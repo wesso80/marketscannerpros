@@ -1083,6 +1083,304 @@ def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
     
     return fig
 
+# ================= Portfolio Management =================
+
+def add_portfolio_position(symbol: str, quantity: float, price: float, transaction_type: str = "BUY", notes: str = "") -> bool:
+    """Add a new position to portfolio with proper validation and P&L calculation"""
+    try:
+        # Validate inputs
+        if quantity <= 0 or price <= 0:
+            st.error("Quantity and price must be positive")
+            return False
+            
+        # Validate transaction type
+        if transaction_type not in ["BUY", "SELL"]:
+            st.error("Transaction type must be BUY or SELL")
+            return False
+            
+        # Check if position already exists
+        existing_query = "SELECT quantity, average_cost FROM portfolio_positions WHERE symbol = %s"
+        existing = execute_db_query(existing_query, (symbol,))
+        
+        # Validate SELL transactions
+        if transaction_type == "SELL":
+            if not existing:
+                st.error(f"Cannot sell {symbol} - no existing position found")
+                return False
+            
+            current_qty = float(existing[0]['quantity'])
+            if quantity > current_qty:
+                st.error(f"Cannot sell {quantity} shares - only {current_qty} shares available")
+                return False
+        
+        # Calculate realized P&L for SELL transactions
+        realized_pnl = 0.0
+        if transaction_type == "SELL" and existing:
+            avg_cost = float(existing[0]['average_cost'])
+            realized_pnl = (price - avg_cost) * quantity
+        
+        # Add transaction record with realized P&L
+        total_amount = quantity * price
+        transaction_query = """
+            INSERT INTO portfolio_transactions (symbol, transaction_type, quantity, price, total_amount, realized_pnl, transaction_date, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s)
+        """
+        execute_db_write(transaction_query, (symbol, transaction_type, quantity, price, total_amount, realized_pnl, notes))
+        
+        # Update or create position
+        if existing:
+            old_qty = float(existing[0]['quantity'])
+            old_cost = float(existing[0]['average_cost'])
+            
+            if transaction_type == "BUY":
+                # Add to position with weighted average cost
+                new_qty = old_qty + quantity
+                new_avg_cost = ((old_qty * old_cost) + (quantity * price)) / new_qty
+            else:  # SELL
+                new_qty = old_qty - quantity
+                new_avg_cost = old_cost  # Keep same average cost for partial sells
+            
+            if new_qty == 0:
+                # Set quantity to 0 and clear market values for historical tracking
+                update_query = """
+                    UPDATE portfolio_positions 
+                    SET quantity = 0, current_price = NULL, market_value = 0, unrealized_pnl = 0, updated_at = NOW()
+                    WHERE symbol = %s
+                """
+                execute_db_write(update_query, (symbol,))
+            else:
+                # Update position with new quantities
+                current_price = get_current_price_portfolio(symbol) or price
+                market_value = new_qty * current_price
+                unrealized_pnl = (current_price - new_avg_cost) * new_qty
+                
+                update_query = """
+                    UPDATE portfolio_positions 
+                    SET quantity = %s, average_cost = %s, current_price = %s, 
+                        market_value = %s, unrealized_pnl = %s, updated_at = NOW()
+                    WHERE symbol = %s
+                """
+                execute_db_write(update_query, (new_qty, new_avg_cost, current_price, market_value, unrealized_pnl, symbol))
+        else:
+            # Create new position (only for BUY)
+            if transaction_type == "BUY":
+                current_price = get_current_price_portfolio(symbol) or price
+                market_value = quantity * current_price
+                unrealized_pnl = (current_price - price) * quantity
+                
+                insert_query = """
+                    INSERT INTO portfolio_positions (symbol, quantity, average_cost, current_price, market_value, unrealized_pnl, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                """
+                execute_db_write(insert_query, (symbol, quantity, price, current_price, market_value, unrealized_pnl))
+        
+        # Show realized P&L for sells
+        if transaction_type == "SELL" and realized_pnl != 0:
+            if realized_pnl > 0:
+                st.success(f"Realized gain: ${realized_pnl:.2f}")
+            else:
+                st.error(f"Realized loss: ${abs(realized_pnl):.2f}")
+        
+        return True
+    except Exception as e:
+        st.error(f"Error adding position: {str(e)}")
+        return False
+
+def get_current_price_portfolio(symbol: str) -> Optional[float]:
+    """Get current price for portfolio calculations with robust fallbacks"""
+    try:
+        ticker = yf.Ticker(symbol)
+        
+        # Try fast_info first (fastest)
+        try:
+            price = ticker.fast_info.get('lastPrice')
+            if price and price > 0:
+                return float(price)
+        except Exception:
+            pass
+        
+        # Fallback to recent minute data
+        try:
+            hist = ticker.history(period="1d", interval="1m")
+            if not hist.empty:
+                return float(hist['Close'].iloc[-1])
+        except Exception:
+            pass
+            
+        # Final fallback to daily data
+        try:
+            hist = ticker.history(period="2d")
+            if not hist.empty:
+                return float(hist['Close'].iloc[-1])
+        except Exception:
+            pass
+            
+    except Exception:
+        pass
+    
+    return None
+
+def update_portfolio_prices() -> None:
+    """Update all portfolio positions with current prices"""
+    try:
+        positions_query = "SELECT symbol, quantity, average_cost FROM portfolio_positions"
+        positions = execute_db_query(positions_query)
+        
+        if positions:
+            for position in positions:
+                symbol = position['symbol']
+                quantity = float(position['quantity'])
+                average_cost = float(position['average_cost'])
+                
+                current_price = get_current_price_portfolio(symbol) or 0.0
+                market_value = quantity * current_price
+                unrealized_pnl = (current_price - average_cost) * quantity
+                
+                update_query = """
+                    UPDATE portfolio_positions 
+                    SET current_price = %s, market_value = %s, unrealized_pnl = %s, updated_at = NOW()
+                    WHERE symbol = %s
+                """
+                execute_db_write(update_query, (current_price, market_value, unrealized_pnl, symbol))
+    except Exception as e:
+        st.error(f"Error updating prices: {str(e)}")
+
+def get_portfolio_positions() -> List[Dict[str, Any]]:
+    """Get all portfolio positions (excluding zero quantities)"""
+    query = """
+        SELECT symbol, quantity, average_cost, current_price, market_value, unrealized_pnl, updated_at
+        FROM portfolio_positions 
+        WHERE quantity > 0
+        ORDER BY market_value DESC
+    """
+    return execute_db_query(query) or []
+
+def get_portfolio_transactions(limit: int = 50) -> List[Dict[str, Any]]:
+    """Get portfolio transaction history"""
+    query = """
+        SELECT symbol, transaction_type, quantity, price, total_amount, realized_pnl, transaction_date, notes
+        FROM portfolio_transactions 
+        ORDER BY transaction_date DESC 
+        LIMIT %s
+    """
+    return execute_db_query(query, (limit,)) or []
+
+def calculate_portfolio_metrics() -> Dict[str, Any]:
+    """Calculate portfolio performance metrics"""
+    try:
+        positions = get_portfolio_positions()
+        transactions = get_portfolio_transactions(1000)  # Get more for calculations
+        
+        if not positions:
+            return {}
+        
+        total_market_value = sum(float(pos['market_value']) for pos in positions)
+        total_unrealized_pnl = sum(float(pos['unrealized_pnl']) for pos in positions)
+        total_cost_basis = sum(float(pos['quantity']) * float(pos['average_cost']) for pos in positions)
+        
+        # Calculate realized P&L from transactions (now stored in database)
+        realized_pnl = sum([float(t.get('realized_pnl', 0)) for t in transactions])
+        
+        total_pnl = realized_pnl + total_unrealized_pnl
+        total_return_pct = (total_pnl / total_cost_basis) * 100 if total_cost_basis > 0 else 0
+        
+        return {
+            'total_positions': len(positions),
+            'total_market_value': total_market_value,
+            'total_cost_basis': total_cost_basis,
+            'total_unrealized_pnl': total_unrealized_pnl,
+            'realized_pnl': realized_pnl,
+            'total_pnl': total_pnl,
+            'total_return_pct': total_return_pct
+        }
+    except Exception as e:
+        st.error(f"Error calculating metrics: {str(e)}")
+        return {}
+
+def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
+    """Create portfolio allocation chart"""
+    if not positions:
+        return None
+    
+    symbols = [pos['symbol'] for pos in positions]
+    values = [float(pos['market_value']) for pos in positions]
+    colors = ['#00D4AA', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=symbols,
+        values=values,
+        hole=0.4,
+        marker_colors=colors[:len(symbols)],
+        textinfo='label+percent',
+        textposition='outside'
+    )])
+    
+    fig.update_layout(
+        title="Portfolio Allocation by Market Value",
+        template="plotly_dark",
+        height=400,
+        showlegend=False
+    )
+    
+    return fig
+
+def create_portfolio_performance_chart() -> go.Figure:
+    """Create portfolio performance over time chart"""
+    try:
+        # Get transaction history to build performance timeline
+        transactions = get_portfolio_transactions(1000)
+        
+        if not transactions:
+            return None
+        
+        # Group transactions by date and calculate running totals
+        df_transactions = pd.DataFrame(transactions)
+        df_transactions['transaction_date'] = pd.to_datetime(df_transactions['transaction_date'])
+        df_transactions = df_transactions.sort_values('transaction_date')
+        
+        # Calculate cumulative invested amount
+        df_transactions['cumulative_invested'] = df_transactions['total_amount'].cumsum()
+        
+        # Get current portfolio value for the end point
+        metrics = calculate_portfolio_metrics()
+        current_value = metrics.get('total_market_value', 0)
+        
+        # Create the chart
+        fig = go.Figure()
+        
+        # Add invested capital line
+        fig.add_trace(go.Scatter(
+            x=df_transactions['transaction_date'],
+            y=df_transactions['cumulative_invested'],
+            mode='lines+markers',
+            name='Invested Capital',
+            line=dict(color='#FFA500', width=2)
+        ))
+        
+        # Add current value point
+        if not df_transactions.empty:
+            last_date = df_transactions['transaction_date'].iloc[-1]
+            fig.add_trace(go.Scatter(
+                x=[last_date],
+                y=[current_value],
+                mode='markers',
+                name='Current Value',
+                marker=dict(color='#00D4AA', size=10)
+            ))
+        
+        fig.update_layout(
+            title="Portfolio Performance Over Time",
+            xaxis_title="Date",
+            yaxis_title="Value ($)",
+            template="plotly_dark",
+            height=400
+        )
+        
+        return fig
+    except Exception as e:
+        st.error(f"Error creating performance chart: {str(e)}")
+        return None
+
 # ================= UI =================
 st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
 st.title("📊 Market Scanner Dashboard")
@@ -1944,6 +2242,213 @@ if st.session_state.get('show_backtest_history', False):
         if st.button("Close History", key="close_backtest_history"):
             st.session_state.show_backtest_history = False
             st.rerun()
+
+# ================= Portfolio Tracking =================
+st.markdown("---")
+st.subheader("💼 Portfolio Tracking")
+
+# Portfolio overview
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    # Portfolio metrics at the top
+    portfolio_metrics = calculate_portfolio_metrics()
+    
+    if portfolio_metrics:
+        col1_1, col1_2, col1_3, col1_4 = st.columns(4)
+        
+        with col1_1:
+            market_value = portfolio_metrics.get('total_market_value', 0)
+            st.metric("Market Value", f"${market_value:,.2f}")
+        
+        with col1_2:
+            total_return = portfolio_metrics.get('total_return_pct', 0)
+            color = "green" if total_return >= 0 else "red"
+            st.metric("Total Return", f"{total_return:.2f}%", delta=None)
+        
+        with col1_3:
+            unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
+            st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+        
+        with col1_4:
+            num_positions = portfolio_metrics.get('total_positions', 0)
+            st.metric("Positions", num_positions)
+
+with col2:
+    # Quick actions
+    if st.button("🔄 Update Prices", use_container_width=True):
+        with st.spinner("Updating portfolio prices..."):
+            update_portfolio_prices()
+        st.success("Prices updated!")
+        st.rerun()
+
+# Main portfolio tabs
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Position", "📋 Holdings", "📈 History"])
+
+with tab1:
+    # Portfolio overview with charts
+    positions = get_portfolio_positions()
+    
+    if positions:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Portfolio allocation chart
+            allocation_chart = create_portfolio_chart(positions)
+            if allocation_chart:
+                st.plotly_chart(allocation_chart, use_container_width=True)
+        
+        with col2:
+            # Portfolio performance chart
+            performance_chart = create_portfolio_performance_chart()
+            if performance_chart:
+                st.plotly_chart(performance_chart, use_container_width=True)
+        
+        # Key metrics table
+        if portfolio_metrics:
+            st.subheader("📊 Portfolio Metrics")
+            metrics_data = {
+                'Metric': [
+                    'Total Market Value',
+                    'Total Cost Basis', 
+                    'Unrealized P&L',
+                    'Realized P&L',
+                    'Total P&L',
+                    'Total Return %',
+                    'Number of Positions'
+                ],
+                'Value': [
+                    f"${portfolio_metrics.get('total_market_value', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_cost_basis', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_unrealized_pnl', 0):,.2f}",
+                    f"${portfolio_metrics.get('realized_pnl', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_pnl', 0):,.2f}",
+                    f"{portfolio_metrics.get('total_return_pct', 0):.2f}%",
+                    f"{portfolio_metrics.get('total_positions', 0)}"
+                ]
+            }
+            metrics_df = pd.DataFrame(metrics_data)
+            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
+
+with tab2:
+    # Add new position form
+    st.subheader("➕ Add New Position")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
+        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
+        transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
+    
+    with col2:
+        average_cost = st.number_input("Price per Share:", min_value=0.01, step=0.01, key="portfolio_cost")
+        notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
+    
+    if symbol and quantity > 0 and average_cost > 0:
+        total_value = quantity * average_cost
+        st.info(f"Total Transaction Value: ${total_value:,.2f}")
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("Add Position", type="primary", use_container_width=True):
+                success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                if success:
+                    st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                    # Clear form
+                    st.session_state.portfolio_symbol = ""
+                    st.session_state.portfolio_quantity = 0.0
+                    st.session_state.portfolio_cost = 0.0
+                    st.session_state.portfolio_notes = ""
+                    st.rerun()
+
+with tab3:
+    # Current holdings
+    st.subheader("📋 Current Holdings")
+    
+    positions = get_portfolio_positions()
+    
+    if positions:
+        # Create positions dataframe
+        positions_data = []
+        for pos in positions:
+            positions_data.append({
+                'Symbol': pos['symbol'],
+                'Quantity': f"{float(pos['quantity']):,.4f}",
+                'Avg Cost': f"${float(pos['average_cost']):,.2f}",
+                'Current Price': f"${float(pos['current_price']):,.2f}",
+                'Market Value': f"${float(pos['market_value']):,.2f}",
+                'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
+                'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
+                'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
+            })
+        
+        positions_df = pd.DataFrame(positions_data)
+        st.dataframe(positions_df, use_container_width=True, hide_index=True)
+        
+        # Quick actions for positions
+        st.subheader("⚡ Quick Actions")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
+            if sell_symbol:
+                current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
+                if current_pos:
+                    max_qty = float(current_pos['quantity'])
+                    sell_qty = st.number_input(f"Quantity to sell (max {max_qty}):", min_value=0.0001, max_value=max_qty, step=0.1, key="sell_qty")
+                    sell_price = st.number_input("Sell Price:", min_value=0.01, step=0.01, key="sell_price")
+                    
+                    if sell_qty > 0 and sell_price > 0:
+                        if st.button("Sell Position", type="secondary"):
+                            success = add_portfolio_position(sell_symbol, sell_qty, sell_price, "SELL", f"Partial sale of {sell_symbol}")
+                            if success:
+                                st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
+                                st.rerun()
+    else:
+        st.info("No positions found. Add your first position using the 'Add Position' tab.")
+
+with tab4:
+    # Transaction history
+    st.subheader("📈 Transaction History")
+    
+    transactions = get_portfolio_transactions(100)
+    
+    if transactions:
+        # Create transactions dataframe
+        trans_data = []
+        for trans in transactions:
+            trans_data.append({
+                'Date': pd.to_datetime(trans['transaction_date']).strftime('%Y-%m-%d %H:%M'),
+                'Symbol': trans['symbol'],
+                'Type': trans['transaction_type'],
+                'Quantity': f"{float(trans['quantity']):,.4f}",
+                'Price': f"${float(trans['price']):,.2f}",
+                'Total Amount': f"${float(trans['total_amount']):,.2f}",
+                'Notes': trans.get('notes', '') or '-'
+            })
+        
+        trans_df = pd.DataFrame(trans_data)
+        st.dataframe(trans_df, use_container_width=True, hide_index=True)
+        
+        # Transaction summary
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            buy_count = len([t for t in transactions if t['transaction_type'] == 'BUY'])
+            st.metric("Buy Transactions", buy_count)
+        
+        with col2:
+            sell_count = len([t for t in transactions if t['transaction_type'] == 'SELL'])
+            st.metric("Sell Transactions", sell_count)
+        
+        with col3:
+            total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
+            st.metric("Total Invested", f"${total_invested:,.2f}")
+    else:
+        st.info("No transactions found. Add your first position to start tracking.")
 
 # Status information
 st.subheader("📊 Scan Statistics")
