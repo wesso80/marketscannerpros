@@ -2,7 +2,14 @@
 
 ## Overview
 
-A comprehensive market scanning application built with Streamlit that analyzes equity and cryptocurrency markets using technical indicators and risk management principles. The application fetches real-time market data via yfinance, performs technical analysis with pandas, and provides ATR-based position sizing recommendations. It features a web dashboard for interactive analysis and supports automated notifications via email and Slack integrations.
+A comprehensive market scanning application built with Streamlit that analyzes equity and cryptocurrency markets using technical indicators and risk management principles. The application fetches real-time market data via yfinance, performs technical analysis with pandas, and provides ATR-based position sizing recommendations. 
+
+**Now transformed into a multi-platform mobile application suite** with:
+- **PWA (Progressive Web App)**: Installable web app for immediate mobile distribution
+- **Android TWA**: Native Android app for Google Play Store distribution  
+- **Capacitor Native Apps**: True iOS and Android apps for both App Store and Play Store
+
+The app features a web dashboard for interactive analysis and supports automated notifications via email and Slack integrations.
 
 ## User Preferences
 
@@ -37,6 +44,12 @@ Preferred communication style: Simple, everyday language.
 - **Volume Filtering**: Minimum dollar volume thresholds for liquidity screening
 - **Multi-Asset Support**: Unified scanning framework for both equities and cryptocurrencies
 
+### Mobile App Distribution Infrastructure
+- **Progressive Web App (PWA)**: Manifest and service worker integration for installable web app experience
+- **Android TWA (Trusted Web Activity)**: Bubblewrap-based native Android app for Google Play Store
+- **Capacitor Native Apps**: True iOS and Android applications using server-based architecture
+- **Multi-Platform Strategy**: Three distribution channels covering all mobile platforms and app stores
+
 ## External Dependencies
 
 ### Market Data APIs
@@ -47,8 +60,15 @@ Preferred communication style: Simple, everyday language.
 - **SMTP Email Services**: Generic SMTP support for email notifications (configurable providers)
 - **Slack Webhooks**: Integration for team-based alerting and notifications
 
+### Mobile Development Frameworks
+- **@capacitor/cli**: Command-line interface for native app development
+- **@capacitor/core**: Core Capacitor runtime for web-to-native bridge
+- **@capacitor/ios**: iOS platform integration for App Store distribution
+- **@capacitor/android**: Android platform integration for Play Store distribution
+- **@bubblewrap/cli**: Google's TWA (Trusted Web Activity) build tool
+
 ### Python Libraries
-- **Streamlit**: Web application framework for dashboard interface
+- **Streamlit**: Web application framework for dashboard interface (now PWA-enabled)
 - **Pandas & NumPy**: Data manipulation and numerical computations
 - **Plotly**: Interactive charting and visualization
 - **Requests**: HTTP client for external API communications
@@ -57,3 +77,4 @@ Preferred communication style: Simple, everyday language.
 ### Infrastructure Dependencies
 - **Environment Variables**: Configuration management for sensitive credentials
 - **File System**: CSV export functionality and temporary data storage
+- **PWA Assets**: Service worker, manifest, and mobile app icons in `/static/` directory
