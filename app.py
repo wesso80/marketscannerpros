@@ -26,7 +26,7 @@ import plotly.express as px
 st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 st.markdown("""
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#111111">
+<meta name="theme-color" content="#0b0f19">
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
 </script>
