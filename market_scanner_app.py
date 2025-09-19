@@ -2407,11 +2407,6 @@ with tab2:
                 success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
                 if success:
                     st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                    # Clear form
-                    st.session_state.portfolio_symbol = ""
-                    st.session_state.portfolio_quantity = 0.0
-                    st.session_state.portfolio_cost = 0.0
-                    st.session_state.portfolio_notes = ""
                     st.rerun()
 
 with tab3:
