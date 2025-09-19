@@ -1231,9 +1231,29 @@ def get_backtest_results() -> List[Dict[str, Any]]:
     result = execute_db_query(query)
     if result:
         for r in result:
-            # Parse JSON fields
-            r['parameters'] = json.loads(r['parameters']) if r['parameters'] else {}
-            r['results_data'] = json.loads(r['results_data']) if r['results_data'] else {}
+            # Parse JSON fields safely (handle both string and already-parsed dict)
+            if r['parameters']:
+                if isinstance(r['parameters'], str):
+                    try:
+                        r['parameters'] = json.loads(r['parameters'])
+                    except json.JSONDecodeError:
+                        r['parameters'] = {}
+                elif not isinstance(r['parameters'], dict):
+                    r['parameters'] = {}
+            else:
+                r['parameters'] = {}
+            
+            if r['results_data']:
+                if isinstance(r['results_data'], str):
+                    try:
+                        r['results_data'] = json.loads(r['results_data'])
+                    except json.JSONDecodeError:
+                        r['results_data'] = {}
+                elif not isinstance(r['results_data'], dict):
+                    r['results_data'] = {}
+            else:
+                r['results_data'] = {}
+            
             # Keep config and results for backward compatibility
             r['config'] = r['parameters']
             r['results'] = r['results_data']
