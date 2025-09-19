@@ -10,12 +10,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, timezone
 from dateutil import tz
 from math import floor
 import io
+import json
 
 # ================= Config =================
 @dataclass
@@ -68,6 +71,88 @@ def min_bars_required(tf: str) -> int:
 
 def dollar_volume(df: pd.DataFrame) -> float:
     return float((df["close"] * df["volume"]).tail(20).mean())
+
+# ================= Database Connection =================
+@st.cache_resource
+def get_connection_pool():
+    """Get PostgreSQL connection pool"""
+    try:
+        from psycopg2 import pool
+        connection_pool = pool.SimpleConnectionPool(
+            1, 20,  # min and max connections
+            host=os.getenv("PGHOST"),
+            port=os.getenv("PGPORT"),
+            database=os.getenv("PGDATABASE"),
+            user=os.getenv("PGUSER"),
+            password=os.getenv("PGPASSWORD")
+        )
+        return connection_pool
+    except Exception as e:
+        st.error(f"Database connection pool failed: {e}")
+        return None
+
+def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = True) -> Optional[List[Dict[Any, Any]]]:
+    """Execute database query and return results"""
+    pool = get_connection_pool()
+    if not pool:
+        return None
+    
+    conn = None
+    try:
+        conn = pool.getconn()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, params)
+            if fetch:
+                return [dict(row) for row in cur.fetchall()]
+            else:
+                conn.commit()
+                return []
+    except Exception as e:
+        st.error(f"Database query failed: {e}")
+        if conn:
+            conn.rollback()
+        return None
+    finally:
+        if conn:
+            pool.putconn(conn)
+
+# ================= Watchlist Management =================
+def create_watchlist(name: str, description: str, symbols: List[str]) -> bool:
+    """Create a new watchlist"""
+    query = """
+        INSERT INTO watchlists (name, description, symbols) 
+        VALUES (%s, %s, %s)
+    """
+    result = execute_db_query(query, (name, description, symbols), fetch=False)
+    return result is not None
+
+def get_watchlists() -> List[Dict[str, Any]]:
+    """Get all watchlists"""
+    query = "SELECT * FROM watchlists ORDER BY created_at DESC"
+    result = execute_db_query(query)
+    return result if result else []
+
+def get_watchlist_by_id(watchlist_id: int) -> Optional[Dict[str, Any]]:
+    """Get a specific watchlist by ID"""
+    query = "SELECT * FROM watchlists WHERE id = %s"
+    result = execute_db_query(query, (watchlist_id,))
+    return result[0] if result else None
+
+def update_watchlist(watchlist_id: int, name: str, description: str, symbols: List[str]) -> bool:
+    """Update an existing watchlist"""
+    query = """
+        UPDATE watchlists 
+        SET name = %s, description = %s, symbols = %s, updated_at = NOW()
+        WHERE id = %s
+    """
+    result = execute_db_query(query, (name, description, symbols, watchlist_id), fetch=False)
+    return result is not None
+
+def delete_watchlist(watchlist_id: int) -> bool:
+    """Delete a watchlist"""
+    query = "DELETE FROM watchlists WHERE id = %s"
+    result = execute_db_query(query, (watchlist_id,), fetch=False)
+    return result is not None
 
 # ================= Data Source (yfinance) =================
 def get_ohlcv_yf(symbol: str, timeframe: str) -> pd.DataFrame:
@@ -269,13 +354,147 @@ if refresh_clicked:
     st.rerun()
 
 # Sidebar
+# ================= Watchlist Management =================
+st.sidebar.header("📋 Watchlists")
+
+# Get all watchlists
+watchlists = get_watchlists()
+watchlist_names = ["Manual Entry"] + [f"{wl['name']} ({len(wl['symbols'])} symbols)" for wl in watchlists]
+
+# Watchlist selection
+selected_watchlist = st.sidebar.selectbox("Select Watchlist:", watchlist_names, index=0)
+
+# Watchlist management controls
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("➕ New", key="new_watchlist"):
+        st.session_state.show_new_watchlist = True
+with col2:
+    if st.button("✏️ Manage", key="manage_watchlists"):
+        st.session_state.show_manage_watchlists = True
+
+# New watchlist creation modal
+if st.session_state.get('show_new_watchlist', False):
+    with st.sidebar.expander("Create New Watchlist", expanded=True):
+        new_name = st.text_input("Watchlist Name:", key="new_wl_name")
+        new_desc = st.text_area("Description:", key="new_wl_desc", height=60)
+        new_symbols_text = st.text_area("Symbols (one per line):", key="new_wl_symbols", height=100)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Save", key="save_new_wl"):
+                if new_name and new_symbols_text:
+                    symbols = [s.strip().upper() for s in new_symbols_text.splitlines() if s.strip()]
+                    if create_watchlist(new_name, new_desc, symbols):
+                        st.success(f"Watchlist '{new_name}' created!")
+                        st.session_state.show_new_watchlist = False
+                        st.rerun()
+                    else:
+                        st.error("Failed to create watchlist")
+                else:
+                    st.error("Name and symbols required")
+        with col3:
+            if st.button("Cancel", key="cancel_new_wl"):
+                st.session_state.show_new_watchlist = False
+                st.rerun()
+
+# Manage existing watchlists
+if st.session_state.get('show_manage_watchlists', False):
+    with st.sidebar.expander("Manage Watchlists", expanded=True):
+        if watchlists:
+            for wl in watchlists:
+                st.write(f"**{wl['name']}** ({len(wl['symbols'])} symbols)")
+                st.write(f"*{wl['description']}*" if wl['description'] else "*No description*")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Edit", key=f"edit_{wl['id']}"):
+                        st.session_state.edit_watchlist_id = wl['id']
+                with col2:
+                    if st.button("Delete", key=f"delete_{wl['id']}"):
+                        st.session_state.confirm_delete_id = wl['id']
+                        st.session_state.confirm_delete_name = wl['name']
+                st.markdown("---")
+        else:
+            st.info("No watchlists found. Create one above!")
+        
+        if st.button("Close", key="close_manage"):
+            st.session_state.show_manage_watchlists = False
+            st.rerun()
+
+# Edit watchlist modal
+if st.session_state.get('edit_watchlist_id'):
+    edit_wl_id = st.session_state.edit_watchlist_id
+    edit_wl = get_watchlist_by_id(edit_wl_id)
+    
+    if edit_wl:
+        with st.sidebar.expander(f"Edit Watchlist: {edit_wl['name']}", expanded=True):
+            edit_name = st.text_input("Watchlist Name:", value=edit_wl['name'], key="edit_wl_name")
+            edit_desc = st.text_area("Description:", value=edit_wl['description'] or "", key="edit_wl_desc", height=60)
+            edit_symbols_text = st.text_area("Symbols (one per line):", 
+                                           value="\n".join(edit_wl['symbols']), key="edit_wl_symbols", height=100)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Save", key="save_edit_wl"):
+                    if edit_name and edit_symbols_text:
+                        symbols = [s.strip().upper() for s in edit_symbols_text.splitlines() if s.strip()]
+                        if update_watchlist(edit_wl_id, edit_name, edit_desc, symbols):
+                            st.success(f"Watchlist '{edit_name}' updated!")
+                            st.session_state.edit_watchlist_id = None
+                            st.rerun()
+                        else:
+                            st.error("Failed to update watchlist")
+                    else:
+                        st.error("Name and symbols required")
+            with col3:
+                if st.button("Cancel", key="cancel_edit_wl"):
+                    st.session_state.edit_watchlist_id = None
+                    st.rerun()
+    else:
+        st.error("Watchlist not found")
+        st.session_state.edit_watchlist_id = None
+
+# Delete confirmation modal
+if st.session_state.get('confirm_delete_id'):
+    delete_id = st.session_state.confirm_delete_id
+    delete_name = st.session_state.confirm_delete_name
+    
+    with st.sidebar.expander(f"⚠️ Delete Watchlist", expanded=True):
+        st.write(f"Are you sure you want to delete **'{delete_name}'**?")
+        st.write("This action cannot be undone.")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Delete", key="confirm_delete"):
+                if delete_watchlist(delete_id):
+                    st.success(f"Deleted '{delete_name}'")
+                    st.session_state.confirm_delete_id = None
+                    st.session_state.confirm_delete_name = None
+                    st.rerun()
+                else:
+                    st.error("Failed to delete watchlist")
+        with col3:
+            if st.button("Cancel", key="cancel_delete"):
+                st.session_state.confirm_delete_id = None
+                st.session_state.confirm_delete_name = None
+                st.rerun()
+
+# Load symbols from selected watchlist
+if selected_watchlist != "Manual Entry":
+    selected_wl_data = watchlists[watchlist_names.index(selected_watchlist) - 1]
+    equity_symbols = [s for s in selected_wl_data['symbols'] if not s.endswith('-USD')]
+    crypto_symbols = [s for s in selected_wl_data['symbols'] if s.endswith('-USD')]
+else:
+    equity_symbols = CFG.symbols_equity
+    crypto_symbols = CFG.symbols_crypto
+
 st.sidebar.header("Equity Symbols")
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(CFG.symbols_equity), height=140)
+    "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(CFG.symbols_crypto), height=140)
+    "\n".join(crypto_symbols), height=140)
 
 st.sidebar.header("Timeframes")
 tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], index=0)
