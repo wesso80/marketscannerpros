@@ -33,7 +33,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uv add yfinance pandas numpy requests python-dateutil plotly && streamlit run market_scanner_app.py --server.port 5000"
+args = "streamlit run market_scanner_app.py --server.port 5000"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -47,6 +47,10 @@ args = "uv add yfinance pandas numpy requests python-dateutil"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 35357
+externalPort = 3001
 
 [[ports]]
 localPort = 42595
