@@ -3,7 +3,7 @@
 # Market Scanner Android APK Build Script
 # Replace YOUR_DEPLOYED_DOMAIN with your actual Replit app domain
 
-DOMAIN="YOUR_DEPLOYED_DOMAIN"  # Example: https://market-scanner.your-username.repl.co
+DOMAIN="https://market-scanner-1-wesso80.replit.app"
 
 echo "🚀 Building Market Scanner Android APK..."
 echo "Using domain: $DOMAIN"
