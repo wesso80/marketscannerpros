@@ -91,7 +91,7 @@ def get_connection_pool():
         st.error(f"Database connection pool failed: {e}")
         return None
 
-def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = True) -> Optional[List[Dict[Any, Any]]]:
+def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = True):
     """Execute database query and return results"""
     pool = get_connection_pool()
     if not pool:
@@ -106,7 +106,7 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
                 return [dict(row) for row in cur.fetchall()]
             else:
                 conn.commit()
-                return []
+                return cur.rowcount  # Return number of affected rows
     except Exception as e:
         st.error(f"Database query failed: {e}")
         if conn:
@@ -115,6 +115,132 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
     finally:
         if conn:
             pool.putconn(conn)
+
+def execute_db_write(query: str, params: Optional[tuple] = None) -> Optional[int]:
+    """Execute database write query and return affected row count"""
+    result = execute_db_query(query, params, fetch=False)
+    return result if isinstance(result, int) else None
+
+# ================= Price Alerts Management =================
+def create_price_alert(symbol: str, alert_type: str, target_price: float, notification_method: str = 'email') -> bool:
+    """Create a new price alert"""
+    query = """
+        INSERT INTO price_alerts (symbol, alert_type, target_price, notification_method) 
+        VALUES (%s, %s, %s, %s)
+    """
+    result = execute_db_write(query, (symbol, alert_type, target_price, notification_method))
+    return result is not None and result > 0
+
+def get_active_alerts() -> List[Dict[str, Any]]:
+    """Get all active price alerts"""
+    query = "SELECT * FROM price_alerts WHERE is_active = TRUE ORDER BY created_at DESC"
+    result = execute_db_query(query)
+    return result if result else []
+
+def get_all_alerts() -> List[Dict[str, Any]]:
+    """Get all price alerts"""
+    query = "SELECT * FROM price_alerts ORDER BY created_at DESC"
+    result = execute_db_query(query)
+    return result if result else []
+
+def trigger_alert(alert_id: int, current_price: float) -> bool:
+    """Mark an alert as triggered - atomic operation"""
+    query = """
+        UPDATE price_alerts 
+        SET is_triggered = TRUE, triggered_at = NOW(), current_price = %s, is_active = FALSE
+        WHERE id = %s AND is_active = TRUE AND is_triggered = FALSE
+    """
+    result = execute_db_write(query, (current_price, alert_id))
+    return result is not None and result > 0
+
+def delete_alert(alert_id: int) -> bool:
+    """Delete a price alert"""
+    query = "DELETE FROM price_alerts WHERE id = %s"
+    result = execute_db_write(query, (alert_id,))
+    return result is not None and result > 0
+
+def get_current_price(symbol: str) -> Optional[float]:
+    """Get current price for a symbol with fallback methods"""
+    try:
+        # Try fast_info first
+        ticker = yf.Ticker(symbol)
+        if hasattr(ticker, 'fast_info'):
+            fast_info = ticker.fast_info
+            price = fast_info.get('last_price') or fast_info.get('regularMarketPrice')
+            if price:
+                return float(price)
+        
+        # Fallback to recent history
+        hist = ticker.history(period="1d", interval="1m")
+        if not hist.empty:
+            return float(hist['Close'].iloc[-1])
+        
+        # Last resort: use info (slow but comprehensive)
+        info = ticker.info
+        price = info.get('currentPrice') or info.get('regularMarketPrice')
+        if price:
+            return float(price)
+            
+    except Exception as e:
+        print(f"Error getting price for {symbol}: {e}")
+    
+    return None
+
+def check_price_alerts():
+    """Check all active alerts against current prices and trigger if needed"""
+    active_alerts = get_active_alerts()
+    if not active_alerts:
+        return 0
+    
+    triggered_count = 0
+    for alert in active_alerts:
+        try:
+            current_price = get_current_price(alert['symbol'])
+            
+            if current_price:
+                # Check if alert condition is met
+                should_trigger = False
+                if alert['alert_type'] == 'above' and current_price >= alert['target_price']:
+                    should_trigger = True
+                elif alert['alert_type'] == 'below' and current_price <= alert['target_price']:
+                    should_trigger = True
+                
+                if should_trigger:
+                    if trigger_alert(alert['id'], current_price):
+                        triggered_count += 1
+                        # Send notification
+                        send_alert_notification(alert, current_price)
+        except Exception as e:
+            print(f"Error checking alert for {alert['symbol']}: {e}")
+    
+    return triggered_count
+
+def send_alert_notification(alert: Dict[str, Any], current_price: float):
+    """Send notification for triggered alert"""
+    symbol = alert['symbol']
+    target = alert['target_price']
+    alert_type = alert['alert_type']
+    
+    subject = f"🚨 Price Alert Triggered: {symbol}"
+    message = f"""
+Price Alert Triggered!
+
+Symbol: {symbol}
+Alert Type: Price {alert_type} ${target:.2f}
+Current Price: ${current_price:.2f}
+Target Price: ${target:.2f}
+
+The price target you set has been reached.
+"""
+    
+    # Send email notification
+    if alert['notification_method'] in ['email', 'both']:
+        send_email(subject, message)
+    
+    # Send Slack notification  
+    if alert['notification_method'] in ['slack', 'both']:
+        slack_msg = f"🚨 *{symbol}* price alert triggered!\nCurrent: ${current_price:.2f} | Target: ${target:.2f} ({alert_type})"
+        push_slack(slack_msg)
 
 # ================= Watchlist Management =================
 def create_watchlist(name: str, description: str, symbols: List[str]) -> bool:
@@ -633,6 +759,147 @@ with st.expander("Show details", expanded=False):
     - Stop Price = Entry ± (ATR Multiplier × ATR)
     - This ensures consistent dollar risk per trade regardless of instrument volatility
     """)
+
+# ================= Price Alerts Management =================
+st.subheader("🚨 Price Alerts")
+
+# Auto-refresh toggle and controls
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+with col1:
+    auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
+
+with col2:
+    if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
+        with st.spinner("Checking price alerts..."):
+            triggered_count = check_price_alerts()
+            if triggered_count and triggered_count > 0:
+                st.success(f"🚨 {triggered_count} alert(s) triggered!")
+            else:
+                st.info("No alerts triggered")
+
+with col3:
+    if st.button("➕ New Alert"):
+        st.session_state.show_new_alert = True
+
+# Auto-refresh implementation  
+if auto_check:
+    import time
+    
+    # Initialize auto-check state
+    if 'last_auto_check' not in st.session_state:
+        st.session_state.last_auto_check = time.time()
+    if 'auto_check_interval' not in st.session_state:
+        st.session_state.auto_check_interval = 300  # 5 minutes
+    
+    current_time = time.time()
+    time_since_last_check = current_time - st.session_state.last_auto_check
+    
+    # Show countdown
+    remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
+    with col4:
+        if remaining_time > 0:
+            st.info(f"Next check in: {int(remaining_time)}s")
+        else:
+            st.info("Checking alerts...")
+    
+    # Check alerts if interval has passed
+    if time_since_last_check >= st.session_state.auto_check_interval:
+        triggered_count = check_price_alerts()
+        st.session_state.last_auto_check = current_time
+        
+        if triggered_count and triggered_count > 0:
+            st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
+            st.balloons()  # Celebrate triggered alerts
+        else:
+            st.success("All alerts checked - no triggers")
+    
+    # Auto-refresh every 10 seconds to update countdown and check alerts
+    time.sleep(10)
+    st.rerun()
+else:
+    # Clear auto-check state when disabled
+    if 'last_auto_check' in st.session_state:
+        del st.session_state.last_auto_check
+
+# New alert form
+if st.session_state.get('show_new_alert', False):
+    with st.expander("Create New Price Alert", expanded=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
+            alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
+            
+        with col2:
+            alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
+            alert_method = st.selectbox("Notification:", ["email", "slack", "both"], key="alert_method")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Create Alert", key="create_alert"):
+                # Input validation
+                if not alert_symbol or not alert_symbol.strip():
+                    st.error("Symbol is required")
+                elif alert_price <= 0:
+                    st.error("Price must be positive")
+                elif alert_type not in ['above', 'below']:
+                    st.error("Invalid alert type")
+                else:
+                    symbol_clean = alert_symbol.strip().upper()
+                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                        st.success(f"Alert created for {symbol_clean}")
+                        st.session_state.show_new_alert = False
+                        st.rerun()
+                    else:
+                        st.error("Failed to create alert - please check database connection")
+        
+        with col3:
+            if st.button("Cancel", key="cancel_alert"):
+                st.session_state.show_new_alert = False
+                st.rerun()
+
+# Display alerts in tabs
+tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
+
+with tab1:
+    active_alerts = get_active_alerts()
+    if active_alerts:
+        # Create DataFrame for better display
+        alerts_df = pd.DataFrame(active_alerts)
+        alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
+        
+        display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
+        st.dataframe(alerts_df[display_cols], use_container_width=True)
+        
+        # Delete alerts
+        st.write("**Manage Alerts:**")
+        for alert in active_alerts:
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+            with col1:
+                st.write(f"{alert['symbol']} - {alert['alert_type']} ${alert['target_price']:.2f}")
+            with col4:
+                if st.button("Delete", key=f"del_alert_{alert['id']}"):
+                    if delete_alert(alert['id']):
+                        st.success("Alert deleted")
+                        st.rerun()
+                    else:
+                        st.error("Failed to delete alert")
+    else:
+        st.info("No active alerts. Create one above to get notified when price targets are hit.")
+
+with tab2:
+    all_alerts = get_all_alerts()
+    triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
+    
+    if triggered_alerts:
+        triggered_df = pd.DataFrame(triggered_alerts)
+        triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
+        
+        display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
+        st.dataframe(triggered_df[display_cols], use_container_width=True)
+    else:
+        st.info("No triggered alerts yet.")
+
 
 # Status information
 st.subheader("📊 Scan Statistics")
