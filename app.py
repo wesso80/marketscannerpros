@@ -22,6 +22,25 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 
+# ================= PWA Configuration =================
+# Inject PWA manifest and service worker registration for mobile installability
+st.markdown("""
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/static/sw.js')
+      .then(function(registration) {
+        console.log('SW registered: ', registration);
+      }, function(registrationError) {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}
+</script>
+""", unsafe_allow_html=True)
+
 # ================= Config =================
 @dataclass
 class ScanConfig:
@@ -1597,8 +1616,8 @@ if 'cx_errors' not in st.session_state:
     st.session_state.cx_errors = pd.DataFrame()
 
 c1, c2, c3 = st.columns([1,1,1])
-run_clicked = c1.button("🔎 Run Scanner", use_container_width=True)
-refresh_clicked = c2.button("🔁 Refresh Data", use_container_width=True)
+run_clicked = c1.button("🔎 Run Scanner", width='stretch')
+refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
 now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
 c3.info(f"Last scan: {now_syd}")
 
@@ -1913,7 +1932,7 @@ st.subheader("🏛 Equity Markets")
 if not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
-    st.dataframe(display_eq, use_container_width=True)
+    st.dataframe(display_eq, width='stretch')
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -1929,13 +1948,13 @@ else:
 # Equity errors
 if not st.session_state.eq_errors.empty:
     with st.expander("⚠️ Equity Scan Errors", expanded=False):
-        st.dataframe(st.session_state.eq_errors, use_container_width=True)
+        st.dataframe(st.session_state.eq_errors, width='stretch')
 
 st.subheader("₿ Crypto Markets")
 if not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
-    st.dataframe(display_cx, use_container_width=True)
+    st.dataframe(display_cx, width='stretch')
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
@@ -1951,7 +1970,7 @@ else:
 # Crypto errors
 if not st.session_state.cx_errors.empty:
     with st.expander("⚠️ Crypto Scan Errors", expanded=False):
-        st.dataframe(st.session_state.cx_errors, use_container_width=True)
+        st.dataframe(st.session_state.cx_errors, width='stretch')
 
 # Combined CSV download
 if not st.session_state.eq_results.empty or not st.session_state.cx_results.empty:
@@ -2094,7 +2113,7 @@ with tab1:
         alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
         
         display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
-        st.dataframe(alerts_df[display_cols], use_container_width=True)
+        st.dataframe(alerts_df[display_cols], width='stretch')
         
         # Delete alerts
         st.write("**Manage Alerts:**")
@@ -2121,7 +2140,7 @@ with tab2:
         triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
         
         display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
-        st.dataframe(triggered_df[display_cols], use_container_width=True)
+        st.dataframe(triggered_df[display_cols], width='stretch')
     else:
         st.info("No triggered alerts yet.")
 
@@ -2219,7 +2238,7 @@ if chart_symbol and chart_symbol.strip():
     # Generate chart
     col1, col2 = st.columns([3, 1])
     with col2:
-        generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", use_container_width=True)
+        generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
     
     # Display chart if requested
     if generate_chart_clicked or st.session_state.get('chart_generated', False):
@@ -2240,7 +2259,7 @@ if chart_symbol and chart_symbol.strip():
                 chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
                 
                 if chart_fig:
-                    st.plotly_chart(chart_fig, use_container_width=True)
+                    st.plotly_chart(chart_fig, width='stretch')
                     # Set session state to keep chart visible
                     st.session_state.chart_generated = True
                     
@@ -2356,9 +2375,9 @@ with col1:
 
 with col2:
     st.write("**Actions:**")
-    run_backtest_btn = st.button("🚀 Run Backtest", use_container_width=True, key="run_backtest")
+    run_backtest_btn = st.button("🚀 Run Backtest", width='stretch', key="run_backtest")
     
-    if st.button("📊 View History", use_container_width=True, key="view_backtest_history"):
+    if st.button("📊 View History", width='stretch', key="view_backtest_history"):
         st.session_state.show_backtest_history = True
 
 # Run backtest
@@ -2428,7 +2447,7 @@ if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
                 # Performance chart
                 chart_fig = create_backtest_chart(results)
                 if chart_fig:
-                    st.plotly_chart(chart_fig, use_container_width=True)
+                    st.plotly_chart(chart_fig, width='stretch')
                 
                 # Detailed metrics
                 with st.expander("📈 Detailed Performance Metrics", expanded=False):
@@ -2465,7 +2484,7 @@ if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
                         
                         if symbol_perf_data:
                             symbol_df = pd.DataFrame(symbol_perf_data)
-                            st.dataframe(symbol_df, use_container_width=True)
+                            st.dataframe(symbol_df, width='stretch')
                 
                 # Trade log
                 if results.get('trades'):
@@ -2477,7 +2496,7 @@ if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
                         trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
                         
                         display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
-                        st.dataframe(trades_df[display_cols], use_container_width=True)
+                        st.dataframe(trades_df[display_cols], width='stretch')
                 
                 # Errors if any
                 if results.get('errors'):
@@ -2574,7 +2593,7 @@ with col1:
 
 with col2:
     # Quick actions
-    if st.button("🔄 Update Prices", use_container_width=True):
+    if st.button("🔄 Update Prices", width='stretch'):
         with st.spinner("Updating portfolio prices..."):
             update_portfolio_prices()
         st.success("Prices updated!")
@@ -2626,7 +2645,7 @@ with tab1:
                 ]
             }
             metrics_df = pd.DataFrame(metrics_data)
-            st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+            st.dataframe(metrics_df, width='stretch', hide_index=True)
     else:
         st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
 
@@ -2651,7 +2670,7 @@ with tab2:
         
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            if st.button("Add Position", type="primary", use_container_width=True):
+            if st.button("Add Position", type="primary", width='stretch'):
                 success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
                 if success:
                     st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
@@ -2679,7 +2698,7 @@ with tab3:
             })
         
         positions_df = pd.DataFrame(positions_data)
-        st.dataframe(positions_df, use_container_width=True, hide_index=True)
+        st.dataframe(positions_df, width='stretch', hide_index=True)
         
         # Quick actions for positions
         st.subheader("⚡ Quick Actions")
@@ -2724,7 +2743,7 @@ with tab4:
             })
         
         trans_df = pd.DataFrame(trans_data)
-        st.dataframe(trans_df, use_container_width=True, hide_index=True)
+        st.dataframe(trans_df, width='stretch', hide_index=True)
         
         # Transaction summary
         col1, col2, col3 = st.columns(3)

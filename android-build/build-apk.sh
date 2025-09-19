@@ -9,7 +9,7 @@ echo "🚀 Building Market Scanner Android APK..."
 echo "Using domain: $DOMAIN"
 
 # Initialize Bubblewrap project
-npx bubblewrap init --manifest="${DOMAIN}/manifest.webmanifest"
+npx bubblewrap init --manifest="${DOMAIN}/static/manifest.webmanifest"
 
 # The command above will prompt you for:
 # - App name: Market Scanner
@@ -26,6 +26,8 @@ echo "⚠️  IMPORTANT: Copy the SHA-256 fingerprint and update your assetlinks
 echo "   Replace 'AB:CD:EF:...:12' with your actual fingerprint"
 echo "   File location: static/.well-known/assetlinks.json"
 echo "   This file must be accessible at: ${DOMAIN}/.well-known/assetlinks.json"
+echo "   NOTE: Streamlit serves files from /static, so assetlinks.json must be configured"
+echo "   to be reachable at domain root. Contact hosting provider if needed."
 
 # After answering prompts, build the APK
 echo "Building APK..."
