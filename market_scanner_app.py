@@ -1952,11 +1952,10 @@ if chart_symbol and chart_symbol.strip():
     # Generate chart
     col1, col2 = st.columns([3, 1])
     with col2:
-        if st.button("📊 Generate Chart", key="generate_chart", use_container_width=True):
-            st.session_state.generate_chart = True
+        generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", use_container_width=True)
     
     # Display chart if requested
-    if st.session_state.get('generate_chart', False):
+    if generate_chart_clicked or st.session_state.get('chart_generated', False):
         with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
             try:
                 # Build indicator list
@@ -1975,6 +1974,8 @@ if chart_symbol and chart_symbol.strip():
                 
                 if chart_fig:
                     st.plotly_chart(chart_fig, use_container_width=True)
+                    # Set session state to keep chart visible
+                    st.session_state.chart_generated = True
                     
                     # Technical analysis summary
                     with st.expander("📊 Technical Analysis Summary", expanded=False):
