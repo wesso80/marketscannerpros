@@ -882,10 +882,20 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
                 stop_atr_mult: float = 1.5, min_score: float = 10) -> Dict[str, Any]:
     """Run historical backtest on scoring methodology with robust risk management"""
     try:
-        # Validate date range for intraday timeframes
+        # Validate date range
         start_dt = pd.to_datetime(start_date)
         end_dt = pd.to_datetime(end_date)
         days_diff = (end_dt - start_dt).days
+        
+        # Check for invalid date range
+        if days_diff <= 0:
+            return {'error': f'Invalid date range: Start date ({start_date}) must be before end date ({end_date})', 
+                   'trades': [], 'metrics': {}, 'symbol_performance': {}}
+        
+        # Check minimum period
+        if days_diff < 30:
+            return {'error': 'Backtest period must be at least 30 days for meaningful results', 
+                   'trades': [], 'metrics': {}, 'symbol_performance': {}}
         
         # yfinance limitations for intraday data
         if timeframe in ['1m', '5m', '15m', '30m', '1h'] and days_diff > 60:
