@@ -1778,6 +1778,74 @@ acct = st.sidebar.number_input("Account Equity ($):", 100, 100_000_000, value=in
 risk = st.sidebar.number_input("Risk per Trade (%):", 0.1, 10.0, value=CFG.risk_pct*100, step=0.1) / 100.0
 stop_mult = st.sidebar.number_input("Stop = k × ATR:", 0.5, 5.0, value=CFG.stop_atr_mult, step=0.1)
 
+# ================= User Instructions/Help Section =================
+with st.sidebar.expander("📖 Help & Instructions", expanded=False):
+    st.markdown("""
+    ### 🔍 Quick Start Guide
+    
+    **1. Configure Settings:**
+    - Set your Account Equity (how much you can invest)
+    - Set Risk per Trade (1% recommended)
+    - Adjust Stop Multiplier (1.5x ATR default)
+    
+    **2. Add Symbols:**
+    - Equity: AAPL, MSFT, TSLA (one per line)
+    - Crypto: BTC-USD, ETH-USD (one per line)
+    
+    **3. Run Scanner:**
+    - Click "Run Scanner" button
+    - Higher scores = better opportunities
+    - Bullish = Buy signal, Bearish = Sell signal
+    
+    **4. Set Price Alerts:**
+    - Configure email below
+    - Scroll down to Price Alerts section
+    - Set target prices for notifications
+    
+    ### 📊 Understanding Results
+    **Score Ranges:**
+    - 75-100: Very strong signal
+    - 25-75: Moderate signal  
+    - 0-25: Weak signal
+    - Below 0: Bearish signal
+    
+    **Key Columns:**
+    - **Score**: Overall strength rating
+    - **Direction**: Buy (Bullish) vs Sell (Bearish)
+    - **Size**: Shares/coins to buy
+    - **Stop**: Stop-loss price
+    - **Risk $**: Maximum loss amount
+    
+    ### 🚨 Price Alerts Setup
+    1. Enter email address below
+    2. Click "Test Email" to verify
+    3. Save your settings
+    4. Create alerts in Price Alerts section
+    
+    ### 📈 Chart Analysis
+    **RSI Levels:**
+    - Over 70: Overbought (may pullback)
+    - Under 30: Oversold (may bounce)
+    - Over 50: Bullish momentum
+    - Under 50: Bearish momentum
+    
+    **Best Practices:**
+    - Start with 1% risk per trade
+    - Focus on scores above 50
+    - Use calculated stop prices
+    - Don't chase missed opportunities
+    - Diversify your investments
+    
+    ### 📱 Mobile Usage
+    - Install as mobile app via browser menu
+    - All features work on mobile
+    - Touch-friendly charts
+    - Email alerts work even when closed
+    
+    ---
+    ⚠️ **Important**: This tool provides analysis, but YOU make the final investment decisions. Always do your own research and never invest more than you can afford to lose.
+    """)
+
 st.sidebar.header("📧 Notification Settings")
 
 # User notification preferences
