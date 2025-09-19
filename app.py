@@ -29,7 +29,7 @@ st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
 st.markdown("""
-<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0b0f19">
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js'); }
@@ -1616,7 +1616,7 @@ st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
 
 # Add PWA functionality
 st.markdown("""
-<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
