@@ -2877,6 +2877,20 @@ with col4:
     cx_err_count = len(st.session_state.cx_errors) if not st.session_state.cx_errors.empty else 0
     st.metric("Crypto Errors", cx_err_count)
 
+# Download App File
+st.markdown("---")
+st.subheader("💾 Download App")
+with open(__file__, 'r', encoding='utf-8') as f:
+    app_content = f.read()
+
+st.download_button(
+    label="📥 Download app.py to your computer",
+    data=app_content,
+    file_name="market_scanner_app.py",
+    mime="text/python",
+    help="Download the complete Market Scanner application file"
+)
+
 # Footer
 st.markdown("---")
 st.markdown("""
