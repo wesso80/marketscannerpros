@@ -23,21 +23,12 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 # ================= PWA Configuration =================
-# Inject PWA manifest and service worker registration for mobile installability
+st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 st.markdown("""
-<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/static/sw.js')
-      .then(function(registration) {
-        console.log('SW registered: ', registration);
-      }, function(registrationError) {
-        console.log('SW registration failed: ', registrationError);
-      });
-  });
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
 </script>
 """, unsafe_allow_html=True)
 
