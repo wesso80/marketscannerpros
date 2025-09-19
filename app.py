@@ -29,7 +29,7 @@ st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
 st.markdown("""
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <meta name="theme-color" content="#0b0f19">
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js'); }
@@ -1616,7 +1616,7 @@ st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
 
 # Add PWA functionality
 st.markdown("""
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -2876,35 +2876,6 @@ with col3:
 with col4:
     cx_err_count = len(st.session_state.cx_errors) if not st.session_state.cx_errors.empty else 0
     st.metric("Crypto Errors", cx_err_count)
-
-# Download App File
-st.markdown("---")
-st.subheader("💾 Download App")
-
-try:
-    # Use the actual file path instead of __file__ which may be cached in Streamlit
-    file_path = "app.py"
-    with open(file_path, 'r', encoding='utf-8') as f:
-        app_content = f.read()
-    
-    # Show file info
-    file_size_kb = len(app_content.encode('utf-8')) / 1024
-    line_count = len(app_content.splitlines())
-    st.info(f"💡 **File info:** {line_count:,} lines • {file_size_kb:.0f}KB • Check Downloads folder after clicking")
-    
-    if st.download_button(
-        label="📥 Download market_scanner_app.py",
-        data=app_content.encode('utf-8'),
-        file_name="market_scanner_app.py",
-        mime="text/plain",
-        help="Download the complete Market Scanner application file"
-    ):
-        st.success("✅ Download initiated! Check your Downloads folder for 'market_scanner_app.py'")
-        st.info("📁 **File should be:** ~119KB with 2,900+ lines of Python code")
-        
-except Exception as e:
-    st.error(f"Download error: {str(e)}")
-    st.info("Alternative: You can copy the code from the Replit file browser instead.")
 
 # Footer
 st.markdown("---")
