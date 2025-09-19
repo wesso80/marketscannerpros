@@ -1009,9 +1009,28 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
     except Exception as e:
         return {'error': str(e), 'trades': [], 'metrics': {}, 'symbol_performance': {}}
 
+def convert_numpy_types(obj):
+    """Convert numpy types to native Python types for JSON serialization"""
+    import numpy as np
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    return obj
+
 def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, Any]) -> bool:
     """Save backtest results to database"""
     try:
+        # Convert numpy types to native Python types
+        config = convert_numpy_types(config)
+        results = convert_numpy_types(results)
+        
         # Extract metrics from results
         metrics = results.get('metrics', {})
         
@@ -1029,12 +1048,12 @@ def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, A
             config.get('start_date'),
             config.get('end_date'), 
             config.get('symbols', []),
-            metrics.get('total_trades', 0),
-            metrics.get('winning_trades', 0),
-            metrics.get('losing_trades', 0),
-            metrics.get('total_return', 0),
-            metrics.get('sharpe_ratio', 0),
-            metrics.get('max_drawdown', 0),
+            int(metrics.get('total_trades', 0)),
+            int(metrics.get('winning_trades', 0)),
+            int(metrics.get('losing_trades', 0)),
+            float(metrics.get('total_return', 0)),
+            float(metrics.get('sharpe_ratio', 0)) if metrics.get('sharpe_ratio') is not None else None,
+            float(metrics.get('max_drawdown', 0)),
             json.dumps(config, default=str),
             json.dumps(results, default=str)
         )
