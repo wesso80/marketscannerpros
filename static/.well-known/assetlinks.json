@@ -2,7 +2,9 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.yourcompany.marketscanner",
-    "sha256_cert_fingerprints": ["PASTE:YOUR:RELEASE:FINGERPRINT"]
+    "package_name": "com.wesso80.marketscanner",
+    "sha256_cert_fingerprints": [
+      "PASTE_YOUR_RELEASE_SHA256_FROM_BUBBLEWRAP_HERE"
+    ]
   }
 }]
