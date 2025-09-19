@@ -2617,7 +2617,9 @@ if st.session_state.get('show_backtest_history', False):
                     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
                     
                     with col1:
-                        st.write(f"**{backtest['name']}**")
+                        # Handle different field names (backtest_name vs name)
+                        name = backtest.get('backtest_name') or backtest.get('name', 'Unnamed Backtest')
+                        st.write(f"**{name}**")
                         created_at = pd.to_datetime(backtest['created_at']).strftime('%Y-%m-%d %H:%M')
                         st.caption(f"Created: {created_at}")
                     
