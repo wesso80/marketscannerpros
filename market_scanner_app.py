@@ -10,6 +10,7 @@ import os
 import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import psycopg2.extensions
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, timezone
@@ -71,60 +72,103 @@ def dollar_volume(df: pd.DataFrame) -> float:
 # ================= Database Connection =================
 @st.cache_resource
 def get_connection_pool():
-    """Get PostgreSQL connection pool"""
+    """Get PostgreSQL connection pool with better SSL handling"""
     try:
         from psycopg2 import pool
+        import psycopg2.extensions
+        
         connection_pool = pool.SimpleConnectionPool(
-            1, 20,  # min and max connections
+            1, 10,  # Reduce max connections to avoid overwhelming DB
             host=os.getenv("PGHOST"),
             port=os.getenv("PGPORT"),
             database=os.getenv("PGDATABASE"),
             user=os.getenv("PGUSER"),
-            password=os.getenv("PGPASSWORD")
+            password=os.getenv("PGPASSWORD"),
+            # Add connection timeout and SSL settings
+            connect_timeout=10,
+            sslmode='require',
+            options='-c statement_timeout=30000'  # 30 second query timeout
         )
         return connection_pool
     except Exception as e:
         st.error(f"Database connection pool failed: {e}")
         return None
 
-def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = True):
-    """Execute database query and return results"""
+def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = True, retries: int = 3):
+    """Execute database query with retry logic for connection drops"""
     pool = get_connection_pool()
     if not pool:
         return None
     
-    conn = None
-    try:
-        conn = pool.getconn()
-        # Validate connection before use
-        if conn.closed:
-            # Connection is closed, get a new one
-            pool.putconn(conn, close=True)
+    for attempt in range(retries):
+        conn = None
+        try:
             conn = pool.getconn()
-        
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, params)
-            if fetch:
-                return [dict(row) for row in cur.fetchall()]
+            
+            # Check connection health
+            if conn.closed or conn.status != 1:  # 1 = CONNECTION_OK
+                # Connection is bad, discard it and get a new one
+                try:
+                    pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = pool.getconn()
+            
+            # Test the connection with a simple query
+            with conn.cursor() as test_cur:
+                test_cur.execute("SELECT 1")
+            
+            # Execute the actual query
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, params)
+                if fetch:
+                    return [dict(row) for row in cur.fetchall()]
+                else:
+                    conn.commit()
+                    return cur.rowcount
+                    
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+            # Connection-related errors - retry with backoff
+            if conn:
+                try:
+                    pool.putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = None
+            
+            if attempt < retries - 1:
+                import time
+                time.sleep(0.5 * (attempt + 1))  # Exponential backoff
+                continue
             else:
-                conn.commit()
-                return cur.rowcount  # Return number of affected rows
-    except Exception as e:
-        st.error(f"Database query failed: {e}")
-        if conn:
-            try:
-                conn.rollback()
-            except Exception:
-                # Connection already closed, ignore rollback error
-                pass
-        return None
-    finally:
-        if conn:
-            try:
-                pool.putconn(conn)
-            except Exception:
-                # Connection may be closed, ignore putconn error
-                pass
+                st.error(f"Database connection failed after {retries} attempts: {e}")
+                return None
+                
+        except Exception as e:
+            # Other errors - don't retry
+            st.error(f"Database query failed: {e}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                try:
+                    pool.putconn(conn)
+                except Exception:
+                    pass
+            return None
+            
+        finally:
+            if conn:
+                try:
+                    pool.putconn(conn)
+                except Exception:
+                    pass
+        
+        # If we reach here, the query succeeded
+        break
+    
+    return None
 
 def execute_db_write(query: str, params: Optional[tuple] = None) -> Optional[int]:
     """Execute database write query and return affected row count"""
