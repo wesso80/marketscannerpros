@@ -2882,20 +2882,25 @@ st.markdown("---")
 st.subheader("💾 Download App")
 
 try:
-    with open(__file__, 'r', encoding='utf-8') as f:
+    # Use the actual file path instead of __file__ which may be cached in Streamlit
+    file_path = "app.py"
+    with open(file_path, 'r', encoding='utf-8') as f:
         app_content = f.read()
     
-    st.info("💡 **Download Tips:** After clicking download, check your browser's download folder or notification bar.")
+    # Show file info
+    file_size_kb = len(app_content.encode('utf-8')) / 1024
+    line_count = len(app_content.splitlines())
+    st.info(f"💡 **File info:** {line_count:,} lines • {file_size_kb:.0f}KB • Check Downloads folder after clicking")
     
     if st.download_button(
-        label="📥 Download app.py to your computer",
-        data=app_content,
+        label="📥 Download market_scanner_app.py",
+        data=app_content.encode('utf-8'),
         file_name="market_scanner_app.py",
         mime="text/plain",
         help="Download the complete Market Scanner application file"
     ):
         st.success("✅ Download initiated! Check your Downloads folder for 'market_scanner_app.py'")
-        st.info("📁 **File location:** Usually in Downloads folder or browser's default download location")
+        st.info("📁 **File should be:** ~119KB with 2,900+ lines of Python code")
         
 except Exception as e:
     st.error(f"Download error: {str(e)}")
