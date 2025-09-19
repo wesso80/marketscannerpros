@@ -127,11 +127,14 @@ def execute_db_write(query: str, params: Optional[tuple] = None) -> Optional[int
 # ================= Price Alerts Management =================
 def create_price_alert(symbol: str, alert_type: str, target_price: float, notification_method: str = 'email') -> bool:
     """Create a new price alert"""
+    # Get current user email from session state
+    user_email = st.session_state.get('user_email', '')
+    
     query = """
-        INSERT INTO price_alerts (symbol, alert_type, target_price, notification_method) 
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO price_alerts (symbol, alert_type, target_price, notification_method, user_email) 
+        VALUES (%s, %s, %s, %s, %s)
     """
-    result = execute_db_write(query, (symbol, alert_type, target_price, notification_method))
+    result = execute_db_write(query, (symbol, alert_type, target_price, notification_method, user_email))
     return result is not None and result > 0
 
 def get_active_alerts() -> List[Dict[str, Any]]:
@@ -238,7 +241,17 @@ The price target you set has been reached.
     
     # Send email notification
     if alert['notification_method'] in ['email', 'both']:
-        send_email(subject, message)
+        # Get user notification preferences
+        user_prefs = get_notification_preferences_for_alert(alert)
+        
+        if user_prefs and user_prefs['user_email']:
+            # Send to user's configured email using SendGrid
+            if user_prefs['notification_method'] in ['email', 'both']:
+                send_email_to_user(subject, message, user_prefs['user_email'])
+        else:
+            # No user preferences - show in-app notification instead
+            st.warning(f"🚨 Price Alert: {alert['symbol']} reached ${alert['target_price']:.2f}")
+            st.info("Configure email notifications in the sidebar to receive alerts via email.")
     
     # Send Slack notification  
     if alert['notification_method'] in ['slack', 'both']:
@@ -431,6 +444,7 @@ def push_slack(text: str):
     except Exception as e: print("Slack error:", e)
 
 def send_email(subject: str, body: str):
+    """Legacy SMTP email function for scan results"""
     if not all([CFG.smtp_host, CFG.smtp_port, CFG.smtp_user, CFG.smtp_pass, CFG.email_to]):
         return False, "Missing SMTP env vars"
     msg = MIMEMultipart()
@@ -446,6 +460,94 @@ def send_email(subject: str, body: str):
         return True, "sent"
     except Exception as e:
         return False, str(e)
+
+def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
+    """Send email to specific user using SendGrid - from python_sendgrid integration"""
+    import os
+    
+    try:
+        # Check if SendGrid is configured
+        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
+        if not sendgrid_key:
+            st.error("SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable.")
+            return False
+            
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail, Email, To, Content
+        
+        sg = SendGridAPIClient(sendgrid_key)
+        
+        # Use a default from email (you can customize this)
+        from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
+        
+        message = Mail(
+            from_email=Email(from_email),
+            to_emails=To(to_email),
+            subject=subject
+        )
+        message.content = Content("text/plain", body)
+        
+        sg.send(message)
+        return True
+        
+    except Exception as e:
+        st.error(f"Failed to send email: {str(e)}")
+        return False
+
+def save_user_notification_preferences(user_email: str, method: str) -> bool:
+    """Save user notification preferences to database"""
+    try:
+        query = """
+            INSERT INTO user_notification_preferences (user_email, notification_method, updated_at)
+            VALUES (%s, %s, NOW())
+            ON CONFLICT (user_email) 
+            DO UPDATE SET 
+                notification_method = EXCLUDED.notification_method,
+                updated_at = NOW()
+        """
+        result = execute_db_write(query, (user_email, method))
+        return result is not None and result > 0
+    except Exception as e:
+        st.error(f"Failed to save preferences: {str(e)}")
+        return False
+
+def get_user_notification_preferences(user_email: str) -> Dict[str, Any]:
+    """Get user notification preferences from database"""
+    try:
+        query = "SELECT * FROM user_notification_preferences WHERE user_email = %s"
+        result = execute_db_query(query, (user_email,))
+        return result[0] if result else None
+    except Exception as e:
+        return None
+
+def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Dict[str, Any]:
+    """Get notification preferences for a price alert from database"""
+    # Get user email from the alert
+    user_email = alert.get('user_email')
+    
+    if not user_email:
+        # No user associated with this alert
+        return None
+        
+    # Get preferences from database
+    prefs = get_user_notification_preferences(user_email)
+    
+    if prefs:
+        return {
+            'user_email': prefs['user_email'],
+            'notification_method': prefs['notification_method']
+        }
+    
+    # Fallback to session state if database lookup fails
+    session_user_email = st.session_state.get('user_email')
+    if session_user_email == user_email:
+        return {
+            'user_email': user_email,
+            'notification_method': st.session_state.get('notification_method', 'email')
+        }
+    
+    # No preferences found
+    return None
 
 def format_block(df: pd.DataFrame, title: str) -> str:
     if df.empty:
@@ -1612,9 +1714,85 @@ acct = st.sidebar.number_input("Account Equity ($):", 100, 100_000_000, value=in
 risk = st.sidebar.number_input("Risk per Trade (%):", 0.1, 10.0, value=CFG.risk_pct*100, step=0.1) / 100.0
 stop_mult = st.sidebar.number_input("Stop = k × ATR:", 0.5, 5.0, value=CFG.stop_atr_mult, step=0.1)
 
-st.sidebar.header("Notifications")
-send_email_toggle = st.sidebar.checkbox("Email top picks (uses SMTP_* env vars)")
-send_slack_toggle = st.sidebar.checkbox("Slack summary (uses SLACK_WEBHOOK_URL)")
+st.sidebar.header("📧 Notification Settings")
+
+# User notification preferences
+with st.sidebar.expander("Price Alert Notifications", expanded=False):
+    st.markdown("**Configure how you receive price alerts:**")
+    
+    user_email = st.text_input(
+        "Your Email:", 
+        placeholder="Enter your email address",
+        help="You'll receive price alert notifications here",
+        key="user_notification_email"
+    )
+    
+    notification_method = st.selectbox(
+        "Notification Method:",
+        ["Email Only", "None"],
+        index=0,
+        help="Choose how you want to receive alerts"
+    )
+    
+    # Map UI options to backend values
+    method_mapping = {
+        "Email Only": "email",
+        "None": "none"
+    }
+    backend_method = method_mapping[notification_method]
+    
+    if user_email and notification_method == "Email Only":
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📧 Test Email", help="Send a test notification to verify your email"):
+                if "@" in user_email and "." in user_email:
+                    # Store user email preference with consistent key
+                    st.session_state.user_email = user_email
+                    st.session_state.notification_method = backend_method
+                    
+                    # Send test email
+                    try:
+                        test_subject = "🧪 Market Scanner Test Notification"
+                        test_message = f"""
+Hello!
+
+This is a test notification from your Market Scanner dashboard.
+
+If you're reading this, your email notifications are configured correctly!
+
+Your Settings:
+- Email: {user_email}
+- Method: {notification_method}
+
+Happy trading! 📈
+"""
+                        send_email_to_user(test_subject, test_message, user_email)
+                        st.success("✅ Test email sent! Check your inbox.")
+                    except Exception as e:
+                        st.error(f"❌ Email test failed: {str(e)}")
+                else:
+                    st.error("Please enter a valid email address")
+        
+        with col2:
+            if st.button("💾 Save Settings", help="Save your notification preferences"):
+                if "@" in user_email and "." in user_email:
+                    # Save to session state
+                    st.session_state.user_email = user_email
+                    st.session_state.notification_method = backend_method
+                    
+                    # Save to database
+                    if save_user_notification_preferences(user_email, backend_method):
+                        st.success("✅ Settings saved successfully!")
+                    else:
+                        st.warning("⚠️ Settings saved locally but failed to save to database")
+                else:
+                    st.error("Please enter a valid email address")
+
+# Legacy scanning notifications (keep for backward compatibility)
+with st.sidebar.expander("Scan Result Notifications", expanded=False):
+    st.markdown("**Send market scan results:**")
+    send_email_toggle = st.checkbox("Email top picks (requires global SMTP setup)")
+    send_slack_toggle = st.checkbox("Slack summary (requires webhook URL)")
 
 # Main scanning logic
 if run_clicked:
