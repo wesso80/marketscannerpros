@@ -1578,6 +1578,11 @@ st.markdown("""
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Market Scanner">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
 """, unsafe_allow_html=True)
 st.title("📊 Market Scanner Dashboard")
 
