@@ -13,10 +13,19 @@ npx bubblewrap init --manifest="${DOMAIN}/manifest.webmanifest"
 
 # The command above will prompt you for:
 # - App name: Market Scanner
-# - Package ID: com.marketscanner.app (or your preference)
+# - Package ID: com.yourcompany.marketscanner (MUST match assetlinks.json!)
 # - Signing key: Choose to generate new one
 # - App version: 1
 # - Target Android version: Latest
+
+# After initialization, get the certificate fingerprint
+echo "📋 Getting certificate fingerprint..."
+npx bubblewrap fingerprint
+
+echo "⚠️  IMPORTANT: Copy the SHA-256 fingerprint and update your assetlinks.json file!"
+echo "   Replace 'AB:CD:EF:...:12' with your actual fingerprint"
+echo "   File location: static/.well-known/assetlinks.json"
+echo "   This file must be accessible at: ${DOMAIN}/.well-known/assetlinks.json"
 
 # After answering prompts, build the APK
 echo "Building APK..."
@@ -25,3 +34,9 @@ npx bubblewrap build
 echo "✅ APK build complete!"
 echo "📱 Your Market Scanner APK will be in the app/build/outputs/apk/release/ directory"
 echo "🚀 You can now upload this to Google Play Console"
+
+echo ""
+echo "📝 Final checklist:"
+echo "   ✓ assetlinks.json updated with real fingerprint"
+echo "   ✓ Package name matches in assetlinks.json and APK"
+echo "   ✓ File accessible at ${DOMAIN}/.well-known/assetlinks.json"
