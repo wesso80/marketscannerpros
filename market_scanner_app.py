@@ -1011,12 +1011,39 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
 
 def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, Any]) -> bool:
     """Save backtest results to database"""
-    query = """
-        INSERT INTO backtesting_results (name, config, results, created_at) 
-        VALUES (%s, %s, %s, NOW())
-    """
-    result = execute_db_write(query, (name, json.dumps(config), json.dumps(results, default=str)))
-    return result is not None and result > 0
+    try:
+        # Extract metrics from results
+        metrics = results.get('metrics', {})
+        
+        query = """
+            INSERT INTO backtesting_results (
+                backtest_name, start_date, end_date, symbols, total_trades, 
+                winning_trades, losing_trades, total_return, sharpe_ratio, 
+                max_drawdown, parameters, results_data, created_at
+            ) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """
+        
+        params = (
+            name,
+            config.get('start_date'),
+            config.get('end_date'), 
+            config.get('symbols', []),
+            metrics.get('total_trades', 0),
+            metrics.get('winning_trades', 0),
+            metrics.get('losing_trades', 0),
+            metrics.get('total_return', 0),
+            metrics.get('sharpe_ratio', 0),
+            metrics.get('max_drawdown', 0),
+            json.dumps(config, default=str),
+            json.dumps(results, default=str)
+        )
+        
+        result = execute_db_write(query, params)
+        return result is not None and result > 0
+    except Exception as e:
+        st.error(f"Error saving backtest result: {str(e)}")
+        return False
 
 def get_backtest_results() -> List[Dict[str, Any]]:
     """Get all saved backtest results"""
@@ -1025,8 +1052,11 @@ def get_backtest_results() -> List[Dict[str, Any]]:
     if result:
         for r in result:
             # Parse JSON fields
-            r['config'] = json.loads(r['config']) if r['config'] else {}
-            r['results'] = json.loads(r['results']) if r['results'] else {}
+            r['parameters'] = json.loads(r['parameters']) if r['parameters'] else {}
+            r['results_data'] = json.loads(r['results_data']) if r['results_data'] else {}
+            # Keep config and results for backward compatibility
+            r['config'] = r['parameters']
+            r['results'] = r['results_data']
     return result if result else []
 
 def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
