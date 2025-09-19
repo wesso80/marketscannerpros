@@ -38,12 +38,7 @@ class ScanConfig:
     stop_atr_mult: float = 1.5
     # Optional notifications
     slack_webhook: str = os.getenv("SLACK_WEBHOOK_URL", "")
-    # Email via env (don't paste passwords into code)
-    smtp_host: str = os.getenv("SMTP_HOST", "")
-    smtp_port: int = int(os.getenv("SMTP_PORT", "465"))
-    smtp_user: str = os.getenv("SMTP_USER", "")
-    smtp_pass: str = os.getenv("SMTP_PASS", "")
-    email_to: str  = os.getenv("EMAIL_TO", "")
+    # Legacy SMTP settings removed - now using user-specific SendGrid system
 
 CFG = ScanConfig(
     symbols_equity=["AAPL","MSFT","NVDA","TSLA","AMD","META","GOOGL","AMZN","NFLX","CRM"],
@@ -443,23 +438,7 @@ def push_slack(text: str):
     try: requests.post(CFG.slack_webhook, json={"text": text}, timeout=10)
     except Exception as e: print("Slack error:", e)
 
-def send_email(subject: str, body: str):
-    """Legacy SMTP email function for scan results"""
-    if not all([CFG.smtp_host, CFG.smtp_port, CFG.smtp_user, CFG.smtp_pass, CFG.email_to]):
-        return False, "Missing SMTP env vars"
-    msg = MIMEMultipart()
-    msg["From"] = CFG.smtp_user
-    msg["To"] = CFG.email_to
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
-    try:
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(CFG.smtp_host, CFG.smtp_port, context=context) as server:
-            server.login(CFG.smtp_user, CFG.smtp_pass)
-            server.sendmail(CFG.smtp_user, CFG.email_to, msg.as_string())
-        return True, "sent"
-    except Exception as e:
-        return False, str(e)
+# Legacy SMTP function removed - now using user-specific SendGrid system
 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
     """Send email to specific user using SendGrid - from python_sendgrid integration"""
@@ -1788,11 +1767,21 @@ Happy trading! 📈
                 else:
                     st.error("Please enter a valid email address")
 
-# Legacy scanning notifications (keep for backward compatibility)
+# Scan result notifications (using user-specific email system)
 with st.sidebar.expander("Scan Result Notifications", expanded=False):
     st.markdown("**Send market scan results:**")
-    send_email_toggle = st.checkbox("Email top picks (requires global SMTP setup)")
-    send_slack_toggle = st.checkbox("Slack summary (requires webhook URL)")
+    
+    # Check if user has configured email notifications
+    user_email = st.session_state.get('user_email', '')
+    
+    if user_email:
+        send_email_toggle = st.checkbox("📧 Email top picks to your address", help=f"Send results to {user_email}")
+        st.caption(f"✉️ Configured: {user_email}")
+    else:
+        send_email_toggle = st.checkbox("📧 Email top picks", disabled=True, help="Configure your email in 'Price Alert Notifications' first")
+        st.caption("⚠️ Configure email notifications above to enable")
+    
+    send_slack_toggle = st.checkbox("📱 Slack summary (requires webhook URL)")
 
 # Main scanning logic
 if run_clicked:
@@ -1829,14 +1818,21 @@ if run_clicked:
                 push_slack(slack_msg)
                 st.success("Slack notification sent!")
             
-            if send_email_toggle:
+            if send_email_toggle and user_email:
                 email_subject = f"Market Scanner: Top {len(top_results)} Picks"
-                email_body = format_block(top_results, f"Top {len(top_results)} Market Picks")
-                success, msg = send_email(email_subject, email_body)
+                email_body = f"""Market Scanner Results
+
+{format_block(top_results, f"Top {len(top_results)} Market Picks")}
+
+Scan completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Happy trading! 📈
+"""
+                success = send_email_to_user(email_subject, email_body, user_email)
                 if success:
-                    st.success("Email sent successfully!")
+                    st.success("📧 Email sent successfully!")
                 else:
-                    st.error(f"Email failed: {msg}")
+                    st.error("❌ Email failed to send")
 
 # Display Results
 st.subheader("🏛 Equity Markets")
