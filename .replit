@@ -47,3 +47,7 @@ args = "uv add yfinance pandas numpy requests python-dateutil"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 41613
+externalPort = 3000
