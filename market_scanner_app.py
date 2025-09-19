@@ -5,9 +5,7 @@
 # - Optional Email + Slack summaries
 # - CSV download
 
-import os, smtplib, ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import os
 
 import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
 import psycopg2
