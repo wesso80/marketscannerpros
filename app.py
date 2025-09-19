@@ -29,12 +29,10 @@ st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
 st.markdown("""
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#0b0f19">
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js");
-}
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js'); }
 </script>
 """, unsafe_allow_html=True)
 
@@ -1642,15 +1640,15 @@ st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
 
 # Add PWA functionality
 st.markdown("""
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Market Scanner">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js");
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js');
 }
 </script>
 """, unsafe_allow_html=True)
