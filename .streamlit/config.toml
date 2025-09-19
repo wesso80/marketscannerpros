@@ -2,3 +2,14 @@
 headless = true
 address = "0.0.0.0"
 port = 5000
+baseUrlPath = ""
+enableStaticServing = true
+
+[global]
+dataFrameSerialization = "arrow"
+
+[theme]
+primaryColor = "#007AFF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#111111"

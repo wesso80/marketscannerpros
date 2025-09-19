@@ -1569,6 +1569,16 @@ def create_portfolio_performance_chart() -> go.Figure:
 
 # ================= UI =================
 st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
+
+# Add PWA functionality
+st.markdown("""
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Market Scanner">
+<link rel="apple-touch-icon" href="/icon-192.png">
+""", unsafe_allow_html=True)
 st.title("📊 Market Scanner Dashboard")
 
 # Initialize session state
