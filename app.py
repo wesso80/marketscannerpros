@@ -2880,16 +2880,26 @@ with col4:
 # Download App File
 st.markdown("---")
 st.subheader("💾 Download App")
-with open(__file__, 'r', encoding='utf-8') as f:
-    app_content = f.read()
 
-st.download_button(
-    label="📥 Download app.py to your computer",
-    data=app_content,
-    file_name="market_scanner_app.py",
-    mime="text/python",
-    help="Download the complete Market Scanner application file"
-)
+try:
+    with open(__file__, 'r', encoding='utf-8') as f:
+        app_content = f.read()
+    
+    st.info("💡 **Download Tips:** After clicking download, check your browser's download folder or notification bar.")
+    
+    if st.download_button(
+        label="📥 Download app.py to your computer",
+        data=app_content,
+        file_name="market_scanner_app.py",
+        mime="text/plain",
+        help="Download the complete Market Scanner application file"
+    ):
+        st.success("✅ Download initiated! Check your Downloads folder for 'market_scanner_app.py'")
+        st.info("📁 **File location:** Usually in Downloads folder or browser's default download location")
+        
+except Exception as e:
+    st.error(f"Download error: {str(e)}")
+    st.info("Alternative: You can copy the code from the Replit file browser instead.")
 
 # Footer
 st.markdown("---")
