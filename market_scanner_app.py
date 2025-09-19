@@ -1757,8 +1757,11 @@ Your Settings:
 
 Happy trading! 📈
 """
-                        send_email_to_user(test_subject, test_message, user_email)
-                        st.success("✅ Test email sent! Check your inbox.")
+                        success = send_email_to_user(test_subject, test_message, user_email)
+                        if success:
+                            st.success("✅ Test email sent! Check your inbox.")
+                        else:
+                            st.error("❌ Test email failed. Check SendGrid configuration.")
                     except Exception as e:
                         st.error(f"❌ Email test failed: {str(e)}")
                 else:
