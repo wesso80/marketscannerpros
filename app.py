@@ -1416,6 +1416,30 @@ def add_portfolio_position(symbol: str, quantity: float, price: float, transacti
         st.error(f"Error adding position: {str(e)}")
         return False
 
+def remove_portfolio_position(symbol: str) -> bool:
+    """Completely remove a position and all its transactions from the portfolio"""
+    try:
+        # Check if position exists
+        position_query = "SELECT symbol FROM portfolio_positions WHERE symbol = %s"
+        existing = execute_db_query(position_query, (symbol,))
+        
+        if not existing:
+            st.error(f"Position {symbol} not found")
+            return False
+        
+        # Delete all transactions for this symbol
+        transactions_query = "DELETE FROM portfolio_transactions WHERE symbol = %s"
+        trans_result = execute_db_write(transactions_query, (symbol,))
+        
+        # Delete the position
+        position_delete_query = "DELETE FROM portfolio_positions WHERE symbol = %s"
+        pos_result = execute_db_write(position_delete_query, (symbol,))
+        
+        return pos_result is not None and pos_result > 0
+    except Exception as e:
+        st.error(f"Error removing position: {str(e)}")
+        return False
+
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
     """Get current price for portfolio calculations with robust fallbacks"""
     try:
@@ -2800,6 +2824,7 @@ with tab3:
         col1, col2 = st.columns(2)
         
         with col1:
+            st.markdown("**💰 Sell Position**")
             sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
             if sell_symbol:
                 current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
@@ -2814,6 +2839,24 @@ with tab3:
                             if success:
                                 st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
                                 st.rerun()
+        
+        with col2:
+            st.markdown("**🗑️ Remove Position**")
+            remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
+            if remove_symbol:
+                st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
+                
+                # Confirmation checkbox
+                confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
+                
+                if confirm_remove:
+                    if st.button("Remove Position", type="primary"):
+                        success = remove_portfolio_position(remove_symbol)
+                        if success:
+                            st.success(f"Successfully removed {remove_symbol} from portfolio")
+                            st.rerun()
+                        else:
+                            st.error(f"Failed to remove {remove_symbol}")
     else:
         st.info("No positions found. Add your first position using the 'Add Position' tab.")
 
