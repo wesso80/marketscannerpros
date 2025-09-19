@@ -96,6 +96,12 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
     conn = None
     try:
         conn = pool.getconn()
+        # Validate connection before use
+        if conn.closed:
+            # Connection is closed, get a new one
+            pool.putconn(conn, close=True)
+            conn = pool.getconn()
+        
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(query, params)
             if fetch:
@@ -106,11 +112,19 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
     except Exception as e:
         st.error(f"Database query failed: {e}")
         if conn:
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                # Connection already closed, ignore rollback error
+                pass
         return None
     finally:
         if conn:
-            pool.putconn(conn)
+            try:
+                pool.putconn(conn)
+            except Exception:
+                # Connection may be closed, ignore putconn error
+                pass
 
 def execute_db_write(query: str, params: Optional[tuple] = None) -> Optional[int]:
     """Execute database write query and return affected row count"""
