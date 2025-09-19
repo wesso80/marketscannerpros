@@ -284,11 +284,19 @@ def delete_watchlist(watchlist_id: int) -> bool:
     return result is not None
 
 # ================= Data Source (yfinance) =================
-def get_ohlcv_yf(symbol: str, timeframe: str) -> pd.DataFrame:
-    interval, period = _yf_interval_period(timeframe)
-    data = yf.Ticker(symbol.upper()).history(period=period, interval=interval, auto_adjust=False)
+def get_ohlcv_yf(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+    interval, default_period = _yf_interval_period(timeframe)
+    
+    # Use custom period or date range if provided
+    if start and end:
+        data = yf.Ticker(symbol.upper()).history(start=start, end=end, interval=interval, auto_adjust=False)
+    elif period:
+        data = yf.Ticker(symbol.upper()).history(period=period, interval=interval, auto_adjust=False)
+    else:
+        data = yf.Ticker(symbol.upper()).history(period=default_period, interval=interval, auto_adjust=False)
+    
     if data is None or data.empty:
-        raise ValueError(f"No yfinance data for {symbol} @ {interval}/{period}")
+        raise ValueError(f"No yfinance data for {symbol} @ {interval}/{period or 'date range'}")
     data.index = pd.to_datetime(data.index, utc=True)
     out = pd.DataFrame({
         "open":   data["Open"].astype(float),
@@ -299,8 +307,8 @@ def get_ohlcv_yf(symbol: str, timeframe: str) -> pd.DataFrame:
     }, index=data.index).dropna()
     return out
 
-def get_ohlcv(symbol: str, timeframe: str) -> pd.DataFrame:
-    return get_ohlcv_yf(symbol, timeframe)
+def get_ohlcv(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+    return get_ohlcv_yf(symbol, timeframe, period, start, end)
 
 # ================= Indicators (pure pandas) =================
 def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
@@ -716,6 +724,364 @@ def get_chart_data_summary(symbol: str, timeframe: str = "1D") -> Dict[str, Any]
         }
     except Exception:
         return {}
+
+# ================= Backtesting Engine =================
+def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: str = "1D", 
+                initial_equity: float = 10000, risk_per_trade: float = 0.01, 
+                stop_atr_mult: float = 1.5, min_score: float = 10) -> Dict[str, Any]:
+    """Run historical backtest on scoring methodology with robust risk management"""
+    try:
+        # Validate date range for intraday timeframes
+        start_dt = pd.to_datetime(start_date)
+        end_dt = pd.to_datetime(end_date)
+        days_diff = (end_dt - start_dt).days
+        
+        # yfinance limitations for intraday data
+        if timeframe in ['1m', '5m', '15m', '30m', '1h'] and days_diff > 60:
+            return {'error': 'Intraday backtests limited to 60 days max due to data provider constraints', 
+                   'trades': [], 'metrics': {}, 'symbol_performance': {}}
+        
+        results = {
+            'trades': [],
+            'equity_curve': [],
+            'metrics': {},
+            'symbol_performance': {},
+            'errors': []
+        }
+        
+        # Portfolio state tracking
+        current_equity = initial_equity
+        total_trades = 0
+        winning_trades = 0
+        max_equity = initial_equity
+        max_drawdown = 0
+        active_positions = {}  # symbol -> position dict
+        max_positions = 5  # Portfolio risk management
+        
+        # Create combined date index for equity curve
+        all_dates = set()
+        symbol_data = {}
+        
+        # Pre-load and validate all symbol data
+        for symbol in symbols:
+            try:
+                df = get_ohlcv(symbol, timeframe, period=None, start=start_date, end=end_date)
+                if df.empty or len(df) < 50:
+                    results['errors'].append(f"{symbol}: Insufficient data ({len(df)} bars)")
+                    continue
+                
+                df_features = compute_features(df).dropna()
+                if df_features.empty:
+                    results['errors'].append(f"{symbol}: Features calculation failed")
+                    continue
+                
+                # Calculate scores
+                scores = [score_row(row) for _, row in df_features.iterrows()]
+                df_features['score'] = scores
+                
+                symbol_data[symbol] = df_features
+                all_dates.update(df_features.index)
+                
+            except Exception as e:
+                results['errors'].append(f"{symbol}: Data loading failed - {str(e)}")
+                continue
+        
+        if not symbol_data:
+            return {'error': 'No valid symbol data loaded', 'trades': [], 'metrics': {}, 'symbol_performance': {}}
+        
+        # Create unified timeline
+        date_index = sorted(all_dates)
+        
+        # Initialize daily equity tracking
+        daily_equity = []
+        daily_returns = []
+        
+        # Main backtesting loop
+        for current_date in date_index:
+            day_start_equity = current_equity
+            
+            # Process each symbol for this date
+            for symbol, df_features in symbol_data.items():
+                if current_date not in df_features.index:
+                    continue
+                
+                row = df_features.loc[current_date]
+                
+                # Check existing positions for exits (stops, targets, time)
+                if symbol in active_positions:
+                    position = active_positions[symbol]
+                    exit_triggered = False
+                    exit_reason = ""
+                    exit_price = row['close']
+                    
+                    # Intrabar stop checking using OHLC
+                    if position['direction'] == "long":
+                        if row['low'] <= position['stop_price']:
+                            exit_triggered = True
+                            exit_reason = "stop_loss"
+                            exit_price = position['stop_price']  # Use stop price
+                        elif row['score'] < min_score / 2:
+                            exit_triggered = True
+                            exit_reason = "score_exit"
+                            exit_price = row['close']
+                    else:  # short position
+                        if row['high'] >= position['stop_price']:
+                            exit_triggered = True
+                            exit_reason = "stop_loss"
+                            exit_price = position['stop_price']  # Use stop price
+                        elif row['score'] < min_score / 2:
+                            exit_triggered = True
+                            exit_reason = "score_exit"
+                            exit_price = row['close']
+                    
+                    # Time-based exit
+                    if (current_date - position['entry_date']).days >= 20:
+                        exit_triggered = True
+                        exit_reason = "time_exit"
+                        exit_price = row['close']
+                    
+                    if exit_triggered:
+                        # Execute exit
+                        if position['direction'] == "long":
+                            trade_return = (exit_price - position['entry_price']) / position['entry_price']
+                        else:
+                            trade_return = (position['entry_price'] - exit_price) / position['entry_price']
+                        
+                        trade_pnl = trade_return * position['position_value']
+                        current_equity += trade_pnl
+                        
+                        trade_record = {
+                            'symbol': symbol,
+                            'direction': position['direction'],
+                            'entry_date': position['entry_date'],
+                            'exit_date': current_date,
+                            'entry_price': position['entry_price'],
+                            'exit_price': exit_price,
+                            'position_size': position['position_size'],
+                            'trade_return': trade_return,
+                            'trade_pnl': trade_pnl,
+                            'exit_reason': exit_reason,
+                            'holding_days': (current_date - position['entry_date']).days
+                        }
+                        
+                        results['trades'].append(trade_record)
+                        total_trades += 1
+                        
+                        if trade_pnl > 0:
+                            winning_trades += 1
+                        
+                        # Remove position
+                        del active_positions[symbol]
+                
+                # Check for new entries (if not already in position and portfolio capacity available)
+                if (symbol not in active_positions and 
+                    len(active_positions) < max_positions and 
+                    row['score'] >= min_score and
+                    current_equity > 0):
+                    
+                    # Enter position
+                    entry_price = row['close']
+                    direction = "long" if row['score'] > 0 else "short"
+                    
+                    # ATR-based position sizing with current equity
+                    atr = row['atr']
+                    stop_distance = stop_atr_mult * atr
+                    stop_price = entry_price - stop_distance if direction == "long" else entry_price + stop_distance
+                    
+                    # Risk management: use current equity for sizing
+                    risk_amount = current_equity * risk_per_trade
+                    position_size = risk_amount / abs(entry_price - stop_price)
+                    position_value = position_size * entry_price
+                    
+                    # Don't risk more than available equity
+                    if position_value > current_equity * 0.2:  # Max 20% per position
+                        position_value = current_equity * 0.2
+                        position_size = position_value / entry_price
+                    
+                    active_positions[symbol] = {
+                        'symbol': symbol,
+                        'direction': direction,
+                        'entry_price': entry_price,
+                        'entry_date': current_date,
+                        'stop_price': stop_price,
+                        'position_size': position_size,
+                        'position_value': position_value
+                    }
+            
+            # Update equity curve and drawdown tracking
+            if current_equity != day_start_equity:
+                daily_pnl = current_equity - day_start_equity
+                daily_return = daily_pnl / day_start_equity if day_start_equity > 0 else 0
+                daily_returns.append(daily_return)
+                
+                results['equity_curve'].append({
+                    'date': current_date,
+                    'equity': current_equity,
+                    'trade_pnl': daily_pnl
+                })
+                
+                # Update max drawdown
+                if current_equity > max_equity:
+                    max_equity = current_equity
+                else:
+                    drawdown = (max_equity - current_equity) / max_equity
+                    max_drawdown = max(max_drawdown, drawdown)
+        
+        # Calculate symbol performance
+        for symbol in symbols:
+            symbol_trades = [t for t in results['trades'] if t['symbol'] == symbol]
+            if symbol_trades:
+                symbol_returns = [t['trade_return'] for t in symbol_trades]
+                symbol_pnl = sum([t['trade_pnl'] for t in symbol_trades])
+                
+                results['symbol_performance'][symbol] = {
+                    'total_trades': len(symbol_trades),
+                    'winning_trades': len([t for t in symbol_trades if t['trade_pnl'] > 0]),
+                    'total_pnl': symbol_pnl,
+                    'avg_return': np.mean(symbol_returns),
+                    'win_rate': len([t for t in symbol_trades if t['trade_pnl'] > 0]) / len(symbol_trades)
+                }
+        
+        # Calculate robust performance metrics
+        if results['trades']:
+            total_return = (current_equity - initial_equity) / initial_equity
+            
+            # Annualized Sharpe ratio based on actual timeframe
+            if len(daily_returns) > 1:
+                returns_std = np.std(daily_returns)
+                avg_return = np.mean(daily_returns)
+                
+                # Annualization factor based on timeframe
+                if timeframe == "1D":
+                    periods_per_year = 252
+                elif timeframe == "1h":
+                    periods_per_year = 252 * 6.5  # Trading hours
+                else:
+                    periods_per_year = 252  # Default
+                
+                sharpe_ratio = (avg_return / returns_std) * np.sqrt(periods_per_year) if returns_std > 0 else 0
+            else:
+                sharpe_ratio = 0
+            
+            win_rate = winning_trades / total_trades
+            avg_win = np.mean([t['trade_pnl'] for t in results['trades'] if t['trade_pnl'] > 0]) if winning_trades > 0 else 0
+            avg_loss = np.mean([t['trade_pnl'] for t in results['trades'] if t['trade_pnl'] < 0]) if (total_trades - winning_trades) > 0 else 0
+            profit_factor = abs(avg_win * winning_trades / (abs(avg_loss) * (total_trades - winning_trades))) if avg_loss != 0 and (total_trades - winning_trades) > 0 else float('inf')
+            
+            results['metrics'] = {
+                'initial_equity': initial_equity,
+                'final_equity': current_equity,
+                'total_return': total_return,
+                'total_trades': total_trades,
+                'winning_trades': winning_trades,
+                'losing_trades': total_trades - winning_trades,
+                'win_rate': win_rate,
+                'avg_win': avg_win,
+                'avg_loss': avg_loss,
+                'profit_factor': profit_factor,
+                'max_drawdown': max_drawdown,
+                'sharpe_ratio': sharpe_ratio,
+                'avg_holding_days': np.mean([t['holding_days'] for t in results['trades']]),
+                'max_concurrent_positions': max_positions,
+                'symbols_tested': len(symbol_data)
+            }
+        else:
+            results['metrics'] = {
+                'initial_equity': initial_equity,
+                'final_equity': current_equity,
+                'total_return': 0,
+                'total_trades': 0,
+                'winning_trades': 0,
+                'losing_trades': 0,
+                'win_rate': 0,
+                'avg_win': 0,
+                'avg_loss': 0,
+                'profit_factor': 0,
+                'max_drawdown': 0,
+                'sharpe_ratio': 0,
+                'avg_holding_days': 0,
+                'max_concurrent_positions': max_positions,
+                'symbols_tested': len(symbol_data)
+            }
+        
+        return results
+        
+    except Exception as e:
+        return {'error': str(e), 'trades': [], 'metrics': {}, 'symbol_performance': {}}
+
+def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, Any]) -> bool:
+    """Save backtest results to database"""
+    query = """
+        INSERT INTO backtesting_results (name, config, results, created_at) 
+        VALUES (%s, %s, %s, NOW())
+    """
+    result = execute_db_write(query, (name, json.dumps(config), json.dumps(results, default=str)))
+    return result is not None and result > 0
+
+def get_backtest_results() -> List[Dict[str, Any]]:
+    """Get all saved backtest results"""
+    query = "SELECT * FROM backtesting_results ORDER BY created_at DESC"
+    result = execute_db_query(query)
+    if result:
+        for r in result:
+            # Parse JSON fields
+            r['config'] = json.loads(r['config']) if r['config'] else {}
+            r['results'] = json.loads(r['results']) if r['results'] else {}
+    return result if result else []
+
+def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
+    """Create backtest performance chart"""
+    if not results.get('equity_curve'):
+        return None
+    
+    equity_data = results['equity_curve']
+    equity_df = pd.DataFrame(equity_data)
+    
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.1,
+        row_heights=[0.7, 0.3],
+        subplot_titles=['Equity Curve', 'Trade P&L']
+    )
+    
+    # Equity curve
+    fig.add_trace(
+        go.Scatter(
+            x=equity_df['date'],
+            y=equity_df['equity'],
+            mode='lines',
+            name='Portfolio Equity',
+            line=dict(color='#00D4AA', width=2)
+        ),
+        row=1, col=1
+    )
+    
+    # Trade P&L bars
+    colors = ['green' if pnl >= 0 else 'red' for pnl in equity_df['trade_pnl']]
+    fig.add_trace(
+        go.Bar(
+            x=equity_df['date'],
+            y=equity_df['trade_pnl'],
+            name='Trade P&L',
+            marker_color=colors,
+            opacity=0.7
+        ),
+        row=2, col=1
+    )
+    
+    fig.update_layout(
+        title="Backtest Performance Analysis",
+        height=600,
+        showlegend=True,
+        template="plotly_dark"
+    )
+    
+    fig.update_yaxes(title_text="Equity ($)", row=1, col=1)
+    fig.update_yaxes(title_text="P&L ($)", row=2, col=1)
+    fig.update_xaxes(title_text="Date", row=2, col=1)
+    
+    return fig
 
 # ================= UI =================
 st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
@@ -1322,6 +1688,262 @@ if chart_symbol and chart_symbol.strip():
                 st.error(f"Error generating chart: {str(e)}")
 else:
     st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
+
+# ================= Backtesting Section =================
+st.subheader("🔬 Strategy Backtesting")
+
+# Backtest controls
+col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+
+with col1:
+    backtest_name = st.text_input("Backtest Name:", placeholder="e.g., SPY Momentum Test", key="backtest_name")
+
+with col2:
+    start_date = st.date_input("Start Date:", value=pd.to_datetime("2023-01-01"), key="backtest_start")
+
+with col3:
+    end_date = st.date_input("End Date:", value=pd.to_datetime("2024-01-01"), key="backtest_end")
+
+with col4:
+    backtest_timeframe = st.selectbox("Timeframe:", ["1D", "1h"], key="backtest_timeframe")
+
+# Backtest parameters
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
+
+with col2:
+    risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
+
+with col3:
+    stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
+
+with col4:
+    min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
+
+# Symbol selection for backtesting
+st.write("**Select Symbols for Backtesting:**")
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    # Get symbols from current scan results or manual entry
+    available_symbols = []
+    if not st.session_state.eq_results.empty:
+        available_symbols.extend(st.session_state.eq_results['symbol'].head(10).tolist())
+    if not st.session_state.cx_results.empty:
+        available_symbols.extend(st.session_state.cx_results['symbol'].head(5).tolist())
+    
+    if available_symbols:
+        backtest_symbols = st.multiselect(
+            "Choose from scanned symbols:", 
+            available_symbols, 
+            default=available_symbols[:5],
+            key="backtest_symbols_from_scan"
+        )
+    else:
+        backtest_symbols = []
+    
+    manual_symbols = st.text_area(
+        "Or enter symbols manually (one per line):", 
+        placeholder="AAPL\nMSFT\nGOOGL\nTSLA",
+        height=80,
+        key="manual_backtest_symbols"
+    )
+    
+    # Combine symbols
+    if manual_symbols.strip():
+        manual_list = [s.strip().upper() for s in manual_symbols.splitlines() if s.strip()]
+        all_backtest_symbols = list(set(backtest_symbols + manual_list))
+    else:
+        all_backtest_symbols = backtest_symbols
+
+with col2:
+    st.write("**Actions:**")
+    run_backtest_btn = st.button("🚀 Run Backtest", use_container_width=True, key="run_backtest")
+    
+    if st.button("📊 View History", use_container_width=True, key="view_backtest_history"):
+        st.session_state.show_backtest_history = True
+
+# Run backtest
+if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
+    with st.spinner(f"Running backtest on {len(all_backtest_symbols)} symbols..."):
+        try:
+            config = {
+                'symbols': all_backtest_symbols,
+                'start_date': str(start_date),
+                'end_date': str(end_date),
+                'timeframe': backtest_timeframe,
+                'initial_equity': initial_equity,
+                'risk_per_trade': risk_per_trade,
+                'stop_atr_mult': stop_atr_mult,
+                'min_score': min_score
+            }
+            
+            results = run_backtest(
+                symbols=all_backtest_symbols,
+                start_date=str(start_date),
+                end_date=str(end_date),
+                timeframe=backtest_timeframe,
+                initial_equity=initial_equity,
+                risk_per_trade=risk_per_trade,
+                stop_atr_mult=stop_atr_mult,
+                min_score=min_score
+            )
+            
+            if results.get('error'):
+                st.error(f"Backtest failed: {results['error']}")
+            elif not results.get('trades'):
+                st.warning("No trades generated. Try lowering the minimum score threshold or adjusting the date range.")
+            else:
+                # Save results to database
+                if save_backtest_result(backtest_name.strip(), config, results):
+                    st.success(f"Backtest '{backtest_name}' completed and saved!")
+                else:
+                    st.warning("Backtest completed but failed to save to database")
+                
+                # Display results
+                metrics = results['metrics']
+                
+                # Performance metrics
+                col1, col2, col3, col4, col5 = st.columns(5)
+                
+                with col1:
+                    total_return = metrics.get('total_return', 0) * 100
+                    delta_color = "normal" if total_return >= 0 else "inverse"
+                    st.metric("Total Return", f"{total_return:.1f}%", delta_color=delta_color)
+                
+                with col2:
+                    win_rate = metrics.get('win_rate', 0) * 100
+                    st.metric("Win Rate", f"{win_rate:.1f}%")
+                
+                with col3:
+                    sharpe = metrics.get('sharpe_ratio', 0)
+                    st.metric("Sharpe Ratio", f"{sharpe:.2f}")
+                
+                with col4:
+                    max_dd = metrics.get('max_drawdown', 0) * 100
+                    st.metric("Max Drawdown", f"{max_dd:.1f}%")
+                
+                with col5:
+                    total_trades = metrics.get('total_trades', 0)
+                    st.metric("Total Trades", total_trades)
+                
+                # Performance chart
+                chart_fig = create_backtest_chart(results)
+                if chart_fig:
+                    st.plotly_chart(chart_fig, use_container_width=True)
+                
+                # Detailed metrics
+                with st.expander("📈 Detailed Performance Metrics", expanded=False):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**Trade Statistics:**")
+                        st.write(f"• Total Trades: {metrics.get('total_trades', 0)}")
+                        st.write(f"• Winning Trades: {metrics.get('winning_trades', 0)}")
+                        st.write(f"• Losing Trades: {metrics.get('losing_trades', 0)}")
+                        st.write(f"• Win Rate: {metrics.get('win_rate', 0)*100:.1f}%")
+                        st.write(f"• Average Holding Days: {metrics.get('avg_holding_days', 0):.1f}")
+                    
+                    with col2:
+                        st.markdown("**Financial Metrics:**")
+                        st.write(f"• Initial Equity: ${metrics.get('initial_equity', 0):,.2f}")
+                        st.write(f"• Final Equity: ${metrics.get('final_equity', 0):,.2f}")
+                        st.write(f"• Average Win: ${metrics.get('avg_win', 0):,.2f}")
+                        st.write(f"• Average Loss: ${metrics.get('avg_loss', 0):,.2f}")
+                        st.write(f"• Profit Factor: {metrics.get('profit_factor', 0):.2f}")
+                
+                # Symbol performance breakdown
+                if results.get('symbol_performance'):
+                    with st.expander("📊 Symbol Performance Breakdown", expanded=False):
+                        symbol_perf_data = []
+                        for symbol, perf in results['symbol_performance'].items():
+                            symbol_perf_data.append({
+                                'Symbol': symbol,
+                                'Trades': perf['total_trades'],
+                                'Win Rate': f"{perf['win_rate']*100:.1f}%",
+                                'Total P&L': f"${perf['total_pnl']:,.2f}",
+                                'Avg Return': f"{perf['avg_return']*100:.2f}%"
+                            })
+                        
+                        if symbol_perf_data:
+                            symbol_df = pd.DataFrame(symbol_perf_data)
+                            st.dataframe(symbol_df, use_container_width=True)
+                
+                # Trade log
+                if results.get('trades'):
+                    with st.expander("📋 Trade Log", expanded=False):
+                        trades_df = pd.DataFrame(results['trades'])
+                        trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
+                        trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
+                        trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
+                        trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
+                        
+                        display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
+                        st.dataframe(trades_df[display_cols], use_container_width=True)
+                
+                # Errors if any
+                if results.get('errors'):
+                    with st.expander("⚠️ Backtest Errors", expanded=False):
+                        for error in results['errors']:
+                            st.write(f"• {error}")
+                
+        except Exception as e:
+            st.error(f"Backtest failed: {str(e)}")
+
+elif run_backtest_btn:
+    if not all_backtest_symbols:
+        st.error("Please select symbols for backtesting")
+    if not backtest_name.strip():
+        st.error("Please enter a backtest name")
+
+# Show backtest history
+if st.session_state.get('show_backtest_history', False):
+    with st.expander("📚 Backtest History", expanded=True):
+        saved_backtests = get_backtest_results()
+        
+        if saved_backtests:
+            for i, backtest in enumerate(saved_backtests[:10]):  # Show last 10 backtests
+                with st.container():
+                    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                    
+                    with col1:
+                        st.write(f"**{backtest['name']}**")
+                        created_at = pd.to_datetime(backtest['created_at']).strftime('%Y-%m-%d %H:%M')
+                        st.caption(f"Created: {created_at}")
+                    
+                    with col2:
+                        metrics = backtest.get('results', {}).get('metrics', {})
+                        total_return = metrics.get('total_return', 0) * 100
+                        st.metric("Return", f"{total_return:.1f}%")
+                    
+                    with col3:
+                        win_rate = metrics.get('win_rate', 0) * 100
+                        st.metric("Win Rate", f"{win_rate:.1f}%")
+                    
+                    with col4:
+                        total_trades = metrics.get('total_trades', 0)
+                        st.metric("Trades", total_trades)
+                    
+                    if st.button(f"View Details", key=f"view_backtest_{i}"):
+                        st.session_state[f'show_backtest_details_{i}'] = True
+                    
+                    # Show details if requested
+                    if st.session_state.get(f'show_backtest_details_{i}', False):
+                        config = backtest.get('config', {})
+                        st.json({
+                            'Configuration': config,
+                            'Results Summary': metrics
+                        })
+                    
+                    st.divider()
+        else:
+            st.info("No saved backtests found. Run a backtest above to get started.")
+        
+        if st.button("Close History", key="close_backtest_history"):
+            st.session_state.show_backtest_history = False
+            st.rerun()
 
 # Status information
 st.subheader("📊 Scan Statistics")
