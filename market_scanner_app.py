@@ -19,6 +19,9 @@ from dateutil import tz
 from math import floor
 import io
 import json
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px
 
 # ================= Config =================
 @dataclass
@@ -452,6 +455,267 @@ def to_csv_download(df: pd.DataFrame, filename: str) -> bytes:
     output = io.StringIO()
     df.to_csv(output, index=False)
     return output.getvalue().encode('utf-8')
+
+# ================= Advanced Charting =================
+def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: List[str] = None) -> go.Figure:
+    """Create advanced candlestick chart with technical indicators"""
+    if indicators is None:
+        indicators = ["EMA", "RSI", "MACD", "Volume"]
+    
+    try:
+        # Get data and compute features
+        df = get_ohlcv(symbol, timeframe)
+        if df.empty or len(df) < 50:
+            return None
+        
+        df_with_features = compute_features(df).dropna()
+        if df_with_features.empty:
+            return None
+            
+        # Create subplots based on selected indicators
+        subplot_count = 1  # Main price chart
+        if "RSI" in indicators:
+            subplot_count += 1
+        if "MACD" in indicators:
+            subplot_count += 1
+        if "Volume" in indicators:
+            subplot_count += 1
+        
+        # Calculate subplot heights
+        if subplot_count == 1:
+            row_heights = [1]
+        elif subplot_count == 2:
+            row_heights = [0.7, 0.3]
+        elif subplot_count == 3:
+            row_heights = [0.6, 0.2, 0.2]
+        else:
+            row_heights = [0.5, 0.17, 0.17, 0.16]
+            
+        fig = make_subplots(
+            rows=subplot_count, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.02,
+            row_heights=row_heights,
+            subplot_titles=['Price Chart'] + [ind for ind in indicators if ind != "EMA"]
+        )
+        
+        # Main candlestick chart
+        fig.add_trace(
+            go.Candlestick(
+                x=df_with_features.index,
+                open=df_with_features['open'],
+                high=df_with_features['high'],
+                low=df_with_features['low'],
+                close=df_with_features['close'],
+                name=f"{symbol} Price",
+                increasing_line_color='#00D4AA',
+                decreasing_line_color='#FF6B6B'
+            ),
+            row=1, col=1
+        )
+        
+        # Add EMAs if selected
+        if "EMA" in indicators:
+            ema_colors = {'ema8': '#FF9500', 'ema21': '#007AFF', 'ema50': '#34C759', 'ema200': '#FF3B30'}
+            for ema, color in ema_colors.items():
+                if ema in df_with_features.columns:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=df_with_features.index,
+                            y=df_with_features[ema],
+                            mode='lines',
+                            name=ema.upper(),
+                            line=dict(color=color, width=1.5),
+                            opacity=0.8
+                        ),
+                        row=1, col=1
+                    )
+        
+        # Add Bollinger Bands if EMA is selected
+        if "EMA" in indicators and 'bb_width' in df_with_features.columns:
+            bb_upper = df_with_features['close'].rolling(20).mean() + 2 * df_with_features['close'].rolling(20).std()
+            bb_lower = df_with_features['close'].rolling(20).mean() - 2 * df_with_features['close'].rolling(20).std()
+            bb_middle = df_with_features['close'].rolling(20).mean()
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=bb_upper,
+                    mode='lines',
+                    name='BB Upper',
+                    line=dict(color='rgba(128, 128, 128, 0.3)', width=1),
+                    showlegend=False
+                ),
+                row=1, col=1
+            )
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=bb_lower,
+                    mode='lines',
+                    name='BB Lower',
+                    line=dict(color='rgba(128, 128, 128, 0.3)', width=1),
+                    fill='tonexty',
+                    fillcolor='rgba(128, 128, 128, 0.1)',
+                    showlegend=False
+                ),
+                row=1, col=1
+            )
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=bb_middle,
+                    mode='lines',
+                    name='BB Middle',
+                    line=dict(color='rgba(128, 128, 128, 0.5)', width=1),
+                    showlegend=False
+                ),
+                row=1, col=1
+            )
+        
+        current_row = 2
+        
+        # RSI subplot
+        if "RSI" in indicators and 'rsi' in df_with_features.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=df_with_features['rsi'],
+                    mode='lines',
+                    name='RSI',
+                    line=dict(color='#FF9500', width=2)
+                ),
+                row=current_row, col=1
+            )
+            
+            # Add RSI levels
+            fig.add_hline(y=70, line_dash="dash", line_color="red", opacity=0.5, row=current_row)
+            fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=current_row)
+            fig.add_hline(y=50, line_dash="dot", line_color="gray", opacity=0.3, row=current_row)
+            
+            current_row += 1
+        
+        # MACD subplot
+        if "MACD" in indicators and 'macd_hist' in df_with_features.columns:
+            # Calculate MACD components
+            macd_fast = df_with_features['close'].ewm(span=12).mean()
+            macd_slow = df_with_features['close'].ewm(span=26).mean()
+            macd_line = macd_fast - macd_slow
+            signal_line = macd_line.ewm(span=9).mean()
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=macd_line,
+                    mode='lines',
+                    name='MACD',
+                    line=dict(color='#007AFF', width=2)
+                ),
+                row=current_row, col=1
+            )
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_with_features.index,
+                    y=signal_line,
+                    mode='lines',
+                    name='Signal',
+                    line=dict(color='#FF3B30', width=2)
+                ),
+                row=current_row, col=1
+            )
+            
+            fig.add_trace(
+                go.Bar(
+                    x=df_with_features.index,
+                    y=df_with_features['macd_hist'],
+                    name='MACD Histogram',
+                    marker_color=['green' if x >= 0 else 'red' for x in df_with_features['macd_hist']],
+                    opacity=0.6
+                ),
+                row=current_row, col=1
+            )
+            
+            current_row += 1
+        
+        # Volume subplot
+        if "Volume" in indicators and 'volume' in df_with_features.columns:
+            colors = ['green' if close >= open_price else 'red' 
+                     for close, open_price in zip(df_with_features['close'], df_with_features['open'])]
+            
+            fig.add_trace(
+                go.Bar(
+                    x=df_with_features.index,
+                    y=df_with_features['volume'],
+                    name='Volume',
+                    marker_color=colors,
+                    opacity=0.6
+                ),
+                row=current_row, col=1
+            )
+        
+        # Update layout
+        fig.update_layout(
+            title=f"{symbol} - {timeframe} Chart with Technical Analysis",
+            xaxis_rangeslider_visible=False,
+            height=600 if subplot_count <= 2 else 800,
+            showlegend=True,
+            legend=dict(x=0, y=1, traceorder="normal"),
+            margin=dict(l=50, r=50, t=50, b=50),
+            template="plotly_dark"
+        )
+        
+        # Remove x-axis labels from all but the bottom subplot
+        for i in range(1, subplot_count):
+            fig.update_xaxes(showticklabels=False, row=i, col=1)
+        
+        # Update y-axis titles
+        fig.update_yaxes(title_text="Price ($)", row=1, col=1)
+        if "RSI" in indicators:
+            fig.update_yaxes(title_text="RSI", row=2 if "EMA" in indicators else 2, col=1)
+        if "MACD" in indicators:
+            macd_row = 2 + (1 if "RSI" in indicators else 0)
+            fig.update_yaxes(title_text="MACD", row=macd_row, col=1)
+        if "Volume" in indicators:
+            vol_row = subplot_count
+            fig.update_yaxes(title_text="Volume", row=vol_row, col=1)
+        
+        return fig
+        
+    except Exception as e:
+        st.error(f"Error creating chart for {symbol}: {str(e)}")
+        return None
+
+def get_chart_data_summary(symbol: str, timeframe: str = "1D") -> Dict[str, Any]:
+    """Get summary data for chart display"""
+    try:
+        df = get_ohlcv(symbol, timeframe)
+        if df.empty:
+            return {}
+        
+        df_with_features = compute_features(df).dropna()
+        if df_with_features.empty:
+            return {}
+            
+        latest = df_with_features.iloc[-1]
+        prev = df_with_features.iloc[-2] if len(df_with_features) > 1 else latest
+        
+        price_change = latest['close'] - prev['close']
+        price_change_pct = (price_change / prev['close']) * 100
+        
+        return {
+            'current_price': latest['close'],
+            'price_change': price_change,
+            'price_change_pct': price_change_pct,
+            'volume': latest['volume'],
+            'rsi': latest['rsi'] if 'rsi' in latest else None,
+            'atr': latest['atr'] if 'atr' in latest else None,
+            'ema50_above_200': latest['ema50'] > latest['ema200'] if 'ema50' in latest and 'ema200' in latest else None
+        }
+    except Exception:
+        return {}
 
 # ================= UI =================
 st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
@@ -900,6 +1164,164 @@ with tab2:
     else:
         st.info("No triggered alerts yet.")
 
+
+# ================= Advanced Charting Section =================
+st.subheader("📈 Advanced Technical Analysis Charts")
+
+# Chart controls
+col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+
+with col1:
+    # Get symbols from scan results for quick selection
+    available_symbols = []
+    if not st.session_state.eq_results.empty:
+        available_symbols.extend(st.session_state.eq_results['symbol'].tolist())
+    if not st.session_state.cx_results.empty:
+        available_symbols.extend(st.session_state.cx_results['symbol'].tolist())
+    
+    if available_symbols:
+        symbol_options = ["Manual Entry"] + available_symbols
+        selected_symbol_option = st.selectbox("Select Symbol:", symbol_options, key="chart_symbol_select")
+        
+        if selected_symbol_option == "Manual Entry":
+            chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="manual_chart_symbol")
+        else:
+            chart_symbol = selected_symbol_option
+    else:
+        chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="chart_symbol_input")
+
+with col2:
+    chart_timeframe = st.selectbox("Timeframe:", ["1D", "1h", "30m", "15m", "5m"], key="chart_timeframe")
+
+with col3:
+    chart_period = st.selectbox("Period:", ["3mo", "6mo", "1y", "2y", "5y"], key="chart_period")
+
+with col4:
+    st.write("**Technical Indicators:**")
+    col4a, col4b = st.columns(2)
+    with col4a:
+        show_ema = st.checkbox("EMAs", value=True, key="show_ema")
+        show_rsi = st.checkbox("RSI", value=True, key="show_rsi")
+    with col4b:
+        show_macd = st.checkbox("MACD", value=True, key="show_macd")
+        show_volume = st.checkbox("Volume", value=True, key="show_volume")
+
+# Chart generation
+if chart_symbol and chart_symbol.strip():
+    chart_symbol_clean = chart_symbol.strip().upper()
+    
+    # Display current price summary
+    summary_data = get_chart_data_summary(chart_symbol_clean, chart_timeframe)
+    if summary_data:
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            price = summary_data.get('current_price', 0)
+            st.metric("Current Price", f"${price:.2f}" if price else "N/A")
+        
+        with col2:
+            change = summary_data.get('price_change', 0)
+            change_pct = summary_data.get('price_change_pct', 0)
+            delta_color = "normal" if change >= 0 else "inverse"
+            st.metric("Change", f"${change:.2f}", f"{change_pct:+.2f}%", delta_color=delta_color)
+        
+        with col3:
+            rsi = summary_data.get('rsi')
+            if rsi is not None:
+                rsi_color = "normal" if 30 <= rsi <= 70 else "inverse"
+                st.metric("RSI", f"{rsi:.1f}", delta_color=rsi_color)
+            else:
+                st.metric("RSI", "N/A")
+        
+        with col4:
+            volume = summary_data.get('volume', 0)
+            if volume > 0:
+                if volume >= 1_000_000:
+                    vol_display = f"{volume/1_000_000:.1f}M"
+                elif volume >= 1_000:
+                    vol_display = f"{volume/1_000:.1f}K"
+                else:
+                    vol_display = f"{volume:,.0f}"
+                st.metric("Volume", vol_display)
+            else:
+                st.metric("Volume", "N/A")
+        
+        with col5:
+            ema_trend = summary_data.get('ema50_above_200')
+            if ema_trend is not None:
+                trend_text = "Bullish" if ema_trend else "Bearish"
+                trend_color = "normal" if ema_trend else "inverse"
+                st.metric("Trend", trend_text, delta_color=trend_color)
+            else:
+                st.metric("Trend", "N/A")
+    
+    # Generate chart
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("📊 Generate Chart", key="generate_chart", use_container_width=True):
+            st.session_state.generate_chart = True
+    
+    # Display chart if requested
+    if st.session_state.get('generate_chart', False):
+        with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
+            try:
+                # Build indicator list
+                selected_indicators = []
+                if show_ema:
+                    selected_indicators.append("EMA")
+                if show_rsi:
+                    selected_indicators.append("RSI")
+                if show_macd:
+                    selected_indicators.append("MACD")
+                if show_volume:
+                    selected_indicators.append("Volume")
+                
+                # Create chart
+                chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
+                
+                if chart_fig:
+                    st.plotly_chart(chart_fig, use_container_width=True)
+                    
+                    # Technical analysis summary
+                    with st.expander("📊 Technical Analysis Summary", expanded=False):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**Price Action:**")
+                            if summary_data:
+                                price = summary_data.get('current_price', 0)
+                                change_pct = summary_data.get('price_change_pct', 0)
+                                
+                                if change_pct > 2:
+                                    st.success("🟢 Strong bullish momentum")
+                                elif change_pct > 0:
+                                    st.info("🔵 Mild bullish momentum")
+                                elif change_pct > -2:
+                                    st.warning("🟡 Consolidation")
+                                else:
+                                    st.error("🔴 Bearish momentum")
+                        
+                        with col2:
+                            st.markdown("**RSI Analysis:**")
+                            rsi = summary_data.get('rsi') if summary_data else None
+                            if rsi is not None:
+                                if rsi > 70:
+                                    st.error("🔴 Overbought (RSI > 70)")
+                                elif rsi < 30:
+                                    st.success("🟢 Oversold (RSI < 30)")
+                                elif rsi > 50:
+                                    st.info("🔵 Bullish momentum (RSI > 50)")
+                                else:
+                                    st.warning("🟡 Bearish momentum (RSI < 50)")
+                            else:
+                                st.info("RSI data not available")
+                else:
+                    st.error(f"Unable to generate chart for {chart_symbol_clean}. Please check the symbol and try again.")
+                    
+            except Exception as e:
+                st.error(f"Error generating chart: {str(e)}")
+else:
+    st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
 
 # Status information
 st.subheader("📊 Scan Statistics")
