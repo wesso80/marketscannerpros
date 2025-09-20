@@ -30,8 +30,10 @@ st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 
 st.markdown("""
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0f172a">
-<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+<meta name="theme-color" content="#0b0f19">
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
+</script>
 """, unsafe_allow_html=True)
 
 # ================= Config =================
@@ -1639,12 +1641,16 @@ st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
 # Add PWA functionality
 st.markdown("""
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#0b0f19">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Market Scanner">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
 """, unsafe_allow_html=True)
 st.title("📊 Market Scanner Dashboard")
 
