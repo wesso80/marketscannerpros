@@ -148,6 +148,7 @@ Your app icons are configured and ready:
 - **Bundle ID**: com.marketscanner.pro
 - **Version**: 1.0.0
 - **URL**: https://market-scanner-1-wesso80.replit.app
+- **Privacy Policy**: https://market-scanner-1-wesso80.replit.app/?privacy=true
 
 ⚠️ **IMPORTANT**: This app loads web content from your Replit URL. For App Store approval:
 - Consider adding native features (notifications, file access, etc.)

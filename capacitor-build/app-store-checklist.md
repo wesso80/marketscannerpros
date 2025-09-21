@@ -27,7 +27,7 @@
   - [ ] Short description (max 80 chars)
   - [ ] Release notes
 - [ ] **Compliance**
-  - [ ] Privacy Policy URL
+  - [ ] Privacy Policy URL: `https://market-scanner-1-wesso80.replit.app/?privacy=true`
   - [ ] Data Safety form completed
   - [ ] Content rating questionnaire
 
@@ -57,7 +57,7 @@
   - [ ] Description and promotional text
   - [ ] Keywords (max 100 chars)
   - [ ] Support URL
-  - [ ] Privacy Policy URL ⚠️ **Required**
+  - [ ] Privacy Policy URL: `https://market-scanner-1-wesso80.replit.app/?privacy=true` ⚠️ **Required**
 
 ## Critical Considerations
 
