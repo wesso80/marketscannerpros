@@ -26,7 +26,7 @@ import plotly.express as px
 st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 
 # Check for privacy policy URL parameter
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 if 'privacy' in query_params or st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
     st.markdown("""
     <style>
