@@ -25,6 +25,121 @@ import plotly.express as px
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
 
+# Check for privacy policy URL parameter
+query_params = st.experimental_get_query_params()
+if 'privacy' in query_params or st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
+    st.markdown("""
+    <style>
+    .privacy-policy {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        background: #0b1220;
+        color: #e9eef7;
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 48px 20px;
+    }
+    .privacy-policy h1, .privacy-policy h2 {
+        color: #ffffff;
+        margin-top: 0;
+    }
+    .privacy-policy a {
+        color: #4fd1c5;
+        text-decoration: none;
+    }
+    .privacy-policy a:hover {
+        text-decoration: underline;
+    }
+    .privacy-card {
+        background: #0f1a2b;
+        border: 1px solid #1f2a44;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 18px;
+    }
+    .privacy-tag {
+        display: inline-block;
+        background: #12213b;
+        border: 1px solid #203355;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="privacy-policy">
+        <h1>Privacy Policy</h1>
+        <p class="privacy-tag">Last updated: 2025-09-21</p>
+        
+        <div class="privacy-card">
+            <p><strong>Market Scanner</strong> ("the App") respects your privacy. This policy explains what information we collect, how we use it, and the choices you have.</p>
+        </div>
+
+        <h2>Information We Collect</h2>
+        <div class="privacy-card">
+            <ul>
+                <li><strong>Account &amp; Identifiers:</strong> The App itself does not require you to create an account. Apple may provide anonymous identifiers (e.g., for crash diagnostics).</li>
+                <li><strong>Usage Data:</strong> We may collect anonymized usage and performance data (such as feature usage and crash logs) to improve stability and functionality.</li>
+                <li><strong>Portfolio/Inputs:</strong> Any numbers you enter (e.g., tickers or portfolio inputs) are processed to render charts and analytics and are stored locally on your device unless you explicitly export or back up data.</li>
+            </ul>
+        </div>
+
+        <h2>How We Use Information</h2>
+        <div class="privacy-card">
+            <ul>
+                <li>To operate core features like charting, backtesting, and portfolio analytics.</li>
+                <li>To troubleshoot, prevent errors, and improve performance.</li>
+                <li>To comply with legal obligations and App Store requirements.</li>
+            </ul>
+        </div>
+
+        <h2>Data Sharing &amp; Transfers</h2>
+        <div class="privacy-card">
+            <ul>
+                <li>We do <strong>not</strong> sell your personal data.</li>
+                <li>Service providers (e.g., Apple, analytics or crash reporting vendors) may process limited data on our behalf under contractual safeguards.</li>
+                <li>If required by law, we may disclose information to authorities.</li>
+            </ul>
+        </div>
+
+        <h2>Data Security</h2>
+        <div class="privacy-card">
+            <p>We use reasonable technical and organizational measures to protect information. However, no system can be 100% secure.</p>
+        </div>
+
+        <h2>Your Choices</h2>
+        <div class="privacy-card">
+            <ul>
+                <li>You can reset, clear, or uninstall the App at any time to remove locally stored data.</li>
+                <li>You may opt out of Apple analytics and personalized ads in your iOS settings.</li>
+            </ul>
+        </div>
+
+        <h2>Children</h2>
+        <div class="privacy-card">
+            <p>The App is intended for users 16+ and does not knowingly collect personal information from children.</p>
+        </div>
+
+        <h2>Changes to This Policy</h2>
+        <div class="privacy-card">
+            <p>We may update this policy from time to time. We will post the updated version in this location and revise the "Last updated" date above.</p>
+        </div>
+
+        <h2>Contact</h2>
+        <div class="privacy-card">
+            <p>If you have questions or requests regarding this policy, contact us at:<br>
+            <strong><a href="mailto:bradleywessling@yahoo.com.au">bradleywessling@yahoo.com.au</a></strong></p>
+            <p>We aim to respond within 30 days.</p>
+        </div>
+
+        <p style="opacity: 0.8; font-size: 0.9rem; margin-top: 24px;">© 2025 Market Scanner. All rights reserved.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.stop()  # Stop execution to show only privacy policy
+
 # Handle static file serving for PWA assets at root level
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
@@ -2930,3 +3045,10 @@ st.markdown("""
 - Configure SMTP environment variables for email notifications
 - Set SLACK_WEBHOOK_URL for Slack notifications
 """)
+
+# Add Privacy Policy link separately with proper HTML
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("**Legal**: <a href='?privacy=true' target='_self'>Privacy Policy</a> | Contact: bradleywessling@yahoo.com.au", unsafe_allow_html=True)
+with col2:
+    pass
