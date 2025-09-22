@@ -1,19 +1,24 @@
-// server.js — serve the static site in ./dist on Replit
-const express = require("express");
-const path = require("path");
+// server.js
+// Simple static server for the built web app (dist/)
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DIST = path.join(__dirname, "dist");
 
-// Serve static assets
-app.use(express.static(DIST, { maxAge: "1h", extensions: ["html"] }));
+// serve static files from dist
+const distDir = path.join(__dirname, "dist");
+app.use(express.static(distDir));
 
-// SPA fallback: return index.html for any route we don't have a file for
-app.get("*", (_, res) => {
-  res.sendFile(path.join(DIST, "index.html"));
+// SPA fallback -> index.html
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(distDir, "index.html"));
 });
 
 app.listen(PORT, () => {
-  console.log(`Serving ./dist on http://localhost:${PORT}`);
+  console.log(`MarketScanner web is running on http://localhost:${PORT}`);
 });
