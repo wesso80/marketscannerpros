@@ -3,7 +3,7 @@
     "name": "Market Scanner Pro",
     "slug": "market-scanner-pro",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0"
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -33,8 +33,8 @@
     "extra": {
       "eas": {
         "projectId": "0ebc6f5e-648c-4a6b-ae94-4b334c9bfac2"
-      }
-    },
-    "owner": "wesso80"
+      },
+      "owner": "wesso80"
+    }
   }
 }
