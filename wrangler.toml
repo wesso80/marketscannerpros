@@ -8,7 +8,6 @@ pages_build_output_dir = "dist"
 
 
 # If your static site is built into "dist"
-pages_build_output_dir = "dist"
 
 # (optional) if you'll add KV later:
 # [[kv_namespaces]]
