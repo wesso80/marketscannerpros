@@ -2,14 +2,5 @@
 name = "marketscannerpros"
 compatibility_date = "2025-09-22"
 
-# output folder for Cloudflare Pages
+# Cloudflare Pages will serve whatever you build into this folder
 pages_build_output_dir = "dist"
-
-
-
-# If your static site is built into "dist"
-
-# (optional) if you'll add KV later:
-# [[kv_namespaces]]
-# binding = "SCANNER_KV"
-# id = "xxxxxxxxxxxxxxxxxxxx"
