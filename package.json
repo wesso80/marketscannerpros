@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "private": true,
  {
-"scripts": {
-  "build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
-  "start": "node server.js",
-
-  "pages-preview": "wrangler pages dev dist --local --compatibility-date=2025-09-22"
+  "scripts": {
+    "dev": "expo start --web",
+    "build": "expo export --platform web --output-dir dist --dump-sourcemap",
+    "preview": "npx wrangler pages dev dist --local"
+  }
 }
+
 ,
   "dependencies": {
     "express": "^4.19.2"
