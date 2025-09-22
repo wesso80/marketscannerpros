@@ -1,3 +1,3 @@
-git add vercel.json package.json
-git commit -m "Vercel static export config"
-git push origin main
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
