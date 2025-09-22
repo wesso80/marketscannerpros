@@ -1779,6 +1779,12 @@ if 'eq_errors' not in st.session_state:
 if 'cx_errors' not in st.session_state:
     st.session_state.cx_errors = pd.DataFrame()
 
+# Tier system session state
+if 'user_tier' not in st.session_state:
+    st.session_state.user_tier = 'free'  # 'free', 'pro', 'pro_trader'
+if 'active_alerts_count' not in st.session_state:
+    st.session_state.active_alerts_count = 0
+
 c1, c2, c3 = st.columns([1,1,1])
 run_clicked = c1.button("🔎 Run Scanner", width='stretch')
 refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
@@ -1859,6 +1865,113 @@ if st.session_state.get('show_manage_watchlists', False):
             st.session_state.show_manage_watchlists = False
             st.rerun()
 
+# ================= Subscription Tiers =================
+st.sidebar.header("💳 Subscription")
+
+# Define tier configurations
+TIER_CONFIG = {
+    'free': {
+        'name': '📱 Free Tier',
+        'features': ['Basic market scanning', 'Limited to 10 symbols', 'Max 2 price alerts', 'Basic charts'],
+        'scan_limit': 10,
+        'alert_limit': 2,
+        'color': '#666666'
+    },
+    'pro': {
+        'name': '🚀 Pro Tier',
+        'price': '$9.99/month',
+        'features': ['Unlimited scans & alerts', 'Advanced charts', 'Real-time data', 'Portfolio tracking'],
+        'scan_limit': None,
+        'alert_limit': None,
+        'color': '#4CAF50'
+    },
+    'pro_trader': {
+        'name': '💎 Pro Trader',
+        'price': '$29.99/month',
+        'features': ['Everything in Pro', 'Advanced backtesting', 'Custom algorithms', 'Priority support'],
+        'scan_limit': None,
+        'alert_limit': None,
+        'color': '#FF9800'
+    }
+}
+
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+# Display current tier status
+with st.sidebar.container():
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
+        border: 1px solid {tier_info['color']}44;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 8px 0;
+    ">
+        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
+        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
+            {'Active Plan' if current_tier != 'free' else 'Limited features'}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Show upgrade options for free tier users
+if current_tier == 'free':
+    with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Pro\n$9.99/mo", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                st.info("🚀 Upgrade to Pro - Coming soon! Payment integration in development.")
+        
+        with col2:
+            if st.button("💎 Trader\n$29.99/mo", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                st.info("💎 Upgrade to Pro Trader - Coming soon! Payment integration in development.")
+        
+        # For demo purposes - allow users to simulate tier upgrades
+        st.markdown("---")
+        st.caption("🧪 Demo Mode - Simulate Tiers:")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Free", key="demo_free"):
+                st.session_state.user_tier = 'free'
+                st.rerun()
+        with col2:
+            if st.button("Pro", key="demo_pro"):
+                st.session_state.user_tier = 'pro'
+                st.rerun()
+        with col3:
+            if st.button("Trader", key="demo_trader"):
+                st.session_state.user_tier = 'pro_trader'
+                st.rerun()
+
+# Show tier benefits for paid users
+elif current_tier in ['pro', 'pro_trader']:
+    with st.sidebar.expander("✨ Your Benefits", expanded=False):
+        for feature in tier_info['features']:
+            st.write(f"✅ {feature}")
+        
+        if current_tier == 'pro':
+            st.markdown("---")
+            if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
+                st.info("💎 Upgrade to Pro Trader - Coming soon!")
+        
+        st.markdown("---")
+        st.caption("🧪 Demo Mode:")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Free", key="demo_free_paid"):
+                st.session_state.user_tier = 'free'
+                st.rerun()
+        with col2:
+            if st.button("Pro", key="demo_pro_paid"):
+                st.session_state.user_tier = 'pro'
+                st.rerun()
+        with col3:
+            if st.button("Trader", key="demo_trader_paid"):
+                st.session_state.user_tier = 'pro_trader'
+                st.rerun()
+
 # Edit watchlist modal
 if st.session_state.get('edit_watchlist_id'):
     edit_wl_id = st.session_state.edit_watchlist_id
@@ -1927,12 +2040,32 @@ else:
     crypto_symbols = CFG.symbols_crypto
 
 st.sidebar.header("Equity Symbols")
+
+# Show tier limitations
+current_tier = st.session_state.user_tier
+if current_tier == 'free':
+    st.sidebar.caption(f"⚠️ Free tier: Limited to {TIER_CONFIG['free']['scan_limit']} symbols total (equity + crypto)")
+
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
+
+# Show current symbol count for free tier users
+if current_tier == 'free':
+    eq_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
+    cx_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
+    total_count = eq_count + cx_count
+    limit = TIER_CONFIG['free']['scan_limit']
+    
+    if total_count > limit:
+        st.sidebar.error(f"⚠️ {total_count}/{limit} symbols (over limit)")
+    elif total_count > limit * 0.8:
+        st.sidebar.warning(f"⚠️ {total_count}/{limit} symbols (near limit)")
+    else:
+        st.sidebar.info(f"📊 {total_count}/{limit} symbols")
 
 st.sidebar.header("Timeframes")
 tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], index=0)
@@ -2112,6 +2245,17 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
 if run_clicked:
     eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()]
     cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()]
+    
+    # Check tier limitations
+    current_tier = st.session_state.user_tier
+    tier_info = TIER_CONFIG[current_tier]
+    total_symbols = len(eq_syms) + len(cx_syms)
+    
+    # Apply scan limits for free tier
+    if current_tier == 'free' and tier_info['scan_limit'] and total_symbols > tier_info['scan_limit']:
+        st.error(f"⚠️ Free tier limited to {tier_info['scan_limit']} symbols total. You entered {total_symbols} symbols.")
+        st.info("🚀 Upgrade to Pro for unlimited scans!")
+        st.stop()
     
     with st.spinner("Scanning markets..."):
         # Scan equity markets
@@ -2321,13 +2465,33 @@ if st.session_state.get('show_new_alert', False):
                 elif alert_type not in ['above', 'below']:
                     st.error("Invalid alert type")
                 else:
-                    symbol_clean = alert_symbol.strip().upper()
-                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                        st.success(f"Alert created for {symbol_clean}")
-                        st.session_state.show_new_alert = False
-                        st.rerun()
+                    # Check tier limitations
+                    current_tier = st.session_state.user_tier
+                    if current_tier == 'free':
+                        active_alerts = get_active_alerts()
+                        current_alert_count = len(active_alerts) if active_alerts else 0
+                        alert_limit = TIER_CONFIG['free']['alert_limit']
+                        
+                        if current_alert_count >= alert_limit:
+                            st.error(f"⚠️ Free tier limited to {alert_limit} alerts. You currently have {current_alert_count} alerts.")
+                            st.info("🚀 Upgrade to Pro for unlimited alerts!")
+                        else:
+                            symbol_clean = alert_symbol.strip().upper()
+                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                                st.success(f"Alert created for {symbol_clean}")
+                                st.session_state.show_new_alert = False
+                                st.rerun()
+                            else:
+                                st.error("Failed to create alert - please check database connection")
                     else:
-                        st.error("Failed to create alert - please check database connection")
+                        # Pro and Pro Trader tiers - unlimited alerts
+                        symbol_clean = alert_symbol.strip().upper()
+                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                            st.success(f"Alert created for {symbol_clean}")
+                            st.session_state.show_new_alert = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to create alert - please check database connection")
         
         with col3:
             if st.button("Cancel", key="cancel_alert"):
