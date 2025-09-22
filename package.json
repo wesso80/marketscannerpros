@@ -1,9 +1,12 @@
 {
-  "name": "workspace",
-  "version": "1.0.0",
-  "main": "index.js",
-  {
+  "name": "marketscannerpros",
+  "private": true,
   "scripts": {
+    "pages-build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
+    "pages-preview": "npx wrangler pages dev dist --local"
+  }
+}
+
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
