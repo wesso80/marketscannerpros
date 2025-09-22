@@ -1,0 +1,14 @@
+marketscannerpros/            ← repo root (already exists)
+├─ package.json
+├─ app.json
+├─ ...your current files...
+├─ functions/                 ← NEW (create at repo root)
+│  ├─ _utils.ts               ← NEW
+│  └─ api/                    ← NEW
+│     ├─ health.ts           ← NEW
+│     ├─ quote.ts            ← NEW
+│     ├─ chart.ts            ← NEW
+│     ├─ scan.ts             ← NEW
+│     ├─ alerts.ts           ← (if you use KV)
+│     └─ portfolio.ts        ← (if you use KV)
+└─ wrangler.toml              ← NEW (optional but needed for KV/D1 bindings)
