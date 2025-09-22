@@ -24,10 +24,6 @@ args = "Market Scanner"
 task = "workflow.run"
 args = "install_dependencies"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Mobile App"
-
 [[workflows.workflow]]
 name = "Market Scanner"
 author = "agent"
@@ -48,18 +44,6 @@ author = "agent"
 task = "shell.exec"
 args = "uv add yfinance pandas numpy requests python-dateutil"
 
-[[workflows.workflow]]
-name = "Mobile App"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npx expo start --web --port 3000"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[ports]]
 localPort = 3000
 externalPort = 3002
@@ -71,6 +55,14 @@ externalPort = 80
 [[ports]]
 localPort = 36733
 externalPort = 3001
+
+[[ports]]
+localPort = 39849
+externalPort = 5000
+
+[[ports]]
+localPort = 40435
+externalPort = 3003
 
 [[ports]]
 localPort = 41087
