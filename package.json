@@ -1,13 +1,14 @@
 {
-  "name": "marketscannerpros",
+  "name": "marketscanner",
+  "version": "1.0.0",
   "private": true,
-  {
   "scripts": {
     "build": "npx expo export --platform web --output-dir dist",
     "start": "node index.js",
     "dev": "NODE_ENV=development node index.js"
   }
-},
+}
+,
   "keywords": [],
   "author": "",
   "license": "ISC",
