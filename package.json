@@ -1,40 +1,32 @@
 {
-  "name": "workspace",
+  "name": "market-scanner-pro",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@bubblewrap/cli": "^1.23.0",
-    "@capacitor/android": "^7.4.3",
-    "@capacitor/cli": "^7.4.3",
-    "@capacitor/core": "^7.4.3",
-    "@capacitor/ios": "^7.4.3",
-    "@expo/cli": "^54.0.7",
-    "@react-navigation/bottom-tabs": "^7.4.7",
-    "@react-navigation/native": "^7.1.17",
-    "@react-navigation/stack": "^7.4.8",
-    "expo": "^54.0.9",
-    "expo-constants": "^18.0.9",
-    "expo-device": "^8.0.8",
-    "expo-linking": "^8.0.8",
-    "expo-router": "^6.0.7",
-    "expo-splash-screen": "^31.0.10",
-    "expo-status-bar": "^3.0.8",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-native": "^0.80.2",
-    "react-native-safe-area-context": "^5.6.1",
-    "react-native-screens": "^4.16.0",
-    "react-native-web": "^0.21.1"
+    "expo": "54.0.9",
+    "expo-constants": "18.0.9",
+    "expo-device": "8.0.8",
+    "expo-linking": "8.0.9",
+    "expo-splash-screen": "0.27.5",
+    "expo-status-bar": "3.0.8",
+    "@react-navigation/native": "7.1.17",
+    "@react-navigation/bottom-tabs": "7.4.7",
+    "@react-navigation/stack": "7.4.8",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-native": "0.80.2",
+    "react-native-safe-area-context": "5.6.1",
+    "react-native-screens": "4.16.0"
   },
   "devDependencies": {
-    "@types/react": "~19.1.10",
-    "typescript": "~5.9.2"
-  }
+    "@babel/core": "^7.25.0"
+  },
+  "keywords": []
 }

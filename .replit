@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "nodejs-20"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["glibcLocales", "openjdk17", "android-tools"]
+packages = ["glibcLocales", "openjdk17", "android-tools", "eas-cli", "imagemagick_light"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -81,7 +81,7 @@ localPort = 42595
 externalPort = 3000
 
 [[ports]]
-localPort = 44005
+localPort = 44735
 externalPort = 3003
 
 [agent]
