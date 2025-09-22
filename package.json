@@ -4,7 +4,9 @@
   "scripts": {
     "pages-build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
     "pages-preview": "npx wrangler pages dev dist --local",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,7 @@
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/stack": "^7.4.8",
+    "cors": "^2.8.5",
     "expo": "^54.0.9",
     "expo-constants": "~18.0.9",
     "expo-device": "~8.0.8",
@@ -26,6 +29,7 @@
     "expo-router": "~6.0.7",
     "expo-splash-screen": "~0.27.5",
     "expo-status-bar": "~3.0.8",
+    "express": "^5.1.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "^0.80.2",
