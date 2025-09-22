@@ -2,10 +2,13 @@
   "name": "marketscannerpros",
   "version": "1.0.0",
   "private": true,
+  {
   "scripts": {
     "build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
-    "preview": "npx wrangler pages dev dist --local"
-  },
+    "pages-preview": "npx wrangler pages dev dist --local"
+  }
+}
+,
   "author": "",
   "license": "ISC",
   "description": "",
