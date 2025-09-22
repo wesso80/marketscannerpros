@@ -7,7 +7,6 @@
   "build": "npx expo export --platform web --output-dir dist --dump-sourcemap",
   "start": "node server.js",
 
-  // optional: only if you later want to test Cloudflare preview locally
   "pages-preview": "wrangler pages dev dist --local --compatibility-date=2025-09-22"
 }
 ,
