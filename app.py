@@ -282,7 +282,7 @@ def generate_pairing_token() -> str:
 def create_workspace() -> Optional[str]:
     """Create a new anonymous workspace"""
     query = "INSERT INTO workspaces DEFAULT VALUES RETURNING id"
-    result = execute_db_query(query)
+    result = execute_db_write_returning(query)
     if result and len(result) > 0:
         return str(result[0]['id'])
     return None
