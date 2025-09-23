@@ -2180,7 +2180,12 @@ def is_mobile_app() -> bool:
     """Check if request is from mobile app WebView"""
     # Check for mobile app URL parameter
     query_params = st.query_params
-    if query_params.get('mobile') == 'true':
+    
+    # Debug: Let's see what we're getting
+    mobile_param = query_params.get('mobile')
+    
+    # Check if mobile parameter is present and true
+    if mobile_param == 'true' or mobile_param == ['true']:
         return True
     
     # Check user agent for mobile app indicators
@@ -2220,9 +2225,19 @@ TIER_CONFIG = {
     }
 }
 
+# Debug query parameters
+query_params = st.query_params
+mobile_param = query_params.get('mobile')
+
+# Temporary debug output
+if mobile_param:
+    st.sidebar.info(f"🐛 DEBUG: mobile param = {mobile_param}")
+
 # Only show subscription UI on web (not mobile apps)
 if not is_mobile_app():
     st.sidebar.header("💳 Subscription")
+else:
+    st.sidebar.success("📱 Mobile app detected - subscriptions hidden")
 
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
