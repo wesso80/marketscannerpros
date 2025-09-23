@@ -25,17 +25,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 
-# ================= DEBUG MOBILE DETECTION FIRST =================
-# Put debug code BEFORE page config to ensure it executes
-try:
-    query_params = st.query_params
-    mobile_param = query_params.get('mobile')
-    st.error(f"🐛 PARAMS: {dict(query_params)}")
-    st.info(f"🐛 MOBILE: {mobile_param}")
-    st.success("🐛 DEBUG CODE IS RUNNING!")
-except Exception as e:
-    st.error(f"🐛 DEBUG ERROR: {e}")
-
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
@@ -2189,16 +2178,24 @@ else:
 # Detect if this is accessed from mobile app and hide subscriptions
 def is_mobile_app() -> bool:
     """Check if request is from mobile app WebView"""
-    # Check for mobile app URL parameter
+    # Check for mobile app URL parameter - Streamlit can return different formats
     query_params = st.query_params
     
-    # Debug: Let's see what we're getting
+    # Handle all possible Streamlit query parameter formats
     mobile_param = query_params.get('mobile')
     
-    # Check if mobile parameter is present and true
-    if mobile_param == 'true' or mobile_param == ['true']:
-        return True
+    # Check various formats that Streamlit might return
+    if mobile_param:
+        # Handle string, list, or other formats
+        if isinstance(mobile_param, list):
+            return 'true' in [str(p).lower() for p in mobile_param]
+        else:
+            return str(mobile_param).lower() == 'true'
     
+    # Also check direct key existence for some Streamlit versions
+    if 'mobile' in query_params:
+        return True
+        
     # Check user agent for mobile app indicators
     try:
         headers = st.context.headers if hasattr(st.context, 'headers') else {}
@@ -2241,85 +2238,83 @@ TIER_CONFIG = {
 # Only show subscription UI on web (not mobile apps)
 if not is_mobile_app():
     st.sidebar.header("💳 Subscription")
-else:
-    st.sidebar.success("📱 Mobile app detected - subscriptions hidden")
-
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
-
-# Display current tier status
-with st.sidebar.container():
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
-        border: 1px solid {tier_info['color']}44;
-        border-radius: 10px;
-        padding: 16px;
-        margin: 8px 0;
-    ">
-        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
-        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
-            {'Active Plan' if current_tier != 'free' else 'Limited features'}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Show upgrade options for free tier users
-if current_tier == 'free':
-    with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("🚀 Pro\n$9.99/mo", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                st.info("🚀 Upgrade to Pro - Coming soon! Payment integration in development.")
-        
-        with col2:
-            if st.button("💎 Trader\n$29.99/mo", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                st.info("💎 Upgrade to Pro Trader - Coming soon! Payment integration in development.")
-        
-        # For demo purposes - allow users to simulate tier upgrades
-        st.markdown("---")
-        st.caption("🧪 Demo Mode - Simulate Tiers:")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Free", key="demo_free"):
-                st.session_state.user_tier = 'free'
-                st.rerun()
-        with col2:
-            if st.button("Pro", key="demo_pro"):
-                st.session_state.user_tier = 'pro'
-                st.rerun()
-        with col3:
-            if st.button("Trader", key="demo_trader"):
-                st.session_state.user_tier = 'pro_trader'
-                st.rerun()
-
-# Show tier benefits for paid users
-elif current_tier in ['pro', 'pro_trader']:
-    with st.sidebar.expander("✨ Your Benefits", expanded=False):
-        for feature in tier_info['features']:
-            st.write(f"✅ {feature}")
-        
-        if current_tier == 'pro':
+    
+    current_tier = st.session_state.user_tier
+    tier_info = TIER_CONFIG[current_tier]
+    
+    # Display current tier status
+    with st.sidebar.container():
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
+            border: 1px solid {tier_info['color']}44;
+            border-radius: 10px;
+            padding: 16px;
+            margin: 8px 0;
+        ">
+            <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
+            <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
+                {'Active Plan' if current_tier != 'free' else 'Limited features'}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Show upgrade options for free tier users
+    if current_tier == 'free':
+        with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🚀 Pro\n$9.99/mo", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                    st.info("🚀 Upgrade to Pro - Coming soon! Payment integration in development.")
+            
+            with col2:
+                if st.button("💎 Trader\n$29.99/mo", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                    st.info("💎 Upgrade to Pro Trader - Coming soon! Payment integration in development.")
+            
+            # For demo purposes - allow users to simulate tier upgrades
             st.markdown("---")
-            if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
-                st.info("💎 Upgrade to Pro Trader - Coming soon!")
-        
-        st.markdown("---")
-        st.caption("🧪 Demo Mode:")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Free", key="demo_free_paid"):
-                st.session_state.user_tier = 'free'
-                st.rerun()
-        with col2:
-            if st.button("Pro", key="demo_pro_paid"):
-                st.session_state.user_tier = 'pro'
-                st.rerun()
-        with col3:
-            if st.button("Trader", key="demo_trader_paid"):
-                st.session_state.user_tier = 'pro_trader'
-                st.rerun()
+            st.caption("🧪 Demo Mode - Simulate Tiers:")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Free", key="demo_free"):
+                    st.session_state.user_tier = 'free'
+                    st.rerun()
+            with col2:
+                if st.button("Pro", key="demo_pro"):
+                    st.session_state.user_tier = 'pro'
+                    st.rerun()
+            with col3:
+                if st.button("Trader", key="demo_trader"):
+                    st.session_state.user_tier = 'pro_trader'
+                    st.rerun()
+
+    # Show tier benefits for paid users
+    elif current_tier in ['pro', 'pro_trader']:
+        with st.sidebar.expander("✨ Your Benefits", expanded=False):
+            for feature in tier_info['features']:
+                st.write(f"✅ {feature}")
+            
+            if current_tier == 'pro':
+                st.markdown("---")
+                if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
+                    st.info("💎 Upgrade to Pro Trader - Coming soon!")
+            
+            st.markdown("---")
+            st.caption("🧪 Demo Mode:")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Free", key="demo_free_paid"):
+                    st.session_state.user_tier = 'free'
+                    st.rerun()
+            with col2:
+                if st.button("Pro", key="demo_pro_paid"):
+                    st.session_state.user_tier = 'pro'
+                    st.rerun()
+            with col3:
+                if st.button("Trader", key="demo_trader_paid"):
+                    st.session_state.user_tier = 'pro_trader'
+                    st.rerun()
 
 # End of subscription UI section (hidden for mobile apps)
 
