@@ -2542,8 +2542,8 @@ elif current_tier in ['pro', 'pro_trader']:
         with col2:
             st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
         
-        # Subscription management for active subscribers
-        if current_tier in ['pro', 'pro_trader'] and workspace_id:
+        # Subscription management for active subscribers  
+        if current_tier in ['pro', 'pro_trader']:
             st.markdown("---")
             st.markdown("**📊 Subscription Details**")
             
@@ -2562,7 +2562,7 @@ elif current_tier in ['pro', 'pro_trader']:
                 st.caption("Note: This is a demo subscription")
             
             if st.button("❌ Cancel Subscription", key="cancel_subscription"):
-                if current_subscription:
+                if current_subscription and workspace_id:
                     # Cancel database subscription
                     if cancel_subscription(workspace_id):
                         st.success("✅ Subscription cancelled successfully")
@@ -2570,7 +2570,7 @@ elif current_tier in ['pro', 'pro_trader']:
                     else:
                         st.error("❌ Failed to cancel subscription")
                 else:
-                    # Cancel session-based subscription
+                    # Cancel session-based subscription (demo mode)
                     st.session_state.user_tier = 'free'
                     st.success("✅ Demo subscription cancelled")
                     st.rerun()
