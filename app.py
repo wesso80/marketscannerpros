@@ -2229,9 +2229,9 @@ TIER_CONFIG = {
 query_params = st.query_params
 mobile_param = query_params.get('mobile')
 
-# Temporary debug output
-if mobile_param:
-    st.sidebar.info(f"🐛 DEBUG: mobile param = {mobile_param}")
+# Show ALL query parameters for debugging
+st.sidebar.error(f"🐛 ALL PARAMS: {dict(query_params)}")
+st.sidebar.info(f"🐛 MOBILE PARAM: {mobile_param}")
 
 # Only show subscription UI on web (not mobile apps)
 if not is_mobile_app():
