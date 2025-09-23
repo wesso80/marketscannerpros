@@ -468,7 +468,7 @@ def generate_qr_code(data: str) -> str:
     return f"data:image/png;base64,{img_base64}"
 
 # ================= Price Alerts Management =================
-def create_price_alert(symbol: str, alert_type: str, target_price: float, notification_method: str = 'email') -> bool:
+def create_price_alert(symbol: str, alert_type: str, target_price: float, notification_method: str = 'in_app') -> bool:
     """Create a new price alert with proper workspace ownership"""
     # Get current user email and workspace from session state
     user_email = st.session_state.get('user_email', '')
@@ -3150,19 +3150,21 @@ with st.sidebar.expander("Price Alert Notifications", expanded=False):
     
     notification_method = st.selectbox(
         "Notification Method:",
-        ["Email Only", "None"],
+        ["In-App Notifications", "Slack", "Both", "None"],
         index=0,
-        help="Choose how you want to receive alerts"
+        help="Choose how you want to receive alerts (In-App provides reliable persistent notifications)"
     )
     
     # Map UI options to backend values
     method_mapping = {
-        "Email Only": "email",
+        "In-App Notifications": "in_app",
+        "Slack": "slack", 
+        "Both": "both",
         "None": "none"
     }
     backend_method = method_mapping[notification_method]
     
-    if user_email and notification_method == "Email Only":
+    if user_email and notification_method == "In-App Notifications":
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔔 Test Notification", help="Send a test notification to verify your alert system"):
