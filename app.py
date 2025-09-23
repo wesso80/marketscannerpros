@@ -1956,6 +1956,128 @@ if 'user_tier' not in st.session_state:
 if 'active_alerts_count' not in st.session_state:
     st.session_state.active_alerts_count = 0
 
+# ================= Subscription Management System =================
+def get_subscription_plans():
+    """Get all available subscription plans"""
+    try:
+        query = """
+            SELECT id, plan_code, name, description, monthly_price_usd, yearly_price_usd, 
+                   features, scan_limit, alert_limit, is_active
+            FROM subscription_plans 
+            WHERE is_active = true 
+            ORDER BY monthly_price_usd
+        """
+        result = execute_db_query(query)
+        return result if result else []
+    except Exception as e:
+        st.error(f"Error fetching subscription plans: {str(e)}")
+        return []
+
+def get_workspace_subscription(workspace_id: str):
+    """Get active subscription for a workspace"""
+    try:
+        query = """
+            SELECT us.*, sp.plan_code, sp.name as plan_name, sp.features, sp.scan_limit, sp.alert_limit
+            FROM user_subscriptions us
+            JOIN subscription_plans sp ON us.plan_id = sp.id
+            WHERE us.workspace_id = %s 
+            AND us.subscription_status = 'active'
+            AND (us.current_period_end IS NULL OR us.current_period_end > now())
+            ORDER BY us.created_at DESC
+            LIMIT 1
+        """
+        result = execute_db_query(query, (workspace_id,))
+        return result[0] if result and len(result) > 0 else None
+    except Exception as e:
+        st.error(f"Error fetching subscription: {str(e)}")
+        return None
+
+def create_subscription(workspace_id: str, plan_code: str, platform: str, billing_period: str = 'monthly'):
+    """Create a new subscription for a workspace (DEMO ONLY - requires payment integration)"""
+    try:
+        # SECURITY: In production, this should only be called after payment verification
+        if platform not in ['web', 'ios', 'android']:
+            return False, "Invalid platform"
+        
+        # Get plan details
+        plan_query = "SELECT id FROM subscription_plans WHERE plan_code = %s AND is_active = true"
+        plan_result = execute_db_query(plan_query, (plan_code,))
+        if not plan_result or len(plan_result) == 0:
+            return False, "Invalid subscription plan"
+        
+        plan_id = plan_result[0]['id']
+        
+        # Calculate period end based on billing period
+        if billing_period == 'yearly':
+            period_interval = "interval '1 year'"
+        else:
+            period_interval = "interval '1 month'"
+        
+        # Cancel any existing active subscriptions (prevent multiple active)
+        cancel_subscription(workspace_id)
+        
+        # Create new subscription
+        insert_query = f"""
+            INSERT INTO user_subscriptions 
+            (workspace_id, plan_id, platform, billing_period, subscription_status, current_period_start, current_period_end)
+            VALUES (%s, %s, %s, %s, 'active', now(), now() + {period_interval})
+            RETURNING id
+        """
+        
+        result = execute_db_write_returning(insert_query, (workspace_id, plan_id, platform, billing_period))
+        if not result or len(result) == 0:
+            return False, "Failed to create subscription"
+        
+        subscription_id = result[0]['id']
+        
+        # Log subscription event
+        event_query = """
+            INSERT INTO subscription_events (subscription_id, event_type, platform, event_data)
+            VALUES (%s, 'created', %s, %s)
+        """
+        execute_db_write(event_query, (subscription_id, platform, json.dumps({'plan_code': plan_code, 'billing_period': billing_period})))
+        
+        return True, subscription_id
+    except Exception as e:
+        st.error(f"Error creating subscription: {str(e)}")
+        return False, str(e)
+
+def cancel_subscription(workspace_id: str):
+    """Cancel active subscription for a workspace"""
+    try:
+        # Update subscription status
+        update_query = """
+            UPDATE user_subscriptions 
+            SET subscription_status = 'cancelled', cancelled_at = now()
+            WHERE workspace_id = %s AND subscription_status = 'active'
+            RETURNING id
+        """
+        
+        result = execute_db_write_returning(update_query, (workspace_id,))
+        
+        if result and len(result) > 0:
+            subscription_id = result[0]['id']
+            
+            # Log cancellation event
+            event_query = """
+                INSERT INTO subscription_events (subscription_id, event_type, platform)
+                VALUES (%s, 'cancelled', 'web')
+            """
+            execute_db_write(event_query, (subscription_id,))
+            return True
+            
+        return False
+    except Exception as e:
+        st.error(f"Error cancelling subscription: {str(e)}")
+        return False
+
+def get_user_tier_from_subscription(workspace_id: str):
+    """Get user tier based on active subscription"""
+    subscription = get_workspace_subscription(workspace_id)
+    if subscription:
+        return subscription['plan_code']
+    return 'free'
+
 # ================= Anonymous Workspace System =================
 # Initialize anonymous device and workspace for data sync
 # Initialize persistent device fingerprint
@@ -2239,7 +2361,18 @@ TIER_CONFIG = {
 # Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
 st.sidebar.header("💳 Subscription")
 
-current_tier = st.session_state.user_tier
+# Get current subscription from database
+workspace_id = st.session_state.get('workspace_id')
+current_subscription = None
+current_tier = 'free'
+
+if workspace_id:
+    current_subscription = get_workspace_subscription(workspace_id)
+    if current_subscription:
+        current_tier = current_subscription['plan_code']
+
+# Update session state to match database
+st.session_state.user_tier = current_tier
 tier_info = TIER_CONFIG[current_tier]
 
 # Display current tier status
@@ -2289,17 +2422,35 @@ if current_tier == 'free':
         
         with col1:
             if st.button("🚀 Subscribe to Pro\n$9.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                if is_mobile:
-                    st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
+                if workspace_id:
+                    if is_mobile:
+                        st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
+                    else:
+                        # Create demo subscription for web testing
+                        success, result = create_subscription(workspace_id, 'pro', 'web', 'monthly')
+                        if success:
+                            st.success("🎉 Successfully upgraded to Pro! Features unlocked.")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Subscription failed: {result}")
                 else:
-                    st.info("🚀 Upgrade to Pro - Payment integration in development.")
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
             if st.button("💎 Subscribe to Trader\n$29.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                if is_mobile:
-                    st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
+                if workspace_id:
+                    if is_mobile:
+                        st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
+                    else:
+                        # Create demo subscription for web testing
+                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                        if success:
+                            st.success("🎉 Successfully upgraded to Pro Trader! All features unlocked.")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Subscription failed: {result}")
                 else:
-                    st.info("💎 Upgrade to Pro Trader - Payment integration in development.")
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
         
         # Apple-required billing disclosures and controls
         st.markdown("---")
@@ -2356,10 +2507,20 @@ elif current_tier in ['pro', 'pro_trader']:
         if current_tier == 'pro':
             st.markdown("---")
             if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
-                if is_mobile:
-                    st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                if workspace_id:
+                    if is_mobile:
+                        st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                    else:
+                        # Cancel existing Pro subscription and create Pro Trader
+                        cancel_subscription(workspace_id)
+                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                        if success:
+                            st.success("🎉 Successfully upgraded to Pro Trader!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Upgrade failed: {result}")
                 else:
-                    st.info("💎 Upgrade to Pro Trader - Coming soon!")
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
         
         # Apple-compliant subscription management for active subscribers
         if is_mobile:
@@ -2381,6 +2542,23 @@ elif current_tier in ['pro', 'pro_trader']:
         with col2:
             st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
         
+        # Subscription management for active subscribers
+        if current_subscription and workspace_id:
+            st.markdown("---")
+            st.markdown("**📊 Subscription Details**")
+            st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
+            st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
+            st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
+            if current_subscription.get('current_period_end'):
+                st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
+            
+            if st.button("❌ Cancel Subscription", key="cancel_subscription"):
+                if cancel_subscription(workspace_id):
+                    st.success("✅ Subscription cancelled successfully")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to cancel subscription")
+        
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
         if not is_mobile:  # Only show on web, not in mobile app builds
             st.markdown("---")
@@ -2388,16 +2566,21 @@ elif current_tier in ['pro', 'pro_trader']:
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("Free", key="demo_free_paid"):
-                    st.session_state.user_tier = 'free'
-                    st.rerun()
+                    if workspace_id:
+                        cancel_subscription(workspace_id)
+                        st.rerun()
             with col2:
                 if st.button("Pro", key="demo_pro_paid"):
-                    st.session_state.user_tier = 'pro'
-                    st.rerun()
+                    if workspace_id:
+                        cancel_subscription(workspace_id)
+                        create_subscription(workspace_id, 'pro', 'web', 'monthly')
+                        st.rerun()
             with col3:
                 if st.button("Trader", key="demo_trader_paid"):
-                    st.session_state.user_tier = 'pro_trader'
-                    st.rerun()
+                    if workspace_id:
+                        cancel_subscription(workspace_id)
+                        create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                        st.rerun()
 
 # End of subscription UI section (hidden for mobile apps)
 
