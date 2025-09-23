@@ -18,6 +18,9 @@ from dateutil import tz
 from math import floor
 import io
 import json
+import qrcode
+from PIL import Image
+import base64
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
@@ -195,6 +198,283 @@ def execute_db_write(query: str, params: Optional[tuple] = None) -> Optional[int
     result = execute_db_query(query, params, fetch=False)
     return result if isinstance(result, int) else None
 
+def execute_db_write_returning(query: str, params: Optional[tuple] = None) -> Optional[List[Dict[str, Any]]]:
+    """Execute write query with RETURNING clause - commits and returns results"""
+    pool = get_connection_pool()
+    if not pool:
+        return None
+    
+    conn = None
+    try:
+        conn = pool.getconn()
+        
+        # Check connection health
+        if conn.closed or conn.status != 1:
+            try:
+                pool.putconn(conn, close=True)
+            except Exception:
+                pass
+            conn = pool.getconn()
+        
+        # Execute the query with commit and return
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, params)
+            results = [dict(row) for row in cur.fetchall()]
+            conn.commit()  # CRITICAL: Commit the transaction
+            return results
+                    
+    except Exception as e:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return None
+        
+    finally:
+        if conn:
+            try:
+                pool.putconn(conn)
+            except Exception:
+                pass
+    
+    return None
+
+# ================= Anonymous Data Sync System =================
+import secrets
+import string
+from datetime import datetime, timedelta
+import uuid
+
+def generate_device_fingerprint() -> str:
+    """Generate a unique device fingerprint"""
+    return str(uuid.uuid4())
+
+def get_persistent_device_fingerprint() -> str:
+    """Get or create a persistent device fingerprint using browser localStorage"""
+    # Check if device_id is already in query params
+    query_params = st.query_params
+    device_id = query_params.get('device_id', None)
+    
+    # Handle case where device_id might be a list (fix type handling bug)
+    if isinstance(device_id, list):
+        device_id = device_id[0] if device_id else None
+    
+    # If device_id is present, cache it and return
+    if device_id:
+        if 'cached_device_fingerprint' not in st.session_state:
+            st.session_state.cached_device_fingerprint = device_id
+        return str(device_id)
+    
+    # If we have a cached fingerprint but URL doesn't have it, something went wrong
+    if 'cached_device_fingerprint' in st.session_state:
+        return st.session_state.cached_device_fingerprint
+    
+    # JavaScript to handle localStorage and trigger reload with device_id
+    js_code = """
+    <script>
+    function initDeviceFingerprint() {
+        // Check if we already set the device_id to prevent infinite reloads
+        if (sessionStorage.getItem('device_id_set') === 'true') {
+            return;
+        }
+        
+        let fingerprint = localStorage.getItem('market_scanner_device_id');
+        if (!fingerprint) {
+            // Generate new UUID
+            fingerprint = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            localStorage.setItem('market_scanner_device_id', fingerprint);
+        }
+        
+        // Set device_id in URL and reload once
+        const currentUrl = new URL(window.location);
+        if (!currentUrl.searchParams.has('device_id')) {
+            sessionStorage.setItem('device_id_set', 'true');
+            currentUrl.searchParams.set('device_id', fingerprint);
+            window.location.href = currentUrl.toString();
+        }
+    }
+    
+    // Execute immediately
+    initDeviceFingerprint();
+    </script>
+    """
+    
+    # Inject JavaScript and stop execution to wait for reload
+    st.components.v1.html(js_code, height=0, width=0)
+    st.info("🔄 Initializing device fingerprint...")
+    st.stop()  # Stop execution until reload with device_id
+
+def generate_pairing_token() -> str:
+    """Generate a secure pairing token (10 chars)"""
+    return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
+def create_workspace() -> Optional[str]:
+    """Create a new anonymous workspace"""
+    query = "INSERT INTO workspaces DEFAULT VALUES RETURNING id"
+    result = execute_db_query(query)
+    if result and len(result) > 0:
+        return str(result[0]['id'])
+    return None
+
+def get_or_create_workspace_for_device(device_fingerprint: str) -> Optional[str]:
+    """Get existing workspace for device or create new one"""
+    # Check if device already exists - select most recent workspace deterministically
+    query = """
+        SELECT workspace_id FROM devices 
+        WHERE device_fingerprint = %s AND revoked_at IS NULL
+        ORDER BY created_at DESC 
+        LIMIT 1
+    """
+    result = execute_db_query(query, (device_fingerprint,))
+    
+    if result and len(result) > 0:
+        return str(result[0]['workspace_id'])
+    
+    # Create new workspace and register device
+    workspace_id = create_workspace()
+    if workspace_id:
+        register_device(workspace_id, device_fingerprint, "web", "Web Browser")
+        return workspace_id
+    
+    return None
+
+def register_device(workspace_id: str, device_fingerprint: str, platform: str, device_name: str) -> bool:
+    """Register a device to a workspace"""
+    query = """
+        INSERT INTO devices (workspace_id, device_fingerprint, platform, device_name)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (workspace_id, device_fingerprint) 
+        DO UPDATE SET last_seen = NOW(), revoked_at = NULL
+    """
+    result = execute_db_write(query, (workspace_id, device_fingerprint, platform, device_name))
+    return result is not None and result >= 0
+
+def create_pairing_token(workspace_id: str) -> Optional[str]:
+    """Create a pairing token for workspace"""
+    token = generate_pairing_token()
+    expires_at = datetime.now() + timedelta(minutes=10)  # 10 minute expiry
+    
+    query = """
+        INSERT INTO pairing_tokens (token, workspace_id, expires_at)
+        VALUES (%s, %s, %s)
+    """
+    result = execute_db_write(query, (token, workspace_id, expires_at))
+    
+    if result is not None and result > 0:
+        return token
+    return None
+
+def consume_pairing_token(token: str, device_fingerprint: str, platform: str, device_name: str) -> Optional[str]:
+    """Consume a pairing token and add device to workspace (atomic operation)"""
+    try:
+        # Atomic: update token and get workspace_id in single query to prevent race conditions
+        query = """
+            UPDATE pairing_tokens 
+            SET used_at = NOW() 
+            WHERE token = %s AND used_at IS NULL AND expires_at > NOW()
+            RETURNING workspace_id
+        """
+        result = execute_db_write_returning(query, (token,))
+        
+        if not result or len(result) == 0:
+            return None  # Token invalid, expired, or already used
+            
+        workspace_id = str(result[0]['workspace_id'])
+        
+        # Register device to workspace (using ON CONFLICT to handle duplicates)
+        if register_device(workspace_id, device_fingerprint, platform, device_name):
+            return workspace_id
+        
+        return None
+        
+    except Exception as e:
+        return None
+
+def save_workspace_data(workspace_id: str, data_type: str, item_key: str, data_payload: dict) -> bool:
+    """Save data to workspace with versioning"""
+    query = """
+        INSERT INTO workspace_data (workspace_id, data_type, item_key, data_payload)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (workspace_id, data_type, item_key)
+        DO UPDATE SET 
+            data_payload = EXCLUDED.data_payload,
+            version = workspace_data.version + 1,
+            updated_at = NOW()
+    """
+    
+    import json
+    result = execute_db_write(query, (workspace_id, data_type, item_key, json.dumps(data_payload)))
+    return result is not None and result >= 0
+
+def get_workspace_data(workspace_id: str, data_type: Optional[str] = None, since: Optional[datetime] = None) -> List[Dict]:
+    """Get workspace data with optional filtering"""
+    where_clauses = ["workspace_id = %s"]
+    params = [workspace_id]
+    
+    if data_type:
+        where_clauses.append("data_type = %s")
+        params.append(data_type)
+    
+    if since:
+        where_clauses.append("updated_at > %s")
+        params.append(since)
+    
+    query = f"""
+        SELECT data_type, item_key, data_payload, version, updated_at
+        FROM workspace_data
+        WHERE {' AND '.join(where_clauses)}
+        ORDER BY updated_at DESC
+    """
+    
+    result = execute_db_query(query, tuple(params))
+    return result if result else []
+
+def delete_workspace_data(workspace_id: str, data_type: str, item_key: str) -> bool:
+    """Delete specific workspace data item"""
+    query = "DELETE FROM workspace_data WHERE workspace_id = %s AND data_type = %s AND item_key = %s"
+    result = execute_db_write(query, (workspace_id, data_type, item_key))
+    return result is not None and result > 0
+
+def get_workspace_devices(workspace_id: str) -> List[Dict]:
+    """Get all devices in a workspace"""
+    query = """
+        SELECT device_fingerprint, device_name, platform, created_at, last_seen
+        FROM devices 
+        WHERE workspace_id = %s AND revoked_at IS NULL
+        ORDER BY created_at DESC
+    """
+    result = execute_db_query(query, (workspace_id,))
+    return result if result else []
+
+def revoke_device(workspace_id: str, device_fingerprint: str) -> bool:
+    """Revoke a device from workspace"""
+    query = """
+        UPDATE devices 
+        SET revoked_at = NOW() 
+        WHERE workspace_id = %s AND device_fingerprint = %s
+    """
+    result = execute_db_write(query, (workspace_id, device_fingerprint))
+    return result is not None and result > 0
+
+def generate_qr_code(data: str) -> str:
+    """Generate QR code as base64 image"""
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    
+    img_base64 = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/png;base64,{img_base64}"
+
 # ================= Price Alerts Management =================
 def create_price_alert(symbol: str, alert_type: str, target_price: float, notification_method: str = 'email') -> bool:
     """Create a new price alert"""
@@ -337,6 +617,18 @@ def create_watchlist(name: str, description: str, symbols: List[str]) -> bool:
         VALUES (%s, %s, %s)
     """
     result = execute_db_query(query, (name, description, symbols), fetch=False)
+    
+    # Also save to workspace_data for cross-device sync
+    workspace_id = st.session_state.get('workspace_id')
+    if result is not None and workspace_id:
+        watchlist_data = {
+            'name': name,
+            'description': description,
+            'symbols': symbols,
+            'created_at': datetime.now().isoformat()
+        }
+        save_workspace_data(workspace_id, 'watchlist', name, watchlist_data)
+    
     return result is not None
 
 def get_watchlists() -> List[Dict[str, Any]]:
@@ -359,12 +651,34 @@ def update_watchlist(watchlist_id: int, name: str, description: str, symbols: Li
         WHERE id = %s
     """
     result = execute_db_query(query, (name, description, symbols, watchlist_id), fetch=False)
+    
+    # Also update workspace_data for cross-device sync
+    workspace_id = st.session_state.get('workspace_id')
+    if result is not None and workspace_id:
+        watchlist_data = {
+            'name': name,
+            'description': description,
+            'symbols': symbols,
+            'updated_at': datetime.now().isoformat()
+        }
+        save_workspace_data(workspace_id, 'watchlist', name, watchlist_data)
+    
     return result is not None
 
 def delete_watchlist(watchlist_id: int) -> bool:
     """Delete a watchlist"""
+    # Get watchlist name before deleting for workspace_data cleanup
+    watchlist = get_watchlist_by_id(watchlist_id)
+    watchlist_name = watchlist['name'] if watchlist else None
+    
     query = "DELETE FROM watchlists WHERE id = %s"
     result = execute_db_query(query, (watchlist_id,), fetch=False)
+    
+    # Also remove from workspace_data for cross-device sync
+    workspace_id = st.session_state.get('workspace_id')
+    if result is not None and workspace_id and watchlist_name:
+        delete_workspace_data(workspace_id, 'watchlist', watchlist_name)
+    
     return result is not None
 
 # ================= Data Source (yfinance) =================
@@ -1676,6 +1990,49 @@ if 'user_tier' not in st.session_state:
 if 'active_alerts_count' not in st.session_state:
     st.session_state.active_alerts_count = 0
 
+# ================= Anonymous Workspace System =================
+# Initialize anonymous device and workspace for data sync
+# Initialize persistent device fingerprint
+if 'device_fingerprint' not in st.session_state:
+    st.session_state.device_fingerprint = get_persistent_device_fingerprint()
+
+if 'workspace_id' not in st.session_state:
+    # Get or create workspace for this device
+    workspace_id = get_or_create_workspace_for_device(st.session_state.device_fingerprint)
+    st.session_state.workspace_id = workspace_id
+    
+    # If we have a workspace, sync any existing data
+    if workspace_id:
+        try:
+            # Load existing workspace data into session state
+            existing_data = get_workspace_data(workspace_id)
+            
+            # Process saved watchlists, alerts, etc.
+            for item in existing_data:
+                data_type = item['data_type']
+                item_key = item['item_key'] 
+                payload = json.loads(item['data_payload']) if isinstance(item['data_payload'], str) else item['data_payload']
+                
+                # Restore watchlist items
+                if data_type == 'watchlist':
+                    if 'saved_watchlist' not in st.session_state:
+                        st.session_state.saved_watchlist = []
+                    if item_key not in st.session_state.saved_watchlist:
+                        st.session_state.saved_watchlist.append(item_key)
+                
+                # Restore other data types as needed
+                # Could add portfolio data, settings, etc. here
+                
+        except Exception as e:
+            # Silent fail - don't break app if sync fails
+            pass
+
+if 'pairing_token' not in st.session_state:
+    st.session_state.pairing_token = None
+
+if 'saved_watchlist' not in st.session_state:
+    st.session_state.saved_watchlist = []
+
 c1, c2, c3 = st.columns([1,1,1])
 run_clicked = c1.button("🔎 Run Scanner", width='stretch')
 refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
@@ -1755,6 +2112,101 @@ if st.session_state.get('show_manage_watchlists', False):
         if st.button("Close", key="close_manage"):
             st.session_state.show_manage_watchlists = False
             st.rerun()
+
+# ================= Device Pairing & Sync =================
+st.sidebar.header("📱 Device Sync")
+
+if st.session_state.workspace_id:
+    # Show current workspace info
+    devices = get_workspace_devices(st.session_state.workspace_id)
+    st.sidebar.caption(f"💾 Workspace: {st.session_state.workspace_id[:8]}...")
+    st.sidebar.caption(f"📱 Connected devices: {len(devices)}")
+    
+    # Create pairing section
+    with st.sidebar.expander("🔗 Connect New Device", expanded=False):
+        st.write("**To sync with another device:**")
+        st.write("1. Generate a pairing code below")
+        st.write("2. Open Market Scanner on your other device")
+        st.write("3. Scan the QR code or enter the code")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📱 Generate Code", key="generate_pair"):
+                if st.session_state.workspace_id:
+                    token = create_pairing_token(st.session_state.workspace_id)
+                    if token:
+                        st.session_state.pairing_token = token
+                        st.rerun()
+                    else:
+                        st.error("Failed to generate pairing code")
+        
+        with col2:
+            if st.button("🔄 Sync Now", key="sync_now"):
+                if st.session_state.workspace_id:
+                    # Save current watchlist to workspace
+                    for symbol in st.session_state.saved_watchlist:
+                        save_workspace_data(
+                            st.session_state.workspace_id,
+                            'watchlist',
+                            symbol,
+                            {'symbol': symbol, 'added_at': datetime.now().isoformat()}
+                        )
+                    st.success("🔄 Data synced!")
+        
+        # Show pairing token and QR code
+        if st.session_state.pairing_token:
+            st.write(f"**Pairing Code:** `{st.session_state.pairing_token}`")
+            st.caption("⏱️ Expires in 10 minutes")
+            
+            # Generate QR code
+            pairing_url = f"https://market-scanner-1-wesso80.replit.app/?pair={st.session_state.pairing_token}"
+            qr_img = generate_qr_code(pairing_url)
+            
+            st.markdown(f'<img src="{qr_img}" style="width: 150px; height: 150px; margin: 10px auto; display: block;">', 
+                       unsafe_allow_html=True)
+            st.caption("Scan with your mobile device")
+    
+    # Pair with token section
+    with st.sidebar.expander("🔢 Enter Pairing Code", expanded=False):
+        st.write("**Have a pairing code from another device?**")
+        pair_token = st.text_input("Enter pairing code:", max_chars=6, key="pair_token_input")
+        if st.button("📲 Pair Device", key="pair_device"):
+            if pair_token:
+                new_device_fp = generate_device_fingerprint()
+                result_workspace = consume_pairing_token(pair_token, new_device_fp, "web", "Web Browser")
+                if result_workspace:
+                    # Switch to the paired workspace
+                    st.session_state.workspace_id = result_workspace
+                    st.session_state.device_fingerprint = new_device_fp
+                    st.success("✅ Device paired successfully!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid or expired pairing code")
+            else:
+                st.error("Please enter a pairing code")
+    
+    # Device management
+    if devices and len(devices) > 1:
+        with st.sidebar.expander("⚙️ Manage Devices", expanded=False):
+            for device in devices:
+                device_name = device['device_name'] or "Unknown Device"
+                platform = device['platform'] or "unknown"
+                is_current = device['device_fingerprint'] == st.session_state.device_fingerprint
+                
+                if is_current:
+                    st.write(f"📱 **{device_name}** ({platform}) - *This device*")
+                else:
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.write(f"📱 {device_name} ({platform})")
+                    with col2:
+                        if st.button("🗑️", key=f"revoke_{device['device_fingerprint'][:8]}", help="Remove device"):
+                            if revoke_device(st.session_state.workspace_id, device['device_fingerprint']):
+                                st.success("Device removed")
+                                st.rerun()
+
+else:
+    st.sidebar.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers =================
 st.sidebar.header("💳 Subscription")
