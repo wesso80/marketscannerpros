@@ -819,41 +819,24 @@ def push_slack(text: str):
 # Legacy SMTP function removed - now using user-specific SendGrid system
 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
-    """Send email to specific user using SendGrid with SMTP fallback"""
+    """Send email to specific user using reliable SMTP system"""
     import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
     
-    # First try SendGrid API
+    # Use SMTP directly - more reliable than SendGrid API with dependency issues
     try:
-        sendgrid_key = os.environ.get('SENDGRID_API_KEY')
-        if sendgrid_key:
-            from sendgrid import SendGridAPIClient
-            from sendgrid.helpers.mail import Mail, Email, To, Content
-            
-            sg = SendGridAPIClient(sendgrid_key)
-            from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
-            
-            message = Mail(
-                from_email=Email(from_email),
-                to_emails=To(to_email),
-                subject=subject
-            )
-            message.content = Content("text/plain", body)
-            
-            sg.send(message)
-            return True
-    except Exception as sendgrid_error:
-        st.warning(f"SendGrid failed: {str(sendgrid_error)[:100]}... Trying SMTP fallback...")
-        
-    # Fallback to SMTP if SendGrid fails
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        
-        # Use Gmail SMTP with SendGrid API key as app password
-        smtp_server = "smtp.gmail.com"
+        # SMTP configuration - using SendGrid SMTP instead of API
+        smtp_server = "smtp.sendgrid.net"
         smtp_port = 587
+        smtp_username = "apikey"  # SendGrid SMTP uses 'apikey' as username
+        smtp_password = os.environ.get('SENDGRID_API_KEY')
         from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
+        
+        if not smtp_password:
+            st.error("📧 SendGrid API key not configured")
+            return False
         
         # Create message
         msg = MIMEMultipart()
@@ -862,27 +845,25 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
         
-        # Send via SMTP
+        # Send via SendGrid SMTP
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
-        
-        # Try to use the notification email as username and SendGrid key as password
-        server.login(from_email, os.environ.get('SENDGRID_API_KEY', ''))
+        server.login(smtp_username, smtp_password)
         text = msg.as_string()
         server.sendmail(from_email, to_email, text)
         server.quit()
         
-        st.success("✅ Email sent via SMTP!")
+        st.success("✅ Email sent successfully via SendGrid SMTP!")
         return True
         
     except Exception as smtp_error:
-        st.error(f"Both SendGrid and SMTP failed. SMTP error: {str(smtp_error)}")
+        st.error(f"📧 Email sending failed: {str(smtp_error)}")
         
-        # Final fallback - show in-app notification
-        st.warning(f"📧 Email system not configured properly. Showing notification here instead:")
-        st.warning(f"Subject: {subject}")
-        st.info(f"To: {to_email}")
-        st.info(body)
+        # Show diagnostic information
+        st.warning("📧 Email delivery issue - showing notification content instead:")
+        st.info(f"**Subject:** {subject}")
+        st.info(f"**To:** {to_email}")
+        st.info(f"**Message:** {body}")
         return False
 
 def save_user_notification_preferences(user_email: str, method: str) -> bool:
