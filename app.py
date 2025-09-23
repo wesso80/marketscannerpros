@@ -251,63 +251,29 @@ def generate_device_fingerprint() -> str:
     return str(uuid.uuid4())
 
 def get_persistent_device_fingerprint() -> str:
-    """Get or create a persistent device fingerprint using browser localStorage"""
-    # Check if device_id is already in query params
+    """Get or create a persistent device fingerprint - simplified approach"""
+    # Check if we already have a device fingerprint in session state
+    if 'device_fingerprint' in st.session_state:
+        return st.session_state.device_fingerprint
+    
+    # Check if device_id is in query params (from potential pairing)
     query_params = st.query_params
     device_id = query_params.get('device_id', None)
     
-    # Handle case where device_id might be a list (fix type handling bug)
+    # Handle case where device_id might be a list
     if isinstance(device_id, list):
         device_id = device_id[0] if device_id else None
     
-    # If device_id is present, cache it and return
     if device_id:
-        if 'cached_device_fingerprint' not in st.session_state:
-            st.session_state.cached_device_fingerprint = device_id
+        # Use the device_id from query params
+        st.session_state.device_fingerprint = str(device_id)
         return str(device_id)
     
-    # If we have a cached fingerprint but URL doesn't have it, something went wrong
-    if 'cached_device_fingerprint' in st.session_state:
-        return st.session_state.cached_device_fingerprint
-    
-    # JavaScript to handle localStorage and trigger reload with device_id
-    js_code = """
-    <script>
-    function initDeviceFingerprint() {
-        // Check if we already set the device_id to prevent infinite reloads
-        if (sessionStorage.getItem('device_id_set') === 'true') {
-            return;
-        }
-        
-        let fingerprint = localStorage.getItem('market_scanner_device_id');
-        if (!fingerprint) {
-            // Generate new UUID
-            fingerprint = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-            localStorage.setItem('market_scanner_device_id', fingerprint);
-        }
-        
-        // Set device_id in URL and reload once
-        const currentUrl = new URL(window.location);
-        if (!currentUrl.searchParams.has('device_id')) {
-            sessionStorage.setItem('device_id_set', 'true');
-            currentUrl.searchParams.set('device_id', fingerprint);
-            window.location.href = currentUrl.toString();
-        }
-    }
-    
-    // Execute immediately
-    initDeviceFingerprint();
-    </script>
-    """
-    
-    # Inject JavaScript and stop execution to wait for reload
-    st.components.v1.html(js_code, height=0, width=0)
-    st.info("🔄 Initializing device fingerprint...")
-    st.stop()  # Stop execution until reload with device_id
+    # Generate a new device fingerprint for this session
+    # Note: This will be different each session until we implement persistent storage
+    new_fingerprint = str(uuid.uuid4())
+    st.session_state.device_fingerprint = new_fingerprint
+    return new_fingerprint
 
 def generate_pairing_token() -> str:
     """Generate a secure pairing token (10 chars)"""
