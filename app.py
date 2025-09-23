@@ -975,7 +975,7 @@ def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Dict[str, A
     if session_user_email == user_email:
         return {
             'user_email': user_email,
-            'notification_method': st.session_state.get('notification_method', 'email')
+            'notification_method': st.session_state.get('notification_method', 'in_app')
         }
     
     # No preferences found
