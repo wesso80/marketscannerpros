@@ -2174,10 +2174,26 @@ if st.session_state.workspace_id:
 else:
     st.sidebar.error("❌ Workspace initialization failed")
 
-# ================= Subscription Tiers =================
-st.sidebar.header("💳 Subscription")
+# ================= Subscription Tiers (Web Only) =================
+# Detect if this is accessed from mobile app and hide subscriptions
+def is_mobile_app() -> bool:
+    """Check if request is from mobile app WebView"""
+    # Check for mobile app URL parameter
+    query_params = st.query_params
+    if query_params.get('mobile') == 'true':
+        return True
+    
+    # Check user agent for mobile app indicators
+    try:
+        headers = st.context.headers if hasattr(st.context, 'headers') else {}
+        user_agent = headers.get('user-agent', '').lower()
+        # Detect WebView, mobile app specific user agents
+        mobile_indicators = ['wkwebview', 'android app', 'ios app', 'capacitor', 'cordova']
+        return any(indicator in user_agent for indicator in mobile_indicators)
+    except:
+        return False
 
-# Define tier configurations
+# Define tier configurations (needed for app functionality)
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
@@ -2203,6 +2219,10 @@ TIER_CONFIG = {
         'color': '#FF9800'
     }
 }
+
+# Only show subscription UI on web (not mobile apps)
+if not is_mobile_app():
+    st.sidebar.header("💳 Subscription")
 
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
@@ -2280,6 +2300,8 @@ elif current_tier in ['pro', 'pro_trader']:
             if st.button("Trader", key="demo_trader_paid"):
                 st.session_state.user_tier = 'pro_trader'
                 st.rerun()
+
+# End of subscription UI section (hidden for mobile apps)
 
 # Edit watchlist modal
 if st.session_state.get('edit_watchlist_id'):
