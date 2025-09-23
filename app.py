@@ -2547,36 +2547,52 @@ else:
     st.sidebar.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
-# Detect if this is accessed from mobile app and hide subscriptions
-def is_mobile_app() -> bool:
-    """Check if request is from mobile app WebView"""
-    # Check for mobile app URL parameter - Streamlit can return different formats
-    query_params = st.query_params
-    
-    # Handle all possible Streamlit query parameter formats
-    mobile_param = query_params.get('mobile')
-    
-    # Check various formats that Streamlit might return
-    if mobile_param:
-        # Handle string, list, or other formats
-        if isinstance(mobile_param, list):
-            return 'true' in [str(p).lower() for p in mobile_param]
-        else:
-            return str(mobile_param).lower() == 'true'
-    
-    # Also check direct key existence for some Streamlit versions
-    if 'mobile' in query_params:
-        return True
-        
-    # Check user agent for mobile app indicators
+# Enhanced platform detection for Apple IAP compliance
+def get_platform_type() -> str:
+    """Detect platform type: 'ios', 'android', or 'web'"""
     try:
+        # Check URL parameters first (most reliable for mobile apps)
+        query_params = st.query_params
+        platform_param = query_params.get('platform')
+        
+        if platform_param:
+            platform_str = str(platform_param).lower()
+            if 'ios' in platform_str:
+                return 'ios'
+            elif 'android' in platform_str:
+                return 'android'
+            
+        # Check user agent for platform-specific indicators
         headers = st.context.headers if hasattr(st.context, 'headers') else {}
         user_agent = headers.get('user-agent', '').lower()
-        # Detect WebView, mobile app specific user agents
-        mobile_indicators = ['wkwebview', 'android app', 'ios app', 'capacitor', 'cordova']
-        return any(indicator in user_agent for indicator in mobile_indicators)
-    except:
-        return False
+        
+        # iOS indicators
+        ios_indicators = ['wkwebview', 'ios app', 'capacitor/ios', 'iphone', 'ipad']
+        if any(indicator in user_agent for indicator in ios_indicators):
+            return 'ios'
+            
+        # Android indicators  
+        android_indicators = ['android app', 'capacitor/android', 'android']
+        if any(indicator in user_agent for indicator in android_indicators):
+            return 'android'
+            
+        # Mobile app general indicators (default to iOS for safety)
+        mobile_indicators = ['capacitor', 'cordova']
+        if any(indicator in user_agent for indicator in mobile_indicators):
+            return 'ios'  # Default to iOS for Apple compliance
+            
+    except Exception:
+        pass
+    
+    return 'web'
+
+def is_mobile_app() -> bool:
+    """Check if request is from mobile app WebView"""
+    return get_platform_type() in ['ios', 'android']
+
+def is_ios_app() -> bool:
+    """Check if request is specifically from iOS app"""
+    return get_platform_type() == 'ios'
 
 # Define tier configurations (needed for app functionality)
 TIER_CONFIG = {
@@ -2683,15 +2699,28 @@ if current_tier == 'free':
         
         st.markdown("---")
         
+        # Platform-specific payment buttons (Apple IAP compliance)
+        platform = get_platform_type()
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                if workspace_id:
-                    if is_mobile:
-                        st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
+            if platform == 'ios':
+                # Apple IAP button (required for App Store compliance)
+                if st.button("🍎 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Via Apple In-App Purchase"):
+                    if workspace_id:
+                        st.info("🍎 **Apple In-App Purchase Required**\n\nTo subscribe to Pro ($4.99/month), use the native iOS app where you can purchase through Apple's secure payment system.")
+                        st.markdown("---")
+                        st.markdown("**Next Steps:**")
+                        st.markdown("1. Open the Market Scanner iOS app")
+                        st.markdown("2. Tap 'Subscribe to Pro' in Settings")
+                        st.markdown("3. Complete purchase via Apple ID")
                     else:
-                        # Create Stripe checkout session for web users
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
+            else:
+                # Web/Android Stripe button
+                if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                    if workspace_id:
+                        # Create Stripe checkout session for web/android users
                         checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2703,16 +2732,27 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro!")
                                 st.rerun()
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
+                    else:
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
-            if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                if workspace_id:
-                    if is_mobile:
-                        st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
+            if platform == 'ios':
+                # Apple IAP button (required for App Store compliance)
+                if st.button("🍎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Via Apple In-App Purchase"):
+                    if workspace_id:
+                        st.info("🍎 **Apple In-App Purchase Required**\n\nTo subscribe to Pro Trader ($9.99/month), use the native iOS app where you can purchase through Apple's secure payment system.")
+                        st.markdown("---")
+                        st.markdown("**Next Steps:**")
+                        st.markdown("1. Open the Market Scanner iOS app")
+                        st.markdown("2. Tap 'Subscribe to Pro Trader' in Settings")
+                        st.markdown("3. Complete purchase via Apple ID")
                     else:
-                        # Create Stripe checkout session for web users
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
+            else:
+                # Web/Android Stripe button
+                if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                    if workspace_id:
+                        # Create Stripe checkout session for web/android users
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2724,8 +2764,8 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
                                 st.rerun()
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
+                    else:
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
         
         # Apple-required billing disclosures and controls
         st.markdown("---")
