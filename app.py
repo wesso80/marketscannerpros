@@ -3152,7 +3152,8 @@ with st.sidebar.expander("Price Alert Notifications", expanded=False):
         "Notification Method:",
         ["In-App Notifications", "Slack", "Both", "None"],
         index=0,
-        help="Choose how you want to receive alerts (In-App provides reliable persistent notifications)"
+        help="Choose how you want to receive alerts (In-App provides reliable persistent notifications)",
+        key="notification_method_v2"  # Force refresh with new key
     )
     
     # Map UI options to backend values
@@ -3449,7 +3450,7 @@ if st.session_state.get('show_new_alert', False):
             
         with col2:
             alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-            alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method")
+            alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
         
         col1, col2, col3 = st.columns(3)
         with col1:
