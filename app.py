@@ -2235,46 +2235,104 @@ TIER_CONFIG = {
 
 # Debug moved to top of file
 
-# Only show subscription UI on web (not mobile apps)
-if not is_mobile_app():
-    st.sidebar.header("💳 Subscription")
-    
-    current_tier = st.session_state.user_tier
-    tier_info = TIER_CONFIG[current_tier]
-    
-    # Display current tier status
-    with st.sidebar.container():
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
-            border: 1px solid {tier_info['color']}44;
-            border-radius: 10px;
-            padding: 16px;
-            margin: 8px 0;
-        ">
-            <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
-            <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
-                {'Active Plan' if current_tier != 'free' else 'Limited features'}
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Show upgrade options for free tier users
-    if current_tier == 'free':
-        with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("🚀 Pro\n$9.99/mo", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                    st.info("🚀 Upgrade to Pro - Coming soon! Payment integration in development.")
-            
-            with col2:
-                if st.button("💎 Trader\n$29.99/mo", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                    st.info("💎 Upgrade to Pro Trader - Coming soon! Payment integration in development.")
-            
-            # For demo purposes - allow users to simulate tier upgrades
+# ================= Subscription UI (All Platforms) =================
+# Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
+st.sidebar.header("💳 Subscription")
+
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+# Display current tier status
+with st.sidebar.container():
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
+        border: 1px solid {tier_info['color']}44;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 8px 0;
+    ">
+        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
+        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
+            {'Active Plan' if current_tier != 'free' else 'Limited features'}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Apple-compliant subscription management link (required)
+is_mobile = is_mobile_app()
+if is_mobile:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("📱 **Manage Subscription**")
+    st.sidebar.caption("Tap to manage your subscription through the App Store")
+    # Note: In actual iOS app, this would link to subscription management
+
+# Show upgrade options for free tier users
+if current_tier == 'free':
+    with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
+        # Apple-compliant paywall with clear pricing and full billing terms
+        st.markdown("**🚀 Market Scanner Pro - $9.99 per month**")
+        st.markdown("• Unlimited market scans")
+        st.markdown("• Advanced charts & indicators") 
+        st.markdown("• Real-time price alerts")
+        st.markdown("• Portfolio tracking")
+        
+        st.markdown("**💎 Market Scanner Pro Trader - $29.99 per month**")
+        st.markdown("• Everything in Pro")
+        st.markdown("• Advanced backtesting")
+        st.markdown("• Custom trading algorithms")
+        st.markdown("• Priority support")
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🚀 Subscribe to Pro\n$9.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                if is_mobile:
+                    st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
+                else:
+                    st.info("🚀 Upgrade to Pro - Payment integration in development.")
+        
+        with col2:
+            if st.button("💎 Subscribe to Trader\n$29.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                if is_mobile:
+                    st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
+                else:
+                    st.info("💎 Upgrade to Pro Trader - Payment integration in development.")
+        
+        # Apple-required billing disclosures and controls
+        st.markdown("---")
+        st.markdown("**📋 Billing Information**")
+        st.caption("• Payment will be charged to your Apple ID account")
+        st.caption("• Subscription automatically renews unless cancelled at least 24 hours before the end of the current period")
+        st.caption("• Your account will be charged for renewal within 24 hours prior to the end of the current period")
+        st.caption("• You can manage and cancel subscriptions in your device's subscription settings")
+        
+        # Apple-required links (Terms and Privacy Policy)
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("📄 [Terms of Service](https://marketscannerspros.pages.dev/terms)")
+        with col2:
+            st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
+        
+        # Apple-required subscription management controls
+        if is_mobile:
             st.markdown("---")
-            st.caption("🧪 Demo Mode - Simulate Tiers:")
+            st.markdown("**📱 Subscription Management**")
+            if st.button("⚙️ Manage Subscriptions", key="manage_subscriptions"):
+                st.info("🔗 Opens: Settings > [Your Name] > Subscriptions")
+                # In actual iOS app: itms-apps://apps.apple.com/account/subscriptions
+            
+            if st.button("🔄 Restore Purchases", key="restore_purchases"):
+                st.info("🔄 Restoring previous purchases...")
+                # In actual iOS app: StoreKit.restorePurchases()
+        
+        # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
+        if not is_mobile:  # Only show on web, not in mobile app builds
+            st.markdown("---")
+            st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("Free", key="demo_free"):
@@ -2289,19 +2347,44 @@ if not is_mobile_app():
                     st.session_state.user_tier = 'pro_trader'
                     st.rerun()
 
-    # Show tier benefits for paid users
-    elif current_tier in ['pro', 'pro_trader']:
-        with st.sidebar.expander("✨ Your Benefits", expanded=False):
-            for feature in tier_info['features']:
-                st.write(f"✅ {feature}")
-            
-            if current_tier == 'pro':
-                st.markdown("---")
-                if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
-                    st.info("💎 Upgrade to Pro Trader - Coming soon!")
-            
+# Show tier benefits for paid users
+elif current_tier in ['pro', 'pro_trader']:
+    with st.sidebar.expander("✨ Your Benefits", expanded=False):
+        for feature in tier_info['features']:
+            st.write(f"✅ {feature}")
+        
+        if current_tier == 'pro':
             st.markdown("---")
-            st.caption("🧪 Demo Mode:")
+            if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
+                if is_mobile:
+                    st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                else:
+                    st.info("💎 Upgrade to Pro Trader - Coming soon!")
+        
+        # Apple-compliant subscription management for active subscribers
+        if is_mobile:
+            st.markdown("---")
+            st.markdown("**📱 Subscription Management**")
+            if st.button("⚙️ Manage Subscription", key="manage_sub"):
+                st.info("🔗 Opens: Settings > [Your Name] > Subscriptions")
+                # In actual iOS app: itms-apps://apps.apple.com/account/subscriptions
+            
+            if st.button("🔄 Restore Purchases", key="restore_purchases_paid"):
+                st.info("🔄 Restoring previous purchases...")
+                # In actual iOS app: StoreKit.restorePurchases()
+        
+        # Apple-required links for active subscribers
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("📄 [Terms of Service](https://marketscannerspros.pages.dev/terms)")
+        with col2:
+            st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
+        
+        # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
+        if not is_mobile:  # Only show on web, not in mobile app builds
+            st.markdown("---")
+            st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("Free", key="demo_free_paid"):
