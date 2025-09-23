@@ -24,6 +24,7 @@ import base64
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+import stripe
 
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
@@ -72,6 +73,27 @@ CFG = ScanConfig(
 )
 
 SYD = tz.gettz("Australia/Sydney")
+
+# ================= Stripe Configuration =================
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+# Subscription pricing configuration
+SUBSCRIPTION_PLANS = {
+    "pro": {
+        "name": "Pro",
+        "price": 4.99,
+        "price_id": None,  # Will be set when creating Stripe products
+        "features": ["Real-time market data", "Technical analysis", "Basic alerts"]
+    },
+    "pro_trader": {
+        "name": "Pro Trader", 
+        "price": 9.99,
+        "price_id": None,  # Will be set when creating Stripe products
+        "features": ["Everything in Pro", "Advanced analytics", "Premium alerts", "Priority support"]
+    }
+}
 
 # ================= Utilities =================
 def _yf_interval_period(tf: str) -> Tuple[str, str]:
@@ -2078,6 +2100,159 @@ def get_user_tier_from_subscription(workspace_id: str):
         return subscription['plan_code']
     return 'free'
 
+# ================= Stripe Webhook Endpoint =================
+# Handle webhook in query parameters for Streamlit limitations
+if 'webhook' in st.query_params:
+    webhook_payload = st.query_params.get('payload', '')
+    webhook_signature = st.query_params.get('signature', '')
+    
+    if webhook_payload and webhook_signature:
+        try:
+            import urllib.parse
+            decoded_payload = urllib.parse.unquote(webhook_payload)
+            success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
+            if success:
+                st.write("Webhook processed successfully")
+            else:
+                st.error(f"Webhook error: {message}")
+        except Exception as e:
+            st.error(f"Webhook processing failed: {str(e)}")
+        st.stop()
+
+# Handle successful payment return from Stripe
+if 'session_id' in st.query_params:
+    session_id = st.query_params.get('session_id')
+    if session_id:
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+            if session and session.payment_status == 'paid':
+                st.success("🎉 Payment successful! Your subscription is now active.")
+                st.balloons()
+                # Clear the query parameter to avoid repeated success messages
+                st.query_params.clear()
+                st.rerun()
+        except Exception as e:
+            st.error(f"Error verifying payment: {str(e)}")
+
+# ================= Stripe Integration Functions =================
+def create_stripe_checkout_session(plan_code: str, workspace_id: str):
+    """Create a Stripe checkout session for subscription"""
+    try:
+        if not stripe.api_key:
+            return None, "Stripe not configured"
+        
+        # Get plan details
+        plan = SUBSCRIPTION_PLANS.get(plan_code)
+        if not plan:
+            return None, "Invalid plan"
+        
+        # Create or get customer
+        customer = None
+        try:
+            customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})
+            if customers.data:
+                customer = customers.data[0]
+        except:
+            pass
+        
+        if not customer:
+            customer = stripe.Customer.create(
+                metadata={"workspace_id": workspace_id},
+                description=f"Market Scanner - Workspace {workspace_id[:8]}"
+            )
+        
+        # Create checkout session
+        session = stripe.checkout.Session.create(
+            customer=customer.id,
+            payment_method_types=['card'],
+            mode='subscription',
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': plan['name'],
+                        'description': ', '.join(plan['features'])
+                    },
+                    'unit_amount': int(plan['price'] * 100),
+                    'recurring': {'interval': 'month'}
+                },
+                'quantity': 1,
+            }],
+            metadata={
+                'workspace_id': workspace_id,
+                'plan_code': plan_code
+            },
+            success_url=f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}"
+        )
+        
+        return session.url, None
+    except Exception as e:
+        return None, f"Stripe error: {str(e)}"
+
+def handle_stripe_webhook(webhook_data: dict, signature: str):
+    """Handle Stripe webhook events"""
+    try:
+        if not STRIPE_WEBHOOK_SECRET:
+            return False, "Webhook secret not configured"
+        
+        # Verify webhook signature
+        event = stripe.Webhook.construct_event(
+            webhook_data, signature, STRIPE_WEBHOOK_SECRET
+        )
+        
+        if event['type'] == 'checkout.session.completed':
+            session = event['data']['object']
+            workspace_id = session['metadata'].get('workspace_id')
+            plan_code = session['metadata'].get('plan_code')
+            
+            if workspace_id and plan_code:
+                # Create subscription in database
+                success, result = create_subscription(workspace_id, plan_code, 'web')
+                if not success:
+                    return False, f"Failed to create subscription: {result}"
+                
+                # Store Stripe subscription ID
+                stripe_subscription_id = session.get('subscription')
+                if stripe_subscription_id:
+                    update_query = """
+                        UPDATE user_subscriptions 
+                        SET stripe_subscription_id = %s
+                        WHERE workspace_id = %s AND subscription_status = 'active'
+                    """
+                    execute_db_write(update_query, (stripe_subscription_id, workspace_id))
+        
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            # Cancel subscription in database
+            cancel_query = """
+                UPDATE user_subscriptions 
+                SET subscription_status = 'cancelled', cancelled_at = now()
+                WHERE stripe_subscription_id = %s
+            """
+            execute_db_write(cancel_query, (subscription['id'],))
+            
+        return True, "Webhook processed"
+    except Exception as e:
+        return False, f"Webhook error: {str(e)}"
+
+def cancel_stripe_subscription(workspace_id: str):
+    """Cancel a Stripe subscription"""
+    try:
+        subscription = get_workspace_subscription(workspace_id)
+        if not subscription or not subscription.get('stripe_subscription_id'):
+            return False, "No active Stripe subscription found"
+        
+        # Cancel in Stripe
+        stripe.Subscription.delete(subscription['stripe_subscription_id'])
+        
+        # Cancel in database
+        cancel_subscription(workspace_id)
+        
+        return True, "Subscription cancelled"
+    except Exception as e:
+        return False, f"Error cancelling subscription: {str(e)}"
+
 # ================= Anonymous Workspace System =================
 # Initialize anonymous device and workspace for data sync
 # Initialize persistent device fingerprint
@@ -2366,19 +2541,28 @@ workspace_id = st.session_state.get('workspace_id')
 current_subscription = None
 current_tier = 'free'
 
+# First check session state for demo mode overrides
+demo_tier = st.session_state.get('user_tier')
+
 if workspace_id:
     current_subscription = get_workspace_subscription(workspace_id)
-    if current_subscription:
+    if current_subscription and not demo_tier:
+        # Use database subscription only if no demo mode override
         current_tier = current_subscription['plan_code']
+    elif demo_tier:
+        # Demo mode override takes precedence
+        current_tier = demo_tier
     else:
-        # No database subscription - check session state for demo mode
-        current_tier = st.session_state.get('user_tier', 'free')
+        # No database subscription and no demo override
+        current_tier = 'free'
 else:
     # No workspace - use session state for demo mode
     current_tier = st.session_state.get('user_tier', 'free')
 
-# Update session state to match current tier
-st.session_state.user_tier = current_tier
+# Update session state to match current tier (but don't overwrite demo mode)
+if not st.session_state.get('user_tier'):
+    st.session_state.user_tier = current_tier
+    
 tier_info = TIER_CONFIG[current_tier]
 
 # Display current tier status
@@ -2432,13 +2616,18 @@ if current_tier == 'free':
                     if is_mobile:
                         st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
                     else:
-                        # Create demo subscription for web testing
-                        success, result = create_subscription(workspace_id, 'pro', 'web', 'monthly')
-                        if success:
-                            st.success("🎉 Successfully upgraded to Pro! Features unlocked.")
-                            st.rerun()
+                        # Create Stripe checkout session for web users
+                        checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
+                        if checkout_url:
+                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
+                            st.success("🔗 Redirecting to secure checkout...")
                         else:
-                            st.error(f"❌ Subscription failed: {result}")
+                            st.error(f"❌ Checkout error: {error}")
+                            # Fallback to demo mode if Stripe fails
+                            success, result = create_subscription(workspace_id, 'pro', 'web', 'monthly')
+                            if success:
+                                st.success("🎉 Demo mode: Successfully upgraded to Pro!")
+                                st.rerun()
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
         
@@ -2448,13 +2637,18 @@ if current_tier == 'free':
                     if is_mobile:
                         st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
                     else:
-                        # Create demo subscription for web testing
-                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                        if success:
-                            st.success("🎉 Successfully upgraded to Pro Trader! All features unlocked.")
-                            st.rerun()
+                        # Create Stripe checkout session for web users
+                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        if checkout_url:
+                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
+                            st.success("🔗 Redirecting to secure checkout...")
                         else:
-                            st.error(f"❌ Subscription failed: {result}")
+                            st.error(f"❌ Checkout error: {error}")
+                            # Fallback to demo mode if Stripe fails
+                            success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                            if success:
+                                st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
+                                st.rerun()
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
         
@@ -2517,14 +2711,19 @@ elif current_tier in ['pro', 'pro_trader']:
                     if is_mobile:
                         st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                     else:
-                        # Cancel existing Pro subscription and create Pro Trader
-                        cancel_subscription(workspace_id)
-                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                        if success:
-                            st.success("🎉 Successfully upgraded to Pro Trader!")
-                            st.rerun()
+                        # Create Stripe checkout session for upgrade
+                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        if checkout_url:
+                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
+                            st.success("🔗 Redirecting to secure checkout...")
                         else:
-                            st.error(f"❌ Upgrade failed: {result}")
+                            st.error(f"❌ Checkout error: {error}")
+                            # Fallback to demo mode if Stripe fails
+                            cancel_subscription(workspace_id)
+                            success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                            if success:
+                                st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
+                                st.rerun()
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
         
@@ -2552,33 +2751,51 @@ elif current_tier in ['pro', 'pro_trader']:
         st.markdown("---")
         st.markdown("**📊 Subscription Details**")
         
-        if current_subscription:
-            # Real database subscription
+        if current_subscription and not demo_tier:
+            # Real database subscription (only if no demo mode override)
             st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
             st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
             st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
             if current_subscription.get('current_period_end'):
                 st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
         else:
-            # Session-based subscription (demo mode)
+            # Session-based subscription (demo mode or no database subscription)
             st.caption(f"Plan: {tier_info['name']}")
-            st.caption("Status: Demo/Testing")
+            if demo_tier:
+                st.caption("Status: Demo/Testing")
+            else:
+                st.caption("Status: Active" if current_tier != 'free' else "Status: Free")
             st.caption("Platform: Web")
-            st.caption("Note: This is a demo subscription")
+            if demo_tier:
+                st.caption("Note: This is a demo subscription")
         
         if st.button("❌ Cancel Subscription", key="cancel_subscription"):
-            if current_subscription and workspace_id:
-                # Cancel database subscription
-                if cancel_subscription(workspace_id):
-                    st.success("✅ Subscription cancelled successfully")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to cancel subscription")
-            else:
-                # Cancel session-based subscription (demo mode)
+            if demo_tier:
+                # Cancel demo mode subscription
                 st.session_state.user_tier = 'free'
                 st.success("✅ Demo subscription cancelled")
                 st.rerun()
+            elif current_subscription and workspace_id:
+                # Real database subscription
+                if is_mobile:
+                    st.info("📱 In mobile app, this would open subscription management")
+                else:
+                    # Cancel Stripe subscription for web users
+                    success, message = cancel_stripe_subscription(workspace_id)
+                    if success:
+                        st.success("✅ Subscription cancelled successfully")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Failed to cancel subscription: {message}")
+                        # Fallback to database-only cancellation
+                        if cancel_subscription(workspace_id):
+                            st.success("✅ Local subscription cancelled")
+                            st.rerun()
+                        else:
+                            st.error("❌ Could not cancel subscription")
+            else:
+                # No subscription to cancel
+                st.error("❌ No active subscription found")
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
         if not is_mobile:  # Only show on web, not in mobile app builds
@@ -2587,21 +2804,19 @@ elif current_tier in ['pro', 'pro_trader']:
             col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("Free", key="demo_free_paid"):
-                    if workspace_id:
-                        cancel_subscription(workspace_id)
-                        st.rerun()
+                    st.session_state.user_tier = 'free'
+                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['free']['name']}")
+                    st.rerun()
             with col2:
                 if st.button("Pro", key="demo_pro_paid"):
-                    if workspace_id:
-                        cancel_subscription(workspace_id)
-                        create_subscription(workspace_id, 'pro', 'web', 'monthly')
-                        st.rerun()
+                    st.session_state.user_tier = 'pro'
+                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['pro']['name']}")
+                    st.rerun()
             with col3:
                 if st.button("Trader", key="demo_trader_paid"):
-                    if workspace_id:
-                        cancel_subscription(workspace_id)
-                        create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                        st.rerun()
+                    st.session_state.user_tier = 'pro_trader'
+                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['pro_trader']['name']}")
+                    st.rerun()
 
 # End of subscription UI section (hidden for mobile apps)
 
