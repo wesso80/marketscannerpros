@@ -3104,6 +3104,6 @@ st.markdown("""
 # Add Privacy Policy link separately with proper HTML
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: bradleywessling@yahoo.com.au", unsafe_allow_html=True)
+    st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpro.app", unsafe_allow_html=True)
 with col2:
     pass
