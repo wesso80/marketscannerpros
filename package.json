@@ -8,7 +8,7 @@
     "build:ios": "npx eas build -p ios --profile production"
   },
   "dependencies": {
-    "expo": "^54.0.9",
+    "expo": "~54.0.10",
     "expo-build-properties": "~1.0.9",
     "expo-constants": "~18.0.9",
     "expo-device": "~8.0.8",

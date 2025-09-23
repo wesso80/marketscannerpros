@@ -2339,7 +2339,7 @@ TIER_CONFIG = {
     },
     'pro': {
         'name': '🚀 Pro Tier',
-        'price': '$9.99/month',
+        'price': '$4.99/month',
         'features': ['Unlimited scans & alerts', 'Advanced charts', 'Real-time data', 'Portfolio tracking'],
         'scan_limit': None,
         'alert_limit': None,
@@ -2347,7 +2347,7 @@ TIER_CONFIG = {
     },
     'pro_trader': {
         'name': '💎 Pro Trader',
-        'price': '$29.99/month',
+        'price': '$9.99/month',
         'features': ['Everything in Pro', 'Advanced backtesting', 'Custom algorithms', 'Priority support'],
         'scan_limit': None,
         'alert_limit': None,
@@ -2410,13 +2410,13 @@ if is_mobile:
 if current_tier == 'free':
     with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
         # Apple-compliant paywall with clear pricing and full billing terms
-        st.markdown("**🚀 Market Scanner Pro - $9.99 per month**")
+        st.markdown("**🚀 Market Scanner Pro - $4.99 per month**")
         st.markdown("• Unlimited market scans")
         st.markdown("• Advanced charts & indicators") 
         st.markdown("• Real-time price alerts")
         st.markdown("• Portfolio tracking")
         
-        st.markdown("**💎 Market Scanner Pro Trader - $29.99 per month**")
+        st.markdown("**💎 Market Scanner Pro Trader - $9.99 per month**")
         st.markdown("• Everything in Pro")
         st.markdown("• Advanced backtesting")
         st.markdown("• Custom trading algorithms")
@@ -2427,7 +2427,7 @@ if current_tier == 'free':
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("🚀 Subscribe to Pro\n$9.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+            if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
                 if workspace_id:
                     if is_mobile:
                         st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
@@ -2443,7 +2443,7 @@ if current_tier == 'free':
                     st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
-            if st.button("💎 Subscribe to Trader\n$29.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+            if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
                 if workspace_id:
                     if is_mobile:
                         st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
