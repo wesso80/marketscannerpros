@@ -25,14 +25,19 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 
+# ================= DEBUG MOBILE DETECTION FIRST =================
+# Put debug code BEFORE page config to ensure it executes
+try:
+    query_params = st.query_params
+    mobile_param = query_params.get('mobile')
+    st.error(f"🐛 PARAMS: {dict(query_params)}")
+    st.info(f"🐛 MOBILE: {mobile_param}")
+    st.success("🐛 DEBUG CODE IS RUNNING!")
+except Exception as e:
+    st.error(f"🐛 DEBUG ERROR: {e}")
+
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
-
-# ================= DEBUG MOBILE DETECTION =================
-query_params = st.query_params
-mobile_param = query_params.get('mobile')
-st.error(f"🐛 DEBUG - ALL PARAMS: {dict(query_params)}")
-st.info(f"🐛 DEBUG - MOBILE PARAM: {mobile_param}")
 
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
