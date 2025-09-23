@@ -1,40 +1,30 @@
 {
   "expo": {
-    "name": "Market Scanner Pro",
-    "slug": "market-scanner-pro",
-    "version": "1.0.0",
-    "sdkVersion": "54.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "name": "Market Scanner",
+    "slug": "marketscanner",
+    "owner": "wesso80",
     "ios": {
-      "supportsTablet": false,
       "bundleIdentifier": "com.wesso80.marketscanner",
-      "buildNumber": "1",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.wesso80.marketscanner"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
+    ],
     "extra": {
+      "TARGET_URL": "https://market-scanner-1-wesso80.replit.app",
       "eas": {
-        "projectId": "0ebc6f5e-648c-4a6b-ae94-4b334c9bfac2"
-      },
-      "owner": "wesso80"
+        "projectId": "3f5c8d9e-2d58-49fd-9621-98efab177ee7"
+      }
     }
   }
 }
