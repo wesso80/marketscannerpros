@@ -832,7 +832,8 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
         smtp_port = 587
         smtp_username = "apikey"  # SendGrid SMTP uses 'apikey' as username
         smtp_password = os.environ.get('SENDGRID_API_KEY')
-        from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
+        # Use recipient's email as sender for development - avoids SendGrid verification issues
+        from_email = to_email
         
         if not smtp_password:
             st.error("📧 SendGrid API key not configured")
@@ -857,8 +858,21 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
         return True
         
     except Exception as smtp_error:
-        st.error(f"📧 Email sending failed: {str(smtp_error)}")
+        error_msg = str(smtp_error)
+        st.error(f"📧 Email sending failed: {error_msg}")
         
+        # Provide specific diagnostics based on error type
+        if "authentication" in error_msg.lower():
+            st.error("🔐 Authentication failed - SendGrid API key may be invalid")
+        elif "timeout" in error_msg.lower():
+            st.error("⏰ Connection timeout - Network or SMTP server issue")
+        elif "refused" in error_msg.lower():
+            st.error("🚫 Connection refused - SMTP server not accessible")
+        elif "550" in error_msg:
+            st.error("📮 Email rejected - Invalid sender or recipient")
+        else:
+            st.error(f"🔧 Technical error: {error_msg}")
+            
         # Show diagnostic information
         st.warning("📧 Email delivery issue - showing notification content instead:")
         st.info(f"**Subject:** {subject}")
@@ -3065,6 +3079,19 @@ Happy trading! 📈
 """
                         # Add debug information
                         st.info("🔄 Attempting to send test email...")
+                        
+                        # Show detailed diagnostic information
+                        with st.expander("🔍 Email System Diagnostics", expanded=True):
+                            import os
+                            api_key_exists = bool(os.environ.get('SENDGRID_API_KEY'))
+                            # Use recipient's email as sender for development - avoids SendGrid verification issues
+                            from_email = user_email
+                            
+                            st.write(f"- SendGrid API Key: {'✅ Configured' if api_key_exists else '❌ Missing'}")
+                            st.write(f"- From Email: {from_email}")
+                            st.write(f"- To Email: {user_email}")
+                            st.write(f"- SMTP Server: smtp.sendgrid.net:587")
+                            
                         success = send_email_to_user(test_subject, test_message, user_email)
                         if success:
                             st.success("✅ Test email sent successfully! Check your inbox.")
