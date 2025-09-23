@@ -25,6 +25,14 @@
       "eas": {
         "projectId": "3f5c8d9e-2d58-49fd-9621-98efab177ee7"
       }
+    },
+    "android": {
+      "package": "com.wesso80.marketscanner",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
     }
   }
 }
