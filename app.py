@@ -819,36 +819,70 @@ def push_slack(text: str):
 # Legacy SMTP function removed - now using user-specific SendGrid system
 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
-    """Send email to specific user using SendGrid - from python_sendgrid integration"""
+    """Send email to specific user using SendGrid with SMTP fallback"""
     import os
     
+    # First try SendGrid API
     try:
-        # Check if SendGrid is configured
         sendgrid_key = os.environ.get('SENDGRID_API_KEY')
-        if not sendgrid_key:
-            st.error("SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable.")
-            return False
+        if sendgrid_key:
+            from sendgrid import SendGridAPIClient
+            from sendgrid.helpers.mail import Mail, Email, To, Content
             
-        from sendgrid import SendGridAPIClient
-        from sendgrid.helpers.mail import Mail, Email, To, Content
+            sg = SendGridAPIClient(sendgrid_key)
+            from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
+            
+            message = Mail(
+                from_email=Email(from_email),
+                to_emails=To(to_email),
+                subject=subject
+            )
+            message.content = Content("text/plain", body)
+            
+            sg.send(message)
+            return True
+    except Exception as sendgrid_error:
+        st.warning(f"SendGrid failed: {str(sendgrid_error)[:100]}... Trying SMTP fallback...")
         
-        sg = SendGridAPIClient(sendgrid_key)
+    # Fallback to SMTP if SendGrid fails
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
         
-        # Use a default from email (you can customize this)
+        # Use Gmail SMTP with SendGrid API key as app password
+        smtp_server = "smtp.gmail.com"
+        smtp_port = 587
         from_email = os.environ.get('NOTIFICATION_EMAIL', 'alerts@marketscanner.app')
         
-        message = Mail(
-            from_email=Email(from_email),
-            to_emails=To(to_email),
-            subject=subject
-        )
-        message.content = Content("text/plain", body)
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = from_email
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
         
-        sg.send(message)
+        # Send via SMTP
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        
+        # Try to use the notification email as username and SendGrid key as password
+        server.login(from_email, os.environ.get('SENDGRID_API_KEY', ''))
+        text = msg.as_string()
+        server.sendmail(from_email, to_email, text)
+        server.quit()
+        
+        st.success("✅ Email sent via SMTP!")
         return True
         
-    except Exception as e:
-        st.error(f"Failed to send email: {str(e)}")
+    except Exception as smtp_error:
+        st.error(f"Both SendGrid and SMTP failed. SMTP error: {str(smtp_error)}")
+        
+        # Final fallback - show in-app notification
+        st.warning(f"📧 Email system not configured properly. Showing notification here instead:")
+        st.warning(f"Subject: {subject}")
+        st.info(f"To: {to_email}")
+        st.info(body)
         return False
 
 def save_user_notification_preferences(user_email: str, method: str) -> bool:
@@ -3048,11 +3082,13 @@ Your Settings:
 
 Happy trading! 📈
 """
+                        # Add debug information
+                        st.info("🔄 Attempting to send test email...")
                         success = send_email_to_user(test_subject, test_message, user_email)
                         if success:
-                            st.success("✅ Test email sent! Check your inbox.")
+                            st.success("✅ Test email sent successfully! Check your inbox.")
                         else:
-                            st.error("❌ Test email failed. Check SendGrid configuration.")
+                            st.error("❌ Test email failed. Check the error messages above for details.")
                     except Exception as e:
                         st.error(f"❌ Email test failed: {str(e)}")
                 else:
