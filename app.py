@@ -2225,13 +2225,14 @@ TIER_CONFIG = {
     }
 }
 
-# Debug query parameters
+# Debug query parameters - MOVE TO MAIN AREA
 query_params = st.query_params
 mobile_param = query_params.get('mobile')
 
-# Show ALL query parameters for debugging
-st.sidebar.error(f"🐛 ALL PARAMS: {dict(query_params)}")
-st.sidebar.info(f"🐛 MOBILE PARAM: {mobile_param}")
+# Show debug in main area instead of sidebar
+st.error(f"🐛 DEBUG - ALL PARAMS: {dict(query_params)}")
+st.info(f"🐛 DEBUG - MOBILE PARAM: {mobile_param}")
+st.success(f"🐛 DEBUG - IS_MOBILE_APP(): {is_mobile_app()}")
 
 # Only show subscription UI on web (not mobile apps)
 if not is_mobile_app():
