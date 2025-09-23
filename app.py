@@ -26,7 +26,13 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 # ================= PWA Configuration =================
-st.set_page_config(page_title="Market Scanner", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
+
+# ================= DEBUG MOBILE DETECTION =================
+query_params = st.query_params
+mobile_param = query_params.get('mobile')
+st.error(f"🐛 DEBUG - ALL PARAMS: {dict(query_params)}")
+st.info(f"🐛 DEBUG - MOBILE PARAM: {mobile_param}")
 
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
@@ -1922,7 +1928,7 @@ def create_portfolio_performance_chart() -> go.Figure:
         return None
 
 # ================= UI =================
-st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
+# Page config already set at top - removing duplicate
 
 # Add PWA functionality
 st.markdown("""
@@ -2225,14 +2231,7 @@ TIER_CONFIG = {
     }
 }
 
-# Debug query parameters - MOVE TO MAIN AREA
-query_params = st.query_params
-mobile_param = query_params.get('mobile')
-
-# Show debug in main area instead of sidebar
-st.error(f"🐛 DEBUG - ALL PARAMS: {dict(query_params)}")
-st.info(f"🐛 DEBUG - MOBILE PARAM: {mobile_param}")
-st.success(f"🐛 DEBUG - IS_MOBILE_APP(): {is_mobile_app()}")
+# Debug moved to top of file
 
 # Only show subscription UI on web (not mobile apps)
 if not is_mobile_app():
