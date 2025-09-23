@@ -2543,37 +2543,36 @@ elif current_tier in ['pro', 'pro_trader']:
             st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
         
         # Subscription management for active subscribers  
-        if current_tier in ['pro', 'pro_trader']:
-            st.markdown("---")
-            st.markdown("**📊 Subscription Details**")
-            
-            if current_subscription:
-                # Real database subscription
-                st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
-                st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
-                st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
-                if current_subscription.get('current_period_end'):
-                    st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
-            else:
-                # Session-based subscription (demo mode)
-                st.caption(f"Plan: {tier_info['name']}")
-                st.caption("Status: Demo/Testing")
-                st.caption("Platform: Web")
-                st.caption("Note: This is a demo subscription")
-            
-            if st.button("❌ Cancel Subscription", key="cancel_subscription"):
-                if current_subscription and workspace_id:
-                    # Cancel database subscription
-                    if cancel_subscription(workspace_id):
-                        st.success("✅ Subscription cancelled successfully")
-                        st.rerun()
-                    else:
-                        st.error("❌ Failed to cancel subscription")
-                else:
-                    # Cancel session-based subscription (demo mode)
-                    st.session_state.user_tier = 'free'
-                    st.success("✅ Demo subscription cancelled")
+        st.markdown("---")
+        st.markdown("**📊 Subscription Details**")
+        
+        if current_subscription:
+            # Real database subscription
+            st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
+            st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
+            st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
+            if current_subscription.get('current_period_end'):
+                st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
+        else:
+            # Session-based subscription (demo mode)
+            st.caption(f"Plan: {tier_info['name']}")
+            st.caption("Status: Demo/Testing")
+            st.caption("Platform: Web")
+            st.caption("Note: This is a demo subscription")
+        
+        if st.button("❌ Cancel Subscription", key="cancel_subscription"):
+            if current_subscription and workspace_id:
+                # Cancel database subscription
+                if cancel_subscription(workspace_id):
+                    st.success("✅ Subscription cancelled successfully")
                     st.rerun()
+                else:
+                    st.error("❌ Failed to cancel subscription")
+            else:
+                # Cancel session-based subscription (demo mode)
+                st.session_state.user_tier = 'free'
+                st.success("✅ Demo subscription cancelled")
+                st.rerun()
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
         if not is_mobile:  # Only show on web, not in mobile app builds
