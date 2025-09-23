@@ -26,7 +26,7 @@ const SettingsScreen = () => {
   const upgradeToProTier = () => {
     Alert.alert(
       '🚀 Upgrade to Pro',
-      'Get unlimited scans, alerts, advanced charts, and premium indicators for $9.99/month',
+      'Get unlimited scans, alerts, advanced charts, and premium indicators for $4.99/month',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Upgrade Now', onPress: () => {
@@ -40,7 +40,7 @@ const SettingsScreen = () => {
   const upgradeToProTrader = () => {
     Alert.alert(
       '💎 Upgrade to Pro Trader',
-      'Get everything in Pro plus advanced backtesting, custom algorithms, and priority support for $29.99/month',
+      'Get everything in Pro plus advanced backtesting, custom algorithms, and priority support for $9.99/month',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Upgrade Now', onPress: () => {
@@ -88,7 +88,7 @@ const SettingsScreen = () => {
                   style={styles.upgradeCard}
                   onPress={upgradeToProTier}
                 >
-                  <Text style={styles.upgradeTitle}>🚀 Pro ($9.99/mo)</Text>
+                  <Text style={styles.upgradeTitle}>🚀 Pro ($4.99/mo)</Text>
                   <Text style={styles.upgradeFeatures}>
                     • Unlimited scans & alerts{'\n'}
                     • Advanced charts{'\n'}
@@ -104,7 +104,7 @@ const SettingsScreen = () => {
                   style={styles.upgradeCard}
                   onPress={upgradeToProTrader}
                 >
-                  <Text style={styles.upgradeTitle}>💎 Pro Trader ($29.99/mo)</Text>
+                  <Text style={styles.upgradeTitle}>💎 Pro Trader ($9.99/mo)</Text>
                   <Text style={styles.upgradeFeatures}>
                     • Everything in Pro{'\n'}
                     • Advanced backtesting{'\n'}

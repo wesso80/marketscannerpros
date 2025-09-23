@@ -5,7 +5,7 @@
     "owner": "wesso80",
     "ios": {
       "bundleIdentifier": "com.wesso80.marketscanner",
-      "buildNumber": "1.0.1",
+      "buildNumber": "1.0.2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
