@@ -1,5 +1,5 @@
 export default {
   appId: "com.marketscanner.pro",
   appName: "Market Scanner Pro",
-  server: { url: "https://market-scanner-1-wesso80.replit.app?mobile=true", cleartext: false }
+  server: { url: "https://market-scanner-1-wesso80.replit.app?platform=ios&mobile=true", cleartext: false }
 }

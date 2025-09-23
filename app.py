@@ -2637,56 +2637,77 @@ else:
 # ================= Subscription Tiers (Web Only) =================
 # Enhanced platform detection for Apple IAP compliance
 def get_platform_type() -> str:
-    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection"""
+    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection for TestFlight"""
     try:
-        # Check URL parameters first (most reliable for mobile apps)
+        # PRIORITY 1: Check URL parameters first (most reliable for mobile apps)
         query_params = st.query_params
         platform_param = query_params.get('platform')
-        mobile_param = query_params.get('mobile')
         
+        # Explicit platform parameter (set by mobile app)
         if platform_param:
             platform_str = str(platform_param).lower()
             if 'ios' in platform_str:
                 return 'ios'
             elif 'android' in platform_str:
                 return 'android'
-                
-        # If mobile=true parameter is present, check user agent more carefully
-        if mobile_param and str(mobile_param).lower() == 'true':
-            headers = st.context.headers if hasattr(st.context, 'headers') else {}
-            user_agent = headers.get('user-agent', '').lower()
-            
-            # Strong iOS indicators (WebView running in iOS app)
-            ios_strong_indicators = ['wkwebview', 'mobile/15e148', 'mobile/16', 'mobile/17', 'mobile/18', 'iphone', 'ipad']
-            if any(indicator in user_agent for indicator in ios_strong_indicators):
-                return 'ios'
-                
-            # Capacitor/Cordova in iOS
-            if 'capacitor' in user_agent or 'cordova' in user_agent:
-                if any(ios_indicator in user_agent for ios_indicator in ['iphone', 'ipad', 'ios']):
-                    return 'ios'
-            
-            # Default mobile app to iOS for safety (Apple compliance)
-            return 'ios'
-            
-        # Check user agent for platform-specific indicators
+            elif 'web' in platform_str:
+                return 'web'
+        
+        # PRIORITY 2: Check for mobile app indicators
+        mobile_param = query_params.get('mobile')
+        if mobile_param:
+            return 'ios'  # Default mobile to iOS for Apple compliance
+        
+        # PRIORITY 3: Enhanced User Agent Detection for TestFlight/App Store
         headers = st.context.headers if hasattr(st.context, 'headers') else {}
         user_agent = headers.get('user-agent', '').lower()
         
-        # iOS indicators
-        ios_indicators = ['wkwebview', 'ios app', 'capacitor/ios', 'iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18']
-        if any(indicator in user_agent for indicator in ios_indicators):
+        # Print user agent for debugging (will show in logs)
+        print(f"DEBUG - User Agent: {user_agent}")
+        
+        # Capacitor iOS app detection (TestFlight/App Store) - HIGHEST PRIORITY
+        if 'capacitor' in user_agent:
+            return 'ios'
+        
+        # WKWebView is used by iOS apps (TestFlight, App Store, PWA)
+        if 'wkwebview' in user_agent:
             return 'ios'
             
-        # Android indicators  
-        android_indicators = ['android app', 'capacitor/android', 'android']
-        if any(indicator in user_agent for indicator in android_indicators):
+        # Strong iOS device indicators
+        ios_device_indicators = ['iphone', 'ipad', 'ipod']
+        if any(indicator in user_agent for indicator in ios_device_indicators):
+            # Make sure it's not an Android device pretending to be iOS
+            if 'android' not in user_agent:
+                return 'ios'
+        
+        # iOS version indicators in user agent
+        ios_version_patterns = ['mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19', 'os 15', 'os 16', 'os 17', 'os 18']
+        if any(pattern in user_agent for pattern in ios_version_patterns):
+            return 'ios'
+        
+        # iOS browsers
+        ios_browser_indicators = ['crios', 'fxios', 'webkit', 'safari']
+        if any(indicator in user_agent for indicator in ios_browser_indicators):
+            if 'android' not in user_agent and any(device in user_agent for device in ['iphone', 'ipad', 'mobile']):
+                return 'ios'
+        
+        # Android detection (explicit)
+        if 'android' in user_agent:
             return 'android'
+        
+        # PRIORITY 4: For any remaining mobile indicators, default to iOS for Apple compliance
+        mobile_generic_indicators = ['mobile', 'phone', 'tablet']
+        if any(indicator in user_agent for indicator in mobile_generic_indicators):
+            # If we detect mobile but can't determine platform, default to iOS for safety
+            return 'ios'
             
-    except Exception:
-        pass
-    
-    return 'web'
+        # Desktop/web browsers
+        return 'web'
+        
+    except Exception as e:
+        print(f"Platform detection error: {e}")
+        # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
+        return 'ios'
 
 def is_mobile_app() -> bool:
     """Check if request is from mobile app WebView"""
