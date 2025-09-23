@@ -2194,6 +2194,14 @@ if 'webhook' in st.query_params:
             st.error(f"Webhook processing failed: {str(e)}")
         st.stop()
 
+# Handle Apple IAP Receipt Validation (API endpoint)
+if 'iap' in st.query_params and st.query_params.get('action') == 'validate-receipt':
+    st.write("Apple IAP Receipt Validation Endpoint")
+    if st.button("Validate Receipt"):
+        # This would be called via API, not through Streamlit UI
+        st.info("⚙️ Receipt validation endpoint ready for iOS app")
+    st.stop()
+
 # Handle successful payment return from Stripe
 if 'session_id' in st.query_params:
     session_id = st.query_params.get('session_id')
@@ -2208,6 +2216,86 @@ if 'session_id' in st.query_params:
                 st.rerun()
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
+
+# ================= Apple IAP Receipt Validation =================
+def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
+    """Validate Apple IAP receipt with Apple's servers"""
+    try:
+        import base64
+        import requests
+        
+        # Apple IAP Receipt Validation Endpoint
+        # Use sandbox for development, production for live app
+        apple_endpoint = "https://buy.itunes.apple.com/verifyReceipt"  # Production
+        # apple_endpoint = "https://sandbox.itunes.apple.com/verifyReceipt"  # Sandbox
+        
+        receipt_payload = {
+            "receipt-data": receipt_data,
+            "password": os.getenv("APPLE_SHARED_SECRET"),  # From App Store Connect
+            "exclude-old-transactions": True
+        }
+        
+        response = requests.post(apple_endpoint, json=receipt_payload, timeout=30)
+        
+        if response.status_code != 200:
+            return False, "Apple server error"
+            
+        result = response.json()
+        
+        if result.get("status") == 0:
+            # Receipt is valid
+            latest_receipt_info = result.get("latest_receipt_info", [])
+            
+            # Find the matching transaction
+            for transaction in latest_receipt_info:
+                if transaction.get("product_id") == product_id:
+                    # Check if subscription is active
+                    expires_date = transaction.get("expires_date_ms")
+                    if expires_date:
+                        import time
+                        if int(expires_date) / 1000 > time.time():
+                            return True, {
+                                "transaction_id": transaction.get("transaction_id"),
+                                "expires_date": expires_date,
+                                "product_id": product_id,
+                                "plan_code": "pro" if "pro_monthly" in product_id else "pro_trader"
+                            }
+            
+            return False, "No active subscription found"
+        else:
+            return False, f"Receipt validation failed: {result.get('status')}"
+            
+    except Exception as e:
+        print(f"Apple IAP validation error: {e}")
+        return False, str(e)
+
+def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_id: str, workspace_id: str):
+    """Process Apple IAP purchase and create subscription"""
+    try:
+        # Validate receipt with Apple
+        is_valid, validation_result = validate_apple_iap_receipt(receipt_data, product_id, transaction_id)
+        
+        if is_valid:
+            plan_code = validation_result["plan_code"]
+            
+            # Create subscription in database
+            success, result = create_subscription(workspace_id, plan_code, 'ios', 'monthly')
+            
+            if success:
+                return True, {
+                    "subscription_id": result,
+                    "plan_code": plan_code,
+                    "platform": "ios",
+                    "apple_transaction_id": transaction_id
+                }
+            else:
+                return False, f"Database error: {result}"
+        else:
+            return False, f"Receipt validation failed: {validation_result}"
+            
+    except Exception as e:
+        print(f"Apple IAP processing error: {e}")
+        return False, str(e)
 
 # ================= Stripe Integration Functions =================
 def create_stripe_checkout_session(plan_code: str, workspace_id: str):
@@ -2549,11 +2637,12 @@ else:
 # ================= Subscription Tiers (Web Only) =================
 # Enhanced platform detection for Apple IAP compliance
 def get_platform_type() -> str:
-    """Detect platform type: 'ios', 'android', or 'web'"""
+    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection"""
     try:
         # Check URL parameters first (most reliable for mobile apps)
         query_params = st.query_params
         platform_param = query_params.get('platform')
+        mobile_param = query_params.get('mobile')
         
         if platform_param:
             platform_str = str(platform_param).lower()
@@ -2561,13 +2650,31 @@ def get_platform_type() -> str:
                 return 'ios'
             elif 'android' in platform_str:
                 return 'android'
+                
+        # If mobile=true parameter is present, check user agent more carefully
+        if mobile_param and str(mobile_param).lower() == 'true':
+            headers = st.context.headers if hasattr(st.context, 'headers') else {}
+            user_agent = headers.get('user-agent', '').lower()
+            
+            # Strong iOS indicators (WebView running in iOS app)
+            ios_strong_indicators = ['wkwebview', 'mobile/15e148', 'mobile/16', 'mobile/17', 'mobile/18', 'iphone', 'ipad']
+            if any(indicator in user_agent for indicator in ios_strong_indicators):
+                return 'ios'
+                
+            # Capacitor/Cordova in iOS
+            if 'capacitor' in user_agent or 'cordova' in user_agent:
+                if any(ios_indicator in user_agent for ios_indicator in ['iphone', 'ipad', 'ios']):
+                    return 'ios'
+            
+            # Default mobile app to iOS for safety (Apple compliance)
+            return 'ios'
             
         # Check user agent for platform-specific indicators
         headers = st.context.headers if hasattr(st.context, 'headers') else {}
         user_agent = headers.get('user-agent', '').lower()
         
         # iOS indicators
-        ios_indicators = ['wkwebview', 'ios app', 'capacitor/ios', 'iphone', 'ipad']
+        ios_indicators = ['wkwebview', 'ios app', 'capacitor/ios', 'iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18']
         if any(indicator in user_agent for indicator in ios_indicators):
             return 'ios'
             
@@ -2575,11 +2682,6 @@ def get_platform_type() -> str:
         android_indicators = ['android app', 'capacitor/android', 'android']
         if any(indicator in user_agent for indicator in android_indicators):
             return 'android'
-            
-        # Mobile app general indicators (default to iOS for safety)
-        mobile_indicators = ['capacitor', 'cordova']
-        if any(indicator in user_agent for indicator in mobile_indicators):
-            return 'ios'  # Default to iOS for Apple compliance
             
     except Exception:
         pass
@@ -2705,17 +2807,30 @@ if current_tier == 'free':
         
         with col1:
             if platform == 'ios':
-                # Apple IAP button (required for App Store compliance)
-                if st.button("🍎 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Via Apple In-App Purchase"):
-                    if workspace_id:
-                        st.info("🍎 **Apple In-App Purchase Required**\n\nTo subscribe to Pro ($4.99/month), use the native iOS app where you can purchase through Apple's secure payment system.")
-                        st.markdown("---")
-                        st.markdown("**Next Steps:**")
-                        st.markdown("1. Open the Market Scanner iOS app")
-                        st.markdown("2. Tap 'Subscribe to Pro' in Settings")
-                        st.markdown("3. Complete purchase via Apple ID")
-                    else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
+                # Apple App Store Compliance: NO STRIPE on iOS
+                st.error("🍎 **Apple App Store Policy**")
+                st.markdown("""
+                **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
+                
+                🚫 **Web payments are not available on iOS devices**
+                
+                **To subscribe:**
+                1. Download the Market Scanner app from the App Store
+                2. Open the app on your iOS device  
+                3. Go to Settings → Subscription
+                4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
+                5. Complete purchase through your Apple ID
+                
+                **Need help?** Contact support through the iOS app.
+                """)
+                
+                # No subscription buttons for iOS - redirect to app
+                if st.button("📱 Download iOS App", key="download_ios_app"):
+                    st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
+                    # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+                    
+                # Completely block subscription upgrade UI for iOS
+                st.stop()
             else:
                 # Web/Android Stripe button
                 if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
@@ -2736,19 +2851,7 @@ if current_tier == 'free':
                         st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
-            if platform == 'ios':
-                # Apple IAP button (required for App Store compliance)
-                if st.button("🍎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Via Apple In-App Purchase"):
-                    if workspace_id:
-                        st.info("🍎 **Apple In-App Purchase Required**\n\nTo subscribe to Pro Trader ($9.99/month), use the native iOS app where you can purchase through Apple's secure payment system.")
-                        st.markdown("---")
-                        st.markdown("**Next Steps:**")
-                        st.markdown("1. Open the Market Scanner iOS app")
-                        st.markdown("2. Tap 'Subscribe to Pro Trader' in Settings")
-                        st.markdown("3. Complete purchase via Apple ID")
-                    else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
-            else:
+            if platform != 'ios':  # Only show for non-iOS platforms
                 # Web/Android Stripe button
                 if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
                     if workspace_id:
