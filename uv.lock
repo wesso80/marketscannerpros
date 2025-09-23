@@ -867,6 +867,8 @@ name = "repl-nix-workspace"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "cffi" },
+    { name = "cryptography" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pillow" },
@@ -883,6 +885,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cffi", specifier = ">=2.0.0" },
+    { name = "cryptography", specifier = ">=46.0.1" },
     { name = "numpy", specifier = ">=2.3.3" },
     { name = "pandas", specifier = ">=2.3.2" },
     { name = "pillow", specifier = ">=11.3.0" },
