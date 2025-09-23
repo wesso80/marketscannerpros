@@ -2370,8 +2370,14 @@ if workspace_id:
     current_subscription = get_workspace_subscription(workspace_id)
     if current_subscription:
         current_tier = current_subscription['plan_code']
+    else:
+        # No database subscription - check session state for demo mode
+        current_tier = st.session_state.get('user_tier', 'free')
+else:
+    # No workspace - use session state for demo mode
+    current_tier = st.session_state.get('user_tier', 'free')
 
-# Update session state to match database
+# Update session state to match current tier
 st.session_state.user_tier = current_tier
 tier_info = TIER_CONFIG[current_tier]
 
