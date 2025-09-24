@@ -2202,8 +2202,86 @@ if 'iap' in st.query_params and st.query_params.get('action') == 'validate-recei
         st.info("⚙️ Receipt validation endpoint ready for iOS app")
     st.stop()
 
-# Handle successful payment return from Stripe
-if 'session_id' in st.query_params:
+# ================= CRITICAL: Platform Detection for Apple Compliance =================
+def get_platform_type() -> str:
+    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection for TestFlight"""
+    try:
+        # PRIORITY 1: Check URL parameters first (most reliable for mobile apps)
+        query_params = st.query_params
+        platform_param = query_params.get('platform')
+        
+        # Explicit platform parameter (set by mobile app)
+        if platform_param:
+            platform_str = str(platform_param).lower()
+            if 'ios' in platform_str:
+                return 'ios'
+            elif 'android' in platform_str:
+                return 'android'
+            elif 'web' in platform_str:
+                return 'web'
+        
+        # PRIORITY 2: Check for mobile app indicators
+        mobile_param = query_params.get('mobile')
+        if mobile_param:
+            return 'ios'  # Default mobile to iOS for Apple compliance
+        
+        # PRIORITY 3: Enhanced User Agent Detection for TestFlight/App Store
+        headers = st.context.headers if hasattr(st.context, 'headers') else {}
+        user_agent = headers.get('user-agent', '').lower()
+        
+        # Print user agent for debugging (will show in logs)
+        print(f"DEBUG - User Agent: {user_agent}")
+        
+        # Capacitor iOS app detection (TestFlight/App Store) - HIGHEST PRIORITY
+        if 'capacitor' in user_agent:
+            return 'ios'
+        
+        # WKWebView is used by iOS apps (TestFlight, App Store, PWA)
+        if 'wkwebview' in user_agent:
+            return 'ios'
+            
+        # Strong iOS device indicators
+        ios_device_indicators = ['iphone', 'ipad', 'ipod']
+        if any(indicator in user_agent for indicator in ios_device_indicators):
+            # Make sure it's not an Android device pretending to be iOS
+            if 'android' not in user_agent:
+                return 'ios'
+        
+        # iOS version indicators in user agent
+        ios_version_patterns = ['mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19', 'os 15', 'os 16', 'os 17', 'os 18']
+        if any(pattern in user_agent for pattern in ios_version_patterns):
+            return 'ios'
+        
+        # iOS browsers
+        ios_browser_indicators = ['crios', 'fxios', 'webkit', 'safari']
+        if any(indicator in user_agent for indicator in ios_browser_indicators):
+            if 'android' not in user_agent and any(device in user_agent for device in ['iphone', 'ipad', 'mobile']):
+                return 'ios'
+        
+        # Android detection (explicit)
+        if 'android' in user_agent:
+            return 'android'
+        
+        # PRIORITY 4: For any remaining mobile indicators, default to iOS for Apple compliance
+        mobile_generic_indicators = ['mobile', 'phone', 'tablet']
+        if any(indicator in user_agent for indicator in mobile_generic_indicators):
+            # If we detect mobile but can't determine platform, default to iOS for safety
+            return 'ios'
+            
+        # Desktop/web browsers
+        return 'web'
+        
+    except Exception as e:
+        print(f"Platform detection error: {e}")
+        # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
+        return 'ios'
+
+# CRITICAL: Check platform BEFORE any Stripe processing for Apple compliance
+platform = get_platform_type()
+print(f"DEBUG - Platform detected: {platform}")
+
+# Handle successful payment return from Stripe (ONLY for non-iOS platforms)
+if 'session_id' in st.query_params and platform != 'ios':
     session_id = st.query_params.get('session_id')
     if session_id:
         try:
@@ -2216,6 +2294,21 @@ if 'session_id' in st.query_params:
                 st.rerun()
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
+elif 'session_id' in st.query_params and platform == 'ios':
+    # Block iOS users from accessing Stripe payment processing
+    st.error("🍎 **Apple App Store Policy Violation Detected**")
+    st.markdown("""
+    **iOS devices cannot process web payments due to Apple App Store guidelines.**
+    
+    **To subscribe:**
+    1. Use the native iOS app from the App Store
+    2. Go to Settings → Subscription in the app
+    3. Choose your plan and pay through Apple
+    
+    **Redirecting you to safety...**
+    """)
+    st.query_params.clear()  # Clear Stripe session
+    st.rerun()
 
 # ================= Apple IAP Receipt Validation =================
 def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
@@ -2301,6 +2394,11 @@ def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_i
 def create_stripe_checkout_session(plan_code: str, workspace_id: str):
     """Create a Stripe checkout session for subscription"""
     try:
+        # CRITICAL: Block iOS users from creating Stripe sessions for Apple compliance
+        platform = get_platform_type()
+        if platform == 'ios':
+            return None, "Apple App Store Policy: iOS users must use Apple In-App Purchase system"
+        
         if not stripe.api_key:
             return None, "Stripe not configured"
         
@@ -2635,79 +2733,6 @@ else:
     st.sidebar.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
-# Enhanced platform detection for Apple IAP compliance
-def get_platform_type() -> str:
-    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection for TestFlight"""
-    try:
-        # PRIORITY 1: Check URL parameters first (most reliable for mobile apps)
-        query_params = st.query_params
-        platform_param = query_params.get('platform')
-        
-        # Explicit platform parameter (set by mobile app)
-        if platform_param:
-            platform_str = str(platform_param).lower()
-            if 'ios' in platform_str:
-                return 'ios'
-            elif 'android' in platform_str:
-                return 'android'
-            elif 'web' in platform_str:
-                return 'web'
-        
-        # PRIORITY 2: Check for mobile app indicators
-        mobile_param = query_params.get('mobile')
-        if mobile_param:
-            return 'ios'  # Default mobile to iOS for Apple compliance
-        
-        # PRIORITY 3: Enhanced User Agent Detection for TestFlight/App Store
-        headers = st.context.headers if hasattr(st.context, 'headers') else {}
-        user_agent = headers.get('user-agent', '').lower()
-        
-        # Print user agent for debugging (will show in logs)
-        print(f"DEBUG - User Agent: {user_agent}")
-        
-        # Capacitor iOS app detection (TestFlight/App Store) - HIGHEST PRIORITY
-        if 'capacitor' in user_agent:
-            return 'ios'
-        
-        # WKWebView is used by iOS apps (TestFlight, App Store, PWA)
-        if 'wkwebview' in user_agent:
-            return 'ios'
-            
-        # Strong iOS device indicators
-        ios_device_indicators = ['iphone', 'ipad', 'ipod']
-        if any(indicator in user_agent for indicator in ios_device_indicators):
-            # Make sure it's not an Android device pretending to be iOS
-            if 'android' not in user_agent:
-                return 'ios'
-        
-        # iOS version indicators in user agent
-        ios_version_patterns = ['mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19', 'os 15', 'os 16', 'os 17', 'os 18']
-        if any(pattern in user_agent for pattern in ios_version_patterns):
-            return 'ios'
-        
-        # iOS browsers
-        ios_browser_indicators = ['crios', 'fxios', 'webkit', 'safari']
-        if any(indicator in user_agent for indicator in ios_browser_indicators):
-            if 'android' not in user_agent and any(device in user_agent for device in ['iphone', 'ipad', 'mobile']):
-                return 'ios'
-        
-        # Android detection (explicit)
-        if 'android' in user_agent:
-            return 'android'
-        
-        # PRIORITY 4: For any remaining mobile indicators, default to iOS for Apple compliance
-        mobile_generic_indicators = ['mobile', 'phone', 'tablet']
-        if any(indicator in user_agent for indicator in mobile_generic_indicators):
-            # If we detect mobile but can't determine platform, default to iOS for safety
-            return 'ios'
-            
-        # Desktop/web browsers
-        return 'web'
-        
-    except Exception as e:
-        print(f"Platform detection error: {e}")
-        # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
-        return 'ios'
 
 def is_mobile_app() -> bool:
     """Check if request is from mobile app WebView"""
