@@ -36,84 +36,87 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #1f2937;
-    --secondary-color: #3b82f6;
-    --accent-color: #10b981;
-    --danger-color: #ef4444;
+    --primary-color: #2563eb;
+    --success-color: #16a34a;
+    --danger-color: #dc2626;
     --warning-color: #f59e0b;
-    --background-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --border-radius: 12px;
-    --spacing-unit: 1rem;
+    --info-color: #0ea5e9;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-color: #e5e7eb;
+    --surface-bg: #ffffff;
+    --page-bg: #f5f7fb;
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --border-radius: 6px;
 }
 
 /* Main App Background */
 .stApp {
-    background: var(--background-gradient);
+    background: var(--page-bg);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
 }
 
-/* Header Styling */
+/* Clean Professional Header */
 .main-header {
-    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-    padding: 2rem 0;
+    background: var(--surface-bg);
+    padding: 1.5rem 0;
     margin: -1rem -2rem 2rem -2rem;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    box-shadow: var(--card-shadow);
-    color: white;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
     text-align: center;
 }
 
 .main-header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 24px;
+    font-weight: 600;
     margin: 0;
-    background: linear-gradient(135deg, #10b981, #3b82f6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
 }
 
 .main-header p {
-    font-size: 1.125rem;
-    opacity: 0.9;
+    font-size: 16px;
+    color: var(--text-secondary);
     margin: 0.5rem 0 0 0;
-    font-weight: 400;
+    font-weight: 500;
 }
 
-/* Professional Cards */
+/* Clean Enterprise Cards */
 .pro-card {
-    background: white;
+    background: var(--surface-bg);
     border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin: 1rem 0;
+    padding: 16px;
+    margin: 16px 0;
     box-shadow: var(--card-shadow);
-    border: 1px solid #e5e7eb;
-    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
 }
 
 .pro-card:hover {
     box-shadow: var(--card-shadow-hover);
-    transform: translateY(-2px);
 }
 
 .pro-card h3 {
-    color: var(--primary-color);
+    color: var(--text-primary);
     font-weight: 600;
-    margin-bottom: 1rem;
-    font-size: 1.25rem;
+    margin-bottom: 12px;
+    font-size: 16px;
 }
 
-/* Metrics Cards */
+/* Clean KPI Cards */
 .metric-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    background: var(--surface-bg);
     border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin: 0.5rem 0;
+    padding: 16px;
+    margin: 8px 0;
     box-shadow: var(--card-shadow);
-    border-left: 4px solid var(--secondary-color);
-    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
+    transition: all 0.2s ease;
 }
 
 .metric-card:hover {
@@ -121,35 +124,35 @@ st.markdown("""
 }
 
 .metric-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary-color);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
     margin: 0;
+    text-align: right;
 }
 
 .metric-label {
-    font-size: 0.875rem;
-    color: #6b7280;
+    font-size: 12px;
+    color: var(--text-muted);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-/* Professional Buttons */
+/* Clean Professional Buttons */
 .stButton > button,
 button[data-testid="stBaseButton-secondary"],
 button[kind="secondary"],
 [data-testid="stBaseButton-secondary"],
 div[data-testid="stButton"] button {
-    background: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
-    background-image: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
+    background: var(--primary-color) !important;
     color: white !important;
     border: none !important;
     border-radius: var(--border-radius) !important;
-    padding: 0.75rem 1.5rem !important;
+    padding: 8px 16px !important;
     font-weight: 600 !important;
-    font-size: 1rem !important;
-    transition: all 0.3s ease !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
     box-shadow: var(--card-shadow) !important;
     font-family: 'Inter', sans-serif !important;
     min-height: auto !important;
@@ -158,161 +161,179 @@ div[data-testid="stButton"] button {
 .stButton > button:hover,
 button[data-testid="stBaseButton-secondary"]:hover,
 button[kind="secondary"]:hover {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    background: #1d4ed8 !important;
     box-shadow: var(--card-shadow-hover) !important;
-    transform: translateY(-1px) !important;
 }
 
-/* Sidebar Enhancements */
+/* Clean Sidebar */
 .css-1d391kg {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-right: 1px solid #d1d5db;
+    background: var(--surface-bg);
+    border-right: 1px solid var(--border-color);
 }
 
-/* Data Tables */
+/* Clean Data Tables */
 .stDataFrame {
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
 }
 
-/* Status Indicators */
+/* Clean Status Indicators */
 .status-success {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: var(--success-color);
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
     font-weight: 600;
+    font-size: 12px;
     display: inline-block;
-    margin: 0.25rem;
+    margin: 2px;
 }
 
 .status-warning {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    background: var(--warning-color);
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
     font-weight: 600;
+    font-size: 12px;
     display: inline-block;
-    margin: 0.25rem;
+    margin: 2px;
 }
 
 .status-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: var(--danger-color);
     color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-    margin: 0.25rem;
-}
-
-/* Subscription Tiers */
-.tier-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    padding: 4px 8px;
     border-radius: var(--border-radius);
-    padding: 2rem;
-    margin: 1rem 0;
-    box-shadow: var(--card-shadow);
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-block;
+    margin: 2px;
 }
 
-.tier-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+/* Clean Subscription Tiers */
+.tier-card {
+    background: var(--surface-bg);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
 }
 
 .tier-card:hover {
-    border-color: var(--secondary-color);
+    border-color: var(--primary-color);
     box-shadow: var(--card-shadow-hover);
-    transform: translateY(-4px);
 }
 
 .tier-card.premium {
-    border-color: #fbbf24;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-}
-
-.tier-card.premium::before {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-color: var(--warning-color);
+    border-width: 2px;
 }
 
 .price-display {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--primary-color);
-    margin: 1rem 0;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 16px 0;
+    text-align: right;
 }
 
 .price-period {
-    font-size: 1rem;
-    color: #6b7280;
-    font-weight: 400;
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
-/* Feature Lists */
+/* Clean Feature Lists */
 .feature-list {
     list-style: none;
     padding: 0;
-    margin: 1rem 0;
+    margin: 16px 0;
 }
 
 .feature-list li {
-    padding: 0.5rem 0;
-    color: #374151;
+    padding: 8px 0;
+    color: var(--text-secondary);
     font-weight: 500;
+    font-size: 14px;
     position: relative;
-    padding-left: 1.5rem;
+    padding-left: 20px;
 }
 
 .feature-list li::before {
     content: '✓';
     position: absolute;
     left: 0;
-    color: var(--accent-color);
-    font-weight: 700;
+    color: var(--success-color);
+    font-weight: 600;
 }
 
-/* Text Contrast Fixes */
+/* Enterprise Text Styling */
 .main .block-container {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    background: var(--page-bg);
 }
 
-/* Ensure all text is dark and readable */
+/* Clean readable text */
 .stMarkdown, .stText, .stCaption, .stSubheader {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
 }
 
 .stMarkdown p, .stMarkdown div, .stText p, .stText div, 
 .stMarkdown span, .stText span {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
 }
 
-/* Fix specific Streamlit component text */
+/* Professional component text */
 .main .block-container .stMarkdown {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
 }
 
 .main .block-container .stText {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
 }
 
-/* Ensure metric and info text is readable */
+/* Clean metrics */
 .stMetric .metric-value, .stMetric .metric-label {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
 }
 
-/* Fix any remaining white text issues */
+/* Remove all washed-out styling */
 .element-container .stMarkdown, .element-container .stText {
-    color: #1f2937 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Clean alert styling */
+.stAlert {
+    background: var(--surface-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--border-radius) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Clean success/error/info styling */
+.stSuccess {
+    background: var(--surface-bg) !important;
+    border-left: 3px solid var(--success-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.stError {
+    background: var(--surface-bg) !important;
+    border-left: 3px solid var(--danger-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.stInfo {
+    background: var(--surface-bg) !important;
+    border-left: 3px solid var(--info-color) !important;
+    color: var(--text-primary) !important;
 }
 
 /* Responsive Design */
