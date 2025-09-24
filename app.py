@@ -2794,9 +2794,9 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Basic market scanning', 'Limited to 10 symbols', 'Max 2 price alerts', 'Basic charts'],
-        'scan_limit': 10,
-        'alert_limit': 2,
+        'features': ['Full market scanning', 'All advanced features', 'Real-time data', 'Advanced charts', 'Portfolio tracking', 'Limited to 4 symbols only'],
+        'scan_limit': 4,
+        'alert_limit': None,
         'color': '#666666'
     },
     'pro': {
@@ -3204,7 +3204,7 @@ st.sidebar.header("Equity Symbols")
 # Show tier limitations
 current_tier = st.session_state.user_tier
 if current_tier == 'free':
-    st.sidebar.caption(f"⚠️ Free tier: Limited to {TIER_CONFIG['free']['scan_limit']} symbols total (equity + crypto)")
+    st.sidebar.caption(f"🚀 Free tier: Full features with {TIER_CONFIG['free']['scan_limit']} symbols total • Upgrade for more symbols!")
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
@@ -3489,7 +3489,7 @@ if run_clicked:
     # Apply scan limits for free tier
     if current_tier == 'free' and tier_info['scan_limit'] and total_symbols > tier_info['scan_limit']:
         st.error(f"⚠️ Free tier limited to {tier_info['scan_limit']} symbols total. You entered {total_symbols} symbols.")
-        st.info("🚀 Upgrade to Pro for unlimited scans!")
+        st.info("🚀 **Upgrade to Pro for unlimited symbols!** You get all the same powerful features, just scan your entire watchlist!")
         st.stop()
     
     with st.spinner("Scanning markets..."):
@@ -3773,32 +3773,14 @@ if st.session_state.get('show_new_alert', False):
                     st.error("Invalid alert type")
                 else:
                     # Check tier limitations
-                    current_tier = st.session_state.user_tier
-                    if current_tier == 'free':
-                        active_alerts = get_active_alerts()
-                        current_alert_count = len(active_alerts) if active_alerts else 0
-                        alert_limit = TIER_CONFIG['free']['alert_limit']
-                        
-                        if current_alert_count >= alert_limit:
-                            st.error(f"⚠️ Free tier limited to {alert_limit} alerts. You currently have {current_alert_count} alerts.")
-                            st.info("🚀 Upgrade to Pro for unlimited alerts!")
-                        else:
-                            symbol_clean = alert_symbol.strip().upper()
-                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                                st.success(f"Alert created for {symbol_clean}")
-                                st.session_state.show_new_alert = False
-                                st.rerun()
-                            else:
-                                st.error("Failed to create alert - please check database connection")
+                    # ALL TIERS: Full alert functionality (no restrictions)
+                    symbol_clean = alert_symbol.strip().upper()
+                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                        st.success(f"Alert created for {symbol_clean}")
+                        st.session_state.show_new_alert = False
+                        st.rerun()
                     else:
-                        # Pro and Pro Trader tiers - unlimited alerts
-                        symbol_clean = alert_symbol.strip().upper()
-                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                            st.success(f"Alert created for {symbol_clean}")
-                            st.session_state.show_new_alert = False
-                            st.rerun()
-                        else:
-                            st.error("Failed to create alert - please check database connection")
+                        st.error("Failed to create alert - please check database connection")
         
         with col3:
             if st.button("Cancel", key="cancel_alert"):
