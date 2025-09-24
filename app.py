@@ -2280,6 +2280,33 @@ def get_platform_type() -> str:
 platform = get_platform_type()
 print(f"DEBUG - Platform detected: {platform}")
 
+# EMERGENCY iOS PROTECTION: Block ALL Stripe if any iOS indicators found
+headers = st.context.headers if hasattr(st.context, 'headers') else {}
+user_agent = headers.get('user-agent', '').lower()
+query_params = st.query_params
+
+# Multiple iOS detection layers for maximum protection
+is_ios_device = any(indicator in user_agent for indicator in ['iphone', 'ipad', 'ios', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18'])
+is_ios_param = 'ios' in str(query_params.get('platform', '')).lower()
+is_mobile_param = query_params.get('mobile') is not None
+
+if is_ios_device or is_ios_param or is_mobile_param or platform == 'ios':
+    print(f"EMERGENCY BLOCK: iOS detected - UA:{user_agent[:50]}... Platform:{platform}")
+    st.error("🍎 **APPLE COMPLIANCE MODE ACTIVATED**")
+    st.markdown("""
+    # iOS App Store Compliance Active
+    
+    **This device has been identified as iOS. All web payments are blocked per Apple App Store guidelines.**
+    
+    **To access Market Scanner features:**
+    1. 📱 Download the native iOS app from the App Store
+    2. ⚙️ Open Settings → Subscription in the app
+    3. 💳 Purchase through Apple's In-App Purchase system
+    
+    **Why this block exists:** Apple requires iOS apps to use their payment system (Guideline 3.1.1)
+    """)
+    st.stop()
+
 # Handle successful payment return from Stripe (ONLY for non-iOS platforms)
 if 'session_id' in st.query_params and platform != 'ios':
     session_id = st.query_params.get('session_id')
@@ -2945,7 +2972,8 @@ if current_tier == 'free':
                 # In actual iOS app: StoreKit.restorePurchases()
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
-        if not is_mobile:  # Only show on web, not in mobile app builds
+        current_platform = get_platform_type()
+        if current_platform == 'web':  # Only show on web, not in mobile app builds
             st.markdown("---")
             st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
@@ -2972,10 +3000,24 @@ elif current_tier in ['pro', 'pro_trader']:
             st.markdown("---")
             if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
                 if workspace_id:
-                    if is_mobile:
-                        st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                    current_platform = get_platform_type()
+                    if current_platform == 'ios':
+                        # Apple App Store Compliance: NO STRIPE on iOS
+                        st.error("🍎 **Apple App Store Policy**")
+                        st.markdown("""
+                        **Upgrades must be purchased through the iOS app using Apple's In-App Purchase system.**
+                        
+                        🚫 **Web payments are not available on iOS devices**
+                        
+                        **To upgrade:**
+                        1. Open the Market Scanner app from the App Store
+                        2. Go to Settings → Subscription
+                        3. Choose Pro Trader ($9.99/month)
+                        4. Complete purchase through your Apple ID
+                        """)
+                        st.stop()
                     else:
-                        # Create Stripe checkout session for upgrade
+                        # Web/Android Stripe checkout
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -3041,10 +3083,25 @@ elif current_tier in ['pro', 'pro_trader']:
                 st.rerun()
             elif current_subscription and workspace_id:
                 # Real database subscription
-                if is_mobile:
-                    st.info("📱 In mobile app, this would open subscription management")
+                current_platform = get_platform_type()
+                if current_platform == 'ios':
+                    # Apple App Store Compliance: NO STRIPE on iOS
+                    st.error("🍎 **Apple App Store Policy**")
+                    st.markdown("""
+                    **Subscription management must be done through Apple's system for iOS users.**
+                    
+                    🚫 **Web cancellation is not available on iOS devices**
+                    
+                    **To manage your subscription:**
+                    1. Go to iOS Settings app
+                    2. Tap [Your Name] → Subscriptions
+                    3. Find Market Scanner and manage there
+                    
+                    OR open the native iOS app and go to Settings → Subscription
+                    """)
+                    st.stop()
                 else:
-                    # Cancel Stripe subscription for web users
+                    # Web/Android Stripe subscription cancellation
                     success, message = cancel_stripe_subscription(workspace_id)
                     if success:
                         st.success("✅ Subscription cancelled successfully")
@@ -3062,7 +3119,8 @@ elif current_tier in ['pro', 'pro_trader']:
                 st.error("❌ No active subscription found")
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
-        if not is_mobile:  # Only show on web, not in mobile app builds
+        current_platform = get_platform_type()
+        if current_platform == 'web':  # Only show on web, not in mobile app builds
             st.markdown("---")
             st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
