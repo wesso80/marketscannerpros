@@ -2916,6 +2916,31 @@ if refresh_clicked:
 
 # Sidebar
 # ================= Watchlist Management =================
+# ================= DEVELOPER ACCESS (TOP OF SIDEBAR) =================
+# TEMPORARY: Always authorize developer access for troubleshooting  
+st.sidebar.header("🔧 Developer Access")
+with st.sidebar.expander("Creator Override", expanded=False):
+    st.caption("Authorized developer access - this section is only visible to you")
+    
+    dev_tier = st.selectbox(
+        "Override Tier:",
+        options=['free', 'pro', 'pro_trader'],
+        format_func=lambda x: {
+            'free': '📱 Free Tier',
+            'pro': '🚀 Pro Tier ($4.99/month)', 
+            'pro_trader': '💎 Pro Trader ($9.99/month)'
+        }[x],
+        index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
+        key="dev_tier_override"
+    )
+    
+    if st.button("Apply Override", type="primary"):
+        st.session_state.user_tier = dev_tier
+        st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
+        st.rerun()
+    
+    st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
+
 st.sidebar.header("📋 Watchlists")
 
 # Get all watchlists
@@ -3179,33 +3204,7 @@ AUTHORIZED_DEVELOPER_IDS = [
 current_workspace_id = st.session_state.get('workspace_id', '')
 current_device_id = st.session_state.get('device_fingerprint', '')
 
-# TEMPORARY: Always authorize developer access for troubleshooting
-is_authorized_dev = True  # Always show developer section for now
-
-if is_authorized_dev:
-    st.sidebar.header("🔧 Developer Access")
-    with st.sidebar.expander("Creator Override", expanded=False):
-        st.caption("Authorized developer access - this section is only visible to you")
-        
-        dev_tier = st.selectbox(
-            "Override Tier:",
-            options=['free', 'pro', 'pro_trader'],
-            format_func=lambda x: {
-                'free': '📱 Free Tier',
-                'pro': '🚀 Pro Tier ($4.99/month)', 
-                'pro_trader': '💎 Pro Trader ($9.99/month)'
-            }[x],
-            index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
-            key="dev_tier_override"
-        )
-        
-        if st.button("Apply Override", type="primary"):
-            st.session_state.user_tier = dev_tier
-            st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
-            st.rerun()
-        
-        st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
-        st.caption(f"🔐 Your workspace ID: `{current_workspace_id}`")
+# Remove this section from here - moving to top of sidebar
 
 
 # ================= Subscription UI (All Platforms) =================
