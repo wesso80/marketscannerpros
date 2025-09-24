@@ -29,6 +29,310 @@ import stripe
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
+# ================= Professional Styling =================
+st.markdown("""
+<style>
+/* Professional Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #1f2937;
+    --secondary-color: #3b82f6;
+    --accent-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --background-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+    --spacing-unit: 1rem;
+}
+
+/* Main App Background */
+.stApp {
+    background: var(--background-gradient);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header Styling */
+.main-header {
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    padding: 2rem 0;
+    margin: -1rem -2rem 2rem -2rem;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: var(--card-shadow);
+    color: white;
+    text-align: center;
+}
+
+.main-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.main-header p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    margin: 0.5rem 0 0 0;
+    font-weight: 400;
+}
+
+/* Professional Cards */
+.pro-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.pro-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.pro-card h3 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+/* Metrics Cards */
+.metric-card {
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--secondary-color);
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    box-shadow: var(--card-shadow-hover);
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Professional Buttons */
+.stButton > button,
+button[data-testid="stBaseButton-secondary"],
+button[kind="secondary"],
+[data-testid="stBaseButton-secondary"],
+div[data-testid="stButton"] button {
+    background: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
+    background-image: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--border-radius) !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: var(--card-shadow) !important;
+    font-family: 'Inter', sans-serif !important;
+    min-height: auto !important;
+}
+
+.stButton > button:hover,
+button[data-testid="stBaseButton-secondary"]:hover,
+button[kind="secondary"]:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    box-shadow: var(--card-shadow-hover) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Sidebar Enhancements */
+.css-1d391kg {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-right: 1px solid #d1d5db;
+}
+
+/* Data Tables */
+.stDataFrame {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+/* Status Indicators */
+.status-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+    margin: 0.25rem;
+}
+
+.status-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+    margin: 0.25rem;
+}
+
+.status-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+    margin: 0.25rem;
+}
+
+/* Subscription Tiers */
+.tier-card {
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin: 1rem 0;
+    box-shadow: var(--card-shadow);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.tier-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+}
+
+.tier-card:hover {
+    border-color: var(--secondary-color);
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-4px);
+}
+
+.tier-card.premium {
+    border-color: #fbbf24;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.tier-card.premium::before {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.price-display {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 1rem 0;
+}
+
+.price-period {
+    font-size: 1rem;
+    color: #6b7280;
+    font-weight: 400;
+}
+
+/* Feature Lists */
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.feature-list li {
+    padding: 0.5rem 0;
+    color: #374151;
+    font-weight: 500;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.feature-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--accent-color);
+    font-weight: 700;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-header h1 {
+        font-size: 2rem;
+    }
+    
+    .main-header p {
+        font-size: 1rem;
+    }
+    
+    .tier-card {
+        padding: 1.5rem;
+    }
+    
+    .price-display {
+        font-size: 2rem;
+    }
+}
+
+/* Success/Error Messages */
+.stSuccess {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    border-left: 4px solid var(--accent-color);
+    border-radius: var(--border-radius);
+}
+
+.stError {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-left: 4px solid var(--danger-color);
+    border-radius: var(--border-radius);
+}
+
+.stInfo {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-left: 4px solid var(--secondary-color);
+    border-radius: var(--border-radius);
+}
+
+/* Loading States */
+.stSpinner {
+    color: var(--secondary-color);
+}
+
+/* Charts Enhancement */
+.js-plotly-plot {
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
     st.markdown('<meta http-equiv="refresh" content="0;URL=https://marketscannerspros.pages.dev/privacy" target="_blank">', unsafe_allow_html=True)
@@ -40,7 +344,7 @@ if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
 
 st.markdown("""
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0b0f19">
+<meta name="theme-color" content="#1f2937">
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
 </script>
@@ -2035,7 +2339,14 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 """, unsafe_allow_html=True)
-st.title("📊 Market Scanner Dashboard")
+
+# Professional Header
+st.markdown("""
+<div class="main-header">
+    <h1>📊 Market Scanner Dashboard</h1>
+    <p>Professional Market Analysis & Trading Intelligence Platform</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if 'eq_results' not in st.session_state:
@@ -2813,18 +3124,32 @@ if is_mobile:
 # Show upgrade options for free tier users
 if current_tier == 'free':
     with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
-        # Apple-compliant paywall with clear pricing and full billing terms
-        st.markdown("**🚀 Market Scanner Pro - $4.99 per month**")
-        st.markdown("• Unlimited market scans")
-        st.markdown("• Advanced charts & indicators") 
-        st.markdown("• Real-time price alerts")
-        st.markdown("• Portfolio tracking")
+        # Apple-compliant paywall with professional card design
+        st.markdown("""
+        <div class="tier-card">
+            <h3>🚀 Market Scanner Pro</h3>
+            <div class="price-display">$4.99 <span class="price-period">per month</span></div>
+            <ul class="feature-list">
+                <li>Unlimited market scans</li>
+                <li>Advanced charts & indicators</li>
+                <li>Real-time price alerts</li>
+                <li>Portfolio tracking</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
         
-        st.markdown("**💎 Market Scanner Pro Trader - $9.99 per month**")
-        st.markdown("• Everything in Pro")
-        st.markdown("• Advanced backtesting")
-        st.markdown("• Custom trading algorithms")
-        st.markdown("• Priority support")
+        st.markdown("""
+        <div class="tier-card premium">
+            <h3>💎 Market Scanner Pro Trader</h3>
+            <div class="price-display">$9.99 <span class="price-period">per month</span></div>
+            <ul class="feature-list">
+                <li>Everything in Pro</li>
+                <li>Advanced backtesting</li>
+                <li>Custom trading algorithms</li>
+                <li>Priority support</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -3548,26 +3873,31 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('cx_errors', pd.DataFrame())
 )
 
-st.subheader("🏛 Equity Markets")
+# Equity Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>🏛 Equity Markets</h3>
+""", unsafe_allow_html=True)
+
 # Show normal results if no iOS issues detected
 if not ios_issue_detected and not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
     
-    # Style the direction column for better visibility
+    # Enhanced styling for direction column
     def highlight_direction(val):
         if val == 'Bullish':
-            return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         elif val == 'Bearish':
-            return 'background-color: #f8d7da; color: #721c24; font-weight: bold;'
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Apply styling to direction column
+    # Apply professional styling to direction column
     if 'direction' in display_eq.columns:
         styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
-        st.dataframe(styled_eq, width='stretch')
+        st.dataframe(styled_eq, width='stretch', use_container_width=True)
     else:
-        st.dataframe(display_eq, width='stretch')
+        st.dataframe(display_eq, width='stretch', use_container_width=True)
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -3580,31 +3910,39 @@ if not ios_issue_detected and not st.session_state.eq_results.empty:
 elif not ios_issue_detected:
     st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
 
+# Close equity card
+st.markdown("</div>", unsafe_allow_html=True)
+
 # Equity errors (only show if not iOS WebView issue)
 if not ios_issue_detected and not st.session_state.eq_errors.empty:
     with st.expander("⚠️ Equity Scan Errors", expanded=False):
         st.dataframe(st.session_state.eq_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
 
-st.subheader("₿ Crypto Markets")
+# Crypto Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>₿ Crypto Markets</h3>
+""", unsafe_allow_html=True)
+
 if not ios_issue_detected and not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
     
-    # Style the direction column for better visibility
+    # Enhanced styling for direction column (same as equity)
     def highlight_direction(val):
         if val == 'Bullish':
-            return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         elif val == 'Bearish':
-            return 'background-color: #f8d7da; color: #721c24; font-weight: bold;'
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Apply styling to direction column
+    # Apply professional styling to direction column
     if 'direction' in display_cx.columns:
         styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
-        st.dataframe(styled_cx, width='stretch')
+        st.dataframe(styled_cx, width='stretch', use_container_width=True)
     else:
-        st.dataframe(display_cx, width='stretch')
+        st.dataframe(display_cx, width='stretch', use_container_width=True)
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
@@ -3616,6 +3954,9 @@ if not ios_issue_detected and not st.session_state.cx_results.empty:
     )
 elif not ios_issue_detected:
     st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
+
+# Close crypto card
+st.markdown("</div>", unsafe_allow_html=True)
 
 # Crypto errors (only show if not iOS WebView issue) 
 if not ios_issue_detected and not st.session_state.cx_errors.empty:
