@@ -44,64 +44,51 @@ st.markdown("""
     --text-primary: #0f172a;
     --text-secondary: #334155;
     --text-muted: #64748b;
-    --border-color: #d1d5db;
-    --surface-bg: #ffffff;
-    --page-bg: #f1f5f9;
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
     --border-radius: 6px;
+    --unified-bg: #f8fafc;
 }
 
-/* Main App Background */
+/* Unified Background */
 .stApp {
-    background: var(--page-bg) !important;
+    background: var(--unified-bg) !important;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     line-height: 1.5;
     color: var(--text-primary);
 }
 
-/* Ensure main container has proper background */
+/* Consistent background throughout */
 .main .block-container {
-    background: var(--page-bg) !important;
+    background: var(--unified-bg) !important;
 }
 
-/* Override Streamlit's default white background */
 .stApp > .main {
-    background: var(--page-bg) !important;
+    background: var(--unified-bg) !important;
 }
 
-/* Clean Professional Header */
+/* Clean Unified Header */
 .main-header {
-    background: var(--surface-bg);
+    background: var(--unified-bg);
     padding: 1.5rem 0;
     margin: -1rem -2rem 2rem -2rem;
-    border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
     text-align: center;
 }
 
-/* Style Streamlit header and main content as cards */
+/* Unified styling for all elements */
 [data-testid="stHeader"] {
-    background: var(--surface-bg) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    box-shadow: var(--card-shadow) !important;
+    background: var(--unified-bg) !important;
 }
 
 [data-testid="stVerticalBlock"] {
-    background: var(--surface-bg) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: var(--border-radius) !important;
-    box-shadow: var(--card-shadow) !important;
+    background: var(--unified-bg) !important;
     margin: 8px 0 !important;
     padding: 16px !important;
 }
 
-/* Main content container as card */
+/* Remove all card styling */
 .main .block-container > div {
-    background: var(--surface-bg) !important;
-    border-radius: var(--border-radius) !important;
-    box-shadow: var(--card-shadow) !important;
+    background: var(--unified-bg) !important;
     padding: 16px !important;
     margin: 8px 0 !important;
 }
@@ -120,19 +107,12 @@ st.markdown("""
     font-weight: 500;
 }
 
-/* Clean Enterprise Cards */
+/* Clean Unified Cards */
 .pro-card {
-    background: var(--surface-bg);
-    border-radius: var(--border-radius);
+    background: var(--unified-bg);
     padding: 16px;
     margin: 16px 0;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
     transition: all 0.2s ease;
-}
-
-.pro-card:hover {
-    box-shadow: var(--card-shadow-hover);
 }
 
 .pro-card h3 {
@@ -142,20 +122,13 @@ st.markdown("""
     font-size: 16px;
 }
 
-/* Clean KPI Cards */
+/* Clean KPI Display */
 .metric-card {
-    background: var(--surface-bg);
-    border-radius: var(--border-radius);
+    background: var(--unified-bg);
     padding: 16px;
     margin: 8px 0;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
     border-left: 3px solid var(--primary-color);
     transition: all 0.2s ease;
-}
-
-.metric-card:hover {
-    box-shadow: var(--card-shadow-hover);
 }
 
 .metric-value {
@@ -174,7 +147,7 @@ st.markdown("""
     letter-spacing: 0.05em;
 }
 
-/* Clean Professional Buttons */
+/* Clean Unified Buttons */
 .stButton > button,
 button[data-testid="stBaseButton-secondary"],
 button[kind="secondary"],
@@ -188,7 +161,6 @@ div[data-testid="stButton"] button {
     font-weight: 600 !important;
     font-size: 14px !important;
     transition: all 0.2s ease !important;
-    box-shadow: var(--card-shadow) !important;
     font-family: 'Inter', sans-serif !important;
     min-height: auto !important;
 }
@@ -197,22 +169,18 @@ div[data-testid="stButton"] button {
 button[data-testid="stBaseButton-secondary"]:hover,
 button[kind="secondary"]:hover {
     background: #1d4ed8 !important;
-    box-shadow: var(--card-shadow-hover) !important;
 }
 
-/* Clean Sidebar */
+/* Clean Unified Sidebar */
 .css-1d391kg {
-    background: var(--surface-bg);
-    border-right: 1px solid var(--border-color);
+    background: var(--unified-bg);
 }
 
-/* Clean Data Tables */
+/* Clean Unified Data Tables */
 .stDataFrame {
     border-radius: var(--border-radius);
     overflow: hidden;
-    box-shadow: var(--card-shadow);
-    background: var(--surface-bg);
-    border: 1px solid var(--border-color);
+    background: var(--unified-bg);
 }
 
 /* Clean Status Indicators */
@@ -249,25 +217,16 @@ button[kind="secondary"]:hover {
     margin: 2px;
 }
 
-/* Clean Subscription Tiers */
+/* Clean Unified Subscription Tiers */
 .tier-card {
-    background: var(--surface-bg);
-    border-radius: var(--border-radius);
+    background: var(--unified-bg);
     padding: 24px;
     margin: 16px 0;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
     transition: all 0.2s ease;
 }
 
-.tier-card:hover {
-    border-color: var(--primary-color);
-    box-shadow: var(--card-shadow-hover);
-}
-
 .tier-card.premium {
-    border-color: var(--warning-color);
-    border-width: 2px;
+    border-left: 3px solid var(--warning-color);
 }
 
 .price-display {
@@ -308,9 +267,9 @@ button[kind="secondary"]:hover {
     font-weight: 600;
 }
 
-/* Enterprise Text Styling */
+/* Unified Text Styling */
 .main .block-container {
-    background: var(--page-bg);
+    background: var(--unified-bg);
 }
 
 /* Clean readable text */
@@ -344,29 +303,27 @@ button[kind="secondary"]:hover {
     color: var(--text-primary) !important;
 }
 
-/* Clean alert styling */
+/* Unified alert styling */
 .stAlert {
-    background: var(--surface-bg) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: var(--border-radius) !important;
+    background: var(--unified-bg) !important;
     color: var(--text-primary) !important;
 }
 
-/* Clean success/error/info styling */
+/* Unified success/error/info styling */
 .stSuccess {
-    background: var(--surface-bg) !important;
+    background: var(--unified-bg) !important;
     border-left: 3px solid var(--success-color) !important;
     color: var(--text-primary) !important;
 }
 
 .stError {
-    background: var(--surface-bg) !important;
+    background: var(--unified-bg) !important;
     border-left: 3px solid var(--danger-color) !important;
     color: var(--text-primary) !important;
 }
 
 .stInfo {
-    background: var(--surface-bg) !important;
+    background: var(--unified-bg) !important;
     border-left: 3px solid var(--info-color) !important;
     color: var(--text-primary) !important;
 }
