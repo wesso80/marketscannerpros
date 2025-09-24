@@ -26,6 +26,60 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
+# ================= EMERGENCY iOS COMPLIANCE BLOCK =================
+# CRITICAL: Must happen BEFORE any other Streamlit code
+print("🚨 EMERGENCY iOS CHECK ACTIVATED")
+
+# Get query parameters for iOS detection
+try:
+    query_params = st.query_params if hasattr(st, 'query_params') else {}
+    
+    # Check for explicit iOS parameters first
+    platform_param = query_params.get('platform', '').lower()
+    mobile_param = query_params.get('mobile')
+    
+    print(f"🔍 Parameters: platform={platform_param}, mobile={mobile_param}")
+    
+    # Check user agent
+    user_agent = ""
+    if hasattr(st, 'context') and hasattr(st.context, 'headers'):
+        user_agent = st.context.headers.get('user-agent', '').lower()
+    
+    print(f"🔍 User Agent: {user_agent[:100]}...")
+    
+    # IMMEDIATE iOS detection and blocking
+    is_ios_param = 'ios' in platform_param
+    has_mobile_param = mobile_param is not None
+    is_ios_ua = any(indicator in user_agent for indicator in ['iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19'])
+    
+    if is_ios_param or has_mobile_param or is_ios_ua:
+        print("🚨 IMMEDIATE iOS BLOCK TRIGGERED!")
+        
+        # Set page config first (required by Streamlit)
+        st.set_page_config(page_title="iOS Compliance Block", page_icon="🍎", layout="wide")
+        
+        # Show immediate block message
+        st.error("🚨 **EMERGENCY SYSTEM LOCKDOWN** 🚨")
+        st.markdown("""
+        # 🍎 iOS Device Detected - Apple Compliance Active
+        
+        **IMMEDIATE PROTECTION ACTIVATED**
+        
+        This device has been identified as iOS. All Stripe payment functionality is PERMANENTLY BLOCKED per Apple App Store guidelines.
+        
+        🚫 **Web payments are disabled**
+        📱 **Use the native iOS app from App Store**
+        💳 **Subscribe through Apple's In-App Purchase system**
+        
+        **Compliance Status: ACTIVE** ✅
+        """)
+        
+        # Force immediate stop - no further execution
+        st.stop()
+        
+except Exception as e:
+    print(f"Error in iOS detection: {e}")
+
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
