@@ -3113,6 +3113,30 @@ TIER_CONFIG = {
 
 # Debug moved to top of file
 
+# ================= Developer Override (Creator Access) =================
+st.sidebar.header("🔧 Developer Access")
+with st.sidebar.expander("Creator Override", expanded=False):
+    st.caption("As the app creator, you can access any tier instantly")
+    
+    dev_tier = st.selectbox(
+        "Override Tier:",
+        options=['free', 'pro', 'pro_trader'],
+        format_func=lambda x: {
+            'free': '📱 Free Tier',
+            'pro': '🚀 Pro Tier ($4.99/month)', 
+            'pro_trader': '💎 Pro Trader ($9.99/month)'
+        }[x],
+        index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
+        key="dev_tier_override"
+    )
+    
+    if st.button("Apply Override", type="primary"):
+        st.session_state.user_tier = dev_tier
+        st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
+        st.rerun()
+    
+    st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
+
 # ================= Subscription UI (All Platforms) =================
 # Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
 st.sidebar.header("💳 Subscription")
