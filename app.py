@@ -722,6 +722,71 @@ def consume_pairing_token(token: str, device_fingerprint: str, platform: str, de
     except Exception as e:
         return None
 
+# ================= Admin Authentication System =================
+
+def is_admin_session_valid(workspace_id: str, device_fingerprint: str) -> bool:
+    """Check if current device has valid admin session"""
+    query = """
+        SELECT 1 FROM admin_sessions 
+        WHERE workspace_id = %s AND device_fingerprint = %s 
+        AND expires_at > NOW()
+        LIMIT 1
+    """
+    result = execute_db_query(query, (workspace_id, device_fingerprint))
+    return result is not None and len(result) > 0
+
+def create_admin_session(workspace_id: str, device_fingerprint: str) -> bool:
+    """Create admin session for device (30 day expiry)"""
+    expires_at = datetime.now() + timedelta(days=30)
+    query = """
+        INSERT INTO admin_sessions (workspace_id, device_fingerprint, expires_at)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (workspace_id, device_fingerprint) 
+        DO UPDATE SET expires_at = %s, created_at = NOW()
+    """
+    result = execute_db_write(query, (workspace_id, device_fingerprint, expires_at, expires_at))
+    return result is not None and result >= 0
+
+def verify_admin_pin(pin: str) -> bool:
+    """Verify admin PIN against environment secret"""
+    admin_pin = os.getenv('ADMIN_PIN')
+    return admin_pin is not None and str(pin).strip() == str(admin_pin).strip()
+
+def set_subscription_override(workspace_id: str, tier: str, set_by: str) -> bool:
+    """Set subscription tier override for workspace"""
+    query = """
+        INSERT INTO subscription_overrides (workspace_id, tier, set_by)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (workspace_id) 
+        DO UPDATE SET tier = %s, set_by = %s, updated_at = NOW()
+    """
+    result = execute_db_write(query, (workspace_id, tier, set_by, tier, set_by))
+    return result is not None and result >= 0
+
+def get_subscription_override(workspace_id: str) -> Optional[str]:
+    """Get subscription tier override for workspace"""
+    query = """
+        SELECT tier FROM subscription_overrides 
+        WHERE workspace_id = %s
+        LIMIT 1
+    """
+    result = execute_db_query(query, (workspace_id,))
+    if result and len(result) > 0:
+        return result[0]['tier']
+    return None
+
+def clear_subscription_override(workspace_id: str) -> bool:
+    """Clear subscription tier override for workspace"""
+    query = "DELETE FROM subscription_overrides WHERE workspace_id = %s"
+    result = execute_db_write(query, (workspace_id,))
+    return result is not None and result >= 0
+
+def is_admin(workspace_id: str, device_fingerprint: str) -> bool:
+    """Check if user has admin access"""
+    if not workspace_id or not device_fingerprint:
+        return False
+    return is_admin_session_valid(workspace_id, device_fingerprint)
+
 def save_workspace_data(workspace_id: str, data_type: str, item_key: str, data_payload: dict) -> bool:
     """Save data to workspace with versioning"""
     query = """
@@ -2585,7 +2650,13 @@ def cancel_subscription(workspace_id: str):
         return False
 
 def get_user_tier_from_subscription(workspace_id: str):
-    """Get user tier based on active subscription"""
+    """Get user tier based on active subscription and admin overrides"""
+    # Check for admin override first
+    override_tier = get_subscription_override(workspace_id)
+    if override_tier:
+        return override_tier
+    
+    # Fall back to regular subscription
     subscription = get_workspace_subscription(workspace_id)
     if subscription:
         return subscription['plan_code']
@@ -2916,30 +2987,75 @@ if refresh_clicked:
 
 # Sidebar
 # ================= Watchlist Management =================
-# ================= DEVELOPER ACCESS (CREATOR ONLY) =================
-# Professional developer access section for app creator
-st.sidebar.header("🔧 Developer Access")
-with st.sidebar.expander("Creator Override", expanded=False):
-    st.caption("App creator access - override subscription tier for testing")
-    
-    dev_tier = st.selectbox(
-        "Override Tier:",
-        options=['free', 'pro', 'pro_trader'],
-        format_func=lambda x: {
-            'free': '📱 Free Tier',
-            'pro': '🚀 Pro Tier ($4.99/month)', 
-            'pro_trader': '💎 Pro Trader ($9.99/month)'
-        }[x],
-        index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
-        key="dev_tier_override"
-    )
-    
-    if st.button("Apply Override", type="primary"):
-        st.session_state.user_tier = dev_tier
-        st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
-        st.rerun()
-    
-    st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
+# ================= ADMIN ACCESS (PIN PROTECTED) =================
+# Secure admin interface for app creator only
+device_fingerprint = get_persistent_device_fingerprint()
+workspace_id = get_or_create_workspace_for_device(device_fingerprint)
+
+# Check if user has admin access
+user_is_admin = workspace_id and is_admin(workspace_id, device_fingerprint)
+
+if user_is_admin:
+    # Admin is logged in - show admin controls
+    st.sidebar.header("🔧 Admin Access")
+    with st.sidebar.expander("Creator Controls", expanded=False):
+        st.caption("🔑 Admin authenticated - Creator access")
+        
+        # Current tier display
+        current_tier = get_user_tier_from_subscription(workspace_id) if workspace_id else 'free'
+        st.info(f"Current tier: {current_tier.upper()}")
+        
+        # Tier override controls
+        override_tier = st.selectbox(
+            "Override Tier:",
+            options=['free', 'pro', 'pro_trader'],
+            format_func=lambda x: {
+                'free': '📱 Free Tier',
+                'pro': '🚀 Pro Tier ($4.99/month)', 
+                'pro_trader': '💎 Pro Trader ($9.99/month)'
+            }[x],
+            index=['free', 'pro', 'pro_trader'].index(current_tier),
+            key="admin_tier_override"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Apply Override", type="primary"):
+                if workspace_id and set_subscription_override(workspace_id, override_tier, "admin"):
+                    st.success(f"✅ Tier set to: {override_tier.upper()}")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to set override")
+        
+        with col2:
+            if st.button("Clear Override"):
+                if workspace_id and clear_subscription_override(workspace_id):
+                    st.success("✅ Override cleared")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to clear override")
+        
+        st.caption("💡 Overrides persist across sessions and devices")
+
+else:
+    # Admin login form
+    st.sidebar.header("🔑 Admin Access")
+    with st.sidebar.expander("Admin Login", expanded=False):
+        st.caption("Enter admin PIN to access creator controls")
+        
+        admin_pin = st.text_input("Admin PIN:", type="password", key="admin_pin")
+        
+        if st.button("Login", type="primary"):
+            if verify_admin_pin(admin_pin):
+                if workspace_id and create_admin_session(workspace_id, device_fingerprint):
+                    st.success("✅ Admin access granted!")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to create admin session")
+            else:
+                st.error("❌ Invalid PIN")
+        
+        st.caption("⚠️ Creator access only")
 
 st.sidebar.header("📋 Watchlists")
 
