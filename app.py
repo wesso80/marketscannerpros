@@ -586,25 +586,13 @@ def generate_device_fingerprint() -> str:
     return str(uuid.uuid4())
 
 def get_persistent_device_fingerprint() -> str:
-    """Get or create a persistent device fingerprint - simplified approach"""
+    """Get or create a persistent device fingerprint - SECURE approach"""
     # Check if we already have a device fingerprint in session state
     if 'device_fingerprint' in st.session_state:
         return st.session_state.device_fingerprint
     
-    # Check if device_id is in query params (from potential pairing)
+    # Check for pairing token in URL (from QR code scan) - ONLY trusted auth method
     query_params = st.query_params
-    device_id = query_params.get('device_id', None)
-    
-    # Handle case where device_id might be a list
-    if isinstance(device_id, list):
-        device_id = device_id[0] if device_id else None
-    
-    if device_id:
-        # Use the device_id from query params
-        st.session_state.device_fingerprint = str(device_id)
-        return str(device_id)
-    
-    # Check for pairing token in URL (from QR code scan)
     pair_token = query_params.get('pair', None)
     if isinstance(pair_token, list):
         pair_token = pair_token[0] if pair_token else None
@@ -617,22 +605,21 @@ def get_persistent_device_fingerprint() -> str:
         if workspace_id:
             st.session_state.device_fingerprint = new_fingerprint
             st.session_state.workspace_id = workspace_id
-            # Remove the pair parameter from URL and add device_id
+            # Remove ALL auth-related parameters from URL for security
             st.query_params.clear()
-            st.query_params["device_id"] = new_fingerprint
             st.success("🎉 Device successfully paired! You now have access to all your Pro features.")
             st.rerun()
             return new_fingerprint
         else:
             st.error("❌ Invalid or expired pairing code. Please try again.")
     
-    # Generate a new device fingerprint and persist it in URL for future sessions
+    # SECURITY: Never trust device_id from URL - generate new fingerprint
+    # This prevents account takeover via URL spoofing
     new_fingerprint = str(uuid.uuid4())
     st.session_state.device_fingerprint = new_fingerprint
     
-    # Persist in URL for cross-session notifications - only if not already set
-    if not st.query_params.get("device_id"):
-        st.query_params["device_id"] = new_fingerprint
+    # NOTE: We intentionally do NOT persist device_id in URL for security
+    # Users must use pairing tokens for cross-device access
     
     return new_fingerprint
 
@@ -747,10 +734,57 @@ def create_admin_session(workspace_id: str, device_fingerprint: str) -> bool:
     result = execute_db_write(query, (workspace_id, device_fingerprint, expires_at, expires_at))
     return result is not None and result >= 0
 
-def verify_admin_pin(pin: str) -> bool:
-    """Verify admin PIN against environment secret"""
+def verify_admin_pin(pin: str, workspace_id: str, device_fingerprint: str) -> tuple[bool, str]:
+    """Verify admin PIN with server-side brute-force protection"""
+    if not pin or len(pin.strip()) < 6:  # Minimum 6-digit PIN
+        return False, "PIN must be at least 6 characters"
+    
+    if not workspace_id:
+        return False, "Invalid workspace"
+    
+    # Get client IP (limited in Streamlit environment)
+    client_ip = "unknown"
+    try:
+        headers = st.context.headers if hasattr(st.context, 'headers') else {}
+        client_ip = headers.get('x-forwarded-for', headers.get('x-real-ip', 'unknown'))
+    except:
+        pass
+    
+    current_time = datetime.now()
+    fifteen_min_ago = current_time - timedelta(minutes=15)
+    
+    # Check recent failed attempts from database (server-side protection)
+    check_query = """
+        SELECT COUNT(*) as failed_count 
+        FROM admin_login_attempts 
+        WHERE workspace_id = %s 
+        AND failed_at > %s 
+        AND success = FALSE
+    """
+    
+    result = execute_db_query(check_query, (workspace_id, fifteen_min_ago))
+    
+    if result and len(result) > 0:
+        failed_count = result[0]['failed_count']
+        if failed_count >= 5:
+            return False, "Too many failed attempts. Try again in 15 minutes."
+    
+    # Verify PIN
     admin_pin = os.getenv('ADMIN_PIN')
-    return admin_pin is not None and str(pin).strip() == str(admin_pin).strip()
+    is_valid = admin_pin is not None and str(pin).strip() == str(admin_pin).strip()
+    
+    # Record attempt in database
+    record_query = """
+        INSERT INTO admin_login_attempts (workspace_id, device_fingerprint, ip_address, success)
+        VALUES (%s, %s, %s, %s)
+    """
+    
+    execute_db_write(record_query, (workspace_id, device_fingerprint, client_ip, is_valid))
+    
+    if is_valid:
+        return True, "Success"
+    else:
+        return False, "Invalid PIN"
 
 def set_subscription_override(workspace_id: str, tier: str, set_by: str) -> bool:
     """Set subscription tier override for workspace"""
@@ -3046,14 +3080,18 @@ else:
         admin_pin = st.text_input("Admin PIN:", type="password", key="admin_pin")
         
         if st.button("Login", type="primary"):
-            if verify_admin_pin(admin_pin):
-                if workspace_id and create_admin_session(workspace_id, device_fingerprint):
-                    st.success("✅ Admin access granted!")
-                    st.rerun()
+            if workspace_id:
+                success, message = verify_admin_pin(admin_pin, workspace_id, device_fingerprint)
+                if success:
+                    if create_admin_session(workspace_id, device_fingerprint):
+                        st.success("✅ Admin access granted!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to create admin session")
                 else:
-                    st.error("❌ Failed to create admin session")
+                    st.error(f"❌ {message}")
             else:
-                st.error("❌ Invalid PIN")
+                st.error("❌ Workspace not available")
         
         st.caption("⚠️ Creator access only")
 
@@ -3327,32 +3365,21 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
 st.sidebar.header("💳 Subscription")
 
-# Get current subscription from database
+# Get current subscription from database with admin override support
 workspace_id = st.session_state.get('workspace_id')
 current_subscription = None
-current_tier = 'free'
-
-# First check session state for demo mode overrides
-demo_tier = st.session_state.get('user_tier')
 
 if workspace_id:
+    # Use the proper function that checks admin overrides first, then subscriptions
+    current_tier = get_user_tier_from_subscription(workspace_id)
+    # Also get subscription info for display purposes
     current_subscription = get_workspace_subscription(workspace_id)
-    if current_subscription and not demo_tier:
-        # Use database subscription only if no demo mode override
-        current_tier = current_subscription['plan_code']
-    elif demo_tier:
-        # Demo mode override takes precedence
-        current_tier = demo_tier
-    else:
-        # No database subscription and no demo override
-        current_tier = 'free'
 else:
-    # No workspace - use session state for demo mode
-    current_tier = st.session_state.get('user_tier', 'free')
+    # No workspace - default to free
+    current_tier = 'free'
 
-# Update session state to match current tier (but don't overwrite demo mode)
-if not st.session_state.get('user_tier'):
-    st.session_state.user_tier = current_tier
+# Update session state to match current tier
+st.session_state.user_tier = current_tier
     
 tier_info = TIER_CONFIG[current_tier]
 
