@@ -739,7 +739,10 @@ def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: 
     return get_ohlcv_yf(symbol, timeframe, period, start, end)
 
 # ================= Indicators (pure pandas) =================
-def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
+def _ema(s, n):    
+    # Ensure numeric data before EMA calculation
+    s_numeric = pd.to_numeric(s, errors='coerce')
+    return s_numeric.ewm(span=n, adjust=False).mean()
 def _rsi(s, n=14):
     d = s.diff()
     up = d.clip(lower=0).ewm(alpha=1/n, adjust=False).mean()
@@ -756,6 +759,11 @@ def _bb_width(c, n=20, k=2.0):
 
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
+    
+    # Ensure all price columns are numeric before calculations
+    for col in ['open', 'high', 'low', 'close', 'volume']:
+        out[col] = pd.to_numeric(out[col], errors='coerce')
+    
     out["ema8"]   = _ema(out["close"], 8)
     out["ema21"]  = _ema(out["close"], 21)
     out["ema50"]  = _ema(out["close"], 50)
@@ -1019,10 +1027,16 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Option
         # Get data and compute features
         df = get_ohlcv(symbol, timeframe)
         if df.empty or len(df) < 50:
+            st.error(f"Insufficient data for {symbol}. Got {len(df)} data points, need at least 50.")
             return None
         
-        df_with_features = compute_features(df).dropna()
-        if df_with_features.empty:
+        try:
+            df_with_features = compute_features(df).dropna()
+            if df_with_features.empty:
+                st.error(f"Unable to compute technical indicators for {symbol}.")
+                return None
+        except Exception as e:
+            st.error(f"Error computing technical indicators: {str(e)}")
             return None
             
         # Create subplots based on selected indicators
