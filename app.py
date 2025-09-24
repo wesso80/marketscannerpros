@@ -26,40 +26,6 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
-# ================= iOS COMPLIANCE DETECTION =================
-# Set global iOS detection flag for payment blocking only
-IS_IOS_DEVICE = False
-
-print("🔍 iOS Detection Check...")
-
-# Get query parameters for iOS detection
-try:
-    query_params = st.query_params if hasattr(st, 'query_params') else {}
-    
-    # Check for explicit iOS parameters
-    platform_param = query_params.get('platform', '').lower()
-    mobile_param = query_params.get('mobile')
-    
-    # Check user agent
-    user_agent = ""
-    if hasattr(st, 'context') and hasattr(st.context, 'headers'):
-        user_agent = st.context.headers.get('user-agent', '').lower()
-    
-    # iOS detection logic
-    is_ios_param = 'ios' in platform_param
-    has_mobile_param = mobile_param is not None
-    is_ios_ua = any(indicator in user_agent for indicator in ['iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19'])
-    
-    if is_ios_param or has_mobile_param or is_ios_ua:
-        IS_IOS_DEVICE = True
-        print("✅ iOS Device Detected - Payment blocking will be active")
-    else:
-        print("ℹ️  Non-iOS Device - Standard payments available")
-        
-except Exception as e:
-    print(f"Error in iOS detection: {e}")
-    IS_IOS_DEVICE = False
-
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
@@ -2310,7 +2276,7 @@ def get_platform_type() -> str:
         # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
         return 'ios'
 
-# Platform detection for payment compliance
+# CRITICAL: Check platform BEFORE any Stripe processing for Apple compliance
 platform = get_platform_type()
 print(f"DEBUG - Platform detected: {platform}")
 
@@ -2979,8 +2945,7 @@ if current_tier == 'free':
                 # In actual iOS app: StoreKit.restorePurchases()
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
-        current_platform = get_platform_type()
-        if current_platform == 'web':  # Only show on web, not in mobile app builds
+        if not is_mobile:  # Only show on web, not in mobile app builds
             st.markdown("---")
             st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
@@ -3007,24 +2972,10 @@ elif current_tier in ['pro', 'pro_trader']:
             st.markdown("---")
             if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
                 if workspace_id:
-                    current_platform = get_platform_type()
-                    if current_platform == 'ios':
-                        # Apple App Store Compliance: NO STRIPE on iOS
-                        st.error("🍎 **Apple App Store Policy**")
-                        st.markdown("""
-                        **Upgrades must be purchased through the iOS app using Apple's In-App Purchase system.**
-                        
-                        🚫 **Web payments are not available on iOS devices**
-                        
-                        **To upgrade:**
-                        1. Open the Market Scanner app from the App Store
-                        2. Go to Settings → Subscription
-                        3. Choose Pro Trader ($9.99/month)
-                        4. Complete purchase through your Apple ID
-                        """)
-                        st.stop()
+                    if is_mobile:
+                        st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                     else:
-                        # Web/Android Stripe checkout
+                        # Create Stripe checkout session for upgrade
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -3090,25 +3041,10 @@ elif current_tier in ['pro', 'pro_trader']:
                 st.rerun()
             elif current_subscription and workspace_id:
                 # Real database subscription
-                current_platform = get_platform_type()
-                if current_platform == 'ios':
-                    # Apple App Store Compliance: NO STRIPE on iOS
-                    st.error("🍎 **Apple App Store Policy**")
-                    st.markdown("""
-                    **Subscription management must be done through Apple's system for iOS users.**
-                    
-                    🚫 **Web cancellation is not available on iOS devices**
-                    
-                    **To manage your subscription:**
-                    1. Go to iOS Settings app
-                    2. Tap [Your Name] → Subscriptions
-                    3. Find Market Scanner and manage there
-                    
-                    OR open the native iOS app and go to Settings → Subscription
-                    """)
-                    st.stop()
+                if is_mobile:
+                    st.info("📱 In mobile app, this would open subscription management")
                 else:
-                    # Web/Android Stripe subscription cancellation
+                    # Cancel Stripe subscription for web users
                     success, message = cancel_stripe_subscription(workspace_id)
                     if success:
                         st.success("✅ Subscription cancelled successfully")
@@ -3126,8 +3062,7 @@ elif current_tier in ['pro', 'pro_trader']:
                 st.error("❌ No active subscription found")
         
         # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
-        current_platform = get_platform_type()
-        if current_platform == 'web':  # Only show on web, not in mobile app builds
+        if not is_mobile:  # Only show on web, not in mobile app builds
             st.markdown("---")
             st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
             col1, col2, col3 = st.columns(3)
