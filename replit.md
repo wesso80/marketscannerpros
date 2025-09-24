@@ -50,13 +50,6 @@ Preferred communication style: Simple, everyday language.
 - **Capacitor Native Apps**: True iOS and Android applications using server-based architecture
 - **Multi-Platform Strategy**: Three distribution channels covering all mobile platforms and app stores
 
-### Apple In-App Purchase Integration (NEW)
-- **iOS App Store Compliance**: Platform-specific payment flows ensuring Apple Guidelines 3.1.1 compliance
-- **React Native IAP**: Full StoreKit integration with react-native-iap library for iOS subscriptions
-- **Dual Payment System**: Apple IAP for iOS, Stripe for web/Android - no payment conflicts
-- **Receipt Validation**: Comprehensive backend validation with Apple's servers including sandbox fallback
-- **Subscription Management**: Native iOS subscription management, restore purchases, and Apple-required features
-
 ## External Dependencies
 
 ### Market Data APIs
@@ -82,7 +75,6 @@ Preferred communication style: Simple, everyday language.
 - **psycopg2**: PostgreSQL database connectivity (prepared for future database integration)
 
 ### Infrastructure Dependencies
-- **Environment Variables**: Configuration management for sensitive credentials (Stripe, Apple IAP)
+- **Environment Variables**: Configuration management for sensitive credentials
 - **File System**: CSV export functionality and temporary data storage
 - **PWA Assets**: Service worker, manifest, and mobile app icons in `/static/` directory
-- **Apple IAP Configuration**: App Store Connect product setup for Pro ($4.99) and Pro Trader ($9.99) monthly subscriptions

@@ -2194,94 +2194,8 @@ if 'webhook' in st.query_params:
             st.error(f"Webhook processing failed: {str(e)}")
         st.stop()
 
-# Handle Apple IAP Receipt Validation (API endpoint)
-if 'iap' in st.query_params and st.query_params.get('action') == 'validate-receipt':
-    st.write("Apple IAP Receipt Validation Endpoint")
-    if st.button("Validate Receipt"):
-        # This would be called via API, not through Streamlit UI
-        st.info("⚙️ Receipt validation endpoint ready for iOS app")
-    st.stop()
-
-# ================= CRITICAL: Platform Detection for Apple Compliance =================
-def get_platform_type() -> str:
-    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection for TestFlight"""
-    try:
-        # PRIORITY 1: Check URL parameters first (most reliable for mobile apps)
-        query_params = st.query_params
-        platform_param = query_params.get('platform')
-        
-        # Explicit platform parameter (set by mobile app)
-        if platform_param:
-            platform_str = str(platform_param).lower()
-            if 'ios' in platform_str:
-                return 'ios'
-            elif 'android' in platform_str:
-                return 'android'
-            elif 'web' in platform_str:
-                return 'web'
-        
-        # PRIORITY 2: Check for mobile app indicators
-        mobile_param = query_params.get('mobile')
-        if mobile_param:
-            return 'ios'  # Default mobile to iOS for Apple compliance
-        
-        # PRIORITY 3: Enhanced User Agent Detection for TestFlight/App Store
-        headers = st.context.headers if hasattr(st.context, 'headers') else {}
-        user_agent = headers.get('user-agent', '').lower()
-        
-        # Print user agent for debugging (will show in logs)
-        print(f"DEBUG - User Agent: {user_agent}")
-        
-        # Capacitor iOS app detection (TestFlight/App Store) - HIGHEST PRIORITY
-        if 'capacitor' in user_agent:
-            return 'ios'
-        
-        # WKWebView is used by iOS apps (TestFlight, App Store, PWA)
-        if 'wkwebview' in user_agent:
-            return 'ios'
-            
-        # Strong iOS device indicators
-        ios_device_indicators = ['iphone', 'ipad', 'ipod']
-        if any(indicator in user_agent for indicator in ios_device_indicators):
-            # Make sure it's not an Android device pretending to be iOS
-            if 'android' not in user_agent:
-                return 'ios'
-        
-        # iOS version indicators in user agent
-        ios_version_patterns = ['mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19', 'os 15', 'os 16', 'os 17', 'os 18']
-        if any(pattern in user_agent for pattern in ios_version_patterns):
-            return 'ios'
-        
-        # iOS browsers
-        ios_browser_indicators = ['crios', 'fxios', 'webkit', 'safari']
-        if any(indicator in user_agent for indicator in ios_browser_indicators):
-            if 'android' not in user_agent and any(device in user_agent for device in ['iphone', 'ipad', 'mobile']):
-                return 'ios'
-        
-        # Android detection (explicit)
-        if 'android' in user_agent:
-            return 'android'
-        
-        # PRIORITY 4: For any remaining mobile indicators, default to iOS for Apple compliance
-        mobile_generic_indicators = ['mobile', 'phone', 'tablet']
-        if any(indicator in user_agent for indicator in mobile_generic_indicators):
-            # If we detect mobile but can't determine platform, default to iOS for safety
-            return 'ios'
-            
-        # Desktop/web browsers
-        return 'web'
-        
-    except Exception as e:
-        print(f"Platform detection error: {e}")
-        # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
-        return 'ios'
-
-# CRITICAL: Check platform BEFORE any Stripe processing for Apple compliance
-platform = get_platform_type()
-print(f"DEBUG - Platform detected: {platform}")
-
-# Handle successful payment return from Stripe (ONLY for non-iOS platforms)
-if 'session_id' in st.query_params and platform != 'ios':
+# Handle successful payment return from Stripe
+if 'session_id' in st.query_params:
     session_id = st.query_params.get('session_id')
     if session_id:
         try:
@@ -2294,111 +2208,11 @@ if 'session_id' in st.query_params and platform != 'ios':
                 st.rerun()
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
-elif 'session_id' in st.query_params and platform == 'ios':
-    # Block iOS users from accessing Stripe payment processing
-    st.error("🍎 **Apple App Store Policy Violation Detected**")
-    st.markdown("""
-    **iOS devices cannot process web payments due to Apple App Store guidelines.**
-    
-    **To subscribe:**
-    1. Use the native iOS app from the App Store
-    2. Go to Settings → Subscription in the app
-    3. Choose your plan and pay through Apple
-    
-    **Redirecting you to safety...**
-    """)
-    st.query_params.clear()  # Clear Stripe session
-    st.rerun()
-
-# ================= Apple IAP Receipt Validation =================
-def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
-    """Validate Apple IAP receipt with Apple's servers"""
-    try:
-        import base64
-        import requests
-        
-        # Apple IAP Receipt Validation Endpoint
-        # Use sandbox for development, production for live app
-        apple_endpoint = "https://buy.itunes.apple.com/verifyReceipt"  # Production
-        # apple_endpoint = "https://sandbox.itunes.apple.com/verifyReceipt"  # Sandbox
-        
-        receipt_payload = {
-            "receipt-data": receipt_data,
-            "password": os.getenv("APPLE_SHARED_SECRET"),  # From App Store Connect
-            "exclude-old-transactions": True
-        }
-        
-        response = requests.post(apple_endpoint, json=receipt_payload, timeout=30)
-        
-        if response.status_code != 200:
-            return False, "Apple server error"
-            
-        result = response.json()
-        
-        if result.get("status") == 0:
-            # Receipt is valid
-            latest_receipt_info = result.get("latest_receipt_info", [])
-            
-            # Find the matching transaction
-            for transaction in latest_receipt_info:
-                if transaction.get("product_id") == product_id:
-                    # Check if subscription is active
-                    expires_date = transaction.get("expires_date_ms")
-                    if expires_date:
-                        import time
-                        if int(expires_date) / 1000 > time.time():
-                            return True, {
-                                "transaction_id": transaction.get("transaction_id"),
-                                "expires_date": expires_date,
-                                "product_id": product_id,
-                                "plan_code": "pro" if "pro_monthly" in product_id else "pro_trader"
-                            }
-            
-            return False, "No active subscription found"
-        else:
-            return False, f"Receipt validation failed: {result.get('status')}"
-            
-    except Exception as e:
-        print(f"Apple IAP validation error: {e}")
-        return False, str(e)
-
-def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_id: str, workspace_id: str):
-    """Process Apple IAP purchase and create subscription"""
-    try:
-        # Validate receipt with Apple
-        is_valid, validation_result = validate_apple_iap_receipt(receipt_data, product_id, transaction_id)
-        
-        if is_valid:
-            plan_code = validation_result["plan_code"]
-            
-            # Create subscription in database
-            success, result = create_subscription(workspace_id, plan_code, 'ios', 'monthly')
-            
-            if success:
-                return True, {
-                    "subscription_id": result,
-                    "plan_code": plan_code,
-                    "platform": "ios",
-                    "apple_transaction_id": transaction_id
-                }
-            else:
-                return False, f"Database error: {result}"
-        else:
-            return False, f"Receipt validation failed: {validation_result}"
-            
-    except Exception as e:
-        print(f"Apple IAP processing error: {e}")
-        return False, str(e)
 
 # ================= Stripe Integration Functions =================
 def create_stripe_checkout_session(plan_code: str, workspace_id: str):
     """Create a Stripe checkout session for subscription"""
     try:
-        # CRITICAL: Block iOS users from creating Stripe sessions for Apple compliance
-        platform = get_platform_type()
-        if platform == 'ios':
-            return None, "Apple App Store Policy: iOS users must use Apple In-App Purchase system"
-        
         if not stripe.api_key:
             return None, "Stripe not configured"
         
@@ -2733,14 +2547,36 @@ else:
     st.sidebar.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
-
+# Detect if this is accessed from mobile app and hide subscriptions
 def is_mobile_app() -> bool:
     """Check if request is from mobile app WebView"""
-    return get_platform_type() in ['ios', 'android']
-
-def is_ios_app() -> bool:
-    """Check if request is specifically from iOS app"""
-    return get_platform_type() == 'ios'
+    # Check for mobile app URL parameter - Streamlit can return different formats
+    query_params = st.query_params
+    
+    # Handle all possible Streamlit query parameter formats
+    mobile_param = query_params.get('mobile')
+    
+    # Check various formats that Streamlit might return
+    if mobile_param:
+        # Handle string, list, or other formats
+        if isinstance(mobile_param, list):
+            return 'true' in [str(p).lower() for p in mobile_param]
+        else:
+            return str(mobile_param).lower() == 'true'
+    
+    # Also check direct key existence for some Streamlit versions
+    if 'mobile' in query_params:
+        return True
+        
+    # Check user agent for mobile app indicators
+    try:
+        headers = st.context.headers if hasattr(st.context, 'headers') else {}
+        user_agent = headers.get('user-agent', '').lower()
+        # Detect WebView, mobile app specific user agents
+        mobile_indicators = ['wkwebview', 'android app', 'ios app', 'capacitor', 'cordova']
+        return any(indicator in user_agent for indicator in mobile_indicators)
+    except:
+        return False
 
 # Define tier configurations (needed for app functionality)
 TIER_CONFIG = {
@@ -2847,41 +2683,15 @@ if current_tier == 'free':
         
         st.markdown("---")
         
-        # Platform-specific payment buttons (Apple IAP compliance)
-        platform = get_platform_type()
         col1, col2 = st.columns(2)
         
         with col1:
-            if platform == 'ios':
-                # Apple App Store Compliance: NO STRIPE on iOS
-                st.error("🍎 **Apple App Store Policy**")
-                st.markdown("""
-                **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
-                
-                🚫 **Web payments are not available on iOS devices**
-                
-                **To subscribe:**
-                1. Download the Market Scanner app from the App Store
-                2. Open the app on your iOS device  
-                3. Go to Settings → Subscription
-                4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
-                5. Complete purchase through your Apple ID
-                
-                **Need help?** Contact support through the iOS app.
-                """)
-                
-                # No subscription buttons for iOS - redirect to app
-                if st.button("📱 Download iOS App", key="download_ios_app"):
-                    st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
-                    # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
-                    
-                # Completely block subscription upgrade UI for iOS
-                st.stop()
-            else:
-                # Web/Android Stripe button
-                if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                    if workspace_id:
-                        # Create Stripe checkout session for web/android users
+            if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                if workspace_id:
+                    if is_mobile:
+                        st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
+                    else:
+                        # Create Stripe checkout session for web users
                         checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2893,15 +2703,16 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro!")
                                 st.rerun()
-                    else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
+                else:
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
-            if platform != 'ios':  # Only show for non-iOS platforms
-                # Web/Android Stripe button
-                if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                    if workspace_id:
-                        # Create Stripe checkout session for web/android users
+            if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                if workspace_id:
+                    if is_mobile:
+                        st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
+                    else:
+                        # Create Stripe checkout session for web users
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2913,8 +2724,8 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
                                 st.rerun()
-                    else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
+                else:
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
         
         # Apple-required billing disclosures and controls
         st.markdown("---")
