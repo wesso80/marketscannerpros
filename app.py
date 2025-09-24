@@ -2161,60 +2161,115 @@ def remove_portfolio_position(symbol: str) -> bool:
 
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
     """Get current price for portfolio calculations with robust fallbacks"""
-    try:
-        ticker = yf.Ticker(symbol)
-        
-        # Try fast_info first (fastest)
+    # First try the original symbol
+    for attempt_symbol in [symbol]:
         try:
-            price = ticker.fast_info.get('lastPrice')
-            if price and price > 0:
-                return float(price)
-        except Exception:
-            pass
-        
-        # Fallback to recent minute data
-        try:
-            hist = ticker.history(period="1d", interval="1m")
-            if not hist.empty:
-                return float(hist['Close'].iloc[-1])
-        except Exception:
-            pass
+            ticker = yf.Ticker(attempt_symbol)
             
-        # Final fallback to daily data
-        try:
-            hist = ticker.history(period="2d")
-            if not hist.empty:
-                return float(hist['Close'].iloc[-1])
-        except Exception:
-            pass
+            # Try fast_info first (fastest)
+            try:
+                price = ticker.fast_info.get('lastPrice')
+                if price and price > 0:
+                    return float(price)
+            except Exception:
+                pass
             
-    except Exception:
-        pass
+            # Fallback to recent minute data
+            try:
+                hist = ticker.history(period="1d", interval="1m")
+                if not hist.empty:
+                    return float(hist['Close'].iloc[-1])
+            except Exception:
+                pass
+                
+            # Final fallback to daily data
+            try:
+                hist = ticker.history(period="2d")
+                if not hist.empty:
+                    return float(hist['Close'].iloc[-1])
+            except Exception:
+                pass
+                
+        except Exception:
+            continue
+    
+    # If crypto symbol fails, try alternative formats
+    if '-' in symbol:
+        base, quote = symbol.split('-', 1)
+        alternatives = []
+        
+        # Try different exchange formats for crypto
+        if quote in ['USD', 'AUD']:
+            alternatives.extend([
+                f"{base}-USD",  # Standard USD pair
+                f"{base}USD=X",  # Yahoo Finance crypto format
+                f"{base}-USDT",  # Tether pair
+            ])
+            
+        for alt_symbol in alternatives:
+            if alt_symbol != symbol:  # Don't retry the same symbol
+                try:
+                    ticker = yf.Ticker(alt_symbol)
+                    hist = ticker.history(period="2d")
+                    if not hist.empty:
+                        return float(hist['Close'].iloc[-1])
+                except Exception:
+                    continue
     
     return None
 
 def update_portfolio_prices() -> None:
     """Update all portfolio positions with current prices"""
+    import time
+    
     try:
         positions_query = "SELECT symbol, quantity, average_cost FROM portfolio_positions"
         positions = execute_db_query(positions_query)
         
         if positions:
-            for position in positions:
+            success_count = 0
+            failed_symbols = []
+            
+            for i, position in enumerate(positions):
                 symbol = position['symbol']
                 quantity = float(position['quantity'])
                 average_cost = float(position['average_cost'])
                 
-                current_price = get_current_price_portfolio(symbol) or 0.0
-                market_value = quantity * current_price
-                unrealized_pnl = (current_price - average_cost) * quantity
+                # Add delay to prevent Yahoo Finance rate limiting (except for first symbol)
+                if i > 0:
+                    time.sleep(0.5)  # 500ms delay between requests
                 
-                update_query = """
-                    UPDATE portfolio_positions 
-                    SET current_price = %s, market_value = %s, unrealized_pnl = %s, updated_at = NOW()
-                    WHERE symbol = %s
-                """
-                execute_db_write(update_query, (current_price, market_value, unrealized_pnl, symbol))
+                try:
+                    current_price = get_current_price_portfolio(symbol)
+                    if current_price and current_price > 0:
+                        market_value = quantity * current_price
+                        unrealized_pnl = (current_price - average_cost) * quantity
+                        
+                        update_query = """
+                            UPDATE portfolio_positions 
+                            SET current_price = %s, market_value = %s, unrealized_pnl = %s, updated_at = NOW()
+                            WHERE symbol = %s
+                        """
+                        execute_db_write(update_query, (current_price, market_value, unrealized_pnl, symbol))
+                        success_count += 1
+                    else:
+                        failed_symbols.append(symbol)
+                        # Still update the timestamp even if price fetch failed
+                        update_query = "UPDATE portfolio_positions SET updated_at = NOW() WHERE symbol = %s"
+                        execute_db_write(update_query, (symbol,))
+                        
+                except Exception as e:
+                    failed_symbols.append(f"{symbol} ({str(e)})")
+                    continue
+            
+            # Show results
+            if success_count > 0:
+                st.success(f"✅ Updated {success_count} out of {len(positions)} positions")
+            
+            if failed_symbols:
+                st.warning(f"⚠️ Failed to update: {', '.join(failed_symbols[:3])}{'...' if len(failed_symbols) > 3 else ''}")
+                st.caption("💡 Some crypto symbols may not be available on Yahoo Finance. Try using different exchanges (e.g., BTC-USD instead of BTC-AUD)")
+                
     except Exception as e:
         st.error(f"Error updating prices: {str(e)}")
 
