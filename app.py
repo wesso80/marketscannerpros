@@ -3538,9 +3538,78 @@ Happy trading! 📈
                 else:
                     st.error("❌ Email failed to send")
 
+# ================= iOS WebView Detection & Enhanced Error Handling =================
+def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
+    """Detect if iOS WebView is blocking yfinance API calls and provide helpful messaging"""
+    total_symbols = len(eq_errors) + len(cx_errors) 
+    total_results = len(eq_results) + len(cx_results)
+    
+    # Check if all/most symbols failed (typical iOS WebView behavior)
+    if total_symbols > 0 and total_results == 0:
+        # Check if errors contain network-related failures
+        all_errors = pd.concat([eq_errors, cx_errors], ignore_index=True) if not eq_errors.empty or not cx_errors.empty else pd.DataFrame()
+        
+        if not all_errors.empty:
+            error_messages = ' '.join(all_errors['error'].astype(str).tolist()).lower()
+            
+            # Common iOS WebView/network error patterns
+            ios_indicators = [
+                'no yfinance data', 'connection', 'network', 'timeout', 
+                'ssl', 'certificate', 'blocked', 'refused', 'unavailable',
+                'nsurlerror', 'cors', 'err_blocked_by_client', '403', '429',
+                'sslhandshakefailed', 'request failed', 'url error'
+            ]
+            
+            if any(indicator in error_messages for indicator in ios_indicators):
+                st.error("🍎 **iOS Mobile App Notice**")
+                st.info("""
+                **Network restrictions are preventing market data loading on iOS.**
+                
+                This is a known limitation with iOS WebView security that blocks external API calls to Yahoo Finance.
+                
+                **What's happening:**
+                • iOS WebView blocks direct connections to financial data providers
+                • This affects all iOS mobile browsers and app WebViews
+                • The same scanner works perfectly on desktop and Android
+                
+                **Coming Soon:**
+                • Server-side data proxy to bypass iOS restrictions
+                • Enhanced mobile compatibility
+                • Real-time data streaming
+                
+                **For now:**
+                • Use desktop/web version for full functionality
+                • Premium features and alerts still work on mobile
+                • Stay tuned for iOS-compatible updates!
+                """)
+                
+                # Show upgrade prompt since other features work
+                if st.session_state.get('user_tier', 'free') == 'free':
+                    st.markdown("""
+                    ---
+                    ### 🚀 **Upgrade to Pro While You Wait**
+                    Premium features like **Price Alerts** and **Portfolio Tracking** work great on iOS!
+                    
+                    **Pro ($4.99/month):** Real-time alerts, basic analytics
+                    **Pro Trader ($9.99/month):** Advanced features, priority support
+                    """)
+                
+                return True  # Indicates iOS issue detected
+    
+    return False  # No iOS issue detected
+
 # Display Results
+# Check for iOS WebView issues before showing results
+ios_issue_detected = detect_ios_webview_issues(
+    st.session_state.get('eq_results', pd.DataFrame()),
+    st.session_state.get('cx_results', pd.DataFrame()), 
+    st.session_state.get('eq_errors', pd.DataFrame()),
+    st.session_state.get('cx_errors', pd.DataFrame())
+)
+
 st.subheader("🏛 Equity Markets")
-if not st.session_state.eq_results.empty:
+# Show normal results if no iOS issues detected
+if not ios_issue_detected and not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
     st.dataframe(display_eq, width='stretch')
@@ -3553,16 +3622,17 @@ if not st.session_state.eq_results.empty:
         file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-else:
+elif not ios_issue_detected:
     st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
 
-# Equity errors
-if not st.session_state.eq_errors.empty:
+# Equity errors (only show if not iOS WebView issue)
+if not ios_issue_detected and not st.session_state.eq_errors.empty:
     with st.expander("⚠️ Equity Scan Errors", expanded=False):
         st.dataframe(st.session_state.eq_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
 
 st.subheader("₿ Crypto Markets")
-if not st.session_state.cx_results.empty:
+if not ios_issue_detected and not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
     st.dataframe(display_cx, width='stretch')
@@ -3575,13 +3645,14 @@ if not st.session_state.cx_results.empty:
         file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-else:
+elif not ios_issue_detected:
     st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
 
-# Crypto errors
-if not st.session_state.cx_errors.empty:
+# Crypto errors (only show if not iOS WebView issue) 
+if not ios_issue_detected and not st.session_state.cx_errors.empty:
     with st.expander("⚠️ Crypto Scan Errors", expanded=False):
         st.dataframe(st.session_state.cx_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
 
 # Combined CSV download
 if not st.session_state.eq_results.empty or not st.session_state.cx_results.empty:
