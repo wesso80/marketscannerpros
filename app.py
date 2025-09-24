@@ -3188,6 +3188,14 @@ is_authorized_dev = (
     dev_access == 'bradley'  # Simple dev access via URL
 )
 
+# TEMPORARY DEBUG: Show URL params and authorization status
+st.sidebar.markdown("---")
+st.sidebar.header("🔍 Debug URL")
+st.sidebar.code(f"URL params: {dict(query_params)}")
+st.sidebar.code(f"Dev param: '{dev_access}'")
+st.sidebar.code(f"Is authorized: {is_authorized_dev}")
+st.sidebar.markdown("---")
+
 if is_authorized_dev:
     st.sidebar.header("🔧 Developer Access")
     with st.sidebar.expander("Creator Override", expanded=False):
