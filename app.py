@@ -3116,7 +3116,7 @@ TIER_CONFIG = {
 # ================= Developer Override (Authorized Users Only) =================
 # SECURITY: Only show to authorized users
 AUTHORIZED_DEVELOPER_IDS = [
-    "your-workspace-id-here",  # Replace with your actual workspace ID
+    "e67df082-aa17-4e78-a9e6-efc4c862518b",  # Creator (Bradley)
     # Add more workspace IDs here for trusted users
 ]
 
@@ -3148,12 +3148,6 @@ if is_authorized_dev:
         st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
         st.caption(f"🔐 Your workspace ID: `{current_workspace_id}`")
 
-# TEMPORARY: Show workspace ID for setup (remove after you get your ID)
-if not is_authorized_dev:
-    st.sidebar.header("⚙️ Setup Required")
-    st.sidebar.error("**Creator Access Setup Needed**")
-    st.sidebar.code(f"Your workspace ID: {current_workspace_id}")
-    st.sidebar.caption("Copy the ID above and paste it into the AUTHORIZED_DEVELOPER_IDS list in app.py, then restart the app.")
 
 # ================= Subscription UI (All Platforms) =================
 # Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
