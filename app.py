@@ -36,131 +36,121 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #2563eb;
-    --success-color: #16a34a;
-    --danger-color: #dc2626;
+    --primary-color: #1f2937;
+    --secondary-color: #3b82f6;
+    --accent-color: #10b981;
+    --danger-color: #ef4444;
     --warning-color: #f59e0b;
-    --info-color: #0ea5e9;
-    --text-primary: #0f172a;
-    --text-secondary: #334155;
-    --text-muted: #64748b;
-    --border-radius: 6px;
-    --unified-bg: #f8fafc;
+    --background-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+    --spacing-unit: 1rem;
 }
 
-/* Unified Background */
+/* Main App Background */
 .stApp {
-    background: var(--unified-bg) !important;
+    background: var(--background-gradient);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--text-primary);
 }
 
-/* Consistent background throughout */
-.main .block-container {
-    background: var(--unified-bg) !important;
-}
-
-.stApp > .main {
-    background: var(--unified-bg) !important;
-}
-
-/* Clean Unified Header */
+/* Header Styling */
 .main-header {
-    background: var(--unified-bg);
-    padding: 1.5rem 0;
+    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    padding: 2rem 0;
     margin: -1rem -2rem 2rem -2rem;
-    color: var(--text-primary);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: var(--card-shadow);
+    color: white;
     text-align: center;
 }
 
-/* Unified styling for all elements */
-[data-testid="stHeader"] {
-    background: var(--unified-bg) !important;
-}
-
-[data-testid="stVerticalBlock"] {
-    background: var(--unified-bg) !important;
-    margin: 8px 0 !important;
-    padding: 16px !important;
-}
-
-/* Remove all card styling */
-.main .block-container > div {
-    background: var(--unified-bg) !important;
-    padding: 16px !important;
-    margin: 8px 0 !important;
-}
-
 .main-header h1 {
-    font-size: 24px;
-    font-weight: 600;
+    font-size: 2.5rem;
+    font-weight: 700;
     margin: 0;
-    color: var(--text-primary);
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .main-header p {
-    font-size: 16px;
-    color: var(--text-secondary);
+    font-size: 1.125rem;
+    opacity: 0.9;
     margin: 0.5rem 0 0 0;
-    font-weight: 500;
+    font-weight: 400;
 }
 
-/* Clean Unified Cards */
+/* Professional Cards */
 .pro-card {
-    background: var(--unified-bg);
-    padding: 16px;
-    margin: 16px 0;
-    transition: all 0.2s ease;
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.pro-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
 }
 
 .pro-card h3 {
-    color: var(--text-primary);
+    color: var(--primary-color);
     font-weight: 600;
-    margin-bottom: 12px;
-    font-size: 16px;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
 }
 
-/* Clean KPI Display */
+/* Metrics Cards */
 .metric-card {
-    background: var(--unified-bg);
-    padding: 16px;
-    margin: 8px 0;
-    border-left: 3px solid var(--primary-color);
-    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--secondary-color);
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    box-shadow: var(--card-shadow-hover);
 }
 
 .metric-value {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
     margin: 0;
-    text-align: right;
 }
 
 .metric-label {
-    font-size: 12px;
-    color: var(--text-muted);
+    font-size: 0.875rem;
+    color: #6b7280;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-/* Clean Unified Buttons */
+/* Professional Buttons */
 .stButton > button,
 button[data-testid="stBaseButton-secondary"],
 button[kind="secondary"],
 [data-testid="stBaseButton-secondary"],
 div[data-testid="stButton"] button {
-    background: var(--primary-color) !important;
+    background: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
+    background-image: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
     color: white !important;
     border: none !important;
     border-radius: var(--border-radius) !important;
-    padding: 8px 16px !important;
+    padding: 0.75rem 1.5rem !important;
     font-weight: 600 !important;
-    font-size: 14px !important;
-    transition: all 0.2s ease !important;
+    font-size: 1rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: var(--card-shadow) !important;
     font-family: 'Inter', sans-serif !important;
     min-height: auto !important;
 }
@@ -168,164 +158,127 @@ div[data-testid="stButton"] button {
 .stButton > button:hover,
 button[data-testid="stBaseButton-secondary"]:hover,
 button[kind="secondary"]:hover {
-    background: #1d4ed8 !important;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    box-shadow: var(--card-shadow-hover) !important;
+    transform: translateY(-1px) !important;
 }
 
-/* Clean Unified Sidebar */
+/* Sidebar Enhancements */
 .css-1d391kg {
-    background: var(--unified-bg);
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-right: 1px solid #d1d5db;
 }
 
-/* Clean Unified Data Tables */
+/* Data Tables */
 .stDataFrame {
     border-radius: var(--border-radius);
     overflow: hidden;
-    background: var(--unified-bg);
+    box-shadow: var(--card-shadow);
 }
 
-/* Clean Status Indicators */
+/* Status Indicators */
 .status-success {
-    background: var(--success-color);
+    background: linear-gradient(135deg, #10b981, #059669);
     color: white;
-    padding: 4px 8px;
-    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
     font-weight: 600;
-    font-size: 12px;
     display: inline-block;
-    margin: 2px;
+    margin: 0.25rem;
 }
 
 .status-warning {
-    background: var(--warning-color);
+    background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
-    padding: 4px 8px;
-    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
     font-weight: 600;
-    font-size: 12px;
     display: inline-block;
-    margin: 2px;
+    margin: 0.25rem;
 }
 
 .status-danger {
-    background: var(--danger-color);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
-    padding: 4px 8px;
-    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
     font-weight: 600;
-    font-size: 12px;
     display: inline-block;
-    margin: 2px;
+    margin: 0.25rem;
 }
 
-/* Clean Unified Subscription Tiers */
+/* Subscription Tiers */
 .tier-card {
-    background: var(--unified-bg);
-    padding: 24px;
-    margin: 16px 0;
-    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin: 1rem 0;
+    box-shadow: var(--card-shadow);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.tier-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+}
+
+.tier-card:hover {
+    border-color: var(--secondary-color);
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-4px);
 }
 
 .tier-card.premium {
-    border-left: 3px solid var(--warning-color);
+    border-color: #fbbf24;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.tier-card.premium::before {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
 }
 
 .price-display {
-    font-size: 32px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 16px 0;
-    text-align: right;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin: 1rem 0;
 }
 
 .price-period {
-    font-size: 14px;
-    color: var(--text-muted);
-    font-weight: 500;
+    font-size: 1rem;
+    color: #6b7280;
+    font-weight: 400;
 }
 
-/* Clean Feature Lists */
+/* Feature Lists */
 .feature-list {
     list-style: none;
     padding: 0;
-    margin: 16px 0;
+    margin: 1rem 0;
 }
 
 .feature-list li {
-    padding: 8px 0;
-    color: var(--text-secondary);
+    padding: 0.5rem 0;
+    color: #374151;
     font-weight: 500;
-    font-size: 14px;
     position: relative;
-    padding-left: 20px;
+    padding-left: 1.5rem;
 }
 
 .feature-list li::before {
     content: '✓';
     position: absolute;
     left: 0;
-    color: var(--success-color);
-    font-weight: 600;
-}
-
-/* Unified Text Styling */
-.main .block-container {
-    background: var(--unified-bg);
-}
-
-/* Clean readable text */
-.stMarkdown, .stText, .stCaption, .stSubheader {
-    color: var(--text-primary) !important;
-    font-size: 14px !important;
-    line-height: 1.5 !important;
-}
-
-.stMarkdown p, .stMarkdown div, .stText p, .stText div, 
-.stMarkdown span, .stText span {
-    color: var(--text-primary) !important;
-}
-
-/* Professional component text */
-.main .block-container .stMarkdown {
-    color: var(--text-primary) !important;
-}
-
-.main .block-container .stText {
-    color: var(--text-primary) !important;
-}
-
-/* Clean metrics */
-.stMetric .metric-value, .stMetric .metric-label {
-    color: var(--text-primary) !important;
-}
-
-/* Remove all washed-out styling */
-.element-container .stMarkdown, .element-container .stText {
-    color: var(--text-primary) !important;
-}
-
-/* Unified alert styling */
-.stAlert {
-    background: var(--unified-bg) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Unified success/error/info styling */
-.stSuccess {
-    background: var(--unified-bg) !important;
-    border-left: 3px solid var(--success-color) !important;
-    color: var(--text-primary) !important;
-}
-
-.stError {
-    background: var(--unified-bg) !important;
-    border-left: 3px solid var(--danger-color) !important;
-    color: var(--text-primary) !important;
-}
-
-.stInfo {
-    background: var(--unified-bg) !important;
-    border-left: 3px solid var(--info-color) !important;
-    color: var(--text-primary) !important;
+    color: var(--accent-color);
+    font-weight: 700;
 }
 
 /* Responsive Design */
@@ -3911,7 +3864,7 @@ def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
     
     return False  # No iOS issue detected
 
-# ================= Main Tabbed Interface =================
+# Display Results
 # Check for iOS WebView issues before showing results
 ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('eq_results', pd.DataFrame()),
@@ -3920,188 +3873,233 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('cx_errors', pd.DataFrame())
 )
 
-# Create main tabs for each category
-tab1, tab2, tab3, tab4 = st.tabs(["📈 Equity Markets", "₿ Crypto Markets", "⏰ Price Alerts", "📊 Advanced Charts"])
+# Equity Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>🏛 Equity Markets</h3>
+""", unsafe_allow_html=True)
+
+# Show normal results if no iOS issues detected
+if not ios_issue_detected and not st.session_state.eq_results.empty:
+    # Limit display to top K
+    display_eq = st.session_state.eq_results.head(topk)
+    
+    # Enhanced styling for direction column
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        elif val == 'Bearish':
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        return ''
+    
+    # Apply professional styling to direction column
+    if 'direction' in display_eq.columns:
+        styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_eq, width='stretch', use_container_width=True)
+    else:
+        st.dataframe(display_eq, width='stretch', use_container_width=True)
+    
+    # CSV download for equity results
+    csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
+    st.download_button(
+        label="📥 Download Equity Results (CSV)",
+        data=csv_eq,
+        file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv"
+    )
+elif not ios_issue_detected:
+    st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
+
+# Close equity card
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Equity errors (only show if not iOS WebView issue)
+if not ios_issue_detected and not st.session_state.eq_errors.empty:
+    with st.expander("⚠️ Equity Scan Errors", expanded=False):
+        st.dataframe(st.session_state.eq_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
+# Crypto Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>₿ Crypto Markets</h3>
+""", unsafe_allow_html=True)
+
+if not ios_issue_detected and not st.session_state.cx_results.empty:
+    # Limit display to top K
+    display_cx = st.session_state.cx_results.head(topk)
+    
+    # Enhanced styling for direction column (same as equity)
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        elif val == 'Bearish':
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        return ''
+    
+    # Apply professional styling to direction column
+    if 'direction' in display_cx.columns:
+        styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_cx, width='stretch', use_container_width=True)
+    else:
+        st.dataframe(display_cx, width='stretch', use_container_width=True)
+    
+    # CSV download for crypto results
+    csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
+    st.download_button(
+        label="📥 Download Crypto Results (CSV)",
+        data=csv_cx,
+        file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv"
+    )
+elif not ios_issue_detected:
+    st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
+
+# Close crypto card
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Crypto errors (only show if not iOS WebView issue) 
+if not ios_issue_detected and not st.session_state.cx_errors.empty:
+    with st.expander("⚠️ Crypto Scan Errors", expanded=False):
+        st.dataframe(st.session_state.cx_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
+# Combined CSV download
+if not st.session_state.eq_results.empty or not st.session_state.cx_results.empty:
+    combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
+    if not combined_results.empty:
+        combined_results_sorted = combined_results.sort_values("score", ascending=False)
+        csv_combined = to_csv_download(combined_results_sorted, "market_scan_combined.csv")
+        st.download_button(
+            label="📥 Download Combined Results (CSV)",
+            data=csv_combined,
+            file_name=f"market_scan_combined_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+
+st.subheader("🧮 Scoring Methodology")
+with st.expander("Show details", expanded=False):
+    st.markdown("""
+    **Technical Analysis Scoring System:**
+    
+    - **Market Regime** (±25 points): Price above/below EMA200 indicates bullish/bearish trend
+    - **Price Structure** (±25 points): 20-period high breakout (+25) or low breakdown (-25)
+    - **Momentum Indicators** (+20 points): RSI > 50 (+10) and MACD histogram > 0 (+10)
+    - **Volume Expansion** (+8 points): Volume Z-score > 0.5 indicates unusual activity
+    - **Volatility Expansion** (+7 points): Bollinger Band width above 20-period average
+    - **Tradability** (+5 points): ATR percentage < 4% indicates manageable volatility
+    - **Overextension Penalties/Rewards**: RSI > 80 (-10 points), RSI < 20 (+10 points for oversold bounce)
+    
+    **Position Sizing Formula:**
+    - Units = ⌊(Account Equity × Risk%) / |Entry Price - Stop Price|⌋
+    - Stop Price = Entry ± (ATR Multiplier × ATR)
+    - This ensures consistent dollar risk per trade regardless of instrument volatility
+    """)
+
+# ================= Price Alerts Management =================
+st.subheader("🚨 Price Alerts")
+
+# Auto-refresh toggle and controls
+col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+with col1:
+    auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
+
+with col2:
+    if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
+        with st.spinner("Checking price alerts..."):
+            triggered_count = check_price_alerts()
+            if triggered_count and triggered_count > 0:
+                st.success(f"🚨 {triggered_count} alert(s) triggered!")
+            else:
+                st.info("No alerts triggered")
+
+with col3:
+    if st.button("➕ New Alert"):
+        st.session_state.show_new_alert = True
+
+# Auto-refresh implementation  
+if auto_check:
+    import time
+    
+    # Initialize auto-check state
+    if 'last_auto_check' not in st.session_state:
+        st.session_state.last_auto_check = time.time()
+    if 'auto_check_interval' not in st.session_state:
+        st.session_state.auto_check_interval = 300  # 5 minutes
+    
+    current_time = time.time()
+    time_since_last_check = current_time - st.session_state.last_auto_check
+    
+    # Show countdown
+    remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
+    with col4:
+        if remaining_time > 0:
+            st.info(f"Next check in: {int(remaining_time)}s")
+        else:
+            st.info("Checking alerts...")
+    
+    # Check alerts if interval has passed
+    if time_since_last_check >= st.session_state.auto_check_interval:
+        triggered_count = check_price_alerts()
+        st.session_state.last_auto_check = current_time
+        
+        if triggered_count and triggered_count > 0:
+            st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
+            st.balloons()  # Celebrate triggered alerts
+        else:
+            st.success("All alerts checked - no triggers")
+    
+    # Auto-refresh every 10 seconds to update countdown and check alerts
+    time.sleep(10)
+    st.rerun()
+else:
+    # Clear auto-check state when disabled
+    if 'last_auto_check' in st.session_state:
+        del st.session_state.last_auto_check
+
+# New alert form
+if st.session_state.get('show_new_alert', False):
+    with st.expander("Create New Price Alert", expanded=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
+            alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
+            
+        with col2:
+            alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
+            alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Create Alert", key="create_alert"):
+                # Input validation
+                if not alert_symbol or not alert_symbol.strip():
+                    st.error("Symbol is required")
+                elif alert_price <= 0:
+                    st.error("Price must be positive")
+                elif alert_type not in ['above', 'below']:
+                    st.error("Invalid alert type")
+                else:
+                    # Check tier limitations
+                    # ALL TIERS: Full alert functionality (no restrictions)
+                    symbol_clean = alert_symbol.strip().upper()
+                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                        st.success(f"Alert created for {symbol_clean}")
+                        st.session_state.show_new_alert = False
+                        st.rerun()
+                    else:
+                        st.error("Failed to create alert - please check database connection")
+        
+        with col3:
+            if st.button("Cancel", key="cancel_alert"):
+                st.session_state.show_new_alert = False
+                st.rerun()
+
+# Display alerts in tabs
+tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
 
 with tab1:
-    st.markdown("### Equity Markets")
-    st.markdown("---")
-    
-    # Show normal results if no iOS issues detected
-    if not ios_issue_detected and not st.session_state.eq_results.empty:
-        # Limit display to top K
-        display_eq = st.session_state.eq_results.head(topk)
-        
-        # Enhanced styling for direction column
-        def highlight_direction(val):
-            if val == 'Bullish':
-                return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-            elif val == 'Bearish':
-                return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-            return ''
-        
-        # Apply professional styling to direction column
-        if 'direction' in display_eq.columns:
-            styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
-            st.dataframe(styled_eq, width='stretch', use_container_width=True)
-        else:
-            st.dataframe(display_eq, width='stretch', use_container_width=True)
-        
-        # CSV download for equity results
-        csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
-        st.download_button(
-            label="📥 Download Equity Results (CSV)",
-            data=csv_eq,
-            file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
-    elif not ios_issue_detected:
-        st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
-    
-    # Equity errors (only show if not iOS WebView issue)
-    if not ios_issue_detected and not st.session_state.eq_errors.empty:
-        with st.expander("⚠️ Equity Scan Errors", expanded=False):
-            st.dataframe(st.session_state.eq_errors, width='stretch')
-            st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
-
-with tab2:
-    st.markdown("### Crypto Markets")
-    st.markdown("---")
-    
-    if not ios_issue_detected and not st.session_state.cx_results.empty:
-        # Limit display to top K
-        display_cx = st.session_state.cx_results.head(topk)
-        
-        # Enhanced styling for direction column (same as equity)
-        def highlight_direction(val):
-            if val == 'Bullish':
-                return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-            elif val == 'Bearish':
-                return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-            return ''
-        
-        # Apply professional styling to direction column
-        if 'direction' in display_cx.columns:
-            styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
-            st.dataframe(styled_cx, width='stretch', use_container_width=True)
-        else:
-            st.dataframe(display_cx, width='stretch', use_container_width=True)
-        
-        # CSV download for crypto results
-        csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
-        st.download_button(
-            label="📥 Download Crypto Results (CSV)",
-            data=csv_cx,
-            file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
-    elif not ios_issue_detected:
-        st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
-    
-    # Crypto errors (only show if not iOS WebView issue) 
-    if not ios_issue_detected and not st.session_state.cx_errors.empty:
-        with st.expander("⚠️ Crypto Scan Errors", expanded=False):
-            st.dataframe(st.session_state.cx_errors, width='stretch')
-            st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
-
-with tab3:
-    st.markdown("### Price Alerts")
-    st.markdown("---")
-    
-    # Auto-refresh toggle and controls
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-    with col1:
-        auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
-    
-    with col2:
-        if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
-            with st.spinner("Checking price alerts..."):
-                triggered_count = check_price_alerts()
-                if triggered_count and triggered_count > 0:
-                    st.success(f"🚨 {triggered_count} alert(s) triggered!")
-                else:
-                    st.info("No alerts triggered")
-    
-    with col3:
-        if st.button("➕ New Alert"):
-            st.session_state.show_new_alert = True
-    
-    # Auto-refresh implementation (simplified to avoid app-wide disruption)
-    if auto_check:
-        import time
-        
-        # Initialize auto-check state
-        if 'last_auto_check' not in st.session_state:
-            st.session_state.last_auto_check = time.time()
-        if 'auto_check_interval' not in st.session_state:
-            st.session_state.auto_check_interval = 300  # 5 minutes
-        
-        current_time = time.time()
-        time_since_last_check = current_time - st.session_state.last_auto_check
-        
-        # Show countdown
-        remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
-        with col4:
-            if remaining_time > 0:
-                st.info(f"Next check in: {int(remaining_time)}s")
-            else:
-                st.info("Checking alerts...")
-        
-        # Check alerts if interval has passed (without sleep/rerun to avoid disruption)
-        if time_since_last_check >= st.session_state.auto_check_interval:
-            triggered_count = check_price_alerts()
-            st.session_state.last_auto_check = current_time
-            
-            if triggered_count and triggered_count > 0:
-                st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
-            else:
-                st.success("All alerts checked - no triggers")
-    else:
-        # Clear auto-check state when disabled
-        if 'last_auto_check' in st.session_state:
-            del st.session_state.last_auto_check
-    
-    # New alert form
-    if st.session_state.get('show_new_alert', False):
-        with st.expander("Create New Price Alert", expanded=True):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
-                alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
-                
-            with col2:
-                alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-                alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Create Alert", key="create_alert"):
-                    # Input validation
-                    if not alert_symbol or not alert_symbol.strip():
-                        st.error("Symbol is required")
-                    elif alert_price <= 0:
-                        st.error("Price must be positive")
-                    elif alert_type not in ['above', 'below']:
-                        st.error("Invalid alert type")
-                    else:
-                        # Check tier limitations
-                        # ALL TIERS: Full alert functionality (no restrictions)
-                        symbol_clean = alert_symbol.strip().upper()
-                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                            st.success(f"Alert created for {symbol_clean}")
-                            st.session_state.show_new_alert = False
-                            st.rerun()
-                        else:
-                            st.error("Failed to create alert - please check database connection")
-            
-            with col3:
-                if st.button("Cancel", key="cancel_alert"):
-                    st.session_state.show_new_alert = False
-                    st.rerun()
-    
-    # Display alerts in separate sections (not nested tabs)
-    st.markdown("#### 🔔 Active Alerts")
     active_alerts = get_active_alerts()
     if active_alerts:
         # Create DataFrame for better display
@@ -4126,8 +4124,8 @@ with tab3:
                         st.error("Failed to delete alert")
     else:
         st.info("No active alerts. Create one above to get notified when price targets are hit.")
-    
-    st.markdown("#### ✅ Triggered Alerts")
+
+with tab2:
     all_alerts = get_all_alerts()
     triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
     
@@ -4141,9 +4139,8 @@ with tab3:
         st.info("No triggered alerts yet.")
 
 
-with tab4:
-    st.markdown("### Advanced Technical Analysis Charts")
-    st.markdown("---")
+# ================= Advanced Charting Section =================
+st.subheader("📈 Advanced Technical Analysis Charts")
 
 # Chart controls
 col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
