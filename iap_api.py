@@ -162,7 +162,7 @@ async def get_entitlement(device_id: str = None, user_id: str = None):
             query = """
             SELECT plan_code, status, current_period_end 
             FROM user_subscriptions 
-            WHERE workspace_id = %s AND status = 'active' AND current_period_end > NOW()
+            WHERE workspace_id = %s AND status IN ('active', 'cancelled') AND current_period_end > NOW()
             ORDER BY current_period_end DESC LIMIT 1
             """
             cursor.execute(query, (user_id,))
@@ -170,7 +170,7 @@ async def get_entitlement(device_id: str = None, user_id: str = None):
             query = """
             SELECT plan_code, status, current_period_end 
             FROM user_subscriptions 
-            WHERE workspace_id = %s AND status = 'active' AND current_period_end > NOW()
+            WHERE workspace_id = %s AND status IN ('active', 'cancelled') AND current_period_end > NOW()
             ORDER BY current_period_end DESC LIMIT 1
             """
             cursor.execute(query, (device_id,))

@@ -2586,14 +2586,14 @@ def get_subscription_plans():
         return []
 
 def get_workspace_subscription(workspace_id: str):
-    """Get active subscription for a workspace"""
+    """Get active subscription for a workspace (includes cancelled subs still in billing period)"""
     try:
         query = """
             SELECT us.*, sp.plan_code, sp.name as plan_name, sp.features, sp.scan_limit, sp.alert_limit
             FROM user_subscriptions us
             JOIN subscription_plans sp ON us.plan_id = sp.id
             WHERE us.workspace_id = %s 
-            AND us.subscription_status = 'active'
+            AND us.subscription_status IN ('active', 'cancelled')
             AND (us.current_period_end IS NULL OR us.current_period_end > now())
             ORDER BY us.created_at DESC
             LIMIT 1
