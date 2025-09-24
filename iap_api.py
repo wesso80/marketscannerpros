@@ -146,6 +146,92 @@ def get_plan_code_from_product_id(product_id: str) -> str:
     }
     return product_mapping.get(product_id, 'free')
 
+@app.get("/api/iap/entitlement")
+async def get_entitlement(device_id: str = None, user_id: str = None):
+    """Get current subscription entitlement for device or user"""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            raise HTTPException(status_code=500, detail="Database URL not configured")
+        
+        conn = psycopg2.connect(database_url)
+        cursor = conn.cursor()
+        
+        # Query by device_id or user_id
+        if user_id:
+            query = """
+            SELECT plan_code, status, current_period_end 
+            FROM user_subscriptions 
+            WHERE workspace_id = %s AND status = 'active' AND current_period_end > NOW()
+            ORDER BY current_period_end DESC LIMIT 1
+            """
+            cursor.execute(query, (user_id,))
+        elif device_id:
+            query = """
+            SELECT plan_code, status, current_period_end 
+            FROM user_subscriptions 
+            WHERE workspace_id = %s AND status = 'active' AND current_period_end > NOW()
+            ORDER BY current_period_end DESC LIMIT 1
+            """
+            cursor.execute(query, (device_id,))
+        else:
+            raise HTTPException(status_code=400, detail="device_id or user_id required")
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result:
+            return {
+                "tier": result[0],
+                "status": result[1], 
+                "expires_at": result[2].isoformat(),
+                "features": get_features_for_tier(result[0])
+            }
+        else:
+            return {
+                "tier": "free",
+                "status": "none",
+                "expires_at": None,
+                "features": get_features_for_tier("free")
+            }
+            
+    except Exception as e:
+        logger.error(f"Get entitlement error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def get_features_for_tier(tier: str) -> dict:
+    """Return feature permissions for subscription tier"""
+    features = {
+        "free": {
+            "market_scans": 5,
+            "watchlists": 1,
+            "alerts": False,
+            "advanced_charts": False,
+            "backtesting": False,
+            "custom_algorithms": False,
+            "portfolio_tracking": False
+        },
+        "pro": {
+            "market_scans": -1,  # unlimited
+            "watchlists": -1,
+            "alerts": True,
+            "advanced_charts": True,
+            "backtesting": False,
+            "custom_algorithms": False,
+            "portfolio_tracking": True
+        },
+        "pro_trader": {
+            "market_scans": -1,
+            "watchlists": -1,
+            "alerts": True,
+            "advanced_charts": True,
+            "backtesting": True,
+            "custom_algorithms": True,
+            "portfolio_tracking": True
+        }
+    }
+    return features.get(tier, features["free"])
+
 async def process_subscription(validation_result: dict, workspace_id: str, transaction_id: str):
     """Create or update subscription in database"""
     try:

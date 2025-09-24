@@ -24,6 +24,10 @@ args = "install_dependencies"
 task = "workflow.run"
 args = "Market Scanner"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apple IAP API"
+
 [[workflows.workflow]]
 name = "install_dependencies"
 author = "agent"
@@ -43,6 +47,18 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow]]
+name = "Apple IAP API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python iap_api.py"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 3000
