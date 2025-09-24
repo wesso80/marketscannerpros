@@ -2856,8 +2856,7 @@ if current_tier == 'free':
                     st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
                     # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
                     
-                # Completely block subscription upgrade UI for iOS
-                st.stop()
+                # iOS users continue to see app features, just no web payments
             else:
                 # Web/Android Stripe button
                 if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
