@@ -3607,30 +3607,34 @@ elif current_tier in ['pro', 'pro_trader']:
         st.markdown("---")
         st.markdown("**📊 Subscription Details**")
         
-        if current_subscription and not demo_tier:
-            # Real database subscription (only if no demo mode override)
+        if current_subscription:
+            # Real database subscription
             st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
             st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
             st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
             if current_subscription.get('current_period_end'):
                 st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
         else:
-            # Session-based subscription (demo mode or no database subscription)
+            # Tier from admin override or free
             st.caption(f"Plan: {tier_info['name']}")
-            if demo_tier:
-                st.caption("Status: Demo/Testing")
-            else:
-                st.caption("Status: Active" if current_tier != 'free' else "Status: Free")
+            st.caption("Status: Active" if current_tier != 'free' else "Status: Free")
             st.caption("Platform: Web")
-            if demo_tier:
-                st.caption("Note: This is a demo subscription")
+            # Show admin override info if applicable
+            if workspace_id:
+                override_tier = get_subscription_override(workspace_id)
+                if override_tier:
+                    st.caption("Note: Admin override active")
         
         if st.button("❌ Cancel Subscription", key="cancel_subscription"):
-            if demo_tier:
-                # Cancel demo mode subscription
-                st.session_state.user_tier = 'free'
-                st.success("✅ Demo subscription cancelled")
-                st.rerun()
+            # Check if this is an admin override
+            override_tier = get_subscription_override(workspace_id) if workspace_id else None
+            if override_tier:
+                # Clear admin override
+                if workspace_id and clear_subscription_override(workspace_id):
+                    st.success("✅ Admin override cleared")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to clear admin override")
             elif current_subscription and workspace_id:
                 # Real database subscription
                 if is_mobile:
