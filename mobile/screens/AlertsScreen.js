@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MarketDataService from '../services/MarketDataService';
+import IAPService from '../services/IAPService';
 
 const AlertsScreen = () => {
   const [alerts, setAlerts] = useState([]);
@@ -22,7 +23,24 @@ const AlertsScreen = () => {
     targetPrice: '',
     notificationMethod: 'email'
   });
-  const [isFreeTier, setIsFreeTier] = useState(true); // TODO: Get from user subscription
+  const [isFreeTier, setIsFreeTier] = useState(true);
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
+
+  useEffect(() => {
+    checkSubscriptionTier();
+  }, []);
+
+  const checkSubscriptionTier = async () => {
+    try {
+      const entitlement = await IAPService.checkSubscriptionStatus();
+      setIsFreeTier(entitlement.tier === 'free');
+      setSubscriptionLoaded(true);
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+      setIsFreeTier(true);
+      setSubscriptionLoaded(true);
+    }
+  };
 
   useEffect(() => {
     loadAlerts();
@@ -43,10 +61,8 @@ const AlertsScreen = () => {
       return;
     }
 
-    if (isFreeTier && alerts.length >= 2) {
-      Alert.alert('Upgrade Required', 'Free tier limited to 2 alerts. Upgrade to Pro for unlimited alerts.');
-      return;
-    }
+    // NEW STRATEGY: All tiers get full alert functionality
+    // Only symbol scanning is limited to 4 for free tier
 
     try {
       await MarketDataService.createPriceAlert(
@@ -101,9 +117,9 @@ const AlertsScreen = () => {
         </Text>
       )}
       
-      {isFreeTier && (
+      {subscriptionLoaded && isFreeTier && (
         <View style={styles.freeWarning}>
-          <Text style={styles.freeText}>🔒 Upgrade for unlimited alerts</Text>
+          <Text style={styles.freeText}>🚀 Free tier: All features • 4 symbols only</Text>
         </View>
       )}
     </View>
@@ -121,9 +137,9 @@ const AlertsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isFreeTier && (
+      {subscriptionLoaded && isFreeTier && (
         <View style={styles.tierBanner}>
-          <Text style={styles.tierText}>Free Tier - Limited to 2 alerts</Text>
+          <Text style={styles.tierText}>Free tier: Unlimited alerts • 4 symbols only • Upgrade for more!</Text>
           <TouchableOpacity style={styles.upgradeButton}>
             <Text style={styles.upgradeText}>Upgrade Pro</Text>
           </TouchableOpacity>
