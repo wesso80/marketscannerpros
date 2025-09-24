@@ -3021,79 +3021,84 @@ if refresh_clicked:
 
 # Sidebar
 # ================= Watchlist Management =================
-# ================= ADMIN ACCESS (PIN PROTECTED) =================
-# Secure admin interface for app creator only
-device_fingerprint = get_persistent_device_fingerprint()
-workspace_id = get_or_create_workspace_for_device(device_fingerprint)
+# ================= ADMIN ACCESS (HIDDEN UNLESS REQUESTED) =================
+# Only show admin interface if ?admin=true in URL for security
+query_params = st.query_params
+show_admin = query_params.get('admin') == 'true'
 
-# Check if user has admin access
-user_is_admin = workspace_id and is_admin(workspace_id, device_fingerprint)
+if show_admin:
+    # Secure admin interface for app creator only
+    device_fingerprint = get_persistent_device_fingerprint()
+    workspace_id = get_or_create_workspace_for_device(device_fingerprint)
 
-if user_is_admin:
-    # Admin is logged in - show admin controls
-    st.sidebar.header("🔧 Admin Access")
-    with st.sidebar.expander("Creator Controls", expanded=False):
-        st.caption("🔑 Admin authenticated - Creator access")
-        
-        # Current tier display
-        current_tier = get_user_tier_from_subscription(workspace_id) if workspace_id else 'free'
-        st.info(f"Current tier: {current_tier.upper()}")
-        
-        # Tier override controls
-        override_tier = st.selectbox(
-            "Override Tier:",
-            options=['free', 'pro', 'pro_trader'],
-            format_func=lambda x: {
-                'free': '📱 Free Tier',
-                'pro': '🚀 Pro Tier ($4.99/month)', 
-                'pro_trader': '💎 Pro Trader ($9.99/month)'
-            }[x],
-            index=['free', 'pro', 'pro_trader'].index(current_tier),
-            key="admin_tier_override"
-        )
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Apply Override", type="primary"):
-                if workspace_id and set_subscription_override(workspace_id, override_tier, "admin"):
-                    st.success(f"✅ Tier set to: {override_tier.upper()}")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to set override")
-        
-        with col2:
-            if st.button("Clear Override"):
-                if workspace_id and clear_subscription_override(workspace_id):
-                    st.success("✅ Override cleared")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to clear override")
-        
-        st.caption("💡 Overrides persist across sessions and devices")
+    # Check if user has admin access
+    user_is_admin = workspace_id and is_admin(workspace_id, device_fingerprint)
 
-else:
-    # Admin login form
-    st.sidebar.header("🔑 Admin Access")
-    with st.sidebar.expander("Admin Login", expanded=False):
-        st.caption("Enter admin PIN to access creator controls")
-        
-        admin_pin = st.text_input("Admin PIN:", type="password", key="admin_pin")
-        
-        if st.button("Login", type="primary"):
-            if workspace_id:
-                success, message = verify_admin_pin(admin_pin, workspace_id, device_fingerprint)
-                if success:
-                    if create_admin_session(workspace_id, device_fingerprint):
-                        st.success("✅ Admin access granted!")
+    if user_is_admin:
+        # Admin is logged in - show admin controls
+        st.sidebar.header("🔧 Admin Access")
+        with st.sidebar.expander("Creator Controls", expanded=False):
+            st.caption("🔑 Admin authenticated - Creator access")
+            
+            # Current tier display
+            current_tier = get_user_tier_from_subscription(workspace_id) if workspace_id else 'free'
+            st.info(f"Current tier: {current_tier.upper()}")
+            
+            # Tier override controls
+            override_tier = st.selectbox(
+                "Override Tier:",
+                options=['free', 'pro', 'pro_trader'],
+                format_func=lambda x: {
+                    'free': '📱 Free Tier',
+                    'pro': '🚀 Pro Tier ($4.99/month)', 
+                    'pro_trader': '💎 Pro Trader ($9.99/month)'
+                }[x],
+                index=['free', 'pro', 'pro_trader'].index(current_tier),
+                key="admin_tier_override"
+            )
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Apply Override", type="primary"):
+                    if workspace_id and set_subscription_override(workspace_id, override_tier, "admin"):
+                        st.success(f"✅ Tier set to: {override_tier.upper()}")
                         st.rerun()
                     else:
-                        st.error("❌ Failed to create admin session")
+                        st.error("❌ Failed to set override")
+            
+            with col2:
+                if st.button("Clear Override"):
+                    if workspace_id and clear_subscription_override(workspace_id):
+                        st.success("✅ Override cleared")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to clear override")
+            
+            st.caption("💡 Overrides persist across sessions and devices")
+
+    else:
+        # Admin login form
+        st.sidebar.header("🔑 Admin Access")
+        with st.sidebar.expander("Admin Login", expanded=False):
+            st.caption("Enter admin PIN to access creator controls")
+            
+            admin_pin = st.text_input("Admin PIN:", type="password", key="admin_pin")
+            
+            if st.button("Login", type="primary"):
+                if workspace_id:
+                    success, message = verify_admin_pin(admin_pin, workspace_id, device_fingerprint)
+                    if success:
+                        if create_admin_session(workspace_id, device_fingerprint):
+                            st.success("✅ Admin access granted!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to create admin session")
+                    else:
+                        st.error(f"❌ {message}")
                 else:
-                    st.error(f"❌ {message}")
-            else:
-                st.error("❌ Workspace not available")
-        
-        st.caption("⚠️ Creator access only")
+                    st.error("❌ Workspace not available")
+            
+            st.caption("⚠️ Creator access only")
 
 st.sidebar.header("📋 Watchlists")
 
