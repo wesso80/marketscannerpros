@@ -3911,7 +3911,7 @@ def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
     
     return False  # No iOS issue detected
 
-# Display Results
+# ================= Main Tabbed Interface =================
 # Check for iOS WebView issues before showing results
 ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('eq_results', pd.DataFrame()),
@@ -3920,233 +3920,188 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('cx_errors', pd.DataFrame())
 )
 
-# Equity Markets Section with Professional Cards
-st.markdown("""
-<div class="pro-card">
-    <h3>🏛 Equity Markets</h3>
-""", unsafe_allow_html=True)
-
-# Show normal results if no iOS issues detected
-if not ios_issue_detected and not st.session_state.eq_results.empty:
-    # Limit display to top K
-    display_eq = st.session_state.eq_results.head(topk)
-    
-    # Enhanced styling for direction column
-    def highlight_direction(val):
-        if val == 'Bullish':
-            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        elif val == 'Bearish':
-            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        return ''
-    
-    # Apply professional styling to direction column
-    if 'direction' in display_eq.columns:
-        styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
-        st.dataframe(styled_eq, width='stretch', use_container_width=True)
-    else:
-        st.dataframe(display_eq, width='stretch', use_container_width=True)
-    
-    # CSV download for equity results
-    csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
-    st.download_button(
-        label="📥 Download Equity Results (CSV)",
-        data=csv_eq,
-        file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
-elif not ios_issue_detected:
-    st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
-
-# Close equity card
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Equity errors (only show if not iOS WebView issue)
-if not ios_issue_detected and not st.session_state.eq_errors.empty:
-    with st.expander("⚠️ Equity Scan Errors", expanded=False):
-        st.dataframe(st.session_state.eq_errors, width='stretch')
-        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
-
-# Crypto Markets Section with Professional Cards
-st.markdown("""
-<div class="pro-card">
-    <h3>₿ Crypto Markets</h3>
-""", unsafe_allow_html=True)
-
-if not ios_issue_detected and not st.session_state.cx_results.empty:
-    # Limit display to top K
-    display_cx = st.session_state.cx_results.head(topk)
-    
-    # Enhanced styling for direction column (same as equity)
-    def highlight_direction(val):
-        if val == 'Bullish':
-            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        elif val == 'Bearish':
-            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        return ''
-    
-    # Apply professional styling to direction column
-    if 'direction' in display_cx.columns:
-        styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
-        st.dataframe(styled_cx, width='stretch', use_container_width=True)
-    else:
-        st.dataframe(display_cx, width='stretch', use_container_width=True)
-    
-    # CSV download for crypto results
-    csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
-    st.download_button(
-        label="📥 Download Crypto Results (CSV)",
-        data=csv_cx,
-        file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
-elif not ios_issue_detected:
-    st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
-
-# Close crypto card
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Crypto errors (only show if not iOS WebView issue) 
-if not ios_issue_detected and not st.session_state.cx_errors.empty:
-    with st.expander("⚠️ Crypto Scan Errors", expanded=False):
-        st.dataframe(st.session_state.cx_errors, width='stretch')
-        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
-
-# Combined CSV download
-if not st.session_state.eq_results.empty or not st.session_state.cx_results.empty:
-    combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
-    if not combined_results.empty:
-        combined_results_sorted = combined_results.sort_values("score", ascending=False)
-        csv_combined = to_csv_download(combined_results_sorted, "market_scan_combined.csv")
-        st.download_button(
-            label="📥 Download Combined Results (CSV)",
-            data=csv_combined,
-            file_name=f"market_scan_combined_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv"
-        )
-
-st.subheader("🧮 Scoring Methodology")
-with st.expander("Show details", expanded=False):
-    st.markdown("""
-    **Technical Analysis Scoring System:**
-    
-    - **Market Regime** (±25 points): Price above/below EMA200 indicates bullish/bearish trend
-    - **Price Structure** (±25 points): 20-period high breakout (+25) or low breakdown (-25)
-    - **Momentum Indicators** (+20 points): RSI > 50 (+10) and MACD histogram > 0 (+10)
-    - **Volume Expansion** (+8 points): Volume Z-score > 0.5 indicates unusual activity
-    - **Volatility Expansion** (+7 points): Bollinger Band width above 20-period average
-    - **Tradability** (+5 points): ATR percentage < 4% indicates manageable volatility
-    - **Overextension Penalties/Rewards**: RSI > 80 (-10 points), RSI < 20 (+10 points for oversold bounce)
-    
-    **Position Sizing Formula:**
-    - Units = ⌊(Account Equity × Risk%) / |Entry Price - Stop Price|⌋
-    - Stop Price = Entry ± (ATR Multiplier × ATR)
-    - This ensures consistent dollar risk per trade regardless of instrument volatility
-    """)
-
-# ================= Price Alerts Management =================
-st.subheader("🚨 Price Alerts")
-
-# Auto-refresh toggle and controls
-col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-with col1:
-    auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
-
-with col2:
-    if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
-        with st.spinner("Checking price alerts..."):
-            triggered_count = check_price_alerts()
-            if triggered_count and triggered_count > 0:
-                st.success(f"🚨 {triggered_count} alert(s) triggered!")
-            else:
-                st.info("No alerts triggered")
-
-with col3:
-    if st.button("➕ New Alert"):
-        st.session_state.show_new_alert = True
-
-# Auto-refresh implementation  
-if auto_check:
-    import time
-    
-    # Initialize auto-check state
-    if 'last_auto_check' not in st.session_state:
-        st.session_state.last_auto_check = time.time()
-    if 'auto_check_interval' not in st.session_state:
-        st.session_state.auto_check_interval = 300  # 5 minutes
-    
-    current_time = time.time()
-    time_since_last_check = current_time - st.session_state.last_auto_check
-    
-    # Show countdown
-    remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
-    with col4:
-        if remaining_time > 0:
-            st.info(f"Next check in: {int(remaining_time)}s")
-        else:
-            st.info("Checking alerts...")
-    
-    # Check alerts if interval has passed
-    if time_since_last_check >= st.session_state.auto_check_interval:
-        triggered_count = check_price_alerts()
-        st.session_state.last_auto_check = current_time
-        
-        if triggered_count and triggered_count > 0:
-            st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
-            st.balloons()  # Celebrate triggered alerts
-        else:
-            st.success("All alerts checked - no triggers")
-    
-    # Auto-refresh every 10 seconds to update countdown and check alerts
-    time.sleep(10)
-    st.rerun()
-else:
-    # Clear auto-check state when disabled
-    if 'last_auto_check' in st.session_state:
-        del st.session_state.last_auto_check
-
-# New alert form
-if st.session_state.get('show_new_alert', False):
-    with st.expander("Create New Price Alert", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
-            alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
-            
-        with col2:
-            alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-            alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Create Alert", key="create_alert"):
-                # Input validation
-                if not alert_symbol or not alert_symbol.strip():
-                    st.error("Symbol is required")
-                elif alert_price <= 0:
-                    st.error("Price must be positive")
-                elif alert_type not in ['above', 'below']:
-                    st.error("Invalid alert type")
-                else:
-                    # Check tier limitations
-                    # ALL TIERS: Full alert functionality (no restrictions)
-                    symbol_clean = alert_symbol.strip().upper()
-                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                        st.success(f"Alert created for {symbol_clean}")
-                        st.session_state.show_new_alert = False
-                        st.rerun()
-                    else:
-                        st.error("Failed to create alert - please check database connection")
-        
-        with col3:
-            if st.button("Cancel", key="cancel_alert"):
-                st.session_state.show_new_alert = False
-                st.rerun()
-
-# Display alerts in tabs
-tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
+# Create main tabs for each category
+tab1, tab2, tab3, tab4 = st.tabs(["📈 Equity Markets", "₿ Crypto Markets", "⏰ Price Alerts", "📊 Advanced Charts"])
 
 with tab1:
+    st.markdown("### Equity Markets")
+    st.markdown("---")
+    
+    # Show normal results if no iOS issues detected
+    if not ios_issue_detected and not st.session_state.eq_results.empty:
+        # Limit display to top K
+        display_eq = st.session_state.eq_results.head(topk)
+        
+        # Enhanced styling for direction column
+        def highlight_direction(val):
+            if val == 'Bullish':
+                return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+            elif val == 'Bearish':
+                return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+            return ''
+        
+        # Apply professional styling to direction column
+        if 'direction' in display_eq.columns:
+            styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
+            st.dataframe(styled_eq, width='stretch', use_container_width=True)
+        else:
+            st.dataframe(display_eq, width='stretch', use_container_width=True)
+        
+        # CSV download for equity results
+        csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
+        st.download_button(
+            label="📥 Download Equity Results (CSV)",
+            data=csv_eq,
+            file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    elif not ios_issue_detected:
+        st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
+    
+    # Equity errors (only show if not iOS WebView issue)
+    if not ios_issue_detected and not st.session_state.eq_errors.empty:
+        with st.expander("⚠️ Equity Scan Errors", expanded=False):
+            st.dataframe(st.session_state.eq_errors, width='stretch')
+            st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
+with tab2:
+    st.markdown("### Crypto Markets")
+    st.markdown("---")
+    
+    if not ios_issue_detected and not st.session_state.cx_results.empty:
+        # Limit display to top K
+        display_cx = st.session_state.cx_results.head(topk)
+        
+        # Enhanced styling for direction column (same as equity)
+        def highlight_direction(val):
+            if val == 'Bullish':
+                return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+            elif val == 'Bearish':
+                return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+            return ''
+        
+        # Apply professional styling to direction column
+        if 'direction' in display_cx.columns:
+            styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
+            st.dataframe(styled_cx, width='stretch', use_container_width=True)
+        else:
+            st.dataframe(display_cx, width='stretch', use_container_width=True)
+        
+        # CSV download for crypto results
+        csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
+        st.download_button(
+            label="📥 Download Crypto Results (CSV)",
+            data=csv_cx,
+            file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
+    elif not ios_issue_detected:
+        st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
+    
+    # Crypto errors (only show if not iOS WebView issue) 
+    if not ios_issue_detected and not st.session_state.cx_errors.empty:
+        with st.expander("⚠️ Crypto Scan Errors", expanded=False):
+            st.dataframe(st.session_state.cx_errors, width='stretch')
+            st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
+with tab3:
+    st.markdown("### Price Alerts")
+    st.markdown("---")
+    
+    # Auto-refresh toggle and controls
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    with col1:
+        auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
+    
+    with col2:
+        if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
+            with st.spinner("Checking price alerts..."):
+                triggered_count = check_price_alerts()
+                if triggered_count and triggered_count > 0:
+                    st.success(f"🚨 {triggered_count} alert(s) triggered!")
+                else:
+                    st.info("No alerts triggered")
+    
+    with col3:
+        if st.button("➕ New Alert"):
+            st.session_state.show_new_alert = True
+    
+    # Auto-refresh implementation (simplified to avoid app-wide disruption)
+    if auto_check:
+        import time
+        
+        # Initialize auto-check state
+        if 'last_auto_check' not in st.session_state:
+            st.session_state.last_auto_check = time.time()
+        if 'auto_check_interval' not in st.session_state:
+            st.session_state.auto_check_interval = 300  # 5 minutes
+        
+        current_time = time.time()
+        time_since_last_check = current_time - st.session_state.last_auto_check
+        
+        # Show countdown
+        remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
+        with col4:
+            if remaining_time > 0:
+                st.info(f"Next check in: {int(remaining_time)}s")
+            else:
+                st.info("Checking alerts...")
+        
+        # Check alerts if interval has passed (without sleep/rerun to avoid disruption)
+        if time_since_last_check >= st.session_state.auto_check_interval:
+            triggered_count = check_price_alerts()
+            st.session_state.last_auto_check = current_time
+            
+            if triggered_count and triggered_count > 0:
+                st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
+            else:
+                st.success("All alerts checked - no triggers")
+    else:
+        # Clear auto-check state when disabled
+        if 'last_auto_check' in st.session_state:
+            del st.session_state.last_auto_check
+    
+    # New alert form
+    if st.session_state.get('show_new_alert', False):
+        with st.expander("Create New Price Alert", expanded=True):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
+                alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
+                
+            with col2:
+                alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
+                alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Create Alert", key="create_alert"):
+                    # Input validation
+                    if not alert_symbol or not alert_symbol.strip():
+                        st.error("Symbol is required")
+                    elif alert_price <= 0:
+                        st.error("Price must be positive")
+                    elif alert_type not in ['above', 'below']:
+                        st.error("Invalid alert type")
+                    else:
+                        # Check tier limitations
+                        # ALL TIERS: Full alert functionality (no restrictions)
+                        symbol_clean = alert_symbol.strip().upper()
+                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                            st.success(f"Alert created for {symbol_clean}")
+                            st.session_state.show_new_alert = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to create alert - please check database connection")
+            
+            with col3:
+                if st.button("Cancel", key="cancel_alert"):
+                    st.session_state.show_new_alert = False
+                    st.rerun()
+    
+    # Display alerts in separate sections (not nested tabs)
+    st.markdown("#### 🔔 Active Alerts")
     active_alerts = get_active_alerts()
     if active_alerts:
         # Create DataFrame for better display
@@ -4171,8 +4126,8 @@ with tab1:
                         st.error("Failed to delete alert")
     else:
         st.info("No active alerts. Create one above to get notified when price targets are hit.")
-
-with tab2:
+    
+    st.markdown("#### ✅ Triggered Alerts")
     all_alerts = get_all_alerts()
     triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
     
@@ -4186,8 +4141,9 @@ with tab2:
         st.info("No triggered alerts yet.")
 
 
-# ================= Advanced Charting Section =================
-st.subheader("📈 Advanced Technical Analysis Charts")
+with tab4:
+    st.markdown("### Advanced Technical Analysis Charts")
+    st.markdown("---")
 
 # Chart controls
 col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
