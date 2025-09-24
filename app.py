@@ -604,6 +604,28 @@ def get_persistent_device_fingerprint() -> str:
         st.session_state.device_fingerprint = str(device_id)
         return str(device_id)
     
+    # Check for pairing token in URL (from QR code scan)
+    pair_token = query_params.get('pair', None)
+    if isinstance(pair_token, list):
+        pair_token = pair_token[0] if pair_token else None
+        
+    if pair_token:
+        # Generate device fingerprint for pairing
+        new_fingerprint = str(uuid.uuid4())
+        # Try to consume the pairing token
+        workspace_id = consume_pairing_token(pair_token, new_fingerprint, "web", "Web Browser")
+        if workspace_id:
+            st.session_state.device_fingerprint = new_fingerprint
+            st.session_state.workspace_id = workspace_id
+            # Remove the pair parameter from URL and add device_id
+            st.query_params.clear()
+            st.query_params["device_id"] = new_fingerprint
+            st.success("🎉 Device successfully paired! You now have access to all your Pro features.")
+            st.rerun()
+            return new_fingerprint
+        else:
+            st.error("❌ Invalid or expired pairing code. Please try again.")
+    
     # Generate a new device fingerprint and persist it in URL for future sessions
     new_fingerprint = str(uuid.uuid4())
     st.session_state.device_fingerprint = new_fingerprint
@@ -768,6 +790,7 @@ def revoke_device(workspace_id: str, device_fingerprint: str) -> bool:
 
 def generate_qr_code(data: str) -> str:
     """Generate QR code as base64 image"""
+    import qrcode
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
     qr.make(fit=True)
