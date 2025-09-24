@@ -3113,29 +3113,47 @@ TIER_CONFIG = {
 
 # Debug moved to top of file
 
-# ================= Developer Override (Creator Access) =================
-st.sidebar.header("🔧 Developer Access")
-with st.sidebar.expander("Creator Override", expanded=False):
-    st.caption("As the app creator, you can access any tier instantly")
-    
-    dev_tier = st.selectbox(
-        "Override Tier:",
-        options=['free', 'pro', 'pro_trader'],
-        format_func=lambda x: {
-            'free': '📱 Free Tier',
-            'pro': '🚀 Pro Tier ($4.99/month)', 
-            'pro_trader': '💎 Pro Trader ($9.99/month)'
-        }[x],
-        index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
-        key="dev_tier_override"
-    )
-    
-    if st.button("Apply Override", type="primary"):
-        st.session_state.user_tier = dev_tier
-        st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
-        st.rerun()
-    
-    st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
+# ================= Developer Override (Authorized Users Only) =================
+# SECURITY: Only show to authorized users
+AUTHORIZED_DEVELOPER_IDS = [
+    "your-workspace-id-here",  # Replace with your actual workspace ID
+    # Add more workspace IDs here for trusted users
+]
+
+current_workspace_id = st.session_state.get('workspace_id', '')
+is_authorized_dev = current_workspace_id in AUTHORIZED_DEVELOPER_IDS
+
+if is_authorized_dev:
+    st.sidebar.header("🔧 Developer Access")
+    with st.sidebar.expander("Creator Override", expanded=False):
+        st.caption("Authorized developer access - this section is only visible to you")
+        
+        dev_tier = st.selectbox(
+            "Override Tier:",
+            options=['free', 'pro', 'pro_trader'],
+            format_func=lambda x: {
+                'free': '📱 Free Tier',
+                'pro': '🚀 Pro Tier ($4.99/month)', 
+                'pro_trader': '💎 Pro Trader ($9.99/month)'
+            }[x],
+            index=['free', 'pro', 'pro_trader'].index(st.session_state.get('user_tier', 'free')),
+            key="dev_tier_override"
+        )
+        
+        if st.button("Apply Override", type="primary"):
+            st.session_state.user_tier = dev_tier
+            st.success(f"✅ Tier set to: {['📱 Free', '🚀 Pro', '💎 Pro Trader'][['free', 'pro', 'pro_trader'].index(dev_tier)]}")
+            st.rerun()
+        
+        st.caption("💡 This overrides database subscriptions and gives you instant access to all features")
+        st.caption(f"🔐 Your workspace ID: `{current_workspace_id}`")
+
+# TEMPORARY: Show workspace ID for setup (remove after you get your ID)
+if not is_authorized_dev:
+    st.sidebar.header("⚙️ Setup Required")
+    st.sidebar.error("**Creator Access Setup Needed**")
+    st.sidebar.code(f"Your workspace ID: {current_workspace_id}")
+    st.sidebar.caption("Copy the ID above and paste it into the AUTHORIZED_DEVELOPER_IDS list in app.py, then restart the app.")
 
 # ================= Subscription UI (All Platforms) =================
 # Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
