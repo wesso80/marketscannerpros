@@ -10,27 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  initConnection,
-  purchaseProduct,
-  getSubscriptions,
-  validateReceiptIos,
-  clearProductsIOS,
-  endConnection,
-  requestSubscription,
-  finishTransaction,
-  acknowledgePurchaseAndroid,
-  purchaseUpdatedListener,
-  purchaseErrorListener,
-} from 'react-native-iap';
 
-import { PRODUCT_IDS } from '../config/IAPProducts';
+import IAPService, { SUBSCRIPTION_SKUS, FeatureGate } from '../services/IAPService';
 
 const SettingsScreen = () => {
-  const [isFreeTier, setIsFreeTier] = useState(true);
-  const [currentSubscription, setCurrentSubscription] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [subscriptionStatus, setSubscriptionStatus] = useState('free');
+  const [subscriptionFeatures, setSubscriptionFeatures] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     notifications: true,
     darkMode: false,
@@ -38,167 +24,107 @@ const SettingsScreen = () => {
     soundAlerts: true,
   });
 
-  // Initialize Apple IAP connection
   useEffect(() => {
     initializeIAP();
-    return () => {
-      endConnection();
-    };
   }, []);
 
   const initializeIAP = async () => {
     try {
-      setIsLoading(true);
-      await initConnection();
-      
-      // Get available subscription products
-      const products = await getSubscriptions(Object.values(PRODUCT_IDS));
-      setSubscriptions(products);
-      
-      // Check current subscription status
+      setLoading(true);
+      await IAPService.initialize();
       await checkSubscriptionStatus();
-      
-      // Set up purchase listeners
-      const purchaseUpdateSubscription = purchaseUpdatedListener((purchase) => {
-        handlePurchaseUpdate(purchase);
-      });
-      
-      const purchaseErrorSubscription = purchaseErrorListener((error) => {
-        console.warn('Purchase error:', error);
-        Alert.alert('Purchase Error', 'Unable to complete purchase. Please try again.');
-        setIsLoading(false);
-      });
-      
-      return () => {
-        purchaseUpdateSubscription?.remove();
-        purchaseErrorSubscription?.remove();
-      };
     } catch (error) {
       console.error('IAP initialization error:', error);
       Alert.alert('Setup Error', 'Unable to initialize payment system.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const checkSubscriptionStatus = async () => {
-    // TODO: Check subscription status from backend
-    // This would typically involve validating receipts with your server
     console.log('Checking subscription status...');
-  };
-
-  const handlePurchaseUpdate = async (purchase) => {
+    
     try {
-      setIsLoading(true);
-      
-      // Validate receipt with backend
-      const validationResult = await validateReceiptWithBackend(purchase);
-      
-      if (validationResult.success) {
-        // Update local subscription state
-        const planType = purchase.productId === PRODUCT_IDS.PRO ? 'pro' : 'pro_trader';
-        setCurrentSubscription(planType);
-        setIsFreeTier(false);
-        
-        // Finish the transaction
-        await finishTransaction(purchase);
-        
-        Alert.alert(
-          '🎉 Purchase Successful!',
-          `Welcome to Market Scanner ${planType === 'pro' ? 'Pro' : 'Pro Trader'}! Your subscription is now active.`,
-          [{ text: 'OK', onPress: () => setIsLoading(false) }]
-        );
-      } else {
-        throw new Error('Receipt validation failed');
-      }
+      const entitlement = await IAPService.checkSubscriptionStatus();
+      setSubscriptionStatus(entitlement.tier);
+      setSubscriptionFeatures(entitlement.features);
+      console.log('Current subscription:', entitlement);
     } catch (error) {
-      console.error('Purchase update error:', error);
-      Alert.alert('Purchase Error', 'Unable to validate purchase. Please contact support.');
-      setIsLoading(false);
-    }
-  };
-
-  const validateReceiptWithBackend = async (purchase) => {
-    try {
-      // TODO: Replace with actual backend API call
-      const response = await fetch('https://market-scanner-1-wesso80.replit.app/api/validate-receipt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          receipt: purchase.transactionReceipt,
-          productId: purchase.productId,
-          transactionId: purchase.transactionId,
-        }),
+      console.error('Failed to check subscription:', error);
+      // Fallback to free tier
+      setSubscriptionStatus('free');
+      setSubscriptionFeatures({
+        market_scans: 5,
+        watchlists: 1,
+        alerts: false,
+        advanced_charts: false,
+        backtesting: false,
+        custom_algorithms: false,
+        portfolio_tracking: false
       });
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Receipt validation error:', error);
-      return { success: false, error: error.message };
-    }
-  };
-
-  const updateSetting = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
-
-  const upgradeToProTier = async () => {
-    try {
-      setIsLoading(true);
-      await requestSubscription(PRODUCT_IDS.PRO);
-    } catch (error) {
-      console.error('Pro subscription error:', error);
-      Alert.alert('Subscription Error', 'Unable to start Pro subscription. Please try again.');
-      setIsLoading(false);
-    }
-  };
-
-  const upgradeToProTrader = async () => {
-    try {
-      setIsLoading(true);
-      await requestSubscription(PRODUCT_IDS.PRO_TRADER);
-    } catch (error) {
-      console.error('Pro Trader subscription error:', error);
-      Alert.alert('Subscription Error', 'Unable to start Pro Trader subscription. Please try again.');
-      setIsLoading(false);
     }
   };
 
   const restorePurchases = async () => {
+    console.log('Restore purchases...');
+    
     try {
-      setIsLoading(true);
-      Alert.alert('Restore Purchases', 'Restoring your previous purchases...', [], { cancelable: false });
+      setLoading(true);
       
-      // TODO: Implement restore purchases logic
-      // This would typically involve checking with Apple's servers
-      // and validating any existing subscriptions
+      const success = await IAPService.restorePurchasesWithValidation();
       
-      setTimeout(() => {
-        setIsLoading(false);
-        Alert.alert('Restore Complete', 'Previous purchases have been restored.');
-      }, 2000);
+      if (success) {
+        await checkSubscriptionStatus();
+      }
     } catch (error) {
-      console.error('Restore purchases error:', error);
-      Alert.alert('Restore Error', 'Unable to restore purchases. Please try again.');
-      setIsLoading(false);
+      console.error('Restore failed:', error);
+      Alert.alert('Error', 'Failed to restore purchases');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const manageSubscriptions = () => {
-    Alert.alert(
-      'Manage Subscriptions',
-      'To manage your subscriptions, go to Settings > [Your Name] > Subscriptions on your device.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Settings', onPress: () => {
-          // In a real app, this would open iOS subscription settings
-          // Linking.openURL('App-Prefs:APPLE_ID&path=SUBSCRIPTIONS');
-          console.log('Would open iOS subscription settings');
-        }}
-      ]
+  const purchaseSubscription = async (productId) => {
+    try {
+      setLoading(true);
+      console.log('Purchasing subscription:', productId);
+      
+      const purchase = await IAPService.purchaseSubscription(productId);
+      console.log('Purchase result:', purchase);
+      
+      // The purchase will be handled by the purchase listener
+      // which will validate the receipt and update subscription status
+      
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      Alert.alert('Purchase Failed', error.message || 'Unable to complete purchase');
+      setLoading(false);
+    }
+  };
+
+  // Set up IAP callbacks
+  useEffect(() => {
+    IAPService.setCallbacks(
+      async (purchase, validationResult) => {
+        console.log('Purchase successful:', purchase);
+        Alert.alert('Success!', 'Subscription activated!');
+        await checkSubscriptionStatus();
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Purchase error:', error);
+        Alert.alert('Purchase Error', error.message || 'Purchase failed');
+        setLoading(false);
+      }
     );
+    
+    return () => {
+      // Cleanup is handled by IAPService
+    };
+  }, []);
+
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
   };
 
   const SettingItem = ({ title, value, onValueChange, disabled = false }) => (
@@ -214,6 +140,8 @@ const SettingsScreen = () => {
     </View>
   );
 
+  const isFreeTier = subscriptionStatus === 'free';
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -223,93 +151,79 @@ const SettingsScreen = () => {
       <ScrollView style={styles.content}>
         {/* Subscription Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Subscription</Text>
+          <Text style={styles.sectionTitle}>📱 Subscription</Text>
           
-          {isFreeTier ? (
-            <View style={styles.tierCard}>
-              <View style={styles.tierHeader}>
-                <Text style={styles.tierTitle}>📱 Free Tier</Text>
-                <Text style={styles.tierStatus}>Active</Text>
+          <View style={styles.subscriptionCard}>
+            <Text style={styles.currentPlanText}>
+              Current Plan: {subscriptionStatus.toUpperCase()}
+            </Text>
+            
+            {subscriptionFeatures && (
+              <View style={styles.featuresList}>
+                <Text style={styles.featuresTitle}>Your Features:</Text>
+                <Text style={styles.featureItem}>
+                  📊 Market Scans: {subscriptionFeatures.market_scans === -1 ? 'Unlimited' : subscriptionFeatures.market_scans}
+                </Text>
+                <Text style={styles.featureItem}>
+                  📁 Watchlists: {subscriptionFeatures.watchlists === -1 ? 'Unlimited' : subscriptionFeatures.watchlists}
+                </Text>
+                <Text style={styles.featureItem}>
+                  🚨 Alerts: {subscriptionFeatures.alerts ? '✅' : '❌'}
+                </Text>
+                <Text style={styles.featureItem}>
+                  📈 Advanced Charts: {subscriptionFeatures.advanced_charts ? '✅' : '❌'}
+                </Text>
+                <Text style={styles.featureItem}>
+                  📊 Backtesting: {subscriptionFeatures.backtesting ? '✅' : '❌'}
+                </Text>
+                <Text style={styles.featureItem}>
+                  💼 Portfolio: {subscriptionFeatures.portfolio_tracking ? '✅' : '❌'}
+                </Text>
               </View>
-              <Text style={styles.tierDescription}>Limited features</Text>
-              
-              <View style={styles.upgradeOptions}>
-                <TouchableOpacity
-                  style={[styles.upgradeCard, isLoading && styles.disabledCard]}
-                  onPress={upgradeToProTier}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.upgradeTitle}>🍎 Pro ($4.99/mo)</Text>
-                  <Text style={styles.upgradeFeatures}>
-                    • Unlimited scans & alerts{'\n'}
-                    • Advanced charts{'\n'}
-                    • Real-time data{'\n'}
-                    • Full portfolio tracking
-                  </Text>
-                  <View style={[styles.upgradeButton, isLoading && styles.disabledButton]}>
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <Text style={styles.upgradeButtonText}>Subscribe via Apple</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.upgradeCard, isLoading && styles.disabledCard]}
-                  onPress={upgradeToProTrader}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.upgradeTitle}>🍎 Pro Trader ($9.99/mo)</Text>
-                  <Text style={styles.upgradeFeatures}>
-                    • Everything in Pro{'\n'}
-                    • Advanced backtesting{'\n'}
-                    • Custom algorithms{'\n'}
-                    • Priority support
-                  </Text>
-                  <View style={[styles.upgradeButton, isLoading && styles.disabledButton]}>
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <Text style={styles.upgradeButtonText}>Subscribe via Apple</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.tierCard}>
-              <View style={styles.tierHeader}>
-                <Text style={styles.tierTitle}>🚀 Pro Tier</Text>
-                <Text style={styles.tierStatus}>Active</Text>
-              </View>
-              <Text style={styles.tierDescription}>All features unlocked</Text>
-            </View>
-          )}
-        </View>
+            )}
 
-        {/* Notification Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <SettingItem
-            title="Push Notifications"
-            value={settings.notifications}
-            onValueChange={(value) => updateSetting('notifications', value)}
-          />
-          <SettingItem
-            title="Sound Alerts"
-            value={settings.soundAlerts}
-            onValueChange={(value) => updateSetting('soundAlerts', value)}
-            disabled={isFreeTier}
-          />
-          {isFreeTier && (
-            <Text style={styles.upgradeNote}>🔒 Sound alerts require Pro subscription</Text>
-          )}
+            {isFreeTier && (
+              <View style={styles.upgradeSection}>
+                <TouchableOpacity
+                  style={[styles.upgradeButton, loading && styles.disabledButton]}
+                  onPress={() => purchaseSubscription(SUBSCRIPTION_SKUS.PRO)}
+                  disabled={loading}
+                >
+                  <Text style={styles.upgradeButtonText}>
+                    {loading ? '...' : '🚀 Upgrade to Pro - $4.99/month'}
+                  </Text>
+                  <Text style={styles.upgradeButtonDesc}>Unlimited scans, alerts & advanced charts</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.upgradeButton, styles.proTraderButton, loading && styles.disabledButton]}
+                  onPress={() => purchaseSubscription(SUBSCRIPTION_SKUS.PRO_TRADER)}
+                  disabled={loading}
+                >
+                  <Text style={styles.upgradeButtonText}>
+                    {loading ? '...' : '💎 Upgrade to Pro Trader - $9.99/month'}
+                  </Text>
+                  <Text style={styles.upgradeButtonDesc}>Everything in Pro + backtesting & algorithms</Text>
+                </TouchableOpacity>
+
+                <View style={styles.appleNotice}>
+                  <Text style={styles.appleNoticeText}>
+                    🍎 Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* App Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
+          <SettingItem
+            title="Push Notifications"
+            value={settings.notifications}
+            onValueChange={(value) => updateSetting('notifications', value)}
+          />
           <SettingItem
             title="Dark Mode"
             value={settings.darkMode}
@@ -320,20 +234,29 @@ const SettingsScreen = () => {
             value={settings.autoRefresh}
             onValueChange={(value) => updateSetting('autoRefresh', value)}
           />
+          <SettingItem
+            title="Sound Alerts"
+            value={settings.soundAlerts}
+            onValueChange={(value) => updateSetting('soundAlerts', value)}
+            disabled={!subscriptionFeatures?.alerts}
+          />
+          {!subscriptionFeatures?.alerts && (
+            <Text style={styles.upgradeNote}>🔒 Sound alerts require Pro subscription</Text>
+          )}
         </View>
 
         {/* Account Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           
-          {!isFreeTier && (
-            <TouchableOpacity style={styles.actionItem} onPress={manageSubscriptions}>
-              <Text style={styles.actionText}>⚙️ Manage Subscription</Text>
-            </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity style={styles.actionItem} onPress={restorePurchases}>
-            <Text style={styles.actionText}>🔄 Restore Purchases</Text>
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={restorePurchases}
+            disabled={loading}
+          >
+            <Text style={styles.actionText}>
+              {loading ? '🔄 Restoring...' : '🔄 Restore Purchases'}
+            </Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionItem}>
@@ -347,10 +270,6 @@ const SettingsScreen = () => {
           <TouchableOpacity style={styles.actionItem}>
             <Text style={styles.actionText}>🔒 Privacy Policy</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.actionItem, styles.dangerAction]}>
-            <Text style={styles.dangerText}>🚪 Sign Out</Text>
-          </TouchableOpacity>
         </View>
 
         {/* App Info */}
@@ -363,6 +282,13 @@ const SettingsScreen = () => {
             <Text style={styles.infoText}>Build: 2025.01.01</Text>
           </View>
         </View>
+
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Processing...</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -399,7 +325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  tierCard: {
+  subscriptionCard: {
     margin: 16,
     padding: 16,
     backgroundColor: '#f8f9fa',
@@ -407,64 +333,69 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
-  tierHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  tierTitle: {
+  currentPlanText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-  },
-  tierStatus: {
-    backgroundColor: '#28a745',
-    color: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tierDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  upgradeOptions: {
-    gap: 12,
-  },
-  upgradeCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  upgradeTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: '#007AFF',
-    marginBottom: 8,
+    marginBottom: 10,
+    textAlign: 'center',
   },
-  upgradeFeatures: {
+  featuresList: {
+    backgroundColor: '#F8F9FA',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  featuresTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  featureItem: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 5,
+    paddingLeft: 5,
+  },
+  upgradeSection: {
+    marginTop: 15,
   },
   upgradeButton: {
     backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  proTraderButton: {
+    backgroundColor: '#8B5CF6',
   },
   upgradeButtonText: {
     color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 14,
+    marginBottom: 5,
+  },
+  upgradeButtonDesc: {
+    color: 'white',
+    fontSize: 12,
+    opacity: 0.9,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  appleNotice: {
+    backgroundColor: '#FFE4E1',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  appleNoticeText: {
+    fontSize: 12,
+    color: '#D73502',
+    textAlign: 'center',
+    lineHeight: 16,
   },
   settingItem: {
     flexDirection: 'row',
@@ -502,13 +433,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  dangerAction: {
-    borderBottomWidth: 0,
-  },
-  dangerText: {
-    fontSize: 16,
-    color: '#dc3545',
-  },
   infoItem: {
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -517,11 +441,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  disabledCard: {
-    opacity: 0.6,
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  disabledButton: {
-    opacity: 0.7,
+  loadingText: {
+    color: 'white',
+    marginTop: 10,
+    fontSize: 16,
   },
 });
 
