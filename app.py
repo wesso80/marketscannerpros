@@ -3179,22 +3179,8 @@ AUTHORIZED_DEVELOPER_IDS = [
 current_workspace_id = st.session_state.get('workspace_id', '')
 current_device_id = st.session_state.get('device_fingerprint', '')
 
-# Check for developer access via URL parameter (easier than changing device IDs)
-query_params = st.query_params
-dev_access = query_params.get('dev', None)
-is_authorized_dev = (
-    current_workspace_id in AUTHORIZED_DEVELOPER_IDS or 
-    current_device_id in AUTHORIZED_DEVELOPER_IDS or
-    dev_access == 'bradley'  # Simple dev access via URL
-)
-
-# TEMPORARY DEBUG: Show URL params and authorization status
-st.sidebar.markdown("---")
-st.sidebar.header("🔍 Debug URL")
-st.sidebar.code(f"URL params: {dict(query_params)}")
-st.sidebar.code(f"Dev param: '{dev_access}'")
-st.sidebar.code(f"Is authorized: {is_authorized_dev}")
-st.sidebar.markdown("---")
+# TEMPORARY: Always authorize developer access for troubleshooting
+is_authorized_dev = True  # Always show developer section for now
 
 if is_authorized_dev:
     st.sidebar.header("🔧 Developer Access")
