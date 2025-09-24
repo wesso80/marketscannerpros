@@ -2551,8 +2551,9 @@ if st.session_state.user_tier == 'free':
         """)
     
     with col3:
-        if get_platform_type() == 'ios':
-            st.info("📱 **Upgrade in iOS App**\n\nGo to Settings → Subscription to purchase through Apple")
+        is_mobile = st.session_state.get('is_mobile_app', False)
+        if is_mobile:
+            st.info("📱 **Upgrade in Mobile App**\n\nGo to Settings → Subscription to purchase")
         else:
             st.info("🌐 **Upgrade on Web**\n\nGo to Settings → Subscription to purchase")
     
