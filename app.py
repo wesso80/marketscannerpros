@@ -3116,12 +3116,14 @@ TIER_CONFIG = {
 # ================= Developer Override (Authorized Users Only) =================
 # SECURITY: Only show to authorized users
 AUTHORIZED_DEVELOPER_IDS = [
-    "e67df082-aa17-4e78-a9e6-efc4c862518b",  # Creator (Bradley)
-    # Add more workspace IDs here for trusted users
+    "e67df082-aa17-4e78-a9e6-efc4c862518b",  # Creator (Bradley) - workspace_id
+    "da40c1eb-7ce2-43d8-a273-4e0e2117b384",  # Creator (Bradley) - device_id
+    # Add more workspace IDs or device IDs here for trusted users
 ]
 
 current_workspace_id = st.session_state.get('workspace_id', '')
-is_authorized_dev = current_workspace_id in AUTHORIZED_DEVELOPER_IDS
+current_device_id = st.session_state.get('device_fingerprint', '')
+is_authorized_dev = current_workspace_id in AUTHORIZED_DEVELOPER_IDS or current_device_id in AUTHORIZED_DEVELOPER_IDS
 
 if is_authorized_dev:
     st.sidebar.header("🔧 Developer Access")
