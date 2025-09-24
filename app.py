@@ -44,21 +44,31 @@ st.markdown("""
     --text-primary: #0f172a;
     --text-secondary: #334155;
     --text-muted: #64748b;
-    --border-color: #e5e7eb;
+    --border-color: #d1d5db;
     --surface-bg: #ffffff;
-    --page-bg: #f5f7fb;
-    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-    --card-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --page-bg: #f1f5f9;
+    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
     --border-radius: 6px;
 }
 
 /* Main App Background */
 .stApp {
-    background: var(--page-bg);
+    background: var(--page-bg) !important;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     line-height: 1.5;
     color: var(--text-primary);
+}
+
+/* Ensure main container has proper background */
+.main .block-container {
+    background: var(--page-bg) !important;
+}
+
+/* Override Streamlit's default white background */
+.stApp > .main {
+    background: var(--page-bg) !important;
 }
 
 /* Clean Professional Header */
@@ -69,6 +79,31 @@ st.markdown("""
     border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
     text-align: center;
+}
+
+/* Style Streamlit header and main content as cards */
+[data-testid="stHeader"] {
+    background: var(--surface-bg) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    box-shadow: var(--card-shadow) !important;
+}
+
+[data-testid="stVerticalBlock"] {
+    background: var(--surface-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--card-shadow) !important;
+    margin: 8px 0 !important;
+    padding: 16px !important;
+}
+
+/* Main content container as card */
+.main .block-container > div {
+    background: var(--surface-bg) !important;
+    border-radius: var(--border-radius) !important;
+    box-shadow: var(--card-shadow) !important;
+    padding: 16px !important;
+    margin: 8px 0 !important;
 }
 
 .main-header h1 {
