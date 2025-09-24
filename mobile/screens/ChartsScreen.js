@@ -9,20 +9,35 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import IAPService from '../services/IAPService';
 
 const ChartsScreen = () => {
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL');
   const [timeframe, setTimeframe] = useState('1D');
-  const [isFreeTier, setIsFreeTier] = useState(true); // TODO: Get from user subscription
+  const [isFreeTier, setIsFreeTier] = useState(true);
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
+
+  React.useEffect(() => {
+    checkSubscriptionTier();
+  }, []);
+
+  const checkSubscriptionTier = async () => {
+    try {
+      const entitlement = await IAPService.checkSubscriptionStatus();
+      setIsFreeTier(entitlement.tier === 'free');
+      setSubscriptionLoaded(true);
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+      setIsFreeTier(true);
+      setSubscriptionLoaded(true);
+    }
+  };
 
   const timeframes = ['1D', '1H', '30M', '15M', '5M'];
   const popularSymbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'META'];
 
   const loadChart = async () => {
-    if (isFreeTier && !['1D', '1H'].includes(timeframe)) {
-      Alert.alert('Upgrade Required', 'Free tier limited to daily and hourly charts. Upgrade to Pro for intraday charts.');
-      return;
-    }
+    // NEW STRATEGY: All chart features work for everyone
 
     try {
       // TODO: Load chart data from backend
@@ -44,9 +59,9 @@ const ChartsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isFreeTier && (
+      {subscriptionLoaded && isFreeTier && (
         <View style={styles.tierBanner}>
-          <Text style={styles.tierText}>Free Tier - Limited to daily/hourly charts</Text>
+          <Text style={styles.tierText}>Free Tier: All features • 4 symbols only • Upgrade for more!</Text>
           <TouchableOpacity style={styles.upgradeButton}>
             <Text style={styles.upgradeText}>Upgrade Pro</Text>
           </TouchableOpacity>
@@ -94,21 +109,15 @@ const ChartsScreen = () => {
                 style={[
                   styles.timeframeButton,
                   timeframe === tf && styles.selectedTimeframe,
-                  isFreeTier && !['1D', '1H'].includes(tf) && styles.disabledButton
+                  false && styles.disabledButton
                 ]}
-                onPress={() => {
-                  if (isFreeTier && !['1D', '1H'].includes(tf)) {
-                    Alert.alert('Upgrade Required', 'Intraday charts require Pro subscription');
-                    return;
-                  }
-                  setTimeframe(tf);
-                }}
-                disabled={isFreeTier && !['1D', '1H'].includes(tf)}
+                onPress={() => setTimeframe(tf)}
+                disabled={false}
               >
                 <Text style={[
                   styles.timeframeButtonText,
                   timeframe === tf && styles.selectedTimeframeText,
-                  isFreeTier && !['1D', '1H'].includes(tf) && styles.disabledText
+                  false && styles.disabledText
                 ]}>
                   {tf}
                 </Text>
@@ -128,14 +137,14 @@ const ChartsScreen = () => {
             Chart will display here
           </Text>
           
-          {isFreeTier && (
+          {subscriptionLoaded && isFreeTier && (
             <View style={styles.featureList}>
-              <Text style={styles.featureTitle}>🔒 Pro Features:</Text>
-              <Text style={styles.featureItem}>• Intraday charts (5m, 15m, 30m)</Text>
-              <Text style={styles.featureItem}>• Advanced technical indicators</Text>
-              <Text style={styles.featureItem}>• Volume analysis</Text>
-              <Text style={styles.featureItem}>• Bollinger Bands & MACD</Text>
-              <Text style={styles.featureItem}>• Custom indicators</Text>
+              <Text style={styles.featureTitle}>🚀 You have ALL features!</Text>
+              <Text style={styles.featureItem}>• Intraday charts (5m, 15m, 30m) ✓</Text>
+              <Text style={styles.featureItem}>• Advanced technical indicators ✓</Text>
+              <Text style={styles.featureItem}>• Volume analysis ✓</Text>
+              <Text style={styles.featureItem}>• Bollinger Bands & MACD ✓</Text>
+              <Text style={styles.featureItem}>• Only limited to 4 symbols • Upgrade for unlimited!</Text>
             </View>
           )}
         </View>
@@ -149,16 +158,16 @@ const ChartsScreen = () => {
               key={indicator}
               style={[
                 styles.indicatorChip,
-                isFreeTier && ['BB', 'Volume'].includes(indicator) && styles.disabledChip
+                false && styles.disabledChip
               ]}
-              disabled={isFreeTier && ['BB', 'Volume'].includes(indicator)}
+              disabled={false}
             >
               <Text style={[
                 styles.indicatorChipText,
-                isFreeTier && ['BB', 'Volume'].includes(indicator) && styles.disabledText
+                false && styles.disabledText
               ]}>
                 {indicator}
-                {isFreeTier && ['BB', 'Volume'].includes(indicator) && ' 🔒'}
+                {''}
               </Text>
             </TouchableOpacity>
           ))}

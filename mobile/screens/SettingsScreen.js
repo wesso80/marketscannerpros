@@ -162,22 +162,22 @@ const SettingsScreen = () => {
               <View style={styles.featuresList}>
                 <Text style={styles.featuresTitle}>Your Features:</Text>
                 <Text style={styles.featureItem}>
-                  📊 Market Scans: {subscriptionFeatures.market_scans === -1 ? 'Unlimited' : subscriptionFeatures.market_scans}
+                  📊 Market Scans: {isFreeTier ? '4 symbols' : 'Unlimited'}
                 </Text>
                 <Text style={styles.featureItem}>
-                  📁 Watchlists: {subscriptionFeatures.watchlists === -1 ? 'Unlimited' : subscriptionFeatures.watchlists}
+                  📁 Watchlists: ✅ Unlimited
                 </Text>
                 <Text style={styles.featureItem}>
-                  🚨 Alerts: {subscriptionFeatures.alerts ? '✅' : '❌'}
+                  🚨 Alerts: ✅ Unlimited
                 </Text>
                 <Text style={styles.featureItem}>
-                  📈 Advanced Charts: {subscriptionFeatures.advanced_charts ? '✅' : '❌'}
+                  📈 Advanced Charts: ✅ All features
                 </Text>
                 <Text style={styles.featureItem}>
-                  📊 Backtesting: {subscriptionFeatures.backtesting ? '✅' : '❌'}
+                  📊 Backtesting: ✅ Full access
                 </Text>
                 <Text style={styles.featureItem}>
-                  💼 Portfolio: {subscriptionFeatures.portfolio_tracking ? '✅' : '❌'}
+                  💼 Portfolio: ✅ Complete tracking
                 </Text>
               </View>
             )}
@@ -192,7 +192,7 @@ const SettingsScreen = () => {
                   <Text style={styles.upgradeButtonText}>
                     {loading ? '...' : '🚀 Upgrade to Pro - $4.99/month'}
                   </Text>
-                  <Text style={styles.upgradeButtonDesc}>Unlimited scans, alerts & advanced charts</Text>
+                  <Text style={styles.upgradeButtonDesc}>Unlimited symbols (vs 4 symbol limit)</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -203,7 +203,7 @@ const SettingsScreen = () => {
                   <Text style={styles.upgradeButtonText}>
                     {loading ? '...' : '💎 Upgrade to Pro Trader - $9.99/month'}
                   </Text>
-                  <Text style={styles.upgradeButtonDesc}>Everything in Pro + backtesting & algorithms</Text>
+                  <Text style={styles.upgradeButtonDesc}>Unlimited symbols + priority support</Text>
                 </TouchableOpacity>
 
                 <View style={styles.appleNotice}>
@@ -238,11 +238,8 @@ const SettingsScreen = () => {
             title="Sound Alerts"
             value={settings.soundAlerts}
             onValueChange={(value) => updateSetting('soundAlerts', value)}
-            disabled={!subscriptionFeatures?.alerts}
+            disabled={false}
           />
-          {!subscriptionFeatures?.alerts && (
-            <Text style={styles.upgradeNote}>🔒 Sound alerts require Pro subscription</Text>
-          )}
         </View>
 
         {/* Account Actions */}

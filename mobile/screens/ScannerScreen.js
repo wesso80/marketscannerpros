@@ -11,24 +11,50 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MarketDataService from '../services/MarketDataService';
+import IAPService from '../services/IAPService';
 
 const ScannerScreen = () => {
   const [scanResults, setScanResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isFreeTier, setIsFreeTier] = useState(true); // TODO: Get from user subscription
+  const [isFreeTier, setIsFreeTier] = useState(true);
+  const [subscriptionLoaded, setSubscriptionLoaded] = useState(false);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    const tierData = await checkSubscriptionTier();
+    await runScan(tierData.isFreeTier);
+  };
+
+  const checkSubscriptionTier = async () => {
+    try {
+      const entitlement = await IAPService.checkSubscriptionStatus();
+      const isFreeTierValue = entitlement.tier === 'free';
+      setIsFreeTier(isFreeTierValue);
+      setSubscriptionLoaded(true);
+      return { isFreeTier: isFreeTierValue };
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+      setIsFreeTier(true);
+      setSubscriptionLoaded(true);
+      return { isFreeTier: true };
+    }
+  };
+
+  // Note: No need for re-scan effect - initializeApp handles first scan
+  // If subscription changes (upgrades), it should be handled in upgrade flow
 
   const defaultSymbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'META', 'GOOGL', 'AMZN'];
 
-  useEffect(() => {
-    runScan();
-  }, []);
-
-  const runScan = async () => {
+  const runScan = async (freeTierOverride = null) => {
     try {
       setLoading(true);
-      const symbols = isFreeTier ? defaultSymbols.slice(0, 10) : defaultSymbols;
-      const results = await MarketDataService.getScanResults(symbols, '1D', isFreeTier);
+      const isFree = freeTierOverride !== null ? freeTierOverride : isFreeTier;
+      const symbols = isFree ? defaultSymbols.slice(0, 4) : defaultSymbols;
+      const results = await MarketDataService.getScanResults(symbols, '1D', isFree);
       setScanResults(results?.results || []);
     } catch (error) {
       Alert.alert('Error', 'Failed to run market scan');
@@ -72,9 +98,9 @@ const ScannerScreen = () => {
         </View>
       </View>
       
-      {isFreeTier && (
+      {subscriptionLoaded && isFreeTier && (
         <View style={styles.freeWarning}>
-          <Text style={styles.freeText}>🔒 Upgrade for unlimited scans</Text>
+          <Text style={styles.freeText}>🚀 Free tier: 4 symbols • Upgrade for unlimited!</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -97,9 +123,9 @@ const ScannerScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isFreeTier && (
+      {subscriptionLoaded && isFreeTier && (
         <View style={styles.tierBanner}>
-          <Text style={styles.tierText}>Free Tier - Limited to 10 symbols</Text>
+          <Text style={styles.tierText}>Free tier: All features • 4 symbols only • Upgrade for unlimited!</Text>
           <TouchableOpacity style={styles.upgradeButton} onPress={() => {}}>
             <Text style={styles.upgradeText}>Upgrade Pro</Text>
           </TouchableOpacity>
