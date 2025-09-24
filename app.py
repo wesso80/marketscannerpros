@@ -2917,9 +2917,13 @@ if refresh_clicked:
 # Sidebar
 # ================= Watchlist Management =================
 # ================= DEVELOPER ACCESS (TOP OF SIDEBAR) =================
-# TEMPORARY: Always authorize developer access for troubleshooting  
+# OBVIOUS DEBUG - This should ALWAYS show up
+st.sidebar.error("🚨 DEVELOPER ACCESS SECTION - IF YOU SEE THIS, THE CODE IS WORKING!")
 st.sidebar.header("🔧 Developer Access")
-with st.sidebar.expander("Creator Override", expanded=False):
+st.sidebar.success("✅ Developer section is loading properly!")
+
+with st.sidebar.expander("Creator Override", expanded=True):  # Force it expanded
+    st.warning("⚠️ This is the developer override section!")
     st.caption("Authorized developer access - this section is only visible to you")
     
     dev_tier = st.selectbox(
