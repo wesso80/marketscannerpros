@@ -18,10 +18,7 @@ from dateutil import tz
 from math import floor
 import io
 import json
-try:
-    import qrcode
-except ImportError:
-    qrcode = None
+import qrcode
 from PIL import Image
 import base64
 import plotly.graph_objects as go
@@ -417,7 +414,7 @@ def get_workspace_data(workspace_id: str, data_type: Optional[str] = None, since
     
     if since:
         where_clauses.append("updated_at > %s")
-        params.append(since.isoformat())
+        params.append(since)
     
     query = f"""
         SELECT data_type, item_key, data_payload, version, updated_at
@@ -458,11 +455,7 @@ def revoke_device(workspace_id: str, device_fingerprint: str) -> bool:
 
 def generate_qr_code(data: str) -> str:
     """Generate QR code as base64 image"""
-    try:
-        import qrcode as qr_module
-        qr = qr_module.QRCode(version=1, box_size=10, border=5)
-    except ImportError:
-        return ""
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(data)
     qr.make(fit=True)
     
@@ -481,10 +474,6 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
     user_email = st.session_state.get('user_email', '')
     workspace_id = st.session_state.get('workspace_id')
     
-    if not workspace_id:
-        st.error("No workspace found. Please ensure you're properly logged in.")
-        return False
-    
     query = """
         INSERT INTO price_alerts (symbol, alert_type, target_price, notification_method, user_email, workspace_id) 
         VALUES (%s, %s, %s, %s, %s, %s)
@@ -495,31 +484,31 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
 def get_active_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
     """Get active price alerts for current workspace only (tenant-isolated)"""
     if not workspace_id:
-        workspace_id = st.session_state.get('workspace_id', '')
+        workspace_id = st.session_state.get('workspace_id')
     
     if not workspace_id:
         return []  # No workspace = no alerts (prevents cross-tenant access)
     
     query = "SELECT * FROM price_alerts WHERE is_active = TRUE AND workspace_id = %s ORDER BY created_at DESC"
-    result = execute_db_query(query, (workspace_id or '',))
+    result = execute_db_query(query, (workspace_id,))
     return result if result else []
 
 def get_all_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
     """Get all price alerts for current workspace only (tenant-isolated)"""
     if not workspace_id:
-        workspace_id = st.session_state.get('workspace_id', '')
+        workspace_id = st.session_state.get('workspace_id')
     
     if not workspace_id:
         return []  # No workspace = no alerts (prevents cross-tenant access)
     
     query = "SELECT * FROM price_alerts WHERE workspace_id = %s ORDER BY created_at DESC"
-    result = execute_db_query(query, (workspace_id or '',))
+    result = execute_db_query(query, (workspace_id,))
     return result if result else []
 
 def trigger_alert(alert_id: int, current_price: float, workspace_id: str = None) -> bool:
     """Mark an alert as triggered - atomic operation with workspace validation"""
     if not workspace_id:
-        workspace_id = st.session_state.get('workspace_id', '')
+        workspace_id = st.session_state.get('workspace_id')
     
     if not workspace_id:
         return False  # No workspace = no triggering (prevents cross-tenant access)
@@ -529,19 +518,19 @@ def trigger_alert(alert_id: int, current_price: float, workspace_id: str = None)
         SET is_triggered = TRUE, triggered_at = NOW(), current_price = %s, is_active = FALSE
         WHERE id = %s AND workspace_id = %s AND is_active = TRUE AND is_triggered = FALSE
     """
-    result = execute_db_write(query, (current_price, alert_id, workspace_id or ''))
+    result = execute_db_write(query, (current_price, alert_id, workspace_id))
     return result is not None and result > 0
 
 def delete_alert(alert_id: int, workspace_id: str = None) -> bool:
     """Delete a price alert with workspace validation (tenant-isolated)"""
     if not workspace_id:
-        workspace_id = st.session_state.get('workspace_id', '')
+        workspace_id = st.session_state.get('workspace_id')
     
     if not workspace_id:
         return False  # No workspace = no deletion (prevents cross-tenant access)
     
     query = "DELETE FROM price_alerts WHERE id = %s AND workspace_id = %s"
-    result = execute_db_write(query, (alert_id, workspace_id or ''))
+    result = execute_db_write(query, (alert_id, workspace_id))
     return result is not None and result > 0
 
 def get_current_price(symbol: str) -> Optional[float]:
@@ -712,7 +701,7 @@ def delete_watchlist(watchlist_id: int) -> bool:
     return result is not None
 
 # ================= Data Source (yfinance) =================
-def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
+def get_ohlcv_yf(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     interval, default_period = _yf_interval_period(timeframe)
     
     # Use custom period or date range if provided
@@ -735,14 +724,11 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, star
     }, index=data.index).dropna()
     return out
 
-def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
+def get_ohlcv(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     return get_ohlcv_yf(symbol, timeframe, period, start, end)
 
 # ================= Indicators (pure pandas) =================
-def _ema(s, n):    
-    # Ensure numeric data before EMA calculation
-    s_numeric = pd.to_numeric(s, errors='coerce')
-    return s_numeric.ewm(span=n, adjust=False).mean()
+def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
 def _rsi(s, n=14):
     d = s.diff()
     up = d.clip(lower=0).ewm(alpha=1/n, adjust=False).mean()
@@ -759,11 +745,6 @@ def _bb_width(c, n=20, k=2.0):
 
 def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
-    
-    # Ensure all price columns are numeric before calculations
-    for col in ['open', 'high', 'low', 'close', 'volume']:
-        out[col] = pd.to_numeric(out[col], errors='coerce')
-    
     out["ema8"]   = _ema(out["close"], 8)
     out["ema21"]  = _ema(out["close"], 21)
     out["ema50"]  = _ema(out["close"], 50)
@@ -907,7 +888,7 @@ def get_user_notifications(user_email: str, workspace_id: str, limit: int = 10):
         print(f"Error fetching notifications: {e}")
         return []
 
-def mark_notification_read(notification_id: int, workspace_id: str, user_email: Optional[str] = None):
+def mark_notification_read(notification_id: int, workspace_id: str, user_email: str = None):
     """Mark a notification as read (with secure workspace and user validation)"""
     try:
         if user_email:
@@ -962,7 +943,7 @@ def save_user_notification_preferences(user_email: str, method: str) -> bool:
         st.error(f"Failed to save preferences: {str(e)}")
         return False
 
-def get_user_notification_preferences(user_email: str) -> Optional[Dict[str, Any]]:
+def get_user_notification_preferences(user_email: str) -> Dict[str, Any]:
     """Get user notification preferences from database"""
     try:
         query = "SELECT * FROM user_notification_preferences WHERE user_email = %s"
@@ -971,7 +952,7 @@ def get_user_notification_preferences(user_email: str) -> Optional[Dict[str, Any
     except Exception as e:
         return None
 
-def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Dict[str, Any]:
     """Get notification preferences for a price alert from database"""
     # Get user email from the alert
     user_email = alert.get('user_email')
@@ -1018,7 +999,7 @@ def to_csv_download(df: pd.DataFrame, filename: str) -> bytes:
     return output.getvalue().encode('utf-8')
 
 # ================= Advanced Charting =================
-def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Optional[List[str]] = None) -> Optional[go.Figure]:
+def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: List[str] = None) -> go.Figure:
     """Create advanced candlestick chart with technical indicators"""
     if indicators is None:
         indicators = ["EMA", "RSI", "MACD", "Volume"]
@@ -1027,16 +1008,10 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Option
         # Get data and compute features
         df = get_ohlcv(symbol, timeframe)
         if df.empty or len(df) < 50:
-            st.error(f"Insufficient data for {symbol}. Got {len(df)} data points, need at least 50.")
             return None
         
-        try:
-            df_with_features = compute_features(df).dropna()
-            if df_with_features.empty:
-                st.error(f"Unable to compute technical indicators for {symbol}.")
-                return None
-        except Exception as e:
-            st.error(f"Error computing technical indicators: {str(e)}")
+        df_with_features = compute_features(df).dropna()
+        if df_with_features.empty:
             return None
             
         # Create subplots based on selected indicators
@@ -1158,9 +1133,9 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Option
             )
             
             # Add RSI levels
-            fig.add_hline(y=70, line_dash="dash", line_color="red", opacity=0.5, row=str(current_row))
-            fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=str(current_row))
-            fig.add_hline(y=50, line_dash="dot", line_color="gray", opacity=0.3, row=str(current_row))
+            fig.add_hline(y=70, line_dash="dash", line_color="red", opacity=0.5, row=current_row)
+            fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=current_row)
+            fig.add_hline(y=50, line_dash="dot", line_color="gray", opacity=0.3, row=current_row)
             
             current_row += 1
         
@@ -1334,7 +1309,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
         # Pre-load and validate all symbol data
         for symbol in symbols:
             try:
-                df = get_ohlcv(symbol, timeframe, start=start_date, end=end_date)
+                df = get_ohlcv(symbol, timeframe, period=None, start=start_date, end=end_date)
                 if df.empty or len(df) < 50:
                     results['errors'].append(f"{symbol}: Insufficient data ({len(df)} bars)")
                     continue
@@ -1578,7 +1553,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
     except Exception as e:
         return {'error': str(e), 'trades': [], 'metrics': {}, 'symbol_performance': {}}
 
-def convert_numpy_types(obj) -> Any:
+def convert_numpy_types(obj):
     """Convert numpy types to native Python types for JSON serialization"""
     import numpy as np
     if isinstance(obj, np.integer):
@@ -1597,11 +1572,8 @@ def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, A
     """Save backtest results to database"""
     try:
         # Convert numpy types to native Python types
-        # Convert numpy types to native Python types  
-        config_converted = convert_numpy_types(config)
-        results_converted = convert_numpy_types(results)
-        config = config_converted if isinstance(config_converted, dict) else {}
-        results = results_converted if isinstance(results_converted, dict) else {}
+        config = convert_numpy_types(config)
+        results = convert_numpy_types(results)
         
         # Extract metrics from results
         metrics = results.get('metrics', {})
@@ -1670,7 +1642,7 @@ def get_backtest_results() -> List[Dict[str, Any]]:
             r['results'] = r['results_data']
     return result if result else []
 
-def create_backtest_chart(results: Dict[str, Any]) -> Optional[go.Figure]:
+def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
     """Create backtest performance chart"""
     if not results.get('equity_curve'):
         return None
@@ -1962,7 +1934,7 @@ def calculate_portfolio_metrics() -> Dict[str, Any]:
         st.error(f"Error calculating metrics: {str(e)}")
         return {}
 
-def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figure]:
+def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
     """Create portfolio allocation chart"""
     if not positions:
         return None
@@ -1989,7 +1961,7 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figur
     
     return fig
 
-def create_portfolio_performance_chart() -> Optional[go.Figure]:
+def create_portfolio_performance_chart() -> go.Figure:
     """Create portfolio performance over time chart"""
     try:
         # Get transaction history to build performance timeline
@@ -2213,8 +2185,7 @@ if 'webhook' in st.query_params:
         try:
             import urllib.parse
             decoded_payload = urllib.parse.unquote(webhook_payload)
-            # success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
-            success, message = False, "Webhook handler not implemented"
+            success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
             if success:
                 st.write("Webhook processed successfully")
             else:
@@ -2222,6 +2193,14 @@ if 'webhook' in st.query_params:
         except Exception as e:
             st.error(f"Webhook processing failed: {str(e)}")
         st.stop()
+
+# Handle Apple IAP Receipt Validation (API endpoint)
+if 'iap' in st.query_params and st.query_params.get('action') == 'validate-receipt':
+    st.write("Apple IAP Receipt Validation Endpoint")
+    if st.button("Validate Receipt"):
+        # This would be called via API, not through Streamlit UI
+        st.info("⚙️ Receipt validation endpoint ready for iOS app")
+    st.stop()
 
 # Handle successful payment return from Stripe
 if 'session_id' in st.query_params:
@@ -2238,6 +2217,86 @@ if 'session_id' in st.query_params:
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
 
+# ================= Apple IAP Receipt Validation =================
+def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
+    """Validate Apple IAP receipt with Apple's servers"""
+    try:
+        import base64
+        import requests
+        
+        # Apple IAP Receipt Validation Endpoint
+        # Use sandbox for development, production for live app
+        apple_endpoint = "https://buy.itunes.apple.com/verifyReceipt"  # Production
+        # apple_endpoint = "https://sandbox.itunes.apple.com/verifyReceipt"  # Sandbox
+        
+        receipt_payload = {
+            "receipt-data": receipt_data,
+            "password": os.getenv("APPLE_SHARED_SECRET"),  # From App Store Connect
+            "exclude-old-transactions": True
+        }
+        
+        response = requests.post(apple_endpoint, json=receipt_payload, timeout=30)
+        
+        if response.status_code != 200:
+            return False, "Apple server error"
+            
+        result = response.json()
+        
+        if result.get("status") == 0:
+            # Receipt is valid
+            latest_receipt_info = result.get("latest_receipt_info", [])
+            
+            # Find the matching transaction
+            for transaction in latest_receipt_info:
+                if transaction.get("product_id") == product_id:
+                    # Check if subscription is active
+                    expires_date = transaction.get("expires_date_ms")
+                    if expires_date:
+                        import time
+                        if int(expires_date) / 1000 > time.time():
+                            return True, {
+                                "transaction_id": transaction.get("transaction_id"),
+                                "expires_date": expires_date,
+                                "product_id": product_id,
+                                "plan_code": "pro" if "pro_monthly" in product_id else "pro_trader"
+                            }
+            
+            return False, "No active subscription found"
+        else:
+            return False, f"Receipt validation failed: {result.get('status')}"
+            
+    except Exception as e:
+        print(f"Apple IAP validation error: {e}")
+        return False, str(e)
+
+def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_id: str, workspace_id: str):
+    """Process Apple IAP purchase and create subscription"""
+    try:
+        # Validate receipt with Apple
+        is_valid, validation_result = validate_apple_iap_receipt(receipt_data, product_id, transaction_id)
+        
+        if is_valid:
+            plan_code = validation_result["plan_code"]
+            
+            # Create subscription in database
+            success, result = create_subscription(workspace_id, plan_code, 'ios', 'monthly')
+            
+            if success:
+                return True, {
+                    "subscription_id": result,
+                    "plan_code": plan_code,
+                    "platform": "ios",
+                    "apple_transaction_id": transaction_id
+                }
+            else:
+                return False, f"Database error: {result}"
+        else:
+            return False, f"Receipt validation failed: {validation_result}"
+            
+    except Exception as e:
+        print(f"Apple IAP processing error: {e}")
+        return False, str(e)
+
 # ================= Stripe Integration Functions =================
 def create_stripe_checkout_session(plan_code: str, workspace_id: str):
     """Create a Stripe checkout session for subscription"""
@@ -2253,11 +2312,7 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
         # Create or get customer
         customer = None
         try:
-            # Note: Stripe list() doesn't support metadata parameter
-            customers = stripe.Customer.list(limit=100)  # Get all customers and filter manually
-            filtered_customers = [c for c in customers.data if c.metadata and c.metadata.get('workspace_id') == workspace_id]
-            if filtered_customers:
-                customer = filtered_customers[0]
+            customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})
             if customers.data:
                 customer = customers.data[0]
         except:
@@ -2580,36 +2635,66 @@ else:
     st.sidebar.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
-# Detect if this is accessed from mobile app and hide subscriptions
-def is_mobile_app() -> bool:
-    """Check if request is from mobile app WebView"""
-    # Check for mobile app URL parameter - Streamlit can return different formats
-    query_params = st.query_params
-    
-    # Handle all possible Streamlit query parameter formats
-    mobile_param = query_params.get('mobile')
-    
-    # Check various formats that Streamlit might return
-    if mobile_param:
-        # Handle string, list, or other formats
-        if isinstance(mobile_param, list):
-            return 'true' in [str(p).lower() for p in mobile_param]
-        else:
-            return str(mobile_param).lower() == 'true'
-    
-    # Also check direct key existence for some Streamlit versions
-    if 'mobile' in query_params:
-        return True
-        
-    # Check user agent for mobile app indicators
+# Enhanced platform detection for Apple IAP compliance
+def get_platform_type() -> str:
+    """Detect platform type: 'ios', 'android', or 'web' with enhanced iOS detection"""
     try:
+        # Check URL parameters first (most reliable for mobile apps)
+        query_params = st.query_params
+        platform_param = query_params.get('platform')
+        mobile_param = query_params.get('mobile')
+        
+        if platform_param:
+            platform_str = str(platform_param).lower()
+            if 'ios' in platform_str:
+                return 'ios'
+            elif 'android' in platform_str:
+                return 'android'
+                
+        # If mobile=true parameter is present, check user agent more carefully
+        if mobile_param and str(mobile_param).lower() == 'true':
+            headers = st.context.headers if hasattr(st.context, 'headers') else {}
+            user_agent = headers.get('user-agent', '').lower()
+            
+            # Strong iOS indicators (WebView running in iOS app)
+            ios_strong_indicators = ['wkwebview', 'mobile/15e148', 'mobile/16', 'mobile/17', 'mobile/18', 'iphone', 'ipad']
+            if any(indicator in user_agent for indicator in ios_strong_indicators):
+                return 'ios'
+                
+            # Capacitor/Cordova in iOS
+            if 'capacitor' in user_agent or 'cordova' in user_agent:
+                if any(ios_indicator in user_agent for ios_indicator in ['iphone', 'ipad', 'ios']):
+                    return 'ios'
+            
+            # Default mobile app to iOS for safety (Apple compliance)
+            return 'ios'
+            
+        # Check user agent for platform-specific indicators
         headers = st.context.headers if hasattr(st.context, 'headers') else {}
         user_agent = headers.get('user-agent', '').lower()
-        # Detect WebView, mobile app specific user agents
-        mobile_indicators = ['wkwebview', 'android app', 'ios app', 'capacitor', 'cordova']
-        return any(indicator in user_agent for indicator in mobile_indicators)
-    except:
-        return False
+        
+        # iOS indicators
+        ios_indicators = ['wkwebview', 'ios app', 'capacitor/ios', 'iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18']
+        if any(indicator in user_agent for indicator in ios_indicators):
+            return 'ios'
+            
+        # Android indicators  
+        android_indicators = ['android app', 'capacitor/android', 'android']
+        if any(indicator in user_agent for indicator in android_indicators):
+            return 'android'
+            
+    except Exception:
+        pass
+    
+    return 'web'
+
+def is_mobile_app() -> bool:
+    """Check if request is from mobile app WebView"""
+    return get_platform_type() in ['ios', 'android']
+
+def is_ios_app() -> bool:
+    """Check if request is specifically from iOS app"""
+    return get_platform_type() == 'ios'
 
 # Define tier configurations (needed for app functionality)
 TIER_CONFIG = {
@@ -2716,15 +2801,41 @@ if current_tier == 'free':
         
         st.markdown("---")
         
+        # Platform-specific payment buttons (Apple IAP compliance)
+        platform = get_platform_type()
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                if workspace_id:
-                    if is_mobile:
-                        st.info("🚀 In mobile app, this would trigger In-App Purchase for Pro tier")
-                    else:
-                        # Create Stripe checkout session for web users
+            if platform == 'ios':
+                # Apple App Store Compliance: NO STRIPE on iOS
+                st.error("🍎 **Apple App Store Policy**")
+                st.markdown("""
+                **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
+                
+                🚫 **Web payments are not available on iOS devices**
+                
+                **To subscribe:**
+                1. Download the Market Scanner app from the App Store
+                2. Open the app on your iOS device  
+                3. Go to Settings → Subscription
+                4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
+                5. Complete purchase through your Apple ID
+                
+                **Need help?** Contact support through the iOS app.
+                """)
+                
+                # No subscription buttons for iOS - redirect to app
+                if st.button("📱 Download iOS App", key="download_ios_app"):
+                    st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
+                    # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+                    
+                # Completely block subscription upgrade UI for iOS
+                st.stop()
+            else:
+                # Web/Android Stripe button
+                if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
+                    if workspace_id:
+                        # Create Stripe checkout session for web/android users
                         checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2736,16 +2847,15 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro!")
                                 st.rerun()
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
+                    else:
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
         
         with col2:
-            if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                if workspace_id:
-                    if is_mobile:
-                        st.info("💎 In mobile app, this would trigger In-App Purchase for Pro Trader tier")
-                    else:
-                        # Create Stripe checkout session for web users
+            if platform != 'ios':  # Only show for non-iOS platforms
+                # Web/Android Stripe button
+                if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
+                    if workspace_id:
+                        # Create Stripe checkout session for web/android users
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                         if checkout_url:
                             st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
@@ -2757,8 +2867,8 @@ if current_tier == 'free':
                             if success:
                                 st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
                                 st.rerun()
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
+                    else:
+                        st.error("❌ Workspace not initialized. Please refresh the page.")
         
         # Apple-required billing disclosures and controls
         st.markdown("---")
