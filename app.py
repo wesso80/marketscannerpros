@@ -26,59 +26,39 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
-# ================= EMERGENCY iOS COMPLIANCE BLOCK =================
-# CRITICAL: Must happen BEFORE any other Streamlit code
-print("🚨 EMERGENCY iOS CHECK ACTIVATED")
+# ================= iOS COMPLIANCE DETECTION =================
+# Set global iOS detection flag for payment blocking only
+IS_IOS_DEVICE = False
+
+print("🔍 iOS Detection Check...")
 
 # Get query parameters for iOS detection
 try:
     query_params = st.query_params if hasattr(st, 'query_params') else {}
     
-    # Check for explicit iOS parameters first
+    # Check for explicit iOS parameters
     platform_param = query_params.get('platform', '').lower()
     mobile_param = query_params.get('mobile')
-    
-    print(f"🔍 Parameters: platform={platform_param}, mobile={mobile_param}")
     
     # Check user agent
     user_agent = ""
     if hasattr(st, 'context') and hasattr(st.context, 'headers'):
         user_agent = st.context.headers.get('user-agent', '').lower()
     
-    print(f"🔍 User Agent: {user_agent[:100]}...")
-    
-    # IMMEDIATE iOS detection and blocking
+    # iOS detection logic
     is_ios_param = 'ios' in platform_param
     has_mobile_param = mobile_param is not None
     is_ios_ua = any(indicator in user_agent for indicator in ['iphone', 'ipad', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18', 'mobile/19'])
     
     if is_ios_param or has_mobile_param or is_ios_ua:
-        print("🚨 IMMEDIATE iOS BLOCK TRIGGERED!")
-        
-        # Set page config first (required by Streamlit)
-        st.set_page_config(page_title="iOS Compliance Block", page_icon="🍎", layout="wide")
-        
-        # Show immediate block message
-        st.error("🚨 **EMERGENCY SYSTEM LOCKDOWN** 🚨")
-        st.markdown("""
-        # 🍎 iOS Device Detected - Apple Compliance Active
-        
-        **IMMEDIATE PROTECTION ACTIVATED**
-        
-        This device has been identified as iOS. All Stripe payment functionality is PERMANENTLY BLOCKED per Apple App Store guidelines.
-        
-        🚫 **Web payments are disabled**
-        📱 **Use the native iOS app from App Store**
-        💳 **Subscribe through Apple's In-App Purchase system**
-        
-        **Compliance Status: ACTIVE** ✅
-        """)
-        
-        # Force immediate stop - no further execution
-        st.stop()
+        IS_IOS_DEVICE = True
+        print("✅ iOS Device Detected - Payment blocking will be active")
+    else:
+        print("ℹ️  Non-iOS Device - Standard payments available")
         
 except Exception as e:
     print(f"Error in iOS detection: {e}")
+    IS_IOS_DEVICE = False
 
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
@@ -2330,36 +2310,9 @@ def get_platform_type() -> str:
         # Ultra-safe default - assume iOS to prevent Apple Guidelines violations
         return 'ios'
 
-# CRITICAL: Check platform BEFORE any Stripe processing for Apple compliance
+# Platform detection for payment compliance
 platform = get_platform_type()
 print(f"DEBUG - Platform detected: {platform}")
-
-# EMERGENCY iOS PROTECTION: Block ALL Stripe if any iOS indicators found
-headers = st.context.headers if hasattr(st.context, 'headers') else {}
-user_agent = headers.get('user-agent', '').lower()
-query_params = st.query_params
-
-# Multiple iOS detection layers for maximum protection
-is_ios_device = any(indicator in user_agent for indicator in ['iphone', 'ipad', 'ios', 'mobile/15', 'mobile/16', 'mobile/17', 'mobile/18'])
-is_ios_param = 'ios' in str(query_params.get('platform', '')).lower()
-is_mobile_param = query_params.get('mobile') is not None
-
-if is_ios_device or is_ios_param or is_mobile_param or platform == 'ios':
-    print(f"EMERGENCY BLOCK: iOS detected - UA:{user_agent[:50]}... Platform:{platform}")
-    st.error("🍎 **APPLE COMPLIANCE MODE ACTIVATED**")
-    st.markdown("""
-    # iOS App Store Compliance Active
-    
-    **This device has been identified as iOS. All web payments are blocked per Apple App Store guidelines.**
-    
-    **To access Market Scanner features:**
-    1. 📱 Download the native iOS app from the App Store
-    2. ⚙️ Open Settings → Subscription in the app
-    3. 💳 Purchase through Apple's In-App Purchase system
-    
-    **Why this block exists:** Apple requires iOS apps to use their payment system (Guideline 3.1.1)
-    """)
-    st.stop()
 
 # Handle successful payment return from Stripe (ONLY for non-iOS platforms)
 if 'session_id' in st.query_params and platform != 'ios':
