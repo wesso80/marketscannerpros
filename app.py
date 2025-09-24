@@ -2973,7 +2973,7 @@ if st.session_state.workspace_id:
             st.caption("⏱️ Expires in 10 minutes")
             
             # Generate QR code
-            pairing_url = f"https://market-scanner-1-wesso80.replit.app/?pair={st.session_state.pairing_token}"
+            pairing_url = f"https://marketscannerpros.app/?pair={st.session_state.pairing_token}"
             qr_img = generate_qr_code(pairing_url)
             
             st.markdown(f'<img src="{qr_img}" style="width: 150px; height: 150px; margin: 10px auto; display: block;">', 
