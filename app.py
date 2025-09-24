@@ -281,6 +281,40 @@ button[kind="secondary"]:hover {
     font-weight: 700;
 }
 
+/* Text Contrast Fixes */
+.main .block-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+/* Ensure all text is dark and readable */
+.stMarkdown, .stText, .stCaption, .stSubheader {
+    color: #1f2937 !important;
+}
+
+.stMarkdown p, .stMarkdown div, .stText p, .stText div, 
+.stMarkdown span, .stText span {
+    color: #1f2937 !important;
+}
+
+/* Fix specific Streamlit component text */
+.main .block-container .stMarkdown {
+    color: #1f2937 !important;
+}
+
+.main .block-container .stText {
+    color: #1f2937 !important;
+}
+
+/* Ensure metric and info text is readable */
+.stMetric .metric-value, .stMetric .metric-label {
+    color: #1f2937 !important;
+}
+
+/* Fix any remaining white text issues */
+.element-container .stMarkdown, .element-container .stText {
+    color: #1f2937 !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .main-header h1 {
