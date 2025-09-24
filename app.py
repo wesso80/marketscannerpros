@@ -2465,6 +2465,99 @@ refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
 now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
 c3.info(f"Last scan: {now_syd}")
 
+# Show premium feature previews to free tier users
+if st.session_state.user_tier == 'free':
+    st.markdown("---")
+    st.markdown("### 🔓 **Unlock Premium Features**")
+    
+    # Create feature preview cards
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        with st.expander("🚨 **Real-Time Price Alerts** - Pro Feature", expanded=False):
+            st.markdown("""
+            **Get notified when your stocks hit target prices:**
+            - ⚡ Real-time price monitoring
+            - 📱 Push notifications & emails
+            - 🎯 Set multiple price targets
+            - 📊 Volume & percentage alerts
+            
+            *Available with Pro ($4.99/month)*
+            """)
+            if st.button("🚀 Upgrade to Pro", key="alerts_upgrade"):
+                st.info("Upgrade through Settings → Subscription")
+        
+        with st.expander("💼 **Portfolio Tracking** - Pro Feature", expanded=False):
+            st.markdown("""
+            **Track your complete investment portfolio:**
+            - 📈 Real-time P&L tracking
+            - 🎯 Performance analytics
+            - 📊 Risk metrics & allocation
+            - 💰 Dividend tracking
+            
+            *Available with Pro ($4.99/month)*
+            """)
+            if st.button("🚀 Upgrade to Pro", key="portfolio_upgrade"):
+                st.info("Upgrade through Settings → Subscription")
+    
+    with col2:
+        with st.expander("📊 **Advanced Backtesting** - Pro Trader Feature", expanded=False):
+            st.markdown("""
+            **Test your trading strategies:**
+            - 🤖 Algorithm backtesting
+            - 📈 Performance metrics
+            - ⚡ Multi-timeframe analysis
+            - 🎯 Risk-adjusted returns
+            
+            *Available with Pro Trader ($9.99/month)*
+            """)
+            if st.button("💎 Upgrade to Pro Trader", key="backtest_upgrade"):
+                st.info("Upgrade through Settings → Subscription")
+        
+        with st.expander("🔧 **Custom Algorithms** - Pro Trader Feature", expanded=False):
+            st.markdown("""
+            **Build your own trading strategies:**
+            - 🤖 Custom indicator combinations
+            - 📊 Advanced screening filters
+            - ⚡ Automated signal generation
+            - 🎯 Priority support
+            
+            *Available with Pro Trader ($9.99/month)*
+            """)
+            if st.button("💎 Upgrade to Pro Trader", key="algorithms_upgrade"):
+                st.info("Upgrade through Settings → Subscription")
+    
+    # Quick upgrade section
+    st.markdown("---")
+    st.markdown("### 🎯 **Ready to Upgrade?**")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col1:
+        st.markdown("""
+        **🚀 Pro - $4.99/month**
+        - Unlimited market scans
+        - Real-time price alerts  
+        - Advanced charting
+        - Portfolio tracking
+        """)
+    
+    with col2:
+        st.markdown("""
+        **💎 Pro Trader - $9.99/month**
+        - Everything in Pro
+        - Advanced backtesting
+        - Custom algorithms
+        - Priority support
+        """)
+    
+    with col3:
+        if get_platform_type() == 'ios':
+            st.info("📱 **Upgrade in iOS App**\n\nGo to Settings → Subscription to purchase through Apple")
+        else:
+            st.info("🌐 **Upgrade on Web**\n\nGo to Settings → Subscription to purchase")
+    
+    st.markdown("---")
+
 # Clear cache if refresh clicked
 if refresh_clicked:
     st.cache_data.clear()
