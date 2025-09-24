@@ -3544,8 +3544,9 @@ def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
     total_symbols = len(eq_errors) + len(cx_errors) 
     total_results = len(eq_results) + len(cx_results)
     
-    # Check if all/most symbols failed (typical iOS WebView behavior)
-    if total_symbols > 0 and total_results == 0:
+    # Only check for iOS issues if we have significant errors AND no results
+    # AND errors are network-related (not just any errors)
+    if total_symbols > 3 and total_results == 0:
         # Check if errors contain network-related failures
         all_errors = pd.concat([eq_errors, cx_errors], ignore_index=True) if not eq_errors.empty or not cx_errors.empty else pd.DataFrame()
         
