@@ -3553,7 +3553,21 @@ st.subheader("🏛 Equity Markets")
 if not ios_issue_detected and not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
-    st.dataframe(display_eq, width='stretch')
+    
+    # Style the direction column for better visibility
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+        elif val == 'Bearish':
+            return 'background-color: #f8d7da; color: #721c24; font-weight: bold;'
+        return ''
+    
+    # Apply styling to direction column
+    if 'direction' in display_eq.columns:
+        styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_eq, width='stretch')
+    else:
+        st.dataframe(display_eq, width='stretch')
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -3576,7 +3590,21 @@ st.subheader("₿ Crypto Markets")
 if not ios_issue_detected and not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
-    st.dataframe(display_cx, width='stretch')
+    
+    # Style the direction column for better visibility
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #d4edda; color: #155724; font-weight: bold;'
+        elif val == 'Bearish':
+            return 'background-color: #f8d7da; color: #721c24; font-weight: bold;'
+        return ''
+    
+    # Apply styling to direction column
+    if 'direction' in display_cx.columns:
+        styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_cx, width='stretch')
+    else:
+        st.dataframe(display_cx, width='stretch')
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
