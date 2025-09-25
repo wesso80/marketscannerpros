@@ -46,6 +46,23 @@ st.markdown("""
     --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --border-radius: 12px;
     --spacing-unit: 1rem;
+    /* Light theme colors */
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --card-background: #ffffff;
+    --border-color: #e5e7eb;
+}
+
+/* Dark theme colors */
+[data-theme="dark"] {
+    --primary-color: #e5e7eb;
+    --background-gradient: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --card-background: #374151;
+    --border-color: #4b5563;
 }
 
 /* Main App Background */
@@ -93,13 +110,14 @@ st.markdown("""
 
 /* Professional Cards */
 .pro-card {
-    background: white;
+    background: var(--card-background);
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 1rem 0;
     box-shadow: var(--card-shadow);
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+    color: var(--text-primary);
 }
 
 .pro-card:hover {
@@ -108,7 +126,7 @@ st.markdown("""
 }
 
 .pro-card h3 {
-    color: var(--primary-color);
+    color: var(--text-primary);
     font-weight: 600;
     margin-bottom: 1rem;
     font-size: 1.25rem;
@@ -116,12 +134,13 @@ st.markdown("""
 
 /* Metrics Cards */
 .metric-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    background: var(--card-background);
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 0.5rem 0;
     box-shadow: var(--card-shadow);
     border-left: 4px solid var(--secondary-color);
+    color: var(--text-primary);
     transition: all 0.3s ease;
 }
 
@@ -138,7 +157,7 @@ st.markdown("""
 
 .metric-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -174,8 +193,8 @@ button[kind="secondary"]:hover {
 
 /* Sidebar Enhancements */
 .css-1d391kg {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-right: 1px solid #d1d5db;
+    background: var(--background-gradient);
+    border-right: 1px solid var(--border-color);
 }
 
 /* Data Tables */
@@ -218,7 +237,7 @@ button[kind="secondary"]:hover {
 
 /* Subscription Tiers */
 .tier-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    background: var(--card-background);
     border-radius: var(--border-radius);
     padding: 2rem;
     margin: 1rem 0;
@@ -227,6 +246,7 @@ button[kind="secondary"]:hover {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    color: var(--text-primary);
 }
 
 .tier-card::before {
@@ -247,7 +267,19 @@ button[kind="secondary"]:hover {
 
 .tier-card.premium {
     border-color: #fbbf24;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    background: var(--card-background);
+    position: relative;
+}
+
+.tier-card.premium::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+    pointer-events: none;
 }
 
 .tier-card.premium::before {
@@ -263,7 +295,7 @@ button[kind="secondary"]:hover {
 
 .price-period {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--text-secondary);
     font-weight: 400;
 }
 
@@ -276,7 +308,7 @@ button[kind="secondary"]:hover {
 
 .feature-list li {
     padding: 0.5rem 0;
-    color: #374151;
+    color: var(--text-primary);
     font-weight: 500;
     position: relative;
     padding-left: 1.5rem;
@@ -311,21 +343,27 @@ button[kind="secondary"]:hover {
 
 /* Success/Error Messages */
 .stSuccess {
-    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    background: var(--card-background);
+    border: 1px solid var(--accent-color);
     border-left: 4px solid var(--accent-color);
     border-radius: var(--border-radius);
+    color: var(--text-primary);
 }
 
 .stError {
-    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    background: var(--card-background);
+    border: 1px solid var(--danger-color);
     border-left: 4px solid var(--danger-color);
     border-radius: var(--border-radius);
+    color: var(--text-primary);
 }
 
 .stInfo {
-    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    background: var(--card-background);
+    border: 1px solid var(--secondary-color);
     border-left: 4px solid var(--secondary-color);
     border-radius: var(--border-radius);
+    color: var(--text-primary);
 }
 
 /* Loading States */
@@ -341,6 +379,32 @@ button[kind="secondary"]:hover {
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ================= Dark Mode Toggle =================
+# Add dark mode toggle in sidebar
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+# Dark mode toggle in sidebar
+dark_mode_toggle = st.sidebar.checkbox("🌙 Dark Mode", value=st.session_state.dark_mode)
+
+if dark_mode_toggle != st.session_state.dark_mode:
+    st.session_state.dark_mode = dark_mode_toggle
+    st.rerun()
+
+# Apply dark mode with JavaScript
+if st.session_state.dark_mode:
+    st.markdown("""
+    <script>
+    document.documentElement.setAttribute('data-theme', 'dark');
+    </script>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <script>
+    document.documentElement.removeAttribute('data-theme');
+    </script>
+    """, unsafe_allow_html=True)
 
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
