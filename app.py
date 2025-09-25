@@ -423,33 +423,6 @@ button[kind="secondary"]:hover {
 </style>
 """, unsafe_allow_html=True)
 
-# ================= Dark Mode Toggle =================
-# Add dark mode toggle in sidebar
-if 'dark_mode' not in st.session_state:
-    st.session_state.dark_mode = False
-
-# Dark mode toggle in sidebar
-dark_mode_toggle = st.sidebar.checkbox("🌙 Dark Mode", value=st.session_state.dark_mode)
-
-if dark_mode_toggle != st.session_state.dark_mode:
-    st.session_state.dark_mode = dark_mode_toggle
-    st.rerun()
-
-# Apply dark mode with JavaScript - Always set the theme
-theme = "dark" if st.session_state.dark_mode else "light"
-st.markdown(f"""
-<script>
-(function() {{
-    console.log('Setting theme to: {theme}');
-    document.documentElement.setAttribute('data-theme', '{theme}');
-    
-    // Force a style recalculation to apply changes immediately
-    document.body.style.display = 'none';
-    document.body.offsetHeight; // trigger reflow
-    document.body.style.display = '';
-}})();
-</script>
-""", unsafe_allow_html=True)
 
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
