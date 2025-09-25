@@ -46,50 +46,12 @@ st.markdown("""
     --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --border-radius: 12px;
     --spacing-unit: 1rem;
-    /* Light theme colors */
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --card-background: #ffffff;
-    --border-color: #e5e7eb;
-}
-
-/* Dark theme colors */
-[data-theme="dark"] {
-    --primary-color: #e5e7eb;
-    --background-gradient: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --text-primary: #f9fafb;
-    --text-secondary: #d1d5db;
-    --card-background: #374151;
-    --border-color: #4b5563;
 }
 
 /* Main App Background */
 .stApp {
     background: var(--background-gradient);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* Main Content Area */
-.main .block-container {
-    background: transparent;
-    color: var(--text-primary);
-}
-
-/* Target Streamlit's main content */
-[data-testid="stAppViewContainer"] {
-    background: var(--background-gradient);
-}
-
-[data-testid="stMain"] {
-    background: transparent;
-    color: var(--text-primary);
-}
-
-/* All text elements */
-.stMarkdown, .stText, .stHeader, p, h1, h2, h3, h4, h5, h6 {
-    color: var(--text-primary) !important;
 }
 
 /* Header Styling */
@@ -131,14 +93,13 @@ st.markdown("""
 
 /* Professional Cards */
 .pro-card {
-    background: var(--card-background);
+    background: white;
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 1rem 0;
     box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
+    border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
-    color: var(--text-primary);
 }
 
 .pro-card:hover {
@@ -147,7 +108,7 @@ st.markdown("""
 }
 
 .pro-card h3 {
-    color: var(--text-primary);
+    color: var(--primary-color);
     font-weight: 600;
     margin-bottom: 1rem;
     font-size: 1.25rem;
@@ -155,13 +116,12 @@ st.markdown("""
 
 /* Metrics Cards */
 .metric-card {
-    background: var(--card-background);
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 0.5rem 0;
     box-shadow: var(--card-shadow);
     border-left: 4px solid var(--secondary-color);
-    color: var(--text-primary);
     transition: all 0.3s ease;
 }
 
@@ -178,7 +138,7 @@ st.markdown("""
 
 .metric-label {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: #6b7280;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -213,31 +173,9 @@ button[kind="secondary"]:hover {
 }
 
 /* Sidebar Enhancements */
-.css-1d391kg, [data-testid="stSidebar"] {
-    background: var(--background-gradient);
-    border-right: 1px solid var(--border-color);
-}
-
-[data-testid="stSidebar"] > div {
-    background: var(--background-gradient);
-    color: var(--text-primary);
-}
-
-/* Fix all Streamlit containers */
-.stContainer, .block-container, [data-testid="block-container"] {
-    background: transparent !important;
-    color: var(--text-primary) !important;
-}
-
-/* Expanders and other components */
-.streamlit-expanderContent {
-    background: var(--card-background) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Columns */
-[data-testid="column"] {
-    background: transparent !important;
+.css-1d391kg {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-right: 1px solid #d1d5db;
 }
 
 /* Data Tables */
@@ -280,7 +218,7 @@ button[kind="secondary"]:hover {
 
 /* Subscription Tiers */
 .tier-card {
-    background: var(--card-background);
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
     border-radius: var(--border-radius);
     padding: 2rem;
     margin: 1rem 0;
@@ -289,7 +227,6 @@ button[kind="secondary"]:hover {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    color: var(--text-primary);
 }
 
 .tier-card::before {
@@ -310,19 +247,7 @@ button[kind="secondary"]:hover {
 
 .tier-card.premium {
     border-color: #fbbf24;
-    background: var(--card-background);
-    position: relative;
-}
-
-.tier-card.premium::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
-    pointer-events: none;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
 }
 
 .tier-card.premium::before {
@@ -338,7 +263,7 @@ button[kind="secondary"]:hover {
 
 .price-period {
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: #6b7280;
     font-weight: 400;
 }
 
@@ -351,7 +276,7 @@ button[kind="secondary"]:hover {
 
 .feature-list li {
     padding: 0.5rem 0;
-    color: var(--text-primary);
+    color: #374151;
     font-weight: 500;
     position: relative;
     padding-left: 1.5rem;
@@ -386,27 +311,21 @@ button[kind="secondary"]:hover {
 
 /* Success/Error Messages */
 .stSuccess {
-    background: var(--card-background);
-    border: 1px solid var(--accent-color);
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
     border-left: 4px solid var(--accent-color);
     border-radius: var(--border-radius);
-    color: var(--text-primary);
 }
 
 .stError {
-    background: var(--card-background);
-    border: 1px solid var(--danger-color);
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
     border-left: 4px solid var(--danger-color);
     border-radius: var(--border-radius);
-    color: var(--text-primary);
 }
 
 .stInfo {
-    background: var(--card-background);
-    border: 1px solid var(--secondary-color);
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
     border-left: 4px solid var(--secondary-color);
     border-radius: var(--border-radius);
-    color: var(--text-primary);
 }
 
 /* Loading States */
@@ -423,35 +342,13 @@ button[kind="secondary"]:hover {
 </style>
 """, unsafe_allow_html=True)
 
-
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
     st.markdown('<meta http-equiv="refresh" content="0;URL=https://marketscannerspros.pages.dev/privacy" target="_blank">', unsafe_allow_html=True)
     st.info("🔗 Redirecting to Privacy Policy...")
     st.stop()  # Stop execution to redirect
 
-# Handle mobile parameter for WebView
-mobile_param = st.query_params.get("mobile", "false").lower() == "true"
-if mobile_param:
-    st.markdown("""
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-    /* Mobile-specific optimizations */
-    .stApp {
-        background: var(--background-gradient) !important;
-    }
-    /* Force dark backgrounds in mobile WebView */
-    .main .block-container, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
-        background: var(--background-gradient) !important;
-    }
-    /* Ensure mobile headers are properly themed */
-    .main-header {
-        background: var(--background-gradient) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Handle static file serving for PWA assets at root level  
+# Handle static file serving for PWA assets at root level
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
 st.markdown("""

@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const TARGET_URL = 'http://localhost:5000?mobile=true';
+const TARGET_URL = 'https://market-scanner-1-wesso80.replit.app?mobile=true';
 
 export default function App() {
   return (

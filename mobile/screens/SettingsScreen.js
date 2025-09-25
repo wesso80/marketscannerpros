@@ -24,20 +24,6 @@ const SettingsScreen = () => {
     soundAlerts: true,
   });
 
-  // Theme colors based on dark mode setting
-  const theme = {
-    background: settings.darkMode ? '#1a1a1a' : '#f5f5f5',
-    cardBackground: settings.darkMode ? '#2d2d2d' : 'white',
-    headerBackground: settings.darkMode ? '#2d2d2d' : 'white',
-    textPrimary: settings.darkMode ? '#ffffff' : '#333333',
-    textSecondary: settings.darkMode ? '#cccccc' : '#666666',
-    borderColor: settings.darkMode ? '#444444' : '#e0e0e0',
-    sectionBackground: settings.darkMode ? '#2d2d2d' : 'white',
-    featureBackground: settings.darkMode ? '#3a3a3a' : '#F8F9FA',
-    appleNoticeBackground: settings.darkMode ? '#2d1a1a' : '#FFE4E1',
-    appleNoticeText: settings.darkMode ? '#ffffff' : '#D73502', // Fixed: White text for better contrast
-  };
-
   useEffect(() => {
     initializeIAP();
   }, []);
@@ -142,16 +128,8 @@ const SettingsScreen = () => {
   };
 
   const SettingItem = ({ title, value, onValueChange, disabled = false }) => (
-    <View style={[
-      styles.settingItem, 
-      disabled && styles.disabledSetting,
-      { borderBottomColor: theme.borderColor }
-    ]}>
-      <Text style={[
-        styles.settingText, 
-        disabled && styles.disabledText,
-        { color: disabled ? theme.textSecondary : theme.textPrimary }
-      ]}>{title}</Text>
+    <View style={[styles.settingItem, disabled && styles.disabledSetting]}>
+      <Text style={[styles.settingText, disabled && styles.disabledText]}>{title}</Text>
       <Switch
         value={value}
         onValueChange={onValueChange}
@@ -165,41 +143,41 @@ const SettingsScreen = () => {
   const isFreeTier = subscriptionStatus === 'free';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.headerBackground, borderBottomColor: theme.borderColor }]}>
-        <Text style={[styles.title, { color: theme.textPrimary }]}>⚙️ Settings</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>⚙️ Settings</Text>
       </View>
 
-      <ScrollView style={[styles.content, { backgroundColor: theme.background }]}>
+      <ScrollView style={styles.content}>
         {/* Subscription Section */}
-        <View style={[styles.section, { backgroundColor: theme.sectionBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>📱 Subscription</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📱 Subscription</Text>
           
-          <View style={[styles.subscriptionCard, { backgroundColor: theme.featureBackground, borderColor: theme.borderColor }]}>
+          <View style={styles.subscriptionCard}>
             <Text style={styles.currentPlanText}>
               Current Plan: {subscriptionStatus.toUpperCase()}
             </Text>
             
             {subscriptionFeatures && (
-              <View style={[styles.featuresList, { backgroundColor: theme.featureBackground }]}>
-                <Text style={[styles.featuresTitle, { color: theme.textPrimary }]}>Your Features:</Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  📊 Market Scans: {subscriptionFeatures.market_scans === 5 ? '5 symbols' : 'Unlimited'}
+              <View style={styles.featuresList}>
+                <Text style={styles.featuresTitle}>Your Features:</Text>
+                <Text style={styles.featureItem}>
+                  📊 Market Scans: {isFreeTier ? '4 symbols' : 'Unlimited'}
                 </Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  📁 Watchlists: {subscriptionFeatures.watchlists === 1 ? '1 list' : '✅ Unlimited'}
+                <Text style={styles.featureItem}>
+                  📁 Watchlists: ✅ Unlimited
                 </Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  🚨 Alerts: {subscriptionFeatures.alerts ? '✅ Unlimited' : '❌ Upgrade required'}
+                <Text style={styles.featureItem}>
+                  🚨 Alerts: ✅ Unlimited
                 </Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  📈 Advanced Charts: {subscriptionFeatures.advanced_charts ? '✅ All features' : '❌ Basic only'}
+                <Text style={styles.featureItem}>
+                  📈 Advanced Charts: ✅ All features
                 </Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  📊 Backtesting: {subscriptionFeatures.backtesting ? '✅ Full access' : '❌ Upgrade required'}
+                <Text style={styles.featureItem}>
+                  📊 Backtesting: ✅ Full access
                 </Text>
-                <Text style={[styles.featureItem, { color: theme.textSecondary }]}>
-                  💼 Portfolio: {subscriptionFeatures.portfolio_tracking ? '✅ Complete tracking' : '❌ Basic tracking'}
+                <Text style={styles.featureItem}>
+                  💼 Portfolio: ✅ Complete tracking
                 </Text>
               </View>
             )}
@@ -228,8 +206,8 @@ const SettingsScreen = () => {
                   <Text style={styles.upgradeButtonDesc}>Unlimited symbols + priority support</Text>
                 </TouchableOpacity>
 
-                <View style={[styles.appleNotice, { backgroundColor: theme.appleNoticeBackground }]}>
-                  <Text style={[styles.appleNoticeText, { color: theme.appleNoticeText }]}>
+                <View style={styles.appleNotice}>
+                  <Text style={styles.appleNoticeText}>
                     🍎 Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.
                   </Text>
                 </View>
@@ -239,8 +217,8 @@ const SettingsScreen = () => {
         </View>
 
         {/* App Settings */}
-        <View style={[styles.section, { backgroundColor: theme.sectionBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>App Settings</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App Settings</Text>
           <SettingItem
             title="Push Notifications"
             value={settings.notifications}
@@ -265,47 +243,47 @@ const SettingsScreen = () => {
         </View>
 
         {/* Account Actions */}
-        <View style={[styles.section, { backgroundColor: theme.sectionBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Account</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
           
           <TouchableOpacity
-            style={[styles.actionItem, { borderBottomColor: theme.borderColor }]}
+            style={styles.actionItem}
             onPress={restorePurchases}
             disabled={loading}
           >
-            <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+            <Text style={styles.actionText}>
               {loading ? '🔄 Restoring...' : '🔄 Restore Purchases'}
             </Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionItem, { borderBottomColor: theme.borderColor }]}>
-            <Text style={[styles.actionText, { color: theme.textPrimary }]}>📧 Support</Text>
+          <TouchableOpacity style={styles.actionItem}>
+            <Text style={styles.actionText}>📧 Support</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionItem, { borderBottomColor: theme.borderColor }]}>
-            <Text style={[styles.actionText, { color: theme.textPrimary }]}>📋 Terms of Service</Text>
+          <TouchableOpacity style={styles.actionItem}>
+            <Text style={styles.actionText}>📋 Terms of Service</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionItem, { borderBottomColor: theme.borderColor }]}>
-            <Text style={[styles.actionText, { color: theme.textPrimary }]}>🔒 Privacy Policy</Text>
+          <TouchableOpacity style={styles.actionItem}>
+            <Text style={styles.actionText}>🔒 Privacy Policy</Text>
           </TouchableOpacity>
         </View>
 
         {/* App Info */}
-        <View style={[styles.section, { backgroundColor: theme.sectionBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>App Info</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App Info</Text>
           <View style={styles.infoItem}>
-            <Text style={[styles.infoText, { color: theme.textSecondary }]}>Version: 1.0.0</Text>
+            <Text style={styles.infoText}>Version: 1.0.0</Text>
           </View>
           <View style={styles.infoItem}>
-            <Text style={[styles.infoText, { color: theme.textSecondary }]}>Build: 2025.01.01</Text>
+            <Text style={styles.infoText}>Build: 2025.01.01</Text>
           </View>
         </View>
 
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#007AFF" />
-            <Text style={[styles.loadingText, { color: theme.textPrimary }]}>Processing...</Text>
+            <Text style={styles.loadingText}>Processing...</Text>
           </View>
         )}
       </ScrollView>
@@ -316,13 +294,13 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor removed - now uses theme.background dynamically
+    backgroundColor: '#f5f5f5',
   },
   header: {
     padding: 20,
-    // backgroundColor removed - now uses theme.headerBackground dynamically
+    backgroundColor: 'white',
     borderBottomWidth: 1,
-    // borderBottomColor removed - now uses theme.borderColor dynamically
+    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 24,
@@ -331,10 +309,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // backgroundColor removed - now uses theme.background dynamically  
   },
   section: {
-    // backgroundColor removed - now uses theme.sectionBackground dynamically
+    backgroundColor: 'white',
     marginVertical: 8,
     paddingVertical: 16,
   },
