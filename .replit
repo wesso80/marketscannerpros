@@ -32,6 +32,10 @@ args = "Apple IAP API"
 task = "workflow.run"
 args = "Market Data API"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Mobile App"
+
 [[workflows.workflow]]
 name = "install_dependencies"
 author = "agent"
@@ -76,6 +80,18 @@ waitForPort = 8001
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "Mobile App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
+waitForPort = 8081
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[ports]]
 localPort = 3000
 externalPort = 3002
@@ -83,6 +99,10 @@ externalPort = 3002
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
 
 [[ports]]
 localPort = 36003
@@ -111,6 +131,10 @@ externalPort = 4200
 [[ports]]
 localPort = 42595
 externalPort = 3000
+
+[[ports]]
+localPort = 43655
+externalPort = 8000
 
 [[ports]]
 localPort = 45401
