@@ -71,6 +71,27 @@ st.markdown("""
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* Main Content Area */
+.main .block-container {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+/* Target Streamlit's main content */
+[data-testid="stAppViewContainer"] {
+    background: var(--background-gradient);
+}
+
+[data-testid="stMain"] {
+    background: transparent;
+    color: var(--text-primary);
+}
+
+/* All text elements */
+.stMarkdown, .stText, .stHeader, p, h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+}
+
 /* Header Styling */
 .main-header {
     background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
@@ -192,9 +213,31 @@ button[kind="secondary"]:hover {
 }
 
 /* Sidebar Enhancements */
-.css-1d391kg {
+.css-1d391kg, [data-testid="stSidebar"] {
     background: var(--background-gradient);
     border-right: 1px solid var(--border-color);
+}
+
+[data-testid="stSidebar"] > div {
+    background: var(--background-gradient);
+    color: var(--text-primary);
+}
+
+/* Fix all Streamlit containers */
+.stContainer, .block-container, [data-testid="block-container"] {
+    background: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+/* Expanders and other components */
+.streamlit-expanderContent {
+    background: var(--card-background) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Columns */
+[data-testid="column"] {
+    background: transparent !important;
 }
 
 /* Data Tables */
