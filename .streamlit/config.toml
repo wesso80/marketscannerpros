@@ -6,5 +6,9 @@ port = 5000
 [browser]
 gatherUsageStats = false
 
-[client]
-showErrorDetails = false
+[theme]
+base="dark"
+primaryColor="#5ee1a9"
+backgroundColor="#0b0f16"
+secondaryBackgroundColor="#111826"
+textColor="#e9eef7"
