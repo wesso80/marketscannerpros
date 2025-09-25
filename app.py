@@ -786,22 +786,23 @@ def verify_admin_pin(pin: str, workspace_id: str, device_fingerprint: str) -> tu
     else:
         return False, "Invalid PIN"
 
-def set_subscription_override(workspace_id: str, tier: str, set_by: str) -> bool:
-    """Set subscription tier override for workspace"""
+def set_subscription_override(workspace_id: str, tier: str, set_by: str, expires_at: datetime = None) -> bool:
+    """Set subscription tier override for workspace with optional expiry"""
     query = """
-        INSERT INTO subscription_overrides (workspace_id, tier, set_by)
-        VALUES (%s, %s, %s)
+        INSERT INTO subscription_overrides (workspace_id, tier, set_by, expires_at)
+        VALUES (%s, %s, %s, %s)
         ON CONFLICT (workspace_id) 
-        DO UPDATE SET tier = %s, set_by = %s, updated_at = NOW()
+        DO UPDATE SET tier = %s, set_by = %s, expires_at = %s, updated_at = NOW()
     """
-    result = execute_db_write(query, (workspace_id, tier, set_by, tier, set_by))
+    result = execute_db_write(query, (workspace_id, tier, set_by, expires_at, tier, set_by, expires_at))
     return result is not None and result >= 0
 
 def get_subscription_override(workspace_id: str) -> Optional[str]:
-    """Get subscription tier override for workspace"""
+    """Get subscription tier override for workspace (only if not expired)"""
     query = """
         SELECT tier FROM subscription_overrides 
-        WHERE workspace_id = %s
+        WHERE workspace_id = %s 
+        AND (expires_at IS NULL OR expires_at > NOW())
         LIMIT 1
     """
     result = execute_db_query(query, (workspace_id,))
@@ -814,6 +815,71 @@ def clear_subscription_override(workspace_id: str) -> bool:
     query = "DELETE FROM subscription_overrides WHERE workspace_id = %s"
     result = execute_db_write(query, (workspace_id,))
     return result is not None and result >= 0
+
+# ================= Friend Access Code System =================
+
+def generate_friend_access_code() -> str:
+    """Generate a secure friend access code (12 chars)"""
+    return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(12))
+
+def create_friend_access_code(access_tier: str = 'pro_trader', duration_days: int = 30) -> Optional[str]:
+    """Create a new friend access code"""
+    code = generate_friend_access_code()
+    query = """
+        INSERT INTO friend_access_codes (code, access_tier, access_duration_days)
+        VALUES (%s, %s, %s)
+    """
+    result = execute_db_write(query, (code, access_tier, duration_days))
+    
+    if result is not None and result > 0:
+        return code
+    return None
+
+def consume_friend_access_code(code: str, workspace_id: str, device_fingerprint: str) -> tuple[bool, str]:
+    """Consume a friend access code and grant access (fully atomic operation)"""
+    try:
+        # Atomic: mark code as used and get details in single query
+        code_expires_at = datetime.now() + timedelta(days=30)  # Default, will be overridden
+        update_query = """
+            UPDATE friend_access_codes 
+            SET used_by_workspace_id = %s, 
+                used_by_device_fingerprint = %s,
+                used_at = NOW(),
+                expires_at = %s
+            WHERE code = %s AND used_at IS NULL
+            RETURNING access_tier, access_duration_days
+        """
+        result = execute_db_write_returning(update_query, (workspace_id, device_fingerprint, code_expires_at, code))
+        
+        if not result or len(result) == 0:
+            return False, "Invalid or already used access code"
+        
+        access_tier = result[0]['access_tier']
+        duration_days = result[0]['access_duration_days']
+        
+        # Calculate proper expiry date
+        override_expires_at = datetime.now() + timedelta(days=duration_days)
+        
+        # Create time-limited subscription override
+        if set_subscription_override(workspace_id, access_tier, f"friend_code_{code}", override_expires_at):
+            return True, f"Success! You now have {access_tier.upper()} access for {duration_days} days"
+        else:
+            return False, "Failed to activate access - contact support"
+            
+    except Exception as e:
+        return False, f"Error processing code: {str(e)}"
+
+def get_friend_access_codes_status() -> list:
+    """Get status of all friend access codes (admin only)"""
+    query = """
+        SELECT code, created_at, used_at, access_tier, access_duration_days,
+               CASE WHEN used_at IS NULL THEN 'Unused' ELSE 'Used' END as status
+        FROM friend_access_codes 
+        ORDER BY created_at DESC
+        LIMIT 50
+    """
+    result = execute_db_query(query)
+    return result if result else []
 
 def is_admin(workspace_id: str, device_fingerprint: str) -> bool:
     """Check if user has admin access"""
@@ -3060,7 +3126,7 @@ if show_admin:
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Apply Override", type="primary"):
-                    if workspace_id and set_subscription_override(workspace_id, override_tier, "admin"):
+                    if workspace_id and set_subscription_override(workspace_id, override_tier, "admin", None):
                         st.success(f"✅ Tier set to: {override_tier.upper()}")
                         st.rerun()
                     else:
@@ -3075,6 +3141,55 @@ if show_admin:
                         st.error("❌ Failed to clear override")
             
             st.caption("💡 Overrides persist across sessions and devices")
+        
+        # Friend Access Code Management
+        with st.sidebar.expander("🎫 Friend Access Codes", expanded=False):
+            st.caption("Generate access codes for friends")
+            
+            # Code generation settings
+            friend_tier = st.selectbox(
+                "Access Level:",
+                options=['pro', 'pro_trader'],
+                format_func=lambda x: {
+                    'pro': '🚀 Pro Tier (Standard)',
+                    'pro_trader': '💎 Pro Trader (Premium)'
+                }[x],
+                index=1,  # Default to pro_trader
+                key="friend_tier_select"
+            )
+            
+            friend_duration = st.selectbox(
+                "Duration:",
+                options=[7, 14, 30, 60, 90],
+                format_func=lambda x: f"📅 {x} days",
+                index=2,  # Default to 30 days
+                key="friend_duration_select"
+            )
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🎫 Generate Code", type="primary", key="generate_friend_code"):
+                    new_code = create_friend_access_code(friend_tier, friend_duration)
+                    if new_code:
+                        st.success(f"✅ Code created!")
+                        st.code(new_code, language=None)
+                        st.caption(f"📱 Share this code with your friend\n📅 Valid for {friend_duration} days once used\n🔒 One-time use only")
+                    else:
+                        st.error("❌ Failed to create code")
+            
+            with col2:
+                if st.button("📊 View Codes", key="view_friend_codes"):
+                    codes = get_friend_access_codes_status()
+                    if codes:
+                        st.write("**Recent Codes:**")
+                        for code in codes[:5]:  # Show last 5 codes
+                            status_emoji = "✅" if code['status'] == 'Used' else "⏳"
+                            tier_emoji = "💎" if code['access_tier'] == 'pro_trader' else "🚀"
+                            st.text(f"{status_emoji} {code['code'][:6]}... {tier_emoji} {code['status']}")
+                    else:
+                        st.info("📝 No codes generated yet")
+            
+            st.caption("🔒 Each code works once per device only")
 
     else:
         # Admin login form
@@ -3388,7 +3503,45 @@ st.session_state.user_tier = current_tier
     
 tier_info = TIER_CONFIG[current_tier]
 
-# Display current tier status
+# Display current tier status with expiry information
+expiry_text = "Limited features"
+if current_tier != 'free':
+    expiry_text = "Active Plan"
+    
+    # Check for friend code expiry (subscription overrides)
+    if workspace_id:
+        override_query = """
+            SELECT expires_at, set_by FROM subscription_overrides 
+            WHERE workspace_id = %s AND expires_at IS NOT NULL
+            LIMIT 1
+        """
+        override_result = execute_db_query(override_query, (workspace_id,))
+        
+        if override_result and len(override_result) > 0:
+            expires_at = override_result[0]['expires_at']
+            set_by = override_result[0]['set_by']
+            
+            # Convert to datetime and calculate days remaining
+            from datetime import datetime
+            import pytz
+            
+            if expires_at:
+                if isinstance(expires_at, str):
+                    expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expires_dt = expires_at
+                
+                now_dt = datetime.now(pytz.UTC)
+                days_remaining = (expires_dt - now_dt).days
+                
+                if days_remaining > 0:
+                    if 'friend_code_' in set_by:
+                        expiry_text = f"Friend Access • {days_remaining} days left"
+                    else:
+                        expiry_text = f"Active Plan • Expires in {days_remaining} days"
+                else:
+                    expiry_text = "Expired Access"
+
 with st.sidebar.container():
     st.markdown(f"""
     <div style="
@@ -3400,7 +3553,7 @@ with st.sidebar.container():
     ">
         <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
         <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
-            {'Active Plan' if current_tier != 'free' else 'Limited features'}
+            {expiry_text}
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -3412,6 +3565,44 @@ if is_mobile:
     st.sidebar.markdown("📱 **Manage Subscription**")
     st.sidebar.caption("Tap to manage your subscription through the App Store")
     # Note: In actual iOS app, this would link to subscription management
+
+# Friend Access Code Redemption (for all users)
+st.sidebar.header("🎫 Friend Access Code")
+with st.sidebar.expander("Have a friend code?", expanded=False):
+    st.caption("Redeem a friend access code for premium features")
+    
+    friend_code_input = st.text_input(
+        "Enter friend code:",
+        placeholder="ABCD1234EFGH",
+        max_chars=12,
+        key="friend_code_input"
+    )
+    
+    if st.button("🎫 Redeem Code", type="primary", key="redeem_friend_code"):
+        if friend_code_input and len(friend_code_input.strip()) >= 8:
+            # Get user's workspace info
+            device_fingerprint = get_persistent_device_fingerprint()
+            workspace_id = get_or_create_workspace_for_device(device_fingerprint)
+            
+            if workspace_id:
+                success, message = consume_friend_access_code(
+                    friend_code_input.strip().upper(), 
+                    workspace_id, 
+                    device_fingerprint
+                )
+                
+                if success:
+                    st.success(message)
+                    st.balloons()
+                    st.rerun()  # Refresh to show new tier
+                else:
+                    st.error(message)
+            else:
+                st.error("❌ Could not link to your device - please try again")
+        else:
+            st.warning("Please enter a valid friend code (8+ characters)")
+    
+    st.caption("🔒 Codes work once per device only")
 
 # Show upgrade options for free tier users
 if current_tier == 'free':
