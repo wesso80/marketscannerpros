@@ -3143,6 +3143,7 @@ if show_admin:
             st.caption("💡 Overrides persist across sessions and devices")
         
         # Friend Access Code Management
+        st.sidebar.write("🐛 Debug: Friend Access Code section loading...")
         with st.sidebar.expander("🎫 Friend Access Codes", expanded=False):
             st.caption("Generate access codes for friends")
             
