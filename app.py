@@ -6,8 +6,6 @@
 # - CSV download
 
 import os
-import plotly.io as pio
-pio.templates.default = "plotly_dark"
 
 import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
 import psycopg2
@@ -30,7 +28,6 @@ import stripe
 
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
-import msp_skin
 
 # ================= Professional Styling =================
 st.markdown("""
