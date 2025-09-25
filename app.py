@@ -430,7 +430,28 @@ if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
     st.info("🔗 Redirecting to Privacy Policy...")
     st.stop()  # Stop execution to redirect
 
-# Handle static file serving for PWA assets at root level
+# Handle mobile parameter for WebView
+mobile_param = st.query_params.get("mobile", "false").lower() == "true"
+if mobile_param:
+    st.markdown("""
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+    /* Mobile-specific optimizations */
+    .stApp {
+        background: var(--background-gradient) !important;
+    }
+    /* Force dark backgrounds in mobile WebView */
+    .main .block-container, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+        background: var(--background-gradient) !important;
+    }
+    /* Ensure mobile headers are properly themed */
+    .main-header {
+        background: var(--background-gradient) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Handle static file serving for PWA assets at root level  
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
 
 st.markdown("""
