@@ -170,7 +170,7 @@ const SettingsScreen = () => {
         <Text style={[styles.title, { color: theme.textPrimary }]}>⚙️ Settings</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={[styles.content, { backgroundColor: theme.background }]}>
         {/* Subscription Section */}
         <View style={[styles.section, { backgroundColor: theme.sectionBackground }]}>
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>📱 Subscription</Text>
@@ -316,13 +316,13 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    // backgroundColor removed - now uses theme.background dynamically
   },
   header: {
     padding: 20,
-    backgroundColor: 'white',
+    // backgroundColor removed - now uses theme.headerBackground dynamically
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    // borderBottomColor removed - now uses theme.borderColor dynamically
   },
   title: {
     fontSize: 24,
@@ -331,9 +331,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    // backgroundColor removed - now uses theme.background dynamically  
   },
   section: {
-    backgroundColor: 'white',
+    // backgroundColor removed - now uses theme.sectionBackground dynamically
     marginVertical: 8,
     paddingVertical: 16,
   },
