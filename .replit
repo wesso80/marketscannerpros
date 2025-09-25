@@ -30,9 +30,5 @@ channel = "stable-25_05"
 packages = ["cargo", "glibcLocales", "libiconv", "libxcrypt", "rustc"]
 
 [[ports]]
-localPort = 3000
-externalPort = 3000
-
-[[ports]]
 localPort = 5000
 externalPort = 80
