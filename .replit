@@ -1,5 +1,12 @@
-run = "bash -lc 'python -m pip install -q --upgrade pip && python -m pip install -q -r requirements.txt && python -m streamlit run app.py --server.address=0.0.0.0 --server.port=$PORT --server.enableCORS=false'"
-modules = ["python-3.11"]
+modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib"]
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 
 [workflows]
 runButton = "Project"
@@ -11,7 +18,27 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "install_dependencies"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "Market Scanner"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apple IAP API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Market Data API"
+
+[[workflows.workflow]]
+name = "install_dependencies"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "uv add yfinance pandas numpy requests python-dateutil"
 
 [[workflows.workflow]]
 name = "Market Scanner"
@@ -25,10 +52,65 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[nix]
-channel = "stable-25_05"
-packages = ["cargo", "glibcLocales", "libiconv", "libxcrypt", "rustc"]
+[[workflows.workflow]]
+name = "Apple IAP API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python iap_api.py"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Market Data API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python market_data_api.py"
+waitForPort = 8001
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 3002
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 36003
+externalPort = 3003
+
+[[ports]]
+localPort = 36733
+externalPort = 3001
+
+[[ports]]
+localPort = 39849
+externalPort = 5000
+
+[[ports]]
+localPort = 40897
+externalPort = 5173
+
+[[ports]]
+localPort = 41087
+externalPort = 4200
+
+[[ports]]
+localPort = 42595
+externalPort = 3000
+
+[[ports]]
+localPort = 45401
+externalPort = 6000
+
+[agent]
+integrations = ["python_sendgrid:1.0.0"]
