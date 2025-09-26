@@ -701,14 +701,16 @@ SUBSCRIPTION_PLANS = {
     "pro": {
         "name": "Pro",
         "price": 4.99,
+        "free_trial_days": 7,
         "price_id": None,  # Will be set when creating Stripe products
-        "features": ["Real-time market data", "Technical analysis", "Basic alerts"]
+        "features": ["Multi-TF confluence", "Squeezes", "Exports"]
     },
     "pro_trader": {
-        "name": "Pro Trader", 
+        "name": "Full Pro Trader", 
         "price": 9.99,
+        "free_trial_days": 5,
         "price_id": None,  # Will be set when creating Stripe products
-        "features": ["Everything in Pro", "Advanced analytics", "Premium alerts", "Priority support"]
+        "features": ["All Pro features", "Advanced alerts", "Priority support"]
     }
 }
 
@@ -3223,12 +3225,12 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
                 description=f"Market Scanner - Workspace {workspace_id[:8]}"
             )
         
-        # Create checkout session
-        session = stripe.checkout.Session.create(
-            customer=customer.id,
-            payment_method_types=['card'],
-            mode='subscription',
-            line_items=[{
+        # Create checkout session with free trial
+        session_params = {
+            'customer': customer.id,
+            'payment_method_types': ['card'],
+            'mode': 'subscription',
+            'line_items': [{
                 'price_data': {
                     'currency': 'usd',
                     'product_data': {
@@ -3240,13 +3242,21 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
                 },
                 'quantity': 1,
             }],
-            metadata={
+            'metadata': {
                 'workspace_id': workspace_id,
                 'plan_code': plan_code
             },
-            success_url=f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}"
-        )
+            'success_url': f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}?session_id={{CHECKOUT_SESSION_ID}}",
+            'cancel_url': f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}"
+        }
+        
+        # Add free trial if configured
+        if 'free_trial_days' in plan and plan['free_trial_days'] > 0:
+            session_params['subscription_data'] = {
+                'trial_period_days': plan['free_trial_days']
+            }
+        
+        session = stripe.checkout.Session.create(**session_params)
         
         return session.url, None
     except Exception as e:
@@ -3922,25 +3932,23 @@ if current_tier == 'free':
         # Apple-compliant paywall with professional card design
         st.markdown("""
         <div class="tier-card">
-            <h3>🚀 Market Scanner Pro</h3>
+            <h3>🚀 Pro <span style="background: var(--accent-color); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; margin-left: 8px;">7-day free trial</span></h3>
             <div class="price-display">$4.99 <span class="price-period">per month</span></div>
             <ul class="feature-list">
-                <li>Unlimited market scans</li>
-                <li>Advanced charts & indicators</li>
-                <li>Real-time price alerts</li>
-                <li>Portfolio tracking</li>
+                <li>Multi-TF confluence</li>
+                <li>Squeezes</li>
+                <li>Exports</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
         <div class="tier-card premium">
-            <h3>💎 Market Scanner Pro Trader</h3>
+            <h3>💎 Full Pro Trader <span style="background: var(--accent-color); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; margin-left: 8px;">5-day free trial</span></h3>
             <div class="price-display">$9.99 <span class="price-period">per month</span></div>
             <ul class="feature-list">
-                <li>Everything in Pro</li>
-                <li>Advanced backtesting</li>
-                <li>Custom trading algorithms</li>
+                <li>All Pro features</li>
+                <li>Advanced alerts</li>
                 <li>Priority support</li>
             </ul>
         </div>
