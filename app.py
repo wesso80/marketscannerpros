@@ -26,8 +26,34 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
+# --- Detect if running in mobile app (?mobile=true) ---
+params = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
+val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", ""))).lower()
+is_mobile = val in ("1", "true", "yes", "y")
+
+
+# --- Detect if running in mobile app (from ?mobile=true) ---
+import streamlit as st
+
+try:
+    qp = st.query_params  # Newer Streamlit
+except Exception:
+    qp = st.experimental_get_query_params()  # Older Streamlit
+
+is_mobile = False
+if "mobile" in qp:
+    val = str(qp["mobile"][0] if isinstance(qp["mobile"], list) else qp["mobile"]).lower()
+    is_mobile = val in ("1", "true", "yes")
+
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
+st.sidebar.write("Mode:", "Mobile" if is_mobile else "Web")
+
+# --- Detect if running in mobile app (?mobile=true) ---
+params = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
+val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", "")).lower())
+is_mobile = val in ("1","true","yes","y")
+
 
 # ================= Professional Styling =================
 st.markdown("""
@@ -46,6 +72,44 @@ st.markdown("""
     --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --border-radius: 12px;
     --spacing-unit: 1rem;
+    
+    /* Light theme colors */
+    --card-bg: white;
+    --metric-card-bg: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    --text-color: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+}
+
+/* Dark theme for mobile apps and prefers-color-scheme: dark */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #e5e7eb;
+        --background-gradient: linear-gradient(135deg, #0b0b0d 0%, #1a1a1d 100%);
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        
+        /* Dark theme colors */
+        --card-bg: #1b1c21;
+        --metric-card-bg: linear-gradient(135deg, #1b1c21 0%, #2a2a2d 100%);
+        --text-color: #e8e8ea;
+        --text-muted: #9ca3af;
+        --border-color: rgba(255,255,255,0.08);
+    }
+}
+
+/* Force dark mode for mobile apps (detected via user agent or mobile parameter) */
+html[data-mobile-dark="true"] {
+    --primary-color: #e5e7eb !important;
+    --background-gradient: linear-gradient(135deg, #0b0b0d 0%, #1a1a1d 100%) !important;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
+    
+    --card-bg: #1b1c21 !important;
+    --metric-card-bg: linear-gradient(135deg, #1b1c21 0%, #2a2a2d 100%) !important;
+    --text-color: #e8e8ea !important;
+    --text-muted: #9ca3af !important;
+    --border-color: rgba(255,255,255,0.08) !important;
 }
 
 /* Main App Background */
@@ -93,12 +157,12 @@ st.markdown("""
 
 /* Professional Cards */
 .pro-card {
-    background: white;
+    background: var(--card-bg);
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 1rem 0;
     box-shadow: var(--card-shadow);
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     transition: all 0.3s ease;
 }
 
@@ -108,7 +172,7 @@ st.markdown("""
 }
 
 .pro-card h3 {
-    color: var(--primary-color);
+    color: var(--text-color);
     font-weight: 600;
     margin-bottom: 1rem;
     font-size: 1.25rem;
@@ -116,7 +180,7 @@ st.markdown("""
 
 /* Metrics Cards */
 .metric-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    background: var(--metric-card-bg);
     border-radius: var(--border-radius);
     padding: 1.5rem;
     margin: 0.5rem 0;
@@ -132,13 +196,13 @@ st.markdown("""
 .metric-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: var(--text-color);
     margin: 0;
 }
 
 .metric-label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--text-muted);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -3143,7 +3207,6 @@ if show_admin:
             st.caption("💡 Overrides persist across sessions and devices")
         
         # Friend Access Code Management
-        st.sidebar.write("🐛 Debug: Friend Access Code section loading...")
         with st.sidebar.expander("🎫 Friend Access Codes", expanded=False):
             st.caption("Generate access codes for friends")
             
@@ -5302,3 +5365,12 @@ with col1:
     st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpro.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
+# === Mobile legacy style overrides (iOS/Android only) ===
+if 'is_mobile' in globals() and is_mobile:
+    st.markdown("""
+<style>
+html, body, .stApp { background:#ffffff !important; color:#111 !important; }
+.pro-card, .metric-card, .tier-card { background:#ffffff !important; color:#111 !important; }
+.stButton > button { background:#2563eb !important; color:#fff !important; }
+</style>
+""", unsafe_allow_html=True)
