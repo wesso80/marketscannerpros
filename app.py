@@ -26,6 +26,28 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
+# ================= HEALTH CHECK ENDPOINT =================
+# Simple health check for deployment readiness
+try:
+    qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
+    health_param = qp.get('health', [''])
+    health_check = str(health_param[0] if isinstance(health_param, list) else health_param).lower()
+    
+    if health_check in ('check', '1', 'true', 'ping'):
+        st.json({
+            "status": "healthy",
+            "service": "market-scanner",
+            "version": "1.0.0",
+            "timestamp": datetime.now().isoformat(),
+            "database": "connected" if os.getenv("DATABASE_URL") else "not_configured",
+            "stripe": "configured" if os.getenv("STRIPE_SECRET_KEY") else "not_configured"
+        })
+        st.stop()  # Return only health check response
+except Exception as e:
+    if health_check in ('check', '1', 'true', 'ping'):
+        st.json({"status": "error", "error": str(e)})
+        st.stop()
+
 # ================= MOBILE DETECTION (CONSOLIDATED) =================
 # Detect mobile once at the top using proper headers and query params
 if 'is_mobile' not in st.session_state:

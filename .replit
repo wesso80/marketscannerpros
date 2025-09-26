@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib", "nano"]
+packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "nano", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -18,27 +18,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "install_dependencies"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Market Scanner"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Apple IAP API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Market Data API"
-
-[[workflows.workflow]]
-name = "install_dependencies"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "uv add yfinance pandas numpy requests python-dateutil"
 
 [[workflows.workflow]]
 name = "Market Scanner"
@@ -49,32 +29,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
+args = "cd /tmp/app && python -m streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Apple IAP API"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python iap_api.py"
-waitForPort = 8000
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow]]
-name = "Market Data API"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python market_data_api.py"
-waitForPort = 8001
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[ports]]
 localPort = 3000
@@ -95,6 +51,10 @@ externalPort = 3001
 [[ports]]
 localPort = 38229
 externalPort = 6800
+
+[[ports]]
+localPort = 39359
+externalPort = 8081
 
 [[ports]]
 localPort = 39849
@@ -119,10 +79,6 @@ externalPort = 3000
 [[ports]]
 localPort = 45401
 externalPort = 6000
-
-[[ports]]
-localPort = 45707
-externalPort = 8099
 
 [[ports]]
 localPort = 46449
