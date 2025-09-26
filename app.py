@@ -85,7 +85,7 @@ st.markdown("""
 @media (prefers-color-scheme: dark) {
     :root {
         --primary-color: #e5e7eb;
-        --background-gradient: linear-gradient(135deg, #0b0b0d 0%, #1a1a1d 100%);
+        --background-gradient: #0b0b0d;
         --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
         --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
         
@@ -96,12 +96,17 @@ st.markdown("""
         --text-muted: #9ca3af;
         --border-color: rgba(255,255,255,0.08);
     }
+    
+    /* Force main content area to full black */
+    .stApp, .main .block-container {
+        background: #0b0b0d !important;
+    }
 }
 
 /* Force dark mode for mobile apps (detected via user agent or mobile parameter) */
 html[data-mobile-dark="true"] {
     --primary-color: #e5e7eb !important;
-    --background-gradient: linear-gradient(135deg, #0b0b0d 0%, #1a1a1d 100%) !important;
+    --background-gradient: #0b0b0d !important;
     --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
     --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
     
@@ -110,6 +115,12 @@ html[data-mobile-dark="true"] {
     --text-color: #e8e8ea !important;
     --text-muted: #9ca3af !important;
     --border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* Force main content to full black for mobile dark mode */
+html[data-mobile-dark="true"] .stApp,
+html[data-mobile-dark="true"] .main .block-container {
+    background: #0b0b0d !important;
 }
 
 /* Main App Background */
