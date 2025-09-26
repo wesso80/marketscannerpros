@@ -411,11 +411,45 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
     margin-bottom: 16px;
 }
 
+/* Fix for number input width issues - ensure readable numbers */
+.stNumberInput > div > div > input {
+    min-width: 120px !important;
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+}
+
+/* Fix for column layout number inputs */
+[data-testid="column"] .stNumberInput {
+    width: 100% !important;
+}
+
+[data-testid="column"] .stNumberInput > div {
+    width: 100% !important;
+}
+
+/* Ensure metric displays don't truncate */
+.stMetric {
+    min-width: 140px !important;
+}
+
+.stMetric > div {
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+
 /* Mobile responsive sidebar */
 @media (max-width: 768px) {
     [data-testid="stSidebar"] {
         width: 100% !important;
         min-width: auto !important;
+    }
+    
+    /* Better mobile number inputs */
+    .stNumberInput > div > div > input {
+        min-width: 100px !important;
+        font-size: 0.9rem !important;
     }
 }
 
@@ -5074,20 +5108,22 @@ with col3:
 with col4:
     backtest_timeframe = st.selectbox("Timeframe:", ["1D", "1h"], key="backtest_timeframe")
 
-# Backtest parameters
-col1, col2, col3, col4 = st.columns(4)
+# Backtest parameters - using wider columns for better readability
+col1, col2 = st.columns(2)
 
 with col1:
-    initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
+    sub_col1, sub_col2 = st.columns(2)
+    with sub_col1:
+        initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
+    with sub_col2:
+        risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
 
 with col2:
-    risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
-
-with col3:
-    stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
-
-with col4:
-    min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
+    sub_col3, sub_col4 = st.columns(2)
+    with sub_col3:
+        stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
+    with sub_col4:
+        min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
 
 # Symbol selection for backtesting
 st.write("**Select Symbols for Backtesting:**")
@@ -5326,24 +5362,27 @@ with col1:
     portfolio_metrics = calculate_portfolio_metrics()
     
     if portfolio_metrics:
-        col1_1, col1_2, col1_3, col1_4 = st.columns(4)
+        # Use wider columns layout to prevent metric truncation
+        col1_1, col1_2 = st.columns(2)
         
         with col1_1:
-            market_value = portfolio_metrics.get('total_market_value', 0)
-            st.metric("Market Value", f"${market_value:,.2f}")
+            sub_col1, sub_col2 = st.columns(2)
+            with sub_col1:
+                market_value = portfolio_metrics.get('total_market_value', 0)
+                st.metric("Market Value", f"${market_value:,.2f}")
+            with sub_col2:
+                total_return = portfolio_metrics.get('total_return_pct', 0)
+                color = "green" if total_return >= 0 else "red"
+                st.metric("Total Return", f"{total_return:.2f}%", delta=None)
         
         with col1_2:
-            total_return = portfolio_metrics.get('total_return_pct', 0)
-            color = "green" if total_return >= 0 else "red"
-            st.metric("Total Return", f"{total_return:.2f}%", delta=None)
-        
-        with col1_3:
-            unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
-            st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
-        
-        with col1_4:
-            num_positions = portfolio_metrics.get('total_positions', 0)
-            st.metric("Positions", num_positions)
+            sub_col3, sub_col4 = st.columns(2)
+            with sub_col3:
+                unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
+                st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+            with sub_col4:
+                num_positions = portfolio_metrics.get('total_positions', 0)
+                st.metric("Positions", num_positions)
 
 with col2:
     # Quick actions
