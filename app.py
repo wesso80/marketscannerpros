@@ -4027,8 +4027,18 @@ with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
 # Compact subscription summary for sidebar
 if current_tier == 'free':
     st.sidebar.info("📱 **Free Tier** - Limited features")
-    if st.sidebar.button("⬆️ **Upgrade to Pro** - 7-day free trial starting at $4.99/month", help="Unlock premium features"):
-        st.info("💡 **Detailed upgrade options moved to main content area for better visibility!**")
+    
+    # Show both upgrade options in sidebar for better visibility
+    st.sidebar.markdown("**💼 Upgrade Plans:**")
+    
+    # Pro Plan - $4.99/month
+    if st.sidebar.button("🚀 **Pro Plan** - $4.99/month", help="7-day free trial • Unlimited scans & alerts", key="sidebar_pro"):
+        st.info("💡 **Pro Plan Selected** - Details below:")
+        st.markdown("**Choose your plan below:**")
+    
+    # Pro Trader Plan - $9.99/month  
+    if st.sidebar.button("💎 **Pro Trader** - $9.99/month", help="5-day free trial • Everything in Pro + backtesting", key="sidebar_trader"):
+        st.info("💡 **Pro Trader Plan Selected** - Details below:")
         st.markdown("**Choose your plan below:**")
         
         st.markdown("---")
