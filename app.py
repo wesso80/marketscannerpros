@@ -49,10 +49,23 @@ if "mobile" in qp:
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 st.sidebar.write("Mode:", "Mobile" if is_mobile else "Web")
 
-# --- Detect if running in mobile app (?mobile=true) ---
+# --- Enhanced mobile app detection ---
 params = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
 val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", "")).lower())
-is_mobile = val in ("1","true","yes","y")
+query_mobile = val in ("1","true","yes","y")
+
+# Additional mobile detection via user agent
+import re
+user_agent = st.session_state.get('user_agent', '')
+if 'HTTP_USER_AGENT' in st.session_state:
+    user_agent = st.session_state['HTTP_USER_AGENT'] 
+
+# Detect mobile environments
+ua_mobile = any(keyword in user_agent.lower() for keyword in [
+    'mobile', 'ios', 'iphone', 'android', 'capacitor', 'marketscannerpro', 'wv'
+])
+
+is_mobile = query_mobile or ua_mobile
 
 
 # ================= Professional Styling =================
@@ -447,18 +460,38 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# Simple mobile dark mode handler
+# Enhanced mobile detection and dark mode handler
 st.markdown("""
 <script>
 (function() {
-    // Check if running in mobile app and force dark mode
+    // Enhanced mobile app detection
     const urlParams = new URLSearchParams(window.location.search);
     const mobileParam = urlParams.get('mobile');
-    const isMobileApp = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
+    const mobileFromQuery = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
+    
+    // Detect various mobile app environments
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isWebView = userAgent.includes('wv') || 
+                      userAgent.includes('mobile') ||
+                      userAgent.includes('ios') ||
+                      userAgent.includes('iphone') ||
+                      userAgent.includes('android');
+    
+    const isCapacitor = window.Capacitor !== undefined;
+    const isStandalone = window.navigator.standalone === true;
+    const isCustomUA = userAgent.includes('marketscannerpro');
+    
+    // Consider it mobile if any mobile indicator is present
+    const isMobileApp = mobileFromQuery || isWebView || isCapacitor || isStandalone || isCustomUA;
     
     if (isMobileApp) {
         document.documentElement.setAttribute('data-mobile-dark', 'true');
         document.documentElement.style.colorScheme = 'dark';
+        
+        // Update the Python mobile state via global flag
+        window.__detectedMobile = true;
+    } else {
+        window.__detectedMobile = false;
     }
 })();
 </script>
