@@ -577,6 +577,29 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
     font-weight: 700;
 }
 
+/* Promotional Button - Hero section marketing (non-functional) */
+.promo-button {
+    background: linear-gradient(135deg, #374151, #4B5563) !important;
+    color: #9CA3AF !important;
+    padding: 0.875rem 2rem !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    border: 1px solid #4B5563 !important;
+    border-radius: var(--border-radius) !important;
+    transition: all 0.3s ease !important;
+    text-transform: none !important;
+    letter-spacing: 0.25px !important;
+    opacity: 0.8;
+    cursor: default;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.promo-button:hover {
+    background: linear-gradient(135deg, #4B5563, #6B7280) !important;
+    transform: none !important;
+    opacity: 0.9;
+}
+
 /* Secondary Button */
 .secondary-button {
     background: transparent !important;
@@ -2954,7 +2977,7 @@ try:
         <h1>Scan crypto & stocks across timeframes — fast.</h1>
         <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
         <div class="hero-buttons">
-            <span class="primary-button">🚀 Start Scanning</span>
+            <span class="promo-button">🚀 Start Scanning (Demo)</span>
             <span class="secondary-button">📊 View Results</span>
         </div>
     </div>
@@ -2966,7 +2989,7 @@ except FileNotFoundError:
         <h1>Scan crypto & stocks across timeframes — fast.</h1>
         <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
         <div class="hero-buttons">
-            <span class="primary-button">🚀 Start Scanning</span>
+            <span class="promo-button">🚀 Start Scanning (Demo)</span>
             <span class="secondary-button">📊 View Results</span>
         </div>
     </div>
