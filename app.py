@@ -3700,42 +3700,42 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
     
         # Pair with token section
         with st.expander("🔢 Enter Pairing Code", expanded=False):
-        st.write("**Have a pairing code from another device?**")
-        pair_token = st.text_input("Enter pairing code:", max_chars=6, key="pair_token_input")
-        if st.button("📲 Pair Device", key="pair_device"):
-            if pair_token:
-                new_device_fp = generate_device_fingerprint()
-                result_workspace = consume_pairing_token(pair_token, new_device_fp, "web", "Web Browser")
-                if result_workspace:
-                    # Switch to the paired workspace
-                    st.session_state.workspace_id = result_workspace
-                    st.session_state.device_fingerprint = new_device_fp
-                    st.success("✅ Device paired successfully!")
-                    st.rerun()
+            st.write("**Have a pairing code from another device?**")
+            pair_token = st.text_input("Enter pairing code:", max_chars=6, key="pair_token_input")
+            if st.button("📲 Pair Device", key="pair_device"):
+                if pair_token:
+                    new_device_fp = generate_device_fingerprint()
+                    result_workspace = consume_pairing_token(pair_token, new_device_fp, "web", "Web Browser")
+                    if result_workspace:
+                        # Switch to the paired workspace
+                        st.session_state.workspace_id = result_workspace
+                        st.session_state.device_fingerprint = new_device_fp
+                        st.success("✅ Device paired successfully!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid or expired pairing code")
                 else:
-                    st.error("❌ Invalid or expired pairing code")
-            else:
-                st.error("Please enter a pairing code")
+                    st.error("Please enter a pairing code")
     
         # Device management
         if devices and len(devices) > 1:
             with st.expander("⚙️ Manage Devices", expanded=False):
-            for device in devices:
-                device_name = device['device_name'] or "Unknown Device"
-                platform = device['platform'] or "unknown"
-                is_current = device['device_fingerprint'] == st.session_state.device_fingerprint
-                
-                if is_current:
-                    st.write(f"📱 **{device_name}** ({platform}) - *This device*")
-                else:
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"📱 {device_name} ({platform})")
-                    with col2:
-                        if st.button("🗑️", key=f"revoke_{device['device_fingerprint'][:8]}", help="Remove device"):
-                            if revoke_device(st.session_state.workspace_id, device['device_fingerprint']):
-                                st.success("Device removed")
-                                st.rerun()
+                for device in devices:
+                    device_name = device['device_name'] or "Unknown Device"
+                    platform = device['platform'] or "unknown"
+                    is_current = device['device_fingerprint'] == st.session_state.device_fingerprint
+                    
+                    if is_current:
+                        st.write(f"📱 **{device_name}** ({platform}) - *This device*")
+                    else:
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.write(f"📱 {device_name} ({platform})")
+                        with col2:
+                            if st.button("🗑️", key=f"revoke_{device['device_fingerprint'][:8]}", help="Remove device"):
+                                if revoke_device(st.session_state.workspace_id, device['device_fingerprint']):
+                                    st.success("Device removed")
+                                    st.rerun()
 
     else:
         st.error("❌ Workspace initialization failed")
