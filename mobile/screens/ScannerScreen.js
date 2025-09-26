@@ -26,7 +26,7 @@ const ScannerScreen = () => {
 
   const initializeApp = async () => {
     const tierData = await checkSubscriptionTier();
-    await runScan(tierData.isFreeTier);
+    await runScan(tierData.isFreeTier, 'equity'); // Default to equity scan
   };
 
   const checkSubscriptionTier = async () => {
@@ -47,14 +47,22 @@ const ScannerScreen = () => {
   // Note: No need for re-scan effect - initializeApp handles first scan
   // If subscription changes (upgrades), it should be handled in upgrade flow
 
-  const defaultSymbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'META', 'GOOGL', 'AMZN'];
+  const defaultEquitySymbols = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'META', 'GOOGL', 'AMZN'];
+  const defaultCryptoSymbols = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD', 'ADA-USD', 'DOGE-USD', 'AVAX-USD'];
+  
+  const [scanType, setScanType] = useState('equity'); // 'equity' or 'crypto'
 
-  const runScan = async (freeTierOverride = null) => {
+  const runScan = async (freeTierOverride = null, scanTypeOverride = null) => {
     try {
       setLoading(true);
       const isFree = freeTierOverride !== null ? freeTierOverride : isFreeTier;
-      const symbols = isFree ? defaultSymbols.slice(0, 4) : defaultSymbols;
-      const results = await MarketDataService.getScanResults(symbols, '1D', isFree);
+      const currentScanType = scanTypeOverride || scanType;
+      
+      const allSymbols = currentScanType === 'crypto' ? defaultCryptoSymbols : defaultEquitySymbols;
+      const symbols = isFree ? allSymbols.slice(0, 4) : allSymbols;
+      const timeframe = currentScanType === 'crypto' ? '1h' : '1D'; // Crypto uses 1h, equity uses 1D
+      
+      const results = await MarketDataService.getScanResults(symbols, timeframe, isFree);
       setScanResults(results?.results || []);
     } catch (error) {
       Alert.alert('Error', 'Failed to run market scan');
@@ -109,18 +117,36 @@ const ScannerScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>📊 Market Scanner</Text>
-        <TouchableOpacity
-          style={[styles.scanButton, loading && styles.scanButtonDisabled]}
-          onPress={runScan}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={styles.scanButtonText}>🔎 Scan</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>📊 Market Scanner</Text>
+          <TouchableOpacity
+            style={[styles.scanButton, loading && styles.scanButtonDisabled]}
+            onPress={() => runScan(null, scanType)}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.scanButtonText}>🔎 Scan {scanType === 'crypto' ? 'Crypto' : 'Stocks'}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        
+        {/* Scan Type Toggle */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity
+            style={[styles.toggleButton, scanType === 'equity' && styles.toggleButtonActive]}
+            onPress={() => setScanType('equity')}
+          >
+            <Text style={[styles.toggleText, scanType === 'equity' && styles.toggleTextActive]}>📈 Stocks</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleButton, scanType === 'crypto' && styles.toggleButtonActive]}
+            onPress={() => setScanType('crypto')}
+          >
+            <Text style={[styles.toggleText, scanType === 'crypto' && styles.toggleTextActive]}>₿ Crypto</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {subscriptionLoaded && isFreeTier && (
@@ -152,13 +178,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     padding: 20,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 2,
+    marginBottom: 15,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  toggleTextActive: {
+    color: 'white',
   },
   title: {
     fontSize: 24,
