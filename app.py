@@ -54,18 +54,21 @@ params = st.query_params if hasattr(st, "query_params") else st.experimental_get
 val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", "")).lower())
 query_mobile = val in ("1","true","yes","y")
 
-# Additional mobile detection via user agent
-import re
-user_agent = st.session_state.get('user_agent', '')
-if 'HTTP_USER_AGENT' in st.session_state:
-    user_agent = st.session_state['HTTP_USER_AGENT'] 
+# Force mobile mode for iOS/iPhone apps (TestFlight, PWA)
+import streamlit as st
+try:
+    # Try to get user agent from request headers
+    from streamlit.web.server.websocket_headers import _get_websocket_headers
+    headers = _get_websocket_headers()
+    user_agent = headers.get('user-agent', '').lower() if headers else ''
+except:
+    user_agent = ''
 
-# Detect mobile environments
-ua_mobile = any(keyword in user_agent.lower() for keyword in [
-    'mobile', 'ios', 'iphone', 'android', 'capacitor', 'marketscannerpro', 'wv'
-])
+# Simple mobile detection - if iPhone/iOS detected, force mobile mode
+ua_mobile = 'iphone' in user_agent or 'ios' in user_agent or 'mobile' in user_agent
 
-is_mobile = query_mobile or ua_mobile
+# For TestFlight/iOS apps, force mobile mode
+is_mobile = query_mobile or ua_mobile or True  # Temporary: Always mobile for testing
 
 
 # ================= Professional Styling =================
