@@ -5447,7 +5447,7 @@ st.markdown("""
 # Add Privacy Policy link separately with proper HTML
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpro.app", unsafe_allow_html=True)
+    st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
 # === Mobile legacy style overrides (iOS/Android only) ===
