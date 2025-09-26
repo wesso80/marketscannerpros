@@ -4077,12 +4077,17 @@ if current_tier == 'free':
                 if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
                     if workspace_id:
                         # Create Stripe checkout session for web/android users
-                        checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
+                        with st.spinner("Creating secure checkout session..."):
+                            checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
+                        
                         if checkout_url:
-                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
-                            st.success("🔗 Redirecting to secure checkout...")
+                            st.success("✅ Checkout session created successfully!")
+                            st.info("🔗 Redirecting to Stripe checkout...")
+                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
+                            st.markdown(f'**Or click here:** [Complete Pro Subscription]({checkout_url})')
                         else:
-                            st.error(f"❌ Checkout error: {error}")
+                            st.error(f"❌ Stripe Checkout Error: {error}")
+                            st.warning("💡 Stripe checkout is not available. Using demo mode instead.")
                             # Fallback to demo mode if Stripe fails
                             success, result = create_subscription(workspace_id, 'pro', 'web', 'monthly')
                             if success:
@@ -4097,12 +4102,17 @@ if current_tier == 'free':
                 if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
                     if workspace_id:
                         # Create Stripe checkout session for web/android users
-                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        with st.spinner("Creating secure checkout session..."):
+                            checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        
                         if checkout_url:
-                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
-                            st.success("🔗 Redirecting to secure checkout...")
+                            st.success("✅ Checkout session created successfully!")
+                            st.info("🔗 Redirecting to Stripe checkout...")
+                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
+                            st.markdown(f'**Or click here:** [Complete Pro Trader Subscription]({checkout_url})')
                         else:
-                            st.error(f"❌ Checkout error: {error}")
+                            st.error(f"❌ Stripe Checkout Error: {error}")
+                            st.warning("💡 Stripe checkout is not available. Using demo mode instead.")
                             # Fallback to demo mode if Stripe fails
                             success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
                             if success:
