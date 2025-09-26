@@ -26,49 +26,36 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 import stripe
 
-# --- Detect if running in mobile app (?mobile=true) ---
-params = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
-val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", ""))).lower()
-is_mobile = val in ("1", "true", "yes", "y")
+# ================= MOBILE DETECTION (CONSOLIDATED) =================
+# Detect mobile once at the top using proper headers and query params
+if 'is_mobile' not in st.session_state:
+    # Check query parameter override first
+    try:
+        qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
+        mobile_param = qp.get('mobile', [''])
+        mobile_query = str(mobile_param[0] if isinstance(mobile_param, list) else mobile_param).lower()
+        query_override = mobile_query in ('1', 'true', 'yes', 'y') if mobile_query else None
+    except:
+        query_override = None
+    
+    # Check User-Agent from headers (proper method)
+    try:
+        headers = st.context.headers if hasattr(st, 'context') and hasattr(st.context, 'headers') else {}
+        user_agent = headers.get('User-Agent', '').lower()
+        ua_mobile = any(keyword in user_agent for keyword in ['iphone', 'ios', 'mobile', 'android', 'ipad'])
+    except:
+        ua_mobile = False
+    
+    # Final decision: query override wins, then user agent detection
+    st.session_state.is_mobile = query_override if query_override is not None else ua_mobile
 
-
-# --- Detect if running in mobile app (from ?mobile=true) ---
-import streamlit as st
-
-try:
-    qp = st.query_params  # Newer Streamlit
-except Exception:
-    qp = st.experimental_get_query_params()  # Older Streamlit
-
-is_mobile = False
-if "mobile" in qp:
-    val = str(qp["mobile"][0] if isinstance(qp["mobile"], list) else qp["mobile"]).lower()
-    is_mobile = val in ("1", "true", "yes")
+is_mobile = st.session_state.is_mobile
 
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
+
+# Show mode in sidebar AFTER mobile detection is complete
 st.sidebar.write("Mode:", "Mobile" if is_mobile else "Web")
-
-# --- Enhanced mobile app detection ---
-params = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
-val = str((params.get("mobile", [""])[0] if isinstance(params.get("mobile"), list) else params.get("mobile", "")).lower())
-query_mobile = val in ("1","true","yes","y")
-
-# Force mobile mode for iOS/iPhone apps (TestFlight, PWA)
-import streamlit as st
-try:
-    # Try to get user agent from request headers
-    from streamlit.web.server.websocket_headers import _get_websocket_headers
-    headers = _get_websocket_headers()
-    user_agent = headers.get('user-agent', '').lower() if headers else ''
-except:
-    user_agent = ''
-
-# Simple mobile detection - if iPhone/iOS detected, force mobile mode
-ua_mobile = 'iphone' in user_agent or 'ios' in user_agent or 'mobile' in user_agent
-
-# For TestFlight/iOS apps, force mobile mode
-is_mobile = query_mobile or ua_mobile or True  # Temporary: Always mobile for testing
 
 
 # ================= Professional Styling =================
@@ -476,97 +463,30 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# BRUTE FORCE Mobile Dark Mode - Inject CSS via JavaScript for maximum priority
+# Client-side iOS TestFlight detection bootstrap
 st.markdown("""
 <script>
 (function() {
-    // Enhanced mobile app detection
+    // Only run if no mobile parameter is already present
     const urlParams = new URLSearchParams(window.location.search);
-    const mobileParam = urlParams.get('mobile');
-    const mobileFromQuery = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
-    
-    // Detect various mobile app environments  
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isWebView = userAgent.includes('wv') || 
-                      userAgent.includes('mobile') ||
-                      userAgent.includes('ios') ||
-                      userAgent.includes('iphone') ||
-                      userAgent.includes('android');
-    
-    const isCapacitor = window.Capacitor !== undefined;
-    const isStandalone = window.navigator.standalone === true;
-    const isCustomUA = userAgent.includes('marketscannerpro');
-    
-    // Consider it mobile if any mobile indicator is present OR force for testing
-    const isMobileApp = mobileFromQuery || isWebView || isCapacitor || isStandalone || isCustomUA || true; // FORCE MOBILE
-    
-    if (isMobileApp) {
-        document.documentElement.setAttribute('data-mobile-dark', 'true');
-        document.documentElement.style.colorScheme = 'dark';
+    if (!urlParams.get('mobile')) {
+        // Detect iOS TestFlight/PWA/WebView environments
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isIOSApp = (
+            userAgent.includes('iphone') || 
+            userAgent.includes('ipad') || 
+            userAgent.includes('ios') ||
+            window.navigator.standalone === true ||
+            (window.webkit && window.webkit.messageHandlers) ||
+            window.DeviceMotionEvent !== undefined
+        );
         
-        // BRUTE FORCE CSS - Inject after all other CSS loads
-        setTimeout(function() {
-            const bruteForceCSS = document.createElement('style');
-            bruteForceCSS.innerHTML = \`
-                /* BRUTE FORCE MOBILE DARK MODE - CANNOT BE OVERRIDDEN */
-                html[data-mobile-dark="true"] *, 
-                html[data-mobile-dark="true"] *::before,
-                html[data-mobile-dark="true"] *::after,
-                html[data-mobile-dark="true"] html,
-                html[data-mobile-dark="true"] body,
-                html[data-mobile-dark="true"] .stApp,
-                html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
-                html[data-mobile-dark="true"] .main .block-container,
-                html[data-mobile-dark="true"] section.main,
-                html[data-mobile-dark="true"] .block-container,
-                html[data-mobile-dark="true"] div[data-testid="block-container"] {
-                    background-color: rgb(14, 17, 23) !important;
-                    background: rgb(14, 17, 23) !important;
-                    color: rgb(250, 250, 250) !important;
-                    color-scheme: dark !important;
-                }
-                
-                /* Force specific Streamlit containers */
-                html[data-mobile-dark="true"] div.stApp,
-                html[data-mobile-dark="true"] section[data-testid="stAppViewContainer"],
-                html[data-mobile-dark="true"] div[data-testid="stAppViewContainer"],
-                html[data-mobile-dark="true"] section.main.st-emotion-cache-bm2z3a.ea3mdgi8,
-                html[data-mobile-dark="true"] div[data-testid="block-container"] {
-                    background-color: rgb(14, 17, 23) !important;
-                    background: rgb(14, 17, 23) !important;
-                }
-            \`;
-            document.head.appendChild(bruteForceCSS);
-            
-            // Force style attributes directly on elements
-            const forceStyle = function() {
-                const elements = [
-                    '.stApp', 
-                    '[data-testid="stAppViewContainer"]',
-                    '.main .block-container',
-                    'section.main',
-                    '.block-container',
-                    'div[data-testid="block-container"]'
-                ];
-                
-                elements.forEach(selector => {
-                    document.querySelectorAll(selector).forEach(el => {
-                        el.style.setProperty('background-color', 'rgb(14, 17, 23)', 'important');
-                        el.style.setProperty('background', 'rgb(14, 17, 23)', 'important');
-                        el.style.setProperty('color', 'rgb(250, 250, 250)', 'important');
-                    });
-                });
-            };
-            
-            forceStyle();
-            // Re-apply every 100ms to fight any overwrites
-            setInterval(forceStyle, 100);
-            
-        }, 500); // Wait for page to load
-        
-        window.__detectedMobile = true;
-    } else {
-        window.__detectedMobile = false;
+        // If iOS app detected, reload with mobile parameter
+        if (isIOSApp && !window.__reloadedForMobile) {
+            window.__reloadedForMobile = true;
+            urlParams.set('mobile', '1');
+            window.location.search = urlParams.toString();
+        }
     }
 })();
 </script>
