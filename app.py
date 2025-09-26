@@ -1411,12 +1411,38 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
     user_email = st.session_state.get('user_email', '')
     workspace_id = st.session_state.get('workspace_id')
     
+    # Validate required fields
+    if not workspace_id:
+        st.error("Error: No workspace found. Please log in again.")
+        return False
+    
+    if not symbol or not symbol.strip():
+        st.error("Error: Symbol is required.")
+        return False
+        
+    if alert_type not in ['above', 'below']:
+        st.error("Error: Invalid alert type.")
+        return False
+        
+    if notification_method not in ['in_app', 'slack', 'both', 'none']:
+        st.error("Error: Invalid notification method.")
+        return False
+    
+    # If user_email is empty, use 'anonymous' 
+    if not user_email or user_email.strip() == '':
+        user_email = 'anonymous'
+    
     query = """
         INSERT INTO price_alerts (symbol, alert_type, target_price, notification_method, user_email, workspace_id) 
         VALUES (%s, %s, %s, %s, %s, %s)
     """
-    result = execute_db_write(query, (symbol, alert_type, target_price, notification_method, user_email, workspace_id))
-    return result is not None and result > 0
+    
+    try:
+        result = execute_db_write(query, (symbol.strip().upper(), alert_type, target_price, notification_method, user_email, workspace_id))
+        return result is not None and result > 0
+    except Exception as e:
+        st.error(f"Database error: {str(e)}")
+        return False
 
 def get_active_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
     """Get active price alerts for current workspace only (tenant-isolated)"""
