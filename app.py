@@ -463,30 +463,108 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# Client-side iOS TestFlight detection bootstrap
+# iOS WebView Dark Mode Fix - Must override native white background
 st.markdown("""
 <script>
 (function() {
-    // Only run if no mobile parameter is already present
+    // Detect if this is a mobile environment
     const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.get('mobile')) {
-        // Detect iOS TestFlight/PWA/WebView environments
-        const userAgent = navigator.userAgent.toLowerCase();
-        const isIOSApp = (
-            userAgent.includes('iphone') || 
-            userAgent.includes('ipad') || 
-            userAgent.includes('ios') ||
-            window.navigator.standalone === true ||
-            (window.webkit && window.webkit.messageHandlers) ||
-            window.DeviceMotionEvent !== undefined
-        );
+    const mobileParam = urlParams.get('mobile');
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    const isIOSApp = (
+        mobileParam === '1' ||
+        userAgent.includes('iphone') || 
+        userAgent.includes('ipad') || 
+        userAgent.includes('ios') ||
+        window.navigator.standalone === true ||
+        (window.webkit && window.webkit.messageHandlers) ||
+        window.DeviceMotionEvent !== undefined
+    );
+    
+    if (isIOSApp) {
+        // Set meta viewport for iOS
+        const metaViewport = document.createElement('meta');
+        metaViewport.name = 'viewport';
+        metaViewport.content = 'width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover';
+        document.head.appendChild(metaViewport);
         
-        // If iOS app detected, reload with mobile parameter
-        if (isIOSApp && !window.__reloadedForMobile) {
-            window.__reloadedForMobile = true;
-            urlParams.set('mobile', '1');
-            window.location.search = urlParams.toString();
-        }
+        // Set meta theme-color for iOS status bar
+        const metaTheme = document.createElement('meta');
+        metaTheme.name = 'theme-color';
+        metaTheme.content = '#0E1117';
+        document.head.appendChild(metaTheme);
+        
+        // Force document color scheme
+        document.documentElement.style.colorScheme = 'dark';
+        document.body.style.colorScheme = 'dark';
+        
+        // Inject iOS-specific dark CSS immediately
+        const iosCSS = document.createElement('style');
+        iosCSS.innerHTML = \`
+            /* iOS WebView Dark Mode Override */
+            * { 
+                -webkit-appearance: none !important;
+                color-scheme: dark !important;
+            }
+            
+            html, body, #root, .stApp, [data-testid="stAppViewContainer"] {
+                background-color: #0E1117 !important;
+                background: #0E1117 !important;
+                color: #FAFAFA !important;
+            }
+            
+            /* Force all main containers */
+            .main .block-container,
+            section.main,
+            .block-container,
+            div[data-testid="block-container"],
+            section[data-testid="stSidebar"] {
+                background-color: #0E1117 !important;
+                background: #0E1117 !important;
+                color: #FAFAFA !important;
+            }
+            
+            /* iOS Safari specific */
+            @supports (-webkit-touch-callout: none) {
+                body { 
+                    background-color: #0E1117 !important;
+                    background: #0E1117 !important;
+                }
+            }
+        \`;
+        document.head.appendChild(iosCSS);
+        
+        // Continuously enforce dark mode for iOS WebView
+        const enforceDark = () => {
+            document.documentElement.style.backgroundColor = '#0E1117';
+            document.body.style.backgroundColor = '#0E1117';
+            
+            // Force specific Streamlit elements
+            const elements = document.querySelectorAll('.stApp, [data-testid="stAppViewContainer"], .main, .block-container');
+            elements.forEach(el => {
+                el.style.backgroundColor = '#0E1117';
+                el.style.background = '#0E1117';
+                el.style.color = '#FAFAFA';
+            });
+        };
+        
+        // Apply immediately and continuously
+        enforceDark();
+        setInterval(enforceDark, 200);
+        
+        // Re-apply after DOM changes
+        new MutationObserver(enforceDark).observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    // Auto-redirect for iOS without mobile param
+    if (isIOSApp && !mobileParam && !window.__reloadedForMobile) {
+        window.__reloadedForMobile = true;
+        urlParams.set('mobile', '1');
+        window.location.search = urlParams.toString();
     }
 })();
 </script>
