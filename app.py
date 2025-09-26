@@ -74,6 +74,7 @@ st.markdown("""
     --spacing-unit: 1rem;
     
     /* Light theme colors */
+    --app-bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     --card-bg: white;
     --metric-card-bg: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
     --text-color: #1f2937;
@@ -81,7 +82,7 @@ st.markdown("""
     --border-color: #e5e7eb;
 }
 
-/* Dark theme for mobile apps and prefers-color-scheme: dark */
+/* Universal Dark Theme for web and mobile */
 @media (prefers-color-scheme: dark) {
     :root {
         --primary-color: #e5e7eb;
@@ -89,43 +90,55 @@ st.markdown("""
         --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
         --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
         
-        /* Dark theme colors */
+        /* Universal dark theme colors */
+        --app-bg: #0b0b0d;
         --card-bg: #1b1c21;
-        --metric-card-bg: linear-gradient(135deg, #1b1c21 0%, #2a2a2d 100%);
+        --metric-card-bg: #1b1c21;
         --text-color: #e8e8ea;
         --text-muted: #9ca3af;
         --border-color: rgba(255,255,255,0.08);
     }
     
-    /* Force main content area to full black */
-    .stApp, .main .block-container {
-        background: #0b0b0d !important;
+    /* Force ALL containers to match sidebar black - Universal */
+    .stApp, 
+    [data-testid="stAppViewContainer"],
+    .main .block-container,
+    [data-testid="stHeader"],
+    [data-testid="stSidebar"],
+    [data-testid="stSidebarNav"] {
+        background: var(--app-bg) !important;
     }
 }
 
-/* Force dark mode for mobile apps (detected via user agent or mobile parameter) */
+/* Force dark mode for mobile apps - Mirror web dark theme exactly */
 html[data-mobile-dark="true"] {
     --primary-color: #e5e7eb !important;
     --background-gradient: #0b0b0d !important;
     --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
     --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
     
+    /* Identical to web dark theme */
+    --app-bg: #0b0b0d !important;
     --card-bg: #1b1c21 !important;
-    --metric-card-bg: linear-gradient(135deg, #1b1c21 0%, #2a2a2d 100%) !important;
+    --metric-card-bg: #1b1c21 !important;
     --text-color: #e8e8ea !important;
     --text-muted: #9ca3af !important;
     --border-color: rgba(255,255,255,0.08) !important;
 }
 
-/* Force main content to full black for mobile dark mode */
+/* Force ALL containers to match sidebar black - Mobile */
 html[data-mobile-dark="true"] .stApp,
-html[data-mobile-dark="true"] .main .block-container {
-    background: #0b0b0d !important;
+html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
+html[data-mobile-dark="true"] .main .block-container,
+html[data-mobile-dark="true"] [data-testid="stHeader"],
+html[data-mobile-dark="true"] [data-testid="stSidebar"],
+html[data-mobile-dark="true"] [data-testid="stSidebarNav"] {
+    background: var(--app-bg) !important;
 }
 
 /* Main App Background */
 .stApp {
-    background: var(--background-gradient);
+    background: var(--app-bg);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -217,6 +230,26 @@ html[data-mobile-dark="true"] .main .block-container {
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+/* Fix Streamlit success/error/info banners for dark mode */
+@media (prefers-color-scheme: dark) {
+    .stSuccess, .stError, .stInfo, .stWarning {
+        background: var(--card-bg) !important;
+        color: var(--text-color) !important;
+        border-color: var(--border-color) !important;
+        border-left: 1px solid var(--border-color) !important;
+    }
+}
+
+html[data-mobile-dark="true"] .stSuccess,
+html[data-mobile-dark="true"] .stError, 
+html[data-mobile-dark="true"] .stInfo,
+html[data-mobile-dark="true"] .stWarning {
+    background: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+    border-left: 1px solid var(--border-color) !important;
 }
 
 /* Professional Buttons */
@@ -360,13 +393,13 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 .price-display {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--primary-color);
+    color: var(--text-color);
     margin: 1rem 0;
 }
 
 .price-period {
     font-size: 1rem;
-    color: #6b7280;
+    color: var(--text-muted);
     font-weight: 400;
 }
 
@@ -379,7 +412,7 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 
 .feature-list li {
     padding: 0.5rem 0;
-    color: #374151;
+    color: var(--text-color);
     font-weight: 500;
     position: relative;
     padding-left: 1.5rem;
@@ -445,6 +478,67 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
+# Universal Dark Mode JavaScript - Wire mobile detection and browser chrome sync
+st.markdown("""
+<script>
+(function() {
+    // Robust mobile detection - accept multiple truthy values like Python
+    const urlParams = new URLSearchParams(window.location.search);
+    const mobileParam = urlParams.get('mobile');
+    const mobileFromQuery = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
+    
+    const isMobileApp = mobileFromQuery || 
+                       navigator.userAgent.includes('MarketScannerPro') ||
+                       navigator.userAgent.includes('wv'); // WebView detection
+    
+    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    
+    function updateDarkMode(isDark) {
+        // Determine if we should use dark mode (mobile forces it OR system prefers it)
+        const shouldUseDark = isMobileApp || isDark;
+        
+        // Set mobile dark flag for CSS
+        if (shouldUseDark) {
+            document.documentElement.setAttribute('data-mobile-dark', 'true');
+        } else {
+            document.documentElement.removeAttribute('data-mobile-dark');
+        }
+        
+        // Update ALL theme-color meta tags (handles static overrides)
+        let themeColor = shouldUseDark ? '#0b0b0d' : '#1f2937';
+        
+        // Update all existing theme-color meta tags
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function(meta) {
+            meta.content = themeColor;
+        });
+        
+        // Create one if none exist
+        if (document.querySelectorAll('meta[name="theme-color"]').length === 0) {
+            let metaThemeColor = document.createElement('meta');
+            metaThemeColor.name = 'theme-color';
+            metaThemeColor.content = themeColor;
+            document.head.appendChild(metaThemeColor);
+        }
+    }
+    
+    // Initial setup
+    updateDarkMode(darkModeQuery.matches);
+    
+    // Listen for dark mode changes (modern browsers)
+    if (darkModeQuery.addEventListener) {
+        darkModeQuery.addEventListener('change', function(e) {
+            updateDarkMode(e.matches);
+        });
+    } else if (darkModeQuery.addListener) {
+        // Legacy browser support
+        darkModeQuery.addListener(function(e) {
+            updateDarkMode(e.matches);
+        });
+    }
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # Privacy Policy - redirect to external URL
 if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
     st.markdown('<meta http-equiv="refresh" content="0;URL=https://marketscannerspros.pages.dev/privacy" target="_blank">', unsafe_allow_html=True)
@@ -456,7 +550,6 @@ if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
 
 st.markdown("""
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#1f2937">
 <script>
 if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }
 </script>
