@@ -1,4 +1,3 @@
-from flask_cors import CORS
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
 # - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
@@ -5460,15 +5459,3 @@ html, body, .stApp { background:#ffffff !important; color:#111 !important; }
 .stButton > button { background:#2563eb !important; color:#fff !important; }
 </style>
 """, unsafe_allow_html=True)
-@app.route("/checkout", methods=["POST","OPTIONS"])
-def checkout():
-    payload = request.get_json(silent=True) or {}
-    plan = payload.get("plan")
-    if plan not in {"pro", "pro_trader"}:
-        return jsonify({"error": "invalid plan"}), 400
-
-    url, error = create_stripe_checkout_session(plan, workspace_id)
-    if error or not url:
-        return jsonify({"error": error or "failed to create session"}), 400
-
-    return jsonify({"url": url}), 200
