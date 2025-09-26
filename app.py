@@ -329,6 +329,34 @@ button[kind="secondary"]:hover {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
 }
 
+/* Dark mode overrides for tier cards with high specificity */
+@media (prefers-color-scheme: dark) {
+    .stApp .tier-card {
+        background: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-color) !important;
+    }
+    
+    .stApp .tier-card.premium {
+        background: var(--card-bg) !important;
+        border-color: #f59e0b !important;
+        color: var(--text-color) !important;
+    }
+}
+
+/* Mobile app dark mode overrides for tier cards */
+html[data-mobile-dark="true"] .stApp .tier-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+html[data-mobile-dark="true"] .stApp .tier-card.premium {
+    background: var(--card-bg) !important;
+    border-color: #f59e0b !important;
+    color: var(--text-color) !important;
+}
+
 .price-display {
     font-size: 2.5rem;
     font-weight: 800;
