@@ -652,11 +652,6 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# Privacy Policy - redirect to external URL
-if st.sidebar.button("📄 Privacy Policy", help="View our Privacy Policy"):
-    st.markdown('<meta http-equiv="refresh" content="0;URL=https://marketscannerspros.pages.dev/privacy" target="_blank">', unsafe_allow_html=True)
-    st.info("🔗 Redirecting to Privacy Policy...")
-    st.stop()  # Stop execution to redirect
 
 # Handle static file serving for PWA assets at root level
 # Files copied to root: manifest.webmanifest, sw.js, assetlinks.json
