@@ -54,8 +54,8 @@ is_mobile = st.session_state.is_mobile
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
-# Show mode in sidebar AFTER mobile detection is complete
-st.sidebar.write("Mode:", "Mobile" if is_mobile else "Web")
+# Show mode in sidebar with compact chip design
+st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile else "💻 Web"}</div>', unsafe_allow_html=True)
 
 
 # ================= Professional Styling - Marketing Page Theme =================
@@ -362,19 +362,61 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
     transform: translateY(-3px) !important;
 }
 
-/* Sidebar Enhancements - Dark Theme */
+/* Sidebar Enhancements - Dark Theme with Better Spacing */
 .css-1d391kg,
 .stSidebar,
 [data-testid="stSidebar"] {
     background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
     border-right: 1px solid var(--border-color) !important;
     color: var(--text-color) !important;
+    min-width: 340px !important;
+    width: 360px !important;
 }
 
-.stSidebar .stButton button {
+/* Improved sidebar spacing and layout */
+[data-testid="stSidebarUserContent"] > * {
+    margin-bottom: 12px !important;
+}
+
+[data-testid="stSidebar"] .stButton > button {
     background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
     color: white !important;
     border: none !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+}
+
+/* Better input sizing and spacing */
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] [role="combobox"] {
+    min-height: 44px !important;
+}
+
+/* Improved label readability */
+[data-testid="stSidebar"] label {
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+    color: var(--text-muted) !important;
+}
+
+/* Compact mode indicator chip */
+.mode-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: var(--accent-color);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+/* Mobile responsive sidebar */
+@media (max-width: 768px) {
+    [data-testid="stSidebar"] {
+        width: 100% !important;
+        min-width: auto !important;
+    }
 }
 
 /* Data Tables - Dark Theme */
@@ -3604,16 +3646,16 @@ if st.session_state.get('show_manage_watchlists', False):
             st.rerun()
 
 # ================= Device Pairing & Sync =================
-st.sidebar.header("📱 Device Sync")
-
-if st.session_state.workspace_id:
-    # Show current workspace info
-    devices = get_workspace_devices(st.session_state.workspace_id)
-    st.sidebar.caption(f"💾 Workspace: {st.session_state.workspace_id[:8]}...")
-    st.sidebar.caption(f"📱 Connected devices: {len(devices)}")
+# Device Sync - collapsed by default for cleaner sidebar
+with st.sidebar.expander("📱 Device Sync", expanded=False):
+    if st.session_state.workspace_id:
+        # Show current workspace info
+        devices = get_workspace_devices(st.session_state.workspace_id)
+        st.caption(f"💾 Workspace: {st.session_state.workspace_id[:8]}...")
+        st.caption(f"📱 Connected devices: {len(devices)}")
     
-    # Create pairing section
-    with st.sidebar.expander("🔗 Connect New Device", expanded=False):
+        # Create pairing section
+        with st.expander("🔗 Connect New Device", expanded=False):
         st.write("**To sync with another device:**")
         st.write("1. Generate a pairing code below")
         st.write("2. Open Market Scanner on your other device")
@@ -3656,8 +3698,8 @@ if st.session_state.workspace_id:
                        unsafe_allow_html=True)
             st.caption("Scan with your mobile device")
     
-    # Pair with token section
-    with st.sidebar.expander("🔢 Enter Pairing Code", expanded=False):
+        # Pair with token section
+        with st.expander("🔢 Enter Pairing Code", expanded=False):
         st.write("**Have a pairing code from another device?**")
         pair_token = st.text_input("Enter pairing code:", max_chars=6, key="pair_token_input")
         if st.button("📲 Pair Device", key="pair_device"):
@@ -3675,9 +3717,9 @@ if st.session_state.workspace_id:
             else:
                 st.error("Please enter a pairing code")
     
-    # Device management
-    if devices and len(devices) > 1:
-        with st.sidebar.expander("⚙️ Manage Devices", expanded=False):
+        # Device management
+        if devices and len(devices) > 1:
+            with st.expander("⚙️ Manage Devices", expanded=False):
             for device in devices:
                 device_name = device['device_name'] or "Unknown Device"
                 platform = device['platform'] or "unknown"
@@ -3695,8 +3737,8 @@ if st.session_state.workspace_id:
                                 st.success("Device removed")
                                 st.rerun()
 
-else:
-    st.sidebar.error("❌ Workspace initialization failed")
+    else:
+        st.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
 # Enhanced platform detection for Apple IAP compliance
@@ -3803,8 +3845,8 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= Subscription UI (All Platforms) =================
-# Show subscription UI on all platforms (required by Apple for In-App Purchase compliance)
+# ================= Subscription Summary (Compact) =================
+# Show compact subscription summary instead of full tier cards
 st.sidebar.header("💳 Subscription")
 
 # Get current subscription from database with admin override support
@@ -3888,9 +3930,8 @@ if is_mobile:
     st.sidebar.caption("Tap to manage your subscription through the App Store")
     # Note: In actual iOS app, this would link to subscription management
 
-# Friend Access Code Redemption (for all users)
-st.sidebar.header("🎫 Friend Access Code")
-with st.sidebar.expander("Have a friend code?", expanded=False):
+# Friend Access Code - collapsed by default for cleaner sidebar  
+with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
     st.caption("Redeem a friend access code for premium features")
     
     friend_code_input = st.text_input(
@@ -3926,33 +3967,12 @@ with st.sidebar.expander("Have a friend code?", expanded=False):
     
     st.caption("🔒 Codes work once per device only")
 
-# Show upgrade options for free tier users
+# Compact subscription summary for sidebar
 if current_tier == 'free':
-    with st.sidebar.expander("⬆️ Upgrade Options", expanded=False):
-        # Apple-compliant paywall with professional card design
-        st.markdown("""
-        <div class="tier-card">
-            <h3>🚀 Pro <span style="background: var(--accent-color); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; margin-left: 8px;">7-day free trial</span></h3>
-            <div class="price-display">$4.99 <span class="price-period">per month</span></div>
-            <ul class="feature-list">
-                <li>Multi-TF confluence</li>
-                <li>Squeezes</li>
-                <li>Exports</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class="tier-card premium">
-            <h3>💎 Full Pro Trader <span style="background: var(--accent-color); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; margin-left: 8px;">5-day free trial</span></h3>
-            <div class="price-display">$9.99 <span class="price-period">per month</span></div>
-            <ul class="feature-list">
-                <li>All Pro features</li>
-                <li>Advanced alerts</li>
-                <li>Priority support</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+    st.sidebar.info("📱 **Free Tier** - Limited features")
+    if st.sidebar.button("⬆️ **Upgrade to Pro** - 7-day free trial starting at $4.99/month", help="Unlock premium features"):
+        st.info("💡 **Detailed upgrade options moved to main content area for better visibility!**")
+        st.markdown("**Choose your plan below:**")
         
         st.markdown("---")
         
