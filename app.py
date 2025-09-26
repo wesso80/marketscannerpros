@@ -4031,95 +4031,83 @@ if current_tier == 'free':
     # Show both upgrade options in sidebar for better visibility
     st.sidebar.markdown("**💼 Upgrade Plans:**")
     
+    # Initialize session state for plan selection
+    if 'selected_plan' not in st.session_state:
+        st.session_state.selected_plan = None
+    
     # Pro Plan - $4.99/month
     if st.sidebar.button("🚀 **Pro Plan** - $4.99/month", help="7-day free trial • Unlimited scans & alerts", key="sidebar_pro"):
-        st.info("💡 **Pro Plan Selected** - Details below:")
-        st.markdown("**Choose your plan below:**")
+        st.session_state.selected_plan = 'pro'
     
     # Pro Trader Plan - $9.99/month  
     if st.sidebar.button("💎 **Pro Trader** - $9.99/month", help="5-day free trial • Everything in Pro + backtesting", key="sidebar_trader"):
-        st.info("💡 **Pro Trader Plan Selected** - Details below:")
-        st.markdown("**Choose your plan below:**")
+        st.session_state.selected_plan = 'pro_trader'
+    
+    # Show upgrade section if a plan is selected
+    if st.session_state.selected_plan:
+        plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
+        plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
+        
+        st.info(f"💡 **{plan_name} Plan Selected** - Complete purchase below:")
+        st.markdown(f"**{plan_name} Plan - {plan_price}/month**")
         
         st.markdown("---")
         
         # Platform-specific payment buttons (Apple IAP compliance)
         platform = get_platform_type()
-        col1, col2 = st.columns(2)
         
-        with col1:
-            if platform == 'ios':
-                # Apple App Store Compliance: NO STRIPE on iOS
-                st.error("🍎 **Apple App Store Policy**")
-                st.markdown("""
-                **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
-                
-                🚫 **Web payments are not available on iOS devices**
-                
-                **To subscribe:**
-                1. Download the Market Scanner app from the App Store
-                2. Open the app on your iOS device  
-                3. Go to Settings → Subscription
-                4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
-                5. Complete purchase through your Apple ID
-                
-                **Need help?** Contact support through the iOS app.
-                """)
-                
-                # No subscription buttons for iOS - redirect to app
-                if st.button("📱 Download iOS App", key="download_ios_app"):
-                    st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
-                    # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+        if platform == 'ios':
+            # Apple App Store Compliance: NO STRIPE on iOS
+            st.error("🍎 **Apple App Store Policy**")
+            st.markdown("""
+            **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
+            
+            🚫 **Web payments are not available on iOS devices**
+            
+            **To subscribe:**
+            1. Download the Market Scanner app from the App Store
+            2. Open the app on your iOS device  
+            3. Go to Settings → Subscription
+            4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
+            5. Complete purchase through your Apple ID
+            
+            **Need help?** Contact support through the iOS app.
+            """)
+            
+            # No subscription buttons for iOS - redirect to app
+            if st.button("📱 Download iOS App", key="download_ios_app"):
+                st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
+                # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+        else:
+            # Web/Android Stripe button for selected plan
+            plan_emoji = "🚀" if st.session_state.selected_plan == 'pro' else "💎"
+            plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
+            plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
+            
+            if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
+                if workspace_id:
+                    # Create Stripe checkout session for web/android users
+                    with st.spinner("Creating secure checkout session..."):
+                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id)
                     
-                # iOS users continue to see app features, just no web payments
-            else:
-                # Web/Android Stripe button
-                if st.button("🚀 Subscribe to Pro\n$4.99 per month", key="upgrade_pro", help="Unlimited scans & alerts, advanced charts"):
-                    if workspace_id:
-                        # Create Stripe checkout session for web/android users
-                        with st.spinner("Creating secure checkout session..."):
-                            checkout_url, error = create_stripe_checkout_session('pro', workspace_id)
-                        
-                        if checkout_url:
-                            st.success("✅ Checkout session created successfully!")
-                            st.info("🔗 Redirecting to Stripe checkout...")
-                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
-                            st.markdown(f'**Or click here:** [Complete Pro Subscription]({checkout_url})')
-                        else:
-                            st.error(f"❌ Stripe Checkout Error: {error}")
-                            st.warning("💡 Stripe checkout is not available. Using demo mode instead.")
-                            # Fallback to demo mode if Stripe fails
-                            success, result = create_subscription(workspace_id, 'pro', 'web', 'monthly')
-                            if success:
-                                st.success("🎉 Demo mode: Successfully upgraded to Pro!")
-                                st.rerun()
+                    if checkout_url:
+                        st.success("✅ Checkout session created successfully!")
+                        st.info("🔗 Redirecting to Stripe checkout...")
+                        st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
+                        st.markdown(f'**Or click here:** [Complete {plan_name} Subscription]({checkout_url})')
                     else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
-        
-        with col2:
-            if platform != 'ios':  # Only show for non-iOS platforms
-                # Web/Android Stripe button
-                if st.button("💎 Subscribe to Trader\n$9.99 per month", key="upgrade_trader", help="Everything in Pro + backtesting & algorithms"):
-                    if workspace_id:
-                        # Create Stripe checkout session for web/android users
-                        with st.spinner("Creating secure checkout session..."):
-                            checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
-                        
-                        if checkout_url:
-                            st.success("✅ Checkout session created successfully!")
-                            st.info("🔗 Redirecting to Stripe checkout...")
-                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
-                            st.markdown(f'**Or click here:** [Complete Pro Trader Subscription]({checkout_url})')
-                        else:
-                            st.error(f"❌ Stripe Checkout Error: {error}")
-                            st.warning("💡 Stripe checkout is not available. Using demo mode instead.")
-                            # Fallback to demo mode if Stripe fails
-                            success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                            if success:
-                                st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
-                                st.rerun()
-                    else:
-                        st.error("❌ Workspace not initialized. Please refresh the page.")
+                        st.error(f"❌ Stripe Checkout Error: {error}")
+                        st.error("💡 Please contact support or try again later. No charges were made.")
+                        # NO DANGEROUS FALLBACK - Do not grant free access
+                        if st.button("🔄 Retry Checkout", key="retry_checkout"):
+                            st.rerun()
+                else:
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
+            
+            # Reset plan selection button
+            if st.button("← Choose Different Plan", key="reset_plan"):
+                st.session_state.selected_plan = None
+                st.rerun()
         
         # Apple-required billing disclosures and controls
         st.markdown("---")
