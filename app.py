@@ -6,28 +6,11 @@
 # - CSV download
 
 import os
-
-import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
-import psycopg2
-from psycopg2.extras import RealDictCursor
-import psycopg2.extensions
-from dataclasses import dataclass
-from typing import List, Tuple, Optional, Dict, Any
-from datetime import datetime, timezone
-from dateutil import tz
-from math import floor
-import io
-import json
-import qrcode
-from PIL import Image
-import base64
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.express as px
-import stripe
+import streamlit as st
+from datetime import datetime
 
 # ================= HEALTH CHECK ENDPOINT =================
-# Simple health check for deployment readiness
+# Simple health check for deployment readiness - MUST BE FIRST
 try:
     qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
     health_param = qp.get('health', [''])
@@ -47,6 +30,32 @@ except Exception as e:
     if health_check in ('check', '1', 'true', 'ping'):
         st.json({"status": "error", "error": str(e)})
         st.stop()
+
+# ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
+# Import heavy dependencies only after health check
+try:
+    import pandas as pd, numpy as np, yfinance as yf, requests
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    import psycopg2.extensions
+    from dataclasses import dataclass
+    from typing import List, Tuple, Optional, Dict, Any
+    from datetime import timezone
+    from dateutil import tz
+    from math import floor
+    import io
+    import json
+    import qrcode
+    from PIL import Image
+    import base64
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    import plotly.express as px
+    import stripe
+except ImportError as e:
+    st.error(f"❌ Failed to import required packages: {e}")
+    st.info("🔧 Please check the deployment environment and package installation.")
+    st.stop()
 
 # ================= MOBILE DETECTION (CONSOLIDATED) =================
 # Detect mobile once at the top using proper headers and query params
