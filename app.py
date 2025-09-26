@@ -58,31 +58,32 @@ st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layo
 st.sidebar.write("Mode:", "Mobile" if is_mobile else "Web")
 
 
-# ================= Professional Styling =================
+# ================= Professional Styling - Marketing Page Theme =================
 st.markdown("""
 <style>
-/* Professional Global Styles */
+/* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --primary-color: #1f2937;
-    --secondary-color: #3b82f6;
-    --accent-color: #10b981;
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
-    --background-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --border-radius: 12px;
+    --primary-color: #0F172A;
+    --secondary-color: #1E293B;
+    --accent-color: #10B981;
+    --accent-hover: #059669;
+    --danger-color: #EF4444;
+    --warning-color: #F59E0B;
+    --success-color: #10B981;
+    --border-radius: 16px;
     --spacing-unit: 1rem;
     
-    /* Light theme colors */
-    --app-bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --card-bg: white;
-    --metric-card-bg: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
-    --text-color: #1f2937;
-    --text-muted: #6b7280;
-    --border-color: #e5e7eb;
+    /* Dark theme colors matching marketing page */
+    --app-bg: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    --card-bg: linear-gradient(145deg, #1E293B 0%, #334155 100%);
+    --metric-card-bg: linear-gradient(145deg, #1E293B 0%, #475569 100%);
+    --text-color: #F8FAFC;
+    --text-muted: #CBD5E1;
+    --border-color: #475569;
+    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
 /* MOBILE DARK MODE - Highest priority overrides */
@@ -122,37 +123,53 @@ html[data-mobile-dark="true"] * {
     background: transparent !important;
 }
 
-/* Main App Background - Let Streamlit theme system handle it */
+/* Main App Background - Marketing Page Dark Theme */
 .stApp {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--app-bg) !important;
+    color: var(--text-color);
 }
 
-/* Header Styling */
+/* Apply dark theme globally */
+.main .block-container {
+    background: transparent !important;
+    color: var(--text-color);
+}
+
+/* Header Styling - Marketing Page Style */
 .main-header {
-    background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-    padding: 2rem 0;
-    margin: -1rem -2rem 2rem -2rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    padding: 3rem 0;
+    margin: -2rem -3rem 3rem -3rem;
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     box-shadow: var(--card-shadow);
-    color: white;
+    color: var(--text-color);
     text-align: center;
+    border-bottom: 2px solid var(--accent-color);
 }
 
 .main-header h1 {
-    font-size: 2.5rem;
+    font-size: 3rem;
     font-weight: 700;
     margin: 0;
-    background: linear-gradient(135deg, #10b981, #3b82f6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-color);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.main-header p {
-    font-size: 1.125rem;
+.main-header .hero-subtitle {
+    font-size: 1.25rem;
     opacity: 0.9;
-    margin: 0.5rem 0 0 0;
+    margin: 1rem 0;
     font-weight: 400;
+    color: var(--text-muted);
+}
+
+.hero-buttons {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .app-icon {
@@ -164,27 +181,45 @@ html[data-mobile-dark="true"] * {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* Professional Cards */
+/* Professional Cards - Marketing Page Style */
 .pro-card {
     background: var(--card-bg);
     border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin: 1rem 0;
+    padding: 2rem;
+    margin: 1.5rem 0;
     box-shadow: var(--card-shadow);
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pro-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
 }
 
 .pro-card:hover {
     box-shadow: var(--card-shadow-hover);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    border-color: var(--accent-color);
 }
 
 .pro-card h3 {
     color: var(--text-color);
     font-weight: 600;
     margin-bottom: 1rem;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+}
+
+.pro-card p {
+    color: var(--text-muted);
+    line-height: 1.6;
 }
 
 /* Metrics Cards */
@@ -223,7 +258,17 @@ html[data-mobile-dark="true"] * {
         background: var(--card-bg) !important;
         color: var(--text-color) !important;
         border-color: var(--border-color) !important;
-        border-left: 1px solid var(--border-color) !important;
+        border-left: 4px solid var(--accent-color) !important;
+    }
+    
+    .stApp {
+        background: var(--app-bg) !important;
+        color: var(--text-color) !important;
+    }
+    
+    .main .block-container {
+        background: transparent !important;
+        color: var(--text-color) !important;
     }
 }
 
@@ -237,45 +282,95 @@ html[data-mobile-dark="true"] .stWarning {
     border-left: 1px solid var(--border-color) !important;
 }
 
-/* Professional Buttons */
+/* Professional Buttons - Marketing Page Green Theme */
 .stButton > button,
 button[data-testid="stBaseButton-secondary"],
 button[kind="secondary"],
 [data-testid="stBaseButton-secondary"],
 div[data-testid="stButton"] button {
-    background: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
-    background-image: linear-gradient(135deg, var(--secondary-color), #2563eb) !important;
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+    background-image: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
     color: white !important;
     border: none !important;
     border-radius: var(--border-radius) !important;
-    padding: 0.75rem 1.5rem !important;
+    padding: 0.75rem 2rem !important;
     font-weight: 600 !important;
     font-size: 1rem !important;
     transition: all 0.3s ease !important;
-    box-shadow: var(--card-shadow) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
     font-family: 'Inter', sans-serif !important;
     min-height: auto !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .stButton > button:hover,
 button[data-testid="stBaseButton-secondary"]:hover,
 button[kind="secondary"]:hover {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
-    box-shadow: var(--card-shadow-hover) !important;
-    transform: translateY(-1px) !important;
+    background: linear-gradient(135deg, var(--accent-hover), #047857) !important;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important;
+    transform: translateY(-2px) !important;
 }
 
-/* Sidebar Enhancements */
-.css-1d391kg {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    border-right: 1px solid #d1d5db;
+/* Primary Action Button - Like marketing page "Launch App" */
+.primary-button {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+    color: white !important;
+    padding: 1rem 2.5rem !important;
+    font-size: 1.125rem !important;
+    font-weight: 700 !important;
+    border-radius: var(--border-radius) !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
 }
 
-/* Data Tables */
+.primary-button:hover {
+    background: linear-gradient(135deg, var(--accent-hover), #047857) !important;
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5) !important;
+    transform: translateY(-3px) !important;
+}
+
+/* Sidebar Enhancements - Dark Theme */
+.css-1d391kg,
+.stSidebar,
+[data-testid="stSidebar"] {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
+    border-right: 1px solid var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+.stSidebar .stButton button {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+    color: white !important;
+    border: none !important;
+}
+
+/* Data Tables - Dark Theme */
 .stDataFrame {
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
+    background: var(--card-bg) !important;
+}
+
+.stDataFrame table {
+    background: var(--card-bg) !important;
+    color: var(--text-color) !important;
+}
+
+.stDataFrame th {
+    background: var(--secondary-color) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+
+.stDataFrame td {
+    background: var(--card-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
 }
 
 /* Status Indicators */
@@ -309,14 +404,14 @@ button[kind="secondary"]:hover {
     margin: 0.25rem;
 }
 
-/* Subscription Tiers */
+/* Subscription Tiers - Marketing Page Dark Theme */
 .tier-card {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    background: var(--card-bg);
     border-radius: var(--border-radius);
     padding: 2rem;
     margin: 1rem 0;
     box-shadow: var(--card-shadow);
-    border: 2px solid transparent;
+    border: 2px solid var(--border-color);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -411,8 +506,44 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
     font-weight: 700;
 }
 
+/* Secondary Button */
+.secondary-button {
+    background: transparent !important;
+    color: var(--text-color) !important;
+    padding: 1rem 2rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: var(--border-radius) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-left: 1rem;
+}
+
+.secondary-button:hover {
+    background: var(--card-bg) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Override Streamlit default styles */
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    color: var(--text-color) !important;
+}
+
+.stMarkdown p {
+    color: var(--text-muted) !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .main-header {
+        padding: 2rem 1rem;
+        margin: -1rem -1rem 2rem -1rem;
+    }
+    
     .main-header h1 {
         font-size: 2rem;
     }
@@ -2752,16 +2883,24 @@ try:
     header_html = f"""
     <div class="main-header">
         <img src="data:image/png;base64,{app_icon_base64}" class="app-icon" alt="Market Scanner App Icon">
-        <h1>📊 Market Scanner Dashboard</h1>
-        <p>Professional Market Analysis & Trading Intelligence Platform</p>
+        <h1>Scan crypto & stocks across timeframes — fast.</h1>
+        <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
+        <div class="hero-buttons">
+            <span class="primary-button">🚀 Start Scanning</span>
+            <span class="secondary-button">📊 View Results</span>
+        </div>
     </div>
     """
 except FileNotFoundError:
     # Fallback if image file is not found
     header_html = """
     <div class="main-header">
-        <h1>📊 Market Scanner Dashboard</h1>
-        <p>Professional Market Analysis & Trading Intelligence Platform</p>
+        <h1>Scan crypto & stocks across timeframes — fast.</h1>
+        <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
+        <div class="hero-buttons">
+            <span class="primary-button">🚀 Start Scanning</span>
+            <span class="secondary-button">📊 View Results</span>
+        </div>
     </div>
     """
 
