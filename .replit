@@ -44,13 +44,13 @@ args = "uv add yfinance pandas numpy requests python-dateutil"
 name = "Market Scanner"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run app.py --server.port 5000"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Apple IAP API"
