@@ -3656,12 +3656,12 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
     
         # Create pairing section
         with st.expander("🔗 Connect New Device", expanded=False):
-        st.write("**To sync with another device:**")
-        st.write("1. Generate a pairing code below")
-        st.write("2. Open Market Scanner on your other device")
-        st.write("3. Scan the QR code or enter the code")
-        
-        col1, col2 = st.columns(2)
+            st.write("**To sync with another device:**")
+            st.write("1. Generate a pairing code below")
+            st.write("2. Open Market Scanner on your other device")
+            st.write("3. Scan the QR code or enter the code")
+            
+            col1, col2 = st.columns(2)
         with col1:
             if st.button("📱 Generate Code", key="generate_pair"):
                 if st.session_state.workspace_id:
@@ -4090,129 +4090,37 @@ if current_tier == 'free':
                     st.session_state.user_tier = 'pro_trader'
                     st.rerun()
 
-# Show tier benefits for paid users
+# Compact subscription status for paid users
 elif current_tier in ['pro', 'pro_trader']:
-    with st.sidebar.expander("✨ Your Benefits", expanded=False):
-        for feature in tier_info['features']:
-            st.write(f"✅ {feature}")
-        
-        if current_tier == 'pro':
-            st.markdown("---")
-            if st.button("💎 Upgrade to Pro Trader", key="upgrade_to_trader"):
-                if workspace_id:
-                    if is_mobile:
-                        st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
-                    else:
-                        # Create Stripe checkout session for upgrade
-                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
-                        if checkout_url:
-                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
-                            st.success("🔗 Redirecting to secure checkout...")
-                        else:
-                            st.error(f"❌ Checkout error: {error}")
-                            # Fallback to demo mode if Stripe fails
-                            cancel_subscription(workspace_id)
-                            success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                            if success:
-                                st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
-                                st.rerun()
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
-        
-        # Apple-compliant subscription management for active subscribers
-        if is_mobile:
-            st.markdown("---")
-            st.markdown("**📱 Subscription Management**")
-            if st.button("⚙️ Manage Subscription", key="manage_sub"):
-                st.info("🔗 Opens: Settings > [Your Name] > Subscriptions")
-                # In actual iOS app: itms-apps://apps.apple.com/account/subscriptions
-            
-            if st.button("🔄 Restore Purchases", key="restore_purchases_paid"):
-                st.info("🔄 Restoring previous purchases...")
-                # In actual iOS app: StoreKit.restorePurchases()
-        
-        # Apple-required links for active subscribers
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("📄 [Terms of Service](https://marketscannerspros.pages.dev/terms)")
-        with col2:
-            st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
-        
-        # Subscription management for active subscribers  
-        st.markdown("---")
-        st.markdown("**📊 Subscription Details**")
-        
-        if current_subscription:
-            # Real database subscription
-            st.caption(f"Plan: {current_subscription.get('plan_name', 'Unknown')}")
-            st.caption(f"Status: {current_subscription.get('subscription_status', 'Unknown').title()}")
-            st.caption(f"Platform: {current_subscription.get('platform', 'Unknown').title()}")
-            if current_subscription.get('current_period_end'):
-                st.caption(f"Renews: {current_subscription['current_period_end'].strftime('%Y-%m-%d')}")
-        else:
-            # Tier from admin override or free
-            st.caption(f"Plan: {tier_info['name']}")
-            st.caption("Status: Active" if current_tier != 'free' else "Status: Free")
-            st.caption("Platform: Web")
-            # Show admin override info if applicable
+    st.sidebar.success(f"✨ **{tier_info['name']}** - {expiry_text}")
+    
+    # Single manage button instead of expanded benefits
+    if st.sidebar.button("⚙️ **Manage Subscription**", help="View benefits, billing, and account options"):
+        st.info("💡 **Subscription management options moved to main content area for better visibility!**")
+        st.markdown("**Your subscription details and options below:**")
+    
+    # Compact upgrade button for Pro users
+    if current_tier == 'pro':
+        if st.sidebar.button("⬆️ **Upgrade to Pro Trader** - $9.99/month", help="Unlock advanced features"):
             if workspace_id:
-                override_tier = get_subscription_override(workspace_id)
-                if override_tier:
-                    st.caption("Note: Admin override active")
-        
-        if st.button("❌ Cancel Subscription", key="cancel_subscription"):
-            # Check if this is an admin override
-            override_tier = get_subscription_override(workspace_id) if workspace_id else None
-            if override_tier:
-                # Clear admin override
-                if workspace_id and clear_subscription_override(workspace_id):
-                    st.success("✅ Admin override cleared")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to clear admin override")
-            elif current_subscription and workspace_id:
-                # Real database subscription
                 if is_mobile:
-                    st.info("📱 In mobile app, this would open subscription management")
+                    st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
-                    # Cancel Stripe subscription for web users
-                    success, message = cancel_stripe_subscription(workspace_id)
-                    if success:
-                        st.success("✅ Subscription cancelled successfully")
-                        st.rerun()
+                    # Create Stripe checkout session for upgrade
+                    checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                    if checkout_url:
+                        st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
+                        st.success("🔗 Redirecting to secure checkout...")
                     else:
-                        st.error(f"❌ Failed to cancel subscription: {message}")
-                        # Fallback to database-only cancellation
-                        if cancel_subscription(workspace_id):
-                            st.success("✅ Local subscription cancelled")
+                        st.error(f"❌ Checkout error: {error}")
+                        # Fallback to demo mode if Stripe fails
+                        cancel_subscription(workspace_id)
+                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
+                        if success:
+                            st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
                             st.rerun()
-                        else:
-                            st.error("❌ Could not cancel subscription")
             else:
-                # No subscription to cancel
-                st.error("❌ No active subscription found")
-        
-        # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
-        if not is_mobile:  # Only show on web, not in mobile app builds
-            st.markdown("---")
-            st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Free", key="demo_free_paid"):
-                    st.session_state.user_tier = 'free'
-                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['free']['name']}")
-                    st.rerun()
-            with col2:
-                if st.button("Pro", key="demo_pro_paid"):
-                    st.session_state.user_tier = 'pro'
-                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['pro']['name']}")
-                    st.rerun()
-            with col3:
-                if st.button("Trader", key="demo_trader_paid"):
-                    st.session_state.user_tier = 'pro_trader'
-                    st.success(f"✅ Demo mode: Switched to {TIER_CONFIG['pro_trader']['name']}")
-                    st.rerun()
+                st.error("❌ Workspace not initialized. Please refresh the page.")
 
 # End of subscription UI section (hidden for mobile apps)
 
