@@ -476,7 +476,7 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# Enhanced mobile detection and dark mode handler
+# BRUTE FORCE Mobile Dark Mode - Inject CSS via JavaScript for maximum priority
 st.markdown("""
 <script>
 (function() {
@@ -485,7 +485,7 @@ st.markdown("""
     const mobileParam = urlParams.get('mobile');
     const mobileFromQuery = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
     
-    // Detect various mobile app environments
+    // Detect various mobile app environments  
     const userAgent = navigator.userAgent.toLowerCase();
     const isWebView = userAgent.includes('wv') || 
                       userAgent.includes('mobile') ||
@@ -497,14 +497,73 @@ st.markdown("""
     const isStandalone = window.navigator.standalone === true;
     const isCustomUA = userAgent.includes('marketscannerpro');
     
-    // Consider it mobile if any mobile indicator is present
-    const isMobileApp = mobileFromQuery || isWebView || isCapacitor || isStandalone || isCustomUA;
+    // Consider it mobile if any mobile indicator is present OR force for testing
+    const isMobileApp = mobileFromQuery || isWebView || isCapacitor || isStandalone || isCustomUA || true; // FORCE MOBILE
     
     if (isMobileApp) {
         document.documentElement.setAttribute('data-mobile-dark', 'true');
         document.documentElement.style.colorScheme = 'dark';
         
-        // Update the Python mobile state via global flag
+        // BRUTE FORCE CSS - Inject after all other CSS loads
+        setTimeout(function() {
+            const bruteForceCSS = document.createElement('style');
+            bruteForceCSS.innerHTML = \`
+                /* BRUTE FORCE MOBILE DARK MODE - CANNOT BE OVERRIDDEN */
+                html[data-mobile-dark="true"] *, 
+                html[data-mobile-dark="true"] *::before,
+                html[data-mobile-dark="true"] *::after,
+                html[data-mobile-dark="true"] html,
+                html[data-mobile-dark="true"] body,
+                html[data-mobile-dark="true"] .stApp,
+                html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
+                html[data-mobile-dark="true"] .main .block-container,
+                html[data-mobile-dark="true"] section.main,
+                html[data-mobile-dark="true"] .block-container,
+                html[data-mobile-dark="true"] div[data-testid="block-container"] {
+                    background-color: rgb(14, 17, 23) !important;
+                    background: rgb(14, 17, 23) !important;
+                    color: rgb(250, 250, 250) !important;
+                    color-scheme: dark !important;
+                }
+                
+                /* Force specific Streamlit containers */
+                html[data-mobile-dark="true"] div.stApp,
+                html[data-mobile-dark="true"] section[data-testid="stAppViewContainer"],
+                html[data-mobile-dark="true"] div[data-testid="stAppViewContainer"],
+                html[data-mobile-dark="true"] section.main.st-emotion-cache-bm2z3a.ea3mdgi8,
+                html[data-mobile-dark="true"] div[data-testid="block-container"] {
+                    background-color: rgb(14, 17, 23) !important;
+                    background: rgb(14, 17, 23) !important;
+                }
+            \`;
+            document.head.appendChild(bruteForceCSS);
+            
+            // Force style attributes directly on elements
+            const forceStyle = function() {
+                const elements = [
+                    '.stApp', 
+                    '[data-testid="stAppViewContainer"]',
+                    '.main .block-container',
+                    'section.main',
+                    '.block-container',
+                    'div[data-testid="block-container"]'
+                ];
+                
+                elements.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(el => {
+                        el.style.setProperty('background-color', 'rgb(14, 17, 23)', 'important');
+                        el.style.setProperty('background', 'rgb(14, 17, 23)', 'important');
+                        el.style.setProperty('color', 'rgb(250, 250, 250)', 'important');
+                    });
+                });
+            };
+            
+            forceStyle();
+            // Re-apply every 100ms to fight any overwrites
+            setInterval(forceStyle, 100);
+            
+        }, 500); // Wait for page to load
+        
         window.__detectedMobile = true;
     } else {
         window.__detectedMobile = false;
