@@ -98,7 +98,31 @@ st.markdown("""
     --border-color: #e5e7eb;
 }
 
-/* Let Streamlit handle dark theme, just ensure containers are transparent to inherit it */
+/* MOBILE DARK MODE - Highest priority overrides */
+html[data-mobile-dark="true"],
+html[data-mobile-dark="true"] body {
+    background-color: rgb(14, 17, 23) !important;
+    color: rgb(250, 250, 250) !important;
+    color-scheme: dark !important;
+}
+
+/* Force ALL containers to dark - Maximum specificity */
+html[data-mobile-dark="true"] .stApp,
+html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
+html[data-mobile-dark="true"] .main .block-container,
+html[data-mobile-dark="true"] section.main,
+html[data-mobile-dark="true"] .block-container,
+html[data-mobile-dark="true"] div.block-container {
+    background-color: rgb(14, 17, 23) !important;
+    background: rgb(14, 17, 23) !important;
+}
+
+/* Override any Streamlit theme that tries to change it back */
+html[data-mobile-dark="true"] * {
+    color-scheme: dark !important;
+}
+
+/* For non-mobile, let Streamlit handle theme */
 .stApp {
     background: transparent !important;
 }
@@ -109,17 +133,6 @@ st.markdown("""
 
 .main .block-container {
     background: transparent !important;
-}
-
-/* Force mobile dark mode for PWA/webview apps */
-html[data-mobile-dark="true"] {
-    color-scheme: dark;
-}
-
-html[data-mobile-dark="true"] .stApp,
-html[data-mobile-dark="true"] [data-testid="stAppViewContainer"], 
-html[data-mobile-dark="true"] .main .block-container {
-    background: rgb(14, 17, 23) !important;
 }
 
 /* Main App Background - Let Streamlit theme system handle it */
