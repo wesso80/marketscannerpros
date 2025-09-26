@@ -82,63 +82,32 @@ st.markdown("""
     --border-color: #e5e7eb;
 }
 
-/* Universal Dark Theme for web and mobile */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --primary-color: #e5e7eb;
-        --background-gradient: #0b0b0d;
-        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-        
-        /* Universal dark theme colors */
-        --app-bg: #0b0b0d;
-        --card-bg: #1b1c21;
-        --metric-card-bg: #1b1c21;
-        --text-color: #e8e8ea;
-        --text-muted: #9ca3af;
-        --border-color: rgba(255,255,255,0.08);
-    }
-    
-    /* Force ALL containers to match sidebar black - Universal */
-    .stApp, 
-    [data-testid="stAppViewContainer"],
-    .main .block-container,
-    [data-testid="stHeader"],
-    [data-testid="stSidebar"],
-    [data-testid="stSidebarNav"] {
-        background: var(--app-bg) !important;
-    }
-}
-
-/* Force dark mode for mobile apps - Mirror web dark theme exactly */
-html[data-mobile-dark="true"] {
-    --primary-color: #e5e7eb !important;
-    --background-gradient: #0b0b0d !important;
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
-    
-    /* Identical to web dark theme */
-    --app-bg: #0b0b0d !important;
-    --card-bg: #1b1c21 !important;
-    --metric-card-bg: #1b1c21 !important;
-    --text-color: #e8e8ea !important;
-    --text-muted: #9ca3af !important;
-    --border-color: rgba(255,255,255,0.08) !important;
-}
-
-/* Force ALL containers to match sidebar black - Mobile */
-html[data-mobile-dark="true"] .stApp,
-html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
-html[data-mobile-dark="true"] .main .block-container,
-html[data-mobile-dark="true"] [data-testid="stHeader"],
-html[data-mobile-dark="true"] [data-testid="stSidebar"],
-html[data-mobile-dark="true"] [data-testid="stSidebarNav"] {
-    background: var(--app-bg) !important;
-}
-
-/* Main App Background */
+/* Let Streamlit handle dark theme, just ensure containers are transparent to inherit it */
 .stApp {
-    background: var(--app-bg);
+    background: transparent !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: transparent !important;
+}
+
+.main .block-container {
+    background: transparent !important;
+}
+
+/* Force mobile dark mode for PWA/webview apps */
+html[data-mobile-dark="true"] {
+    color-scheme: dark;
+}
+
+html[data-mobile-dark="true"] .stApp,
+html[data-mobile-dark="true"] [data-testid="stAppViewContainer"], 
+html[data-mobile-dark="true"] .main .block-container {
+    background: rgb(14, 17, 23) !important;
+}
+
+/* Main App Background - Let Streamlit theme system handle it */
+.stApp {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -478,62 +447,18 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# Universal Dark Mode JavaScript - Wire mobile detection and browser chrome sync
+# Simple mobile dark mode handler
 st.markdown("""
 <script>
 (function() {
-    // Robust mobile detection - accept multiple truthy values like Python
+    // Check if running in mobile app and force dark mode
     const urlParams = new URLSearchParams(window.location.search);
     const mobileParam = urlParams.get('mobile');
-    const mobileFromQuery = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
+    const isMobileApp = mobileParam && ['1', 'true', 'yes', 'y'].includes(mobileParam.toLowerCase());
     
-    const isMobileApp = mobileFromQuery || 
-                       navigator.userAgent.includes('MarketScannerPro') ||
-                       navigator.userAgent.includes('wv'); // WebView detection
-    
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    function updateDarkMode(isDark) {
-        // Determine if we should use dark mode (mobile forces it OR system prefers it)
-        const shouldUseDark = isMobileApp || isDark;
-        
-        // Set mobile dark flag for CSS
-        if (shouldUseDark) {
-            document.documentElement.setAttribute('data-mobile-dark', 'true');
-        } else {
-            document.documentElement.removeAttribute('data-mobile-dark');
-        }
-        
-        // Update ALL theme-color meta tags (handles static overrides)
-        let themeColor = shouldUseDark ? '#0b0b0d' : '#1f2937';
-        
-        // Update all existing theme-color meta tags
-        document.querySelectorAll('meta[name="theme-color"]').forEach(function(meta) {
-            meta.content = themeColor;
-        });
-        
-        // Create one if none exist
-        if (document.querySelectorAll('meta[name="theme-color"]').length === 0) {
-            let metaThemeColor = document.createElement('meta');
-            metaThemeColor.name = 'theme-color';
-            metaThemeColor.content = themeColor;
-            document.head.appendChild(metaThemeColor);
-        }
-    }
-    
-    // Initial setup
-    updateDarkMode(darkModeQuery.matches);
-    
-    // Listen for dark mode changes (modern browsers)
-    if (darkModeQuery.addEventListener) {
-        darkModeQuery.addEventListener('change', function(e) {
-            updateDarkMode(e.matches);
-        });
-    } else if (darkModeQuery.addListener) {
-        // Legacy browser support
-        darkModeQuery.addListener(function(e) {
-            updateDarkMode(e.matches);
-        });
+    if (isMobileApp) {
+        document.documentElement.setAttribute('data-mobile-dark', 'true');
+        document.documentElement.style.colorScheme = 'dark';
     }
 })();
 </script>
