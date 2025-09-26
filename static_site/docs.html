@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MarketScanner Pro — Docs</title>
+  <style>
+    body { background:#0b1220; color:#e5e7eb; font:15px/1.6 system-ui; margin:24px; }
+    h1 { font-size:1.8rem; margin-bottom:12px; }
+    h2 { font-size:1.2rem; margin-top:20px; }
+    ul { margin:6px 0 0 20px; }
+  </style>
+</head>
+<body>
+  <h1>MarketScanner Pro — User Guide</h1>
+  <p><em>How scoring works, signals, alerts, and charts.</em></p>
+
+  <h2>Quick Start</h2>
+  <ol>
+    <li>Choose a watchlist (manual entry or import CSV).</li>
+    <li>Click “Run Scanner” (Equities or Crypto).</li>
+    <li>Open a symbol to see multi-timeframe confluence and indicators.</li>
+    <li>(Optional) Set price alerts and export results for journaling.</li>
+  </ol>
+
+  <h2>Scoring & Weights</h2>
+  <ul>
+    <li>EMA Stack (30%)</li>
+    <li>SMA5↔EMA9/13 Trigger (10%)</li>
+    <li>RSI Regime (20%)</li>
+    <li>MACD Momentum (20%)</li>
+    <li>ATR Risk (10%)</li>
+    <li>Volume Context (7%)</li>
+    <li>Squeeze/Expansion (3%)</li>
+  </ul>
+
+  <h2>Confluence Stacks</h2>
+  <p>TFs: 30m, 1h, 2h, 3h, 4h, 6h, 8h, 1D, Weekly. Stack tiers: ≥2 Watch · ≥3 Setup · ≥4 High-conviction · ≥5 Extreme.</p>
+
+  <h2>Entries, Targets & Stops</h2>
+  <p>Entry via SMA5 cross with EMA stack; ATR-based stops and targets.</p>
+
+  <h2>Alerts</h2>
+  <p>Auto Check cadence, price targets, and signal events.</p>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li>No results? Loosen filters or expand watchlist.</li>
+    <li>Laggy? Fewer TFs or disable live refresh.</li>
+    <li>Mismatch? Check timezone/data source.</li>
+  </ul>
+</body>
+</html>
