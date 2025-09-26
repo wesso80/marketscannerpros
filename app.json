@@ -6,7 +6,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "bundleIdentifier": "com.wesso80.marketscanner",
-      "buildNumber": "1.0.4",
+      "buildNumber": "1.0.7",
       "userInterfaceStyle": "dark",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
