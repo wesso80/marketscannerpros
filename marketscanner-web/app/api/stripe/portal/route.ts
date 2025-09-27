@@ -12,7 +12,7 @@ export async function POST() {
     );
   }
 
-  const stripe = new Stripe(key, { apiVersion: "2024-06-20" });
+  const stripe = new Stripe(key);
   const session = await stripe.billingPortal.sessions.create({
     customer,
     return_url: returnUrl,
