@@ -1,0 +1,21 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
+  "/api/health/route": "/api/health",
+  "/api/stripe/portal/route": "/api/stripe/portal",
+  "/icon.svg/route": "/icon.svg",
+  "/robots.txt/route": "/robots.txt",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/launch/page": "/launch",
+  "/page": "/",
+  "/pricing/page": "/pricing",
+  "/privacy/page": "/privacy",
+  "/terms/page": "/terms",
+  "/contact/page": "/contact",
+  "/disclaimer/page": "/disclaimer",
+  "/dashboard/page": "/dashboard",
+  "/guide/page": "/guide",
+  "/legal/privacy/page": "/legal/privacy",
+  "/legal/terms/page": "/legal/terms",
+  "/signin/page": "/signin"
+}
