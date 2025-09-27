@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
       <h2>Overview</h2>
       <p>
-        MarketScanner Pros (“we”, “us”) provides a trading dashboard and related services.
+        MarketScanner Pros ("we", "us") provides a trading dashboard and related services.
         This policy explains what we collect, why, and your choices.
       </p>
 
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       <h2>How we use information</h2>
       <ul>
         <li>Authenticate accounts and secure access to the dashboard.</li>
-        <li>Process subscriptions and let you manage billing in Stripe’s Customer Portal.</li>
+        <li>Process subscriptions and let you manage billing in Stripe's Customer Portal.</li>
         <li>Operate, maintain, and improve the service; comply with legal obligations.</li>
       </ul>
 
@@ -53,31 +53,7 @@ export default function PrivacyPage() {
       <p>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
 
       <h2>Children</h2>
-      <p>Not directed to individuals under 16. We do not knowingly collect children’s data.</p>
-
-      <h2>Security</h2>
-      <p>We use reasonable technical and organizational measures; no method is 100% secure.</p>
-
-      <h2>Changes</h2>
-      <p>We may update this policy and change the effective date. Material changes may include additional notice.</p>
-
-      <h2>Contact</h2>
-      <p>Email: <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a></p>
-    </main>
-  );
-}
-
-      <h2>International transfers</h2>
-      <p>Data may be processed outside your country; we use appropriate safeguards where required.</p>
-
-      <h2>Retention</h2>
-      <p>We keep personal data only as long as necessary for the purposes above or as required by law.</p>
-
-      <h2>Your rights</h2>
-      <p>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
-
-      <h2>Children</h2>
-      <p>Not directed to individuals under 16. We do not knowingly collect children’s data.</p>
+      <p>Not directed to individuals under 16. We do not knowingly collect children's data.</p>
 
       <h2>Security</h2>
       <p>We use reasonable technical and organizational measures; no method is 100% secure.</p>
