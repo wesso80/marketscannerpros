@@ -22,9 +22,10 @@ In Vercel dashboard, go to Project Settings → Environment Variables and add:
 - `STRIPE_PUBLISHABLE_KEY` = your_live_stripe_publishable_key
 - `NEXTAUTH_URL` = https://your-domain.vercel.app
 - `NEXTAUTH_SECRET` = generate_random_secret_32_chars
+- `GOOGLE_CLIENT_ID` = your_google_oauth_client_id
+- `GOOGLE_CLIENT_SECRET` = your_google_oauth_client_secret
 
 **Optional:**
-- `STRIPE_TEST_CUSTOMER_ID` = customer_id_for_portal_testing
 - `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` = your-domain.com
 
 ### 3. Deploy
