@@ -5681,7 +5681,17 @@ if 'is_mobile' in globals() and is_mobile:
     st.markdown("""
 <style>
 html, body, .stApp { background:#ffffff !important; color:#111 !important; }
-.pro-card, .metric-card, .tier-card { background:#ffffff !important; color:#111 !important; }
+.pro-card, .metric-card { background:#ffffff !important; color:#111 !important; }
+.tier-card { 
+    background:#f8f9fa !important; 
+    color:#111 !important; 
+    border: 2px solid #dee2e6 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+.tier-card.premium {
+    background:#fff9c4 !important;
+    border-color: #fbbf24 !important;
+}
 .stButton > button { background:#2563eb !important; color:#fff !important; }
 </style>
 """, unsafe_allow_html=True)
