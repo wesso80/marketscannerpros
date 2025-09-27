@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
-    {"offset": {"line": 15, "column": 0}, "map": {"version":3,"sources":["file:///home/runner/workspace/marketscanner-web/marketscanner-web/app/page.tsx"],"sourcesContent":["export default function Home() {\n  return (\n    <section className=\"grid gap-4 py-12\">\n      <h1 className=\"text-4xl font-bold\">Scan crypto & stocks across timeframes — fast.</h1>\n      <p className=\"text-neutral-300\">Confluence heatmaps, alerts, backtesting, and exportable watchlists.</p>\n      <div className=\"flex gap-3\">\n        <a className=\"rounded bg-emerald-500 px-4 py-2 text-black\" href=\"/dashboard\">Launch App</a>\n        <a className=\"rounded border border-neutral-700 px-4 py-2\" href=\"/pricing\">See Pricing</a>\n      </div>\n    </section>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,8RAAC;QAAQ,WAAU;;0BACjB,8RAAC;gBAAG,WAAU;0BAAqB;;;;;;0BACnC,8RAAC;gBAAE,WAAU;0BAAmB;;;;;;0BAChC,8RAAC;gBAAI,WAAU;;kCACb,8RAAC;wBAAE,WAAU;wBAA8C,MAAK;kCAAa;;;;;;kCAC7E,8RAAC;wBAAE,WAAU;wBAA8C,MAAK;kCAAW;;;;;;;;;;;;;;;;;;AAInF","debugId":null}}]
-}

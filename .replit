@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "nano", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib"]
+packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "nano", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib", "jq"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -18,19 +18,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Market Scanner"
+args = "Next.js App"
 
 [[workflows.workflow]]
-name = "Market Scanner"
+name = "Next.js App"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000"
+args = "cd marketscanner-web && npm run dev"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[ports]]
 localPort = 3000
