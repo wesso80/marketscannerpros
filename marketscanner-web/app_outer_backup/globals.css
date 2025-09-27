@@ -1,0 +1,29 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Your custom styles */
+@layer components {
+  .btn { @apply rounded bg-emerald-500 px-4 py-2 text-black; }
+}
+@layer utilities {
+  .text-shadow { text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+}
+
+/* Optional theme vars from the Next.js template */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
