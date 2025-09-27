@@ -29,7 +29,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /tmp/app && /home/runner/workspace/.pythonlibs/bin/python3.11 -m streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
+args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
 waitForPort = 5000
 
 [[ports]]
@@ -55,6 +55,10 @@ externalPort = 3001
 [[ports]]
 localPort = 38229
 externalPort = 6800
+
+[[ports]]
+localPort = 39155
+externalPort = 9000
 
 [[ports]]
 localPort = 39849
@@ -83,6 +87,10 @@ externalPort = 6000
 [[ports]]
 localPort = 46449
 externalPort = 8080
+
+[[ports]]
+localPort = 46491
+externalPort = 8081
 
 [[ports]]
 localPort = 46745

@@ -11,6 +11,7 @@ from datetime import datetime
 
 # ================= HEALTH CHECK ENDPOINT =================
 # Simple health check for deployment readiness - MUST BE FIRST
+health_check = ""  # Initialize to prevent unbound variable
 try:
     qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
     health_param = qp.get('health', [''])
@@ -22,8 +23,7 @@ try:
             "service": "market-scanner",
             "version": "1.0.0",
             "timestamp": datetime.now().isoformat(),
-            "database": "connected" if os.getenv("DATABASE_URL") else "not_configured",
-            "stripe": "configured" if os.getenv("STRIPE_SECRET_KEY") else "not_configured"
+            "database": "connected" if os.getenv("DATABASE_URL") else "not_configured"
         })
         st.stop()  # Return only health check response
 except Exception as e:
@@ -33,6 +33,7 @@ except Exception as e:
 
 # ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
 # Import heavy dependencies only after health check
+features_disabled = False
 try:
     import pandas as pd, numpy as np, yfinance as yf, requests
     import psycopg2
@@ -45,17 +46,28 @@ try:
     from math import floor
     import io
     import json
-    import qrcode
+    from qrcode import QRCode
     from PIL import Image
     import base64
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     import plotly.express as px
-    import stripe
+    # Skip stripe import if not available
+    try:
+        import stripe
+    except ImportError:
+        stripe = None
 except ImportError as e:
-    st.error(f"❌ Failed to import required packages: {e}")
-    st.info("🔧 Please check the deployment environment and package installation.")
-    st.stop()
+    features_disabled = True
+    st.warning(f"⚠️ Some features are disabled due to missing packages: {e}")
+    st.info("📊 Basic functionality is still available. Install packages for full features.")
+    # Import only essentials
+    try:
+        import pandas as pd, numpy as np
+        import plotly.graph_objects as go
+    except ImportError:
+        st.error("❌ Core packages missing. Please install pandas, numpy, and plotly.")
+        st.stop()
 
 # ================= MOBILE DETECTION (CONSOLIDATED) =================
 # Detect mobile once at the top using proper headers and query params
@@ -89,666 +101,19 @@ st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layo
 st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile else "💻 Web"}</div>', unsafe_allow_html=True)
 
 
-# ================= Professional Styling - Marketing Page Theme =================
+# ================= Basic App Styling =================
 st.markdown("""
 <style>
-/* Professional Global Styles - Marketing Page Dark Theme */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-:root {
-    --primary-color: #0F172A;
-    --secondary-color: #1E293B;
-    --accent-color: #10B981;
-    --accent-hover: #059669;
-    --danger-color: #EF4444;
-    --warning-color: #F59E0B;
-    --success-color: #10B981;
-    --border-radius: 16px;
-    --spacing-unit: 1rem;
-    
-    /* Dark theme colors matching marketing page */
-    --app-bg: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    --card-bg: linear-gradient(145deg, #1E293B 0%, #334155 100%);
-    --metric-card-bg: linear-gradient(145deg, #1E293B 0%, #475569 100%);
-    --text-color: #F8FAFC;
-    --text-muted: #CBD5E1;
-    --border-color: #475569;
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
-}
-
-/* MOBILE DARK MODE - Highest priority overrides */
-html[data-mobile-dark="true"],
-html[data-mobile-dark="true"] body {
-    background-color: rgb(14, 17, 23) !important;
-    color: rgb(250, 250, 250) !important;
-    color-scheme: dark !important;
-}
-
-/* Force ALL containers to dark - Maximum specificity */
-html[data-mobile-dark="true"] .stApp,
-html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
-html[data-mobile-dark="true"] .main .block-container,
-html[data-mobile-dark="true"] section.main,
-html[data-mobile-dark="true"] .block-container,
-html[data-mobile-dark="true"] div.block-container {
-    background-color: rgb(14, 17, 23) !important;
-    background: rgb(14, 17, 23) !important;
-}
-
-/* Override any Streamlit theme that tries to change it back */
-html[data-mobile-dark="true"] * {
-    color-scheme: dark !important;
-}
-
-/* For non-mobile, let Streamlit handle theme */
-.stApp {
-    background: transparent !important;
-}
-
-[data-testid="stAppViewContainer"] {
-    background: transparent !important;
-}
-
-.main .block-container {
-    background: transparent !important;
-}
-
-/* Main App Background - Marketing Page Dark Theme */
-.stApp {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--app-bg) !important;
-    color: var(--text-color);
-}
-
-/* Apply dark theme globally */
-.main .block-container {
-    background: transparent !important;
-    color: var(--text-color);
-}
-
-/* Header Styling - Marketing Page Style */
-.main-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    padding: 3rem 0;
-    margin: -2rem -3rem 3rem -3rem;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    box-shadow: var(--card-shadow);
-    color: var(--text-color);
-    text-align: center;
-    border-bottom: 2px solid var(--accent-color);
-}
-
-.main-header h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-color);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.main-header .hero-subtitle {
-    font-size: 1.25rem;
-    opacity: 0.9;
-    margin: 1rem 0;
-    font-weight: 400;
-    color: var(--text-muted);
-}
-
-.hero-buttons {
-    margin-top: 2rem;
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.app-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1rem auto;
-    display: block;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Professional Cards - Marketing Page Style */
-.pro-card {
-    background: var(--card-bg);
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    margin: 1.5rem 0;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.pro-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-}
-
-.pro-card:hover {
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-4px);
-    border-color: var(--accent-color);
-}
-
-.pro-card h3 {
-    color: var(--text-color);
-    font-weight: 600;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-}
-
-.pro-card p {
-    color: var(--text-muted);
-    line-height: 1.6;
-}
-
-/* Metrics Cards */
-.metric-card {
-    background: var(--metric-card-bg);
-    border-radius: var(--border-radius);
-    padding: 1.5rem;
-    margin: 0.5rem 0;
-    box-shadow: var(--card-shadow);
-    border-left: 4px solid var(--secondary-color);
-    transition: all 0.3s ease;
-}
-
-.metric-card:hover {
-    box-shadow: var(--card-shadow-hover);
-}
-
-.metric-value {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0;
-}
-
-.metric-label {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Fix Streamlit success/error/info banners with MAXIMUM specificity */
-.stApp .stSuccess, .stApp .stError, .stApp .stInfo, .stApp .stWarning,
-.stApp .stAlert, .stApp [data-testid="stAlert"],
-.stApp [data-testid="stAlertContainer"],
-.stApp div[data-testid="stAlert"], .stApp div[data-testid="stAlertContainer"],
-.alert, .alert-info, .alert-warning, .alert-success, .alert-error {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--accent-color) !important;
-    border-left: 4px solid var(--accent-color) !important;
-    border-top: 1px solid var(--accent-color) !important;
-    border-right: 1px solid var(--accent-color) !important;
-    border-bottom: 1px solid var(--accent-color) !important;
-    box-shadow: var(--card-shadow) !important;
-    border-radius: var(--border-radius) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-    .stSuccess, .stError, .stInfo, .stWarning,
-    .stAlert, [data-testid="stAlert"] {
-        background: var(--card-bg) !important;
-        color: var(--text-color) !important;
-        border-color: var(--accent-color) !important;
-        border-left: 4px solid var(--accent-color) !important;
-        box-shadow: var(--card-shadow) !important;
-    }
-    
-    .stApp {
-        background: var(--app-bg) !important;
-        color: var(--text-color) !important;
-    }
-    
-    .main .block-container {
-        background: transparent !important;
-        color: var(--text-color) !important;
-    }
-}
-
-/* Mobile dark mode - Force GREEN accents on all alerts */
-html[data-mobile-dark="true"] .stSuccess,
-html[data-mobile-dark="true"] .stError, 
-html[data-mobile-dark="true"] .stInfo,
-html[data-mobile-dark="true"] .stWarning,
-html[data-mobile-dark="true"] .stAlert,
-html[data-mobile-dark="true"] [data-testid="stAlert"] {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--accent-color) !important;
-    border-left: 4px solid var(--accent-color) !important;
-    box-shadow: var(--card-shadow) !important;
-}
-
-/* Professional Buttons - MAXIMUM SPECIFICITY for ALL button types */
-.stApp .stButton > button,
-.stApp button[data-testid="stBaseButton-secondary"],
-.stApp button[kind="secondary"],
-.stApp [data-testid="stBaseButton-secondary"],
-.stApp div[data-testid="stButton"] button,
-.stApp button[data-testid="stBaseButton-primary"],
-.stApp button[kind="primary"],
-.stApp [data-testid="stBaseButton-primary"],
-.stApp button {
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
-    background-image: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: var(--border-radius) !important;
-    padding: 0.75rem 2rem !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
-    font-family: 'Inter', sans-serif !important;
-    min-height: auto !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.stApp .stButton > button:hover,
-.stApp button[data-testid="stBaseButton-secondary"]:hover,
-.stApp button[kind="secondary"]:hover,
-.stApp button[data-testid="stBaseButton-primary"]:hover,
-.stApp button[kind="primary"]:hover,
-.stApp button:hover {
-    background: linear-gradient(135deg, var(--accent-hover), #047857) !important;
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important;
-    transform: translateY(-2px) !important;
-}
-
-/* Primary Action Button - Like marketing page "Launch App" */
-.primary-button {
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
-    color: white !important;
-    padding: 1rem 2.5rem !important;
-    font-size: 1.125rem !important;
-    font-weight: 700 !important;
-    border-radius: var(--border-radius) !important;
-    border: none !important;
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4) !important;
-    transition: all 0.3s ease !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-}
-
-.primary-button:hover {
-    background: linear-gradient(135deg, var(--accent-hover), #047857) !important;
-    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5) !important;
-    transform: translateY(-3px) !important;
-}
-
-/* Sidebar Enhancements - Dark Theme with Better Spacing */
-.css-1d391kg,
-.stSidebar,
-[data-testid="stSidebar"] {
-    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%) !important;
-    border-right: 1px solid var(--border-color) !important;
-    color: var(--text-color) !important;
-    min-width: 340px !important;
-    width: 360px !important;
-}
-
-/* Improved sidebar spacing and layout */
-[data-testid="stSidebarUserContent"] > * {
-    margin-bottom: 12px !important;
-}
-
-[data-testid="stSidebar"] .stButton > button {
-    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
-    color: white !important;
-    border: none !important;
-    width: 100% !important;
-    margin-bottom: 8px !important;
-}
-
-/* Better input sizing and spacing */
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] [role="combobox"] {
-    min-height: 44px !important;
-}
-
-/* Improved label readability */
-[data-testid="stSidebar"] label {
-    font-size: 0.9rem !important;
-    line-height: 1.4 !important;
-    color: var(--text-muted) !important;
-}
-
-/* Compact mode indicator chip */
+/* Minimal styling for essential functionality only */
 .mode-chip {
     display: inline-block;
     padding: 4px 12px;
     border-radius: 20px;
-    background: var(--accent-color);
+    background: #10B981;
     color: white;
     font-size: 0.75rem;
     font-weight: 600;
     margin-bottom: 16px;
-}
-
-/* Fix for number input width issues - ensure readable numbers */
-.stNumberInput > div > div > input {
-    min-width: 120px !important;
-    width: 100% !important;
-    text-align: center !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
-}
-
-/* Fix for column layout number inputs */
-[data-testid="column"] .stNumberInput {
-    width: 100% !important;
-}
-
-[data-testid="column"] .stNumberInput > div {
-    width: 100% !important;
-}
-
-/* Ensure metric displays don't truncate */
-.stMetric {
-    min-width: 140px !important;
-}
-
-.stMetric > div {
-    white-space: nowrap !important;
-    overflow: visible !important;
-}
-
-/* Mobile responsive sidebar */
-@media (max-width: 768px) {
-    [data-testid="stSidebar"] {
-        width: 100% !important;
-        min-width: auto !important;
-    }
-    
-    /* Better mobile number inputs */
-    .stNumberInput > div > div > input {
-        min-width: 100px !important;
-        font-size: 0.9rem !important;
-    }
-}
-
-/* Data Tables - Dark Theme */
-.stDataFrame {
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    box-shadow: var(--card-shadow);
-    background: var(--card-bg) !important;
-}
-
-.stDataFrame table {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-}
-
-.stDataFrame th {
-    background: var(--secondary-color) !important;
-    color: var(--text-color) !important;
-    border-color: var(--border-color) !important;
-}
-
-.stDataFrame td {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--border-color) !important;
-}
-
-/* Status Indicators */
-.status-success {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-    margin: 0.25rem;
-}
-
-.status-warning {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-    margin: 0.25rem;
-}
-
-.status-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 600;
-    display: inline-block;
-    margin: 0.25rem;
-}
-
-/* Subscription Tiers - Marketing Page Dark Theme */
-.tier-card {
-    background: var(--card-bg);
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    margin: 1rem 0;
-    box-shadow: var(--card-shadow);
-    border: 2px solid var(--border-color);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.tier-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-}
-
-.tier-card:hover {
-    border-color: var(--secondary-color);
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-4px);
-}
-
-.tier-card.premium {
-    border-color: #fbbf24;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-}
-
-.tier-card.premium::before {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-}
-
-/* Dark mode overrides for tier cards with high specificity */
-@media (prefers-color-scheme: dark) {
-    .stApp .tier-card {
-        background: var(--card-bg) !important;
-        border-color: var(--border-color) !important;
-        color: var(--text-color) !important;
-    }
-    
-    .stApp .tier-card.premium {
-        background: var(--card-bg) !important;
-        border-color: #f59e0b !important;
-        color: var(--text-color) !important;
-    }
-}
-
-/* Mobile app dark mode overrides for tier cards */
-html[data-mobile-dark="true"] .stApp .tier-card {
-    background: var(--card-bg) !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-color) !important;
-}
-
-html[data-mobile-dark="true"] .stApp .tier-card.premium {
-    background: var(--card-bg) !important;
-    border-color: #f59e0b !important;
-    color: var(--text-color) !important;
-}
-
-.price-display {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-color);
-    margin: 1rem 0;
-}
-
-.price-period {
-    font-size: 1rem;
-    color: var(--text-muted);
-    font-weight: 400;
-}
-
-/* Feature Lists */
-.feature-list {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0;
-}
-
-.feature-list li {
-    padding: 0.5rem 0;
-    color: var(--text-color);
-    font-weight: 500;
-    position: relative;
-    padding-left: 1.5rem;
-}
-
-.feature-list li::before {
-    content: '✓';
-    position: absolute;
-    left: 0;
-    color: var(--accent-color);
-    font-weight: 700;
-}
-
-/* Promotional Button - Hero section marketing (non-functional) */
-.promo-button {
-    background: linear-gradient(135deg, #374151, #4B5563) !important;
-    color: #9CA3AF !important;
-    padding: 0.875rem 2rem !important;
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-    border: 1px solid #4B5563 !important;
-    border-radius: var(--border-radius) !important;
-    transition: all 0.3s ease !important;
-    text-transform: none !important;
-    letter-spacing: 0.25px !important;
-    opacity: 0.8;
-    cursor: default;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-}
-
-.promo-button:hover {
-    background: linear-gradient(135deg, #4B5563, #6B7280) !important;
-    transform: none !important;
-    opacity: 0.9;
-}
-
-/* Secondary Button */
-.secondary-button {
-    background: transparent !important;
-    color: var(--text-color) !important;
-    padding: 1rem 2rem !important;
-    font-size: 1rem !important;
-    font-weight: 600 !important;
-    border: 2px solid var(--border-color) !important;
-    border-radius: var(--border-radius) !important;
-    transition: all 0.3s ease !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin-left: 1rem;
-}
-
-.secondary-button:hover {
-    background: var(--card-bg) !important;
-    border-color: var(--accent-color) !important;
-    color: var(--accent-color) !important;
-    transform: translateY(-2px) !important;
-}
-
-/* Override Streamlit default styles */
-.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-    color: var(--text-color) !important;
-}
-
-.stMarkdown p {
-    color: var(--text-muted) !important;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .main-header {
-        padding: 2rem 1rem;
-        margin: -1rem -1rem 2rem -1rem;
-    }
-    
-    .main-header h1 {
-        font-size: 2rem;
-    }
-    
-    .main-header p {
-        font-size: 1rem;
-    }
-    
-    .tier-card {
-        padding: 1.5rem;
-    }
-    
-    .price-display {
-        font-size: 2rem;
-    }
-}
-
-/* Success/Error Messages */
-.stSuccess {
-    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-    border-left: 4px solid var(--accent-color);
-    border-radius: var(--border-radius);
-}
-
-.stError {
-    background: linear-gradient(135deg, #fee2e2, #fecaca);
-    border-left: 4px solid var(--danger-color);
-    border-radius: var(--border-radius);
-}
-
-.stInfo {
-    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-    border-left: 4px solid var(--secondary-color);
-    border-radius: var(--border-radius);
-}
-
-/* Loading States */
-.stSpinner {
-    color: var(--secondary-color);
-}
-
-/* Charts Enhancement */
-.js-plotly-plot {
-    border-radius: var(--border-radius);
-    box-shadow: var(--card-shadow);
-    overflow: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -5156,6 +4521,38 @@ else:
     st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
 
 # ================= Backtesting Section =================
+# Minimal CSS fix for the two unreadable input boxes (date and number inputs)
+st.markdown("""
+<style>
+/* Targeted fix for date and number inputs readability only */
+div[data-testid="stDateInput"] input {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
+    color: #000 !important;
+    background-color: #fff !important;
+}
+
+div[data-testid="stNumberInput"] input {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
+    color: #000 !important;
+    background-color: #fff !important;
+    text-align: center !important;
+    min-width: 100px !important;
+}
+
+/* Better label visibility for these inputs */
+div[data-testid="stDateInput"] label,
+div[data-testid="stNumberInput"] label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.subheader("🔬 Strategy Backtesting")
 
 # Backtest controls
