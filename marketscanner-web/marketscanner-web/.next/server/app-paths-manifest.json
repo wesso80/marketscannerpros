@@ -1,0 +1,8 @@
+{
+  "/docs/page": "app/docs/page.js",
+  "/legal/disclaimer/page": "app/legal/disclaimer/page.js",
+  "/legal/privacy/page": "app/legal/privacy/page.js",
+  "/legal/terms/page": "app/legal/terms/page.js",
+  "/page": "app/page.js",
+  "/pricing/page": "app/pricing/page.js"
+}

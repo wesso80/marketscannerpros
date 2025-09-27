@@ -1,0 +1,20 @@
+{
+  "pages": {
+    "/legal/disclaimer/page": [
+      "static/chunks/6e21b_next_dist_57767630._.js",
+      "static/chunks/marketscanner-web_marketscanner-web_app_favicon_ico_mjs_3943ec18._.js",
+      "static/chunks/marketscanner-web_marketscanner-web_app_globals_31cbe931.css",
+      "static/chunks/marketscanner-web_marketscanner-web_app_layout_tsx_ddaf1b08._.js",
+      "static/chunks/6e21b_next_dist_client_components_builtin_global-error_20e08c55.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_4e6a4901._.js",
+      "static/chunks/6e21b_next_dist_compiled_react-dom_995d7822._.js",
+      "static/chunks/6e21b_next_dist_compiled_next-devtools_index_f740e99e.js",
+      "static/chunks/6e21b_next_dist_compiled_3f5c3f40._.js",
+      "static/chunks/6e21b_next_dist_client_8d55db68._.js",
+      "static/chunks/6e21b_next_dist_ed2c9502._.js",
+      "static/chunks/6e21b_@swc_helpers_cjs_80b7a5ca._.js",
+      "static/chunks/marketscanner-web_marketscanner-web_a0ff3932._.js",
+      "static/chunks/turbopack-marketscanner-web_marketscanner-web_b1928459._.js"
+    ]
+  }
+}

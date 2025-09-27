@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":[],"names":[],"mappings":"","debugId":null}},
+    {"offset": {"line": 15, "column": 0}, "map": {"version":3,"sources":["file:///home/runner/workspace/marketscanner-web/marketscanner-web/app/docs/page.tsx"],"sourcesContent":["export default function Docs() {\n  return (\n    <article className=\"prose prose-invert max-w-none\">\n      <h1>MarketScanner Pro — User Guide</h1>\n      <p>Quick start, scoring model, timeframes, alerts, and exports.</p>\n    </article>\n  );\n}\n"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,8RAAC;QAAQ,WAAU;;0BACjB,8RAAC;0BAAG;;;;;;0BACJ,8RAAC;0BAAE;;;;;;;;;;;;AAGT","debugId":null}}]
+}
