@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+out/
+.vercel/
+.expo/
+.expo-shared/
+*.log
+.env
+.env.local
+.env.*.local
+__pycache__/
+*.pyc
+.DS_Store
