@@ -4,7 +4,7 @@ export default function Home() {
       <h1 style={{fontSize:"2rem", fontWeight:700, letterSpacing:"-0.02em"}}>MarketScanner Pros</h1>
       <p style={{opacity:.85, marginTop:8}}>Run smart scans, interpret scores, and manage alerts.</p>
       <p style={{marginTop:16}}>
-        <a className="btn" href="https://YOUR-REAL-APP-URL">Launch App</a>
+        <a className="btn" href="/launch">Launch App</a>
       </p>
 
       <div style={{marginTop:32, opacity:.9}}>
