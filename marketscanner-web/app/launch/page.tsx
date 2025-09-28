@@ -1,22 +1,14 @@
-'use client';
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+// Don't prerender this at build time
+export const dynamic = "force-dynamic";
 
-export default function Launch() {
-  const router = useRouter();
-  const { status } = useSession(); // 'loading' | 'authenticated' | 'unauthenticated'
+export default async function Launch() {
+  const jar = await cookies();
+  const hasSession =
+    Boolean(jar.get("next-auth.session-token")) ||
+    Boolean(jar.get("__Secure-next-auth.session-token"));
 
-  useEffect(() => {
-    if (status === 'authenticated') router.replace('/dashboard');
-    else if (status === 'unauthenticated') router.replace('/signin');
-  }, [status, router]);
-
-  return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-semibold">Launching…</h1>
-      <p className="opacity-70 mt-2">Checking your session and redirecting.</p>
-    </main>
-  );
+  redirect(hasSession ? "/dashboard" : "/signin");
 }
