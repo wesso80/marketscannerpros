@@ -52,7 +52,7 @@
       "continue": true
     },
     {
-      "src": "^/_next/data/4awaHQpA2NUwhnzhGG8tv/(.*).json",
+      "src": "^/_next/data/bGNxv\\-zECNYCbJbm\\-0Yxa/(.*).json",
       "dest": "/$1",
       "override": true,
       "continue": true,
@@ -77,17 +77,17 @@
     },
     {
       "continue": true,
-      "src": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next|favicon.ico).*))(\\.json)?[\\/#\\?]?$",
+      "src": "^(?:\\/(_next\\/data\\/[^/]{1,}))?\\/api\\/auth\\/signin(\\.json)?[\\/#\\?]?$",
       "missing": [
         {
           "type": "header",
           "key": "x-prerender-revalidate",
-          "value": "5cc8361eefa361fd6d002f13fa5d2135"
+          "value": "03e8adbbc1cb4aaff52369dc455e09a2"
         }
       ],
       "middlewarePath": "middleware",
       "middlewareRawSrc": [
-        "/((?!_next|favicon.ico).*)"
+        "/api/auth/signin"
       ],
       "override": true
     },
@@ -99,7 +99,7 @@
           "key": "x-nextjs-data"
         }
       ],
-      "dest": "/_next/data/4awaHQpA2NUwhnzhGG8tv/index.json",
+      "dest": "/_next/data/bGNxv-zECNYCbJbm-0Yxa/index.json",
       "continue": true,
       "override": true
     },
@@ -111,7 +111,7 @@
           "key": "x-nextjs-data"
         }
       ],
-      "dest": "/_next/data/4awaHQpA2NUwhnzhGG8tv/$1.json",
+      "dest": "/_next/data/bGNxv-zECNYCbJbm-0Yxa/$1.json",
       "continue": true,
       "override": true
     },
@@ -151,7 +151,7 @@
       "handle": "filesystem"
     },
     {
-      "src": "^/_next/data/4awaHQpA2NUwhnzhGG8tv/(.*).json",
+      "src": "^/_next/data/bGNxv\\-zECNYCbJbm\\-0Yxa/(.*).json",
       "dest": "/$1",
       "continue": true,
       "has": [
@@ -227,7 +227,7 @@
           "key": "x-nextjs-data"
         }
       ],
-      "dest": "/_next/data/4awaHQpA2NUwhnzhGG8tv/index.json",
+      "dest": "/_next/data/bGNxv-zECNYCbJbm-0Yxa/index.json",
       "continue": true
     },
     {
@@ -238,11 +238,11 @@
           "key": "x-nextjs-data"
         }
       ],
-      "dest": "/_next/data/4awaHQpA2NUwhnzhGG8tv/$1.json",
+      "dest": "/_next/data/bGNxv-zECNYCbJbm-0Yxa/$1.json",
       "continue": true
     },
     {
-      "src": "^/_next/data/4awaHQpA2NUwhnzhGG8tv/api/auth/(?<nxtPnextauth>.+?)(?:/)?.json$",
+      "src": "^/_next/data/bGNxv\\-zECNYCbJbm\\-0Yxa/api/auth/(?<nxtPnextauth>.+?)(?:/)?.json$",
       "dest": "/api/auth/[...nextauth]?nxtPnextauth=$nxtPnextauth"
     },
     {
@@ -254,7 +254,7 @@
       "dest": "/api/auth/[...nextauth]?nxtPnextauth=$nxtPnextauth"
     },
     {
-      "src": "^/_next/data/4awaHQpA2NUwhnzhGG8tv/(.*).json",
+      "src": "^/_next/data/bGNxv\\-zECNYCbJbm\\-0Yxa/(.*).json",
       "headers": {
         "x-nextjs-matched-path": "/$1"
       },
@@ -262,14 +262,14 @@
       "override": true
     },
     {
-      "src": "^/_next/data/4awaHQpA2NUwhnzhGG8tv/(.*).json",
+      "src": "^/_next/data/bGNxv\\-zECNYCbJbm\\-0Yxa/(.*).json",
       "dest": "__next_data_catchall"
     },
     {
       "handle": "hit"
     },
     {
-      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|4awaHQpA2NUwhnzhGG8tv)/.+",
+      "src": "/_next/static/(?:[^/]+/pages|pages|chunks|runtime|css|image|media|bGNxv\\-zECNYCbJbm\\-0Yxa)/.+",
       "headers": {
         "cache-control": "public,max-age=31536000,immutable"
       },
