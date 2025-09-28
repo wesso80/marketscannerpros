@@ -30,7 +30,7 @@ export default function RootLayout({
               <a href="/legal/terms">Terms</a>
 
               <a href="/contact">Contact</a>
-              <a href="/signin">Sign in</a>
+              <a href="/signin?callbackUrl=/app">Sign in</a>
             </nav>
           </div>
         </header>
