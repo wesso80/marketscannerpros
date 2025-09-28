@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["android-tools", "cargo", "dig", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "jq", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "nano", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib"]
+packages = ["android-tools", "cargo", "eas-cli", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "nano", "openjdk17", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib", "jq"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -26,7 +26,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
+args = "cd marketscanner-web && npm run dev"
 waitForPort = 5000
 
 [workflows.workflow.metadata]

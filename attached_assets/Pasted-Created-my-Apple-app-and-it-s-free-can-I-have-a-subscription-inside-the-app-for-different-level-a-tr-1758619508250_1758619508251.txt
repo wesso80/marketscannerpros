@@ -1,0 +1,64 @@
+Created my Apple app and it’s free can I have a subscription inside the app for different level a trading
+ChatGPT said:
+Thought for 37s
+
+Yes—you absolutely can. Make the app free to download and sell access to your premium trading features as auto-renewable in-app subscription(s). Apple explicitly allows subscriptions in any app category, so long as you use In-App Purchase (StoreKit) for digital features and follow the subscription rules. 
+Apple Developer
++1
+
+Here’s the clean way to set it up for “Basic / Pro / Elite”-style tiers:
+
+Design your subscription structure
+
+Create one Subscription Group in App Store Connect (e.g., “Market Scanner Pro”).
+
+Add multiple subscriptions inside that group (e.g., Basic, Pro, Elite) and assign Levels so users can upgrade/downgrade/cross-grade properly (Level 1 = most features). Pick durations like monthly / yearly. 
+Apple Developer
++2
+Apple Developer
++2
+
+App Store Connect settings (per product)
+
+Set price + duration (1 week / 1, 2, 3, 6 months / 1 year), localize the display name/description, optionally add free trials or intro offers, and consider grace period and price-increase consent if you plan to change prices. 
+Apple Developer
+
+Implementation in your app
+
+Use StoreKit (or a RN/Expo bridge like react-native-iap / RevenueCat) to:
+• fetch available products → show your paywall,
+• initiate purchase → unlock entitlement on success,
+• expose a “Manage Subscription” link in-app so users can view/change/cancel (Apple requires an obvious management path). 
+Apple Developer
+
+Server-side verification (recommended)
+
+Validate receipts and entitlements on your backend and/or with App Store Server API / Notifications so access remains correct across devices and reinstalls. (This also protects you from local spoofing and lets you react to renewals, refunds, or expirations.) 
+Apple Developer
+
+What you must not do
+
+Don’t use external payment for digital features; Apple reviews reject that. (There are niche exceptions like “reader apps,” but trading features are digital services and must use IAP.) 
+Apple Developer
++1
+
+Trading/crypto specifics to avoid review issues
+
+If your app facilitates crypto exchange or transfers, that’s allowed only when the provider is approved/licensed in each region served; otherwise keep it to analytics, education, alerts, charts, etc. Include clear risk disclosures and avoid promising returns. 
+Apple Developer
+
+Mini-checklist for submission
+
+Paywall with clear price, billing period, and trial terms.
+
+Privacy Policy + Terms/EULA linked in the app and on the store listing.
+
+A visible Manage Subscription path in-app.
+
+Feature gating tied to the verified entitlement (don’t unlock based on just a button tap). 
+Apple Developer
++1
+
+If you want, I can outline the exact App Store Connect clicks and a minimal code flow for your Expo/React Native build (product IDs, paywall copy, restore purchases button, and a test plan with Sandbox TestFlight).
+
+ChatGPT can make mistake
