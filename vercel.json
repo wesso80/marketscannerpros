@@ -3,11 +3,5 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "rewrites": [
-    {
-      "source": "/mobile/:path*",
-      "destination": "https://YOUR-STREAMLIT-APP.example.com/:path*"
-    }
-  ]
+  "framework": "nextjs"
 }
