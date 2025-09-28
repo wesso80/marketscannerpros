@@ -4,13 +4,10 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
-  },
   "rewrites": [
     {
       "source": "/mobile/:path*",
-      "destination": "https://your-streamlit-app.example.com/:path*"
+      "destination": "https://YOUR-STREAMLIT-APP.example.com/:path*"
     }
   ]
 }
