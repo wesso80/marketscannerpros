@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Market Scanner",
+    "slug": "marketscanner",
+    "owner": "wesso80",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.wesso80.marketscanner",
+      "buildNumber": "1.0.3",
+      "userInterfaceStyle": "dark",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIUserInterfaceStyle": "Dark"
+      }
+    },
+    "plugins": [
+      ["expo-build-properties", { "ios": { "useFrameworks": "static" } }]
+    ],
+    "extra": {
+      "TARGET_URL": "https://market-scanner-1-wesso80.replit.app",
+      "eas": { "projectId": "3f5c8d9e-2d58-49fd-9621-98efab177ee7" }
+    },
+    "android": {
+      "package": "com.wesso80.marketscanner",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    }
+  }
+}

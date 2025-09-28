@@ -1,0 +1,356 @@
+# market_scanner_app.py
+# One-file Market Scanner (pure pandas) + Streamlit Dashboard
+# - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
+# - ATR-based position sizing
+# - Optional Email + Slack summaries
+# - CSV download
+
+import os, smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+import pandas as pd, numpy as np, yfinance as yf, requests, streamlit as st
+from dataclasses import dataclass
+from typing import List, Tuple
+from datetime import datetime, timezone
+from dateutil import tz
+from math import floor
+
+# ================= Config =================
+@dataclass
+class ScanConfig:
+    symbols_equity: List[str]
+    symbols_crypto: List[str]     # BTC-USD style
+    tf_equity: str = "1D"         # 1D or 1h/30m/15m/5m/1m (yfinance intraday limited)
+    tf_crypto: str = "1h"
+    top_k: int = 15
+    min_dollar_vol: float = 2_000_000
+    # Risk / Position sizing defaults
+    account_equity: float = 10_000.0
+    risk_pct: float = 0.01          # 1% per trade
+    stop_atr_mult: float = 1.5
+    # Optional notifications
+    slack_webhook: str = os.getenv("SLACK_WEBHOOK_URL", "")
+    # Email via env (don’t paste passwords into code)
+    smtp_host: str = os.getenv("SMTP_HOST", "")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "465"))
+    smtp_user: str = os.getenv("SMTP_USER", "")
+    smtp_pass: str = os.getenv("SMTP_PASS", "")
+    email_to: str  = os.getenv("EMAIL_TO", "")
+
+CFG = ScanConfig(
+    symbols_equity=["AAPL","MSFT","NVDA","TSLA","AMD","META"],
+    symbols_crypto=["BTC-USD","ETH-USD","SOL-USD","BNB-USD","XRP-USD"],
+    tf_equity="1D",
+    tf_crypto="1h",
+    top_k=15,
+    min_dollar_vol=2_000_000
+)
+
+SYD = tz.gettz("Australia/Sydney")
+
+# ================= Utilities =================
+def _yf_interval_period(tf: str) -> Tuple[str, str]:
+    t = tf.lower().strip()
+    if t in ("1d","1day","d"):       return ("1d","2y")
+    if t in ("1h","60m"):            return ("60m","730d")
+    if t in ("30m","15m","5m","1m"): return (t, "60d")  # yfinance limit
+    return ("1d","2y")
+
+def min_bars_required(tf: str) -> int:
+    t = tf.lower()
+    if t in ("1d","d"):    return 210
+    if t in ("1h","60m"):  return 350
+    if t in ("30m","15m"): return 500
+    if t in ("5m","1m"):   return 700
+    return 210
+
+def dollar_volume(df: pd.DataFrame) -> float:
+    return float((df["close"] * df["volume"]).tail(20).mean())
+
+# ================= Data Source (yfinance) =================
+def get_ohlcv_yf(symbol: str, timeframe: str) -> pd.DataFrame:
+    interval, period = _yf_interval_period(timeframe)
+    data = yf.Ticker(symbol.upper()).history(period=period, interval=interval, auto_adjust=False)
+    if data is None or data.empty:
+        raise ValueError(f"No yfinance data for {symbol} @ {interval}/{period}")
+    data.index = pd.to_datetime(data.index, utc=True)
+    out = pd.DataFrame({
+        "open":   data["Open"].astype(float),
+        "high":   data["High"].astype(float),
+        "low":    data["Low"].astype(float),
+        "close":  data["Close"].astype(float),
+        "volume": data["Volume"].astype(float).fillna(0.0),
+    }, index=data.index).dropna()
+    return out
+
+def get_ohlcv(symbol: str, timeframe: str) -> pd.DataFrame:
+    return get_ohlcv_yf(symbol, timeframe)
+
+# ================= Indicators (pure pandas) =================
+def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
+def _rsi(s, n=14):
+    d = s.diff()
+    up = d.clip(lower=0).ewm(alpha=1/n, adjust=False).mean()
+    dn = (-d.clip(upper=0)).ewm(alpha=1/n, adjust=False).mean()
+    rs = up / dn
+    return 100 - (100 / (1 + rs))
+def _atr(h, l, c, n=14):
+    tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
+    return tr.ewm(alpha=1/n, adjust=False).mean()
+def _bb_width(c, n=20, k=2.0):
+    ma = c.rolling(n).mean(); sd = c.rolling(n).std()
+    upper, lower = ma + k*sd, ma - k*sd
+    return (upper - lower) / c
+
+def compute_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["ema8"]   = _ema(out["close"], 8)
+    out["ema21"]  = _ema(out["close"], 21)
+    out["ema50"]  = _ema(out["close"], 50)
+    out["ema200"] = _ema(out["close"], 200)
+    out["rsi"]    = _rsi(out["close"], 14)
+
+    macd_fast = _ema(out["close"], 12); macd_slow = _ema(out["close"], 26)
+    macd_line = macd_fast - macd_slow
+    signal    = macd_line.ewm(span=9, adjust=False).mean()
+    out["macd_hist"] = macd_line - signal
+
+    out["atr"]        = _atr(out["high"], out["low"], out["close"], 14)
+    out["bb_width"]   = _bb_width(out["close"], 20, 2.0)
+    out["vol_ma20"]   = out["volume"].rolling(20).mean()
+    out["vol_z"]      = (out["volume"] - out["vol_ma20"]) / out["vol_ma20"].replace(0, np.nan)
+    out["close_20_max"] = out["close"].rolling(20).max()
+    out["close_20_min"] = out["close"].rolling(20).min()
+    out["bb_width_ma"]  = out["bb_width"].rolling(20).mean()
+    return out
+
+# ================= Scoring =================
+def score_row(r) -> float:
+    s = 0.0
+    s += 25 if r.close > r.ema200 else -25
+    s += 25 if r.close > r["close_20_max"] else 0
+    s -= 25 if r.close < r["close_20_min"] else 0
+    s += 10 if (pd.notna(r.rsi) and r.rsi > 50) else -10
+    s += 10 if (pd.notna(r.macd_hist) and r.macd_hist > 0) else -10
+    s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
+    s += 7  if (pd.notna(r.bb_width) and pd.notna(r.bb_width_ma) and r.bb_width > r.bb_width_ma) else 0
+    atr_pct = (r.atr / r.close) if (pd.notna(r.atr) and r.close) else np.nan
+    s += 5 if (pd.notna(atr_pct) and atr_pct < 0.04) else 0
+    s -= 10 if (pd.notna(r.rsi) and r.rsi > 80) else 0
+    s += 10 if (pd.notna(r.rsi) and r.rsi < 20) else 0
+    return float(s)
+
+# ================= Position sizing =================
+def position_sizing(last, direction: str, account_equity: float, risk_pct: float, stop_mult: float):
+    """
+    Returns (size_units, risk_$, notional_$, stop_price)
+    """
+    stop_price = last.close - stop_mult*last.atr if direction=="Bullish" else last.close + stop_mult*last.atr
+    per_unit_risk = abs(last.close - stop_price)
+    risk_dollars  = account_equity * risk_pct
+    size_units = 0 if per_unit_risk <= 0 else floor(risk_dollars / per_unit_risk)
+    notional = size_units * last.close
+    return size_units, risk_dollars, notional, stop_price
+
+# ================= Scanner =================
+@st.cache_data(show_spinner=False, ttl=300)
+def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
+                  account_equity: float, risk_pct: float, stop_mult: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    rows, errs = [], []
+    for sym in symbols:
+        try:
+            df = get_ohlcv(sym, timeframe)
+            if len(df) < min_bars_required(timeframe):
+                raise ValueError(f"Not enough history ({len(df)}) for {timeframe}")
+            if not is_crypto and dollar_volume(df) < CFG.min_dollar_vol:
+                raise ValueError(f"Below min dollar vol ({CFG.min_dollar_vol:,.0f})")
+
+            f = compute_features(df).dropna()
+            if f.empty:
+                raise ValueError("Features empty after dropna()")
+            last = f.iloc[-1]
+            sc = score_row(last)
+            direction = "Bullish" if sc >= 0 else "Bearish"
+
+            size, risk_usd, notional, stop = position_sizing(
+                last, direction, account_equity, risk_pct, stop_mult
+            )
+
+            rows.append({
+                "symbol": sym,
+                "timeframe": timeframe,
+                "close": round(float(last.close), 6),
+                "score": round(sc, 2),
+                "direction": direction,
+                "rsi": round(float(last.rsi), 2),
+                "atr": round(float(last.atr), 6),
+                "ema50_gt_200": bool(last.ema50 > last.ema200),
+                "bb_width": round(float(last.bb_width), 6) if pd.notna(last.bb_width) else None,
+                "vol_z": round(float(last.vol_z), 2) if pd.notna(last.vol_z) else None,
+                "stop": round(float(stop), 6),
+                "size": int(size),
+                "risk_$": round(float(risk_usd), 2),
+                "notional_$": round(float(notional), 2)
+            })
+        except Exception as e:
+            errs.append({"symbol": sym, "timeframe": timeframe, "error": str(e)})
+    df_rows = pd.DataFrame(rows)
+    if not df_rows.empty and "score" in df_rows.columns:
+        df_rows = df_rows.sort_values("score", ascending=False)
+    df_errs = pd.DataFrame(errs)
+    return df_rows, df_errs
+
+# ================= Notifications =================
+def push_slack(text: str):
+    if not CFG.slack_webhook: return
+    try: requests.post(CFG.slack_webhook, json={"text": text}, timeout=10)
+    except Exception as e: print("Slack error:", e)
+
+def send_email(subject: str, body: str):
+    if not all([CFG.smtp_host, CFG.smtp_port, CFG.smtp_user, CFG.smtp_pass, CFG.email_to]):
+        return False, "Missing SMTP env vars"
+    msg = MIMEMultipart()
+    msg["From"] = CFG.smtp_user
+    msg["To"] = CFG.email_to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(CFG.smtp_host, CFG.smtp_port, context=context) as server:
+            server.login(CFG.smtp_user, CFG.smtp_pass)
+            server.sendmail(CFG.smtp_user, CFG.email_to, msg.as_string())
+        return True, "sent"
+    except Exception as e:
+        return False, str(e)
+
+def format_block(df: pd.DataFrame, title: str) -> str:
+    if df.empty:
+        return f"{title}\n(no candidates)"
+    cols = ["symbol","score","close","rsi","atr","vol_z","stop","size","notional_$"]
+    lines = [title]
+    for _, r in df[cols].iterrows():
+        lines.append(f"• {r.symbol}: score {r.score:+.1f}, px {r.close}, RSI {r.rsi}, ATR {r.atr:.5f}, "
+                     f"z {r.vol_z}, stop {r.stop}, size {r.size}, notional ${r.notional_$:,.0f}")
+    return "\n".join(lines)
+
+# ================= UI =================
+st.set_page_config(page_title="Market Scanner Dashboard", layout="wide")
+st.title("📊 Market Scanner Dashboard")
+
+c1, c2, c3 = st.columns([1,1,1])
+run_clicked = c1.button("🔎 Run Scanner", use_container_width=True)
+c2.button("🔁 Refresh Data", use_container_width=True)
+now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
+c3.info(f"Last scan: {now_syd}")
+
+# Sidebar
+st.sidebar.header("Equity Symbols")
+eq_input = st.sidebar.text_area("Enter symbols (one per line):",
+    "\n".join(CFG.symbols_equity), height=140)
+
+st.sidebar.header("Crypto Symbols (BTC-USD style)")
+cx_input = st.sidebar.text_area("Enter symbols (one per line):",
+    "\n".join(CFG.symbols_crypto), height=140)
+
+st.sidebar.header("Timeframes")
+tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], index=0)
+tf_cx = st.sidebar.selectbox("Crypto Timeframe:", ["1h","4h","1d","15m","5m"], index=0)
+
+st.sidebar.header("Filters")
+topk = st.sidebar.number_input("Top K Results:", 5, 100, value=CFG.top_k, step=1)
+minvol = st.sidebar.number_input("Min Dollar Volume:", 0, 200_000_000, value=int(CFG.min_dollar_vol), step=100000)
+
+st.sidebar.header("Risk / Sizing")
+acct = st.sidebar.number_input("Account Equity ($):", 100, 100_000_000, value=int(CFG.account_equity), step=100)
+risk = st.sidebar.number_input("Risk per Trade (%):", 0.1, 10.0, value=CFG.risk_pct*100, step=0.1) / 100.0
+stop_mult = st.sidebar.number_input("Stop = k × ATR:", 0.5, 5.0, value=CFG.stop_atr_mult, step=0.1)
+
+st.sidebar.header("Notifications")
+send_email_toggle = st.sidebar.checkbox("Email top picks (uses SMTP_* env vars)")
+send_slack_toggle = st.sidebar.checkbox("Slack summary (uses SLACK_WEBHOOK_URL)")
+
+st.subheader("🏛 Equity Markets")
+eq_err_container = st.expander("⚠️ Equity Scan Errors", expanded=False)
+st.subheader("₿ Crypto Markets")
+cx_err_container = st.expander("⚠️ Crypto Scan Errors", expanded=False)
+
+st.subheader("🧮 Scoring Methodology")
+with st.expander("Show details", expanded=False):
+    st.markdown("""
+- **Regime**: EMA200 (±25)
+- **Structure**: 20-bar breakout/breakdown (±25)
+- **Momentum**: RSI>50 & MACD hist>0 (+20)
+- **Expansion**: Vol z>0.5 (+8) & BB width rising (+7)
+- **Tradability**: ATR% < 4% (+5)
+- **Overextension**: RSI>80 (−10) / RSI<20 (+10)
+- **Sizing**: Units = ⌊(Account × Risk%) / |Entry−Stop|⌋
+    """)
+
+if run_clicked:
+    eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()]
+    cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()]
+
+    # runtime overrides
+    CFG.top_k = int(topk); CFG.min_dollar_vol = float(minvol)
+    CFG.account_equity = float(acct); CFG.risk_pct = float(risk); CFG.stop_atr_mult = float(stop_mult)
+
+    with st.spinner("Scanning equities..."):
+        eq_df, eq_err = scan_universe(eq_syms, tf_eq, is_crypto=False,
+                                      account_equity=CFG.account_equity, risk_pct=CFG.risk_pct, stop_mult=CFG.stop_atr_mult)
+    with st.spinner("Scanning crypto..."):
+        cx_df, cx_err = scan_universe(cx_syms, tf_cx, is_crypto=True,
+                                      account_equity=CFG.account_equity, risk_pct=CFG.risk_pct, stop_mult=CFG.stop_atr_mult)
+
+    with eq_err_container:
+        st.dataframe(eq_err if not eq_err.empty else pd.DataFrame({"status":["No errors"]}), use_container_width=True)
+    with cx_err_container:
+        st.dataframe(cx_err if not cx_err.empty else pd.DataFrame({"status":["No errors"]}), use_container_width=True)
+
+    st.markdown("### ✅ Results")
+    colL, colR = st.columns(2)
+
+    with colL:
+        st.markdown("**Top Bullish (Equities)**")
+        bull_eq = eq_df[eq_df["direction"]=="Bullish"].head(topk) if not eq_df.empty else pd.DataFrame()
+        st.dataframe(bull_eq, use_container_width=True)
+        st.markdown("**Top Bearish (Equities)**")
+        bear_eq = eq_df[eq_df["direction"]=="Bearish"].head(topk) if not eq_df.empty else pd.DataFrame()
+        st.dataframe(bear_eq, use_container_width=True)
+
+    with colR:
+        st.markdown("**Top Bullish (Crypto)**")
+        bull_cx = cx_df[cx_df["direction"]=="Bullish"].head(topk) if not cx_df.empty else pd.DataFrame()
+        st.dataframe(bull_cx, use_container_width=True)
+        st.markdown("**Top Bearish (Crypto)**")
+        bear_cx = cx_df[cx_df["direction"]=="Bearish"].head(topk) if not cx_df.empty else pd.DataFrame()
+        st.dataframe(bear_cx, use_container_width=True)
+
+    # Download CSV
+    if not eq_df.empty or not cx_df.empty:
+        all_df = pd.concat([eq_df.assign(asset="Equity"), cx_df.assign(asset="Crypto")], ignore_index=True)
+        csv_bytes = all_df.to_csv(index=False).encode()
+        st.download_button("⬇️ Download CSV", data=csv_bytes, file_name="market_scan.csv", mime="text/csv")
+
+    # Slack & Email summaries
+    ts = datetime.now(timezone.utc).astimezone(SYD).strftime("%Y-%m-%d %H:%M %Z")
+    if send_slack_toggle and CFG.slack_webhook:
+        summary = "\n\n".join([
+            f"Market Scanner @ {ts}",
+            format_block(bull_eq, "🔵 Top Bullish (Equities)"),
+            format_block(bear_eq, "🔴 Top Bearish (Equities)"),
+            format_block(bull_cx, "🟦 Top Bullish (Crypto)"),
+            format_block(bear_cx, "🟥 Top Bearish (Crypto)")
+        ])
+        push_slack(summary)
+
+    if send_email_toggle:
+        subject = f"Market Scanner @ {ts}"
+        body = "\n\n".join([
+            format_block(bull_eq, "Top Bullish (Equities)"),
+            format_block(bear_eq, "Top Bearish (Equities)"),
+            format_block(bull_cx, "Top Bullish (Crypto)"),
+            format_block(bear_cx, "Top Bearish (Crypto)")
+        ])
+        ok, msg = send_email(subject, body)
+        st.toast("Email sent ✅" if ok else f"Email failed: {msg}", icon="✉️" if ok else "⚠️")
