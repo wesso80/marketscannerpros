@@ -3,10 +3,7 @@ node_modules/
 out/
 dist/
 .vercel/
-.expo/
-.expo-shared/
 *.log
 .env
 .env.local
 .env.*.local
-.vercel
