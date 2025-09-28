@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+.expo/
+dist/
+.next/
+
+# Build artifacts
+*.tgz
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
