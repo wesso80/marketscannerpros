@@ -1,64 +1,6 @@
 {
   "version": 4,
   "routes": {
-    "/sitemap.xml": {
-      "initialHeaders": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "application/xml",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/sitemap.xml/layout,_N_T_/sitemap.xml/route,_N_T_/sitemap.xml"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/sitemap.xml",
-      "dataRoute": null,
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/robots.txt": {
-      "initialHeaders": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "text/plain",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/robots.txt/layout,_N_T_/robots.txt/route,_N_T_/robots.txt"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/robots.txt",
-      "dataRoute": null,
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/launch": {
       "initialHeaders": {
         "x-nextjs-stale-time": "300",
@@ -79,93 +21,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/launch",
       "dataRoute": "/launch.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/pricing": {
-      "initialHeaders": {
-        "x-nextjs-stale-time": "300",
-        "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/pricing/layout,_N_T_/pricing/page,_N_T_/pricing"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/pricing",
-      "dataRoute": "/pricing.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/terms": {
-      "initialHeaders": {
-        "x-nextjs-stale-time": "300",
-        "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/terms/layout,_N_T_/terms/page,_N_T_/terms"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/terms",
-      "dataRoute": "/terms.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/privacy": {
-      "initialHeaders": {
-        "x-nextjs-stale-time": "300",
-        "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/privacy/layout,_N_T_/privacy/page,_N_T_/privacy"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/privacy",
-      "dataRoute": "/privacy.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -204,11 +59,11 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/legal/privacy": {
+    "/pricing": {
       "initialHeaders": {
         "x-nextjs-stale-time": "300",
         "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/legal/layout,_N_T_/legal/privacy/layout,_N_T_/legal/privacy/page,_N_T_/legal/privacy"
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/pricing/layout,_N_T_/pricing/page,_N_T_/pricing"
       },
       "experimentalBypassFor": [
         {
@@ -222,8 +77,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/legal/privacy",
-      "dataRoute": "/legal/privacy.rsc",
+      "srcRoute": "/pricing",
+      "dataRoute": "/pricing.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -233,11 +88,11 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/disclaimer": {
+    "/privacy": {
       "initialHeaders": {
         "x-nextjs-stale-time": "300",
         "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/disclaimer/layout,_N_T_/disclaimer/page,_N_T_/disclaimer"
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/privacy/layout,_N_T_/privacy/page,_N_T_/privacy"
       },
       "experimentalBypassFor": [
         {
@@ -251,8 +106,37 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/disclaimer",
-      "dataRoute": "/disclaimer.rsc",
+      "srcRoute": "/privacy",
+      "dataRoute": "/privacy.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/robots.txt": {
+      "initialHeaders": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "text/plain",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/robots.txt/layout,_N_T_/robots.txt/route,_N_T_/robots.txt"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/robots.txt",
+      "dataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -291,11 +175,11 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/legal/terms": {
+    "/terms": {
       "initialHeaders": {
         "x-nextjs-stale-time": "300",
         "x-nextjs-prerender": "1",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/legal/layout,_N_T_/legal/terms/layout,_N_T_/legal/terms/page,_N_T_/legal/terms"
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/terms/layout,_N_T_/terms/page,_N_T_/terms"
       },
       "experimentalBypassFor": [
         {
@@ -309,8 +193,37 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/legal/terms",
-      "dataRoute": "/legal/terms.rsc",
+      "srcRoute": "/terms",
+      "dataRoute": "/terms.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/disclaimer": {
+      "initialHeaders": {
+        "x-nextjs-stale-time": "300",
+        "x-nextjs-prerender": "1",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/disclaimer/layout,_N_T_/disclaimer/page,_N_T_/disclaimer"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/disclaimer",
+      "dataRoute": "/disclaimer.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -340,6 +253,64 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/guide",
       "dataRoute": "/guide.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/legal/privacy": {
+      "initialHeaders": {
+        "x-nextjs-stale-time": "300",
+        "x-nextjs-prerender": "1",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/legal/layout,_N_T_/legal/privacy/layout,_N_T_/legal/privacy/page,_N_T_/legal/privacy"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/legal/privacy",
+      "dataRoute": "/legal/privacy.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/legal/terms": {
+      "initialHeaders": {
+        "x-nextjs-stale-time": "300",
+        "x-nextjs-prerender": "1",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/legal/layout,_N_T_/legal/terms/layout,_N_T_/legal/terms/page,_N_T_/legal/terms"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/legal/terms",
+      "dataRoute": "/legal/terms.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -407,13 +378,42 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
+    },
+    "/sitemap.xml": {
+      "initialHeaders": {
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "application/xml",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/sitemap.xml/layout,_N_T_/sitemap.xml/route,_N_T_/sitemap.xml"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/sitemap.xml",
+      "dataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "225ec6c2d69b4fd4271ba19bc68bc705",
-    "previewModeSigningKey": "ebd7f26fa4f87e4a731d26ef95252ec502b9c28951a4a770351c3b6d756fedeb",
-    "previewModeEncryptionKey": "91a1e0f65e31c7e9387a304291f82fa2240544b0371a73be6d0d17b79f000f04"
+    "previewModeId": "3b7151f2a19fd3957d614a3bdf2e1f2b",
+    "previewModeSigningKey": "c2d261348104222991274cf0f1f0092abfb21fa724cd91599c2fef47b17eb9d2",
+    "previewModeEncryptionKey": "cf7038d982bffbbcaee4c35e00b7bc0898e7f19d2a634d7629ec63a25118f7bd"
   }
 }
