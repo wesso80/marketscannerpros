@@ -96,16 +96,37 @@ st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile e
 # ================= Professional Styling - Marketing Page Theme =================
 st.markdown("""
 <style>
-/* PORTFOLIO FIX v2.1 - FORCE WHITE TEXT + DARK BACKGROUNDS - CACHE BUST */
+/* PORTFOLIO FIX v3.0 - FORCE DARK STYLING ON ALL URLS - UNIVERSAL OVERRIDE */
+/* Remove conditional logic - apply dark styling everywhere */
 .stPlotlyChart, .stPlotlyChart > div, .js-plotly-plot, .plotly-graph-div {
     background-color: #1E293B !important;
     background: #1E293B !important;
 }
-div[data-testid="metric-container"] *, .stMetric * {
+
+/* FORCE WHITE TEXT ON ALL METRIC CONTAINERS - NO CONDITIONS */
+div[data-testid="metric-container"], 
+div[data-testid="metric-container"] *,
+.stMetric, .stMetric *,
+[data-testid="metric-container"] label,
+[data-testid="metric-container"] .metric-label,
+[data-testid="metric-container"] .metric-value {
     color: #FFFFFF !important;
     opacity: 1.0 !important;
+    font-weight: 600 !important;
 }
-/* Force refresh timestamp: """ + str(datetime.now().timestamp()) + """ */
+
+/* FORCE ALL CONTAINERS TO DARK BACKGROUND - UNIVERSAL */
+.stApp,
+[data-testid="stAppViewContainer"],
+.main .block-container,
+section.main,
+.block-container,
+div.block-container {
+    background-color: #0F172A !important;
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+}
+
+/* Cache bust: """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -132,41 +153,35 @@ div[data-testid="metric-container"] *, .stMetric * {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* MOBILE DARK MODE - Highest priority overrides */
+/* UNIVERSAL DARK MODE - APPLY TO ALL URLS WITHOUT CONDITIONS */
+html, body {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+    color-scheme: dark !important;
+}
+
+/* FORCE ALL MAIN CONTAINERS TO DARK - NO CONDITIONAL LOGIC */
+.stApp,
+[data-testid="stAppViewContainer"],
+.main .block-container,
+section.main,
+.block-container,
+div.block-container {
+    background-color: #0F172A !important;
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+}
+
+/* ENSURE TEXT VISIBILITY ON ALL CONTAINERS */
+.stApp *, [data-testid="stAppViewContainer"] *, .block-container * {
+    color: #F8FAFC !important;
+}
+
+/* Keep mobile overrides as backup */
 html[data-mobile-dark="true"],
 html[data-mobile-dark="true"] body {
-    background-color: rgb(14, 17, 23) !important;
-    color: rgb(250, 250, 250) !important;
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
     color-scheme: dark !important;
-}
-
-/* Force ALL containers to dark - Maximum specificity */
-html[data-mobile-dark="true"] .stApp,
-html[data-mobile-dark="true"] [data-testid="stAppViewContainer"],
-html[data-mobile-dark="true"] .main .block-container,
-html[data-mobile-dark="true"] section.main,
-html[data-mobile-dark="true"] .block-container,
-html[data-mobile-dark="true"] div.block-container {
-    background-color: rgb(14, 17, 23) !important;
-    background: rgb(14, 17, 23) !important;
-}
-
-/* Override any Streamlit theme that tries to change it back */
-html[data-mobile-dark="true"] * {
-    color-scheme: dark !important;
-}
-
-/* For non-mobile, let Streamlit handle theme */
-.stApp {
-    background: transparent !important;
-}
-
-[data-testid="stAppViewContainer"] {
-    background: transparent !important;
-}
-
-.main .block-container {
-    background: transparent !important;
 }
 
 /* Main App Background - Marketing Page Dark Theme */
