@@ -115,6 +115,46 @@ div[data-testid="metric-container"] *,
     font-weight: 600 !important;
 }
 
+/* PORTFOLIO TRACKING SECTION - FORCE DARK CONTAINERS + WHITE TEXT */
+div[data-testid="stTabs"] > div,
+div[data-testid="stTabs"] div[data-baseweb="tab-panel"],
+div[data-testid="stTabs"] .stTab,
+div[data-testid="stTabs"] .stTabContent,
+div[data-testid="stTabs"] section,
+div[data-testid="stTabs"] .element-container {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+}
+
+/* FORCE ALL TABS AND EXPANDERS TO DARK */
+div[data-testid="stExpander"],
+div[data-testid="stExpander"] > div,
+.streamlit-expanderHeader,
+.streamlit-expanderContent,
+[data-testid="stExpander"] div,
+[data-testid="stExpander"] section {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+}
+
+/* DATAFRAMES AND TABLES - DARK BACKGROUND */
+div[data-testid="stDataFrame"],
+div[data-testid="stTable"],
+.stDataFrame, .stTable,
+.dataframe, table {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
+}
+
+/* PORTFOLIO METRICS - ENSURE BOLD WHITE TEXT */
+.stMetric > div > div {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    opacity: 1.0 !important;
+}
+
 /* FORCE ALL CONTAINERS TO DARK BACKGROUND - UNIVERSAL */
 .stApp,
 [data-testid="stAppViewContainer"],
