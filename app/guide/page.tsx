@@ -46,7 +46,7 @@ export default function UserGuide() {
         <li><strong>Auto Check</strong> cadence for scanning.</li>
         <li><strong>Triggers:</strong> target hits (TP/SL grid), custom price levels.</li>
         <li><strong>Signal events:</strong> SMA5↔EMA9/13 cross, EMA stack flip, RSI regime change, squeeze expansion.</li>
-        <li><strong>Delivery:</strong> in-app; optional email/Telegram/push hooks.</li>
+        <li><strong>Delivery:</strong> in-app notifications (100% reliable); optional email alerts for mobile coverage.</li>
       </ul>
 
       <h2>6) Advanced Charts</h2>
@@ -59,7 +59,7 @@ export default function UserGuide() {
 
       <h2>7) Exports & Workflow</h2>
       <ul>
-        <li>CSV copy for journaling; hooks for email/Telegram/push automation.</li>
+        <li>CSV copy for journaling; email notifications for scan results and alerts.</li>
         <li>Export snapshots from charts for trade logs.</li>
       </ul>
     </main>
