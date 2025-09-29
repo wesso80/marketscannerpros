@@ -33,18 +33,15 @@ export default function Home() {
       </div>
       
       <div style={{flex:1, maxWidth:'500px'}}>
-        <Image 
+        <img 
           src="/dashboard-screenshot.png" 
           alt="MarketScanner Dashboard Preview" 
-          width={500}
-          height={800}
           style={{
             width: '100%',
             height: 'auto',
             borderRadius: '8px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
           }}
-          priority
         />
       </div>
     </div>
