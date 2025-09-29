@@ -1,6 +1,32 @@
+'use client';
 import "./styles.css";
-import "./styles.css";
+import { useState } from "react";
+
 export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
+    setLoading(plan);
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan })
+      });
+      
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
   return (
     <main>
       <h1>Pricing</h1>
@@ -27,9 +53,13 @@ export default function PricingPage() {
             <li>Squeezes</li>
             <li>Exports</li>
           </ul>
-          <span className="btn" style={{opacity: 0.6}}>
-            Coming Soon
-          </span>
+          <button 
+            className="btn" 
+            onClick={() => handleCheckout('pro')}
+            disabled={loading === 'pro'}
+          >
+            {loading === 'pro' ? 'Processing...' : 'Start Free Trial'}
+          </button>
         </div>
 
         {/* Full Pro Trader Plan */}
@@ -41,9 +71,13 @@ export default function PricingPage() {
             <li>Advanced alerts</li>
             <li>Priority support</li>
           </ul>
-          <span className="btn" style={{opacity: 0.6}}>
-            Coming Soon
-          </span>
+          <button 
+            className="btn" 
+            onClick={() => handleCheckout('pro_trader')}
+            disabled={loading === 'pro_trader'}
+          >
+            {loading === 'pro_trader' ? 'Processing...' : 'Start Free Trial'}
+          </button>
         </div>
       </div>
     </main>
