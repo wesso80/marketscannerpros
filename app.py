@@ -1428,7 +1428,7 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
         st.error("Error: Invalid alert type.")
         return False
         
-    if notification_method not in ['in_app', 'slack', 'both', 'none']:
+    if notification_method not in ['in_app', 'email', 'slack', 'both', 'none']:
         st.error("Error: Invalid notification method.")
         return False
     
@@ -1589,6 +1589,15 @@ The price target you set has been reached.
         # Quarantine alerts without workspace_id (should not happen with NOT NULL constraint)
         st.error(f"⚠️ Alert processing error: Missing workspace context for {alert['symbol']}")
         st.info("Please recreate this alert to ensure proper delivery.")
+    
+    # Send email notification if email method selected
+    if alert.get('notification_method') in ['email', 'both'] and user_email and user_email != 'system':
+        try:
+            email_sent = send_email_to_user(subject, message, user_email)
+            if email_sent:
+                print(f"✅ Email alert sent to {user_email} for {symbol}")
+        except Exception as e:
+            print(f"❌ Email notification failed for {user_email}: {e}")
     
     # Optional Slack notification (no longer causes persistence failure)
     if alert.get('notification_method') in ['slack', 'both'] and CFG.slack_webhook:
@@ -4573,22 +4582,23 @@ with st.sidebar.expander("Price Alert Notifications", expanded=False):
     
     notification_method = st.selectbox(
         "Notification Method:",
-        ["In-App Notifications", "Slack", "Both", "None"],
+        ["In-App Notifications", "Email", "Slack", "Both", "None"],
         index=0,
-        help="Choose how you want to receive alerts (In-App provides reliable persistent notifications)",
-        key="notification_method_v2"  # Force refresh with new key
+        help="Choose how you want to receive alerts (Email provides direct delivery to your inbox)",
+        key="notification_method_v3"  # Force refresh with new key
     )
     
     # Map UI options to backend values
     method_mapping = {
         "In-App Notifications": "in_app",
+        "Email": "email",
         "Slack": "slack", 
         "Both": "both",
         "None": "none"
     }
     backend_method = method_mapping[notification_method]
     
-    if user_email and notification_method == "In-App Notifications":
+    if user_email and notification_method in ["In-App Notifications", "Email"]:
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔔 Test Notification", help="Send a test notification to verify your alert system"):
@@ -4623,7 +4633,10 @@ Happy trading! 📈
                             st.write("📱 **Delivery**: Immediate display in dashboard")
                             st.write("🎯 **Reliability**: 100% - No external dependencies")
                             
-                        success = send_email_to_user(test_subject, test_message, user_email)
+                        if notification_method == "Email":
+                            success = send_email_to_user(test_subject, test_message, user_email)
+                        else:
+                            success = send_email_to_user(test_subject, test_message, user_email)
                         if success:
                             st.info("✅ **Perfect!** Your notification system is working correctly.")
                     except Exception as e:
