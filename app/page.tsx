@@ -1,10 +1,16 @@
+"use client";
+
 export default function Home() {
   return (
     <div>
       <h1 style={{fontSize:"2rem", fontWeight:700, letterSpacing:"-0.02em"}}>MarketScanner Pros</h1>
       <p style={{opacity:.85, marginTop:8}}>Run smart scans, interpret scores, and manage alerts.</p>
       <p style={{marginTop:16}}>
-        <a className="btn" href="https://YOUR-REAL-APP-URL">Launch App</a>
+        <button className="btn" onClick={() => {
+          const currentUrl = window.location.href;
+          const streamlitUrl = currentUrl.replace(':3000', ':8080').replace('-3000-', '-8080-');
+          window.open(streamlitUrl, '_blank');
+        }}>Launch App</button>
       </p>
 
       <div style={{marginTop:32, opacity:.9}}>
