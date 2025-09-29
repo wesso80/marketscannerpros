@@ -5606,40 +5606,34 @@ with col1:
     # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
-    # REFINED CSS FIX - White text but keep dark backgrounds
+    # FORCE DARK BACKGROUNDS + WHITE TEXT
     st.markdown("""
     <style>
-    /* Force Portfolio Tracking metric TEXT to be white, but preserve dark backgrounds */
-    div[data-testid="metric-container"],
+    /* FORCE all chart and container backgrounds to be DARK */
+    .stPlotlyChart,
+    [data-testid="stPlotlyChart"],
+    .stPlotlyChart > div,
+    [data-testid="stPlotlyChart"] > div,
+    .stPlotlyChart .plotly-graph-div,
+    .js-plotly-plot .plotly-graph-div {
+        background-color: #1E293B !important;
+        background: #1E293B !important;
+    }
+    
+    /* Force ALL white containers back to dark */
+    .stContainer,
+    [data-testid="stContainer"],
+    .element-container,
+    [data-testid="element-container"],
+    .stMarkdown,
+    .stPlotlyChart .plot-container,
+    .stPlotlyChart .svg-container {
+        background-color: #1E293B !important;
+        background: #1E293B !important;
+    }
+    
+    /* Force Portfolio metric TEXT to be white */
     div[data-testid="metric-container"] *,
-    .metric-container,
-    .metric-container * {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-        /* REMOVED background-color override to keep dark containers */
-    }
-    
-    /* Force metric labels */
-    div[data-testid="metric-container"] label,
-    div[data-testid="metric-container"] .metric-label,
-    .metric-label {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-        font-weight: 500 !important;
-        font-size: 0.9rem !important;
-    }
-    
-    /* Force metric values */
-    div[data-testid="metric-container"] [data-testid="metric-value"],
-    div[data-testid="metric-container"] .metric-value,
-    .metric-value {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-        font-weight: 700 !important;
-        font-size: 1.8rem !important;
-    }
-    
-    /* Backup: Force by element type - TEXT ONLY */
     .stMetric div,
     .stMetric label,
     .stMetric span {
@@ -5647,10 +5641,21 @@ with col1:
         opacity: 1.0 !important;
     }
     
-    /* Keep dark backgrounds for chart containers */
-    .stPlotlyChart > div,
-    [data-testid="stPlotlyChart"] {
-        background-color: var(--card-bg) !important;
+    /* Force metric values to be bold and white */
+    div[data-testid="metric-container"] [data-testid="metric-value"],
+    .metric-value {
+        color: #FFFFFF !important;
+        opacity: 1.0 !important;
+        font-weight: 700 !important;
+        font-size: 1.8rem !important;
+    }
+    
+    /* Force metric labels to be white */
+    div[data-testid="metric-container"] label,
+    .metric-label {
+        color: #FFFFFF !important;
+        opacity: 1.0 !important;
+        font-weight: 500 !important;
     }
     </style>
     """, unsafe_allow_html=True)
