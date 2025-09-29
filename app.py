@@ -193,67 +193,10 @@ div.block-container {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* TARGETED DARK THEME - SPECIFIC ELEMENTS ONLY */
-/* Removed universal selector to prevent over-aggressive styling */
-
-/* INPUT ELEMENTS - PROPER CONTRAST AND VISIBILITY */
-input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput input {
-    background-color: #334155 !important;
+/* NUCLEAR OPTION - FORCE ALL ELEMENTS TO DARK - NO WHITE BOXES ALLOWED */
+* {
+    background-color: #1E293B !important;
     color: #F8FAFC !important;
-    border: 1px solid #475569 !important;
-    border-radius: 8px !important;
-}
-
-/* BUTTON STYLING */
-.stButton > button {
-    background-color: #10B981 !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 8px !important;
-}
-
-.stButton > button:hover {
-    background-color: #059669 !important;
-}
-
-/* PORTFOLIO METRICS SECTION - PROPER VISIBILITY */
-[data-testid="stSubheader"], h1, h2, h3, h4, h5, h6 {
-    color: #F8FAFC !important;
-    background-color: transparent !important;
-}
-
-/* SIMPLIFIED TABLE STYLING - FOCUS ON TEXT VISIBILITY */
-[data-testid="stDataFrame"] {
-    background-color: #334155 !important;
-    border: 1px solid #475569 !important;
-    border-radius: 8px !important;
-}
-
-[data-testid="stDataFrame"] table {
-    color: #FFFFFF !important;
-    background-color: transparent !important;
-}
-
-[data-testid="stDataFrame"] th,
-[data-testid="stDataFrame"] td {
-    color: #FFFFFF !important;
-    background-color: transparent !important;
-    border-color: #475569 !important;
-}
-
-/* FORCE WHITE TEXT ON ALL TABLE CONTENT */
-.stDataFrame *, .stTable *, 
-[data-testid="stDataFrame"] *,
-table *, th *, td * {
-    color: #FFFFFF !important;
-}
-
-/* PORTFOLIO METRIC VALUES */
-[data-testid="metric-container"] {
-    background-color: #334155 !important;
-    border: 1px solid #475569 !important;
-    border-radius: 8px !important;
-    padding: 1rem !important;
 }
 
 html, body {
@@ -5074,8 +5017,8 @@ st.markdown("""
     <h3>🏛 Equity Markets</h3>
 """, unsafe_allow_html=True)
 
-# Show results if they exist (prioritize showing data over iOS detection)
-if not st.session_state.eq_results.empty:
+# Show normal results if no iOS issues detected
+if not ios_issue_detected and not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
     
@@ -5087,25 +5030,12 @@ if not st.session_state.eq_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Mobile-friendly results display
-    st.write("**Equity Scan Results:**")
-    
-    if is_mobile:
-        # Mobile-optimized display - show key info only
-        for idx, row in display_eq.head(5).iterrows():
-            with st.container():
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.write(f"**{row['symbol']}** - {row.get('direction', 'N/A')}")
-                    if 'score' in row:
-                        st.write(f"Score: {row['score']:.1f}")
-                with col2:
-                    if 'close' in row:
-                        st.write(f"${row['close']:.2f}")
-                st.divider()
+    # Apply professional styling to direction column
+    if 'direction' in display_eq.columns:
+        styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_eq, width='stretch', use_container_width=True)
     else:
-        # Desktop display
-        st.table(display_eq.head(10))
+        st.dataframe(display_eq, width='stretch', use_container_width=True)
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -5115,14 +5045,14 @@ if not st.session_state.eq_results.empty:
         file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-else:
+elif not ios_issue_detected:
     st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
 
 # Close equity card
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Equity errors (only show if not iOS WebView issue)
-if not st.session_state.eq_errors.empty:
+if not ios_issue_detected and not st.session_state.eq_errors.empty:
     with st.expander("⚠️ Equity Scan Errors", expanded=False):
         st.dataframe(st.session_state.eq_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
@@ -5133,7 +5063,7 @@ st.markdown("""
     <h3>₿ Crypto Markets</h3>
 """, unsafe_allow_html=True)
 
-if not st.session_state.cx_results.empty:
+if not ios_issue_detected and not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
     
@@ -5145,25 +5075,12 @@ if not st.session_state.cx_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Mobile-friendly results display
-    st.write("**Crypto Scan Results:**")
-    
-    if is_mobile:
-        # Mobile-optimized display - show key info only
-        for idx, row in display_cx.head(5).iterrows():
-            with st.container():
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.write(f"**{row['symbol']}** - {row.get('direction', 'N/A')}")
-                    if 'score' in row:
-                        st.write(f"Score: {row['score']:.1f}")
-                with col2:
-                    if 'close' in row:
-                        st.write(f"${row['close']:.2f}")
-                st.divider()
+    # Apply professional styling to direction column
+    if 'direction' in display_cx.columns:
+        styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_cx, width='stretch', use_container_width=True)
     else:
-        # Desktop display
-        st.table(display_cx.head(10))
+        st.dataframe(display_cx, width='stretch', use_container_width=True)
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
@@ -5173,14 +5090,14 @@ if not st.session_state.cx_results.empty:
         file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-else:
+elif not ios_issue_detected:
     st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
 
 # Close crypto card
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Crypto errors (only show if not iOS WebView issue) 
-if not st.session_state.cx_errors.empty:
+if not ios_issue_detected and not st.session_state.cx_errors.empty:
     with st.expander("⚠️ Crypto Scan Errors", expanded=False):
         st.dataframe(st.session_state.cx_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
@@ -6052,4 +5969,22 @@ with col1:
     st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
-# === Mobile dark theme maintained (no longer overriding to white) ===
+# === Mobile legacy style overrides (iOS/Android only) ===
+if 'is_mobile' in globals() and is_mobile:
+    st.markdown("""
+<style>
+html, body, .stApp { background:#ffffff !important; color:#111 !important; }
+.pro-card, .metric-card { background:#ffffff !important; color:#111 !important; }
+.tier-card { 
+    background:#f8f9fa !important; 
+    color:#111 !important; 
+    border: 2px solid #dee2e6 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+.tier-card.premium {
+    background:#fff9c4 !important;
+    border-color: #fbbf24 !important;
+}
+.stButton > button { background:#2563eb !important; color:#fff !important; }
+</style>
+""", unsafe_allow_html=True)
