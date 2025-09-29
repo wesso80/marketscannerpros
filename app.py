@@ -781,10 +781,12 @@ st.markdown("""
                   window.navigator.standalone === true;
     const isMobile = mobileParam === '1' || isIOS;
     
-    // Set mobile dark mode attribute for CSS targeting
+    // FORCE DARK MODE FOR ALL URLS - ALWAYS USE WORKING STYLING
+    document.documentElement.setAttribute('data-mobile-dark', 'true');
+    document.documentElement.style.colorScheme = 'dark';
+    // Also set mobile flag to ensure consistent styling
     if (isMobile) {
-        document.documentElement.setAttribute('data-mobile-dark', 'true');
-        document.documentElement.style.colorScheme = 'dark';
+        // Keep existing mobile-specific code if needed
     }
     
     // Fix Streamlit tab click issues
