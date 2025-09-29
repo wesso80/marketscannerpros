@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
 export async function sendAlertEmail({
@@ -15,6 +14,9 @@ export async function sendAlertEmail({
   if (!process.env.RESEND_API_KEY) {
     throw new Error("Missing RESEND_API_KEY");
   }
+
+  // Initialize only when sending
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   return await resend.emails.send({
     from,
