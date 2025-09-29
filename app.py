@@ -222,16 +222,30 @@ input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput in
     background-color: transparent !important;
 }
 
-/* ENSURE ALL TABLES AND DATAFRAMES ARE VISIBLE */
+/* AGGRESSIVE TABLE STYLING - FORCE VISIBILITY */
 .stDataFrame, .stTable, table, th, td, 
 [data-testid="stDataFrame"], 
-.dataframe, .dataframe th, .dataframe td {
+.dataframe, .dataframe th, .dataframe td,
+div[data-testid="stDataFrame"] *,
+.styledTable, .styledTable *,
+.css-z5fcl4, .css-z5fcl4 *,
+iframe[title="streamlit_app"], iframe[title="streamlit_app"] * {
     background-color: #334155 !important;
     color: #F8FAFC !important;
     border-color: #475569 !important;
+    border: 1px solid #475569 !important;
 }
 
-/* SCAN RESULTS SPECIFIC STYLING */
+/* STYLED DATAFRAMES (PANDAS STYLING) */
+.dataframe, table.dataframe,
+.dataframe tbody, .dataframe thead,
+.dataframe tr, .dataframe td, .dataframe th {
+    background-color: #334155 !important;
+    color: #F8FAFC !important;
+    border: 1px solid #475569 !important;
+}
+
+/* FORCE VISIBILITY FOR SCAN RESULTS */
 .dataframe tbody tr:nth-child(even) {
     background-color: #2D3748 !important;
 }
@@ -244,6 +258,11 @@ input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput in
     background-color: #1A202C !important;
     color: #F7FAFC !important;
     font-weight: bold !important;
+}
+
+/* STREAMLIT IFRAME CONTENT */
+iframe {
+    background-color: #334155 !important;
 }
 
 /* PORTFOLIO METRIC VALUES */
@@ -5072,8 +5091,8 @@ st.markdown("""
     <h3>🏛 Equity Markets</h3>
 """, unsafe_allow_html=True)
 
-# Show normal results if no iOS issues detected
-if not ios_issue_detected and not st.session_state.eq_results.empty:
+# Show results if they exist (prioritize showing data over iOS detection)
+if not st.session_state.eq_results.empty:
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
     
@@ -5100,14 +5119,14 @@ if not ios_issue_detected and not st.session_state.eq_results.empty:
         file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-elif not ios_issue_detected:
+else:
     st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
 
 # Close equity card
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Equity errors (only show if not iOS WebView issue)
-if not ios_issue_detected and not st.session_state.eq_errors.empty:
+if not st.session_state.eq_errors.empty:
     with st.expander("⚠️ Equity Scan Errors", expanded=False):
         st.dataframe(st.session_state.eq_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
@@ -5118,7 +5137,7 @@ st.markdown("""
     <h3>₿ Crypto Markets</h3>
 """, unsafe_allow_html=True)
 
-if not ios_issue_detected and not st.session_state.cx_results.empty:
+if not st.session_state.cx_results.empty:
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
     
@@ -5145,14 +5164,14 @@ if not ios_issue_detected and not st.session_state.cx_results.empty:
         file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
         mime="text/csv"
     )
-elif not ios_issue_detected:
+else:
     st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
 
 # Close crypto card
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Crypto errors (only show if not iOS WebView issue) 
-if not ios_issue_detected and not st.session_state.cx_errors.empty:
+if not st.session_state.cx_errors.empty:
     with st.expander("⚠️ Crypto Scan Errors", expanded=False):
         st.dataframe(st.session_state.cx_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
