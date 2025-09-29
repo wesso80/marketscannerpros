@@ -910,6 +910,44 @@ code, pre {
     color: #10B981 !important;
     border: 1px solid #475569 !important;
 }
+
+/* Lists - bullet points and ordered lists */
+ul, ol, li {
+    color: #F8FAFC !important;
+}
+
+ul li, ol li {
+    color: #F8FAFC !important;
+    opacity: 1.0 !important;
+}
+
+/* Markdown links */
+a, a:link, a:visited {
+    color: #10B981 !important;
+    opacity: 1.0 !important;
+}
+
+a:hover {
+    color: #059669 !important;
+}
+
+/* All markdown text content */
+.stMarkdown, .stMarkdown * {
+    color: #F8FAFC !important;
+}
+
+/* Specifically target all text nodes */
+.stMarkdown p, .stMarkdown div, .stMarkdown span, 
+.stMarkdown li, .stMarkdown ul, .stMarkdown ol {
+    color: #F8FAFC !important;
+    opacity: 1.0 !important;
+}
+
+/* Footer and legal text should be very visible */
+.stMarkdown strong {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -6037,22 +6075,5 @@ with col1:
     st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
-# === Mobile legacy style overrides (iOS/Android only) ===
-if 'is_mobile' in globals() and is_mobile:
-    st.markdown("""
-<style>
-html, body, .stApp { background:#ffffff !important; color:#111 !important; }
-.pro-card, .metric-card { background:#ffffff !important; color:#111 !important; }
-.tier-card { 
-    background:#f8f9fa !important; 
-    color:#111 !important; 
-    border: 2px solid #dee2e6 !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-}
-.tier-card.premium {
-    background:#fff9c4 !important;
-    border-color: #fbbf24 !important;
-}
-.stButton > button { background:#2563eb !important; color:#fff !important; }
-</style>
-""", unsafe_allow_html=True)
+# === DARK THEME FOR ALL DEVICES - Mobile and Desktop ===
+# Keeping dark theme consistent across all platforms
