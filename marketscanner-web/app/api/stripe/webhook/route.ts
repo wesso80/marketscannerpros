@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs"; // ensure Node runtime for raw body
 
 export async function POST(req: Request) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-08-27.basil" });
   const sig = headers().get("stripe-signature");
   const whsec = process.env.STRIPE_WEBHOOK_SECRET;
 
