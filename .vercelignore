@@ -32,3 +32,22 @@ Thumbs.db
 # Misc
 *.tgz
 *.tar.gz
+
+# Large directories and files (exclude from deployment)
+attached_assets/
+marketscanner-web/
+icons/
+assets/
+*.png
+*.jpg
+*.jpeg
+capacitor-build/
+builds/
+android-build/
+mobile/
+static/
+.streamlit/
+*.py
+*.md
+*.lock
+pyproject.toml
