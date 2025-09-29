@@ -4600,7 +4600,7 @@ with st.sidebar.expander("Price Alert Notifications", expanded=False):
         "Notification Method:",
         ["In-App Notifications", "Email", "Both", "None"],
         index=0,
-        help="Choose how you want to receive alerts (Both = Email + In-App notifications)",
+        help="• In-App: Secure notifications in your dashboard (100% reliable)\n• Email: Get alerts via email (requires internet)\n• Both: In-app + email notifications for maximum coverage\n• None: Disable all notifications",
         key="notification_method_v4"  # Force refresh with new key
     )
     
@@ -4643,10 +4643,26 @@ Happy trading! 📈
                         
                         # Show notification system info
                         with st.expander("📊 Notification System Status", expanded=True):
-                            st.write("🔔 **Primary Method**: In-App Notifications")
-                            st.write("✅ **Status**: Fully operational")
-                            st.write("📱 **Delivery**: Immediate display in dashboard")
-                            st.write("🎯 **Reliability**: 100% - No external dependencies")
+                            st.markdown("""
+                            **🔔 How Notifications Work:**
+                            
+                            **In-App Notifications:**
+                            • Primary delivery method - 100% reliable
+                            • Stored securely in your dashboard
+                            • No external dependencies or internet required
+                            • Instant display when you open the app
+                            
+                            **Email Notifications:**
+                            • Sent via professional email service (Vercel/Resend)
+                            • Beautiful HTML-formatted alerts with branding
+                            • Backup delivery method - requires internet connection
+                            • Delivered to your inbox within seconds
+                            
+                            **Delivery Strategy:**
+                            • **Primary**: In-app (guaranteed delivery)
+                            • **Optional**: Email alerts (for immediate mobile notifications)
+                            • **"Both" method**: Get in-app + email for maximum coverage
+                            """)
                             
                         if notification_method == "Email":
                             success = send_email_to_user(test_subject, test_message, user_email)
@@ -4688,7 +4704,7 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
         send_email_toggle = st.checkbox("📧 Email top picks", disabled=True, help="Configure your email in 'Price Alert Notifications' first")
         st.caption("⚠️ Configure email notifications above to enable")
     
-    send_slack_toggle = st.checkbox("📱 Slack summary (requires webhook URL)")
+    send_email_summary_toggle = st.checkbox("📧 Email scan summary", help="Send scan results summary to your email")
 
 # Main scanning logic
 if run_clicked:
@@ -4733,18 +4749,13 @@ if run_clicked:
             st.session_state.cx_results = pd.DataFrame()
             st.session_state.cx_errors = pd.DataFrame()
     
-    # Send notifications if enabled
-    if send_slack_toggle or send_email_toggle:
+    # Send email notifications if enabled
+    if send_email_summary_toggle or send_email_toggle:
         combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
         if not combined_results.empty:
             top_results = combined_results.head(topk)
             
-            if send_slack_toggle:
-                slack_msg = format_block(top_results, f"📊 Top {len(top_results)} Market Picks")
-                push_slack(slack_msg)
-                st.success("Slack notification sent!")
-            
-            if send_email_toggle and user_email:
+            if (send_email_toggle or send_email_summary_toggle) and user_email:
                 email_subject = f"Market Scanner: Top {len(top_results)} Picks"
                 email_body = f"""Market Scanner Results
 
@@ -5766,8 +5777,8 @@ st.markdown("""
 - Data provided by Yahoo Finance via yfinance library
 - Technical indicators calculated using pandas
 - Position sizing based on Average True Range (ATR)
-- Configure SMTP environment variables for email notifications
-- Set SLACK_WEBHOOK_URL for Slack notifications
+- Email notifications powered by Vercel/Resend API (built-in)
+- In-app notifications provide 100% reliable delivery
 """)
 
 # Add Privacy Policy link separately with proper HTML
