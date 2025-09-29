@@ -27,12 +27,9 @@ export default function PricingPage() {
             <li>Squeezes</li>
             <li>Exports</li>
           </ul>
-          <a 
-            href="https://buy.stripe.com/7sY6oI1Gs4GN2Un7oLg7e02" 
-            className="btn"
-          >
-            Subscribe
-          </a>
+          <span className="btn" style={{opacity: 0.6}}>
+            Coming Soon
+          </span>
         </div>
 
         {/* Full Pro Trader Plan */}
@@ -44,12 +41,9 @@ export default function PricingPage() {
             <li>Advanced alerts</li>
             <li>Priority support</li>
           </ul>
-          <a 
-            href="https://buy.stripe.com/3cI00k2Kwb5bamP8sPg7e01" 
-            className="btn"
-          >
-            Subscribe
-          </a>
+          <span className="btn" style={{opacity: 0.6}}>
+            Coming Soon
+          </span>
         </div>
       </div>
     </main>
