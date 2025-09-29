@@ -1,13 +1,18 @@
 {
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(pricing|docs|disclaimer|privacy|terms|contact)", "destination": "/$1" },
+    { "source": "/(.*)", "destination": "https://market-scanner-1-wesso80.replit.app/$1" }
+  ],
   "redirects": [
     { "source": "/launch", "destination": "https://app.marketscannerpros.app", "permanent": false }
   ],
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },                           // keep Next API on Vercel
-    { "source": "/(pricing|docs|disclaimer|privacy|terms|contact)", "destination": "/$1" }, // Next marketing pages
-    { "source": "/:path*", "destination": "https://market-scanner-1-wesso80.replit.app/:path*" } // everything else → Streamlit
-  ],
   "headers": [
-    { "source": "/api/(.*)", "headers": [ { "key": "Cache-Control", "value": "no-store" } ] }
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    }
   ]
 }
