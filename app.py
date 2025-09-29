@@ -5087,9 +5087,25 @@ if not st.session_state.eq_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Try st.table for better visibility
+    # Mobile-friendly results display
     st.write("**Equity Scan Results:**")
-    st.table(display_eq.head(10))  # Show first 10 results in table format
+    
+    if is_mobile:
+        # Mobile-optimized display - show key info only
+        for idx, row in display_eq.head(5).iterrows():
+            with st.container():
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**{row['symbol']}** - {row.get('direction', 'N/A')}")
+                    if 'score' in row:
+                        st.write(f"Score: {row['score']:.1f}")
+                with col2:
+                    if 'close' in row:
+                        st.write(f"${row['close']:.2f}")
+                st.divider()
+    else:
+        # Desktop display
+        st.table(display_eq.head(10))
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -5129,9 +5145,25 @@ if not st.session_state.cx_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Try st.table for better visibility
+    # Mobile-friendly results display
     st.write("**Crypto Scan Results:**")
-    st.table(display_cx.head(10))  # Show first 10 results in table format
+    
+    if is_mobile:
+        # Mobile-optimized display - show key info only
+        for idx, row in display_cx.head(5).iterrows():
+            with st.container():
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**{row['symbol']}** - {row.get('direction', 'N/A')}")
+                    if 'score' in row:
+                        st.write(f"Score: {row['score']:.1f}")
+                with col2:
+                    if 'close' in row:
+                        st.write(f"${row['close']:.2f}")
+                st.divider()
+    else:
+        # Desktop display
+        st.table(display_cx.head(10))
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
