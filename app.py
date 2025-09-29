@@ -193,27 +193,49 @@ div.block-container {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* UNIVERSAL DARK MODE - APPLY TO ALL URLS WITHOUT CONDITIONS */
+/* NUCLEAR OPTION - FORCE ALL ELEMENTS TO DARK - NO WHITE BOXES ALLOWED */
+* {
+    background-color: #1E293B !important;
+    color: #F8FAFC !important;
+}
+
 html, body {
     background-color: #0F172A !important;
     color: #F8FAFC !important;
     color-scheme: dark !important;
 }
 
-/* FORCE ALL MAIN CONTAINERS TO DARK - NO CONDITIONAL LOGIC */
-.stApp,
-[data-testid="stAppViewContainer"],
-.main .block-container,
-section.main,
-.block-container,
-div.block-container {
-    background-color: #0F172A !important;
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+/* EVERY POSSIBLE CONTAINER - FORCE DARK */
+.stApp, [data-testid="stAppViewContainer"], .main, .block-container,
+section, div, article, main, aside, header, footer, nav,
+.element-container, .stContainer, .stColumn, .stColumns,
+[data-testid="column"], [data-testid="block-container"],
+[data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+    color: #F8FAFC !important;
 }
 
-/* ENSURE TEXT VISIBILITY ON ALL CONTAINERS */
-.stApp *, [data-testid="stAppViewContainer"] *, .block-container * {
+/* STREAMLIT SPECIFIC CONTAINERS */
+.stSelectbox, .stTextInput, .stNumberInput, .stTextArea,
+.stButton, .stCheckbox, .stRadio, .stSlider, .stDateInput,
+.stTimeInput, .stColorPicker, .stFileUploader,
+.stForm, .stFormSubmitButton, .stSuccess, .stError,
+.stWarning, .stInfo, .stException, .stProgress,
+.stSpinner, .stBalloons, .stSnow, .stSidebar {
+    background-color: #1E293B !important;
     color: #F8FAFC !important;
+}
+
+/* OVERRIDE ALL WHITE/LIGHT BACKGROUNDS */
+[style*="background-color: white"],
+[style*="background-color: #fff"],
+[style*="background-color: #ffffff"],
+[style*="background: white"],
+[style*="background: #fff"],
+[style*="background: #ffffff"] {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
 }
 
 /* Keep mobile overrides as backup */
