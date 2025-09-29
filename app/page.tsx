@@ -10,29 +10,12 @@ export default function Home() {
           e.preventDefault();
           e.stopPropagation();
           
-          // Try multiple possible Streamlit URLs
-          const hostname = window.location.hostname;
-          const protocol = window.location.protocol;
+          // Navigate to Streamlit app on Vercel
+          const streamlitUrl = `${window.location.origin}/scanner`;
+          console.log('Opening Market Scanner at:', streamlitUrl);
           
-          const possibleUrls = [
-            // Published Replit app on different port
-            `${protocol}//${hostname.replace('marketscannerapp', 'marketscannerapp-8080')}`,
-            // Different port format
-            `${protocol}//${hostname}:8080`,
-            // Try with port in hostname format
-            `${protocol}//${hostname.replace('-5000-', '-8080-')}`,
-            `${protocol}//${hostname.replace('-3000-', '-8080-')}`,
-            // Direct localhost for development
-            `${protocol}//localhost:8080`
-          ];
-          
-          // Try the first URL that might work
-          const streamlitUrl = possibleUrls[0];
-          console.log('Trying to open Streamlit at:', streamlitUrl);
-          console.log('All possible URLs:', possibleUrls);
-          
-          // Force external navigation
-          window.location.href = streamlitUrl;
+          // Open in new tab for better user experience
+          window.open(streamlitUrl, '_blank');
         }}>Launch App</button>
       </p>
 
