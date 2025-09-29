@@ -3661,6 +3661,15 @@ if 'workspace_id' not in st.session_state:
             # Silent fail - don't break app if sync fails
             pass
 
+# Update user tier based on active subscription (CRITICAL FIX)
+if st.session_state.get('workspace_id'):
+    current_tier = get_user_tier_from_subscription(st.session_state.workspace_id)
+    if current_tier and current_tier != st.session_state.user_tier:
+        st.session_state.user_tier = current_tier
+        # Optional: Show upgrade success message
+        if current_tier in ['pro', 'pro_trader']:
+            st.success(f"🎉 {current_tier.replace('_', ' ').title()} subscription active!")
+
 if 'pairing_token' not in st.session_state:
     st.session_state.pairing_token = None
 
