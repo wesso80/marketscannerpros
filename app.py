@@ -216,6 +216,27 @@ input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput in
     background-color: #059669 !important;
 }
 
+/* PORTFOLIO METRICS SECTION - PROPER VISIBILITY */
+[data-testid="stSubheader"], h1, h2, h3, h4, h5, h6 {
+    color: #F8FAFC !important;
+    background-color: transparent !important;
+}
+
+/* ENSURE PORTFOLIO TABLES AND METRICS ARE VISIBLE */
+.stDataFrame, .stTable, table, th, td {
+    background-color: #334155 !important;
+    color: #F8FAFC !important;
+    border-color: #475569 !important;
+}
+
+/* PORTFOLIO METRIC VALUES */
+[data-testid="metric-container"] {
+    background-color: #334155 !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+    padding: 1rem !important;
+}
+
 html, body {
     background-color: #0F172A !important;
     color: #F8FAFC !important;
@@ -5986,22 +6007,4 @@ with col1:
     st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
-# === Mobile legacy style overrides (iOS/Android only) ===
-if 'is_mobile' in globals() and is_mobile:
-    st.markdown("""
-<style>
-html, body, .stApp { background:#ffffff !important; color:#111 !important; }
-.pro-card, .metric-card { background:#ffffff !important; color:#111 !important; }
-.tier-card { 
-    background:#f8f9fa !important; 
-    color:#111 !important; 
-    border: 2px solid #dee2e6 !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-}
-.tier-card.premium {
-    background:#fff9c4 !important;
-    border-color: #fbbf24 !important;
-}
-.stButton > button { background:#2563eb !important; color:#fff !important; }
-</style>
-""", unsafe_allow_html=True)
+# === Mobile dark theme maintained (no longer overriding to white) ===
