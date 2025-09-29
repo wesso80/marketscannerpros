@@ -1,10 +1,31 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "api/scanner.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/scanner/(.*)",
+      "dest": "/api/scanner.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
   "env": {
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
+    "PYTHONPATH": "/var/task"
   }
 }
