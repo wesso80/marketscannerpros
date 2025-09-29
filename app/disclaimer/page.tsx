@@ -27,18 +27,18 @@ export default function DisclaimerPage() {
         You are solely responsible for your decisions.
       </p>
 
-      <h2 id="accuracy">Data, Signals <h2 id="accuracy">Data, Signals <h2>Data, Signals & Accuracy</h2>amp; Accuracy</h2>amp; Accuracy</h2>
+      <h2 id="accuracy">Data, Signals & Accuracy</h2>
       <p>
         Scores, indicators, and signals may be incomplete, delayed, or inaccurate. Availability
         can be affected by third-party providers. No accuracy or uptime guarantees are made.
       </p>
 
-      <h2 id="backtests">Backtests <h2 id="backtests">Backtests <h2>Backtests & Illustrations</h2>amp; Illustrations</h2>amp; Illustrations</h2>
+      <h2 id="backtests">Backtests & Illustrations</h2>
       <p>
         Any backtested or hypothetical results are for illustration only and do not guarantee
         future performance.
       </p>
-      <h2 id="jurisdiction">Jurisdiction <h2 id="jurisdiction">Jurisdiction <h2>Jurisdiction & Compliance</h2>amp; Compliance</h2>amp; Compliance</h2>
+      <h2 id="jurisdiction">Jurisdiction & Compliance</h2>
       <p>
         You are responsible for complying with the laws and regulations of your jurisdiction.
         The App does not solicit or target any specific country’s investors.
