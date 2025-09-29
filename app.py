@@ -1907,6 +1907,24 @@ def mark_notification_read(notification_id: int, workspace_id: str, user_email: 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
     """Send email via Vercel/Resend API endpoint"""
     try:
+        # Check if email is the registered owner's email (Resend limitation)
+        registered_email = "bradleywessling@yahoo.com.au"
+        if to_email != registered_email:
+            # Store notification about email limitation
+            workspace_id = st.session_state.get('workspace_id')
+            if workspace_id:
+                store_notification(
+                    f"⚠️ Email Limitation: {subject}", 
+                    f"Email service currently only supports sending to {registered_email}\n\n"
+                    f"To enable emails to {to_email}, please:\n"
+                    f"1. Verify a custom domain at resend.com/domains\n"
+                    f"2. Or use {registered_email} for notifications\n\n"
+                    f"Original message:\n{body}", 
+                    to_email, 
+                    workspace_id
+                )
+            return False
+        
         # Vercel email endpoint
         email_endpoint = "https://marketscannerpros.app/api/send-email"
         
@@ -4588,6 +4606,10 @@ st.sidebar.header("📧 Notification Settings")
 # User notification preferences
 with st.sidebar.expander("Price Alert Notifications", expanded=False):
     st.markdown("**Configure how you receive price alerts:**")
+    
+    # Email limitation notice
+    st.info("📧 **Email Limitation**: Currently emails only work for `bradleywessling@yahoo.com.au`. "
+            "To send to other addresses, verify a custom domain at resend.com/domains")
     
     user_email = st.text_input(
         "Your Email:", 
