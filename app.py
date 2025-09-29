@@ -757,7 +757,7 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 </style>
 """, unsafe_allow_html=True)
 
-# Mobile detection and dark mode activation (ORIGINAL WORKING VERSION)
+# Mobile detection with tab click fix
 st.markdown("""
 <script>
 (function() {
@@ -775,6 +775,25 @@ st.markdown("""
         document.documentElement.setAttribute('data-mobile-dark', 'true');
         document.documentElement.style.colorScheme = 'dark';
     }
+    
+    // Fix Streamlit tab click issues
+    function fixTabClicks() {
+        const tabButtons = document.querySelectorAll('[data-testid="stTabs"] button, .stTabs button');
+        tabButtons.forEach(button => {
+            button.style.pointerEvents = 'auto';
+            button.style.cursor = 'pointer';
+            button.style.zIndex = '1000';
+            // Ensure clicks register immediately
+            button.addEventListener('click', function(e) {
+                e.stopImmediatePropagation();
+            }, { capture: true });
+        });
+    }
+    
+    // Apply fix after page loads and on DOM changes
+    document.addEventListener('DOMContentLoaded', fixTabClicks);
+    setTimeout(fixTabClicks, 500);
+    setTimeout(fixTabClicks, 1000);
     
     // Auto-redirect iOS devices to add mobile parameter
     if (isIOS && !mobileParam && !window.__reloadedForMobile) {
