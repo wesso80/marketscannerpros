@@ -166,7 +166,7 @@ div.block-container {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
 }
 
-/* Cache bust: v2.2-mobile-fix - """ + str(datetime.now().timestamp()) + """ */
+/* Cache bust: v2.3-js-mobile-fix - """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1066,9 +1066,40 @@ st.markdown("""
     // FORCE DARK MODE FOR ALL URLS - ALWAYS USE WORKING STYLING
     document.documentElement.setAttribute('data-mobile-dark', 'true');
     document.documentElement.style.colorScheme = 'dark';
-    // Also set mobile flag to ensure consistent styling
+    
+    // MOBILE FIX - Force styles on all problematic elements
+    function forceMobileStyles() {
+        // Fix dataframes
+        document.querySelectorAll('.stDataFrame, [data-testid="stDataFrame"], .stDataFrame *, [data-testid="stDataFrame"] *').forEach(el => {
+            el.style.setProperty('color', '#FFFFFF', 'important');
+            el.style.setProperty('background-color', '#1E293B', 'important');
+        });
+        
+        // Fix metrics
+        document.querySelectorAll('.stMetric, [data-testid="metric-container"], .stMetric *, [data-testid="metric-container"] *').forEach(el => {
+            el.style.setProperty('color', '#FFFFFF', 'important');
+        });
+        
+        // Fix charts
+        document.querySelectorAll('.js-plotly-plot, .stPlotlyChart, [data-testid="stPlotlyChart"]').forEach(el => {
+            el.style.setProperty('background-color', '#1E293B', 'important');
+        });
+        
+        // Fix chart text
+        document.querySelectorAll('.js-plotly-plot text, .stPlotlyChart text').forEach(el => {
+            el.style.setProperty('fill', '#FFFFFF', 'important');
+        });
+    }
+    
+    // Apply fixes on mobile
     if (isMobile) {
-        // Keep existing mobile-specific code if needed
+        forceMobileStyles();
+        // Re-apply after DOM changes
+        setInterval(forceMobileStyles, 1000);
+        
+        // Watch for new elements
+        const observer = new MutationObserver(forceMobileStyles);
+        observer.observe(document.body, { childList: true, subtree: true });
     }
     
     // Fix Streamlit tab click issues
