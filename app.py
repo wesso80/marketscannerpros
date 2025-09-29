@@ -4323,9 +4323,16 @@ if current_tier == 'free':
                         checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id)
                     
                     if checkout_url:
-                        st.success("✅ Checkout session created successfully!")
-                        st.info("🔗 Redirecting to Stripe checkout...")
-                        st.markdown(f'<meta http-equiv="refresh" content="2;URL={checkout_url}">', unsafe_allow_html=True)
+                        # SECURITY: Validate URL before using in HTML to prevent XSS
+                        if checkout_url.startswith('https://checkout.stripe.com/'):
+                            st.success("✅ Checkout session created successfully!")
+                            st.info("🔗 Redirecting to Stripe checkout...")
+                            # Safe redirect - validate Stripe domain
+                            import html
+                            safe_url = html.escape(checkout_url)
+                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={safe_url}">', unsafe_allow_html=True)
+                        else:
+                            st.error("🚨 Security Error: Invalid checkout URL detected")
                         st.markdown(f'**Or click here:** [Complete {plan_name} Subscription]({checkout_url})')
                     else:
                         st.error(f"❌ Stripe Checkout Error: {error}")
@@ -4406,7 +4413,11 @@ elif current_tier in ['pro', 'pro_trader']:
                     # Create Stripe checkout session for upgrade
                     checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
                     if checkout_url:
-                        st.markdown(f'<meta http-equiv="refresh" content="0;URL={checkout_url}">', unsafe_allow_html=True)
+                        # SECURITY: Validate URL before using in HTML to prevent XSS
+                        if checkout_url.startswith('https://checkout.stripe.com/'):
+                            import html
+                            safe_url = html.escape(checkout_url)
+                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={safe_url}">', unsafe_allow_html=True)
                         st.success("🔗 Redirecting to secure checkout...")
                     else:
                         st.error(f"❌ Checkout error: {error}")
