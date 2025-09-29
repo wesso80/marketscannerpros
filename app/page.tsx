@@ -11,7 +11,7 @@ export default function Home() {
           e.stopPropagation();
           
           // Navigate to current Streamlit app in Replit
-          const streamlitUrl = 'https://marketscannerpros-8080.wesso80.repl.co';
+          const streamlitUrl = 'https://5000-65e0d511-a376-4400-9b96-6faf813e6d83-00-346bbki9bwvxl.worf.replit.dev';
           console.log('Opening Market Scanner at:', streamlitUrl);
           
           // Open in new tab for better user experience
