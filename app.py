@@ -222,47 +222,30 @@ input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput in
     background-color: transparent !important;
 }
 
-/* AGGRESSIVE TABLE STYLING - FORCE VISIBILITY */
-.stDataFrame, .stTable, table, th, td, 
-[data-testid="stDataFrame"], 
-.dataframe, .dataframe th, .dataframe td,
-div[data-testid="stDataFrame"] *,
-.styledTable, .styledTable *,
-.css-z5fcl4, .css-z5fcl4 *,
-iframe[title="streamlit_app"], iframe[title="streamlit_app"] * {
+/* SIMPLIFIED TABLE STYLING - FOCUS ON TEXT VISIBILITY */
+[data-testid="stDataFrame"] {
     background-color: #334155 !important;
-    color: #F8FAFC !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stDataFrame"] table {
+    color: #FFFFFF !important;
+    background-color: transparent !important;
+}
+
+[data-testid="stDataFrame"] th,
+[data-testid="stDataFrame"] td {
+    color: #FFFFFF !important;
+    background-color: transparent !important;
     border-color: #475569 !important;
-    border: 1px solid #475569 !important;
 }
 
-/* STYLED DATAFRAMES (PANDAS STYLING) */
-.dataframe, table.dataframe,
-.dataframe tbody, .dataframe thead,
-.dataframe tr, .dataframe td, .dataframe th {
-    background-color: #334155 !important;
-    color: #F8FAFC !important;
-    border: 1px solid #475569 !important;
-}
-
-/* FORCE VISIBILITY FOR SCAN RESULTS */
-.dataframe tbody tr:nth-child(even) {
-    background-color: #2D3748 !important;
-}
-
-.dataframe tbody tr:nth-child(odd) {
-    background-color: #334155 !important;
-}
-
-.dataframe thead th {
-    background-color: #1A202C !important;
-    color: #F7FAFC !important;
-    font-weight: bold !important;
-}
-
-/* STREAMLIT IFRAME CONTENT */
-iframe {
-    background-color: #334155 !important;
+/* FORCE WHITE TEXT ON ALL TABLE CONTENT */
+.stDataFrame *, .stTable *, 
+[data-testid="stDataFrame"] *,
+table *, th *, td * {
+    color: #FFFFFF !important;
 }
 
 /* PORTFOLIO METRIC VALUES */
@@ -5104,8 +5087,9 @@ if not st.session_state.eq_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Show plain dataframe for better visibility (temporarily removing complex styling)
-    st.dataframe(display_eq, width='stretch', use_container_width=True)
+    # Try st.table for better visibility
+    st.write("**Equity Scan Results:**")
+    st.table(display_eq.head(10))  # Show first 10 results in table format
     
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
@@ -5145,8 +5129,9 @@ if not st.session_state.cx_results.empty:
             return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
         return ''
     
-    # Show plain dataframe for better visibility (temporarily removing complex styling)  
-    st.dataframe(display_cx, width='stretch', use_container_width=True)
+    # Try st.table for better visibility
+    st.write("**Crypto Scan Results:**")
+    st.table(display_cx.head(10))  # Show first 10 results in table format
     
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
