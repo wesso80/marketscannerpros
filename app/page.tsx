@@ -7,8 +7,23 @@ export default function Home() {
       <p style={{opacity:.85, marginTop:8}}>Run smart scans, interpret scores, and manage alerts.</p>
       <p style={{marginTop:16}}>
         <button className="btn" onClick={() => {
-          const currentUrl = window.location.href;
-          const streamlitUrl = currentUrl.replace(':3000', ':8080').replace('-3000-', '-8080-');
+          // Get the current hostname and construct Streamlit URL 
+          const hostname = window.location.hostname;
+          const protocol = window.location.protocol;
+          
+          let streamlitUrl;
+          if (hostname.includes('-3000-')) {
+            // Replit environment - replace port in hostname
+            streamlitUrl = `${protocol}//${hostname.replace('-3000-', '-8080-')}`;
+          } else if (hostname === 'localhost') {
+            // Local development
+            streamlitUrl = `${protocol}//localhost:8080`;
+          } else {
+            // Default - try port 8080
+            streamlitUrl = `${protocol}//${hostname}:8080`;
+          }
+          
+          console.log('Opening Streamlit at:', streamlitUrl);
           window.open(streamlitUrl, '_blank');
         }}>Launch App</button>
       </p>
