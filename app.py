@@ -4091,6 +4091,13 @@ else:
     # No workspace - default to free
     current_tier = 'free'
 
+# TEMPORARY: Manual Pro access for testing
+# Check if user should have Pro access (temporary override)
+query_params = st.query_params
+if query_params.get("access") == "pro":
+    current_tier = 'pro'
+    st.success("🎉 **Pro Access Activated!** You now have unlimited symbol scanning and all premium features.")
+
 # Update session state to match current tier
 st.session_state.user_tier = current_tier
     
