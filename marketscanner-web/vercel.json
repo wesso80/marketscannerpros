@@ -1,8 +1,0 @@
-{
-  "routes": [
-    { "src": "^/api/.*", "dest": "/api" },
-    { "src": "^/(pricing|docs|disclaimer|privacy|terms|contact)$", "dest": "/$1" },
-    { "src": "^/launch$", "dest": "/launch" },
-    { "src": ".*", "dest": "https://market-scanner-1-wesso80.replit.app/$0" }
-  ]
-}
