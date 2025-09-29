@@ -1,33 +1,35 @@
 import { NextAuthOptions } from "next-auth";
-import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    Google({ 
-      clientId: process.env.GOOGLE_CLIENT_ID!, 
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET! 
+    Credentials({
+      name: "Access Code",
+      credentials: {
+        accessCode: { label: "Access Code", type: "password" }
+      },
+      async authorize(credentials) {
+        if (credentials?.accessCode === process.env.ACCESS_CODE) {
+          return {
+            id: "user",
+            name: "Authenticated User",
+          };
+        }
+        return null;
+      }
     })
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, account, profile }) {
-      // Keep essential info for server-side operations but store securely
-      if (account?.provider && token.sub) {
-        token.uid = `${account.provider}:${token.sub}`;
+    async jwt({ token, user }) {
+      if (user) {
+        token.uid = user.id;
       }
-      
-      // Keep email in token for server-side operations (billing, etc.)
-      // but remove from client-side session below
-      if (profile?.email) {
-        token.email = profile.email;
-        token.name = profile.name;
-      }
-      
       return token;
     },
     async session({ session, token }) {
       // Add uid to session but remove sensitive info from client
-      (session as any).uid = (token as any).uid;
+      (session as any).uid = token.uid;
       
       // Remove sensitive data from client-side session for privacy
       if (session.user) {
@@ -38,5 +40,8 @@ export const authOptions: NextAuthOptions = {
       
       return session;
     },
+  },
+  pages: {
+    signIn: '/signin',
   },
 };
