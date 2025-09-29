@@ -166,7 +166,7 @@ div.block-container {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
 }
 
-/* Cache bust: v2.4-redirect-fix - """ + str(datetime.now().timestamp()) + """ */
+/* Cache bust: v2.5-mobile-replit - """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1063,13 +1063,22 @@ st.markdown("""
                   window.navigator.standalone === true;
     const isMobile = mobileParam === '1' || isIOS;
     
-    // REDIRECT marketing site to app subdomain
+    // REDIRECT logic: marketscannerpros.app → app.marketscannerpros.app
+    // replit.app URL → mobile mode
     const hostname = window.location.hostname;
+    
     if (hostname === 'marketscannerpros.app' || hostname === 'www.marketscannerpros.app') {
-        // Redirect to app subdomain, preserve query params
+        // Redirect marketing domain to app subdomain
         const newUrl = 'https://app.marketscannerpros.app' + window.location.pathname + window.location.search;
         window.location.replace(newUrl);
         return; // Stop execution
+    }
+    
+    // Force mobile mode for Replit URL
+    if (hostname.includes('replit.app') && !mobileParam) {
+        urlParams.set('mobile', '1');
+        window.location.search = urlParams.toString();
+        return;
     }
     
     // FORCE DARK MODE FOR ALL URLS - ALWAYS USE WORKING STYLING
