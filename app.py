@@ -5606,30 +5606,51 @@ with col1:
     # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
-    # FORCE bold, dark text for Portfolio Tracking metrics - override any grayed styling
+    # AGGRESSIVE CSS FIX - Force Portfolio Tracking metrics to be visible on ALL URLs
     st.markdown("""
     <style>
-    /* Force Portfolio Tracking metrics to be bold and visible */
-    div[data-testid="metric-container"] {
+    /* NUCLEAR OPTION - Force ALL metric containers to be visible with maximum specificity */
+    div[data-testid="metric-container"],
+    div[data-testid="metric-container"] *,
+    .metric-container,
+    .metric-container * {
+        color: #FFFFFF !important;
+        opacity: 1.0 !important;
         background-color: transparent !important;
     }
     
-    div[data-testid="metric-container"] > div {
-        color: #F8FAFC !important;
-        opacity: 1.0 !important;
-    }
-    
-    div[data-testid="metric-container"] label {
-        color: #F8FAFC !important;
+    /* Force metric labels */
+    div[data-testid="metric-container"] label,
+    div[data-testid="metric-container"] .metric-label,
+    .metric-label {
+        color: #FFFFFF !important;
         opacity: 1.0 !important;
         font-weight: 500 !important;
+        font-size: 0.9rem !important;
     }
     
-    div[data-testid="metric-container"] > div > div {
-        color: #F8FAFC !important;
+    /* Force metric values */
+    div[data-testid="metric-container"] [data-testid="metric-value"],
+    div[data-testid="metric-container"] .metric-value,
+    .metric-value {
+        color: #FFFFFF !important;
         opacity: 1.0 !important;
-        font-weight: 600 !important;
-        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        font-size: 1.8rem !important;
+    }
+    
+    /* Backup: Force by element type */
+    .stMetric div,
+    .stMetric label,
+    .stMetric span {
+        color: #FFFFFF !important;
+        opacity: 1.0 !important;
+    }
+    
+    /* Ultimate fallback: Force everything under Portfolio section */
+    .main div:contains("Portfolio Tracking") ~ * div[data-testid="metric-container"] * {
+        color: #FFFFFF !important;
+        opacity: 1.0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
