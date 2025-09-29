@@ -96,7 +96,7 @@ st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile e
 # ================= Professional Styling - Marketing Page Theme =================
 st.markdown("""
 <style>
-/* PORTFOLIO FIX - FORCE WHITE TEXT + DARK BACKGROUNDS */
+/* PORTFOLIO FIX v2.1 - FORCE WHITE TEXT + DARK BACKGROUNDS - CACHE BUST */
 .stPlotlyChart, .stPlotlyChart > div, .js-plotly-plot, .plotly-graph-div {
     background-color: #1E293B !important;
     background: #1E293B !important;
@@ -105,6 +105,7 @@ div[data-testid="metric-container"] *, .stMetric * {
     color: #FFFFFF !important;
     opacity: 1.0 !important;
 }
+/* Force refresh timestamp: """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
