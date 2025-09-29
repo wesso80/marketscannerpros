@@ -4275,9 +4275,9 @@ if current_tier == 'free':
         st.markdown("---")
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("📄 [Terms of Service](https://marketscannerspros.pages.dev/terms)")
+            st.markdown("📄 [Terms of Service](https://marketscannerpros.app/terms)")
         with col2:
-            st.markdown("🔒 [Privacy Policy](https://marketscannerspros.pages.dev/privacy)")
+            st.markdown("🔒 [Privacy Policy](https://marketscannerpros.app/privacy)")
         
         # Apple-required subscription management controls
         if is_mobile:
@@ -5784,7 +5784,7 @@ st.markdown("""
 # Add Privacy Policy link separately with proper HTML
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.markdown("**Legal**: <a href='https://marketscannerspros.pages.dev/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
+    st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
 with col2:
     st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
 # === Mobile legacy style overrides (iOS/Android only) ===
