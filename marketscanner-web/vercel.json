@@ -1,13 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/pricing", "destination": "/pricing" },
-    { "source": "/docs", "destination": "/docs" },
-    { "source": "/disclaimer", "destination": "/disclaimer" },
-    { "source": "/privacy", "destination": "/privacy" },
-    { "source": "/terms", "destination": "/terms" },
-    { "source": "/contact", "destination": "/contact" },
-    { "source": "/launch", "destination": "/launch" },
-    { "source": "/:path*", "destination": "https://market-scanner-1-wesso80.replit.app/:path*" }
+  "routes": [
+    { "src": "^/api/.*", "dest": "/api" },
+    { "src": "^/(pricing|docs|disclaimer|privacy|terms|contact)$", "dest": "/$1" },
+    { "src": "^/launch$", "dest": "/launch" },
+    { "src": ".*", "dest": "https://market-scanner-1-wesso80.replit.app/$0" }
   ]
 }
