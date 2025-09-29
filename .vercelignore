@@ -38,7 +38,9 @@ attached_assets/
 marketscanner-web/
 icons/
 assets/
+# Allow PNG files in public directory but exclude elsewhere
 *.png
+!public/*.png
 *.jpg
 *.jpeg
 capacitor-build/
