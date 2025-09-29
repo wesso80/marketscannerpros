@@ -1,0 +1,82 @@
+~/workspace$ git add .
+git commit -m "Fix Stripe API version compatibility for deployment"
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 11 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+remote: {"auth_status":"auth_error","body":"Invalid username or token. Password authentication is not supported for Git operations."}
+fatal: Authentication failed for 'https://github.com/wesso80/marketscannerpros.git/'
+~/workspace$ dding gh to .replit
+? Where do you use GitHub? GitHub.com
+? What is your preferred protocol for Git operations on this host? HTTPS
+? Authenticate Git with your GitHub credentials? Yes
+? How would you like to authenticate GitHub CLI? Login with a web browser
+
+! First copy your one-time code: DBA5-E3F1
+Press Enter to open https://github.com/login/device in your browser...  
+
+✓ Authentication complete.
+- gh config set -h github.com git_protocol https
+✓ Configured git protocol
+! Authentication credentials saved in plain text
+✓ Logged in as wesso80
+remote: {"auth_status":"auth_error","body":"Invalid username or token. Password authentication is not supported for Git operations."}
+fatal: Authentication failed for 'https://github.com/wesso80/marketscannerpros.git/'
+~/workspace$ 
+~/workspace$ git add .
+git commit -m "Fix Stripe API version compatibility for deployment"
+git push origin main
+On branch main
+Your branch is ahead of 'origin/main' by 11 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+remote: {"auth_status":"auth_error","body":"Invalid username or token. Password authentication is not supported for Git operations."}
+fatal: Authentication failed for 'https://github.com/wesso80/marketscannerpros.git/'
+~/workspace$ # Fix the remote URL (remove the placeholder credentials)
+git remote set-url origin https://github.com/wesso80/marketscannerpros.git
+
+# Configure git to use GitHub CLI for authentication
+git config --global credential.helper ""
+git config credential.helper 'gh auth git-credential'
+
+# Now try pushing again
+git push origin main
+bash: dding: command not found
+bash: ?: command not found
+bash: ?: command not found
+bash: ?: command not found
+bash: ?: command not found
+bash: First: command not found
+bash: Press: command not found
+bash: ✓: command not found
+bash: -: command not found
+bash: ✓: command not found
+bash: Authentication: command not found
+bash: ✓: command not found
+bash: remote:: command not found
+bash: fatal:: command not found
+bash: /home/runner/workspace$: No such file or directory
+bash: /home/runner/workspace$: No such file or directory
+On branch main
+Your branch is ahead of 'origin/main' by 11 commits.
+  (use "git push" to publish your local commits)
+
+nothing to commit, working tree clean
+remote: {"auth_status":"auth_error","body":"Invalid username or token. Password authentication is not supported for Git operations."}
+fatal: Authentication failed for 'https://github.com/wesso80/marketscannerpros.git/'
+bash: On: command not found
+bash: Your: command not found
+bash: use: command not found
+bash: nothing: command not found
+bash: remote:: command not found
+bash: fatal:: command not found
+bash: /home/runner/workspace$: No such file or directory
+error: could not lock config file .git/config: File exists
+fatal: could not set 'remote.origin.url' to 'https://github.com/wesso80/marketscannerpros.git'
+error: could not lock config file .git/config: File exists
+remote: {"auth_status":"auth_error","body":"Invalid username or token. Password authentication is not supported for Git operations."}
+fatal: Authentication failed for 'https://github.com/wesso80/marketscannerpros.git/'
+~/workspace$ 
