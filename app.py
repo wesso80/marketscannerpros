@@ -5606,17 +5606,17 @@ with col1:
     # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
-    # AGGRESSIVE CSS FIX - Force Portfolio Tracking metrics to be visible on ALL URLs
+    # REFINED CSS FIX - White text but keep dark backgrounds
     st.markdown("""
     <style>
-    /* NUCLEAR OPTION - Force ALL metric containers to be visible with maximum specificity */
+    /* Force Portfolio Tracking metric TEXT to be white, but preserve dark backgrounds */
     div[data-testid="metric-container"],
     div[data-testid="metric-container"] *,
     .metric-container,
     .metric-container * {
         color: #FFFFFF !important;
         opacity: 1.0 !important;
-        background-color: transparent !important;
+        /* REMOVED background-color override to keep dark containers */
     }
     
     /* Force metric labels */
@@ -5639,7 +5639,7 @@ with col1:
         font-size: 1.8rem !important;
     }
     
-    /* Backup: Force by element type */
+    /* Backup: Force by element type - TEXT ONLY */
     .stMetric div,
     .stMetric label,
     .stMetric span {
@@ -5647,10 +5647,10 @@ with col1:
         opacity: 1.0 !important;
     }
     
-    /* Ultimate fallback: Force everything under Portfolio section */
-    .main div:contains("Portfolio Tracking") ~ * div[data-testid="metric-container"] * {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
+    /* Keep dark backgrounds for chart containers */
+    .stPlotlyChart > div,
+    [data-testid="stPlotlyChart"] {
+        background-color: var(--card-bg) !important;
     }
     </style>
     """, unsafe_allow_html=True)
