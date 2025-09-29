@@ -1,19 +1,14 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import PortalButton from "@/components/PortalButton";
 
 export const metadata = { title: "Dashboard — MarketScanner Pros" };
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) return null; // middleware redirects to sign-in
-
+export default function DashboardPage() {
   return (
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-xl font-semibold mb-2">Welcome back!</h2>
-        <p className="text-gray-600 mb-4">User ID: {(session as any).uid}</p>
+        <h2 className="text-xl font-semibold mb-2">Welcome to MarketScanner Pro!</h2>
+        <p className="text-gray-600 mb-4">Access your trading tools and analytics below.</p>
         
         <div className="flex gap-4">
           <PortalButton />
