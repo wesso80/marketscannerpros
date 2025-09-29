@@ -222,11 +222,28 @@ input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput in
     background-color: transparent !important;
 }
 
-/* ENSURE PORTFOLIO TABLES AND METRICS ARE VISIBLE */
-.stDataFrame, .stTable, table, th, td {
+/* ENSURE ALL TABLES AND DATAFRAMES ARE VISIBLE */
+.stDataFrame, .stTable, table, th, td, 
+[data-testid="stDataFrame"], 
+.dataframe, .dataframe th, .dataframe td {
     background-color: #334155 !important;
     color: #F8FAFC !important;
     border-color: #475569 !important;
+}
+
+/* SCAN RESULTS SPECIFIC STYLING */
+.dataframe tbody tr:nth-child(even) {
+    background-color: #2D3748 !important;
+}
+
+.dataframe tbody tr:nth-child(odd) {
+    background-color: #334155 !important;
+}
+
+.dataframe thead th {
+    background-color: #1A202C !important;
+    color: #F7FAFC !important;
+    font-weight: bold !important;
 }
 
 /* PORTFOLIO METRIC VALUES */
