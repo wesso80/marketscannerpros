@@ -1428,7 +1428,7 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
         st.error("Error: Invalid alert type.")
         return False
         
-    if notification_method not in ['in_app', 'email', 'slack', 'both', 'none']:
+    if notification_method not in ['in_app', 'email', 'both', 'none']:
         st.error("Error: Invalid notification method.")
         return False
     
@@ -1599,10 +1599,7 @@ The price target you set has been reached.
         except Exception as e:
             print(f"❌ Email notification failed for {user_email}: {e}")
     
-    # Optional Slack notification (no longer causes persistence failure)
-    if alert.get('notification_method') in ['slack', 'both'] and CFG.slack_webhook:
-        slack_msg = f"🚨 *{symbol}* price alert triggered!\nCurrent: ${current_price:.2f} | Target: ${target:.2f} ({alert_type})"
-        push_slack(slack_msg)
+    # Note: "Both" method already stores in-app notification above + sends email above
 
 # ================= Watchlist Management =================
 def create_watchlist(name: str, description: str, symbols: List[str]) -> bool:
@@ -4582,23 +4579,22 @@ with st.sidebar.expander("Price Alert Notifications", expanded=False):
     
     notification_method = st.selectbox(
         "Notification Method:",
-        ["In-App Notifications", "Email", "Slack", "Both", "None"],
+        ["In-App Notifications", "Email", "Both", "None"],
         index=0,
-        help="Choose how you want to receive alerts (Email provides direct delivery to your inbox)",
-        key="notification_method_v3"  # Force refresh with new key
+        help="Choose how you want to receive alerts (Both = Email + In-App notifications)",
+        key="notification_method_v4"  # Force refresh with new key
     )
     
     # Map UI options to backend values
     method_mapping = {
         "In-App Notifications": "in_app",
         "Email": "email",
-        "Slack": "slack", 
-        "Both": "both",
+        "Both": "both",  # Now means email + in-app
         "None": "none"
     }
     backend_method = method_mapping[notification_method]
     
-    if user_email and notification_method in ["In-App Notifications", "Email"]:
+    if user_email and notification_method in ["In-App Notifications", "Email", "Both"]:
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔔 Test Notification", help="Send a test notification to verify your alert system"):
