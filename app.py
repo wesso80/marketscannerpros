@@ -166,7 +166,7 @@ div.block-container {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
 }
 
-/* Cache bust: v2.1 - """ + str(datetime.now().timestamp()) + """ */
+/* Cache bust: v2.2-mobile-fix - """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -419,6 +419,37 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
     border-left: 4px solid #64748B !important;
 }
 
+/* MOBILE COMPREHENSIVE FIX - All dataframes and tables */
+html[data-mobile-dark="true"] .stDataFrame,
+html[data-mobile-dark="true"] [data-testid="stDataFrame"],
+html[data-mobile-dark="true"] .stDataFrame *,
+html[data-mobile-dark="true"] [data-testid="stDataFrame"] * {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* MOBILE FIX - All metrics must be white */
+html[data-mobile-dark="true"] .stMetric,
+html[data-mobile-dark="true"] [data-testid="metric-container"],
+html[data-mobile-dark="true"] .stMetric *,
+html[data-mobile-dark="true"] [data-testid="metric-container"] * {
+    color: #FFFFFF !important;
+}
+
+/* MOBILE FIX - Plotly charts */
+html[data-mobile-dark="true"] .js-plotly-plot,
+html[data-mobile-dark="true"] .stPlotlyChart,
+html[data-mobile-dark="true"] .plotly,
+html[data-mobile-dark="true"] [data-testid="stPlotlyChart"] {
+    background-color: #1E293B !important;
+}
+
+/* MOBILE FIX - Chart text must be visible */
+html[data-mobile-dark="true"] .js-plotly-plot text,
+html[data-mobile-dark="true"] .stPlotlyChart text {
+    fill: #FFFFFF !important;
+}
+
 /* Professional Buttons - MAXIMUM SPECIFICITY for ALL button types */
 .stApp .stButton > button,
 .stApp button[data-testid="stBaseButton-secondary"],
@@ -566,6 +597,26 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
     .stNumberInput > div > div > input {
         min-width: 100px !important;
         font-size: 0.9rem !important;
+    }
+    
+    /* MOBILE FIX - Force white text in dataframes */
+    .stDataFrame, [data-testid="stDataFrame"],
+    .stDataFrame table, [data-testid="stDataFrame"] table,
+    .stDataFrame td, [data-testid="stDataFrame"] td,
+    .stDataFrame th, [data-testid="stDataFrame"] th {
+        color: #FFFFFF !important;
+        background-color: #1E293B !important;
+    }
+    
+    /* MOBILE FIX - Force metrics to show white */
+    .stMetric, [data-testid="metric-container"],
+    .stMetric *, [data-testid="metric-container"] * {
+        color: #FFFFFF !important;
+    }
+    
+    /* MOBILE FIX - Charts must have dark background */
+    .js-plotly-plot, .stPlotlyChart {
+        background-color: #1E293B !important;
     }
 }
 
