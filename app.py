@@ -4097,6 +4097,9 @@ query_params = st.query_params
 if query_params.get("access") == "pro":
     current_tier = 'pro'
     st.success("🎉 **Pro Access Activated!** You now have unlimited symbol scanning and all premium features.")
+elif query_params.get("access") == "pro_trader":
+    current_tier = 'pro_trader'
+    st.success("🎉 **Pro Trader Access Activated!** You now have unlimited scanning + advanced alerts + priority support!")
 
 # Update session state to match current tier
 st.session_state.user_tier = current_tier
