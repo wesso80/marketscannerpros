@@ -3374,7 +3374,7 @@ if 'iap' in st.query_params and st.query_params.get('action') == 'validate-recei
         st.info("⚙️ Receipt validation endpoint ready for iOS app")
     st.stop()
 
-# Handle successful payment return from Stripe
+# Handle successful payment return from Stripe (original method)
 if 'session_id' in st.query_params:
     session_id = st.query_params.get('session_id')
     if session_id:
@@ -3388,6 +3388,34 @@ if 'session_id' in st.query_params:
                 st.rerun()
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
+
+# Handle successful payment return from new Stripe redirect
+if st.query_params.get('stripe_success') == 'true':
+    access_level = st.query_params.get('access', '')
+    if access_level in ['pro', 'pro_trader']:
+        try:
+            # Get workspace ID for current user
+            device_fp = get_persistent_device_fingerprint()
+            workspace_id = get_or_create_workspace_for_device(device_fp)
+            
+            if workspace_id:
+                # Create subscription automatically 
+                success, result = create_subscription(workspace_id, access_level, 'web', 'monthly')
+                if success:
+                    st.success(f"🎉 Payment successful! Your {access_level.replace('_', ' ').title()} subscription is now active.")
+                    st.balloons()
+                    # Clear URL parameters for security
+                    st.query_params.clear()
+                    st.rerun()
+                else:
+                    st.error(f"Error activating subscription: {result}")
+            else:
+                st.error("Error: Could not identify your account. Please contact support.")
+        except Exception as e:
+            st.error(f"Error activating subscription: {str(e)}")
+            # Still clear parameters to avoid repeated attempts
+            st.query_params.clear()
+            st.rerun()
 
 # ================= Apple IAP Receipt Validation =================
 def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
