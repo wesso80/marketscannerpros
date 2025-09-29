@@ -5606,6 +5606,34 @@ with col1:
     # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
+    # FORCE bold, dark text for Portfolio Tracking metrics - override any grayed styling
+    st.markdown("""
+    <style>
+    /* Force Portfolio Tracking metrics to be bold and visible */
+    div[data-testid="metric-container"] {
+        background-color: transparent !important;
+    }
+    
+    div[data-testid="metric-container"] > div {
+        color: #F8FAFC !important;
+        opacity: 1.0 !important;
+    }
+    
+    div[data-testid="metric-container"] label {
+        color: #F8FAFC !important;
+        opacity: 1.0 !important;
+        font-weight: 500 !important;
+    }
+    
+    div[data-testid="metric-container"] > div > div {
+        color: #F8FAFC !important;
+        opacity: 1.0 !important;
+        font-weight: 600 !important;
+        font-size: 1.5rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Always display metrics with clean, bold formatting (no faded text)
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
     
