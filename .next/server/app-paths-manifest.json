@@ -1,5 +1,7 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/api/alerts/debug/route": "app/api/alerts/debug/route.js",
+  "/api/alerts/test-email/route": "app/api/alerts/test-email/route.js",
   "/api/health/route": "app/api/health/route.js",
   "/api/stripe/portal/route": "app/api/stripe/portal/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
@@ -10,9 +12,9 @@
   "/robots.txt/route": "app/robots.txt/route.js",
   "/terms/page": "app/terms/page.js",
   "/sitemap.xml/route": "app/sitemap.xml/route.js",
-  "/disclaimer/page": "app/disclaimer/page.js",
   "/contact/page": "app/contact/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/disclaimer/page": "app/disclaimer/page.js",
   "/guide/page": "app/guide/page.js",
   "/legal/privacy/page": "app/legal/privacy/page.js",
   "/legal/terms/page": "app/legal/terms/page.js"
