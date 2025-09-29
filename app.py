@@ -378,56 +378,67 @@ html[data-mobile-dark="true"] body {
     opacity: 1.0 !important;
 }
 
-/* Fix Streamlit success/error/info banners with MAXIMUM specificity */
+/* Fix Streamlit success/error/info banners - CLEAN DARK DESIGN */
 .stApp .stSuccess, .stApp .stError, .stApp .stInfo, .stApp .stWarning,
 .stApp .stAlert, .stApp [data-testid="stAlert"],
 .stApp [data-testid="stAlertContainer"],
 .stApp div[data-testid="stAlert"], .stApp div[data-testid="stAlertContainer"],
 .alert, .alert-info, .alert-warning, .alert-success, .alert-error {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--accent-color) !important;
-    border-left: 4px solid var(--accent-color) !important;
-    border-top: 1px solid var(--accent-color) !important;
-    border-right: 1px solid var(--accent-color) !important;
-    border-bottom: 1px solid var(--accent-color) !important;
-    box-shadow: var(--card-shadow) !important;
-    border-radius: var(--border-radius) !important;
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #475569 !important;
+    border-left: 4px solid #475569 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+}
+
+/* Error boxes - red accent */
+.stApp .stError, .stApp div[data-testid="stAlert"][data-color="error"] {
+    border-left-color: #EF4444 !important;
+}
+
+/* Success boxes - subtle border, no green background */
+.stApp .stSuccess {
+    border-left-color: #64748B !important;
+}
+
+/* Info boxes - subtle border */
+.stApp .stInfo {
+    border-left-color: #64748B !important;
 }
 
 @media (prefers-color-scheme: dark) {
     .stSuccess, .stError, .stInfo, .stWarning,
     .stAlert, [data-testid="stAlert"] {
-        background: var(--card-bg) !important;
-        color: var(--text-color) !important;
-        border-color: var(--accent-color) !important;
-        border-left: 4px solid var(--accent-color) !important;
-        box-shadow: var(--card-shadow) !important;
+        background: #1E293B !important;
+        color: #FFFFFF !important;
+        border: 1px solid #475569 !important;
+        border-left: 4px solid #64748B !important;
     }
     
     .stApp {
         background: var(--app-bg) !important;
-        color: var(--text-color) !important;
+        color: #FFFFFF !important;
     }
     
     .main .block-container {
         background: transparent !important;
-        color: var(--text-color) !important;
+        color: #FFFFFF !important;
     }
 }
 
-/* Mobile dark mode - Force GREEN accents on all alerts */
+/* Mobile dark mode - CLEAN SUBTLE ALERTS */
 html[data-mobile-dark="true"] .stSuccess,
 html[data-mobile-dark="true"] .stError, 
 html[data-mobile-dark="true"] .stInfo,
 html[data-mobile-dark="true"] .stWarning,
 html[data-mobile-dark="true"] .stAlert,
 html[data-mobile-dark="true"] [data-testid="stAlert"] {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--accent-color) !important;
-    border-left: 4px solid var(--accent-color) !important;
-    box-shadow: var(--card-shadow) !important;
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #475569 !important;
+    border-left: 4px solid #64748B !important;
 }
 
 /* Professional Buttons - MAXIMUM SPECIFICITY for ALL button types */
@@ -580,29 +591,39 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
     }
 }
 
-/* Data Tables - Dark Theme */
-.stDataFrame {
+/* Data Tables - Dark Theme with BRIGHT WHITE TEXT */
+.stDataFrame, [data-testid="stDataFrame"] {
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--card-shadow);
-    background: var(--card-bg) !important;
+    background: #1E293B !important;
 }
 
-.stDataFrame table {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
+.stDataFrame table, [data-testid="stDataFrame"] table {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
 }
 
-.stDataFrame th {
-    background: var(--secondary-color) !important;
-    color: var(--text-color) !important;
-    border-color: var(--border-color) !important;
+.stDataFrame th, [data-testid="stDataFrame"] th {
+    background: #334155 !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    border-color: #475569 !important;
 }
 
-.stDataFrame td {
-    background: var(--card-bg) !important;
-    color: var(--text-color) !important;
-    border-color: var(--border-color) !important;
+.stDataFrame td, [data-testid="stDataFrame"] td {
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border-color: #475569 !important;
+}
+
+/* DataFrame cell text must be white */
+.stDataFrame tbody tr td, [data-testid="stDataFrame"] tbody tr td {
+    color: #FFFFFF !important;
+}
+
+.stDataFrame thead tr th, [data-testid="stDataFrame"] thead tr th {
+    color: #FFFFFF !important;
 }
 
 /* Status Indicators */
@@ -819,23 +840,29 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
-/* Success/Error Messages */
+/* Success/Error Messages - CLEAN DARK STYLE */
 .stSuccess {
-    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-    border-left: 4px solid var(--accent-color);
-    border-radius: var(--border-radius);
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #475569 !important;
+    border-left: 4px solid #64748B !important;
+    border-radius: 12px !important;
 }
 
 .stError {
-    background: linear-gradient(135deg, #fee2e2, #fecaca);
-    border-left: 4px solid var(--danger-color);
-    border-radius: var(--border-radius);
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #475569 !important;
+    border-left: 4px solid #EF4444 !important;
+    border-radius: 12px !important;
 }
 
 .stInfo {
-    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-    border-left: 4px solid var(--secondary-color);
-    border-radius: var(--border-radius);
+    background: #1E293B !important;
+    color: #FFFFFF !important;
+    border: 1px solid #475569 !important;
+    border-left: 4px solid #64748B !important;
+    border-radius: 12px !important;
 }
 
 /* Loading States */
@@ -843,11 +870,30 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--secondary-color);
 }
 
-/* Charts Enhancement */
+/* Charts Enhancement - WHITE TEXT ON DARK BG */
 .js-plotly-plot {
     border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     overflow: hidden;
+    background: #1E293B !important;
+}
+
+/* Plotly chart text must be white */
+.js-plotly-plot .plotly text,
+.js-plotly-plot text {
+    fill: #FFFFFF !important;
+}
+
+/* Plotly axis labels and titles */
+.js-plotly-plot .xtick text,
+.js-plotly-plot .ytick text,
+.js-plotly-plot .gtitle {
+    fill: #FFFFFF !important;
+}
+
+/* Plotly legend text */
+.js-plotly-plot .legend text {
+    fill: #FFFFFF !important;
 }
 
 /* COMPREHENSIVE TEXT VISIBILITY FIXES */
@@ -947,6 +993,32 @@ a:hover {
 .stMarkdown strong {
     color: #FFFFFF !important;
     font-weight: 700 !important;
+}
+
+/* NUMBER INPUTS - White text visible */
+input[type="number"], input[type="text"], input[type="email"] {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* SELECT DROPDOWNS - White text */
+select, option {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* TEXTAREA - White text */
+textarea {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* All form elements */
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea,
+[data-baseweb="select"] {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
 }
 </style>
 """, unsafe_allow_html=True)
