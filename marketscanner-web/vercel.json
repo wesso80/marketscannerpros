@@ -1,18 +1,15 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(pricing|docs|disclaimer|privacy|terms|contact)", "destination": "/$1" },
-    { "source": "/(.*)", "destination": "https://market-scanner-1-wesso80.replit.app/$1" }
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/pricing", "destination": "/pricing" },
+    { "source": "/docs", "destination": "/docs" },
+    { "source": "/disclaimer", "destination": "/disclaimer" },
+    { "source": "/privacy", "destination": "/privacy" },
+    { "source": "/terms", "destination": "/terms" },
+    { "source": "/contact", "destination": "/contact" },
+    { "source": "/:path*", "destination": "https://market-scanner-1-wesso80.replit.app/:path*" }
   ],
   "redirects": [
     { "source": "/launch", "destination": "https://app.marketscannerpros.app", "permanent": false }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
-      ]
-    }
   ]
 }
