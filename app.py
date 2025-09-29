@@ -193,10 +193,10 @@ div.block-container {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* NUCLEAR OPTION - FORCE ALL ELEMENTS TO DARK - NO WHITE BOXES ALLOWED */
+/* FORCE DARK BACKGROUNDS BUT KEEP TEXT BRIGHT */
 * {
     background-color: #1E293B !important;
-    color: #F8FAFC !important;
+    color: #FFFFFF !important;
 }
 
 html, body {
@@ -275,16 +275,16 @@ html[data-mobile-dark="true"] body {
     font-size: 3rem;
     font-weight: 700;
     margin: 0;
-    color: var(--text-color);
+    color: #FFFFFF !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .main-header .hero-subtitle {
     font-size: 1.25rem;
-    opacity: 0.9;
+    opacity: 1.0;
     margin: 1rem 0;
     font-weight: 400;
-    color: var(--text-muted);
+    color: #F8FAFC !important;
 }
 
 .hero-buttons {
@@ -334,14 +334,15 @@ html[data-mobile-dark="true"] body {
 }
 
 .pro-card h3 {
-    color: var(--text-color);
-    font-weight: 600;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
     margin-bottom: 1rem;
     font-size: 1.5rem;
 }
 
 .pro-card p {
-    color: var(--text-muted);
+    color: #F8FAFC !important;
+    opacity: 1.0 !important;
     line-height: 1.6;
 }
 
@@ -363,16 +364,18 @@ html[data-mobile-dark="true"] body {
 .metric-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--text-color);
+    color: #FFFFFF !important;
     margin: 0;
+    opacity: 1.0 !important;
 }
 
 .metric-label {
     font-size: 0.875rem;
-    color: var(--text-muted);
-    font-weight: 500;
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    opacity: 1.0 !important;
 }
 
 /* Fix Streamlit success/error/info banners with MAXIMUM specificity */
@@ -519,7 +522,8 @@ html[data-mobile-dark="true"] [data-testid="stAlert"] {
 [data-testid="stSidebar"] label {
     font-size: 0.9rem !important;
     line-height: 1.4 !important;
-    color: var(--text-muted) !important;
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
 }
 
 /* Compact mode indicator chip */
@@ -701,14 +705,14 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 .price-display {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--text-color);
+    color: #FFFFFF !important;
     margin: 1rem 0;
 }
 
 .price-period {
     font-size: 1rem;
-    color: var(--text-muted);
-    font-weight: 400;
+    color: #F8FAFC !important;
+    font-weight: 500 !important;
 }
 
 /* Feature Lists */
@@ -720,7 +724,7 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
 
 .feature-list li {
     padding: 0.5rem 0;
-    color: var(--text-color);
+    color: #F8FAFC !important;
     font-weight: 500;
     position: relative;
     padding-left: 1.5rem;
@@ -779,13 +783,16 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
     transform: translateY(-2px) !important;
 }
 
-/* Override Streamlit default styles */
-.stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-    color: var(--text-color) !important;
+/* Override Streamlit default styles - BRIGHT WHITE HEADINGS */
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6,
+h1, h2, h3, h4, h5, h6 {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
 }
 
-.stMarkdown p {
-    color: var(--text-muted) !important;
+.stMarkdown p, p {
+    color: #F8FAFC !important;
+    opacity: 1.0 !important;
 }
 
 /* Responsive Design */
@@ -841,6 +848,67 @@ html[data-mobile-dark="true"] .stApp .tier-card.premium {
     border-radius: var(--border-radius);
     box-shadow: var(--card-shadow);
     overflow: hidden;
+}
+
+/* COMPREHENSIVE TEXT VISIBILITY FIXES */
+/* All labels should be bright and readable */
+label, [data-testid="stWidgetLabel"], .stLabel {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    opacity: 1.0 !important;
+}
+
+/* Text inputs and textareas - bright text on dark background */
+input, textarea, [data-baseweb="input"], [data-baseweb="textarea"] {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
+    border-color: #475569 !important;
+}
+
+/* Select boxes and dropdowns */
+[data-baseweb="select"], [role="combobox"], .stSelectbox div {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* Expander headers must be bright white */
+.streamlit-expanderHeader, [data-testid="stExpander"] summary {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
+
+/* All text in expander content */
+[data-testid="stExpander"] div, .streamlit-expanderContent * {
+    color: #F8FAFC !important;
+}
+
+/* Tab labels */
+[data-testid="stTabs"] button, .stTabs button {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+
+/* Ensure all divs with text are visible */
+div {
+    color: #F8FAFC !important;
+}
+
+/* Span elements */
+span {
+    color: #F8FAFC !important;
+}
+
+/* Strong emphasis text should be bright white */
+strong, b {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
+
+/* Code blocks */
+code, pre {
+    background-color: #0F172A !important;
+    color: #10B981 !important;
+    border: 1px solid #475569 !important;
 }
 </style>
 """, unsafe_allow_html=True)
