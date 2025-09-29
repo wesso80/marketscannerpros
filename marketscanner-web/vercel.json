@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(pricing|docs|status)", "destination": "/$1" },
+    { "source": "/(.*)", "destination": "https://market-scanner-1-wesso80.replit.app/$1" }
+  ]
+}
