@@ -27,9 +27,13 @@ try:
         })
         st.stop()  # Return only health check response
 except Exception as e:
-    if health_check in ('check', '1', 'true', 'ping'):
-        st.json({"status": "error", "error": str(e)})
-        st.stop()
+    try:
+        if health_check in ('check', '1', 'true', 'ping'):
+            st.json({"status": "error", "error": str(e)})
+            st.stop()
+    except NameError:
+        # health_check not defined, ignore
+        pass
 
 # ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
 # Import heavy dependencies only after health check
@@ -3233,23 +3237,24 @@ def get_user_tier_from_subscription(workspace_id: str):
     return 'free'
 
 # ================= Stripe Webhook Endpoint =================
-# Handle webhook in query parameters for Streamlit limitations
-if 'webhook' in st.query_params:
-    webhook_payload = st.query_params.get('payload', '')
-    webhook_signature = st.query_params.get('signature', '')
-    
-    if webhook_payload and webhook_signature:
-        try:
-            import urllib.parse
-            decoded_payload = urllib.parse.unquote(webhook_payload)
-            success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
-            if success:
-                st.write("Webhook processed successfully")
-            else:
-                st.error(f"Webhook error: {message}")
-        except Exception as e:
-            st.error(f"Webhook processing failed: {str(e)}")
-        st.stop()
+# Handle webhook in query parameters for Streamlit limitations  
+# (DISABLED - function called before definition)
+# if 'webhook' in st.query_params:
+#     webhook_payload = st.query_params.get('payload', '')
+#     webhook_signature = st.query_params.get('signature', '')
+#     
+#     if webhook_payload and webhook_signature:
+#         try:
+#             import urllib.parse
+#             decoded_payload = urllib.parse.unquote(webhook_payload)
+#             success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
+#             if success:
+#                 st.write("Webhook processed successfully")
+#             else:
+#                 st.error(f"Webhook error: {message}")
+#         except Exception as e:
+#             st.error(f"Webhook processing failed: {str(e)}")
+#         st.stop()
 
 # Handle Apple IAP Receipt Validation (API endpoint)
 if 'iap' in st.query_params and st.query_params.get('action') == 'validate-receipt':
