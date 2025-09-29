@@ -3028,11 +3028,32 @@ def create_portfolio_performance_chart() -> go.Figure:
             ))
         
         fig.update_layout(
-            title="Portfolio Performance Over Time",
+            title={
+                "text": "Portfolio Performance Over Time",
+                "font": {"size": 18, "color": "#F8FAFC"}
+            },
             xaxis_title="Date",
             yaxis_title="Value ($)",
             template="plotly_dark",
-            height=400
+            height=400,
+            font=dict(size=14, color="#F8FAFC"),
+            legend=dict(
+                font=dict(size=16, color="#F8FAFC"),
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            xaxis=dict(
+                title_font=dict(size=16, color="#F8FAFC"),
+                tickfont=dict(size=14, color="#F8FAFC")
+            ),
+            yaxis=dict(
+                title_font=dict(size=16, color="#F8FAFC"),
+                tickfont=dict(size=14, color="#F8FAFC")
+            ),
+            margin=dict(l=40, r=40, t=60, b=40)
         )
         
         return fig
