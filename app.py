@@ -4128,15 +4128,15 @@ else:
     # No workspace - default to free
     current_tier = 'free'
 
-# TEMPORARY: Manual Pro access for testing
+# TEMPORARY: Manual Pro access for testing (NO SUCCESS MESSAGES to avoid layout issues)
 # Check if user should have Pro access (temporary override)
 query_params = st.query_params
 if query_params.get("access") == "pro":
     current_tier = 'pro'
-    st.success("🎉 **Pro Access Activated!** You now have unlimited symbol scanning and all premium features.")
+    # Removed success message that was causing layout/styling issues
 elif query_params.get("access") == "pro_trader":
     current_tier = 'pro_trader'
-    st.success("🎉 **Pro Trader Access Activated!** You now have unlimited scanning + advanced alerts + priority support!")
+    # Removed success message that was causing layout/styling issues
 
 # Update session state to match current tier
 st.session_state.user_tier = current_tier
