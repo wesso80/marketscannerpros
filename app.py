@@ -96,6 +96,16 @@ st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile e
 # ================= Professional Styling - Marketing Page Theme =================
 st.markdown("""
 <style>
+/* PORTFOLIO FIX - FORCE WHITE TEXT + DARK BACKGROUNDS */
+.stPlotlyChart, .stPlotlyChart > div, .js-plotly-plot, .plotly-graph-div {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+}
+div[data-testid="metric-container"] *, .stMetric * {
+    color: #FFFFFF !important;
+    opacity: 1.0 !important;
+}
+
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -5606,59 +5616,7 @@ with col1:
     # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
-    # FORCE DARK BACKGROUNDS + WHITE TEXT
-    st.markdown("""
-    <style>
-    /* FORCE all chart and container backgrounds to be DARK */
-    .stPlotlyChart,
-    [data-testid="stPlotlyChart"],
-    .stPlotlyChart > div,
-    [data-testid="stPlotlyChart"] > div,
-    .stPlotlyChart .plotly-graph-div,
-    .js-plotly-plot .plotly-graph-div {
-        background-color: #1E293B !important;
-        background: #1E293B !important;
-    }
-    
-    /* Force ALL white containers back to dark */
-    .stContainer,
-    [data-testid="stContainer"],
-    .element-container,
-    [data-testid="element-container"],
-    .stMarkdown,
-    .stPlotlyChart .plot-container,
-    .stPlotlyChart .svg-container {
-        background-color: #1E293B !important;
-        background: #1E293B !important;
-    }
-    
-    /* Force Portfolio metric TEXT to be white */
-    div[data-testid="metric-container"] *,
-    .stMetric div,
-    .stMetric label,
-    .stMetric span {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-    }
-    
-    /* Force metric values to be bold and white */
-    div[data-testid="metric-container"] [data-testid="metric-value"],
-    .metric-value {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-        font-weight: 700 !important;
-        font-size: 1.8rem !important;
-    }
-    
-    /* Force metric labels to be white */
-    div[data-testid="metric-container"] label,
-    .metric-label {
-        color: #FFFFFF !important;
-        opacity: 1.0 !important;
-        font-weight: 500 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# REMOVED CSS FROM HERE - Moving to top of file for better injection
     
     # Always display metrics with clean, bold formatting (no faded text)
     metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
