@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'subscription',
-      success_url: `${request.nextUrl.origin}/dashboard?success=true`,
+      success_url: `https://65e0d511-a376-4400-9b96-6faf813e6d83-00-346bbki9bwvxl.worf.replit.dev/?access=${plan}&stripe_success=true`,
       cancel_url: `${request.nextUrl.origin}/pricing?canceled=true`,
       subscription_data: {
         trial_period_days: planConfig.trial_days,
