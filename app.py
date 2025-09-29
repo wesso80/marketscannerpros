@@ -5598,27 +5598,24 @@ with col1:
     portfolio_metrics = calculate_portfolio_metrics()
     
     if portfolio_metrics:
-        # Use wider columns layout to prevent metric truncation
-        col1_1, col1_2 = st.columns(2)
+        # Clean 4-column layout for consistent formatting across all tiers
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
         
-        with col1_1:
-            sub_col1, sub_col2 = st.columns(2)
-            with sub_col1:
-                market_value = portfolio_metrics.get('total_market_value', 0)
-                st.metric("Market Value", f"${market_value:,.2f}")
-            with sub_col2:
-                total_return = portfolio_metrics.get('total_return_pct', 0)
-                color = "green" if total_return >= 0 else "red"
-                st.metric("Total Return", f"{total_return:.2f}%", delta=None)
-        
-        with col1_2:
-            sub_col3, sub_col4 = st.columns(2)
-            with sub_col3:
-                unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
-                st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
-            with sub_col4:
-                num_positions = portfolio_metrics.get('total_positions', 0)
-                st.metric("Positions", num_positions)
+        with metric_col1:
+            market_value = portfolio_metrics.get('total_market_value', 0)
+            st.metric("Market Value", f"${market_value:,.2f}")
+            
+        with metric_col2:
+            total_return = portfolio_metrics.get('total_return_pct', 0)
+            st.metric("Total Return", f"{total_return:.2f}%")
+            
+        with metric_col3:
+            unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
+            st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+            
+        with metric_col4:
+            num_positions = portfolio_metrics.get('total_positions', 0)
+            st.metric("Positions", num_positions)
 
 with col2:
     # Quick actions
