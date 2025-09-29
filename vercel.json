@@ -1,31 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "api/scanner.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/scanner/(.*)",
-      "dest": "/api/scanner.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
   "env": {
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
-    "PYTHONPATH": "/var/task"
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
   }
 }
