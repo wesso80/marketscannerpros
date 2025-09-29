@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PortalButton from "@/components/PortalButton";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('');
   
@@ -44,11 +44,11 @@ export default function DashboardPage() {
         <div className="flex gap-4">
           <PortalButton />
           <a 
-            href="https://app.marketscannerpros.app"
+            href="https://65e0d511-a376-4400-9b96-6faf813e6d83-00-346bbki9bwvxl.worf.replit.dev/?access=pro"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 inline-block">
-            Launch App
+            Launch Pro App
           </a>
         </div>
       </div>
@@ -68,5 +68,13 @@ export default function DashboardPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
