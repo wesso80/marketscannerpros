@@ -1880,18 +1880,78 @@ def mark_notification_read(notification_id: int, workspace_id: str, user_email: 
         return False
 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
-    """Legacy wrapper - stores notification using current workspace"""
-    # Get workspace from session state
-    workspace_id = st.session_state.get('workspace_id')
-    if not workspace_id:
-        # Fallback to immediate display if no workspace
-        st.success("🔔 **Market Scanner Alert** (Temporary Display)")
-        st.info(f"**{subject}**")
-        with st.expander("📄 View Message", expanded=True):
-            st.write(body)
-        return True
-    
-    return store_notification(subject, body, to_email, workspace_id)
+    """Send email via Vercel/Resend API endpoint"""
+    try:
+        # Vercel email endpoint
+        email_endpoint = "https://marketscannerpros.app/api/send-email"
+        
+        # Prepare email data
+        email_data = {
+            "to": to_email,
+            "subject": subject,
+            "html": f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 20px; color: white; border-radius: 8px 8px 0 0;">
+                    <h2 style="margin: 0; color: #10B981;">📈 Market Scanner Alert</h2>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
+                    <h3 style="color: #0F172A; margin-top: 0;">{subject}</h3>
+                    <div style="white-space: pre-line; color: #374151; line-height: 1.6;">
+{body}
+                    </div>
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                        This alert was sent by MarketScanner Pro<br>
+                        <a href="https://marketscannerpros.app" style="color: #10B981;">Visit Dashboard</a> | 
+                        <a href="https://app.marketscannerpros.app" style="color: #10B981;">Open Scanner</a>
+                    </p>
+                </div>
+            </div>
+            """,
+            "text": f"{subject}\n\n{body}\n\n--\nMarketScanner Pro\nVisit: https://marketscannerpros.app"
+        }
+        
+        # Send email via Vercel endpoint
+        response = requests.post(
+            email_endpoint,
+            json=email_data,
+            headers={
+                "Content-Type": "application/json"
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            # Email sent successfully, also store in database for record keeping
+            workspace_id = st.session_state.get('workspace_id')
+            if workspace_id:
+                store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
+            return True
+        else:
+            # Email failed, store in database as fallback
+            workspace_id = st.session_state.get('workspace_id')
+            if workspace_id:
+                store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\n\n{body}", to_email, workspace_id)
+            else:
+                # Show immediate notification if no workspace
+                st.error(f"🚨 Email delivery failed for {to_email}")
+                st.info(f"**{subject}**")
+                with st.expander("📄 View Message", expanded=True):
+                    st.write(body)
+            return False
+            
+    except Exception as e:
+        # Fallback to database storage on any error
+        workspace_id = st.session_state.get('workspace_id')
+        if workspace_id:
+            store_notification(f"⚠️ Email Error: {subject}", f"Error sending email to {to_email}: {str(e)}\n\n{body}", to_email, workspace_id)
+        else:
+            # Show immediate notification if no workspace
+            st.error(f"🚨 Email system error: {str(e)}")
+            st.info(f"**{subject}**")
+            with st.expander("📄 View Message", expanded=True):
+                st.write(body)
+        return False
 
 def save_user_notification_preferences(user_email: str, method: str) -> bool:
     """Save user notification preferences to database"""
