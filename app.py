@@ -5863,10 +5863,24 @@ with col4:
 
 # Footer
 st.markdown("---")
+
+# LEGAL DISCLAIMER - REQUIRED FOR LIABILITY PROTECTION
+st.error("""
+🚨 **IMPORTANT LEGAL DISCLAIMER** 🚨
+
+**This is NOT financial or investment advice.** MarketScanner Pro is for educational and informational purposes only.
+
+⚠️ **Trading and investing involves substantial risk of loss and is not suitable for all investors.**
+⚠️ **Past performance does not guarantee future results.**  
+⚠️ **You are solely responsible for your investment decisions.**
+
+**Consult a licensed financial advisor before making investment decisions.**
+""")
+
 st.markdown("""
 **Market Scanner Dashboard** - Real-time technical analysis with risk management
 - Data provided by Yahoo Finance via yfinance library
-- Technical indicators calculated using pandas
+- Technical indicators calculated using pandas  
 - Position sizing based on Average True Range (ATR)
 - Email notifications powered by Vercel/Resend API (built-in)
 - In-app notifications provide 100% reliable delivery
