@@ -10,8 +10,8 @@ export default function Home() {
           e.preventDefault();
           e.stopPropagation();
           
-          // Navigate to Streamlit app on Vercel
-          const streamlitUrl = `${window.location.origin}/scanner`;
+          // Navigate to current Streamlit app in Replit
+          const streamlitUrl = 'https://marketscannerpros-8080.wesso80.repl.co';
           console.log('Opening Market Scanner at:', streamlitUrl);
           
           // Open in new tab for better user experience
