@@ -1067,40 +1067,70 @@ st.markdown("""
     document.documentElement.setAttribute('data-mobile-dark', 'true');
     document.documentElement.style.colorScheme = 'dark';
     
-    // MOBILE FIX - Force styles on all problematic elements
+    // AGGRESSIVE FIX - Force styles on all problematic elements
     function forceMobileStyles() {
-        // Fix dataframes
-        document.querySelectorAll('.stDataFrame, [data-testid="stDataFrame"], .stDataFrame *, [data-testid="stDataFrame"] *').forEach(el => {
-            el.style.setProperty('color', '#FFFFFF', 'important');
-            el.style.setProperty('background-color', '#1E293B', 'important');
-        });
-        
-        // Fix metrics
-        document.querySelectorAll('.stMetric, [data-testid="metric-container"], .stMetric *, [data-testid="metric-container"] *').forEach(el => {
-            el.style.setProperty('color', '#FFFFFF', 'important');
-        });
-        
-        // Fix charts
-        document.querySelectorAll('.js-plotly-plot, .stPlotlyChart, [data-testid="stPlotlyChart"]').forEach(el => {
-            el.style.setProperty('background-color', '#1E293B', 'important');
-        });
-        
-        // Fix chart text
-        document.querySelectorAll('.js-plotly-plot text, .stPlotlyChart text').forEach(el => {
-            el.style.setProperty('fill', '#FFFFFF', 'important');
-        });
+        try {
+            // Fix ALL dataframes and tables
+            const dataframeSelectors = [
+                '.stDataFrame', '[data-testid="stDataFrame"]', 
+                '.stDataFrame table', '[data-testid="stDataFrame"] table',
+                '.stDataFrame td', '[data-testid="stDataFrame"] td',
+                '.stDataFrame th', '[data-testid="stDataFrame"] th',
+                'table', 'td', 'th', 'tbody', 'thead'
+            ];
+            dataframeSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    el.style.setProperty('color', '#FFFFFF', 'important');
+                    el.style.setProperty('background-color', '#1E293B', 'important');
+                });
+            });
+            
+            // Fix ALL metrics
+            const metricSelectors = [
+                '.stMetric', '[data-testid="metric-container"]',
+                '.stMetric *', '[data-testid="metric-container"] *',
+                '[data-testid="stMetricLabel"]', '[data-testid="stMetricValue"]'
+            ];
+            metricSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    el.style.setProperty('color', '#FFFFFF', 'important');
+                    el.style.setProperty('background-color', 'transparent', 'important');
+                });
+            });
+            
+            // Fix ALL charts and plotly
+            const chartSelectors = [
+                '.js-plotly-plot', '.stPlotlyChart', '[data-testid="stPlotlyChart"]',
+                '.plotly', '.plot-container'
+            ];
+            chartSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    el.style.setProperty('background-color', '#1E293B', 'important');
+                });
+            });
+            
+            // Fix ALL chart text in SVG
+            document.querySelectorAll('.js-plotly-plot text, .stPlotlyChart text, .plotly text, svg text').forEach(el => {
+                el.setAttribute('fill', '#FFFFFF');
+                el.style.setProperty('fill', '#FFFFFF', 'important');
+            });
+        } catch(e) {
+            console.log('Style fix error:', e);
+        }
     }
     
-    // Apply fixes on mobile
-    if (isMobile) {
-        forceMobileStyles();
-        // Re-apply after DOM changes
-        setInterval(forceMobileStyles, 1000);
-        
-        // Watch for new elements
-        const observer = new MutationObserver(forceMobileStyles);
+    // ALWAYS apply fixes (both mobile and desktop)
+    forceMobileStyles();
+    // Re-apply after DOM changes
+    setInterval(forceMobileStyles, 500);
+    
+    // Watch for new elements
+    setTimeout(() => {
+        const observer = new MutationObserver(() => {
+            setTimeout(forceMobileStyles, 100);
+        });
         observer.observe(document.body, { childList: true, subtree: true });
-    }
+    }, 1000);
     
     // Fix Streamlit tab click issues
     function fixTabClicks() {
