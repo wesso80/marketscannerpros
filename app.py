@@ -193,10 +193,27 @@ div.block-container {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* NUCLEAR OPTION - FORCE ALL ELEMENTS TO DARK - NO WHITE BOXES ALLOWED */
-* {
-    background-color: #1E293B !important;
+/* TARGETED DARK THEME - SPECIFIC ELEMENTS ONLY */
+/* Removed universal selector to prevent over-aggressive styling */
+
+/* INPUT ELEMENTS - PROPER CONTRAST AND VISIBILITY */
+input, textarea, select, .stSelectbox div, .stTextInput input, .stNumberInput input {
+    background-color: #334155 !important;
     color: #F8FAFC !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+}
+
+/* BUTTON STYLING */
+.stButton > button {
+    background-color: #10B981 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+.stButton > button:hover {
+    background-color: #059669 !important;
 }
 
 html, body {
