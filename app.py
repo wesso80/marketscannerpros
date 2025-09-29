@@ -166,7 +166,7 @@ div.block-container {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
 }
 
-/* Cache bust: """ + str(datetime.now().timestamp()) + """ */
+/* Cache bust: v2.1 - """ + str(datetime.now().timestamp()) + """ */
 
 /* Professional Global Styles - Marketing Page Dark Theme */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -193,11 +193,7 @@ div.block-container {
     --card-shadow-hover: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* FORCE DARK BACKGROUNDS BUT KEEP TEXT BRIGHT */
-* {
-    background-color: #1E293B !important;
-    color: #FFFFFF !important;
-}
+/* REMOVE OVERLY AGGRESSIVE GLOBAL STYLES - BE SPECIFIC INSTEAD */
 
 html, body {
     background-color: #0F172A !important;
@@ -205,38 +201,20 @@ html, body {
     color-scheme: dark !important;
 }
 
-/* EVERY POSSIBLE CONTAINER - FORCE DARK */
+/* SPECIFIC CONTAINERS ONLY - NOT ALL DIVS */
 .stApp, [data-testid="stAppViewContainer"], .main, .block-container,
-section, div, article, main, aside, header, footer, nav,
-.element-container, .stContainer, .stColumn, .stColumns,
-[data-testid="column"], [data-testid="block-container"],
-[data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"] {
-    background-color: #1E293B !important;
-    background: #1E293B !important;
+section.main, .element-container {
+    background-color: transparent !important;
     color: #F8FAFC !important;
 }
 
-/* STREAMLIT SPECIFIC CONTAINERS */
-.stSelectbox, .stTextInput, .stNumberInput, .stTextArea,
-.stButton, .stCheckbox, .stRadio, .stSlider, .stDateInput,
-.stTimeInput, .stColorPicker, .stFileUploader,
-.stForm, .stFormSubmitButton, .stSuccess, .stError,
-.stWarning, .stInfo, .stException, .stProgress,
-.stSpinner, .stBalloons, .stSnow, .stSidebar {
+/* STREAMLIT SPECIFIC CONTAINERS - MINIMAL OVERRIDE */
+.stSidebar {
     background-color: #1E293B !important;
     color: #F8FAFC !important;
 }
 
-/* OVERRIDE ALL WHITE/LIGHT BACKGROUNDS */
-[style*="background-color: white"],
-[style*="background-color: #fff"],
-[style*="background-color: #ffffff"],
-[style*="background: white"],
-[style*="background: #fff"],
-[style*="background: #ffffff"] {
-    background-color: #1E293B !important;
-    background: #1E293B !important;
-}
+/* REMOVE - TOO AGGRESSIVE */
 
 /* Keep mobile overrides as backup */
 html[data-mobile-dark="true"],
@@ -934,13 +912,11 @@ input, textarea, [data-baseweb="input"], [data-baseweb="textarea"] {
     font-weight: 600 !important;
 }
 
-/* Ensure all divs with text are visible */
-div {
-    color: #F8FAFC !important;
-}
-
-/* Span elements */
-span {
+/* Text elements - target specifically */
+.stMarkdown div,
+.stMarkdown span,
+[data-testid="stMarkdownContainer"] div,
+[data-testid="stMarkdownContainer"] span {
     color: #F8FAFC !important;
 }
 
