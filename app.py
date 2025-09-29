@@ -3064,31 +3064,17 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-try:
-    app_icon_base64 = get_base64_of_bin_file("attached_assets/Financial Market Growth Icon_1758709284055.png")
-    header_html = f"""
-    <div class="main-header">
-        <img src="data:image/png;base64,{app_icon_base64}" class="app-icon" alt="Market Scanner App Icon">
-        <h1>Scan crypto & stocks across timeframes — fast.</h1>
-        <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
-        <div class="hero-buttons">
-            <span class="promo-button">🚀 Start Scanning (Demo)</span>
-            <span class="secondary-button">📊 View Results</span>
-        </div>
+# Single header - no duplicates
+header_html = """
+<div class="main-header">
+    <h1>Scan crypto & stocks across timeframes — fast.</h1>
+    <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
+    <div class="hero-buttons">
+        <span class="promo-button">🚀 Start Scanning (Demo)</span>
+        <span class="secondary-button">📊 View Results</span>
     </div>
-    """
-except FileNotFoundError:
-    # Fallback if image file is not found
-    header_html = """
-    <div class="main-header">
-        <h1>Scan crypto & stocks across timeframes — fast.</h1>
-        <p class="hero-subtitle">Professional Market Analysis & Trading Intelligence Platform</p>
-        <div class="hero-buttons">
-            <span class="promo-button">🚀 Start Scanning (Demo)</span>
-            <span class="secondary-button">📊 View Results</span>
-        </div>
-    </div>
-    """
+</div>
+"""
 
 st.markdown(header_html, unsafe_allow_html=True)
 
