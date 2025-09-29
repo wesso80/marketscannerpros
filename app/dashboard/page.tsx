@@ -1,5 +1,3 @@
-"use client";
-
 import PortalButton from "@/components/PortalButton";
 
 export const metadata = { title: "Dashboard — MarketScanner Pros" };
@@ -14,11 +12,13 @@ export default function DashboardPage() {
         
         <div className="flex gap-4">
           <PortalButton />
-          <button 
-            onClick={() => window.open('https://marketscannerpros-8080.wesso80.repl.co', '_blank')}
+          <a 
+            href="https://marketscannerpros-8080.wesso80.repl.co"
+            target="_blank"
+            rel="noopener noreferrer"
             className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 inline-block">
             Launch App
-          </button>
+          </a>
         </div>
       </div>
       
