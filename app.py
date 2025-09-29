@@ -5603,28 +5603,27 @@ st.subheader("💼 Portfolio Tracking")
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    # Portfolio metrics at the top
+    # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
     portfolio_metrics = calculate_portfolio_metrics()
     
-    if portfolio_metrics:
-        # Clean 4-column layout for consistent formatting across all tiers
-        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    # Always display metrics with clean, bold formatting (no faded text)
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    
+    with metric_col1:
+        market_value = portfolio_metrics.get('total_market_value', 0) if portfolio_metrics else 0
+        st.metric("Market Value", f"${market_value:,.2f}")
         
-        with metric_col1:
-            market_value = portfolio_metrics.get('total_market_value', 0)
-            st.metric("Market Value", f"${market_value:,.2f}")
-            
-        with metric_col2:
-            total_return = portfolio_metrics.get('total_return_pct', 0)
-            st.metric("Total Return", f"{total_return:.2f}%")
-            
-        with metric_col3:
-            unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0)
-            st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
-            
-        with metric_col4:
-            num_positions = portfolio_metrics.get('total_positions', 0)
-            st.metric("Positions", num_positions)
+    with metric_col2:
+        total_return = portfolio_metrics.get('total_return_pct', 0) if portfolio_metrics else 0
+        st.metric("Total Return", f"{total_return:.2f}%")
+        
+    with metric_col3:
+        unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0) if portfolio_metrics else 0
+        st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+        
+    with metric_col4:
+        num_positions = portfolio_metrics.get('total_positions', 0) if portfolio_metrics else 0
+        st.metric("Positions", num_positions)
 
 with col2:
     # Quick actions
