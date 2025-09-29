@@ -1,12 +1,14 @@
 import Stripe from "stripe";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs"; // ensure Node runtime for raw body
+export const runtime = "nodejs";        // raw body requires Node runtime
+export const dynamic = "force-dynamic"; // avoid caching on edge
 
 export async function POST(req: Request) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-08-27.basil" });
-  const sig = headers().get("stripe-signature");
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+  // In Next 15, just read from req.headers (no async headers() needed)
+  const sig = req.headers.get("stripe-signature");
   const whsec = process.env.STRIPE_WEBHOOK_SECRET;
 
   const rawBody = Buffer.from(await req.arrayBuffer());
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        // TODO: upsert user subscription in your DB here
+        // TODO: upsert your user/subscription in DB here
         break;
       default:
         break;
@@ -37,6 +39,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
-
-// (Pages Router needs bodyParser:false. App Router uses raw body above.)
-export const config = { api: { bodyParser: false } };
