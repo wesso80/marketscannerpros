@@ -1,5 +1,5 @@
 {
-  "/pricing/page": "app/pricing/page.js",
   "/icon.svg/route": "app/icon.svg/route.js",
-  "/privacy/page": "app/privacy/page.js"
+  "/privacy/page": "app/privacy/page.js",
+  "/guide/page": "app/guide/page.js"
 }
