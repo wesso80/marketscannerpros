@@ -46,7 +46,7 @@ export default function TermsPage() {
       <h2 id="billing">3. Subscriptions &amp; Billing</h2>
       <ul>
         <li>The App offers Free, Pro ($4.99/mo), and Full Pro Trader ($9.99/mo) plans.</li>
-        <li>Payments are processed securely via platform providers (Apple, Google) or Stripe.</li>
+        <li>Payments are processed securely via Stripe.</li>
         <li>Subscriptions renew automatically until cancelled through your account or app store settings.</li>
         <li>We do not provide pro-rated refunds for unused time after cancellation.</li>
       </ul>

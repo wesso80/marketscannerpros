@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy — MarketScanner Pros",
   description:
-    "How MarketScanner Pros collects, uses, and protects your data, including Google sign-in (NextAuth) and Stripe billing.",
+    "How MarketScanner Pros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
   alternates: { canonical: "https://marketscannerpros.app/privacy" },
 };
 
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
       <h2>Information we collect</h2>
       <ul>
-        <li><strong>Account:</strong> Google sign-in via NextAuth (email and basic profile).</li>
+        <li><strong>Account:</strong> Secure access code authentication (no personal information collected).</li>
         <li><strong>Billing:</strong> Processed by Stripe; we keep minimal subscription status.</li>
         <li><strong>Usage & Logs:</strong> Diagnostics and server logs for reliability/abuse prevention.</li>
         <li><strong>Cookies/Storage:</strong> Auth/session cookies and preferences.</li>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
       <h2>Sharing & processors</h2>
       <ul>
         <li><strong>Stripe</strong> (payments & portal).</li>
-        <li><strong>Google</strong> (OAuth via NextAuth).</li>
+        <li><strong>NextAuth</strong> (JWT session management).</li>
         <li><strong>Hosting</strong>: Vercel (app) and Cloudflare Pages (marketing).</li>
         <li><strong>Backend</strong>: Our FastAPI service for data features.</li>
       </ul>
