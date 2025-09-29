@@ -1,22 +1,11 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
-export async function sendAlertEmail(opts: {
-  to: string;
-  subject: string;
-  html: string;
-  fromOverride?: string;
-}) {
-  const from =
-    opts.fromOverride ||
-    process.env.EMAIL_FROM ||
-    "MarketScanner Alerts <onboarding@resend.dev>";
-
-  return await resend.emails.send({
-    from,
-    to: opts.to,
-    subject: opts.subject,
-    html: opts.html,
-  });
+export async function sendAlertEmail({
+  to, subject, html,
+}: { to: string; subject: string; html: string }) {
+  if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
+  const resend = new Resend(process.env.RESEND_API_KEY); // init at call-time
+  return await resend.emails.send({ from, to, subject, html });
 }
