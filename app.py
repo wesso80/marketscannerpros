@@ -3898,6 +3898,13 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
                 description=f"Market Scanner - Workspace {workspace_id[:8]}"
             )
         
+        # Determine base URL for redirects
+        base_url = os.getenv('DOMAIN_URL')
+        if not base_url:
+            repl_slug = os.getenv('REPL_SLUG', 'app')
+            repl_owner = os.getenv('REPL_OWNER', 'user')
+            base_url = f'https://{repl_slug}.{repl_owner}.repl.co'
+        
         # Create checkout session with free trial
         session_params = {
             'customer': customer.id,
@@ -3919,8 +3926,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
                 'workspace_id': workspace_id,
                 'plan_code': plan_code
             },
-            'success_url': f"{os.getenv('DOMAIN_URL') or f'https://{os.getenv(\"REPL_SLUG\", \"app\")}.{os.getenv(\"REPL_OWNER\", \"user\")}.repl.co'}?session_id={{CHECKOUT_SESSION_ID}}",
-            'cancel_url': f"{os.getenv('DOMAIN_URL') or f'https://{os.getenv(\"REPL_SLUG\", \"app\")}.{os.getenv(\"REPL_OWNER\", \"user\")}.repl.co'}"
+            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}",
+            'cancel_url': base_url
         }
         
         # Add free trial if configured
