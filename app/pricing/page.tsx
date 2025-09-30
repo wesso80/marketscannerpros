@@ -80,6 +80,10 @@ export default function PricingPage() {
           </button>
         </div>
       </div>
+          {/* MSP ANCHORS (auto-insert) */}
+      <div id="pro" className="scroll-mt-24"></div>
+      <div id="protrader" className="scroll-mt-24"></div>
     </main>
   );
 }
+
