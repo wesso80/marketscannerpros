@@ -4446,25 +4446,34 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Full market scanning', 'All advanced features', 'Real-time data', 'Advanced charts', 'Portfolio tracking', 'Limited to 4 symbols only'],
-        'scan_limit': 4,
-        'alert_limit': None,
+        'features': ['Market scanning (6 symbols)', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'scan_limit': 6,
+        'alert_limit': 0,
+        'portfolio_limit': 3,
+        'has_advanced_charts': False,
+        'has_backtesting': False,
         'color': '#666666'
     },
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited scans & alerts', 'Advanced charts', 'Real-time data', 'Portfolio tracking'],
-        'scan_limit': None,
-        'alert_limit': None,
+        'features': ['12 symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'scan_limit': 12,
+        'alert_limit': 5,
+        'portfolio_limit': 8,
+        'has_advanced_charts': True,
+        'has_backtesting': False,
         'color': '#4CAF50'
     },
     'pro_trader': {
         'name': '💎 Pro Trader',
         'price': '$9.99/month',
-        'features': ['Everything in Pro', 'Advanced backtesting', 'Custom algorithms', 'Priority support'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting', 'Full site access', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': None,
+        'portfolio_limit': None,
+        'has_advanced_charts': True,
+        'has_backtesting': True,
         'color': '#FF9800'
     }
 }
@@ -4864,8 +4873,11 @@ st.sidebar.header("Equity Symbols")
 
 # Show tier limitations
 current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
 if current_tier == 'free':
-    st.sidebar.caption(f"🚀 Free tier: Full features with {TIER_CONFIG['free']['scan_limit']} symbols total • Upgrade for more symbols!")
+    st.sidebar.caption(f"🚀 Free tier: {tier_info['scan_limit']} scanner symbols, {tier_info['portfolio_limit']} portfolio symbols • Upgrade for more!")
+elif current_tier == 'pro':
+    st.sidebar.caption(f"✨ Pro: {tier_info['scan_limit']} symbols, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
@@ -5503,14 +5515,28 @@ if st.session_state.get('show_new_alert', False):
                     st.error("Invalid alert type")
                 else:
                     # Check tier limitations
-                    # ALL TIERS: Full alert functionality (no restrictions)
-                    symbol_clean = alert_symbol.strip().upper()
-                    if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                        st.success(f"Alert created for {symbol_clean}")
-                        st.session_state.show_new_alert = False
-                        st.rerun()
+                    current_tier = st.session_state.user_tier
+                    tier_info = TIER_CONFIG[current_tier]
+                    active_alerts = get_active_alerts()
+                    alert_count = len(active_alerts) if active_alerts else 0
+                    
+                    # Check if free tier trying to create alerts
+                    if current_tier == 'free':
+                        st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
+                        st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
+                    # Check if pro tier has reached alert limit
+                    elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
+                        st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
+                        st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
                     else:
-                        st.error("Failed to create alert - please check database connection")
+                        # Create the alert
+                        symbol_clean = alert_symbol.strip().upper()
+                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                            st.success(f"Alert created for {symbol_clean}")
+                            st.session_state.show_new_alert = False
+                            st.rerun()
+                        else:
+                            st.error("Failed to create alert - please check database connection")
         
         with col3:
             if st.button("Cancel", key="cancel_alert"):
@@ -5721,6 +5747,24 @@ else:
 
 # ================= Backtesting Section =================
 st.subheader("🔬 Strategy Backtesting")
+
+# Check tier access for backtesting
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+if not tier_info['has_backtesting']:
+    st.warning("🔒 **Strategy Backtesting is a Pro Trader feature**")
+    st.info("""
+    **Unlock Advanced Backtesting with Pro Trader:**
+    - Test trading strategies on historical data
+    - Analyze performance metrics and win rates
+    - Optimize your trading approach
+    - Get 5-7 day free trial!
+    """)
+    if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
+        st.session_state.selected_plan = 'pro_trader'
+        st.rerun()
+    st.stop()
 
 # Backtest controls
 col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
@@ -6091,6 +6135,24 @@ with tab2:
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
             if st.button("Add Position", type="primary", width='stretch'):
+                # Check tier limitations for new BUY positions
+                if transaction_type == "BUY":
+                    current_tier = st.session_state.user_tier
+                    tier_info = TIER_CONFIG[current_tier]
+                    current_positions = get_portfolio_positions()
+                    position_count = len(current_positions) if current_positions else 0
+                    
+                    # Check if trying to add new position beyond limit
+                    if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
+                        existing_symbols = [p['symbol'] for p in current_positions]
+                        if symbol not in existing_symbols:
+                            st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
+                            if current_tier == 'free':
+                                st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
+                            else:
+                                st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
+                            st.stop()
+                
                 success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
                 if success:
                     st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
