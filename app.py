@@ -4050,6 +4050,16 @@ if 'pairing_token' not in st.session_state:
 if 'saved_watchlist' not in st.session_state:
     st.session_state.saved_watchlist = []
 
+# Market selection toggles
+col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
+with col_toggle1:
+    scan_equities = st.checkbox("📈 Scan Equities", value=True, key="scan_equities_toggle")
+with col_toggle2:
+    scan_crypto = st.checkbox("₿ Scan Crypto", value=True, key="scan_crypto_toggle")
+with col_toggle3:
+    if not scan_equities and not scan_crypto:
+        st.warning("⚠️ Please select at least one market to scan")
+
 c1, c2, c3 = st.columns([1,1,1])
 run_clicked = c1.button("🔎 Run Scanner", width='stretch')
 refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
@@ -5148,46 +5158,51 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
 
 # Main scanning logic
 if run_clicked:
-    eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()]
-    cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()]
-    
-    # Check tier limitations
-    current_tier = st.session_state.user_tier
-    tier_info = TIER_CONFIG[current_tier]
-    total_symbols = len(eq_syms) + len(cx_syms)
-    
-    # Apply scan limits for free tier
-    if current_tier == 'free' and tier_info['scan_limit'] and total_symbols > tier_info['scan_limit']:
-        st.warning(f"⚠️ Free tier limited to {tier_info['scan_limit']} symbols total. You entered {total_symbols} symbols.")
-        st.info(f"🚀 **Scanning first {tier_info['scan_limit']} symbols for you!** Upgrade to Pro for unlimited symbols!")
+    # Check if at least one market is selected
+    if not scan_equities and not scan_crypto:
+        st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
+    else:
+        # Get symbols from inputs
+        eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
+        cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
         
-        # Slice to first 4 symbols for free tier
-        limit = tier_info['scan_limit']
-        if eq_syms and len(eq_syms) > limit:
-            eq_syms = eq_syms[:limit]
-            cx_syms = []  # If we hit equity limit, no crypto
-        elif len(eq_syms) + len(cx_syms) > limit:
-            remaining_limit = limit - len(eq_syms)
-            cx_syms = cx_syms[:remaining_limit] if remaining_limit > 0 else []
-    
-    with st.spinner("Scanning markets..."):
-        # Scan equity markets
-        if eq_syms:
-            st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
-                eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
-            )
-        else:
-            st.session_state.eq_results = pd.DataFrame()
-            st.session_state.eq_errors = pd.DataFrame()
+        # Check tier limitations
+        current_tier = st.session_state.user_tier
+        tier_info = TIER_CONFIG[current_tier]
+        total_symbols = len(eq_syms) + len(cx_syms)
         
-        # Scan crypto markets
-        if cx_syms:
-            st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
-                cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
-            )
-        else:
-            st.session_state.cx_results = pd.DataFrame()
-            st.session_state.cx_errors = pd.DataFrame()
+        # Apply scan limits for free tier
+        if current_tier == 'free' and tier_info['scan_limit'] and total_symbols > tier_info['scan_limit']:
+            st.warning(f"⚠️ Free tier limited to {tier_info['scan_limit']} symbols total. You entered {total_symbols} symbols.")
+            st.info(f"🚀 **Scanning first {tier_info['scan_limit']} symbols for you!** Upgrade to Pro for unlimited symbols!")
+            
+            # Slice to first 6 symbols for free tier
+            limit = tier_info['scan_limit']
+            if eq_syms and len(eq_syms) > limit:
+                eq_syms = eq_syms[:limit]
+                cx_syms = []  # If we hit equity limit, no crypto
+            elif len(eq_syms) + len(cx_syms) > limit:
+                remaining_limit = limit - len(eq_syms)
+                cx_syms = cx_syms[:remaining_limit] if remaining_limit > 0 else []
+        
+        with st.spinner("Scanning markets..."):
+            # Scan equity markets (only if toggle is enabled)
+            if scan_equities and eq_syms:
+                st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
+                    eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                )
+            else:
+                st.session_state.eq_results = pd.DataFrame()
+                st.session_state.eq_errors = pd.DataFrame()
+            
+            # Scan crypto markets (only if toggle is enabled)
+            if scan_crypto and cx_syms:
+                st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
+                    cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
+                )
+            else:
+                st.session_state.cx_results = pd.DataFrame()
+                st.session_state.cx_errors = pd.DataFrame()
     
     # Send email notifications if enabled
     if send_email_summary_toggle or send_email_toggle:
