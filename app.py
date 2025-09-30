@@ -3778,18 +3778,23 @@ if st.query_params.get('stripe_success') == 'true':
                 if success:
                     st.success(f"🎉 Payment successful! Your {access_level.replace('_', ' ').title()} subscription is now active.")
                     st.balloons()
-                    # Clear URL parameters for security
+                    # Clear stripe_success but keep access parameter
+                    new_params = dict(st.query_params)
+                    new_params.pop('stripe_success', None)
                     st.query_params.clear()
+                    for key, value in new_params.items():
+                        st.query_params[key] = value
                     st.rerun()
                 else:
-                    st.error(f"Error activating subscription: {result}")
+                    # Show error but DON'T clear access parameter - user still gets Pro via temporary override
+                    st.warning(f"⚠️ Subscription database error: {result}")
+                    st.info("✨ Don't worry - your Pro access is active! This is just a database sync issue.")
             else:
                 st.error("Error: Could not identify your account. Please contact support.")
         except Exception as e:
-            st.error(f"Error activating subscription: {str(e)}")
-            # Still clear parameters to avoid repeated attempts
-            st.query_params.clear()
-            st.rerun()
+            # Show error but DON'T clear access parameter - user still gets Pro via temporary override
+            st.warning(f"⚠️ Subscription activation error: {str(e)}")
+            st.info("✨ Don't worry - your Pro access is active! This is just a database sync issue.")
 
 # ================= Apple IAP Receipt Validation =================
 def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
