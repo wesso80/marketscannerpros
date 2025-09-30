@@ -3919,8 +3919,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
                 'workspace_id': workspace_id,
                 'plan_code': plan_code
             },
-            'success_url': f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}?session_id={{CHECKOUT_SESSION_ID}}",
-            'cancel_url': f"{os.getenv('DOMAIN_URL', 'http://localhost:5000')}"
+            'success_url': f"{os.getenv('DOMAIN_URL') or f'https://{os.getenv(\"REPL_SLUG\", \"app\")}.{os.getenv(\"REPL_OWNER\", \"user\")}.repl.co'}?session_id={{CHECKOUT_SESSION_ID}}",
+            'cancel_url': f"{os.getenv('DOMAIN_URL') or f'https://{os.getenv(\"REPL_SLUG\", \"app\")}.{os.getenv(\"REPL_OWNER\", \"user\")}.repl.co'}"
         }
         
         # Add free trial if configured
