@@ -4685,28 +4685,21 @@ if current_tier == 'free':
             
             if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
                 if workspace_id:
-                    # Create Stripe checkout session for web/android users
-                    with st.spinner("Creating secure checkout session..."):
-                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id)
+                    # Redirect to Next.js pricing page (Stripe integration works there)
+                    base_url = os.getenv('DOMAIN_URL')
+                    if not base_url:
+                        repl_slug = os.getenv('REPL_SLUG', 'app')
+                        repl_owner = os.getenv('REPL_OWNER', 'user')
+                        base_url = f"https://{repl_slug}.{repl_owner}.repl.co"
                     
-                    if checkout_url:
-                        # SECURITY: Validate URL before using in HTML to prevent XSS
-                        if checkout_url.startswith('https://checkout.stripe.com/'):
-                            st.success("✅ Checkout session created successfully!")
-                            st.info("🔗 Redirecting to Stripe checkout...")
-                            # Safe redirect - validate Stripe domain
-                            import html
-                            safe_url = html.escape(checkout_url)
-                            st.markdown(f'<meta http-equiv="refresh" content="2;URL={safe_url}">', unsafe_allow_html=True)
-                        else:
-                            st.error("🚨 Security Error: Invalid checkout URL detected")
-                        st.markdown(f'**Or click here:** [Complete {plan_name} Subscription]({checkout_url})')
-                    else:
-                        st.error(f"❌ Stripe Checkout Error: {error}")
-                        st.error("💡 Please contact support or try again later. No charges were made.")
-                        # NO DANGEROUS FALLBACK - Do not grant free access
-                        if st.button("🔄 Retry Checkout", key="retry_checkout"):
-                            st.rerun()
+                    # Redirect to pricing page with plan parameter
+                    pricing_url = f"{base_url}/pricing?plan={st.session_state.selected_plan}"
+                    st.success("✅ Redirecting to secure checkout...")
+                    st.info("🔗 Opening pricing page where you can complete your subscription...")
+                    import html
+                    safe_url = html.escape(pricing_url)
+                    st.markdown(f'<meta http-equiv="refresh" content="1;URL={safe_url}">', unsafe_allow_html=True)
+                    st.markdown(f'**Or click here:** [Complete {plan_name} Subscription]({pricing_url})')
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
             
@@ -4777,23 +4770,18 @@ elif current_tier in ['pro', 'pro_trader']:
                 if is_mobile:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
-                    # Create Stripe checkout session for upgrade
-                    checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
-                    if checkout_url:
-                        # SECURITY: Validate URL before using in HTML to prevent XSS
-                        if checkout_url.startswith('https://checkout.stripe.com/'):
-                            import html
-                            safe_url = html.escape(checkout_url)
-                            st.markdown(f'<meta http-equiv="refresh" content="0;URL={safe_url}">', unsafe_allow_html=True)
-                        st.success("🔗 Redirecting to secure checkout...")
-                    else:
-                        st.error(f"❌ Checkout error: {error}")
-                        # Fallback to demo mode if Stripe fails
-                        cancel_subscription(workspace_id)
-                        success, result = create_subscription(workspace_id, 'pro_trader', 'web', 'monthly')
-                        if success:
-                            st.success("🎉 Demo mode: Successfully upgraded to Pro Trader!")
-                            st.rerun()
+                    # Redirect to Next.js pricing page (Stripe integration works there)
+                    base_url = os.getenv('DOMAIN_URL')
+                    if not base_url:
+                        repl_slug = os.getenv('REPL_SLUG', 'app')
+                        repl_owner = os.getenv('REPL_OWNER', 'user')
+                        base_url = f"https://{repl_slug}.{repl_owner}.repl.co"
+                    
+                    pricing_url = f"{base_url}/pricing?plan=pro_trader"
+                    st.success("🔗 Redirecting to secure checkout...")
+                    import html
+                    safe_url = html.escape(pricing_url)
+                    st.markdown(f'<meta http-equiv="refresh" content="1;URL={safe_url}">', unsafe_allow_html=True)
             else:
                 st.error("❌ Workspace not initialized. Please refresh the page.")
 
