@@ -1,4 +1,3 @@
-import Reviews from "./reviews/Reviews";
 "use client";
 
 import Image from 'next/image';
