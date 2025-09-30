@@ -4686,14 +4686,15 @@ if current_tier == 'free':
             if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
                 if workspace_id:
                     # Redirect to Next.js pricing page (Stripe integration works there)
-                    base_url = os.getenv('DOMAIN_URL')
-                    if not base_url:
-                        repl_slug = os.getenv('REPL_SLUG', 'app')
-                        repl_owner = os.getenv('REPL_OWNER', 'user')
-                        base_url = f"https://{repl_slug}.{repl_owner}.repl.co"
+                    # Use REPLIT_DEV_DOMAIN to get correct domain, port 3000 for Next.js
+                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN')
+                    if dev_domain:
+                        # In Replit, access Next.js app on port 3000
+                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan={st.session_state.selected_plan}"
+                    else:
+                        # Fallback to standard domain
+                        pricing_url = f"https://{os.getenv('REPL_SLUG', 'app')}-{os.getenv('REPL_OWNER', 'user')}.replit.app/pricing?plan={st.session_state.selected_plan}"
                     
-                    # Redirect to pricing page with plan parameter
-                    pricing_url = f"{base_url}/pricing?plan={st.session_state.selected_plan}"
                     st.success("✅ Redirecting to secure checkout...")
                     st.info("🔗 Opening pricing page where you can complete your subscription...")
                     import html
@@ -4771,13 +4772,12 @@ elif current_tier in ['pro', 'pro_trader']:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
                     # Redirect to Next.js pricing page (Stripe integration works there)
-                    base_url = os.getenv('DOMAIN_URL')
-                    if not base_url:
-                        repl_slug = os.getenv('REPL_SLUG', 'app')
-                        repl_owner = os.getenv('REPL_OWNER', 'user')
-                        base_url = f"https://{repl_slug}.{repl_owner}.repl.co"
+                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN')
+                    if dev_domain:
+                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan=pro_trader"
+                    else:
+                        pricing_url = f"https://{os.getenv('REPL_SLUG', 'app')}-{os.getenv('REPL_OWNER', 'user')}.replit.app/pricing?plan=pro_trader"
                     
-                    pricing_url = f"{base_url}/pricing?plan=pro_trader"
                     st.success("🔗 Redirecting to secure checkout...")
                     import html
                     safe_url = html.escape(pricing_url)
