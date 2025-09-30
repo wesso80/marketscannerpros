@@ -4056,32 +4056,7 @@ refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
 now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
 c3.info(f"Last scan: {now_syd}")
 
-# Show freemium tier banner to free tier users
-if st.session_state.user_tier == 'free':
-    st.markdown("---")
-    
-    # Clean tier banner with upgrade messaging
-    st.info("""
-    🚀 **Free Tier: All Features Unlocked!** 
-    
-    You have access to ALL market scanning features, advanced indicators, charting tools, and alerts.
-    
-    **Only limitation:** 4 symbols per scan • **Upgrade for unlimited symbols!**
-    """)
-    
-    # Simple upgrade section
-    col1, col2, col3 = st.columns([1, 1, 1])
-    
-    with col2:
-        is_mobile = st.session_state.get('is_mobile_app', False)
-        if is_mobile:
-            st.markdown("**📱 Upgrade in Mobile App**")
-            st.caption("Settings → Subscription")
-        else:
-            st.markdown("**🌐 Upgrade on Web**") 
-            st.caption("Settings → Subscription")
-    
-    st.markdown("---")
+# Removed outdated freemium banner - tier limits now properly enforced throughout app
 
 # Clear cache if refresh clicked
 if refresh_clicked:
