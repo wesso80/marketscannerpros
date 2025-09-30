@@ -2310,13 +2310,16 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
             "text": f"{subject}\n\n{body}\n\n--\nMarketScanner Pro\nVisit: https://marketscannerpros.app"
         }
         
-        # Send email via Resend API endpoint
+        # Send email via Resend API endpoint with authentication
+        alerts_key = os.getenv("ALERTS_TEST_KEY")
+        headers = {"Content-Type": "application/json"}
+        if alerts_key:
+            headers["x-alerts-key"] = alerts_key
+            
         response = requests.post(
             email_endpoint,
             json=email_data,
-            headers={
-                "Content-Type": "application/json"
-            },
+            headers=headers,
             timeout=10
         )
         
