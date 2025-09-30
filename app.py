@@ -1094,12 +1094,26 @@ st.markdown("""
                 '.stDataFrame table', '[data-testid="stDataFrame"] table',
                 '.stDataFrame td', '[data-testid="stDataFrame"] td',
                 '.stDataFrame th', '[data-testid="stDataFrame"] th',
-                'table', 'td', 'th', 'tbody', 'thead'
+                'table', 'td', 'th', 'tbody', 'thead',
+                '.dataframe', '.dataframe td', '.dataframe th'
             ];
             dataframeSelectors.forEach(selector => {
                 document.querySelectorAll(selector).forEach(el => {
                     el.style.setProperty('color', '#FFFFFF', 'important');
                     el.style.setProperty('background-color', '#1E293B', 'important');
+                });
+            });
+            
+            // Fix ALL expanders and their content
+            const expanderSelectors = [
+                '[data-testid="stExpander"]', '.streamlit-expanderHeader',
+                '[data-testid="stExpander"] *', '.streamlit-expanderContent',
+                '[data-testid="stExpander"] div', '[data-testid="stExpander"] p',
+                '[data-testid="stExpander"] span', '[data-testid="stExpander"] label'
+            ];
+            expanderSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    el.style.setProperty('color', '#FFFFFF', 'important');
                 });
             });
             
