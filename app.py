@@ -2310,7 +2310,7 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
             "text": f"{subject}\n\n{body}\n\n--\nMarketScanner Pro\nVisit: https://marketscannerpros.app"
         }
         
-        # Send email via Vercel endpoint
+        # Send email via Resend API endpoint
         response = requests.post(
             email_endpoint,
             json=email_data,
@@ -2327,10 +2327,11 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
                 store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
             return True
         else:
-            # Email failed, store in database as fallback
+            # Email failed, store in database as fallback with error details
             workspace_id = st.session_state.get('workspace_id')
+            error_msg = f"Status: {response.status_code}, Response: {response.text[:200]}"
             if workspace_id:
-                store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\n\n{body}", to_email, workspace_id)
+                store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\nError: {error_msg}\n\n{body}", to_email, workspace_id)
             else:
                 # Show immediate notification if no workspace
                 st.error(f"🚨 Email delivery failed for {to_email}")
