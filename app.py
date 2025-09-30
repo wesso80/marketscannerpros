@@ -5491,7 +5491,7 @@ if st.session_state.get('show_new_alert', False):
             
         with col2:
             alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-            alert_method = st.selectbox("Notification:", ["in_app", "slack", "both"], key="alert_method_v2")
+            alert_method = st.selectbox("Notification:", ["in_app", "email", "both"], key="alert_method_v2")
         
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -6126,6 +6126,7 @@ with tab2:
         with col2:
             if st.button("Add Position", type="primary", width='stretch'):
                 # Check tier limitations for new BUY positions
+                can_add = True
                 if transaction_type == "BUY":
                     current_tier = st.session_state.user_tier
                     tier_info = TIER_CONFIG[current_tier]
@@ -6141,12 +6142,13 @@ with tab2:
                                 st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
                             else:
                                 st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
-                            st.stop()
+                            can_add = False
                 
-                success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
-                if success:
-                    st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                    st.rerun()
+                if can_add:
+                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                    if success:
+                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                        st.rerun()
 
 with tab3:
     # Current holdings
