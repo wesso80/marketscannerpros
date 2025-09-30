@@ -41,7 +41,7 @@ export default function PricingPage() {
             <li>Limited symbols</li>
             <li>Core scanner</li>
           </ul>
-          <a href="/launch" className="btn">Launch App</a>
+          <a href="https://app.marketscannerpros.app" target="_blank" className="btn">Launch App</a>
         </div>
 
         {/* Pro Plan */}
