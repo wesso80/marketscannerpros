@@ -44,7 +44,7 @@ function DashboardContent() {
         <div className="flex gap-4">
           <PortalButton />
           <a 
-            href="https://65e0d511-a376-4400-9b96-6faf813e6d83-00-346bbki9bwvxl.worf.replit.dev/?access=pro"
+            href="https://app.marketscannerpros.app/?access=pro"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 inline-block">
