@@ -1,5 +1,26 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/alerts/debug/route": "app/api/alerts/debug/route.js",
+  "/api/alerts/proxy/route": "app/api/alerts/proxy/route.js",
+  "/api/alerts/send/route": "app/api/alerts/send/route.js",
+  "/api/alerts/test-email/route": "app/api/alerts/test-email/route.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/api/stripe/create-checkout-session/route": "app/api/stripe/create-checkout-session/route.js",
+  "/api/stripe/portal/route": "app/api/stripe/portal/route.js",
+  "/api/stripe/webhook/route": "app/api/stripe/webhook/route.js",
+  "/api/subscription/update/route": "app/api/subscription/update/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/icon.svg/route": "app/icon.svg/route.js",
+  "/launch/page": "app/launch/page.js",
+  "/pricing/page": "app/pricing/page.js",
   "/page": "app/page.js",
-  "/privacy/page": "app/privacy/page.js"
+  "/privacy/page": "app/privacy/page.js",
+  "/terms/page": "app/terms/page.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/contact/page": "app/contact/page.js",
+  "/disclaimer/page": "app/disclaimer/page.js",
+  "/legal/privacy/page": "app/legal/privacy/page.js",
+  "/guide/page": "app/guide/page.js",
+  "/legal/terms/page": "app/legal/terms/page.js"
 }
