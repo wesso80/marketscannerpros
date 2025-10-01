@@ -6308,31 +6308,37 @@ st.markdown("""
 (function redirectUpgradeButtons(){
   function hook() {
     const rules = [
-      { test: /4\.99/, href: "https://marketscannerpros.app/pricing#pro" },
-      { test: /9\.99/, href: "https://marketscannerpros.app/pricing#protrader" }
+      { test: /pro.*4\.99/i, href: "https://marketscannerpros.app/pricing#pro" },
+      { test: /trader.*9\.99/i, href: "https://marketscannerpros.app/pricing#protrader" }
     ];
-    document.querySelectorAll('button').forEach(btn => {
+
+    document.querySelectorAll('button, a, div[role="button"]').forEach(btn => {
       const txt = (btn.textContent || "").trim();
+      console.log("🔍 Found button:", txt);   // DEBUG log all button text
       const rule = rules.find(r => r.test.test(txt));
       if (rule && !btn.__mspHooked) {
+        console.log("✅ Hooking button:", txt, "→", rule.href);
         btn.__mspHooked = true;
         btn.addEventListener('click', e => {
+          console.log("➡️ Redirecting from button:", txt, "to", rule.href);
           e.preventDefault();
           e.stopImmediatePropagation();
-          window.location.assign(rule.href);
+          window.location.href = rule.href;
         }, { capture: true });
       }
     });
 
-    // Kill old “Redirecting to secure checkout…” alerts
-    document.querySelectorAll('[data-testid="stAlert"]').forEach(a => {
-      if ((a.textContent || "").toLowerCase().includes("redirecting to secure checkout")) {
+    // Kill checkout alerts
+    document.querySelectorAll('[data-testid="stAlert"], div').forEach(a => {
+      const t = (a.textContent || "").toLowerCase();
+      if (t.includes("redirecting to secure checkout")) {
+        console.log("❌ Removed unwanted alert:", t);
         a.remove();
       }
     });
   }
   hook();
-  setInterval(hook, 500);
+  setInterval(hook, 1000); // recheck every 1s
 })();
 </script>
 """, unsafe_allow_html=True)
