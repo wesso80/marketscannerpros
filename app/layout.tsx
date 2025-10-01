@@ -5,6 +5,8 @@ import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 
 export const metadata = { title: "MarketScanner Pros" };
+import { APP_URL } from 'lib/appUrl';
+import AppUrlFixer from "@/components/AppUrlFixer";
 
 export default function RootLayout({
   children,
@@ -14,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+      <AppUrlFixer />
         <header className="header">
           <div
             className="container"

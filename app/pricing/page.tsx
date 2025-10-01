@@ -4,6 +4,19 @@ import { useState } from "react";
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  
+  const getStreamlitUrl = () => {
+    if (process.env.NEXT_PUBLIC_STREAMLIT_URL) {
+      return process.env.NEXT_PUBLIC_STREAMLIT_URL;
+    }
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('localhost') || currentUrl.includes('127.0.0.1')) {
+        return 'http://localhost:5000';
+      }
+    }
+    return 'https://app.marketscannerpros.app';
+  };
 
   const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
     setLoading(plan);
@@ -41,7 +54,10 @@ export default function PricingPage() {
             <li>Limited symbols</li>
             <li>Core scanner</li>
           </ul>
-          <a href="https://app.marketscannerpros.app" target="_blank" className="btn">Launch App</a>
+          <button className="btn" onClick={(e) => {
+            e.preventDefault();
+            window.open(getStreamlitUrl(), '_blank');
+          }}>Launch App</button>
         </div>
 
         {/* Pro Plan */}
