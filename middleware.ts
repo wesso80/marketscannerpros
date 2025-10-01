@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get("host") || "";
+  const host = (req.headers.get("host") || "").toLowerCase();
 
   // Only redirect the subdomain to Streamlit (preserve path + query)
-  if (host.toLowerCase() === "app.marketscannerpros.app") {
+  if (host === "app.marketscannerpros.app") {
     const url = new URL(req.url);
-    const target = new URL(\`https://market-scanner-1-wesso80.replit.app\${url.pathname}\${url.search}\`);
+    const target = new URL("https://market-scanner-1-wesso80.replit.app" + url.pathname + url.search);
     return NextResponse.redirect(target, 308);
   }
 
