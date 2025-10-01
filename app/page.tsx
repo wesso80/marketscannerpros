@@ -7,6 +7,25 @@ import './pricing/styles.css';
 export default function Home() {
   const [loading, setLoading] = useState<string | null>(null);
 
+  // Get Streamlit URL from env or construct it
+  const getStreamlitUrl = () => {
+    // Use environment variable if set
+    if (process.env.NEXT_PUBLIC_STREAMLIT_URL) {
+      return process.env.NEXT_PUBLIC_STREAMLIT_URL;
+    }
+    
+    // Fallback for local development
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('localhost') || currentUrl.includes('127.0.0.1')) {
+        return 'http://localhost:5000';
+      }
+    }
+    
+    // Default fallback
+    return 'https://app.marketscannerpros.app';
+  };
+
   const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
     setLoading(plan);
     try {
@@ -37,17 +56,12 @@ export default function Home() {
           <h1 style={{fontSize:"2rem", fontWeight:700, letterSpacing:"-0.02em"}}>MarketScanner Pros</h1>
           <p style={{opacity:.85, marginTop:8}}>Run smart scans, interpret scores, and manage alerts.</p>
           <p style={{marginTop:16}}>
-            <button className="btn" onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              
-              // Navigate to production app
-              const streamlitUrl = 'https://app.marketscannerpros.app';
-              console.log('Opening Market Scanner at:', streamlitUrl);
-              
-              // Open in new tab for better user experience
-              window.open(streamlitUrl, '_blank');
-            }}>Launch App</button>
+            <button
+              className="btn"
+              onClick={() => window.open(getStreamlitUrl(), '_blank')}
+            >
+              Launch App
+            </button>
           </p>
 
           <div style={{marginTop:32, opacity:.9}}>
@@ -88,7 +102,12 @@ export default function Home() {
               <li>Limited symbols</li>
               <li>Core scanner</li>
             </ul>
-            <a href="https://app.marketscannerpros.app" target="_blank" className="btn">Launch App</a>
+            <button
+              className="btn"
+              onClick={() => window.open(getStreamlitUrl(), '_blank')}
+            >
+              Launch App
+            </button>
           </div>
 
           {/* Pro Plan */}
@@ -131,5 +150,3 @@ export default function Home() {
     </>
   );
 }
-// Force redeploy
-// Fix Stripe API version

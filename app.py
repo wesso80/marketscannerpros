@@ -4685,17 +4685,29 @@ if current_tier == 'free':
             
             if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
                 if workspace_id:
-                    # Redirect to pricing page using window.location for proper navigation
-                    pricing_url = f"/pricing?plan={st.session_state.selected_plan}"
-                    st.success("✅ Redirecting to secure checkout...")
-                    st.info("🔗 Opening pricing page where you can complete your subscription...")
-                    # Use JavaScript to navigate to pricing page
+                    # Redirect to Next.js pricing page (port 3000)
+                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN', '')
+                    if dev_domain:
+                        # Change port from -00- to -3000-
+                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan={st.session_state.selected_plan}"
+                    else:
+                        pricing_url = f"http://localhost:3000/pricing?plan={st.session_state.selected_plan}"
+                    
+                    st.success("✅ Opening pricing page in new tab...")
+                    st.info("🔗 Click the button below to complete your subscription:")
+                    # Open pricing page in new window with JavaScript that should work
                     st.markdown(f"""
-                    <script>
-                        window.top.location.href = '{pricing_url}';
-                    </script>
+                    <a href="{pricing_url}" target="_blank" style="
+                        display: inline-block;
+                        padding: 0.5rem 1rem;
+                        background: #1f77b4;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 0.25rem;
+                        font-weight: 600;
+                        margin-top: 0.5rem;
+                    ">🚀 Open Pricing Page</a>
                     """, unsafe_allow_html=True)
-                    st.markdown(f'**Or click here:** [Complete {plan_name} Subscription]({pricing_url})')
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
             
@@ -4766,13 +4778,25 @@ elif current_tier in ['pro', 'pro_trader']:
                 if is_mobile:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
-                    # Redirect to pricing page using JavaScript
-                    pricing_url = "/pricing?plan=pro_trader"
-                    st.success("🔗 Redirecting to secure checkout...")
+                    # Redirect to Next.js pricing page (port 3000)
+                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN', '')
+                    if dev_domain:
+                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan=pro_trader"
+                    else:
+                        pricing_url = f"http://localhost:3000/pricing?plan=pro_trader"
+                    
+                    st.success("🔗 Opening pricing page...")
                     st.markdown(f"""
-                    <script>
-                        window.top.location.href = '{pricing_url}';
-                    </script>
+                    <a href="{pricing_url}" target="_blank" style="
+                        display: inline-block;
+                        padding: 0.5rem 1rem;
+                        background: #1f77b4;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 0.25rem;
+                        font-weight: 600;
+                        margin-top: 0.5rem;
+                    ">🚀 Open Pricing Page</a>
                     """, unsafe_allow_html=True)
             else:
                 st.error("❌ Workspace not initialized. Please refresh the page.")
@@ -6343,3 +6367,37 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 # MSP_REDIRECT_OVERRIDE_END
+
+# MSP_MONKEYPATCH_BUTTON_START
+# Intercept Streamlit's st.button to redirect upgrade buttons to marketing pricing
+import re as _re
+__orig_button = st.button
+__orig_link_button = getattr(st, "link_button", None)
+
+def _msp_button(label, *args, **kwargs):
+    text = str(label or "")
+    # Match common variants of your upgrade buttons
+    is_pro = _re.search(r"(complete.*pro.*4\.99)|(pro.*4\.99)", text, _re.I)
+    is_trader = _re.search(r"(complete.*(pro\s*)?trader.*9\.99)|(trader.*9\.99)", text, _re.I)
+
+    if is_pro:
+        url = "https://marketscannerpros.app/pricing#pro"
+        if __orig_link_button:
+            __orig_link_button("🚀 PRO — $4.99 / month", url)
+        else:
+            st.markdown(f"[🚀 PRO — $4.99 / month]({url})", unsafe_allow_html=True)
+        return False  # prevent original checkout flow
+
+    if is_trader:
+        url = "https://marketscannerpros.app/pricing#protrader"
+        if __orig_link_button:
+            __orig_link_button("💎 PRO TRADER — $9.99 / month", url)
+        else:
+            st.markdown(f"[💎 PRO TRADER — $9.99 / month]({url})", unsafe_allow_html=True)
+        return False
+
+    # Default: run original Streamlit button
+    return __orig_button(label, *args, **kwargs)
+
+st.button = _msp_button
+# MSP_MONKEYPATCH_BUTTON_END
