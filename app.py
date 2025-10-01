@@ -103,6 +103,22 @@ st.markdown("""
     background: #1E293B !important;
 }
 
+/* Force dark background on all plotly chart elements */
+.stPlotlyChart svg,
+.js-plotly-plot svg,
+.plotly-graph-div svg,
+.plot-container,
+.svg-container {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+}
+
+/* Plotly chart paper and plot background */
+.stPlotlyChart .bg,
+.js-plotly-plot .bg {
+    fill: #1E293B !important;
+}
+
 /* FORCE WHITE TEXT ON ALL METRIC CONTAINERS - NO CONDITIONS */
 div[data-testid="metric-container"], 
 div[data-testid="metric-container"] *,
@@ -940,10 +956,42 @@ input, textarea, [data-baseweb="input"], [data-baseweb="textarea"] {
     border-color: #475569 !important;
 }
 
-/* Select boxes and dropdowns */
+/* Select boxes and dropdowns - COMPREHENSIVE FIX */
 [data-baseweb="select"], [role="combobox"], .stSelectbox div {
     color: #FFFFFF !important;
     background-color: #1E293B !important;
+}
+
+/* Dropdown popup menus - dark background with white text */
+[data-baseweb="popover"],
+[data-baseweb="menu"],
+[data-baseweb="list"],
+ul[role="listbox"] {
+    background-color: #1E293B !important;
+    border: 1px solid #475569 !important;
+}
+
+/* Dropdown menu options */
+[role="option"],
+li[role="option"],
+[data-baseweb="menu"] li {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
+}
+
+/* Dropdown menu option hover state */
+[role="option"]:hover,
+li[role="option"]:hover,
+[data-baseweb="menu"] li:hover {
+    background-color: #334155 !important;
+    color: #FFFFFF !important;
+}
+
+/* Selectbox input field */
+.stSelectbox > div > div,
+.stSelectbox input {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
 }
 
 /* Expander headers must be bright white */
@@ -2650,7 +2698,9 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: List[s
             showlegend=True,
             legend=dict(x=0, y=1, traceorder="normal"),
             margin=dict(l=50, r=50, t=50, b=50),
-            template="plotly_dark"
+            template="plotly_dark",
+            paper_bgcolor='#1E293B',
+            plot_bgcolor='#1E293B'
         )
         
         # Remove x-axis labels from all but the bottom subplot
@@ -3131,7 +3181,9 @@ def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
         title="Backtest Performance Analysis",
         height=600,
         showlegend=True,
-        template="plotly_dark"
+        template="plotly_dark",
+        paper_bgcolor='#1E293B',
+        plot_bgcolor='#1E293B'
     )
     
     fig.update_yaxes(title_text="Equity ($)", row=1, col=1)
@@ -3455,6 +3507,8 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
         title="Portfolio Allocation by Market Value",
         template="plotly_dark",
         height=400,
+        paper_bgcolor='#1E293B',
+        plot_bgcolor='#1E293B',
         showlegend=False
     )
     
@@ -3513,6 +3567,8 @@ def create_portfolio_performance_chart() -> go.Figure:
             yaxis_title="Value ($)",
             template="plotly_dark",
             height=400,
+            paper_bgcolor='#1E293B',
+            plot_bgcolor='#1E293B',
             font=dict(size=14, color="#F8FAFC"),
             legend=dict(
                 font=dict(size=16, color="#F8FAFC"),
