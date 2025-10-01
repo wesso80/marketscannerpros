@@ -4685,29 +4685,29 @@ if current_tier == 'free':
             
             if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
                 if workspace_id:
-                    # Redirect to Next.js pricing page (port 3000)
-                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN', '')
-                    if dev_domain:
-                        # Change port from -00- to -3000-
-                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan={st.session_state.selected_plan}"
-                    else:
-                        pricing_url = f"http://localhost:3000/pricing?plan={st.session_state.selected_plan}"
-                    
-                    st.success("✅ Opening pricing page in new tab...")
-                    st.info("🔗 Click the button below to complete your subscription:")
-                    # Open pricing page in new window with JavaScript that should work
-                    st.markdown(f"""
-                    <a href="{pricing_url}" target="_blank" style="
-                        display: inline-block;
-                        padding: 0.5rem 1rem;
-                        background: #1f77b4;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 0.25rem;
-                        font-weight: 600;
-                        margin-top: 0.5rem;
-                    ">🚀 Open Pricing Page</a>
-                    """, unsafe_allow_html=True)
+                    # Create Stripe checkout session directly
+                    with st.spinner("🔄 Creating secure checkout..."):
+                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id)
+                        
+                        if checkout_url:
+                            st.success("✅ Redirecting to secure Stripe checkout...")
+                            st.markdown(f"""
+                            <meta http-equiv="refresh" content="0;url={checkout_url}">
+                            <a href="{checkout_url}" target="_blank" style="
+                                display: inline-block;
+                                padding: 0.75rem 1.5rem;
+                                background: linear-gradient(135deg, #10b981, #059669);
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                margin-top: 0.5rem;
+                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                            ">🚀 Complete Checkout</a>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.error(f"❌ {error or 'Could not create checkout session'}")
+                            st.info("Please try again or contact support if the problem persists.")
                 else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
             
@@ -4778,26 +4778,29 @@ elif current_tier in ['pro', 'pro_trader']:
                 if is_mobile:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
-                    # Redirect to Next.js pricing page (port 3000)
-                    dev_domain = os.getenv('REPLIT_DEV_DOMAIN', '')
-                    if dev_domain:
-                        pricing_url = f"https://{dev_domain.replace('-00-', '-3000-')}/pricing?plan=pro_trader"
-                    else:
-                        pricing_url = f"http://localhost:3000/pricing?plan=pro_trader"
-                    
-                    st.success("🔗 Opening pricing page...")
-                    st.markdown(f"""
-                    <a href="{pricing_url}" target="_blank" style="
-                        display: inline-block;
-                        padding: 0.5rem 1rem;
-                        background: #1f77b4;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 0.25rem;
-                        font-weight: 600;
-                        margin-top: 0.5rem;
-                    ">🚀 Open Pricing Page</a>
-                    """, unsafe_allow_html=True)
+                    # Create Stripe checkout session directly
+                    with st.spinner("🔄 Creating secure checkout..."):
+                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        
+                        if checkout_url:
+                            st.success("✅ Redirecting to secure Stripe checkout...")
+                            st.markdown(f"""
+                            <meta http-equiv="refresh" content="0;url={checkout_url}">
+                            <a href="{checkout_url}" target="_blank" style="
+                                display: inline-block;
+                                padding: 0.75rem 1.5rem;
+                                background: linear-gradient(135deg, #10b981, #059669);
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                margin-top: 0.5rem;
+                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                            ">💎 Upgrade Now</a>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.error(f"❌ {error or 'Could not create checkout session'}")
+                            st.info("Please try again or contact support if the problem persists.")
             else:
                 st.error("❌ Workspace not initialized. Please refresh the page.")
 
