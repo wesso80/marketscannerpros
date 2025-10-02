@@ -1,9 +1,9 @@
-import Hero from "../components/Hero";
 "use client";
-
-import Image from 'next/image';
-import { useState } from 'react';
-import './pricing/styles.css';
+import Hero from "../components/Hero";
+import Why from "../components/Why";
+import HowItWorks from "../components/HowItWorks";
+import { useState } from "react";
+import "./pricing/styles.css";
 
 export default function Home() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -14,37 +14,40 @@ export default function Home() {
     if (process.env.NEXT_PUBLIC_STREAMLIT_URL) {
       return process.env.NEXT_PUBLIC_STREAMLIT_URL;
     }
-    
+
     // Fallback for local development
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const currentUrl = window.location.href;
-      if (currentUrl.includes('localhost') || currentUrl.includes('127.0.0.1')) {
-        return 'http://localhost:5000';
+      if (
+        currentUrl.includes("localhost") ||
+        currentUrl.includes("127.0.0.1")
+      ) {
+        return "http://localhost:5000";
       }
     }
-    
+
     // Default fallback
-    return 'https://app.marketscannerpros.app';
+    return "https://app.marketscannerpros.app";
   };
 
-  const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
+  const handleCheckout = async (plan: "pro" | "pro_trader") => {
     setLoading(plan);
     try {
-      const response = await fetch('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan })
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
       });
-      
+
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data.error || "Failed to create checkout session");
       }
     } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Failed to start checkout. Please try again.');
+      console.error("Checkout error:", error);
+      alert("Failed to start checkout. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -52,47 +55,26 @@ export default function Home() {
 
   return (
     <>
-      <div style={{display:'flex', gap:'3rem', alignItems:'flex-start', maxWidth:'1200px', margin:'0 auto'}}>
-        <div style={{flex:1}}>
-          <h1 style={{fontSize:"2rem", fontWeight:700, letterSpacing:"-0.02em"}}>MarketScanner Pros</h1>
-          <p style={{opacity:.85, marginTop:8}}>Run smart scans, interpret scores, and manage alerts.</p>
-          <p style={{marginTop:16}}>
-            <button
-              className="btn"
-              onClick={() => window.open(getStreamlitUrl(), '_blank')}
-            >
-              Launch App
-            </button>
-          </p>
-
-          <div style={{marginTop:32, opacity:.9}}>
-            <h2>Why MarketScanner?</h2>
-            <ul style={{lineHeight:1.7, marginLeft:"1.2rem"}}>
-              <li>Multi-timeframe confluence scoring</li>
-              <li>Squeeze detection and momentum context</li>
-              <li>CSV exports and alert hooks</li>
-            </ul>
-          </div>
-        </div>
-        
-        <div style={{flex:1, maxWidth:'500px'}}>
-          <img 
-            src="/dashboard-screenshot.png" 
-            alt="MarketScanner Dashboard Preview" 
-            style={{
-              width: '100%',
-              height: 'auto',
-              borderRadius: '8px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-          />
-        </div>
-      </div>
-
+      <Hero />
+      {/* removed legacy hero block */}
+      <Why />
+      <HowItWorks />
       {/* Pricing Section */}
-      <div style={{marginTop:'4rem', maxWidth:'1200px', margin:'4rem auto 0'}}>
-        <h2 style={{fontSize:"1.75rem", fontWeight:700, marginBottom:'0.5rem'}}>Pricing & Plans</h2>
-        <p style={{opacity:.85, marginBottom:'2rem'}}>Start free. Upgrade any time. Cancel in your Stripe portal.</p>
+      <div
+        style={{ marginTop: "4rem", maxWidth: "1200px", margin: "4rem auto 0" }}
+      >
+        <h2
+          style={{
+            fontSize: "1.75rem",
+            fontWeight: 700,
+            marginBottom: "0.5rem",
+          }}
+        >
+          Pricing & Plans
+        </h2>
+        <p style={{ opacity: 0.85, marginBottom: "2rem" }}>
+          Start free. Upgrade any time. Cancel in your Stripe portal.
+        </p>
 
         <div className="plans">
           {/* Free Plan */}
@@ -105,7 +87,7 @@ export default function Home() {
             </ul>
             <button
               className="btn"
-              onClick={() => window.open(getStreamlitUrl(), '_blank')}
+              onClick={() => window.open(getStreamlitUrl(), "_blank")}
             >
               Launch App
             </button>
@@ -113,37 +95,41 @@ export default function Home() {
 
           {/* Pro Plan */}
           <div className="plan">
-            <h2>Pro <span className="badge">7-day free trial</span></h2>
+            <h2>
+              Pro <span className="badge">7-day free trial</span>
+            </h2>
             <p>$4.99 / month</p>
             <ul>
               <li>Multi-TF confluence</li>
               <li>Squeezes</li>
               <li>Exports</li>
             </ul>
-            <button 
-              className="btn" 
-              onClick={() => handleCheckout('pro')}
-              disabled={loading === 'pro'}
+            <button
+              className="btn"
+              onClick={() => handleCheckout("pro")}
+              disabled={loading === "pro"}
             >
-              {loading === 'pro' ? 'Processing...' : 'Start Free Trial'}
+              {loading === "pro" ? "Processing..." : "Start Free Trial"}
             </button>
           </div>
 
           {/* Full Pro Trader Plan */}
           <div className="plan">
-            <h2>Full Pro Trader <span className="badge">5-day free trial</span></h2>
+            <h2>
+              Full Pro Trader <span className="badge">5-day free trial</span>
+            </h2>
             <p>$9.99 / month</p>
             <ul>
               <li>All Pro features</li>
               <li>Advanced alerts</li>
               <li>Priority support</li>
             </ul>
-            <button 
-              className="btn" 
-              onClick={() => handleCheckout('pro_trader')}
-              disabled={loading === 'pro_trader'}
+            <button
+              className="btn"
+              onClick={() => handleCheckout("pro_trader")}
+              disabled={loading === "pro_trader"}
             >
-              {loading === 'pro_trader' ? 'Processing...' : 'Start Free Trial'}
+              {loading === "pro_trader" ? "Processing..." : "Start Free Trial"}
             </button>
           </div>
         </div>

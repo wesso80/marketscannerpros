@@ -1,10 +1,10 @@
 // components/Hero.tsx
-import Image from "next/image";
+import HeroShot from "./HeroShot";
 import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-neutral-800">
+    <section className="w-full h-auto relative overflow-hidden border-b border-neutral-800 pb-20">
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
         {/* Left: copy + CTAs */}
         <div>
@@ -30,7 +30,6 @@ export default function Hero() {
             >
               Start Free Now
             </Link>
-
             <Link
               href="/user-guide"
               className="rounded-xl border border-neutral-700 px-5 py-3 font-medium hover:bg-neutral-900/50"
@@ -44,17 +43,10 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* Right: product screenshot */}
-        <div className="relative">
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-2 shadow-[0_0_0_1px_rgba(16,185,129,0.08),0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-            <Image
-              src="/marketing/dashboard.png"
-              alt="MarketScanner Pro dashboard"
-              width={980}
-              height={640}
-              priority
-              className="rounded-xl"
-            />
+        {/* Right: white frame + your screenshot */}
+        <div className="relative flex items-center justify-center md:justify-end">
+          <div className="w-full max-w-[640px]">
+            <HeroShot />
           </div>
           <div className="pointer-events-none absolute -left-10 -top-10 hidden h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl md:block" />
         </div>

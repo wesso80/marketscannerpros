@@ -1,0 +1,47 @@
+// components/HowItWorks.tsx
+const steps = [
+  {
+    title: "Pick your symbols",
+    desc: "Choose crypto or stocks you want to scan — build as many watchlists as you like.",
+  },
+  {
+    title: "Run the scanner",
+    desc: "Multi-timeframe analysis (EMA stack + squeeze detection) runs in seconds.",
+  },
+  {
+    title: "Act on signals",
+    desc: "See confluence scores, export CSVs, and connect alert hooks.",
+  },
+];
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <path fill="currentColor" d="M9.55 16.2 5.8 12.45l1.4-1.4 2.35 2.35 6.25-6.3 1.4 1.45z"/>
+    </svg>
+  );
+}
+
+export default function HowItWorks() {
+  return (
+    <section className="hiw border-b border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <h2 className="text-center text-3xl font-bold md:text-4xl">How It Works</h2>
+        <p className="mt-3 text-center text-neutral-400">From charts to clarity in 3 steps</p>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {steps.map((step, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-center shadow"
+            >
+              <CheckIcon style={{width:40,height:40}} className="mx-auto mb-4 text-emerald-400" />
+              <h3 className="text-lg font-semibold">{step.title}</h3>
+              <p className="mt-2 text-sm text-neutral-400 leading-relaxed">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
