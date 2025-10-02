@@ -5,7 +5,10 @@ import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 import MobileNav from "../components/MobileNav";
 
-export const metadata = { title: "MarketScanner Pros" };
+export const metadata = { 
+  title: "MarketScanner Pros",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5"
+};
 import { APP_URL } from 'lib/appUrl';
 import AppUrlFixer from "@/components/AppUrlFixer";
 
@@ -15,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+    <html lang="en" className="overflow-x-hidden">
+      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
       <AppUrlFixer />
         <header className="header">
           <div

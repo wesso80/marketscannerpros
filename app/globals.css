@@ -1,23 +1,29 @@
 :root { color-scheme: dark; }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   background: #0a0a0a;
   color: #e5e5e5;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 a { color: #34d399; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.container { max-width: 960px; margin: 0 auto; padding: 1rem; }
+.container { max-width: 960px; margin: 0 auto; padding: 1rem; width: 100%; box-sizing: border-box; }
 @media (min-width: 768px) {
   .container { padding: 1.25rem; }
 }
 
 .nav { display: flex; gap: 1rem; opacity: .9; font-size: .95rem; }
-.header { border-bottom: 1px solid #27272a; }
+.header { border-bottom: 1px solid #27272a; overflow-x: hidden; }
 .title { font-weight: 700; }
 
 /* Buttons */
