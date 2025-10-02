@@ -1,0 +1,29 @@
+/* Hide default chrome */
+header[data-testid="stHeader"], footer, #MainMenu { visibility: hidden; }
+
+/* Layout width + spacing */
+.block-container { max-width: 1200px; padding-top: 2.5rem; }
+
+/* Typographic scale to match marketing */
+.ms-h1 { font-size: 2.1rem; font-weight: 800; line-height: 1.1; }
+.ms-h2 { font-size: 1.25rem; font-weight: 700; margin-top: 1rem; }
+ul.ms-bullets { margin: .75rem 0 0 1.25rem; }
+ul.ms-bullets li { margin: .35rem 0; }
+
+/* Buttons */
+a.ms-btn, button.ms-btn {
+  display: inline-flex; align-items:center; gap:.5rem;
+  padding:.65rem 1rem; border-radius:.7rem; font-weight:700;
+  background:#10B981; color:#041014; text-decoration:none; border:none;
+  transition: transform .05s ease, box-shadow .2s ease, filter .2s ease;
+}
+a.ms-btn:hover, button.ms-btn:hover { filter:brightness(1.06); box-shadow:0 10px 35px -10px rgba(16,185,129,.45); }
+
+/* Cards */
+.ms-card {
+  background:#111827; border:1px solid #1F2937; border-radius:16px; padding:1rem 1.25rem;
+}
+
+/* Screenshot frame */
+.ms-mock { border:1px solid #1F2937; border-radius:16px; overflow:hidden; }
+.ms-mock img { display:block; width:100%; height:auto; }
