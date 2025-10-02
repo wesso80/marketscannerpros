@@ -1,7 +1,3 @@
-hero()
-from ui_helpers import inject_base_ui, ms_plotly_dark, hero
-
-inject_base_ui()
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
 # - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
