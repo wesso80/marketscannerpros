@@ -57,6 +57,33 @@ Preferred communication style: Simple, everyday language.
 - **Receipt Validation**: Comprehensive backend validation with Apple's servers including sandbox fallback
 - **Subscription Management**: Native iOS subscription management, restore purchases, and Apple-required features
 
+## Recent Changes & Important Fixes (October 2025)
+
+### Chart Visibility Fix (Critical)
+**Issue**: All Plotly charts (pie charts, line charts, technical analysis) were rendering completely black/invisible
+**Root Cause**: Overly aggressive CSS and JavaScript were forcing ALL SVG elements to have dark backgrounds
+**Solution**: 
+- Removed CSS rules that forced `background-color` on SVG elements (lines 106-120 in app.py)
+- Updated JavaScript to only style chart CONTAINERS, not SVG content (lines 1171-1182)
+- Let Plotly's `template="plotly_dark"` handle chart rendering
+- Charts now properly set `paper_bgcolor='#1E293B'` and `plot_bgcolor='#1E293B'` in Python code
+
+### Dropdown & Form Visibility Fix
+**Issue**: Dropdown menus and select boxes had white backgrounds with white text (unreadable)
+**Solution**: Added comprehensive CSS for dropdown styling (lines 946-982 in app.py)
+- Dark backgrounds (#1E293B) for all select boxes and popover menus
+- White text (#FFFFFF) for dropdown options
+- Hover states with lighter backgrounds (#334155)
+
+### Stripe Checkout Flow Simplification
+**Issue**: Multi-step confusing upgrade flow that redirected through broken intermediate pages
+**Solution**: Direct Stripe checkout integration (lines 4689-4713, 4784-4806 in app.py)
+- Removed Next.js intermediate redirect
+- `create_stripe_checkout_session()` called directly from Streamlit
+- Auto-redirect to Stripe with single click
+
+**Important**: Do NOT force SVG styling via CSS - always let Plotly control chart rendering through Python configuration.
+
 ## External Dependencies
 
 ### Market Data APIs
