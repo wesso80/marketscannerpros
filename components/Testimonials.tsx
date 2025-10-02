@@ -1,8 +1,8 @@
 // components/Testimonials.tsx
 export default function Testimonials() {
   return (
-    <section className="border-t border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
+    <section className="border-t border-neutral-800 bg-neutral-950 relative z-10">
+      <div className="mx-auto max-w-5xl px-4 py-10 md:py-14">
         <h2 className="text-xl font-bold md:text-2xl">What Traders Are Saying</h2>
 
         <div className="mt-4 md:mt-5 grid gap-3 sm:grid-cols-2 md:grid-cols-3">

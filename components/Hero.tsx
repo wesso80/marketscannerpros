@@ -4,10 +4,11 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="w-full relative border-b border-neutral-800">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 md:gap-10 px-4 py-10 md:py-20 md:grid-cols-2">
+    <section className="w-full border-b border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-10 md:py-20">
+        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2 md:gap-10">
         {/* Left: copy + CTAs */}
-        <div>
+        <div className="order-2 md:order-1">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
             <span>Try Pro free for 7 days</span>
             <span className="text-neutral-500">•</span>
@@ -44,9 +45,9 @@ export default function Hero() {
         </div>
 
         {/* Right: white frame + your screenshot */}
-        <div className="relative">
+        <div className="order-1 md:order-2">
           <HeroShot />
-          <div className="pointer-events-none absolute -left-10 -top-10 hidden h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl md:block" />
+        </div>
         </div>
       </div>
     </section>
