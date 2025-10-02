@@ -1,4 +1,7 @@
-from ui_helpers import ms_plotly_dark
+hero()
+from ui_helpers import inject_base_ui, ms_plotly_dark, hero
+
+inject_base_ui()
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
 # - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
@@ -1377,6 +1380,7 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
                 cur.execute(query, params)
                 if fetch:
                     return [dict(row) for row in cur.fetchall()]
+                else:
                     conn.commit()
                     return cur.rowcount
                     
@@ -1393,6 +1397,7 @@ def execute_db_query(query: str, params: Optional[tuple] = None, fetch: bool = T
                 import time
                 time.sleep(0.5 * (attempt + 1))  # Exponential backoff
                 continue
+            else:
                 st.error(f"Database connection failed after {retries} attempts: {e}")
                 return None
                 
@@ -1504,6 +1509,7 @@ def get_persistent_device_fingerprint() -> str:
             st.success("🎉 Device successfully paired! You now have access to all your Pro features.")
             st.rerun()
             return new_fingerprint
+        else:
             st.error("❌ Invalid or expired pairing code. Please try again.")
     
     # SECURITY: Never trust device_id from URL - generate new fingerprint
@@ -1676,6 +1682,7 @@ def verify_admin_pin(pin: str, workspace_id: str, device_fingerprint: str) -> tu
     
     if is_valid:
         return True, "Success"
+    else:
         return False, "Invalid PIN"
 
 def set_subscription_override(workspace_id: str, tier: str, set_by: str, expires_at: datetime = None) -> bool:
@@ -1755,6 +1762,7 @@ def consume_friend_access_code(code: str, workspace_id: str, device_fingerprint:
         # Create time-limited subscription override
         if set_subscription_override(workspace_id, access_tier, f"friend_code_{code}", override_expires_at):
             return True, f"Success! You now have {access_tier.upper()} access for {duration_days} days"
+        else:
             return False, "Failed to activate access - contact support"
             
     except Exception as e:
@@ -2036,6 +2044,7 @@ The price target you set has been reached.
     if workspace_id:
         # Always store notification regardless of any other conditions
         store_notification(subject, message, user_email, workspace_id)
+    else:
         # Quarantine alerts without workspace_id (should not happen with NOT NULL constraint)
         st.error(f"⚠️ Alert processing error: Missing workspace context for {alert['symbol']}")
         st.info("Please recreate this alert to ensure proper delivery.")
@@ -2132,6 +2141,7 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: str = None, start: str = N
         data = yf.Ticker(symbol.upper()).history(start=start, end=end, interval=interval, auto_adjust=False)
     elif period:
         data = yf.Ticker(symbol.upper()).history(period=period, interval=interval, auto_adjust=False)
+    else:
         data = yf.Ticker(symbol.upper()).history(period=default_period, interval=interval, auto_adjust=False)
     
     if data is None or data.empty:
@@ -2321,6 +2331,7 @@ def mark_notification_read(notification_id: int, workspace_id: str, user_email: 
             WHERE id = %s AND workspace_id = %s AND user_email = %s
             """
             result = execute_db_write(query, (notification_id, workspace_id, user_email))
+        else:
             # Fallback with workspace validation only
             query = """
             UPDATE notifications 
@@ -2384,11 +2395,13 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
             if workspace_id:
                 store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
             return True
+        else:
             # Email failed, store in database as fallback with error details
             workspace_id = st.session_state.get('workspace_id')
             error_msg = f"Status: {response.status_code}, Response: {response.text[:200]}"
             if workspace_id:
                 store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\nError: {error_msg}\n\n{body}", to_email, workspace_id)
+            else:
                 # Show immediate notification if no workspace
                 st.error(f"🚨 Email delivery failed for {to_email}")
                 st.info(f"**{subject}**")
@@ -2401,6 +2414,7 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
         workspace_id = st.session_state.get('workspace_id')
         if workspace_id:
             store_notification(f"⚠️ Email Error: {subject}", f"Error sending email to {to_email}: {str(e)}\n\n{body}", to_email, workspace_id)
+        else:
             # Show immediate notification if no workspace
             st.error(f"🚨 Email system error: {str(e)}")
             st.info(f"**{subject}**")
@@ -2512,6 +2526,7 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: List[s
             row_heights = [0.7, 0.3]
         elif subplot_count == 3:
             row_heights = [0.6, 0.2, 0.2]
+        else:
             row_heights = [0.5, 0.17, 0.17, 0.16]
             
         fig = make_subplots(
@@ -2871,6 +2886,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
                         # Execute exit
                         if position['direction'] == "long":
                             trade_return = (exit_price - position['entry_price']) / position['entry_price']
+                        else:
                             trade_return = (position['entry_price'] - exit_price) / position['entry_price']
                         
                         trade_pnl = trade_return * position['position_value']
@@ -2949,6 +2965,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
                 # Update max drawdown
                 if current_equity > max_equity:
                     max_equity = current_equity
+                else:
                     drawdown = (max_equity - current_equity) / max_equity
                     max_drawdown = max(max_drawdown, drawdown)
         
@@ -2981,9 +2998,11 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
                     periods_per_year = 252
                 elif timeframe == "1h":
                     periods_per_year = 252 * 6.5  # Trading hours
+                else:
                     periods_per_year = 252  # Default
                 
                 sharpe_ratio = (avg_return / returns_std) * np.sqrt(periods_per_year) if returns_std > 0 else 0
+            else:
                 sharpe_ratio = 0
             
             win_rate = winning_trades / total_trades
@@ -3008,6 +3027,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
                 'max_concurrent_positions': max_positions,
                 'symbols_tested': len(symbol_data)
             }
+        else:
             results['metrics'] = {
                 'initial_equity': initial_equity,
                 'final_equity': current_equity,
@@ -3101,6 +3121,7 @@ def get_backtest_results() -> List[Dict[str, Any]]:
                         r['parameters'] = {}
                 elif not isinstance(r['parameters'], dict):
                     r['parameters'] = {}
+            else:
                 r['parameters'] = {}
             
             if r['results_data']:
@@ -3111,6 +3132,7 @@ def get_backtest_results() -> List[Dict[str, Any]]:
                         r['results_data'] = {}
                 elif not isinstance(r['results_data'], dict):
                     r['results_data'] = {}
+            else:
                 r['results_data'] = {}
             
             # Keep config and results for backward compatibility
@@ -3239,6 +3261,7 @@ def add_portfolio_position(symbol: str, quantity: float, price: float, transacti
                     WHERE symbol = %s
                 """
                 execute_db_write(update_query, (symbol,))
+            else:
                 # Update position with new quantities
                 current_price = get_current_price_portfolio(symbol) or price
                 market_value = new_qty * current_price
@@ -3251,6 +3274,7 @@ def add_portfolio_position(symbol: str, quantity: float, price: float, transacti
                     WHERE symbol = %s
                 """
                 execute_db_write(update_query, (new_qty, new_avg_cost, current_price, market_value, unrealized_pnl, symbol))
+        else:
             # Create new position (only for BUY)
             if transaction_type == "BUY":
                 current_price = get_current_price_portfolio(symbol) or price
@@ -3267,6 +3291,7 @@ def add_portfolio_position(symbol: str, quantity: float, price: float, transacti
         if transaction_type == "SELL" and realized_pnl != 0:
             if realized_pnl > 0:
                 st.success(f"Realized gain: ${realized_pnl:.2f}")
+            else:
                 st.error(f"Realized loss: ${abs(realized_pnl):.2f}")
         
         return True
@@ -3391,6 +3416,7 @@ def update_portfolio_prices() -> None:
                         """
                         execute_db_write(update_query, (current_price, market_value, unrealized_pnl, symbol))
                         success_count += 1
+                    else:
                         failed_symbols.append(symbol)
                         # Still update the timestamp even if price fetch failed
                         update_query = "UPDATE portfolio_positions SET updated_at = NOW() WHERE symbol = %s"
@@ -3680,6 +3706,7 @@ def create_subscription(workspace_id: str, plan_code: str, platform: str, billin
         # Calculate period end based on billing period
         if billing_period == 'yearly':
             period_interval = "interval '1 year'"
+        else:
             period_interval = "interval '1 month'"
         
         # Cancel any existing active subscriptions (prevent multiple active)
@@ -3818,9 +3845,11 @@ if st.query_params.get('stripe_success') == 'true':
                     for key, value in new_params.items():
                         st.query_params[key] = value
                     st.rerun()
+                else:
                     # Show error but DON'T clear access parameter - user still gets Pro via temporary override
                     st.warning(f"⚠️ Subscription database error: {result}")
                     st.info("✨ Don't worry - your Pro access is active! This is just a database sync issue.")
+            else:
                 st.error("Error: Could not identify your account. Please contact support.")
         except Exception as e:
             # Show error but DON'T clear access parameter - user still gets Pro via temporary override
@@ -3872,6 +3901,7 @@ def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_i
                             }
             
             return False, "No active subscription found"
+        else:
             return False, f"Receipt validation failed: {result.get('status')}"
             
     except Exception as e:
@@ -3897,7 +3927,9 @@ def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_i
                     "platform": "ios",
                     "apple_transaction_id": transaction_id
                 }
+            else:
                 return False, f"Database error: {result}"
+        else:
             return False, f"Receipt validation failed: {validation_result}"
             
     except Exception as e:
@@ -4158,6 +4190,7 @@ if show_admin:
                     if workspace_id and set_subscription_override(workspace_id, override_tier, "admin", None):
                         st.success(f"✅ Tier set to: {override_tier.upper()}")
                         st.rerun()
+                    else:
                         st.error("❌ Failed to set override")
             
             with col2:
@@ -4165,6 +4198,7 @@ if show_admin:
                     if workspace_id and clear_subscription_override(workspace_id):
                         st.success("✅ Override cleared")
                         st.rerun()
+                    else:
                         st.error("❌ Failed to clear override")
             
             st.caption("💡 Overrides persist across sessions and devices")
@@ -4201,6 +4235,7 @@ if show_admin:
                         st.success(f"✅ Code created!")
                         st.code(new_code, language=None)
                         st.caption(f"📱 Share this code with your friend\n📅 Valid for {friend_duration} days once used\n🔒 One-time use only")
+                    else:
                         st.error("❌ Failed to create code")
             
             with col2:
@@ -4212,10 +4247,12 @@ if show_admin:
                             status_emoji = "✅" if code['status'] == 'Used' else "⏳"
                             tier_emoji = "💎" if code['access_tier'] == 'pro_trader' else "🚀"
                             st.text(f"{status_emoji} {code['code'][:6]}... {tier_emoji} {code['status']}")
+                    else:
                         st.info("📝 No codes generated yet")
             
             st.caption("🔒 Each code works once per device only")
 
+    else:
         # Admin login form
         st.sidebar.header("🔑 Admin Access")
         with st.sidebar.expander("Admin Login", expanded=False):
@@ -4230,8 +4267,11 @@ if show_admin:
                         if create_admin_session(workspace_id, device_fingerprint):
                             st.success("✅ Admin access granted!")
                             st.rerun()
+                        else:
                             st.error("❌ Failed to create admin session")
+                    else:
                         st.error(f"❌ {message}")
+                else:
                     st.error("❌ Workspace not available")
             
             st.caption("⚠️ Creator access only")
@@ -4270,7 +4310,9 @@ if st.session_state.get('show_new_watchlist', False):
                         st.success(f"Watchlist '{new_name}' created!")
                         st.session_state.show_new_watchlist = False
                         st.rerun()
+                    else:
                         st.error("Failed to create watchlist")
+                else:
                     st.error("Name and symbols required")
         with col3:
             if st.button("Cancel", key="cancel_new_wl"):
@@ -4293,6 +4335,7 @@ if st.session_state.get('show_manage_watchlists', False):
                         st.session_state.confirm_delete_id = wl['id']
                         st.session_state.confirm_delete_name = wl['name']
                 st.markdown("---")
+        else:
             st.info("No watchlists found. Create one above!")
         
         if st.button("Close", key="close_manage"):
@@ -4323,6 +4366,7 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
                     if token:
                         st.session_state.pairing_token = token
                         st.rerun()
+                    else:
                         st.error("Failed to generate pairing code")
         
         with col2:
@@ -4365,7 +4409,9 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
                         st.session_state.device_fingerprint = new_device_fp
                         st.success("✅ Device paired successfully!")
                         st.rerun()
+                    else:
                         st.error("❌ Invalid or expired pairing code")
+                else:
                     st.error("Please enter a pairing code")
     
         # Device management
@@ -4378,6 +4424,7 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
                     
                     if is_current:
                         st.write(f"📱 **{device_name}** ({platform}) - *This device*")
+                    else:
                         col1, col2 = st.columns([3, 1])
                         with col1:
                             st.write(f"📱 {device_name} ({platform})")
@@ -4387,6 +4434,7 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
                                     st.success("Device removed")
                                     st.rerun()
 
+    else:
         st.error("❌ Workspace initialization failed")
 
 # ================= Subscription Tiers (Web Only) =================
@@ -4516,6 +4564,7 @@ if workspace_id:
     current_tier = get_user_tier_from_subscription(workspace_id)
     # Also get subscription info for display purposes
     current_subscription = get_workspace_subscription(workspace_id)
+else:
     # No workspace - default to free
     current_tier = 'free'
 
@@ -4559,6 +4608,7 @@ if current_tier != 'free':
             if expires_at:
                 if isinstance(expires_at, str):
                     expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
                     expires_dt = expires_at
                 
                 now_dt = datetime.now(pytz.UTC)
@@ -4567,7 +4617,9 @@ if current_tier != 'free':
                 if days_remaining > 0:
                     if 'friend_code_' in set_by:
                         expiry_text = f"Friend Access • {days_remaining} days left"
+                    else:
                         expiry_text = f"Active Plan • Expires in {days_remaining} days"
+                else:
                     expiry_text = "Expired Access"
 
 with st.sidebar.container():
@@ -4622,8 +4674,11 @@ with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
                     st.success(message)
                     st.balloons()
                     st.rerun()  # Refresh to show new tier
+                else:
                     st.error(message)
+            else:
                 st.error("❌ Could not link to your device - please try again")
+        else:
             st.warning("Please enter a valid friend code (8+ characters)")
     
     st.caption("🔒 Codes work once per device only")
@@ -4682,6 +4737,7 @@ if current_tier == 'free':
             if st.button("📱 Download iOS App", key="download_ios_app"):
                 st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
                 # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+        else:
             # Web/Android Stripe button for selected plan
             plan_emoji = "🚀" if st.session_state.selected_plan == 'pro' else "💎"
             plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
@@ -4709,8 +4765,10 @@ if current_tier == 'free':
                                 box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
                             ">🚀 Complete Checkout</a>
                             """, unsafe_allow_html=True)
+                        else:
                             st.error(f"❌ {error or 'Could not create checkout session'}")
                             st.info("Please try again or contact support if the problem persists.")
+                else:
                     st.error("❌ Workspace not initialized. Please refresh the page.")
             
             # Reset plan selection button
@@ -4779,6 +4837,7 @@ elif current_tier in ['pro', 'pro_trader']:
             if workspace_id:
                 if is_mobile:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                else:
                     # Create Stripe checkout session directly
                     with st.spinner("🔄 Creating secure checkout..."):
                         checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
@@ -4799,8 +4858,10 @@ elif current_tier in ['pro', 'pro_trader']:
                                 box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
                             ">💎 Upgrade Now</a>
                             """, unsafe_allow_html=True)
+                        else:
                             st.error(f"❌ {error or 'Could not create checkout session'}")
                             st.info("Please try again or contact support if the problem persists.")
+            else:
                 st.error("❌ Workspace not initialized. Please refresh the page.")
 
 # End of subscription UI section (hidden for mobile apps)
@@ -4826,12 +4887,15 @@ if st.session_state.get('edit_watchlist_id'):
                             st.success(f"Watchlist '{edit_name}' updated!")
                             st.session_state.edit_watchlist_id = None
                             st.rerun()
+                        else:
                             st.error("Failed to update watchlist")
+                    else:
                         st.error("Name and symbols required")
             with col3:
                 if st.button("Cancel", key="cancel_edit_wl"):
                     st.session_state.edit_watchlist_id = None
                     st.rerun()
+    else:
         st.error("Watchlist not found")
         st.session_state.edit_watchlist_id = None
 
@@ -4852,6 +4916,7 @@ if st.session_state.get('confirm_delete_id'):
                     st.session_state.confirm_delete_id = None
                     st.session_state.confirm_delete_name = None
                     st.rerun()
+                else:
                     st.error("Failed to delete watchlist")
         with col3:
             if st.button("Cancel", key="cancel_delete"):
@@ -4896,6 +4961,7 @@ if current_tier == 'free':
         st.sidebar.error(f"⚠️ {total_count}/{limit} symbols (over limit)")
     elif total_count > limit * 0.8:
         st.sidebar.warning(f"⚠️ {total_count}/{limit} symbols (near limit)")
+    else:
         st.sidebar.info(f"📊 {total_count}/{limit} symbols")
 
 st.sidebar.header("Timeframes")
@@ -4991,11 +5057,11 @@ if st.sidebar.checkbox("🐛 Debug Notifications", value=False):
     st.sidebar.write(f"User email: {user_email or 'Not set'}")
     st.sidebar.write(f"Workspace ID: {workspace_id[:8] if workspace_id else 'Not set'}...")
 
-# Initialize notifications
-notifications = []
 if user_email and workspace_id:
     # Fetch user's notifications ONLY for current workspace (secure)
     notifications = get_user_notifications(user_email, workspace_id, limit=5)
+else:
+    notifications = []
 
 unread_notifications = [n for n in notifications if not n.get('is_read', True)] if notifications else []
 
@@ -5014,6 +5080,7 @@ if unread_notifications:
                 st.write(f"**{subject}**")
                 if hasattr(created_at, 'strftime'):
                     st.caption(f"🕒 {created_at.strftime('%Y-%m-%d %H:%M')}")
+                else:
                     st.caption(f"🕒 {created_at}")
                 
             with col2:
@@ -5037,7 +5104,9 @@ elif notifications:
             st.write(f"✓ {subject}")
             if hasattr(created_at, 'strftime'):
                 st.caption(f"🕒 {created_at.strftime('%Y-%m-%d %H:%M')}")
+            else:
                 st.caption(f"🕒 {created_at}")
+else:
     st.sidebar.info("💡 **Set up notifications** below to see your market alerts here")
 
 st.sidebar.header("📧 Notification Settings")
@@ -5126,11 +5195,13 @@ Happy trading! 📈
                             
                         if notification_method == "Email":
                             success = send_email_to_user(test_subject, test_message, user_email)
+                        else:
                             success = send_email_to_user(test_subject, test_message, user_email)
                         if success:
                             st.info("✅ **Perfect!** Your notification system is working correctly.")
                     except Exception as e:
                         st.error(f"❌ Email test failed: {str(e)}")
+                else:
                     st.error("Please enter a valid email address")
         
         with col2:
@@ -5143,12 +5214,10 @@ Happy trading! 📈
                     # Save to database
                     if save_user_notification_preferences(user_email, backend_method):
                         st.success("✅ Settings saved successfully!")
+                    else:
                         st.warning("⚠️ Settings saved locally but failed to save to database")
+                else:
                     st.error("Please enter a valid email address")
-
-# Initialize email notification toggles
-send_email_toggle = False
-send_email_summary_toggle = False
 
 # Scan result notifications (using user-specific email system)
 with st.sidebar.expander("Scan Result Notifications", expanded=False):
@@ -5171,6 +5240,7 @@ if run_clicked:
     # Check if at least one market is selected
     if not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
+    else:
         # Get symbols from inputs
         eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
         cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
@@ -5200,6 +5270,7 @@ if run_clicked:
                 st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
                     eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
                 )
+            else:
                 st.session_state.eq_results = pd.DataFrame()
                 st.session_state.eq_errors = pd.DataFrame()
             
@@ -5208,6 +5279,7 @@ if run_clicked:
                 st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
                     cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
                 )
+            else:
                 st.session_state.cx_results = pd.DataFrame()
                 st.session_state.cx_errors = pd.DataFrame()
     
@@ -5230,6 +5302,7 @@ Happy trading! 📈
                 success = send_email_to_user(email_subject, email_body, user_email)
                 if success:
                     st.success("📧 Email sent successfully!")
+                else:
                     st.error("❌ Email failed to send")
 
 # ================= iOS WebView Detection & Enhanced Error Handling =================
@@ -5325,6 +5398,7 @@ if not ios_issue_detected and not st.session_state.eq_results.empty:
     if 'direction' in display_eq.columns:
         styled_eq = display_eq.style.applymap(highlight_direction, subset=['direction'])
         st.dataframe(styled_eq, width='stretch', use_container_width=True)
+    else:
         st.dataframe(display_eq, width='stretch', use_container_width=True)
     
     # CSV download for equity results
@@ -5369,6 +5443,7 @@ if not ios_issue_detected and not st.session_state.cx_results.empty:
     if 'direction' in display_cx.columns:
         styled_cx = display_cx.style.applymap(highlight_direction, subset=['direction'])
         st.dataframe(styled_cx, width='stretch', use_container_width=True)
+    else:
         st.dataframe(display_cx, width='stretch', use_container_width=True)
     
     # CSV download for crypto results
@@ -5437,6 +5512,7 @@ with col2:
             triggered_count = check_price_alerts()
             if triggered_count and triggered_count > 0:
                 st.success(f"🚨 {triggered_count} alert(s) triggered!")
+            else:
                 st.info("No alerts triggered")
 
 with col3:
@@ -5461,6 +5537,7 @@ if auto_check:
     with col4:
         if remaining_time > 0:
             st.info(f"Next check in: {int(remaining_time)}s")
+        else:
             st.info("Checking alerts...")
     
     # Check alerts if interval has passed
@@ -5471,11 +5548,13 @@ if auto_check:
         if triggered_count and triggered_count > 0:
             st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
             st.balloons()  # Celebrate triggered alerts
+        else:
             st.success("All alerts checked - no triggers")
     
     # Auto-refresh every 10 seconds to update countdown and check alerts
     time.sleep(10)
     st.rerun()
+else:
     # Clear auto-check state when disabled
     if 'last_auto_check' in st.session_state:
         del st.session_state.last_auto_check
@@ -5503,6 +5582,7 @@ if st.session_state.get('show_new_alert', False):
                     st.error("Price must be positive")
                 elif alert_type not in ['above', 'below']:
                     st.error("Invalid alert type")
+                else:
                     # Check tier limitations
                     current_tier = st.session_state.user_tier
                     tier_info = TIER_CONFIG[current_tier]
@@ -5517,12 +5597,14 @@ if st.session_state.get('show_new_alert', False):
                     elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
                         st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
                         st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
+                    else:
                         # Create the alert
                         symbol_clean = alert_symbol.strip().upper()
                         if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
                             st.success(f"Alert created for {symbol_clean}")
                             st.session_state.show_new_alert = False
                             st.rerun()
+                        else:
                             st.error("Failed to create alert - please check database connection")
         
         with col3:
@@ -5554,7 +5636,9 @@ with tab1:
                     if delete_alert(alert['id']):
                         st.success("Alert deleted")
                         st.rerun()
+                    else:
                         st.error("Failed to delete alert")
+    else:
         st.info("No active alerts. Create one above to get notified when price targets are hit.")
 
 with tab2:
@@ -5567,6 +5651,7 @@ with tab2:
         
         display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
         st.dataframe(triggered_df[display_cols], width='stretch')
+    else:
         st.info("No triggered alerts yet.")
 
 
@@ -5635,6 +5720,7 @@ if chart_symbol and chart_symbol.strip():
             if rsi is not None:
                 rsi_color = "normal" if 30 <= rsi <= 70 else "inverse"
                 st.metric("RSI", f"{rsi:.1f}", delta_color=rsi_color)
+            else:
                 st.metric("RSI", "N/A")
         
         with col4:
@@ -5644,8 +5730,10 @@ if chart_symbol and chart_symbol.strip():
                     vol_display = f"{volume/1_000_000:.1f}M"
                 elif volume >= 1_000:
                     vol_display = f"{volume/1_000:.1f}K"
+                else:
                     vol_display = f"{volume:,.0f}"
                 st.metric("Volume", vol_display)
+            else:
                 st.metric("Volume", "N/A")
         
         with col5:
@@ -5654,6 +5742,7 @@ if chart_symbol and chart_symbol.strip():
                 trend_text = "Bullish" if ema_trend else "Bearish"
                 trend_color = "normal" if ema_trend else "inverse"
                 st.metric("Trend", trend_text, delta_color=trend_color)
+            else:
                 st.metric("Trend", "N/A")
     
     # Generate chart
@@ -5680,7 +5769,7 @@ if chart_symbol and chart_symbol.strip():
                 chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
                 
                 if chart_fig:
-                    st.plotly_chart(chart_fig, width='stretch')
+                    st.plotly_chart(ms_plotly_dark(chart_fig), width='stretch')
                     # Set session state to keep chart visible
                     st.session_state.chart_generated = True
                     
@@ -5700,6 +5789,7 @@ if chart_symbol and chart_symbol.strip():
                                     st.info("🔵 Mild bullish momentum")
                                 elif change_pct > -2:
                                     st.warning("🟡 Consolidation")
+                                else:
                                     st.error("🔴 Bearish momentum")
                         
                         with col2:
@@ -5712,12 +5802,16 @@ if chart_symbol and chart_symbol.strip():
                                     st.success("🟢 Oversold (RSI < 30)")
                                 elif rsi > 50:
                                     st.info("🔵 Bullish momentum (RSI > 50)")
+                                else:
                                     st.warning("🟡 Bearish momentum (RSI < 50)")
+                            else:
                                 st.info("RSI data not available")
+                else:
                     st.error(f"Unable to generate chart for {chart_symbol_clean}. Please check the symbol and try again.")
                     
             except Exception as e:
                 st.error(f"Error generating chart: {str(e)}")
+else:
     st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
 
 # ================= Backtesting Section =================
@@ -5739,6 +5833,8 @@ if not tier_info['has_backtesting']:
         if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
             st.session_state.selected_plan = 'pro_trader'
             st.rerun()
+else:
+
     # Backtest controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
@@ -5790,6 +5886,7 @@ if not tier_info['has_backtesting']:
                 default=available_symbols[:5],
                 key="backtest_symbols_from_scan"
             )
+        else:
             backtest_symbols = []
     
         manual_symbols = st.text_area(
@@ -5803,6 +5900,7 @@ if not tier_info['has_backtesting']:
         if manual_symbols.strip():
             manual_list = [s.strip().upper() for s in manual_symbols.splitlines() if s.strip()]
             all_backtest_symbols = list(set(backtest_symbols + manual_list))
+        else:
             all_backtest_symbols = backtest_symbols
 
     with col2:
@@ -5842,9 +5940,11 @@ if not tier_info['has_backtesting']:
                     st.error(f"Backtest failed: {results['error']}")
                 elif not results.get('trades'):
                     st.warning("No trades generated. Try lowering the minimum score threshold or adjusting the date range.")
+                else:
                     # Save results to database
                     if save_backtest_result(backtest_name.strip(), config, results):
                         st.success(f"Backtest '{backtest_name}' completed and saved!")
+                    else:
                         st.warning("Backtest completed but failed to save to database")
                 
                     # Display results
@@ -5877,7 +5977,7 @@ if not tier_info['has_backtesting']:
                     # Performance chart
                     chart_fig = create_backtest_chart(results)
                     if chart_fig:
-                        st.plotly_chart(chart_fig, width='stretch')
+                        st.plotly_chart(ms_plotly_dark(chart_fig), width='stretch')
                 
                     # Detailed metrics
                     with st.expander("📈 Detailed Performance Metrics", expanded=False):
@@ -5985,6 +6085,7 @@ if not tier_info['has_backtesting']:
                             })
                     
                         st.divider()
+            else:
                 st.info("No saved backtests found. Run a backtest above to get started.")
         
             if st.button("Close History", key="close_backtest_history"):
@@ -6044,18 +6145,14 @@ with tab1:
         with col1:
             # Portfolio allocation chart
             allocation_chart = create_portfolio_chart(positions)
-            if allocation_chart is not None:
-                st.plotly_chart(ms_plotly_dark(allocation_chart), use_container_width=True, theme=None)
-                st.warning('No allocation data to chart — add positions or update prices.')
-        st.warning('No allocation data to chart — add positions or update prices.')
+            if allocation_chart:
+                st.plotly_chart(ms_plotly_dark(allocation_chart), use_container_width=True)
         
         with col2:
             # Portfolio performance chart
             performance_chart = create_portfolio_performance_chart()
-            if performance_chart is not None:
-                st.plotly_chart(ms_plotly_dark(performance_chart), use_container_width=True, theme=None)
-                st.warning('No performance data to chart — click **Update Prices** to build history.')
-        st.warning('No performance data to chart — click **Update Prices** to build history.')
+            if performance_chart:
+                st.plotly_chart(ms_plotly_dark(performance_chart), use_container_width=True)
         
         # Key metrics table
         if portfolio_metrics:
@@ -6082,6 +6179,7 @@ with tab1:
             }
             metrics_df = pd.DataFrame(metrics_data)
             st.dataframe(metrics_df, width='stretch', hide_index=True)
+    else:
         st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
 
 with tab2:
@@ -6121,6 +6219,7 @@ with tab2:
                             st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
                             if current_tier == 'free':
                                 st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
+                            else:
                                 st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
                             can_add = False
                 
@@ -6144,44 +6243,22 @@ with tab3:
                 'Symbol': pos['symbol'],
                 'Quantity': f"{float(pos['quantity']):,.4f}",
                 'Avg Cost': f"${float(pos['average_cost']):,.2f}",
-                'Current Price': f"${float(pos.get('current_price', 0)):,.2f}",
-                'Market Value': f"${float(pos.get('market_value', 0)):,.2f}",
-                'Cost Basis': f"${float(pos.get('cost_basis', 0)):,.2f}",
-                'Unrealized P&L': f"${float(pos.get('unrealized_pnl', 0)):,.2f}",
-                'Return %': f"{float(pos.get('return_pct', 0)):.2f}%"
+                'Current Price': f"${float(pos['current_price']):,.2f}",
+                'Market Value': f"${float(pos['market_value']):,.2f}",
+                'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
+                'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
+                'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
             })
         
         positions_df = pd.DataFrame(positions_data)
-        st.dataframe(positions_df, use_container_width=True, hide_index=True)
+        st.dataframe(positions_df, width='stretch', hide_index=True)
         
-        # Charts
-        st.markdown("---")
-        st.subheader("📊 Portfolio Visualization")
-        
+        # Quick actions for positions
+        st.subheader("⚡ Quick Actions")
         col1, col2 = st.columns(2)
         
         with col1:
-            allocation_chart = create_portfolio_chart(positions)
-            if allocation_chart:
-                st.plotly_chart(allocation_chart, use_container_width=True)
-            else:
-                st.warning("No allocation data to chart — add positions or update prices.")
-        
-        with col2:
-            performance_chart = create_portfolio_performance_chart()
-            if performance_chart:
-                st.plotly_chart(performance_chart, use_container_width=True)
-            else:
-                st.warning("No performance data to chart — click **Update Prices** to build history.")
-        
-        # Position management
-        st.markdown("---")
-        st.subheader("⚙️ Manage Positions")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**📉 Sell Position**")
+            st.markdown("**💰 Sell Position**")
             sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
             if sell_symbol:
                 current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
@@ -6212,6 +6289,8 @@ with tab3:
                         if success:
                             st.success(f"Successfully removed {remove_symbol} from portfolio")
                             st.rerun()
+                        else:
+                            st.error(f"Failed to remove {remove_symbol}")
     else:
         st.info("No positions found. Add your first position using the 'Add Position' tab.")
 
@@ -6252,6 +6331,7 @@ with tab4:
         with col3:
             total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
             st.metric("Total Invested", f"${total_invested:,.2f}")
+    else:
         st.info("No transactions found. Add your first position to start tracking.")
 
 # Status information
@@ -6367,6 +6447,7 @@ def _msp_button(label, *args, **kwargs):
         url = "https://marketscannerpros.app/pricing#pro"
         if __orig_link_button:
             __orig_link_button("🚀 PRO — $4.99 / month", url)
+        else:
             st.markdown(f"[🚀 PRO — $4.99 / month]({url})", unsafe_allow_html=True)
         return False  # prevent original checkout flow
 
@@ -6374,6 +6455,7 @@ def _msp_button(label, *args, **kwargs):
         url = "https://marketscannerpros.app/pricing#protrader"
         if __orig_link_button:
             __orig_link_button("💎 PRO TRADER — $9.99 / month", url)
+        else:
             st.markdown(f"[💎 PRO TRADER — $9.99 / month]({url})", unsafe_allow_html=True)
         return False
 
