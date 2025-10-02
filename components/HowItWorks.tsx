@@ -24,8 +24,8 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export default function HowItWorks() {
   return (
-    <section className="hiw border-b border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-5xl px-4 py-8 md:py-12">
+    <section className="hiw border-b border-neutral-800 bg-neutral-950 relative z-10">
+      <div className="mx-auto max-w-5xl px-4 py-10 md:py-14">
         <h2 className="text-center text-xl font-bold md:text-2xl">How It Works</h2>
         <p className="mt-2 text-center text-sm text-neutral-400">From charts to clarity in 3 steps</p>
 
