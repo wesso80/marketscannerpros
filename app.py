@@ -5146,6 +5146,10 @@ Happy trading! 📈
                         st.warning("⚠️ Settings saved locally but failed to save to database")
                     st.error("Please enter a valid email address")
 
+# Initialize email notification toggles
+send_email_toggle = False
+send_email_summary_toggle = False
+
 # Scan result notifications (using user-specific email system)
 with st.sidebar.expander("Scan Result Notifications", expanded=False):
     st.markdown("**Send market scan results:**")
@@ -5156,6 +5160,7 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
     if user_email:
         send_email_toggle = st.checkbox("📧 Email top picks to your address", help=f"Send results to {user_email}")
         st.caption(f"✉️ Configured: {user_email}")
+    else:
         send_email_toggle = st.checkbox("📧 Email top picks", disabled=True, help="Configure your email in 'Price Alert Notifications' first")
         st.caption("⚠️ Configure email notifications above to enable")
     
@@ -5585,7 +5590,9 @@ with col1:
         
         if selected_symbol_option == "Manual Entry":
             chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="manual_chart_symbol")
+        else:
             chart_symbol = selected_symbol_option
+    else:
         chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="chart_symbol_input")
 
 with col2:
