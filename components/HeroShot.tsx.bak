@@ -1,0 +1,37 @@
+// components/HeroShot.tsx
+"use client";
+import Image from "next/image";
+import { useState } from "react";
+
+export default function HeroShot() {
+  const [imgError, setImgError] = useState(false);
+
+  // your uploaded image
+  const src = imgError ? "/marketing/hero-top.svg" : "/marketing/hero-top.png";
+
+  return (
+    <div
+      className={[
+        // responsive “frame” that controls size
+        "relative w-full",
+        // aspect ratio & height scale by breakpoint
+        // (small phones → shorter; desktops → taller)
+        "h-56 xs:h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[420px]",
+        "rounded-2xl border border-neutral-800 bg-white",
+        "shadow-[0_0_0_1px_rgba(16,185,129,.08),0_30px_80px_-20px_rgba(0,0,0,.6)]",
+      ].join(" ")}
+    >
+      <Image
+        src={src}
+        alt="MarketScanner dashboard preview"
+        fill
+        // keep entire image visible inside the frame
+        className="rounded-2xl object-contain"
+        // let Next pick the right size for each viewport
+        sizes="(min-width: 1024px) 540px, (min-width: 768px) 50vw, 90vw"
+        priority
+        onError={() => setImgError(true)}
+      />
+    </div>
+  );
+}
