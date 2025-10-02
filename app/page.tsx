@@ -1,4 +1,6 @@
 "use client";
+import HowSimple from "../components/HowSimple";
+import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";
 import Why from "../components/Why";
 import HowItWorks from "../components/HowItWorks";
@@ -70,6 +72,8 @@ export default function Home() {
             marginBottom: "0.5rem",
           }}
         >
+      <HowSimple />
+      <Testimonials />
           Pricing & Plans
         </h2>
         <p style={{ opacity: 0.85, marginBottom: "2rem" }}>

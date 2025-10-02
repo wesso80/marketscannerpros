@@ -25,19 +25,19 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function HowItWorks() {
   return (
     <section className="hiw border-b border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="text-center text-3xl font-bold md:text-4xl">How It Works</h2>
-        <p className="mt-3 text-center text-neutral-400">From charts to clarity in 3 steps</p>
+      <div className="mx-auto max-w-5xl px-4 py-8 md:py-12">
+        <h2 className="text-center text-xl font-bold md:text-2xl">How It Works</h2>
+        <p className="mt-2 text-center text-sm text-neutral-400">From charts to clarity in 3 steps</p>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
+        <div className="mt-6 md:mt-8 grid gap-4 md:grid-cols-3">
           {steps.map((step, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-center shadow"
+              className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 md:p-5 text-center shadow"
             >
-              <CheckIcon style={{width:40,height:40}} className="mx-auto mb-4 text-emerald-400" />
-              <h3 className="text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm text-neutral-400 leading-relaxed">{step.desc}</p>
+              <CheckIcon style={{width:28,height:28}} className="mx-auto mb-3 text-emerald-400" />
+              <h3 className="text-base font-semibold">{step.title}</h3>
+              <p className="mt-1.5 text-xs md:text-sm text-neutral-400 leading-relaxed">{step.desc}</p>
             </div>
           ))}
         </div>
