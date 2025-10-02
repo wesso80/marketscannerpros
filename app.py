@@ -3492,24 +3492,40 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
     
     symbols = [pos['symbol'] for pos in positions]
     values = [float(pos['market_value']) for pos in positions]
-    colors = ['#00D4AA', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    # Bright, highly visible colors for dark background
+    colors = ['#10B981', '#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
     
     fig = go.Figure(data=[go.Pie(
         labels=symbols,
         values=values,
         hole=0.4,
-        marker_colors=colors[:len(symbols)],
+        marker=dict(
+            colors=colors[:len(symbols)],
+            line=dict(color='#FFFFFF', width=2)
+        ),
         textinfo='label+percent',
-        textposition='outside'
+        textposition='outside',
+        textfont=dict(size=14, color='#FFFFFF'),
+        hovertemplate='<b>%{label}</b><br>Value: $%{value:.2f}<br>Percent: %{percent}<extra></extra>'
     )])
     
     fig.update_layout(
-        title="Portfolio Allocation by Market Value",
+        title=dict(
+            text="Portfolio Allocation by Market Value",
+            font=dict(size=18, color='#FFFFFF')
+        ),
         template="plotly_dark",
-        height=400,
+        height=500,
         paper_bgcolor='#1E293B',
         plot_bgcolor='#1E293B',
-        showlegend=False
+        showlegend=True,
+        legend=dict(
+            font=dict(size=12, color='#FFFFFF'),
+            bgcolor='rgba(30, 41, 59, 0.8)',
+            bordercolor='#475569',
+            borderwidth=1
+        ),
+        font=dict(color='#FFFFFF')
     )
     
     return fig
