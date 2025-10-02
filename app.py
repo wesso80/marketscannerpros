@@ -103,21 +103,8 @@ st.markdown("""
     background: #1E293B !important;
 }
 
-/* Force dark background on all plotly chart elements */
-.stPlotlyChart svg,
-.js-plotly-plot svg,
-.plotly-graph-div svg,
-.plot-container,
-.svg-container {
-    background-color: #1E293B !important;
-    background: #1E293B !important;
-}
-
-/* Plotly chart paper and plot background */
-.stPlotlyChart .bg,
-.js-plotly-plot .bg {
-    fill: #1E293B !important;
-}
+/* DO NOT force SVG backgrounds - let Plotly control chart rendering */
+/* Chart backgrounds are set in Python code via paper_bgcolor and plot_bgcolor */
 
 /* FORCE WHITE TEXT ON ALL METRIC CONTAINERS - NO CONDITIONS */
 div[data-testid="metric-container"], 
@@ -1178,22 +1165,18 @@ st.markdown("""
                 });
             });
             
-            // Fix ALL charts and plotly
-            const chartSelectors = [
-                '.js-plotly-plot', '.stPlotlyChart', '[data-testid="stPlotlyChart"]',
-                '.plotly', '.plot-container'
-            ];
-            chartSelectors.forEach(selector => {
+            // Fix chart CONTAINERS only - let Plotly handle chart rendering
+            const chartContainers = ['.stPlotlyChart'];
+            chartContainers.forEach(selector => {
                 document.querySelectorAll(selector).forEach(el => {
-                    el.style.setProperty('background-color', '#1E293B', 'important');
+                    // Only set container background, don't touch SVG content
+                    if (!el.tagName || el.tagName.toLowerCase() !== 'svg') {
+                        el.style.setProperty('background-color', '#1E293B', 'important');
+                    }
                 });
             });
             
-            // Fix ALL chart text in SVG
-            document.querySelectorAll('.js-plotly-plot text, .stPlotlyChart text, .plotly text, svg text').forEach(el => {
-                el.setAttribute('fill', '#FFFFFF');
-                el.style.setProperty('fill', '#FFFFFF', 'important');
-            });
+            // DO NOT force SVG text colors - Plotly handles this via template
         } catch(e) {
             console.log('Style fix error:', e);
         }
