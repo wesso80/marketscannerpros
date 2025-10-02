@@ -9,12 +9,12 @@ export default function MobileNav() {
       {/* Hamburger Button - Only visible on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden flex flex-col gap-1 p-2"
+        className="md:hidden flex flex-col gap-1 p-2 flex-shrink-0"
         aria-label="Toggle menu"
       >
-        <span className={`block h-0.5 w-6 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-        <span className={`block h-0.5 w-6 bg-neutral-100 transition-all ${isOpen ? 'opacity-0' : ''}`} />
-        <span className={`block h-0.5 w-6 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'opacity-0' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
       </button>
 
       {/* Desktop Nav - Hidden on mobile */}
