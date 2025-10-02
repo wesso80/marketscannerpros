@@ -32,3 +32,15 @@ a.ms-btn:hover, button.ms-btn:hover { filter:brightness(1.06); box-shadow:0 10px
 .overlay, .backdrop, .modal-backdrop,
 [data-overlay], [data-nextjs-dialog-overlay],
 [data-nextjs-dialog-backdrop] { display: none !important; }
+
+/* Make sure Plotly containers are visible and tall enough */
+.stPlotlyChart div { min-height: 260px !important; }
+
+/* Ensure plot area always visible */
+.stPlotlyChart div { min-height: 260px !important; }
+
+/* Ensure Plotly containers are visible/tall enough */
+.stPlotlyChart div { min-height: 260px !important; }
+
+/* Ensure Plotly containers are visible/tall enough */
+.stPlotlyChart div { min-height: 260px !important; }
