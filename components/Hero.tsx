@@ -4,8 +4,8 @@ import Link from "next/link";
 
 export default function Hero() {
   return (
-    <section className="w-full h-auto relative overflow-hidden border-b border-neutral-800 pb-20">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-4 py-14 md:grid-cols-2 md:py-20">
+    <section className="w-full relative border-b border-neutral-800">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-6 md:gap-10 px-4 py-10 md:py-20 md:grid-cols-2">
         {/* Left: copy + CTAs */}
         <div>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
