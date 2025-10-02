@@ -9,9 +9,8 @@ export default function HeroShot() {
 
   return (
     <div
-      className="relative rounded-lg md:rounded-2xl border border-neutral-800 bg-white p-2 md:p-3 md:justify-self-end"
+      className="relative rounded-lg md:rounded-2xl border border-neutral-800 bg-white p-2 md:p-3 w-full"
       style={{
-        width: "100%",
         maxWidth: "100%",
         aspectRatio: "16 / 9",
         boxShadow:
@@ -23,7 +22,7 @@ export default function HeroShot() {
         alt="MarketScanner dashboard preview"
         width={960}
         height={540}
-        className="w-full h-full rounded-md md:rounded-xl object-cover"
+        className="w-full h-full rounded-md md:rounded-xl object-contain"
         sizes="(min-width: 768px) 640px, 100vw"
         onError={() => setImgError(true)}
         priority

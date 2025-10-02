@@ -11,7 +11,10 @@ html, body {
 a { color: #34d399; text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.container { max-width: 960px; margin: 0 auto; padding: 1.25rem; }
+.container { max-width: 960px; margin: 0 auto; padding: 1rem; }
+@media (min-width: 768px) {
+  .container { padding: 1.25rem; }
+}
 
 .nav { display: flex; gap: 1rem; opacity: .9; font-size: .95rem; }
 .header { border-bottom: 1px solid #27272a; }
