@@ -9,7 +9,8 @@ export default function MobileNav() {
       {/* Hamburger Button - Only visible on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden flex flex-col gap-1 p-2 flex-shrink-0"
+        className="flex flex-col gap-1 p-2 flex-shrink-0 md:hidden"
+        style={{ display: 'flex' }}
         aria-label="Toggle menu"
       >
         <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
@@ -18,17 +19,15 @@ export default function MobileNav() {
       </button>
 
       {/* Desktop Nav - Hidden on mobile, shown on desktop */}
-      <div className="hidden md:block">
-        <nav className="flex gap-4 opacity-90 text-sm flex-wrap">
-          <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
-          <a href="/disclaimer" className="hover:text-emerald-400 whitespace-nowrap">Disclaimer</a>
-          <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>
-          <a href="/privacy" className="hover:text-emerald-400 whitespace-nowrap">Privacy</a>
-          <a href="/legal/terms" className="hover:text-emerald-400 whitespace-nowrap">Terms</a>
-          <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
-          <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
-        </nav>
-      </div>
+      <nav className="desktop-nav" style={{ display: 'none' }}>
+        <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
+        <a href="/disclaimer" className="hover:text-emerald-400 whitespace-nowrap">Disclaimer</a>
+        <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>
+        <a href="/privacy" className="hover:text-emerald-400 whitespace-nowrap">Privacy</a>
+        <a href="/legal/terms" className="hover:text-emerald-400 whitespace-nowrap">Terms</a>
+        <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
+        <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
+      </nav>
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
