@@ -4864,6 +4864,7 @@ if selected_watchlist != "Manual Entry":
     selected_wl_data = watchlists[watchlist_names.index(selected_watchlist) - 1]
     equity_symbols = [s for s in selected_wl_data['symbols'] if not s.endswith('-USD')]
     crypto_symbols = [s for s in selected_wl_data['symbols'] if s.endswith('-USD')]
+else:
     equity_symbols = CFG.symbols_equity
     crypto_symbols = CFG.symbols_crypto
 
