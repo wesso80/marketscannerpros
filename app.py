@@ -1,7 +1,3 @@
-hero()
-from ui_helpers import inject_base_ui, ms_plotly_dark, hero
-
-inject_base_ui()
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
 # - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
@@ -5769,7 +5765,7 @@ if chart_symbol and chart_symbol.strip():
                 chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
                 
                 if chart_fig:
-                    st.plotly_chart(ms_plotly_dark(chart_fig), width='stretch')
+                    st.plotly_chart(chart_fig, width='stretch')
                     # Set session state to keep chart visible
                     st.session_state.chart_generated = True
                     
@@ -5977,7 +5973,7 @@ else:
                     # Performance chart
                     chart_fig = create_backtest_chart(results)
                     if chart_fig:
-                        st.plotly_chart(ms_plotly_dark(chart_fig), width='stretch')
+                        st.plotly_chart(chart_fig, width='stretch')
                 
                     # Detailed metrics
                     with st.expander("📈 Detailed Performance Metrics", expanded=False):
@@ -6146,13 +6142,13 @@ with tab1:
             # Portfolio allocation chart
             allocation_chart = create_portfolio_chart(positions)
             if allocation_chart:
-                st.plotly_chart(ms_plotly_dark(allocation_chart), use_container_width=True)
+                st.plotly_chart(allocation_chart, use_container_width=True)
         
         with col2:
             # Portfolio performance chart
             performance_chart = create_portfolio_performance_chart()
             if performance_chart:
-                st.plotly_chart(ms_plotly_dark(performance_chart), use_container_width=True)
+                st.plotly_chart(performance_chart, use_container_width=True)
         
         # Key metrics table
         if portfolio_metrics:
