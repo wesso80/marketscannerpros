@@ -2,6 +2,7 @@
 import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";
 import Why from "../components/Why";
+import HowItWorks from "../components/HowItWorks";
 import { useState } from "react";
 import "./pricing/styles.css";
 
@@ -57,6 +58,7 @@ export default function Home() {
     <>
       <Hero />
       <Why />
+      <HowItWorks />
       <Testimonials />
       
       {/* Pricing Section */}
