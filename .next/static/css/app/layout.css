@@ -26,8 +26,8 @@ a:hover { text-decoration: underline; }
 }
 
 .nav { display: flex; gap: 1rem; opacity: .9; font-size: .95rem; }
-.header { border-bottom: 1px solid #27272a; overflow-x: hidden; }
-.title { font-weight: 700; }
+.header { border-bottom: 1px solid #27272a; overflow: hidden; width: 100%; }
+.title { font-weight: 700; flex-shrink: 0; }
 
 /* Buttons */
 .btn {
