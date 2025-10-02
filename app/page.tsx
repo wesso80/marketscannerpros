@@ -63,19 +63,11 @@ export default function Home() {
       <Testimonials />
       
       {/* Pricing Section */}
-      <div
-        style={{ marginTop: "4rem", maxWidth: "1200px", margin: "4rem auto 0" }}
-      >
-        <h2
-          style={{
-            fontSize: "1.75rem",
-            fontWeight: 700,
-            marginBottom: "0.5rem",
-          }}
-        >
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+        <h2 className="text-2xl md:text-3xl font-bold mb-2">
           Pricing & Plans
         </h2>
-        <p style={{ opacity: 0.85, marginBottom: "2rem" }}>
+        <p className="opacity-85 mb-8 text-sm md:text-base">
           Start free. Upgrade any time. Cancel in your Stripe portal.
         </p>
 
