@@ -17,16 +17,18 @@ export default function MobileNav() {
         <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
       </button>
 
-      {/* Desktop Nav - Hidden on mobile */}
-      <nav className="hidden md:flex md:gap-4 md:opacity-90 md:text-sm flex-wrap">
-        <a href="/guide" className="hover:text-emerald-400">User Guide</a>
-        <a href="/disclaimer" className="hover:text-emerald-400">Disclaimer</a>
-        <a href="/pricing" className="hover:text-emerald-400">Pricing</a>
-        <a href="/privacy" className="hover:text-emerald-400">Privacy</a>
-        <a href="/legal/terms" className="hover:text-emerald-400">Terms</a>
-        <a href="/contact" className="hover:text-emerald-400">Contact</a>
-        <a href="/dashboard" className="hover:text-emerald-400">Dashboard</a>
-      </nav>
+      {/* Desktop Nav - Hidden on mobile, shown on desktop */}
+      <div className="hidden md:block">
+        <nav className="flex gap-4 opacity-90 text-sm flex-wrap">
+          <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
+          <a href="/disclaimer" className="hover:text-emerald-400 whitespace-nowrap">Disclaimer</a>
+          <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>
+          <a href="/privacy" className="hover:text-emerald-400 whitespace-nowrap">Privacy</a>
+          <a href="/legal/terms" className="hover:text-emerald-400 whitespace-nowrap">Terms</a>
+          <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
+          <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
+        </nav>
+      </div>
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
