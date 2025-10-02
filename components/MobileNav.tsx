@@ -18,14 +18,14 @@ export default function MobileNav() {
       </button>
 
       {/* Desktop Nav - Hidden on mobile */}
-      <nav className="hidden md:flex gap-4 opacity-90 text-sm">
-        <a href="/guide">User Guide</a>
-        <a href="/disclaimer">Disclaimer</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/legal/terms">Terms</a>
-        <a href="/contact">Contact</a>
-        <a href="/dashboard">Dashboard</a>
+      <nav className="hidden md:flex md:gap-4 md:opacity-90 md:text-sm flex-wrap">
+        <a href="/guide" className="hover:text-emerald-400">User Guide</a>
+        <a href="/disclaimer" className="hover:text-emerald-400">Disclaimer</a>
+        <a href="/pricing" className="hover:text-emerald-400">Pricing</a>
+        <a href="/privacy" className="hover:text-emerald-400">Privacy</a>
+        <a href="/legal/terms" className="hover:text-emerald-400">Terms</a>
+        <a href="/contact" className="hover:text-emerald-400">Contact</a>
+        <a href="/dashboard" className="hover:text-emerald-400">Dashboard</a>
       </nav>
 
       {/* Mobile Menu Overlay */}
