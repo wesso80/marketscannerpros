@@ -4991,10 +4991,11 @@ if st.sidebar.checkbox("🐛 Debug Notifications", value=False):
     st.sidebar.write(f"User email: {user_email or 'Not set'}")
     st.sidebar.write(f"Workspace ID: {workspace_id[:8] if workspace_id else 'Not set'}...")
 
+# Initialize notifications
+notifications = []
 if user_email and workspace_id:
     # Fetch user's notifications ONLY for current workspace (secure)
     notifications = get_user_notifications(user_email, workspace_id, limit=5)
-    notifications = []
 
 unread_notifications = [n for n in notifications if not n.get('is_read', True)] if notifications else []
 
