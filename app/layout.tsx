@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
       <AppUrlFixer />
         <header className="header">
           <div
