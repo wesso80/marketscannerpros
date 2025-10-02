@@ -1,3 +1,4 @@
+import SocialProof from "../components/SocialProof";
 "use client";
 import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";

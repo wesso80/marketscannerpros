@@ -1,19 +1,34 @@
 // components/SocialProof.tsx
+import Image from "next/image";
+
+const logos = [
+  { src: "/logos/reddit.svg",        alt: "Reddit" },
+  { src: "/logos/indiehackers.svg",  alt: "Indie Hackers" },
+  { src: "/logos/producthunt.svg",   alt: "Product Hunt" },
+  { src: "/logos/appstore.svg",      alt: "App Store" },
+  { src: "/logos/googleplay.svg",    alt: "Google Play" },
+];
+
 export default function SocialProof() {
   return (
     <section className="border-t border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4 py-16 text-center">
-        <h2 className="text-xl font-semibold text-neutral-300">Trusted & Featured</h2>
-        <div className="mt-8 flex flex-wrap justify-center gap-8 opacity-70">
-          <img src="/logos/reddit.svg" alt="Reddit" className="h-8" />
-          <img src="/logos/indiehackers.svg" alt="IndieHackers" className="h-8" />
-          <img src="/logos/producthunt.svg" alt="ProductHunt" className="h-8" />
-          <img src="/logos/appstore.svg" alt="App Store" className="h-10" />
-          <img src="/logos/googleplay.svg" alt="Google Play" className="h-10" />
-        </div>
-        <p className="mt-6 text-sm text-neutral-500">
-          No ads • No spam • Cancel anytime
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <p className="mb-6 text-center text-xs uppercase tracking-wide text-neutral-500">
+          As seen on
         </p>
+
+        <div className="grid grid-cols-2 items-center justify-items-center gap-6 sm:grid-cols-3 md:grid-cols-5">
+          {logos.map((l) => (
+            <Image
+              key={l.alt}
+              src={l.src}
+              alt={l.alt}
+              width={160}
+              height={32}
+              className="opacity-70 hover:opacity-100 transition"
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
