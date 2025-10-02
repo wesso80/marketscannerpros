@@ -1,37 +1,19 @@
 // components/SocialProof.tsx
 export default function SocialProof() {
-  const quotes = [
-    { q: "I spotted XRP’s squeeze 3 hours early thanks to MarketScanner Pro.", a: "Beta trader" },
-    { q: "The confluence score cuts through noise. Way faster decisions.", a: "Swing trader" },
-  ];
-  const logos = ["Reddit", "Indie Hackers", "Product Hunt"]; // replace with real logos later
   return (
-    <section className="border-b border-neutral-800">
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        <div className="grid gap-8 md:grid-cols-2">
-          <div>
-            <h3 className="text-2xl font-semibold">What traders say</h3>
-            <div className="mt-4 space-y-5">
-              {quotes.map((x, i) => (
-                <blockquote key={i} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                  <p className="text-neutral-200">“{x.q}”</p>
-                  <p className="mt-2 text-sm text-neutral-400">— {x.a}</p>
-                </blockquote>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h3 className="text-2xl font-semibold">Seen on</h3>
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-400">
-              {logos.map((l) => (
-                <span key={l} className="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-1">{l}</span>
-              ))}
-            </div>
-            <div className="mt-6 rounded-md border border-emerald-600/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
-              No ads. No spam. Cancel anytime.
-            </div>
-          </div>
+    <section className="border-t border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-16 text-center">
+        <h2 className="text-xl font-semibold text-neutral-300">Trusted & Featured</h2>
+        <div className="mt-8 flex flex-wrap justify-center gap-8 opacity-70">
+          <img src="/logos/reddit.svg" alt="Reddit" className="h-8" />
+          <img src="/logos/indiehackers.svg" alt="IndieHackers" className="h-8" />
+          <img src="/logos/producthunt.svg" alt="ProductHunt" className="h-8" />
+          <img src="/logos/appstore.svg" alt="App Store" className="h-10" />
+          <img src="/logos/googleplay.svg" alt="Google Play" className="h-10" />
         </div>
+        <p className="mt-6 text-sm text-neutral-500">
+          No ads • No spam • Cancel anytime
+        </p>
       </div>
     </section>
   );
