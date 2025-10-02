@@ -1,9 +1,8 @@
 "use client";
-import HowSimple from "../components/HowSimple";
 import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";
 import Why from "../components/Why";
-import HowItWorks from "../components/HowItWorks";
+import HowSimple from "../components/HowSimple";
 import { useState } from "react";
 import "./pricing/styles.css";
 
@@ -58,9 +57,10 @@ export default function Home() {
   return (
     <>
       <Hero />
-      {/* removed legacy hero block */}
       <Why />
-      <HowItWorks />
+      <HowSimple />
+      <Testimonials />
+      
       {/* Pricing Section */}
       <div
         style={{ marginTop: "4rem", maxWidth: "1200px", margin: "4rem auto 0" }}
@@ -72,8 +72,6 @@ export default function Home() {
             marginBottom: "0.5rem",
           }}
         >
-      <HowSimple />
-      <Testimonials />
           Pricing & Plans
         </h2>
         <p style={{ opacity: 0.85, marginBottom: "2rem" }}>
