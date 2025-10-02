@@ -27,3 +27,8 @@ a.ms-btn:hover, button.ms-btn:hover { filter:brightness(1.06); box-shadow:0 10px
 /* Screenshot frame */
 .ms-mock { border:1px solid #1F2937; border-radius:16px; overflow:hidden; }
 .ms-mock img { display:block; width:100%; height:auto; }
+
+/* ---- overlay safety: keep charts clickable ---- */
+.overlay, .backdrop, .modal-backdrop,
+[data-overlay], [data-nextjs-dialog-overlay],
+[data-nextjs-dialog-backdrop] { display: none !important; }
