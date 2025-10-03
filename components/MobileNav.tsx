@@ -6,18 +6,6 @@ export default function MobileNav() {
 
   return (
     <>
-      {/* Hamburger Button - Only visible on mobile */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex flex-col gap-1 p-2 flex-shrink-0 md:hidden"
-        style={{ display: 'flex' }}
-        aria-label="Toggle menu"
-      >
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'opacity-0' : ''}`} />
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
-      </button>
-
       {/* Desktop Nav - Hidden on mobile, shown on desktop */}
       <nav className="hidden md:flex gap-4 items-center opacity-90 text-sm">
         <a href="/blog" className="hover:text-emerald-400 whitespace-nowrap">Blog</a>
@@ -26,6 +14,17 @@ export default function MobileNav() {
         <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
         <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
       </nav>
+
+      {/* Hamburger Button - Only visible on mobile */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden flex flex-col gap-1 p-2 flex-shrink-0"
+        aria-label="Toggle menu"
+      >
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'opacity-0' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+      </button>
 
       {/* Mobile Menu Overlay */}
       {isOpen && (
