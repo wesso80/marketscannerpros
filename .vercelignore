@@ -38,6 +38,7 @@ attached_assets/
 marketscanner-web/
 icons/
 assets/
+backups/
 # Allow PNG files in public directory but exclude elsewhere
 *.png
 !public/*.png
