@@ -19,7 +19,7 @@ export default function MobileNav() {
       </button>
 
       {/* Desktop Nav - Hidden on mobile, shown on desktop */}
-      <nav className="desktop-nav" style={{ display: 'none' }}>
+      <nav className="hidden md:flex gap-4 items-center opacity-90 text-sm">
         <a href="/blog" className="hover:text-emerald-400 whitespace-nowrap">Blog</a>
         <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
         <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>

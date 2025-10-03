@@ -5,11 +5,11 @@ import { useState } from "react";
 
 export default function HeroShot() {
   const [imgError, setImgError] = useState(false);
-  const src = imgError ? "/marketing/hero-top.svg" : "/marketing/hero-top.png";
+  const src = imgError ? "/marketing/hero-top.svg" : "/marketing/hero-dashboard.png";
 
   return (
     <div
-      className="relative rounded-lg md:rounded-2xl border border-neutral-800 bg-white p-2 md:p-3 w-full overflow-hidden"
+      className="relative rounded-lg md:rounded-2xl border border-neutral-800 bg-neutral-900 p-2 md:p-3 w-full overflow-hidden"
       style={{
         maxWidth: "100%",
         boxShadow:
