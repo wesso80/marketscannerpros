@@ -1,9 +1,12 @@
-import Pricing from "../components/Pricing";
 "use client";
+import Pricing from "../components/Pricing";
 import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";
 import Why from "../components/Why";
 import HowItWorks from "../components/HowItWorks";
+import SocialProof from "../components/SocialProof";
+import ReferralBanner from "../components/ReferralBanner";
+import Newsletter from "../components/Newsletter";
 import { useState } from "react";
 import "./pricing/styles.css";
 
@@ -58,9 +61,11 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <SocialProof />
       <Why />
       <HowItWorks />
       <Testimonials />
+      <ReferralBanner />
       
       {/* Pricing Section */}
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
@@ -129,6 +134,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <Newsletter />
     </>
   );
 }
