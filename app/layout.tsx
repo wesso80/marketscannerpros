@@ -22,8 +22,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
       <AppUrlFixer />
         <header className="header">
-          <div className="container flex items-center justify-between py-3">
-            <a className="title text-base md:text-lg font-bold whitespace-nowrap" href="/">
+          <div className="container flex items-center justify-between py-4">
+            <a className="text-xl md:text-2xl font-bold whitespace-nowrap" href="/">
               MarketScanner<span style={{ color: "#34d399" }}>Pros</span>
             </a>
             <MobileNav />
