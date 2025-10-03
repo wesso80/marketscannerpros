@@ -1,3 +1,4 @@
+import Pricing from "../components/Pricing";
 "use client";
 import Testimonials from "../components/Testimonials";
 import Hero from "../components/Hero";
