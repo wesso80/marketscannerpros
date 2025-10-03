@@ -7,29 +7,24 @@ export default function MobileNav() {
   return (
     <>
       {/* Desktop Nav - Only visible on larger screens */}
-      <nav style={{ 
+      <nav className="desktop-only-nav" style={{ 
         display: 'none',
       }}>
         <style jsx>{`
           @media (min-width: 768px) {
-            nav {
+            .desktop-only-nav {
               display: flex !important;
-              gap: 1.5rem;
               align-items: center;
               opacity: 0.9;
               font-size: 0.875rem;
             }
-            nav a {
-              white-space: nowrap;
-              margin: 0 0.5rem;
-            }
           }
         `}</style>
-        <a href="/blog">Blog</a>
-        <a href="/guide">User Guide</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/contact">Contact</a>
-        <a href="/dashboard">Dashboard</a>
+        <a href="/blog" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Blog</a>
+        <a href="/guide" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>User Guide</a>
+        <a href="/pricing" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Pricing</a>
+        <a href="/contact" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Contact</a>
+        <a href="/dashboard" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Dashboard</a>
       </nav>
 
       {/* Hamburger Button - Only visible on mobile */}
