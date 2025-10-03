@@ -2882,6 +2882,8 @@ def init_trade_journal_table():
         quantity DECIMAL(12,4) NOT NULL,
         direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT')),
         trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage')),
+        strike_price DECIMAL(12,4),
+        expiration_date DATE,
         stop_loss DECIMAL(12,4),
         take_profit DECIMAL(12,4),
         pnl DECIMAL(12,2),
@@ -2905,11 +2907,14 @@ def init_trade_journal_table():
     
     try:
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage'))")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS strike_price DECIMAL(12,4)")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS expiration_date DATE")
     except:
         pass
 
 def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price: float, 
                          quantity: float, direction: str, trade_type: str = "Spot",
+                         strike_price: Optional[float] = None, expiration_date = None,
                          stop_loss: Optional[float] = None, 
                          take_profit: Optional[float] = None, setup_type: Optional[str] = None, 
                          entry_reason: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
@@ -2918,12 +2923,12 @@ def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price
         query = """
         INSERT INTO trade_journal 
         (workspace_id, symbol, entry_date, entry_price, quantity, direction, trade_type,
-         stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+         strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
         RETURNING id
         """
         params = (workspace_id, symbol.upper(), entry_date, entry_price, quantity, 
-                 direction, trade_type, stop_loss, take_profit, setup_type, entry_reason, tags)
+                 direction, trade_type, strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags)
         result = execute_db_write_returning(query, params)
         return result is not None
     except Exception as e:
@@ -6482,6 +6487,8 @@ with tab1:
         quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
     
     with col2:
+        strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", help="For options trades only")
+        expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", help="For options trades only")
         stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
         take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
         setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Other"], key="journal_setup")
@@ -6520,6 +6527,8 @@ with tab1:
                     quantity=quantity,
                     direction=direction,
                     trade_type=trade_type,
+                    strike_price=strike_price if strike_price > 0 else None,
+                    expiration_date=expiration_date if expiration_date else None,
                     stop_loss=stop_loss if stop_loss > 0 else None,
                     take_profit=take_profit if take_profit > 0 else None,
                     setup_type=setup,
@@ -6556,6 +6565,10 @@ with tab2:
                 with col1:
                     st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
                     st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
+                    if trade.get('strike_price'):
+                        st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
+                    if trade.get('expiration_date'):
+                        st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
                     if trade['stop_loss']:
                         st.write(f"**Stop Loss:** ${float(trade['stop_loss']):.2f}")
                     if trade['take_profit']:
@@ -6642,6 +6655,8 @@ with tab2:
                     'Symbol': trade['symbol'],
                     'Direction': trade['direction'],
                     'Type': trade.get('trade_type', 'Spot'),
+                    'Strike': float(trade['strike_price']) if trade.get('strike_price') else '',
+                    'Expiration': pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d') if trade.get('expiration_date') else '',
                     'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
                     'Entry Price': float(trade['entry_price']),
                     'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
