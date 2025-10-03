@@ -20,11 +20,9 @@ export default function MobileNav() {
 
       {/* Desktop Nav - Hidden on mobile, shown on desktop */}
       <nav className="desktop-nav" style={{ display: 'none' }}>
+        <a href="/blog" className="hover:text-emerald-400 whitespace-nowrap">Blog</a>
         <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
-        <a href="/disclaimer" className="hover:text-emerald-400 whitespace-nowrap">Disclaimer</a>
         <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>
-        <a href="/privacy" className="hover:text-emerald-400 whitespace-nowrap">Privacy</a>
-        <a href="/legal/terms" className="hover:text-emerald-400 whitespace-nowrap">Terms</a>
         <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
         <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
       </nav>
@@ -51,11 +49,9 @@ export default function MobileNav() {
           >
             ✕
           </button>
+          <a href="/blog" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Blog</a>
           <a href="/guide" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>User Guide</a>
-          <a href="/disclaimer" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Disclaimer</a>
           <a href="/pricing" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Pricing</a>
-          <a href="/privacy" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Privacy</a>
-          <a href="/legal/terms" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Terms</a>
           <a href="/contact" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Contact</a>
           <a href="/dashboard" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Dashboard</a>
         </div>
