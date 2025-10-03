@@ -43,6 +43,7 @@ try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
     import psycopg2.extensions
+    from psycopg2 import pool
     from dataclasses import dataclass
     from typing import List, Tuple, Optional, Dict, Any
     from datetime import timezone
@@ -57,10 +58,140 @@ try:
     from plotly.subplots import make_subplots
     import plotly.express as px
     import stripe
+    import sentry_sdk
+    from collections import defaultdict
+    import secrets
+    import string
+    import time
 except ImportError as e:
     st.error(f"❌ Failed to import required packages: {e}")
     st.info("🔧 Please check the deployment environment and package installation.")
     st.stop()
+
+# ================= ERROR MONITORING SETUP (SENTRY) =================
+# Initialize Sentry for production error tracking
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
+        profiles_sample_rate=0.1,
+        environment=os.getenv('DEPLOYMENT_ENV', 'production'),
+        release=f"market-scanner@1.0.0"
+    )
+
+# ================= RATE LIMITING =================
+# Simple in-memory rate limiter to prevent abuse
+class RateLimiter:
+    def __init__(self):
+        self.requests = defaultdict(list)
+        self.max_requests_per_minute = 60
+        self.max_requests_per_hour = 1000
+    
+    def check_rate_limit(self, identifier: str) -> Tuple[bool, str]:
+        """Check if request is within rate limits"""
+        now = time.time()
+        
+        # Clean old requests (older than 1 hour)
+        self.requests[identifier] = [
+            req_time for req_time in self.requests[identifier] 
+            if now - req_time < 3600
+        ]
+        
+        # Check limits
+        recent_requests = [
+            req_time for req_time in self.requests[identifier] 
+            if now - req_time < 60
+        ]
+        
+        if len(recent_requests) >= self.max_requests_per_minute:
+            return False, "Rate limit exceeded: Too many requests per minute"
+        
+        if len(self.requests[identifier]) >= self.max_requests_per_hour:
+            return False, "Rate limit exceeded: Too many requests per hour"
+        
+        # Add current request
+        self.requests[identifier].append(now)
+        return True, "OK"
+
+# Initialize global rate limiter
+@st.cache_resource
+def get_rate_limiter():
+    return RateLimiter()
+
+# ================= AUTOMATED DATABASE BACKUP =================
+def create_database_backup():
+    """Create automated database backup using pg_dump"""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            return False, "Database URL not configured"
+        
+        # Create backup filename with timestamp
+        backup_dir = "/tmp/backups"
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = f"{backup_dir}/market_scanner_backup_{timestamp}.sql"
+        
+        # Use pg_dump to create backup
+        import subprocess
+        result = subprocess.run(
+            ["pg_dump", database_url, "-f", backup_file],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode == 0:
+            # Compress the backup
+            subprocess.run(["gzip", backup_file], check=True)
+            
+            # Keep only last 7 backups to save space
+            import glob
+            backups = sorted(glob.glob(f"{backup_dir}/market_scanner_backup_*.sql.gz"))
+            for old_backup in backups[:-7]:
+                os.remove(old_backup)
+            
+            return True, f"Backup created: {backup_file}.gz"
+        else:
+            return False, f"Backup failed: {result.stderr}"
+            
+    except Exception as e:
+        return False, f"Backup error: {str(e)}"
+
+def schedule_daily_backup():
+    """Check if daily backup is needed and create one"""
+    try:
+        backup_marker = "/tmp/last_backup.txt"
+        
+        # Check when last backup was made
+        should_backup = True
+        if os.path.exists(backup_marker):
+            with open(backup_marker, 'r') as f:
+                last_backup = f.read().strip()
+                last_backup_date = datetime.fromisoformat(last_backup).date()
+                if last_backup_date == datetime.now().date():
+                    should_backup = False
+        
+        if should_backup:
+            success, message = create_database_backup()
+            if success:
+                # Update backup marker
+                with open(backup_marker, 'w') as f:
+                    f.write(datetime.now().isoformat())
+                print(f"✅ {message}")
+            else:
+                print(f"⚠️ Backup failed: {message}")
+                
+    except Exception as e:
+        print(f"⚠️ Backup scheduling error: {e}")
+
+# Run daily backup check (non-blocking)
+try:
+    schedule_daily_backup()
+except Exception:
+    pass  # Don't let backup failures break the app
 
 # ================= MOBILE DETECTION (CONSOLIDATED) =================
 # Detect mobile once at the top using proper headers and query params
@@ -5233,8 +5364,16 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
 
 # Main scanning logic
 if run_clicked:
+    # Rate limiting check
+    rate_limiter = get_rate_limiter()
+    workspace_id = st.session_state.get('workspace_id', 'anonymous')
+    allowed, message = rate_limiter.check_rate_limit(workspace_id)
+    
+    if not allowed:
+        st.error(f"🚫 {message}")
+        st.info("Please wait a moment before scanning again. Upgrade to Pro for higher limits!")
     # Check if at least one market is selected
-    if not scan_equities and not scan_crypto:
+    elif not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
     else:
         # Get symbols from inputs
