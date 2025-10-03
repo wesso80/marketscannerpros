@@ -2881,6 +2881,7 @@ def init_trade_journal_table():
         exit_price DECIMAL(12,4),
         quantity DECIMAL(12,4) NOT NULL,
         direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT')),
+        trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage')),
         stop_loss DECIMAL(12,4),
         take_profit DECIMAL(12,4),
         pnl DECIMAL(12,2),
@@ -2901,22 +2902,28 @@ def init_trade_journal_table():
     CREATE INDEX IF NOT EXISTS idx_trade_journal_entry_date ON trade_journal(entry_date DESC);
     """
     execute_db_write(create_table_query)
+    
+    try:
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage'))")
+    except:
+        pass
 
 def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price: float, 
-                         quantity: float, direction: str, stop_loss: Optional[float] = None, 
+                         quantity: float, direction: str, trade_type: str = "Spot",
+                         stop_loss: Optional[float] = None, 
                          take_profit: Optional[float] = None, setup_type: Optional[str] = None, 
                          entry_reason: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
     """Add new trade to journal"""
     try:
         query = """
         INSERT INTO trade_journal 
-        (workspace_id, symbol, entry_date, entry_price, quantity, direction, 
+        (workspace_id, symbol, entry_date, entry_price, quantity, direction, trade_type,
          stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
         RETURNING id
         """
         params = (workspace_id, symbol.upper(), entry_date, entry_price, quantity, 
-                 direction, stop_loss, take_profit, setup_type, entry_reason, tags)
+                 direction, trade_type, stop_loss, take_profit, setup_type, entry_reason, tags)
         result = execute_db_write_returning(query, params)
         return result is not None
     except Exception as e:
@@ -6469,6 +6476,7 @@ with tab1:
     with col1:
         journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
         direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
+        trade_type = st.selectbox("Trade Type:", ["Spot", "Leverage"], key="journal_trade_type")
         entry_date = st.date_input("Entry Date:", key="journal_entry_date")
         entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
         quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
@@ -6511,6 +6519,7 @@ with tab1:
                     entry_price=entry_price,
                     quantity=quantity,
                     direction=direction,
+                    trade_type=trade_type,
                     stop_loss=stop_loss if stop_loss > 0 else None,
                     take_profit=take_profit if take_profit > 0 else None,
                     setup_type=setup,
@@ -6567,6 +6576,8 @@ with tab2:
                         st.write("")
                 
                 with col3:
+                    if trade.get('trade_type'):
+                        st.write(f"**Type:** {trade['trade_type']}")
                     if trade['setup_type']:
                         st.write(f"**Setup:** {trade['setup_type']}")
                     if trade['tags']:
@@ -6630,6 +6641,7 @@ with tab2:
                 df_data.append({
                     'Symbol': trade['symbol'],
                     'Direction': trade['direction'],
+                    'Type': trade.get('trade_type', 'Spot'),
                     'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
                     'Entry Price': float(trade['entry_price']),
                     'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
