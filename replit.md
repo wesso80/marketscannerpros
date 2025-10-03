@@ -57,7 +57,25 @@ Preferred communication style: Simple, everyday language.
 - **Receipt Validation**: Comprehensive backend validation with Apple's servers including sandbox fallback
 - **Subscription Management**: Native iOS subscription management, restore purchases, and Apple-required features
 
+### Production Infrastructure & Monitoring (NEW - October 3, 2025)
+- **Error Monitoring (Sentry)**: Real-time error tracking and performance monitoring with 10% transaction sampling
+- **Rate Limiting**: In-memory rate limiter protecting against abuse (60 requests/min, 1000 requests/hour per user)
+- **Database Connection Pooling**: psycopg2 SimpleConnectionPool with 1-10 connections, health checks, and exponential backoff retry logic
+- **Automated Backups**: Daily PostgreSQL backups with pg_dump, gzip compression, and 7-day retention policy
+- **Health Check Endpoint**: Fast health check endpoint for monitoring services (accessed via `?health=check` query parameter)
+- **Performance Optimization**: Statement timeout (30s), connection timeout (10s), and SSL requirement for database security
+
 ## Recent Changes & Important Fixes (October 2025)
+
+### Production Features Added (October 3, 2025)
+**Added**: Complete production-ready infrastructure for reliability and monitoring
+**Features**:
+- Sentry SDK integration for error tracking (requires SENTRY_DSN environment variable)
+- Rate limiting system to prevent API abuse and protect server resources
+- Database connection pooling already present, verified health checks and retry logic
+- Automated daily backup system creating compressed SQL dumps in /tmp/backups
+- Comprehensive error handling with Sentry capture for debugging production issues
+- Rate limits: 60 requests per minute, 1000 per hour (tracked per workspace_id)
 
 ### Code Quality Improvements - LSP Error Fixes (October 3, 2025)
 **Issue**: 41 LSP (Language Server Protocol) type checking errors across app.py
