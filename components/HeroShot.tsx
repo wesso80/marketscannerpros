@@ -21,8 +21,8 @@ export default function HeroShot() {
         alt="MarketScanner dashboard preview"
         width={960}
         height={540}
-        className="w-full h-auto rounded-md md:rounded-xl"
-        style={{ display: 'block', maxWidth: '100%' }}
+        className="rounded-md md:rounded-xl"
+        style={{ display: 'block', width: '100%', height: 'auto' }}
         sizes="(min-width: 768px) 640px, 100vw"
         onError={() => setImgError(true)}
         priority
