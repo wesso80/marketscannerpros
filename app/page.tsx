@@ -6,7 +6,6 @@ import Why from "../components/Why";
 import HowItWorks from "../components/HowItWorks";
 import SocialProof from "../components/SocialProof";
 import ReferralBanner from "../components/ReferralBanner";
-import Newsletter from "../components/Newsletter";
 import { useState } from "react";
 import "./pricing/styles.css";
 
@@ -134,8 +133,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      <Newsletter />
     </>
   );
 }
