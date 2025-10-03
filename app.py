@@ -11,6 +11,7 @@ from datetime import datetime
 
 # ================= HEALTH CHECK ENDPOINT =================
 # Simple health check for deployment readiness - MUST BE FIRST
+health_check = ''
 try:
     qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
     health_param = qp.get('health', [''])
