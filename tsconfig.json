@@ -33,8 +33,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
- "exclude": [
-  "node_modules",
-  "backups",
-  "attached_assets"
-]
+  "exclude": [
+    "node_modules",
+    "backups",
+    "attached_assets"
+  ]
+}
