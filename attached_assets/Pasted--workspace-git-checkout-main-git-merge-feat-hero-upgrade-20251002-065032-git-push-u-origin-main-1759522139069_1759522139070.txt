@@ -1,0 +1,319 @@
+~/workspace$ git checkout main
+git merge feat/hero-upgrade-20251002-065032
+git push -u origin main
+Updating files: 100% (172/172), done.
+Switched to branch 'main'
+Updating ed4d713..59fc884
+Updating files: 100% (172/172), done.
+Fast-forward
+ .next/app-build-manifest.json                   |   20 +-
+ .next/build-manifest.json                       |    5 +-
+ .next/cache/.tsbuildinfo                        |    2 +-
+ .next/cache/config.json                         |    6 +-
+ ...qlDOpRScei1f1f+Nnaoh+Xn+aFqTIqpochPrnM=.webp |  Bin 0 -> 42168 bytes
+ ...3xpeBfU1kngvg7tMyRtxU3qyr7RcWgq8qygNtU=.webp |  Bin 0 -> 60940 bytes
+ ...IW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp |  Bin 0 -> 76808 bytes
+ ...IW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp |  Bin 0 -> 76808 bytes
+ ...IW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp |  Bin 0 -> 76808 bytes
+ ...IW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp |  Bin 0 -> 76808 bytes
+ .../client-development-fallback/0.pack.gz       |  Bin 0 -> 12011934 bytes
+ .../client-development-fallback/1.pack.gz       |  Bin 0 -> 5626 bytes
+ .../client-development-fallback/2.pack.gz       |  Bin 0 -> 20734 bytes
+ .../client-development-fallback/index.pack.gz   |  Bin 0 -> 56045 bytes
+ .../index.pack.gz.old                           |  Bin 0 -> 53104 bytes
+ .../cache/webpack/client-development/1.pack.gz  |  Bin 9738604 -> 9642722 bytes
+ .../cache/webpack/client-development/10.pack.gz |  Bin 0 -> 2483 bytes
+ .../cache/webpack/client-development/11.pack.gz |  Bin 0 -> 18096 bytes
+ .../cache/webpack/client-development/12.pack.gz |  Bin 0 -> 1499 bytes
+ .../cache/webpack/client-development/13.pack.gz |  Bin 0 -> 7960 bytes
+ .../cache/webpack/client-development/14.pack.gz |  Bin 0 -> 202254 bytes
+ .../cache/webpack/client-development/2.pack.gz  |  Bin 91 -> 371349 bytes
+ .../cache/webpack/client-development/3.pack.gz  |  Bin 0 -> 692316 bytes
+ .../cache/webpack/client-development/4.pack.gz  |  Bin 0 -> 17809 bytes
+ .../cache/webpack/client-development/5.pack.gz  |  Bin 0 -> 1485 bytes
+ .../cache/webpack/client-development/6.pack.gz  |  Bin 0 -> 9041 bytes
+ .../cache/webpack/client-development/7.pack.gz  |  Bin 0 -> 203902 bytes
+ .../cache/webpack/client-development/8.pack.gz  |  Bin 0 -> 27240 bytes
+ .../cache/webpack/client-development/9.pack.gz  |  Bin 0 -> 1715 bytes
+ .../webpack/client-development/index.pack.gz    |  Bin 2001 -> 139877 bytes
+ .../client-development/index.pack.gz.old        |  Bin 121317 -> 139899 bytes
+ .next/cache/webpack/client-production/0.pack    |  Bin 12547597 -> 14111825 bytes
+ .next/cache/webpack/client-production/1.pack    |  Bin 0 -> 82855 bytes
+ .next/cache/webpack/client-production/2.pack    |  Bin 0 -> 55200 bytes
+ .../cache/webpack/client-production/index.pack  |  Bin 1743631 -> 2040658 bytes
+ .../webpack/client-production/index.pack.old    |  Bin 0 -> 2038390 bytes
+ .../webpack/edge-server-development/0.pack.gz   |  Bin 0 -> 737663 bytes
+ .../webpack/edge-server-development/1.pack.gz   |  Bin 0 -> 6749 bytes
+ .../edge-server-development/index.pack.gz       |  Bin 0 -> 54742 bytes
+ .../edge-server-development/index.pack.gz.old   |  Bin 0 -> 28186 bytes
+ .../cache/webpack/edge-server-production/0.pack |  Bin 274 -> 3664620 bytes
+ .../webpack/edge-server-production/index.pack   |  Bin 7215 -> 217499 bytes
+ .../cache/webpack/server-development/0.pack.gz  |  Bin 1364844 -> 4819 bytes
+ .../cache/webpack/server-development/1.pack.gz  |  Bin 107812 -> 108727 bytes
+ .../cache/webpack/server-development/10.pack.gz |  Bin 0 -> 31205 bytes
+ .../cache/webpack/server-development/11.pack.gz |  Bin 0 -> 5256 bytes
+ .../cache/webpack/server-development/12.pack.gz |  Bin 0 -> 7057 bytes
+ .../cache/webpack/server-development/13.pack.gz |  Bin 0 -> 108948 bytes
+ .../cache/webpack/server-development/14.pack.gz |  Bin 0 -> 2360395 bytes
+ .../cache/webpack/server-development/2.pack.gz  |  Bin 1993617 -> 3028588 bytes
+ .../cache/webpack/server-development/3.pack.gz  |  Bin 0 -> 2360395 bytes
+ .../cache/webpack/server-development/4.pack.gz  |  Bin 0 -> 1515308 bytes
+ .../cache/webpack/server-development/5.pack.gz  |  Bin 0 -> 13963 bytes
+ .../cache/webpack/server-development/6.pack.gz  |  Bin 0 -> 1527 bytes
+ .../cache/webpack/server-development/7.pack.gz  |  Bin 0 -> 5894 bytes
+ .../cache/webpack/server-development/8.pack.gz  |  Bin 0 -> 114887 bytes
+ .../cache/webpack/server-development/9.pack.gz  |  Bin 0 -> 1915 bytes
+ .../webpack/server-development/index.pack.gz    |  Bin 136921 -> 204293 bytes
+ .../server-development/index.pack.gz.old        |  Bin 127806 -> 204213 bytes
+ .next/cache/webpack/server-production/0.pack    |  Bin 25163443 -> 25292467 bytes
+ .next/cache/webpack/server-production/1.pack    |  Bin 0 -> 1847709 bytes
+ .next/cache/webpack/server-production/2.pack    |  Bin 0 -> 122800 bytes
+ .../cache/webpack/server-production/index.pack  |  Bin 3645744 -> 4030587 bytes
+ .../webpack/server-production/index.pack.old    |  Bin 0 -> 3885252 bytes
+ .next/server/app-paths-manifest.json            |    5 +-
+ .next/server/app/icon.svg/route.js              |   66 +
+ .next/server/app/page.js                        |  459 +++
+ .../app/page_client-reference-manifest.js       |    1 +
+ .next/server/edge-runtime-webpack.js            | 1155 ++++++
+ .next/server/middleware-build-manifest.js       |    5 +-
+ .next/server/middleware-manifest.json           |   27 +-
+ .next/server/middleware.js                      |  652 ++++
+ .next/server/server-reference-manifest.json     |    2 +-
+ .../webpack/633457081244afec._.hot-update.json  |    1 +
+ .next/server/vendor-chunks/@swc.js              |   65 +
+ .next/server/vendor-chunks/next.js              | 3132 +++++++++++++++++
+ .next/server/webpack-runtime.js                 |  220 ++
+ .next/static/chunks/app-pages-internals.js      |  138 +
+ .next/static/chunks/app/layout.js               |  116 +
+ .next/static/chunks/app/not-found.js            |   28 +
+ .next/static/chunks/app/page.js                 |  565 +++
+ .next/static/chunks/main-app.js                 | 2011 +++++++++++
+ .next/static/chunks/webpack.js                  | 1410 ++++++++
+ .next/static/css/app/layout.css                 |   87 +
+ .next/static/css/app/page.css                   |   11 +
+ .../webpack/633457081244afec._.hot-update.json  |    1 +
+ .next/trace                                     |    7 +-
+ .next/types/app/layout.ts                       |   79 +
+ .next/types/app/page.ts                         |   79 +
+ .replit                                         |    2 +-
+ .streamlit/config.toml                          |   19 +
+ app.py                                          |  758 +++-
+ app/blog/[slug]/page.tsx                        |  122 +
+ app/blog/page.tsx                               |   36 +
+ app/blog/posts-data.ts                          |  416 +++
+ app/components/Hero.tsx                         |   49 +
+ app/components/Hero.tsx.bak_importfix           |   49 +
+ app/components/marketing/HeroShot.tsx           |   47 +
+ app/globals.css                                 |   28 +-
+ app/layout.tsx                                  |   28 +-
+ app/page.tsx                                    |  130 +-
+ app/page.tsx.bak.1759397694                     |  122 +
+ app/page.tsx.bak_hero_import                    |  140 +
+ attached_assets/IMG_4407_1759434822960.png      |  Bin 0 -> 476770 bytes
+ attached_assets/IMG_4408_1759434822960.png      |  Bin 0 -> 442248 bytes
+ attached_assets/IMG_4409_1759438121678.png      |  Bin 0 -> 792260 bytes
+ attached_assets/IMG_4410_1759438627400.png      |  Bin 0 -> 1026513 bytes
+ attached_assets/IMG_4411_1759439295201.png      |  Bin 0 -> 852702 bytes
+ attached_assets/IMG_4413_1759439639186.png      |  Bin 0 -> 1110099 bytes
+ attached_assets/IMG_4414_1759441398619.png      |  Bin 0 -> 1108427 bytes
+ ...it-just-says-1759454830017_1759454830018.txt |   58 +
+ attached_assets/image_1759403489903.png         |  Bin 0 -> 45103 bytes
+ attached_assets/image_1759406873743.png         |  Bin 0 -> 31526 bytes
+ attached_assets/image_1759406890554.png         |  Bin 0 -> 28227 bytes
+ attached_assets/image_1759406903071.png         |  Bin 0 -> 21483 bytes
+ attached_assets/image_1759406914643.png         |  Bin 0 -> 38452 bytes
+ attached_assets/image_1759406930723.png         |  Bin 0 -> 59221 bytes
+ attached_assets/image_1759407163487.png         |  Bin 0 -> 14199 bytes
+ attached_assets/image_1759407628064.png         |  Bin 0 -> 54678 bytes
+ attached_assets/image_1759521821142.png         |  Bin 0 -> 46934 bytes
+ backups/20251002-065032/components.tgz          |  Bin 0 -> 3099 bytes
+ backups/20251002-065032/page.tsx                |  152 +
+ backups/20251002-072116/globals.css             |   63 +
+ backups/20251002-072116/layout.tsx              |   48 +
+ backups/20251002-072330/page.tsx                |  153 +
+ backups/20251002-072742/page.tsx                |  154 +
+ backups/20251002-072951/page.tsx                |  154 +
+ backups/20251002-073141/page.tsx                |  156 +
+ backups/20251002-073330/page.tsx                |  156 +
+ backups/20251002-074010/HowItWorks.tsx          |   47 +
+ backups/20251002-080131/Hero.tsx                |   64 +
+ backups/20251002-080603/Hero.tsx                |   64 +
+ backups/20251002-080805/page.tsx                |  156 +
+ backups/20251002-085248/Hero.tsx                |   54 +
+ backups/20251002-085744/Hero.tsx                |   54 +
+ backups/20251002-085744/HeroShot.tsx            |   19 +
+ backups/20251002-085744/HowItWorks.tsx          |   47 +
+ backups/20251002-085744/page.tsx                |  121 +
+ backups/20251002-093154/page.tsx                |  121 +
+ backups/20251002-102911/page.tsx                |  140 +
+ backups/20251002-110808/page.tsx                |  141 +
+ backups/20251002-113546/page.tsx                |  139 +
+ backups/20251002-113751/page.tsx                |  141 +
+ backups/20251002-215802/page.tsx                |  134 +
+ components/AnalyticsLoader.tsx                  |    7 +
+ components/Benefits.tsx                         |   24 +
+ components/Footer.tsx                           |    1 +
+ components/Hero.tsx                             |   57 +
+ components/HeroShot.tsx                         |   32 +
+ components/HeroShot.tsx.bak                     |   37 +
+ components/HowItWorks.tsx                       |   47 +
+ components/HowSimple.tsx                        |   52 +
+ components/MidCTA.tsx                           |   17 +
+ components/MobileNav.tsx                        |   61 +
+ components/Newsletter.tsx                       |   26 +
+ components/Pricing.tsx                          |   99 +
+ components/ReferralBanner.tsx                   |   12 +
+ components/SocialProof.tsx                      |   35 +
+ components/Testimonials.tsx                     |   33 +
+ components/Why.tsx                              |   24 +
+ package-lock.json                               | 1369 ++++++-
+ package.json                                    |    6 +-
+ public/logos/appstore.svg                       |    4 +
+ public/logos/googleplay.svg                     |    4 +
+ public/logos/indiehackers.svg                   |    4 +
+ public/logos/producthunt.svg                    |    4 +
+ public/logos/reddit.svg                         |    4 +
+ public/marketing/hero-top.png                   |  Bin 0 -> 1371845 bytes
+ public/marketing/hero-top.svg                   |    8 +
+ pyproject.toml                                  |    2 +
+ replit.md                                       |   45 +
+ uv.lock                                         |   16 +
+ 172 files changed, 16649 insertions(+), 218 deletions(-)
+ create mode 100644 .next/cache/images/6Er3Wf7cwJ0yoBF2Zb9o6nEp2Gosqq81SG77jrom6fs=/60.1759521959013.eurr6qlDOpRScei1f1f+Nnaoh+Xn+aFqTIqpochPrnM=.webp
+ create mode 100644 .next/cache/images/b9DkbTgjwxahzmHjU6gc7X0Ny8YTUVWHZktL0yYg2o0=/60.1759403296110.btv3O3xpeBfU1kngvg7tMyRtxU3qyr7RcWgq8qygNtU=.webp
+ create mode 100644 .next/cache/images/clJgAZWUK9PoAK-0KqjRJLpBjoH8LVeJFBsgvm3cWOg=/60.1759474435096.-jVFdIW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp
+ create mode 100644 .next/cache/images/it1C0hfNrtbXemyh4z00AuJpK-0NIgn+LeXbsyKFaSE=/60.1759521956763.-jVFdIW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp
+ create mode 100644 .next/cache/images/seIP3NM8Cji+78fdRG7w03cqcHcb7m8att9-K+42qPI=/60.1759473465076.-jVFdIW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp
+ create mode 100644 .next/cache/images/zTMrLH0FnVTHiP0-lcdCNr2B37UxRQq+aSXsRBxKSzQ=/60.1759473904791.-jVFdIW7xlEIvsp4V3DT6eAxu-dPjCXM8OjhsLnmKvs=.webp
+ create mode 100644 .next/cache/webpack/client-development-fallback/0.pack.gz
+ create mode 100644 .next/cache/webpack/client-development-fallback/1.pack.gz
+ create mode 100644 .next/cache/webpack/client-development-fallback/2.pack.gz
+ create mode 100644 .next/cache/webpack/client-development-fallback/index.pack.gz
+ create mode 100644 .next/cache/webpack/client-development-fallback/index.pack.gz.old
+ create mode 100644 .next/cache/webpack/client-development/10.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/11.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/12.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/13.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/14.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/3.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/4.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/5.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/6.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/7.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/8.pack.gz
+ create mode 100644 .next/cache/webpack/client-development/9.pack.gz
+ create mode 100644 .next/cache/webpack/client-production/1.pack
+ create mode 100644 .next/cache/webpack/client-production/2.pack
+ create mode 100644 .next/cache/webpack/client-production/index.pack.old
+ create mode 100644 .next/cache/webpack/edge-server-development/0.pack.gz
+ create mode 100644 .next/cache/webpack/edge-server-development/1.pack.gz
+ create mode 100644 .next/cache/webpack/edge-server-development/index.pack.gz
+ create mode 100644 .next/cache/webpack/edge-server-development/index.pack.gz.old
+ create mode 100644 .next/cache/webpack/server-development/10.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/11.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/12.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/13.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/14.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/3.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/4.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/5.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/6.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/7.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/8.pack.gz
+ create mode 100644 .next/cache/webpack/server-development/9.pack.gz
+ create mode 100644 .next/cache/webpack/server-production/1.pack
+ create mode 100644 .next/cache/webpack/server-production/2.pack
+ create mode 100644 .next/cache/webpack/server-production/index.pack.old
+ create mode 100644 .next/server/app/icon.svg/route.js
+ create mode 100644 .next/server/app/page.js
+ create mode 100644 .next/server/app/page_client-reference-manifest.js
+ create mode 100644 .next/server/edge-runtime-webpack.js
+ create mode 100644 .next/server/middleware.js
+ create mode 100644 .next/server/static/webpack/633457081244afec._.hot-update.json
+ create mode 100644 .next/server/vendor-chunks/@swc.js
+ create mode 100644 .next/server/vendor-chunks/next.js
+ create mode 100644 .next/server/webpack-runtime.js
+ create mode 100644 .next/static/chunks/app-pages-internals.js
+ create mode 100644 .next/static/chunks/app/layout.js
+ create mode 100644 .next/static/chunks/app/not-found.js
+ create mode 100644 .next/static/chunks/app/page.js
+ create mode 100644 .next/static/chunks/main-app.js
+ create mode 100644 .next/static/chunks/webpack.js
+ create mode 100644 .next/static/css/app/layout.css
+ create mode 100644 .next/static/css/app/page.css
+ create mode 100644 .next/static/webpack/633457081244afec._.hot-update.json
+ create mode 100644 .next/types/app/layout.ts
+ create mode 100644 .next/types/app/page.ts
+ create mode 100644 app/blog/[slug]/page.tsx
+ create mode 100644 app/blog/page.tsx
+ create mode 100644 app/blog/posts-data.ts
+ create mode 100644 app/components/Hero.tsx
+ create mode 100644 app/components/Hero.tsx.bak_importfix
+ create mode 100644 app/components/marketing/HeroShot.tsx
+ create mode 100644 app/page.tsx.bak.1759397694
+ create mode 100644 app/page.tsx.bak_hero_import
+ create mode 100644 attached_assets/IMG_4407_1759434822960.png
+ create mode 100644 attached_assets/IMG_4408_1759434822960.png
+ create mode 100644 attached_assets/IMG_4409_1759438121678.png
+ create mode 100644 attached_assets/IMG_4410_1759438627400.png
+ create mode 100644 attached_assets/IMG_4411_1759439295201.png
+ create mode 100644 attached_assets/IMG_4413_1759439639186.png
+ create mode 100644 attached_assets/IMG_4414_1759441398619.png
+ create mode 100644 attached_assets/Pasted--Improvements-to-Stand-Out-More-1-Stronger-Hero-Section-Above-the-Fold-Right-now-it-just-says-1759454830017_1759454830018.txt
+ create mode 100644 attached_assets/image_1759403489903.png
+ create mode 100644 attached_assets/image_1759406873743.png
+ create mode 100644 attached_assets/image_1759406890554.png
+ create mode 100644 attached_assets/image_1759406903071.png
+ create mode 100644 attached_assets/image_1759406914643.png
+ create mode 100644 attached_assets/image_1759406930723.png
+ create mode 100644 attached_assets/image_1759407163487.png
+ create mode 100644 attached_assets/image_1759407628064.png
+ create mode 100644 attached_assets/image_1759521821142.png
+ create mode 100644 backups/20251002-065032/components.tgz
+ create mode 100644 backups/20251002-065032/page.tsx
+ create mode 100644 backups/20251002-072116/globals.css
+ create mode 100644 backups/20251002-072116/layout.tsx
+ create mode 100644 backups/20251002-072330/page.tsx
+ create mode 100644 backups/20251002-072742/page.tsx
+ create mode 100644 backups/20251002-072951/page.tsx
+ create mode 100644 backups/20251002-073141/page.tsx
+ create mode 100644 backups/20251002-073330/page.tsx
+ create mode 100644 backups/20251002-074010/HowItWorks.tsx
+ create mode 100644 backups/20251002-080131/Hero.tsx
+ create mode 100644 backups/20251002-080603/Hero.tsx
+ create mode 100644 backups/20251002-080805/page.tsx
+ create mode 100644 backups/20251002-085248/Hero.tsx
+ create mode 100644 backups/20251002-085744/Hero.tsx
+ create mode 100644 backups/20251002-085744/HeroShot.tsx
+ create mode 100644 backups/20251002-085744/HowItWorks.tsx
+ create mode 100644 backups/20251002-085744/page.tsx
+ create mode 100644 backups/20251002-093154/page.tsx
+ create mode 100644 backups/20251002-102911/page.tsx
+ create mode 100644 backups/20251002-110808/page.tsx
+ create mode 100644 backups/20251002-113546/page.tsx
+ create mode 100644 backups/20251002-113751/page.tsx
+ create mode 100644 backups/20251002-215802/page.tsx
+ create mode 100644 components/Benefits.tsx
+ create mode 100644 components/Hero.tsx
+ create mode 100644 components/HeroShot.tsx
+ create mode 100644 components/HeroShot.tsx.bak
+ create mode 100644 components/HowItWorks.tsx
+ create mode 100644 components/HowSimple.tsx
+ create mode 100644 components/MidCTA.tsx
+ create mode 100644 components/MobileNav.tsx
+ create mode 100644 components/Newsletter.tsx
+ create mode 100644 components/Pricing.tsx
+ create mode 100644 components/ReferralBanner.tsx
+ create mode 100644 components/SocialProof.tsx
+ create mode 100644 components/Testimonials.tsx
+ create mode 100644 components/Why.tsx
+ create mode 100644 public/logos/appstore.svg
+ create mode 100644 public/logos/googleplay.svg
+ create mode 100644 public/logos/indiehackers.svg
+ create mode 100644 public/logos/producthunt.svg
+ create mode 100644 public/logos/reddit.svg
+ create mode 100644 public/marketing/hero-top.png
+ create mode 100644 public/marketing/hero-top.svg
+remote: Repository not found.
+fatal: repository 'https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git/' not found
+~/workspace$ 
