@@ -6,24 +6,74 @@ export default function MobileNav() {
 
   return (
     <>
-      {/* Desktop Nav - Hidden on mobile, shown on desktop */}
-      <nav className="hidden md:flex gap-4 items-center opacity-90 text-sm">
-        <a href="/blog" className="hover:text-emerald-400 whitespace-nowrap">Blog</a>
-        <a href="/guide" className="hover:text-emerald-400 whitespace-nowrap">User Guide</a>
-        <a href="/pricing" className="hover:text-emerald-400 whitespace-nowrap">Pricing</a>
-        <a href="/contact" className="hover:text-emerald-400 whitespace-nowrap">Contact</a>
-        <a href="/dashboard" className="hover:text-emerald-400 whitespace-nowrap">Dashboard</a>
+      {/* Desktop Nav - Only visible on larger screens */}
+      <nav style={{ 
+        display: 'none',
+      }}>
+        <style jsx>{`
+          @media (min-width: 768px) {
+            nav {
+              display: flex !important;
+              gap: 1rem;
+              align-items: center;
+              opacity: 0.9;
+              font-size: 0.875rem;
+            }
+          }
+        `}</style>
+        <a href="/blog" style={{ whiteSpace: 'nowrap' }}>Blog</a>
+        <a href="/guide" style={{ whiteSpace: 'nowrap' }}>User Guide</a>
+        <a href="/pricing" style={{ whiteSpace: 'nowrap' }}>Pricing</a>
+        <a href="/contact" style={{ whiteSpace: 'nowrap' }}>Contact</a>
+        <a href="/dashboard" style={{ whiteSpace: 'nowrap' }}>Dashboard</a>
       </nav>
 
       {/* Hamburger Button - Only visible on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden flex flex-col gap-1 p-2 flex-shrink-0"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+          padding: '0.5rem',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+        className="md:hidden"
         aria-label="Toggle menu"
       >
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? 'opacity-0' : ''}`} />
-        <span className={`block h-0.5 w-5 bg-neutral-100 transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+        <style jsx>{`
+          @media (min-width: 768px) {
+            button {
+              display: none !important;
+            }
+          }
+        `}</style>
+        <span style={{ 
+          display: 'block', 
+          height: '2px', 
+          width: '20px', 
+          backgroundColor: '#f5f5f5',
+          transition: 'all 0.3s',
+          transform: isOpen ? 'rotate(45deg) translateY(6px)' : 'none'
+        }} />
+        <span style={{ 
+          display: 'block', 
+          height: '2px', 
+          width: '20px', 
+          backgroundColor: '#f5f5f5',
+          transition: 'all 0.3s',
+          opacity: isOpen ? 0 : 1
+        }} />
+        <span style={{ 
+          display: 'block', 
+          height: '2px', 
+          width: '20px', 
+          backgroundColor: '#f5f5f5',
+          transition: 'all 0.3s',
+          transform: isOpen ? 'rotate(-45deg) translateY(-6px)' : 'none'
+        }} />
       </button>
 
       {/* Mobile Menu Overlay */}
