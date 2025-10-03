@@ -13,9 +13,16 @@ export default function AnalyticsLoader() {
           s.defer = true;
           s.setAttribute("data-domain", domain);
           s.setAttribute("data-msa", "plausible");
+          s.onerror = () => console.log("Analytics blocked or unavailable");
           document.head.appendChild(s);
         }
       }
+      
+      window.addEventListener('unhandledrejection', (event) => {
+        if (event.reason?.message?.includes('plausible')) {
+          event.preventDefault();
+        }
+      });
     } catch {}
   }, []);
 
