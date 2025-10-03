@@ -14,18 +14,22 @@ export default function MobileNav() {
           @media (min-width: 768px) {
             nav {
               display: flex !important;
-              gap: 1rem;
+              gap: 1.5rem;
               align-items: center;
               opacity: 0.9;
               font-size: 0.875rem;
             }
+            nav a {
+              white-space: nowrap;
+              margin: 0 0.5rem;
+            }
           }
         `}</style>
-        <a href="/blog" style={{ whiteSpace: 'nowrap' }}>Blog</a>
-        <a href="/guide" style={{ whiteSpace: 'nowrap' }}>User Guide</a>
-        <a href="/pricing" style={{ whiteSpace: 'nowrap' }}>Pricing</a>
-        <a href="/contact" style={{ whiteSpace: 'nowrap' }}>Contact</a>
-        <a href="/dashboard" style={{ whiteSpace: 'nowrap' }}>Dashboard</a>
+        <a href="/blog">Blog</a>
+        <a href="/guide">User Guide</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/contact">Contact</a>
+        <a href="/dashboard">Dashboard</a>
       </nav>
 
       {/* Hamburger Button - Only visible on mobile */}
