@@ -2867,6 +2867,209 @@ def get_chart_data_summary(symbol: str, timeframe: str = "1D") -> Dict[str, Any]
     except Exception:
         return {}
 
+# ================= Trade Journal Functions =================
+def init_trade_journal_table():
+    """Create trade_journal table if it doesn't exist"""
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS trade_journal (
+        id SERIAL PRIMARY KEY,
+        workspace_id TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        entry_date TIMESTAMP NOT NULL,
+        entry_price DECIMAL(12,4) NOT NULL,
+        exit_date TIMESTAMP,
+        exit_price DECIMAL(12,4),
+        quantity DECIMAL(12,4) NOT NULL,
+        direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT')),
+        stop_loss DECIMAL(12,4),
+        take_profit DECIMAL(12,4),
+        pnl DECIMAL(12,2),
+        pnl_pct DECIMAL(8,2),
+        r_multiple DECIMAL(8,2),
+        setup_type TEXT,
+        entry_reason TEXT,
+        exit_reason TEXT,
+        mistakes_learned TEXT,
+        tags TEXT[],
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_trade_journal_workspace ON trade_journal(workspace_id);
+    CREATE INDEX IF NOT EXISTS idx_trade_journal_symbol ON trade_journal(symbol);
+    CREATE INDEX IF NOT EXISTS idx_trade_journal_entry_date ON trade_journal(entry_date DESC);
+    """
+    execute_db_write(create_table_query)
+
+def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price: float, 
+                         quantity: float, direction: str, stop_loss: Optional[float] = None, 
+                         take_profit: Optional[float] = None, setup_type: Optional[str] = None, 
+                         entry_reason: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
+    """Add new trade to journal"""
+    try:
+        query = """
+        INSERT INTO trade_journal 
+        (workspace_id, symbol, entry_date, entry_price, quantity, direction, 
+         stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+        RETURNING id
+        """
+        params = (workspace_id, symbol.upper(), entry_date, entry_price, quantity, 
+                 direction, stop_loss, take_profit, setup_type, entry_reason, tags)
+        result = execute_db_write_returning(query, params)
+        return result is not None
+    except Exception as e:
+        st.error(f"Failed to add trade: {e}")
+        if SENTRY_DSN:
+            sentry_sdk.capture_exception(e)
+        return False
+
+def close_trade(trade_id: int, exit_date, exit_price: float, 
+                exit_reason: Optional[str] = None, mistakes_learned: Optional[str] = None) -> bool:
+    """Close an active trade and calculate P&L"""
+    try:
+        trade = execute_db_query("SELECT * FROM trade_journal WHERE id = %s", (trade_id,))
+        if not trade or len(trade) == 0:
+            return False
+        
+        trade = trade[0]
+        entry_price = float(trade['entry_price'])
+        quantity = float(trade['quantity'])
+        direction = trade['direction']
+        stop_loss = float(trade['stop_loss']) if trade['stop_loss'] else None
+        
+        if direction == 'LONG':
+            pnl = (exit_price - entry_price) * quantity
+            pnl_pct = ((exit_price - entry_price) / entry_price) * 100
+        else:
+            pnl = (entry_price - exit_price) * quantity
+            pnl_pct = ((entry_price - exit_price) / entry_price) * 100
+        
+        r_multiple = None
+        if stop_loss:
+            risk_per_share = abs(entry_price - stop_loss)
+            if risk_per_share > 0:
+                r_multiple = pnl / (risk_per_share * quantity)
+        
+        query = """
+        UPDATE trade_journal 
+        SET exit_date = %s, exit_price = %s, pnl = %s, pnl_pct = %s, 
+            r_multiple = %s, exit_reason = %s, mistakes_learned = %s, 
+            is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s
+        """
+        params = (exit_date, exit_price, pnl, pnl_pct, r_multiple, 
+                 exit_reason, mistakes_learned, trade_id)
+        execute_db_write(query, params)
+        return True
+    except Exception as e:
+        st.error(f"Failed to close trade: {e}")
+        if SENTRY_DSN:
+            sentry_sdk.capture_exception(e)
+        return False
+
+def get_trade_journal(workspace_id: str, active_only: bool = False, 
+                     limit: int = 100) -> Optional[List[Dict]]:
+    """Get trade journal entries"""
+    try:
+        if active_only:
+            query = """
+            SELECT * FROM trade_journal 
+            WHERE workspace_id = %s AND is_active = TRUE
+            ORDER BY entry_date DESC
+            LIMIT %s
+            """
+        else:
+            query = """
+            SELECT * FROM trade_journal 
+            WHERE workspace_id = %s
+            ORDER BY entry_date DESC
+            LIMIT %s
+            """
+        result = execute_db_query(query, (workspace_id, limit))
+        return result if result else []
+    except Exception:
+        return []
+
+def calculate_journal_stats(workspace_id: str) -> Dict[str, Any]:
+    """Calculate performance statistics from trade journal"""
+    try:
+        trades = get_trade_journal(workspace_id, active_only=False)
+        if not trades:
+            trades = []
+        closed_trades = [t for t in trades if not t['is_active']]
+        
+        if not closed_trades:
+            return {
+                'total_trades': 0,
+                'winning_trades': 0,
+                'losing_trades': 0,
+                'win_rate': 0,
+                'total_pnl': 0,
+                'avg_win': 0,
+                'avg_loss': 0,
+                'avg_r': 0,
+                'profit_factor': 0,
+                'largest_win': 0,
+                'largest_loss': 0,
+                'active_trades': len([t for t in trades if t['is_active']])
+            }
+        
+        total_trades = len(closed_trades)
+        winning_trades = [t for t in closed_trades if float(t['pnl']) > 0]
+        losing_trades = [t for t in closed_trades if float(t['pnl']) < 0]
+        
+        win_count = len(winning_trades)
+        loss_count = len(losing_trades)
+        win_rate = (win_count / total_trades * 100) if total_trades > 0 else 0
+        
+        total_pnl = sum(float(t['pnl']) for t in closed_trades)
+        avg_win = sum(float(t['pnl']) for t in winning_trades) / win_count if win_count > 0 else 0
+        avg_loss = sum(float(t['pnl']) for t in losing_trades) / loss_count if loss_count > 0 else 0
+        
+        r_trades = [t for t in closed_trades if t['r_multiple'] is not None]
+        avg_r = sum(float(t['r_multiple']) for t in r_trades) / len(r_trades) if r_trades else 0
+        
+        gross_profit = sum(float(t['pnl']) for t in winning_trades)
+        gross_loss = abs(sum(float(t['pnl']) for t in losing_trades))
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0
+        
+        largest_win = max((float(t['pnl']) for t in winning_trades), default=0)
+        largest_loss = min((float(t['pnl']) for t in losing_trades), default=0)
+        
+        return {
+            'total_trades': total_trades,
+            'winning_trades': win_count,
+            'losing_trades': loss_count,
+            'win_rate': win_rate,
+            'total_pnl': total_pnl,
+            'avg_win': avg_win,
+            'avg_loss': avg_loss,
+            'avg_r': avg_r,
+            'profit_factor': profit_factor,
+            'largest_win': largest_win,
+            'largest_loss': largest_loss,
+            'active_trades': len([t for t in trades if t['is_active']])
+        }
+    except Exception as e:
+        st.error(f"Failed to calculate stats: {e}")
+        return {}
+
+def delete_trade(trade_id: int) -> bool:
+    """Delete a trade from journal"""
+    try:
+        execute_db_write("DELETE FROM trade_journal WHERE id = %s", (trade_id,))
+        return True
+    except:
+        return False
+
+# Initialize trade journal table on startup
+try:
+    init_trade_journal_table()
+except:
+    pass
+
 # ================= Backtesting Engine =================
 def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: str = "1D", 
                 initial_equity: float = 10000, risk_per_trade: float = 0.01, 
@@ -6226,6 +6429,336 @@ else:
             if st.button("Close History", key="close_backtest_history"):
                 st.session_state.show_backtest_history = False
                 st.rerun()
+
+# ================= Trade Journal =================
+st.markdown("---")
+st.subheader("📔 Trade Journal")
+
+# Calculate stats for overview
+workspace_id = st.session_state.get('workspace_id', 'anonymous')
+journal_stats = calculate_journal_stats(workspace_id)
+
+# Overview metrics
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    total_trades = journal_stats.get('total_trades', 0)
+    st.metric("Total Trades", total_trades)
+
+with col2:
+    win_rate = journal_stats.get('win_rate', 0)
+    st.metric("Win Rate", f"{win_rate:.1f}%")
+
+with col3:
+    total_pnl = journal_stats.get('total_pnl', 0)
+    pnl_color = "green" if total_pnl >= 0 else "red"
+    st.metric("Total P&L", f"${total_pnl:,.2f}")
+
+with col4:
+    avg_r = journal_stats.get('avg_r', 0)
+    st.metric("Avg R-Multiple", f"{avg_r:.2f}R")
+
+# Main journal tabs
+tab1, tab2, tab3, tab4 = st.tabs(["➕ Log Trade", "📊 Trade History", "📈 Performance Stats", "💡 Insights"])
+
+with tab1:
+    st.subheader("Log New Trade")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
+        direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
+        entry_date = st.date_input("Entry Date:", key="journal_entry_date")
+        entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
+        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
+    
+    with col2:
+        stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
+        take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
+        setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Other"], key="journal_setup")
+        tags_input = st.text_input("Tags (comma-separated):", placeholder="swing, earnings, technical", key="journal_tags")
+    
+    entry_reason = st.text_area("Entry Reason / Trade Plan:", placeholder="Why did you enter this trade? What's your thesis?", key="journal_entry_reason", height=100)
+    
+    if journal_symbol and entry_price > 0 and quantity > 0:
+        total_value = entry_price * quantity
+        risk_amount = None
+        if stop_loss and stop_loss > 0:
+            risk_per_share = abs(entry_price - stop_loss)
+            risk_amount = risk_per_share * quantity
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.info(f"Position Size: ${total_value:,.2f}")
+        if risk_amount:
+            with col2:
+                st.info(f"Risk Amount: ${risk_amount:,.2f}")
+            with col3:
+                risk_pct = (risk_amount / total_value) * 100
+                st.info(f"Risk %: {risk_pct:.2f}%")
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("📝 Log Trade", type="primary", width='stretch'):
+                tags_list = [tag.strip() for tag in tags_input.split(',')] if tags_input else None
+                setup = setup_type if setup_type else None
+                
+                success = add_trade_to_journal(
+                    workspace_id=workspace_id,
+                    symbol=journal_symbol,
+                    entry_date=entry_date,
+                    entry_price=entry_price,
+                    quantity=quantity,
+                    direction=direction,
+                    stop_loss=stop_loss if stop_loss > 0 else None,
+                    take_profit=take_profit if take_profit > 0 else None,
+                    setup_type=setup,
+                    entry_reason=entry_reason if entry_reason else None,
+                    tags=tags_list
+                )
+                
+                if success:
+                    st.success(f"✅ Trade logged: {direction} {quantity} shares of {journal_symbol}")
+                    st.rerun()
+
+with tab2:
+    st.subheader("Trade History")
+    
+    # Filter options
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        show_filter = st.selectbox("Show:", ["All Trades", "Active Only", "Closed Only"], key="journal_filter")
+    
+    active_only = show_filter == "Active Only"
+    trades = get_trade_journal(workspace_id, active_only=active_only)
+    
+    if not trades:
+        trades = []
+    
+    if show_filter == "Closed Only":
+        trades = [t for t in trades if not t['is_active']]
+    
+    if trades:
+        for i, trade in enumerate(trades):
+            with st.expander(f"{'🟢' if trade['is_active'] else '⚫'} {trade['symbol']} - {trade['direction']} ({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})", expanded=False):
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
+                    st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
+                    if trade['stop_loss']:
+                        st.write(f"**Stop Loss:** ${float(trade['stop_loss']):.2f}")
+                    if trade['take_profit']:
+                        st.write(f"**Take Profit:** ${float(trade['take_profit']):.2f}")
+                
+                with col2:
+                    if not trade['is_active']:
+                        st.write(f"**Exit Price:** ${float(trade['exit_price']):.2f}")
+                        pnl = float(trade['pnl'])
+                        pnl_pct = float(trade['pnl_pct'])
+                        pnl_emoji = "🟢" if pnl >= 0 else "🔴"
+                        st.write(f"**P&L:** {pnl_emoji} ${pnl:,.2f} ({pnl_pct:+.2f}%)")
+                        if trade['r_multiple']:
+                            r_val = float(trade['r_multiple'])
+                            st.write(f"**R-Multiple:** {r_val:.2f}R")
+                    else:
+                        st.write("**Status:** 🟢 Active")
+                        st.write("")
+                
+                with col3:
+                    if trade['setup_type']:
+                        st.write(f"**Setup:** {trade['setup_type']}")
+                    if trade['tags']:
+                        st.write(f"**Tags:** {', '.join(trade['tags'])}")
+                
+                if trade['entry_reason']:
+                    st.write(f"**Entry Reason:** {trade['entry_reason']}")
+                
+                if not trade['is_active']:
+                    if trade['exit_reason']:
+                        st.write(f"**Exit Reason:** {trade['exit_reason']}")
+                    if trade['mistakes_learned']:
+                        st.write(f"**💡 Lessons Learned:** {trade['mistakes_learned']}")
+                
+                # Actions
+                col1, col2, col3, col4 = st.columns(4)
+                
+                if trade['is_active']:
+                    with col1:
+                        if st.button("Close Trade", key=f"close_trade_{i}"):
+                            st.session_state[f'closing_trade_{i}'] = True
+                            st.rerun()
+                    
+                    if st.session_state.get(f'closing_trade_{i}', False):
+                        st.write("**Close Trade:**")
+                        exit_date = st.date_input("Exit Date:", key=f"exit_date_{i}")
+                        exit_price = st.number_input("Exit Price:", min_value=0.01, step=0.01, key=f"exit_price_{i}")
+                        exit_reason = st.text_input("Exit Reason:", key=f"exit_reason_{i}")
+                        mistakes = st.text_area("Mistakes / Lessons Learned:", key=f"mistakes_{i}")
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("✅ Confirm Close", key=f"confirm_close_{i}"):
+                                success = close_trade(
+                                    trade_id=trade['id'],
+                                    exit_date=exit_date,
+                                    exit_price=exit_price,
+                                    exit_reason=exit_reason if exit_reason else None,
+                                    mistakes_learned=mistakes if mistakes else None
+                                )
+                                if success:
+                                    st.success("Trade closed successfully!")
+                                    st.session_state[f'closing_trade_{i}'] = False
+                                    st.rerun()
+                        with col2:
+                            if st.button("Cancel", key=f"cancel_close_{i}"):
+                                st.session_state[f'closing_trade_{i}'] = False
+                                st.rerun()
+                
+                with col4:
+                    if st.button("🗑️ Delete", key=f"delete_trade_{i}"):
+                        if delete_trade(trade['id']):
+                            st.success("Trade deleted")
+                            st.rerun()
+        
+        # Export option
+        st.markdown("---")
+        if st.button("📥 Export to CSV"):
+            df_data = []
+            for trade in trades:
+                df_data.append({
+                    'Symbol': trade['symbol'],
+                    'Direction': trade['direction'],
+                    'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
+                    'Entry Price': float(trade['entry_price']),
+                    'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
+                    'Exit Price': float(trade['exit_price']) if trade['exit_price'] else '',
+                    'Quantity': float(trade['quantity']),
+                    'P&L': float(trade['pnl']) if trade['pnl'] else '',
+                    'P&L %': float(trade['pnl_pct']) if trade['pnl_pct'] else '',
+                    'R-Multiple': float(trade['r_multiple']) if trade['r_multiple'] else '',
+                    'Setup': trade['setup_type'] or '',
+                    'Status': 'Active' if trade['is_active'] else 'Closed'
+                })
+            
+            df = pd.DataFrame(df_data)
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download CSV",
+                data=csv,
+                file_name=f"trade_journal_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No trades logged yet. Use the 'Log Trade' tab to add your first trade!")
+
+with tab3:
+    st.subheader("Performance Statistics")
+    
+    if journal_stats.get('total_trades', 0) > 0:
+        # Key metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Win Rate", f"{journal_stats['win_rate']:.1f}%")
+            st.metric("Winning Trades", journal_stats['winning_trades'])
+        
+        with col2:
+            st.metric("Avg R-Multiple", f"{journal_stats['avg_r']:.2f}R")
+            st.metric("Losing Trades", journal_stats['losing_trades'])
+        
+        with col3:
+            st.metric("Total P&L", f"${journal_stats['total_pnl']:,.2f}")
+            st.metric("Profit Factor", f"{journal_stats['profit_factor']:.2f}")
+        
+        with col4:
+            st.metric("Active Trades", journal_stats['active_trades'])
+            st.metric("Total Trades", journal_stats['total_trades'])
+        
+        st.markdown("---")
+        
+        # Win/Loss breakdown
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Win/Loss Analysis")
+            st.write(f"**Average Win:** ${journal_stats['avg_win']:,.2f}")
+            st.write(f"**Average Loss:** ${journal_stats['avg_loss']:,.2f}")
+            st.write(f"**Largest Win:** ${journal_stats['largest_win']:,.2f}")
+            st.write(f"**Largest Loss:** ${journal_stats['largest_loss']:,.2f}")
+        
+        with col2:
+            st.subheader("Key Insights")
+            
+            if journal_stats['win_rate'] >= 50:
+                st.success(f"✅ Solid win rate of {journal_stats['win_rate']:.1f}%")
+            else:
+                st.warning(f"⚠️ Win rate below 50% ({journal_stats['win_rate']:.1f}%)")
+            
+            if journal_stats['avg_r'] >= 1.5:
+                st.success(f"✅ Strong average R of {journal_stats['avg_r']:.2f}R")
+            elif journal_stats['avg_r'] >= 1.0:
+                st.info(f"📊 Decent average R of {journal_stats['avg_r']:.2f}R")
+            else:
+                st.warning(f"⚠️ Low average R of {journal_stats['avg_r']:.2f}R")
+            
+            if journal_stats['profit_factor'] >= 2.0:
+                st.success(f"✅ Excellent profit factor of {journal_stats['profit_factor']:.2f}")
+            elif journal_stats['profit_factor'] >= 1.5:
+                st.info(f"📊 Good profit factor of {journal_stats['profit_factor']:.2f}")
+            elif journal_stats['profit_factor'] > 1.0:
+                st.warning(f"⚠️ Marginal profit factor of {journal_stats['profit_factor']:.2f}")
+            else:
+                st.error(f"❌ Unprofitable: Profit factor {journal_stats['profit_factor']:.2f}")
+    else:
+        st.info("No completed trades yet. Statistics will appear once you close some trades.")
+
+with tab4:
+    st.subheader("Trading Insights & Tips")
+    
+    st.markdown("""
+    ### 📚 How to Use Your Trade Journal
+    
+    **Log Every Trade:**
+    - Record entry immediately after placing trade
+    - Include your reasoning and plan
+    - Set stop loss for R-multiple tracking
+    
+    **Close Trades Properly:**
+    - Log exit price and reason
+    - Document what went wrong (mistakes)
+    - Note lessons learned for next time
+    
+    **Review Regularly:**
+    - Check stats weekly/monthly
+    - Identify patterns in winners/losers
+    - Focus on setup types that work
+    
+    ### 🎯 What to Track
+    
+    **Setup Types:**
+    - Which setups have highest win rate?
+    - Which produce best R-multiples?
+    - Which should you avoid?
+    
+    **Mistakes:**
+    - Are you chasing entries?
+    - Cutting winners too early?
+    - Holding losers too long?
+    
+    **Discipline:**
+    - Following your stop losses?
+    - Taking profits at target?
+    - Sticking to trade plan?
+    
+    ### 💡 Pro Tips
+    
+    - Aim for win rate >50% OR avg R >1.5R (not both needed)
+    - Profit factor >1.5 = profitable strategy
+    - Review mistakes section often - that's where growth happens
+    - Export to CSV for deeper analysis in spreadsheets
+    """)
 
 # ================= Portfolio Tracking =================
 st.markdown("---")

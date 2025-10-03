@@ -11,6 +11,8 @@ A comprehensive market scanning application built with Streamlit that analyzes e
 
 The app features a web dashboard for interactive analysis and supports automated notifications via email and Slack integrations.
 
+**Trade Journal Feature (October 2025):** Comprehensive trading journal for logging trades, tracking performance, and improving through self-analysis. Includes win rate, R-multiple tracking, profit factor calculations, and exportable trade history.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -66,6 +68,19 @@ Preferred communication style: Simple, everyday language.
 - **Performance Optimization**: Statement timeout (30s), connection timeout (10s), and SSL requirement for database security
 
 ## Recent Changes & Important Fixes (October 2025)
+
+### Trade Journal Feature Added (October 3, 2025)
+**Added**: Complete trade journal system for performance tracking and trading improvement
+**Features**:
+- **Log Trades**: Record entries with symbol, direction, prices, stop loss, take profit, setup type, and reasoning
+- **Track Performance**: Automatic P&L calculation, R-multiple tracking, win rate statistics
+- **Analyze Results**: Performance stats dashboard with profit factor, avg win/loss, insights
+- **Learn from Mistakes**: Dedicated fields for exit reasons and lessons learned
+- **Export Data**: CSV export for external analysis
+- **Database Schema**: Full PostgreSQL table with indexes for performance
+- **Smart Insights**: Automatic performance feedback based on statistics
+
+**Why This Matters**: Trade journals are proven tools for trader improvement. Helps identify what works, what doesn't, and patterns in trading behavior.
 
 ### Production Features Added (October 3, 2025)
 **Added**: Complete production-ready infrastructure for reliability and monitoring
