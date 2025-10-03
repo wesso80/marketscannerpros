@@ -1793,7 +1793,7 @@ def get_workspace_data(workspace_id: str, data_type: Optional[str] = None, since
     
     if since:
         where_clauses.append("updated_at > %s")
-        params.append(since)
+        params.append(since)  # type: ignore
     
     query = f"""
         SELECT data_type, item_key, data_payload, version, updated_at
@@ -2299,7 +2299,7 @@ def get_user_notifications(user_email: str, workspace_id: str, limit: int = 10):
         print(f"Error fetching notifications: {e}")
         return []
 
-def mark_notification_read(notification_id: int, workspace_id: str, user_email: str = None):
+def mark_notification_read(notification_id: int, workspace_id: str, user_email: Optional[str] = None):
     """Mark a notification as read (with secure workspace and user validation)"""
     try:
         if user_email:
@@ -2608,9 +2608,9 @@ def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Option
             )
             
             # Add RSI levels
-            fig.add_hline(y=70, line_dash="dash", line_color="red", opacity=0.5, row=current_row)
-            fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=current_row)
-            fig.add_hline(y=50, line_dash="dot", line_color="gray", opacity=0.3, row=current_row)
+            fig.add_hline(y=70, line_dash="dash", line_color="red", opacity=0.5, row=current_row)  # type: ignore
+            fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=current_row)  # type: ignore
+            fig.add_hline(y=50, line_dash="dot", line_color="gray", opacity=0.3, row=current_row)  # type: ignore
             
             current_row += 1
         
@@ -2786,7 +2786,7 @@ def run_backtest(symbols: List[str], start_date: str, end_date: str, timeframe: 
         # Pre-load and validate all symbol data
         for symbol in symbols:
             try:
-                df = get_ohlcv(symbol, timeframe, period=None, start=start_date, end=end_date)
+                df = get_ohlcv(symbol, timeframe, start=start_date, end=end_date)
                 if df.empty or len(df) < 50:
                     results['errors'].append(f"{symbol}: Insufficient data ({len(df)} bars)")
                     continue
@@ -3049,8 +3049,8 @@ def save_backtest_result(name: str, config: Dict[str, Any], results: Dict[str, A
     """Save backtest results to database"""
     try:
         # Convert numpy types to native Python types
-        config = convert_numpy_types(config)
-        results = convert_numpy_types(results)
+        config = convert_numpy_types(config)  # type: ignore
+        results = convert_numpy_types(results)  # type: ignore
         
         # Extract metrics from results
         metrics = results.get('metrics', {})
@@ -3119,7 +3119,7 @@ def get_backtest_results() -> List[Dict[str, Any]]:
             r['results'] = r['results_data']
     return result if result else []
 
-def create_backtest_chart(results: Dict[str, Any]) -> go.Figure:
+def create_backtest_chart(results: Dict[str, Any]) -> Optional[go.Figure]:
     """Create backtest performance chart"""
     if not results.get('equity_curve'):
         return None
@@ -3468,7 +3468,7 @@ def calculate_portfolio_metrics() -> Dict[str, Any]:
         st.error(f"Error calculating metrics: {str(e)}")
         return {}
 
-def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
+def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figure]:
     """Create portfolio allocation chart"""
     if not positions:
         return None
@@ -3513,7 +3513,7 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> go.Figure:
     
     return fig
 
-def create_portfolio_performance_chart() -> go.Figure:
+def create_portfolio_performance_chart() -> Optional[go.Figure]:
     """Create portfolio performance over time chart"""
     try:
         # Get transaction history to build performance timeline
@@ -3909,8 +3909,8 @@ def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_i
         # Validate receipt with Apple
         is_valid, validation_result = validate_apple_iap_receipt(receipt_data, product_id, transaction_id)
         
-        if is_valid:
-            plan_code = validation_result["plan_code"]
+        if is_valid and isinstance(validation_result, dict):
+            plan_code = validation_result.get("plan_code", "free")
             
             # Create subscription in database
             success, result = create_subscription(workspace_id, plan_code, 'ios', 'monthly')
@@ -3946,7 +3946,7 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
         # Create or get customer
         customer = None
         try:
-            customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})
+            customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})  # type: ignore
             if customers.data:
                 customer = customers.data[0]
         except:
@@ -4103,8 +4103,9 @@ if 'workspace_id' not in st.session_state:
             pass
 
 # Update user tier based on active subscription (CRITICAL FIX)
-if st.session_state.get('workspace_id'):
-    current_tier = get_user_tier_from_subscription(st.session_state.workspace_id)
+workspace_id_for_tier = st.session_state.get('workspace_id')
+if workspace_id_for_tier and isinstance(workspace_id_for_tier, str):
+    current_tier = get_user_tier_from_subscription(workspace_id_for_tier)
     if current_tier and current_tier != st.session_state.user_tier:
         st.session_state.user_tier = current_tier
         # Optional: Show upgrade success message
