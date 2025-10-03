@@ -1665,7 +1665,7 @@ def verify_admin_pin(pin: str, workspace_id: str, device_fingerprint: str) -> tu
     else:
         return False, "Invalid PIN"
 
-def set_subscription_override(workspace_id: str, tier: str, set_by: str, expires_at: datetime = None) -> bool:
+def set_subscription_override(workspace_id: str, tier: str, set_by: str, expires_at: Optional[datetime] = None) -> bool:
     """Set subscription tier override for workspace with optional expiry"""
     query = """
         INSERT INTO subscription_overrides (workspace_id, tier, set_by, expires_at)
@@ -1834,8 +1834,7 @@ def revoke_device(workspace_id: str, device_fingerprint: str) -> bool:
 
 def generate_qr_code(data: str) -> str:
     """Generate QR code as base64 image"""
-    import qrcode
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)  # type: ignore
     qr.add_data(data)
     qr.make(fit=True)
     
@@ -1887,7 +1886,7 @@ def create_price_alert(symbol: str, alert_type: str, target_price: float, notifi
         st.error(f"Database error: {str(e)}")
         return False
 
-def get_active_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
+def get_active_alerts(workspace_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Get active price alerts for current workspace only (tenant-isolated)"""
     if not workspace_id:
         workspace_id = st.session_state.get('workspace_id')
@@ -1899,7 +1898,7 @@ def get_active_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
     result = execute_db_query(query, (workspace_id,))
     return result if result else []
 
-def get_all_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
+def get_all_alerts(workspace_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Get all price alerts for current workspace only (tenant-isolated)"""
     if not workspace_id:
         workspace_id = st.session_state.get('workspace_id')
@@ -1911,7 +1910,7 @@ def get_all_alerts(workspace_id: str = None) -> List[Dict[str, Any]]:
     result = execute_db_query(query, (workspace_id,))
     return result if result else []
 
-def trigger_alert(alert_id: int, current_price: float, workspace_id: str = None) -> bool:
+def trigger_alert(alert_id: int, current_price: float, workspace_id: Optional[str] = None) -> bool:
     """Mark an alert as triggered - atomic operation with workspace validation"""
     if not workspace_id:
         workspace_id = st.session_state.get('workspace_id')
@@ -1927,7 +1926,7 @@ def trigger_alert(alert_id: int, current_price: float, workspace_id: str = None)
     result = execute_db_write(query, (current_price, alert_id, workspace_id))
     return result is not None and result > 0
 
-def delete_alert(alert_id: int, workspace_id: str = None) -> bool:
+def delete_alert(alert_id: int, workspace_id: Optional[str] = None) -> bool:
     """Delete a price alert with workspace validation (tenant-isolated)"""
     if not workspace_id:
         workspace_id = st.session_state.get('workspace_id')
@@ -2113,7 +2112,7 @@ def delete_watchlist(watchlist_id: int) -> bool:
     return result is not None
 
 # ================= Data Source (yfinance) =================
-def get_ohlcv_yf(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
     interval, default_period = _yf_interval_period(timeframe)
     
     # Use custom period or date range if provided
@@ -2136,7 +2135,7 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: str = None, start: str = N
     }, index=data.index).dropna()
     return out
 
-def get_ohlcv(symbol: str, timeframe: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
     return get_ohlcv_yf(symbol, timeframe, period, start, end)
 
 # ================= Indicators (pure pandas) =================
@@ -2419,7 +2418,7 @@ def save_user_notification_preferences(user_email: str, method: str) -> bool:
         st.error(f"Failed to save preferences: {str(e)}")
         return False
 
-def get_user_notification_preferences(user_email: str) -> Dict[str, Any]:
+def get_user_notification_preferences(user_email: str) -> Optional[Dict[str, Any]]:
     """Get user notification preferences from database"""
     try:
         query = "SELECT * FROM user_notification_preferences WHERE user_email = %s"
@@ -2428,7 +2427,7 @@ def get_user_notification_preferences(user_email: str) -> Dict[str, Any]:
     except Exception as e:
         return None
 
-def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Dict[str, Any]:
+def get_notification_preferences_for_alert(alert: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Get notification preferences for a price alert from database"""
     # Get user email from the alert
     user_email = alert.get('user_email')
@@ -2475,7 +2474,7 @@ def to_csv_download(df: pd.DataFrame, filename: str) -> bytes:
     return output.getvalue().encode('utf-8')
 
 # ================= Advanced Charting =================
-def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: List[str] = None) -> go.Figure:
+def create_advanced_chart(symbol: str, timeframe: str = "1D", indicators: Optional[List[str]] = None) -> Optional[go.Figure]:
     """Create advanced candlestick chart with technical indicators"""
     if indicators is None:
         indicators = ["EMA", "RSI", "MACD", "Volume"]
