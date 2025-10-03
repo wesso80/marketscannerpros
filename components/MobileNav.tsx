@@ -18,13 +18,20 @@ export default function MobileNav() {
               opacity: 0.9;
               font-size: 0.875rem;
             }
+            .desktop-only-nav a {
+              margin-right: 1.5rem;
+              white-space: nowrap;
+            }
+            .desktop-only-nav a:last-child {
+              margin-right: 0;
+            }
           }
         `}</style>
-        <a href="/blog" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Blog</a>
-        <a href="/guide" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>User Guide</a>
-        <a href="/pricing" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Pricing</a>
-        <a href="/contact" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Contact</a>
-        <a href="/dashboard" style={{ padding: '0 12px', whiteSpace: 'nowrap' }}>Dashboard</a>
+        <a href="/blog">Blog</a>
+        <a href="/guide">User Guide</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/contact">Contact</a>
+        <a href="/dashboard">Dashboard</a>
       </nav>
 
       {/* Hamburger Button - Only visible on mobile */}
