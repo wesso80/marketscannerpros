@@ -1,11 +1,19 @@
+'use client';
+
 import HeroShot from './HeroShot';
 
 export default function Hero() {
   return (
     <section className="relative pt-20 pb-12">
-      <div className="mx-auto max-w-6xl px-4 text-center">
+      <div className="mx-auto max-w-6xl px-4 grid md:grid-cols-2 gap-10 items-center">
+        
         {/* Text Section */}
-        <div className="mb-6">
+        <div className="w-full md:order-1 text-center md:text-left">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+            <span>Try Pro free for 7 days</span>
+            <span className="text-neutral-500">•</span>
+            <span>No credit card required</span>
+          </div>
           <h1 className="mb-4 text-4xl md:text-6xl font-bold">
             Powerful Market Scanner
           </h1>
@@ -15,7 +23,9 @@ export default function Hero() {
         </div>
 
         {/* Hero Image */}
-        <HeroShot />
+        <div className="w-full md:order-2">
+          <HeroShot />
+        </div>
       </div>
     </section>
   );
