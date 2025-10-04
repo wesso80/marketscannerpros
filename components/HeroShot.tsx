@@ -9,7 +9,7 @@ export default function HeroShot() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 p-2 md:rounded-2xl md:p-3"
+      className="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 p-2 md:rounded-2xl md:p-3 mx-auto"
       style={{
         maxWidth: '100%',
         boxShadow:
