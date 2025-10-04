@@ -5055,6 +5055,31 @@ if current_tier == 'free':
         st.info(f"💡 **{plan_name} Plan Selected** - Complete purchase below:")
         st.markdown(f"**{plan_name} Plan - {plan_price}/month**")
         
+        # Show detailed feature list
+        if st.session_state.selected_plan == 'pro':
+            st.markdown("""
+            **✅ Included in Pro:**
+            - ✅ Unlimited Market Scanner
+            - ✅ Unlimited Price Alerts
+            - ✅ Advanced Technical Charts
+            - ✅ Unlimited Portfolio Tracking
+            
+            **🔒 Pro Trader Exclusive:**
+            - 🔒 Trade Journal (Pro Trader only)
+            - 🔒 Strategy Backtesting (Pro Trader only)
+            """)
+        else:  # pro_trader
+            st.markdown("""
+            **✅ Everything Included:**
+            - ✅ Unlimited Market Scanner
+            - ✅ Unlimited Price Alerts
+            - ✅ Advanced Technical Charts
+            - ✅ Unlimited Portfolio Tracking
+            - ✅ Trade Journal
+            - ✅ Strategy Backtesting
+            - ✅ Full Site Access
+            """)
+        
         st.markdown("---")
         
         # Platform-specific payment buttons (Apple IAP compliance)
