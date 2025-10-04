@@ -31,7 +31,7 @@ export default function UserGuide() {
       <ul>
         <li><strong>Stack tiers:</strong> ×2 Watch → ×3 Setup → ×4 High-conviction → ×≥5 Extreme.</li>
         <li><strong>Countdown:</strong> badge shows time remaining in each active candle.</li>
-        <li><strong>Weekly:</strong> adds macro context but doesn’t block intraday triggers.</li>
+        <li><strong>Weekly:</strong> adds macro context but doesn't block intraday triggers.</li>
       </ul>
       <h2>4) Entries, Targets, Stops, Risk</h2>
       <ul>
