@@ -6227,247 +6227,283 @@ if chart_symbol and chart_symbol.strip():
 else:
     st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
 
-# ================= Portfolio Tracking =================
-st.markdown("---")
-st.subheader("💼 Portfolio Tracking")
+# ================= Backtesting Section =================
+st.subheader("🔬 Strategy Backtesting")
 
-# Portfolio overview
-col1, col2 = st.columns([2, 1])
+# Check tier access for backtesting
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
 
-with col1:
-    # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
-    portfolio_metrics = calculate_portfolio_metrics()
-    
-# REMOVED CSS FROM HERE - Moving to top of file for better injection
-    
-    # Always display metrics with clean, bold formatting (no faded text)
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-    
-    with metric_col1:
-        market_value = portfolio_metrics.get('total_market_value', 0) if portfolio_metrics else 0
-        st.metric("Market Value", f"${market_value:,.2f}")
-        
-    with metric_col2:
-        total_return = portfolio_metrics.get('total_return_pct', 0) if portfolio_metrics else 0
-        st.metric("Total Return", f"{total_return:.2f}%")
-        
-    with metric_col3:
-        unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0) if portfolio_metrics else 0
-        st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
-        
-    with metric_col4:
-        num_positions = portfolio_metrics.get('total_positions', 0) if portfolio_metrics else 0
-        st.metric("Positions", num_positions)
+if not tier_info['has_backtesting']:
+    with st.expander("🔒 **Strategy Backtesting** - Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Advanced Backtesting with Pro Trader:**
+        - Test trading strategies on historical data
+        - Analyze performance metrics and win rates
+        - Optimize your trading approach
+        - Get 5-7 day free trial!
+        """)
+        if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
+            st.session_state.selected_plan = 'pro_trader'
+            st.rerun()
+else:
 
-with col2:
-    # Quick actions
-    if st.button("🔄 Update Prices", width='stretch'):
-        with st.spinner("Updating portfolio prices..."):
-            update_portfolio_prices()
-        st.success("Prices updated!")
-        st.rerun()
+    # Backtest controls
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
-# Main portfolio tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Position", "📋 Holdings", "📈 History"])
-
-with tab1:
-    # Portfolio overview with charts
-    positions = get_portfolio_positions()
-    
-    if positions:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Portfolio allocation chart
-            allocation_chart = create_portfolio_chart(positions)
-            if allocation_chart:
-                st.plotly_chart(allocation_chart, use_container_width=True)
-        
-        with col2:
-            # Portfolio performance chart
-            performance_chart = create_portfolio_performance_chart()
-            if performance_chart:
-                st.plotly_chart(performance_chart, use_container_width=True)
-        
-        # Key metrics table
-        if portfolio_metrics:
-            st.subheader("📊 Portfolio Metrics")
-            metrics_data = {
-                'Metric': [
-                    'Total Market Value',
-                    'Total Cost Basis', 
-                    'Unrealized P&L',
-                    'Realized P&L',
-                    'Total P&L',
-                    'Total Return %',
-                    'Number of Positions'
-                ],
-                'Value': [
-                    f"${portfolio_metrics.get('total_market_value', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_cost_basis', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_unrealized_pnl', 0):,.2f}",
-                    f"${portfolio_metrics.get('realized_pnl', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_pnl', 0):,.2f}",
-                    f"{portfolio_metrics.get('total_return_pct', 0):.2f}%",
-                    f"{portfolio_metrics.get('total_positions', 0)}"
-                ]
-            }
-            metrics_df = pd.DataFrame(metrics_data)
-            st.dataframe(metrics_df, width='stretch', hide_index=True)
-    else:
-        st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
-
-with tab2:
-    # Add new position form
-    st.subheader("➕ Add New Position")
-    
-    col1, col2 = st.columns(2)
-    
     with col1:
-        symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
-        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
-        transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
-    
+        backtest_name = st.text_input("Backtest Name:", placeholder="e.g., SPY Momentum Test", key="backtest_name")
+
     with col2:
-        average_cost = st.number_input("Price per Share:", min_value=0.01, step=0.01, key="portfolio_cost")
-        notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
-    
-    if symbol and quantity > 0 and average_cost > 0:
-        total_value = quantity * average_cost
-        st.info(f"Total Transaction Value: ${total_value:,.2f}")
-        
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            if st.button("Add Position", type="primary", width='stretch'):
-                # Check tier limitations for new BUY positions
-                can_add = True
-                if transaction_type == "BUY":
-                    current_tier = st.session_state.user_tier
-                    tier_info = TIER_CONFIG[current_tier]
-                    current_positions = get_portfolio_positions()
-                    position_count = len(current_positions) if current_positions else 0
-                    
-                    # Check if trying to add new position beyond limit
-                    if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
-                        existing_symbols = [p['symbol'] for p in current_positions]
-                        if symbol not in existing_symbols:
-                            st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
-                            if current_tier == 'free':
-                                st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
-                            else:
-                                st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
-                            can_add = False
-                
-                if can_add:
-                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
-                    if success:
-                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                        st.rerun()
+        start_date = st.date_input("Start Date:", value=pd.to_datetime("2023-01-01"), key="backtest_start")
 
-with tab3:
-    # Current holdings
-    st.subheader("📋 Current Holdings")
-    
-    positions = get_portfolio_positions()
-    
-    if positions:
-        # Create positions dataframe
-        positions_data = []
-        for pos in positions:
-            positions_data.append({
-                'Symbol': pos['symbol'],
-                'Quantity': f"{float(pos['quantity']):,.4f}",
-                'Avg Cost': f"${float(pos['average_cost']):,.2f}",
-                'Current Price': f"${float(pos['current_price']):,.2f}",
-                'Market Value': f"${float(pos['market_value']):,.2f}",
-                'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
-                'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
-                'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
-            })
-        
-        positions_df = pd.DataFrame(positions_data)
-        st.dataframe(positions_df, width='stretch', hide_index=True)
-        
-        # Quick actions for positions
-        st.subheader("⚡ Quick Actions")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**💰 Sell Position**")
-            sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
-            if sell_symbol:
-                current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
-                if current_pos:
-                    max_qty = float(current_pos['quantity'])
-                    sell_qty = st.number_input(f"Quantity to sell (max {max_qty}):", min_value=0.0001, max_value=max_qty, step=0.1, key="sell_qty")
-                    sell_price = st.number_input("Sell Price:", min_value=0.01, step=0.01, key="sell_price")
-                    
-                    if sell_qty > 0 and sell_price > 0:
-                        if st.button("Sell Position", type="secondary"):
-                            success = add_portfolio_position(sell_symbol, sell_qty, sell_price, "SELL", f"Partial sale of {sell_symbol}")
-                            if success:
-                                st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
-                                st.rerun()
-        
-        with col2:
-            st.markdown("**🗑️ Remove Position**")
-            remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
-            if remove_symbol:
-                st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
-                
-                # Confirmation checkbox
-                confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
-                
-                if confirm_remove:
-                    if st.button("Remove Position", type="primary"):
-                        success = remove_portfolio_position(remove_symbol)
-                        if success:
-                            st.success(f"Successfully removed {remove_symbol} from portfolio")
-                            st.rerun()
-                        else:
-                            st.error(f"Failed to remove {remove_symbol}")
-    else:
-        st.info("No positions found. Add your first position using the 'Add Position' tab.")
+    with col3:
+        end_date = st.date_input("End Date:", value=pd.to_datetime("2024-01-01"), key="backtest_end")
 
-with tab4:
-    # Transaction history
-    st.subheader("📈 Transaction History")
+    with col4:
+        backtest_timeframe = st.selectbox("Timeframe:", ["1D", "1h"], key="backtest_timeframe")
+
+    # Backtest parameters - using wider columns for better readability
+    col1, col2 = st.columns(2)
+
+    with col1:
+        sub_col1, sub_col2 = st.columns(2)
+        with sub_col1:
+            initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
+        with sub_col2:
+            risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
+
+    with col2:
+        sub_col3, sub_col4 = st.columns(2)
+        with sub_col3:
+            stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
+        with sub_col4:
+            min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
+
+    # Symbol selection for backtesting
+    st.write("**Select Symbols for Backtesting:**")
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        # Get symbols from current scan results or manual entry
+        available_symbols = []
+        if not st.session_state.eq_results.empty:
+            available_symbols.extend(st.session_state.eq_results['symbol'].head(10).tolist())
+        if not st.session_state.cx_results.empty:
+            available_symbols.extend(st.session_state.cx_results['symbol'].head(5).tolist())
     
-    transactions = get_portfolio_transactions(100)
+        if available_symbols:
+            backtest_symbols = st.multiselect(
+                "Choose from scanned symbols:", 
+                available_symbols, 
+                default=available_symbols[:5],
+                key="backtest_symbols_from_scan"
+            )
+        else:
+            backtest_symbols = []
     
-    if transactions:
-        # Create transactions dataframe
-        trans_data = []
-        for trans in transactions:
-            trans_data.append({
-                'Date': pd.to_datetime(trans['transaction_date']).strftime('%Y-%m-%d %H:%M'),
-                'Symbol': trans['symbol'],
-                'Type': trans['transaction_type'],
-                'Quantity': f"{float(trans['quantity']):,.4f}",
-                'Price': f"${float(trans['price']):,.2f}",
-                'Total Amount': f"${float(trans['total_amount']):,.2f}",
-                'Notes': trans.get('notes', '') or '-'
-            })
+        manual_symbols = st.text_area(
+            "Or enter symbols manually (one per line):", 
+            placeholder="AAPL\nMSFT\nGOOGL\nTSLA",
+            height=80,
+            key="manual_backtest_symbols"
+        )
+    
+        # Combine symbols
+        if manual_symbols.strip():
+            manual_list = [s.strip().upper() for s in manual_symbols.splitlines() if s.strip()]
+            all_backtest_symbols = list(set(backtest_symbols + manual_list))
+        else:
+            all_backtest_symbols = backtest_symbols
+
+    with col2:
+        st.write("**Actions:**")
+        run_backtest_btn = st.button("🚀 Run Backtest", width='stretch', key="run_backtest")
+    
+        if st.button("📊 View History", width='stretch', key="view_backtest_history"):
+            st.session_state.show_backtest_history = True
+
+    # Run backtest
+    if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
+        with st.spinner(f"Running backtest on {len(all_backtest_symbols)} symbols..."):
+            try:
+                config = {
+                    'symbols': all_backtest_symbols,
+                    'start_date': str(start_date),
+                    'end_date': str(end_date),
+                    'timeframe': backtest_timeframe,
+                    'initial_equity': initial_equity,
+                    'risk_per_trade': risk_per_trade,
+                    'stop_atr_mult': stop_atr_mult,
+                    'min_score': min_score
+                }
+            
+                results = run_backtest(
+                    symbols=all_backtest_symbols,
+                    start_date=str(start_date),
+                    end_date=str(end_date),
+                    timeframe=backtest_timeframe,
+                    initial_equity=initial_equity,
+                    risk_per_trade=risk_per_trade,
+                    stop_atr_mult=stop_atr_mult,
+                    min_score=min_score
+                )
+            
+                if results.get('error'):
+                    st.error(f"Backtest failed: {results['error']}")
+                elif not results.get('trades'):
+                    st.warning("No trades generated. Try lowering the minimum score threshold or adjusting the date range.")
+                else:
+                    # Save results to database
+                    if save_backtest_result(backtest_name.strip(), config, results):
+                        st.success(f"Backtest '{backtest_name}' completed and saved!")
+                    else:
+                        st.warning("Backtest completed but failed to save to database")
+                
+                    # Display results
+                    metrics = results['metrics']
+                
+                    # Performance metrics
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                
+                    with col1:
+                        total_return = metrics.get('total_return', 0) * 100
+                        delta_color = "normal" if total_return >= 0 else "inverse"
+                        st.metric("Total Return", f"{total_return:.1f}%", delta_color=delta_color)
+                
+                    with col2:
+                        win_rate = metrics.get('win_rate', 0) * 100
+                        st.metric("Win Rate", f"{win_rate:.1f}%")
+                
+                    with col3:
+                        sharpe = metrics.get('sharpe_ratio', 0)
+                        st.metric("Sharpe Ratio", f"{sharpe:.2f}")
+                
+                    with col4:
+                        max_dd = metrics.get('max_drawdown', 0) * 100
+                        st.metric("Max Drawdown", f"{max_dd:.1f}%")
+                
+                    with col5:
+                        total_trades = metrics.get('total_trades', 0)
+                        st.metric("Total Trades", total_trades)
+                
+                    # Performance chart
+                    chart_fig = create_backtest_chart(results)
+                    if chart_fig:
+                        st.plotly_chart(chart_fig, width='stretch')
+                
+                    # Detailed metrics
+                    with st.expander("📈 Detailed Performance Metrics", expanded=False):
+                        col1, col2 = st.columns(2)
+                    
+                        with col1:
+                            st.markdown("**Trade Statistics:**")
+                            st.write(f"• Total Trades: {metrics.get('total_trades', 0)}")
+                            st.write(f"• Winning Trades: {metrics.get('winning_trades', 0)}")
+                            st.write(f"• Losing Trades: {metrics.get('losing_trades', 0)}")
+                            st.write(f"• Win Rate: {metrics.get('win_rate', 0)*100:.1f}%")
+                            st.write(f"• Average Holding Days: {metrics.get('avg_holding_days', 0):.1f}")
+                    
+                        with col2:
+                            st.markdown("**Financial Metrics:**")
+                            st.write(f"• Initial Equity: ${metrics.get('initial_equity', 0):,.2f}")
+                            st.write(f"• Final Equity: ${metrics.get('final_equity', 0):,.2f}")
+                            st.write(f"• Average Win: ${metrics.get('avg_win', 0):,.2f}")
+                            st.write(f"• Average Loss: ${metrics.get('avg_loss', 0):,.2f}")
+                            st.write(f"• Profit Factor: {metrics.get('profit_factor', 0):.2f}")
+                
+                    # Symbol performance breakdown
+                    if results.get('symbol_performance'):
+                        with st.expander("📊 Symbol Performance Breakdown", expanded=False):
+                            symbol_perf_data = []
+                            for symbol, perf in results['symbol_performance'].items():
+                                symbol_perf_data.append({
+                                    'Symbol': symbol,
+                                    'Trades': perf['total_trades'],
+                                    'Win Rate': f"{perf['win_rate']*100:.1f}%",
+                                    'Total P&L': f"${perf['total_pnl']:,.2f}",
+                                    'Avg Return': f"{perf['avg_return']*100:.2f}%"
+                                })
+                        
+                            if symbol_perf_data:
+                                symbol_df = pd.DataFrame(symbol_perf_data)
+                                st.dataframe(symbol_df, width='stretch')
+                
+                    # Trade log
+                    if results.get('trades'):
+                        with st.expander("📋 Trade Log", expanded=False):
+                            trades_df = pd.DataFrame(results['trades'])
+                            trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
+                            trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
+                            trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
+                            trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
+                        
+                            display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
+                            st.dataframe(trades_df[display_cols], width='stretch')
+                
+                    # Errors if any
+                    if results.get('errors'):
+                        with st.expander("⚠️ Backtest Errors", expanded=False):
+                            for error in results['errors']:
+                                st.write(f"• {error}")
+                
+            except Exception as e:
+                st.error(f"Backtest failed: {str(e)}")
+
+    elif run_backtest_btn:
+        if not all_backtest_symbols:
+            st.error("Please select symbols for backtesting")
+        if not backtest_name.strip():
+            st.error("Please enter a backtest name")
+
+    # Show backtest history
+    if st.session_state.get('show_backtest_history', False):
+        with st.expander("📚 Backtest History", expanded=True):
+            saved_backtests = get_backtest_results()
         
-        trans_df = pd.DataFrame(trans_data)
-        st.dataframe(trans_df, width='stretch', hide_index=True)
+            if saved_backtests:
+                for i, backtest in enumerate(saved_backtests[:10]):  # Show last 10 backtests
+                    with st.container():
+                        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                    
+                        with col1:
+                            # Handle different field names (backtest_name vs name)
+                            name = backtest.get('backtest_name') or backtest.get('name', 'Unnamed Backtest')
+                            st.write(f"**{name}**")
+                            created_at = pd.to_datetime(backtest['created_at']).strftime('%Y-%m-%d %H:%M')
+                            st.caption(f"Created: {created_at}")
+                    
+                        with col2:
+                            metrics = backtest.get('results', {}).get('metrics', {})
+                            total_return = metrics.get('total_return', 0) * 100
+                            st.metric("Return", f"{total_return:.1f}%")
+                    
+                        with col3:
+                            win_rate = metrics.get('win_rate', 0) * 100
+                            st.metric("Win Rate", f"{win_rate:.1f}%")
+                    
+                        with col4:
+                            total_trades = metrics.get('total_trades', 0)
+                            st.metric("Trades", total_trades)
+                    
+                        if st.button(f"View Details", key=f"view_backtest_{i}"):
+                            st.session_state[f'show_backtest_details_{i}'] = True
+                    
+                        # Show details if requested
+                        if st.session_state.get(f'show_backtest_details_{i}', False):
+                            config = backtest.get('config', {})
+                            st.json({
+                                'Configuration': config,
+                                'Results Summary': metrics
+                            })
+                    
+                        st.divider()
+            else:
+                st.info("No saved backtests found. Run a backtest above to get started.")
         
-        # Transaction summary
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            buy_count = len([t for t in transactions if t['transaction_type'] == 'BUY'])
-            st.metric("Buy Transactions", buy_count)
-        
-        with col2:
-            sell_count = len([t for t in transactions if t['transaction_type'] == 'SELL'])
-            st.metric("Sell Transactions", sell_count)
-        
-        with col3:
-            total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
-            st.metric("Total Invested", f"${total_invested:,.2f}")
-    else:
-        st.info("No transactions found. Add your first position to start tracking.")
+            if st.button("Close History", key="close_backtest_history"):
+                st.session_state.show_backtest_history = False
+                st.rerun()
 
 # ================= Trade Journal =================
 st.markdown("---")
@@ -6818,283 +6854,247 @@ with tab4:
     - Export to CSV for deeper analysis in spreadsheets
     """)
 
-# ================= Backtesting Section =================
-st.subheader("🔬 Strategy Backtesting")
+# ================= Portfolio Tracking =================
+st.markdown("---")
+st.subheader("💼 Portfolio Tracking")
 
-# Check tier access for backtesting
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
+# Portfolio overview
+col1, col2 = st.columns([2, 1])
 
-if not tier_info['has_backtesting']:
-    with st.expander("🔒 **Strategy Backtesting** - Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Advanced Backtesting with Pro Trader:**
-        - Test trading strategies on historical data
-        - Analyze performance metrics and win rates
-        - Optimize your trading approach
-        - Get 5-7 day free trial!
-        """)
-        if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
-            st.session_state.selected_plan = 'pro_trader'
-            st.rerun()
-else:
+with col1:
+    # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
+    portfolio_metrics = calculate_portfolio_metrics()
+    
+# REMOVED CSS FROM HERE - Moving to top of file for better injection
+    
+    # Always display metrics with clean, bold formatting (no faded text)
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    
+    with metric_col1:
+        market_value = portfolio_metrics.get('total_market_value', 0) if portfolio_metrics else 0
+        st.metric("Market Value", f"${market_value:,.2f}")
+        
+    with metric_col2:
+        total_return = portfolio_metrics.get('total_return_pct', 0) if portfolio_metrics else 0
+        st.metric("Total Return", f"{total_return:.2f}%")
+        
+    with metric_col3:
+        unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0) if portfolio_metrics else 0
+        st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+        
+    with metric_col4:
+        num_positions = portfolio_metrics.get('total_positions', 0) if portfolio_metrics else 0
+        st.metric("Positions", num_positions)
 
-    # Backtest controls
-    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+with col2:
+    # Quick actions
+    if st.button("🔄 Update Prices", width='stretch'):
+        with st.spinner("Updating portfolio prices..."):
+            update_portfolio_prices()
+        st.success("Prices updated!")
+        st.rerun()
 
-    with col1:
-        backtest_name = st.text_input("Backtest Name:", placeholder="e.g., SPY Momentum Test", key="backtest_name")
+# Main portfolio tabs
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Position", "📋 Holdings", "📈 History"])
 
-    with col2:
-        start_date = st.date_input("Start Date:", value=pd.to_datetime("2023-01-01"), key="backtest_start")
+with tab1:
+    # Portfolio overview with charts
+    positions = get_portfolio_positions()
+    
+    if positions:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Portfolio allocation chart
+            allocation_chart = create_portfolio_chart(positions)
+            if allocation_chart:
+                st.plotly_chart(allocation_chart, use_container_width=True)
+        
+        with col2:
+            # Portfolio performance chart
+            performance_chart = create_portfolio_performance_chart()
+            if performance_chart:
+                st.plotly_chart(performance_chart, use_container_width=True)
+        
+        # Key metrics table
+        if portfolio_metrics:
+            st.subheader("📊 Portfolio Metrics")
+            metrics_data = {
+                'Metric': [
+                    'Total Market Value',
+                    'Total Cost Basis', 
+                    'Unrealized P&L',
+                    'Realized P&L',
+                    'Total P&L',
+                    'Total Return %',
+                    'Number of Positions'
+                ],
+                'Value': [
+                    f"${portfolio_metrics.get('total_market_value', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_cost_basis', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_unrealized_pnl', 0):,.2f}",
+                    f"${portfolio_metrics.get('realized_pnl', 0):,.2f}",
+                    f"${portfolio_metrics.get('total_pnl', 0):,.2f}",
+                    f"{portfolio_metrics.get('total_return_pct', 0):.2f}%",
+                    f"{portfolio_metrics.get('total_positions', 0)}"
+                ]
+            }
+            metrics_df = pd.DataFrame(metrics_data)
+            st.dataframe(metrics_df, width='stretch', hide_index=True)
+    else:
+        st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
 
-    with col3:
-        end_date = st.date_input("End Date:", value=pd.to_datetime("2024-01-01"), key="backtest_end")
-
-    with col4:
-        backtest_timeframe = st.selectbox("Timeframe:", ["1D", "1h"], key="backtest_timeframe")
-
-    # Backtest parameters - using wider columns for better readability
+with tab2:
+    # Add new position form
+    st.subheader("➕ Add New Position")
+    
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        sub_col1, sub_col2 = st.columns(2)
-        with sub_col1:
-            initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
-        with sub_col2:
-            risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
-
+        symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
+        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
+        transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
+    
     with col2:
-        sub_col3, sub_col4 = st.columns(2)
-        with sub_col3:
-            stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
-        with sub_col4:
-            min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
-
-    # Symbol selection for backtesting
-    st.write("**Select Symbols for Backtesting:**")
-    col1, col2 = st.columns([3, 1])
-
-    with col1:
-        # Get symbols from current scan results or manual entry
-        available_symbols = []
-        if not st.session_state.eq_results.empty:
-            available_symbols.extend(st.session_state.eq_results['symbol'].head(10).tolist())
-        if not st.session_state.cx_results.empty:
-            available_symbols.extend(st.session_state.cx_results['symbol'].head(5).tolist())
+        average_cost = st.number_input("Price per Share:", min_value=0.01, step=0.01, key="portfolio_cost")
+        notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
     
-        if available_symbols:
-            backtest_symbols = st.multiselect(
-                "Choose from scanned symbols:", 
-                available_symbols, 
-                default=available_symbols[:5],
-                key="backtest_symbols_from_scan"
-            )
-        else:
-            backtest_symbols = []
-    
-        manual_symbols = st.text_area(
-            "Or enter symbols manually (one per line):", 
-            placeholder="AAPL\nMSFT\nGOOGL\nTSLA",
-            height=80,
-            key="manual_backtest_symbols"
-        )
-    
-        # Combine symbols
-        if manual_symbols.strip():
-            manual_list = [s.strip().upper() for s in manual_symbols.splitlines() if s.strip()]
-            all_backtest_symbols = list(set(backtest_symbols + manual_list))
-        else:
-            all_backtest_symbols = backtest_symbols
-
-    with col2:
-        st.write("**Actions:**")
-        run_backtest_btn = st.button("🚀 Run Backtest", width='stretch', key="run_backtest")
-    
-        if st.button("📊 View History", width='stretch', key="view_backtest_history"):
-            st.session_state.show_backtest_history = True
-
-    # Run backtest
-    if run_backtest_btn and all_backtest_symbols and backtest_name.strip():
-        with st.spinner(f"Running backtest on {len(all_backtest_symbols)} symbols..."):
-            try:
-                config = {
-                    'symbols': all_backtest_symbols,
-                    'start_date': str(start_date),
-                    'end_date': str(end_date),
-                    'timeframe': backtest_timeframe,
-                    'initial_equity': initial_equity,
-                    'risk_per_trade': risk_per_trade,
-                    'stop_atr_mult': stop_atr_mult,
-                    'min_score': min_score
-                }
-            
-                results = run_backtest(
-                    symbols=all_backtest_symbols,
-                    start_date=str(start_date),
-                    end_date=str(end_date),
-                    timeframe=backtest_timeframe,
-                    initial_equity=initial_equity,
-                    risk_per_trade=risk_per_trade,
-                    stop_atr_mult=stop_atr_mult,
-                    min_score=min_score
-                )
-            
-                if results.get('error'):
-                    st.error(f"Backtest failed: {results['error']}")
-                elif not results.get('trades'):
-                    st.warning("No trades generated. Try lowering the minimum score threshold or adjusting the date range.")
-                else:
-                    # Save results to database
-                    if save_backtest_result(backtest_name.strip(), config, results):
-                        st.success(f"Backtest '{backtest_name}' completed and saved!")
-                    else:
-                        st.warning("Backtest completed but failed to save to database")
-                
-                    # Display results
-                    metrics = results['metrics']
-                
-                    # Performance metrics
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                
-                    with col1:
-                        total_return = metrics.get('total_return', 0) * 100
-                        delta_color = "normal" if total_return >= 0 else "inverse"
-                        st.metric("Total Return", f"{total_return:.1f}%", delta_color=delta_color)
-                
-                    with col2:
-                        win_rate = metrics.get('win_rate', 0) * 100
-                        st.metric("Win Rate", f"{win_rate:.1f}%")
-                
-                    with col3:
-                        sharpe = metrics.get('sharpe_ratio', 0)
-                        st.metric("Sharpe Ratio", f"{sharpe:.2f}")
-                
-                    with col4:
-                        max_dd = metrics.get('max_drawdown', 0) * 100
-                        st.metric("Max Drawdown", f"{max_dd:.1f}%")
-                
-                    with col5:
-                        total_trades = metrics.get('total_trades', 0)
-                        st.metric("Total Trades", total_trades)
-                
-                    # Performance chart
-                    chart_fig = create_backtest_chart(results)
-                    if chart_fig:
-                        st.plotly_chart(chart_fig, width='stretch')
-                
-                    # Detailed metrics
-                    with st.expander("📈 Detailed Performance Metrics", expanded=False):
-                        col1, col2 = st.columns(2)
-                    
-                        with col1:
-                            st.markdown("**Trade Statistics:**")
-                            st.write(f"• Total Trades: {metrics.get('total_trades', 0)}")
-                            st.write(f"• Winning Trades: {metrics.get('winning_trades', 0)}")
-                            st.write(f"• Losing Trades: {metrics.get('losing_trades', 0)}")
-                            st.write(f"• Win Rate: {metrics.get('win_rate', 0)*100:.1f}%")
-                            st.write(f"• Average Holding Days: {metrics.get('avg_holding_days', 0):.1f}")
-                    
-                        with col2:
-                            st.markdown("**Financial Metrics:**")
-                            st.write(f"• Initial Equity: ${metrics.get('initial_equity', 0):,.2f}")
-                            st.write(f"• Final Equity: ${metrics.get('final_equity', 0):,.2f}")
-                            st.write(f"• Average Win: ${metrics.get('avg_win', 0):,.2f}")
-                            st.write(f"• Average Loss: ${metrics.get('avg_loss', 0):,.2f}")
-                            st.write(f"• Profit Factor: {metrics.get('profit_factor', 0):.2f}")
-                
-                    # Symbol performance breakdown
-                    if results.get('symbol_performance'):
-                        with st.expander("📊 Symbol Performance Breakdown", expanded=False):
-                            symbol_perf_data = []
-                            for symbol, perf in results['symbol_performance'].items():
-                                symbol_perf_data.append({
-                                    'Symbol': symbol,
-                                    'Trades': perf['total_trades'],
-                                    'Win Rate': f"{perf['win_rate']*100:.1f}%",
-                                    'Total P&L': f"${perf['total_pnl']:,.2f}",
-                                    'Avg Return': f"{perf['avg_return']*100:.2f}%"
-                                })
-                        
-                            if symbol_perf_data:
-                                symbol_df = pd.DataFrame(symbol_perf_data)
-                                st.dataframe(symbol_df, width='stretch')
-                
-                    # Trade log
-                    if results.get('trades'):
-                        with st.expander("📋 Trade Log", expanded=False):
-                            trades_df = pd.DataFrame(results['trades'])
-                            trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
-                            trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
-                            trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
-                            trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
-                        
-                            display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
-                            st.dataframe(trades_df[display_cols], width='stretch')
-                
-                    # Errors if any
-                    if results.get('errors'):
-                        with st.expander("⚠️ Backtest Errors", expanded=False):
-                            for error in results['errors']:
-                                st.write(f"• {error}")
-                
-            except Exception as e:
-                st.error(f"Backtest failed: {str(e)}")
-
-    elif run_backtest_btn:
-        if not all_backtest_symbols:
-            st.error("Please select symbols for backtesting")
-        if not backtest_name.strip():
-            st.error("Please enter a backtest name")
-
-    # Show backtest history
-    if st.session_state.get('show_backtest_history', False):
-        with st.expander("📚 Backtest History", expanded=True):
-            saved_backtests = get_backtest_results()
+    if symbol and quantity > 0 and average_cost > 0:
+        total_value = quantity * average_cost
+        st.info(f"Total Transaction Value: ${total_value:,.2f}")
         
-            if saved_backtests:
-                for i, backtest in enumerate(saved_backtests[:10]):  # Show last 10 backtests
-                    with st.container():
-                        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            if st.button("Add Position", type="primary", width='stretch'):
+                # Check tier limitations for new BUY positions
+                can_add = True
+                if transaction_type == "BUY":
+                    current_tier = st.session_state.user_tier
+                    tier_info = TIER_CONFIG[current_tier]
+                    current_positions = get_portfolio_positions()
+                    position_count = len(current_positions) if current_positions else 0
                     
-                        with col1:
-                            # Handle different field names (backtest_name vs name)
-                            name = backtest.get('backtest_name') or backtest.get('name', 'Unnamed Backtest')
-                            st.write(f"**{name}**")
-                            created_at = pd.to_datetime(backtest['created_at']).strftime('%Y-%m-%d %H:%M')
-                            st.caption(f"Created: {created_at}")
-                    
-                        with col2:
-                            metrics = backtest.get('results', {}).get('metrics', {})
-                            total_return = metrics.get('total_return', 0) * 100
-                            st.metric("Return", f"{total_return:.1f}%")
-                    
-                        with col3:
-                            win_rate = metrics.get('win_rate', 0) * 100
-                            st.metric("Win Rate", f"{win_rate:.1f}%")
-                    
-                        with col4:
-                            total_trades = metrics.get('total_trades', 0)
-                            st.metric("Trades", total_trades)
-                    
-                        if st.button(f"View Details", key=f"view_backtest_{i}"):
-                            st.session_state[f'show_backtest_details_{i}'] = True
-                    
-                        # Show details if requested
-                        if st.session_state.get(f'show_backtest_details_{i}', False):
-                            config = backtest.get('config', {})
-                            st.json({
-                                'Configuration': config,
-                                'Results Summary': metrics
-                            })
-                    
-                        st.divider()
-            else:
-                st.info("No saved backtests found. Run a backtest above to get started.")
+                    # Check if trying to add new position beyond limit
+                    if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
+                        existing_symbols = [p['symbol'] for p in current_positions]
+                        if symbol not in existing_symbols:
+                            st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
+                            if current_tier == 'free':
+                                st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
+                            else:
+                                st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
+                            can_add = False
+                
+                if can_add:
+                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                    if success:
+                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                        st.rerun()
+
+with tab3:
+    # Current holdings
+    st.subheader("📋 Current Holdings")
+    
+    positions = get_portfolio_positions()
+    
+    if positions:
+        # Create positions dataframe
+        positions_data = []
+        for pos in positions:
+            positions_data.append({
+                'Symbol': pos['symbol'],
+                'Quantity': f"{float(pos['quantity']):,.4f}",
+                'Avg Cost': f"${float(pos['average_cost']):,.2f}",
+                'Current Price': f"${float(pos['current_price']):,.2f}",
+                'Market Value': f"${float(pos['market_value']):,.2f}",
+                'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
+                'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
+                'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
+            })
         
-            if st.button("Close History", key="close_backtest_history"):
-                st.session_state.show_backtest_history = False
-                st.rerun()
+        positions_df = pd.DataFrame(positions_data)
+        st.dataframe(positions_df, width='stretch', hide_index=True)
+        
+        # Quick actions for positions
+        st.subheader("⚡ Quick Actions")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**💰 Sell Position**")
+            sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
+            if sell_symbol:
+                current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
+                if current_pos:
+                    max_qty = float(current_pos['quantity'])
+                    sell_qty = st.number_input(f"Quantity to sell (max {max_qty}):", min_value=0.0001, max_value=max_qty, step=0.1, key="sell_qty")
+                    sell_price = st.number_input("Sell Price:", min_value=0.01, step=0.01, key="sell_price")
+                    
+                    if sell_qty > 0 and sell_price > 0:
+                        if st.button("Sell Position", type="secondary"):
+                            success = add_portfolio_position(sell_symbol, sell_qty, sell_price, "SELL", f"Partial sale of {sell_symbol}")
+                            if success:
+                                st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
+                                st.rerun()
+        
+        with col2:
+            st.markdown("**🗑️ Remove Position**")
+            remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
+            if remove_symbol:
+                st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
+                
+                # Confirmation checkbox
+                confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
+                
+                if confirm_remove:
+                    if st.button("Remove Position", type="primary"):
+                        success = remove_portfolio_position(remove_symbol)
+                        if success:
+                            st.success(f"Successfully removed {remove_symbol} from portfolio")
+                            st.rerun()
+                        else:
+                            st.error(f"Failed to remove {remove_symbol}")
+    else:
+        st.info("No positions found. Add your first position using the 'Add Position' tab.")
+
+with tab4:
+    # Transaction history
+    st.subheader("📈 Transaction History")
+    
+    transactions = get_portfolio_transactions(100)
+    
+    if transactions:
+        # Create transactions dataframe
+        trans_data = []
+        for trans in transactions:
+            trans_data.append({
+                'Date': pd.to_datetime(trans['transaction_date']).strftime('%Y-%m-%d %H:%M'),
+                'Symbol': trans['symbol'],
+                'Type': trans['transaction_type'],
+                'Quantity': f"{float(trans['quantity']):,.4f}",
+                'Price': f"${float(trans['price']):,.2f}",
+                'Total Amount': f"${float(trans['total_amount']):,.2f}",
+                'Notes': trans.get('notes', '') or '-'
+            })
+        
+        trans_df = pd.DataFrame(trans_data)
+        st.dataframe(trans_df, width='stretch', hide_index=True)
+        
+        # Transaction summary
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            buy_count = len([t for t in transactions if t['transaction_type'] == 'BUY'])
+            st.metric("Buy Transactions", buy_count)
+        
+        with col2:
+            sell_count = len([t for t in transactions if t['transaction_type'] == 'SELL'])
+            st.metric("Sell Transactions", sell_count)
+        
+        with col3:
+            total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
+            st.metric("Total Invested", f"${total_invested:,.2f}")
+    else:
+        st.info("No transactions found. Add your first position to start tracking.")
 
 # Status information
 st.subheader("📊 Scan Statistics")
