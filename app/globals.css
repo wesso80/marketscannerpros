@@ -25,6 +25,8 @@ a:hover { text-decoration: underline; }
 /* Desktop nav styling - only applies at md breakpoint and above */
 @media (min-width: 768px) {
   .nav { display: flex; gap: 1rem; opacity: .9; font-size: .95rem; }
+  nav a { margin-right: 1.5rem; }
+  nav a:last-child { margin-right: 0; }
 }
 .header { border-bottom: 1px solid #27272a; overflow: hidden; width: 100%; }
 
