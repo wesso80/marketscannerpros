@@ -5311,10 +5311,16 @@ if not use_top100_eq:
         key="eq_multiselect"
     )
     if selected_eq_from_list:
-        st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+        if current_tier == 'free':
+            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} selected (Free tier scans first 6 total)")
+        else:
+            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
 else:
     selected_eq_from_list = TOP_100_EQUITIES
-    st.sidebar.success(f"✅ All 100 equities selected!")
+    if current_tier == 'free':
+        st.sidebar.warning(f"⚠️ 100 selected, but Free tier scans only first 6 total")
+    else:
+        st.sidebar.success(f"✅ All 100 equities selected!")
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
@@ -5351,10 +5357,16 @@ if not use_top100_cx:
         key="cx_multiselect"
     )
     if selected_cx_from_list:
-        st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+        if current_tier == 'free':
+            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} selected (Free tier scans first 6 total)")
+        else:
+            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
 else:
     selected_cx_from_list = TOP_100_CRYPTO
-    st.sidebar.success(f"✅ All 100 crypto selected!")
+    if current_tier == 'free':
+        st.sidebar.warning(f"⚠️ 100 selected, but Free tier scans only first 6 total")
+    else:
+        st.sidebar.success(f"✅ All 100 crypto selected!")
 
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
