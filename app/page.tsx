@@ -9,14 +9,8 @@ import ReferralBanner from "../components/ReferralBanner";
 import { useState } from "react";
 import "./pricing/styles.css";
 
-export default function HomePage() {
-  return (
-    <div className="mx-auto max-w-6xl px-4">
-      {/* hero, headings, etc. */}
-    </div>
-  );
-}
-
+export default function Home() {
+  const [loading, setLoading] = useState<string | null>(null);
 
   // Get Streamlit URL from env or construct it
   const getStreamlitUrl = () => {
