@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function Hero() {
   return (
     <section className="w-full border-b border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-20">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-2 md:gap-10">
         
         {/* Image first on mobile, right on desktop */}
@@ -46,7 +46,7 @@ export default function Hero() {
           </div>
 
           <p className="mt-3 text-xs text-neutral-400">
-            No ads • Cancel anytime • Educational only — not financial advice
+            No ads • Cancel anytime — Educational only — not financial advice
           </p>
         </div>
 
