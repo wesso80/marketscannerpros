@@ -3,8 +3,11 @@ import HeroShot from './HeroShot';
 export default function Hero() {
   return (
     <section className="relative pt-20 pb-12">
+      {/* pt-20 = space under sticky header */}
       <div className="mx-auto max-w-6xl px-4 text-center">
-        <h1 className="mb-6 text-4xl md:text-6xl font-bold">Powerful market scanner</h1>
+        <h1 className="mb-6 text-4xl md:text-6xl font-bold">
+          Powerful market scanner
+        </h1>
         <p className="mb-10 text-lg md:text-xl text-neutral-400">
           Get real-time breakout alerts with ease.
         </p>
