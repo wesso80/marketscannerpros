@@ -33,7 +33,3 @@ export default function SocialProof() {
     </section>
   );
 }
-      </div>
-    </section>
-  );
-}
