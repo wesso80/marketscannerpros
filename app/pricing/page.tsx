@@ -51,8 +51,10 @@ export default function PricingPage() {
           <h2>Free</h2>
           <p>$0</p>
           <ul>
-            <li>Limited symbols</li>
-            <li>Core scanner</li>
+            <li>✅ Unlimited Market Scanner</li>
+            <li>✅ Portfolio Tracking (3 symbols)</li>
+            <li>✅ Real-time Market Data</li>
+            <li>✅ Try Pro with 5-7 day trial</li>
           </ul>
           <button className="btn" onClick={(e) => {
             e.preventDefault();
@@ -65,9 +67,12 @@ export default function PricingPage() {
           <h2>Pro <span className="badge">7-day free trial</span></h2>
           <p>$4.99 / month</p>
           <ul>
-            <li>Multi-TF confluence</li>
-            <li>Squeezes</li>
-            <li>Exports</li>
+            <li>✅ Unlimited Symbol Scanner</li>
+            <li>✅ Unlimited Price Alerts</li>
+            <li>✅ Advanced Technical Charts</li>
+            <li>✅ Unlimited Portfolio Tracking</li>
+            <li>🔒 Trade Journal (Pro Trader)</li>
+            <li>🔒 Backtesting (Pro Trader)</li>
           </ul>
           <button 
             className="btn" 
@@ -83,9 +88,13 @@ export default function PricingPage() {
           <h2>Full Pro Trader <span className="badge">5-day free trial</span></h2>
           <p>$9.99 / month</p>
           <ul>
-            <li>All Pro features</li>
-            <li>Advanced alerts</li>
-            <li>Priority support</li>
+            <li>✅ Everything in Pro</li>
+            <li>✅ Trade Journal</li>
+            <li>✅ Strategy Backtesting</li>
+            <li>✅ Backtesting Signal Alerts</li>
+            <li>✅ Email Buy/Sell Notifications</li>
+            <li>✅ TradingView Integration</li>
+            <li>✅ Full Site Access</li>
           </ul>
           <button 
             className="btn" 
