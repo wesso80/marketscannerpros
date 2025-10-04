@@ -6,80 +6,24 @@ export default function MobileNav() {
 
   return (
     <>
-      {/* Desktop Nav - Only visible on larger screens */}
-      <nav className="desktop-only-nav" style={{ 
-        display: 'none',
-      }}>
-        <style jsx>{`
-          @media (min-width: 768px) {
-            .desktop-only-nav {
-              display: flex !important;
-              align-items: center;
-              opacity: 0.9;
-              font-size: 0.875rem;
-            }
-            .desktop-only-nav a {
-              margin-right: 1.5rem;
-              white-space: nowrap;
-            }
-            .desktop-only-nav a:last-child {
-              margin-right: 0;
-            }
-          }
-        `}</style>
-        <a href="/blog">Blog</a>
-        <a href="/guide">User Guide</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/contact">Contact</a>
-        <a href="/dashboard">Dashboard</a>
+      {/* Desktop Nav - Hidden on mobile */}
+      <nav className="hidden md:flex md:items-center md:gap-6 md:text-sm">
+        <a href="/blog" className="hover:text-emerald-400 transition-colors">Blog</a>
+        <a href="/guide" className="hover:text-emerald-400 transition-colors">User Guide</a>
+        <a href="/pricing" className="hover:text-emerald-400 transition-colors">Pricing</a>
+        <a href="/contact" className="hover:text-emerald-400 transition-colors">Contact</a>
+        <a href="/dashboard" className="hover:text-emerald-400 transition-colors">Dashboard</a>
       </nav>
 
       {/* Hamburger Button - Only visible on mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.25rem',
-          padding: '0.5rem',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer'
-        }}
-        className="md:hidden"
+        className="flex md:hidden flex-col gap-1 p-2"
         aria-label="Toggle menu"
       >
-        <style jsx>{`
-          @media (min-width: 768px) {
-            button {
-              display: none !important;
-            }
-          }
-        `}</style>
-        <span style={{ 
-          display: 'block', 
-          height: '2px', 
-          width: '20px', 
-          backgroundColor: '#f5f5f5',
-          transition: 'all 0.3s',
-          transform: isOpen ? 'rotate(45deg) translateY(6px)' : 'none'
-        }} />
-        <span style={{ 
-          display: 'block', 
-          height: '2px', 
-          width: '20px', 
-          backgroundColor: '#f5f5f5',
-          transition: 'all 0.3s',
-          opacity: isOpen ? 0 : 1
-        }} />
-        <span style={{ 
-          display: 'block', 
-          height: '2px', 
-          width: '20px', 
-          backgroundColor: '#f5f5f5',
-          transition: 'all 0.3s',
-          transform: isOpen ? 'rotate(-45deg) translateY(-6px)' : 'none'
-        }} />
+        <span className={`block h-0.5 w-5 bg-white transition-all ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-white transition-all ${isOpen ? 'opacity-0' : ''}`} />
+        <span className={`block h-0.5 w-5 bg-white transition-all ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
       </button>
 
       {/* Mobile Menu Overlay */}
@@ -91,12 +35,7 @@ export default function MobileNav() {
       )}
 
       {/* Mobile Menu Drawer */}
-      <div className={`
-        fixed top-0 right-0 h-full w-64 bg-neutral-900 z-50 
-        transform transition-transform duration-300 ease-in-out
-        md:hidden border-l border-neutral-800
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-      `}>
+      <div className={`fixed top-0 right-0 h-full w-64 bg-neutral-900 z-50 transform transition-transform duration-300 md:hidden border-l border-neutral-800 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex flex-col p-6 gap-4">
           <button 
             onClick={() => setIsOpen(false)}
