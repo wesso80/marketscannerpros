@@ -1,6 +1,6 @@
 # Final GitHub Updates - All Files
 
-Update these 5 files on GitHub to fix all issues:
+Update these 6 files on GitHub to fix all issues:
 
 ---
 
@@ -313,6 +313,45 @@ export default function UserGuide() {
 
 ---
 
+## 6. components/Header.tsx
+**Issue:** User Guide tab links to wrong URL
+**Action:** Replace entire file with this:
+
+```tsx
+'use client';
+
+import Link from 'next/link';
+
+export default function Header() {
+  return (
+    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/70 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <Link href="/" className="text-xl font-semibold tracking-tight text-emerald-300">
+          MarketScannerPros
+        </Link>
+
+        <nav className="hidden md:flex items-center gap-6 text-emerald-300/90">
+          <Link href="/blog">Blog</Link>
+          <Link href="/guide">User Guide</Link>
+          <Link href="/pricing">Pricing</Link>
+          <Link href="/contact">Contact</Link>
+          <Link href="/dashboard">Dashboard</Link>
+        </nav>
+
+        <nav className="flex md:hidden items-center gap-4 text-emerald-300/90">
+          <Link href="/blog">Blog</Link>
+          <Link href="/pricing">Pricing</Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+```
+
+**CRITICAL FIX:** Line 15 must say `/guide` NOT `/user-guide` - this is why clicking the tab gives "page not found"!
+
+---
+
 ## Summary of Changes
 
 1. **app/globals.css** - Removed force-center CSS (line 85-98)
@@ -320,7 +359,10 @@ export default function UserGuide() {
 3. **components/HeroShot.tsx** - Shrunk image to 200px max-width (mobile-friendly!)
 4. **components/SocialProof.tsx** - Fixed corruption (removed extra JSX after component)
 5. **app/guide/page.tsx** - Added complete user guide content
+6. **components/Header.tsx** - CRITICAL FIX: User Guide tab now links to /guide (was /user-guide)
 
 **Mobile Fix:** Hero image now 200px max-width instead of 280px for proper mobile display!
+
+**4-Hour User Guide Bug SOLVED:** Header navigation was linking to /user-guide instead of /guide!
 
 All files are ready to copy-paste directly into GitHub!
