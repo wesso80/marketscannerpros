@@ -5786,6 +5786,11 @@ st.markdown("""
 
 # Show normal results if no iOS issues detected
 if not ios_issue_detected and not st.session_state.eq_results.empty:
+    # Show info about display limit
+    total_eq_scanned = len(st.session_state.eq_results)
+    if total_eq_scanned > topk:
+        st.info(f"📊 Showing top {topk} of {total_eq_scanned} scanned equities. Download CSV for all results. Adjust 'Top K Results' in sidebar to show more.")
+    
     # Limit display to top K
     display_eq = st.session_state.eq_results.head(topk)
     
@@ -5831,6 +5836,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if not ios_issue_detected and not st.session_state.cx_results.empty:
+    # Show info about display limit
+    total_cx_scanned = len(st.session_state.cx_results)
+    if total_cx_scanned > topk:
+        st.info(f"📊 Showing top {topk} of {total_cx_scanned} scanned crypto. Download CSV for all results. Adjust 'Top K Results' in sidebar to show more.")
+    
     # Limit display to top K
     display_cx = st.session_state.cx_results.head(topk)
     
