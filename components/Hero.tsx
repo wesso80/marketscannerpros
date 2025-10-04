@@ -9,7 +9,7 @@ export default function Hero() {
         <div className="flex flex-col gap-6 md:grid md:grid-cols-2 md:gap-10">
         
         {/* Image first on mobile, right on desktop */}
-        <div className="w-full md:order-2">
+        <div className="w-full md:order-2 flex items-center justify-center">
           <HeroShot />
         </div>
 
