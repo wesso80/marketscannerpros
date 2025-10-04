@@ -1,5 +1,6 @@
 // components/HeroShot.tsx
 "use client";
+import Image from "next/image";
 
 export default function HeroShot() {
   return (
@@ -11,11 +12,13 @@ export default function HeroShot() {
           "0 0 0 1px rgba(16,185,129,.08), 0 20px 60px -15px rgba(0,0,0,.5), 0 10px 30px -10px rgba(0,0,0,.4)",
       }}
     >
-      <img
+      <Image
         src="/marketing/hero-dashboard.png"
         alt="MarketScanner dashboard preview"
+        width={1181}
+        height={866}
         className="rounded-md w-full h-auto mx-auto"
-        style={{ display: 'block', maxWidth: '100%' }}
+        priority
       />
     </div>
   );

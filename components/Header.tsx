@@ -10,17 +10,12 @@ export default function Header() {
           MarketScannerPros
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-emerald-300/90">
-          <Link href="/blog">Blog</Link>
-          <Link href="/guide">User Guide</Link>
-          <Link href="/pricing">Pricing</Link>
-          <Link href="/contact">Contact</Link>
-          <Link href="/dashboard">Dashboard</Link>
-        </nav>
-
-        <nav className="flex md:hidden items-center gap-4 text-emerald-300/90">
-          <Link href="/blog">Blog</Link>
-          <Link href="/pricing">Pricing</Link>
+        <nav className="flex items-center gap-3 md:gap-6 text-sm md:text-base text-emerald-300/90">
+          <Link href="/blog" className="hover:text-emerald-300">Blog</Link>
+          <Link href="/guide" className="hidden sm:block hover:text-emerald-300">User Guide</Link>
+          <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
+          <Link href="/contact" className="hidden md:block hover:text-emerald-300">Contact</Link>
+          <Link href="/dashboard" className="hidden md:block hover:text-emerald-300">Dashboard</Link>
         </nav>
       </div>
     </header>
