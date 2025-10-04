@@ -4857,13 +4857,13 @@ TIER_CONFIG = {
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', 'Trade Journal', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': 5,
         'portfolio_limit': 8,
         'has_advanced_charts': True,
         'has_backtesting': False,
-        'has_trade_journal': True,
+        'has_trade_journal': False,
         'color': '#4CAF50'
     },
     'pro_trader': {
@@ -6554,9 +6554,9 @@ current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
 if not tier_info['has_trade_journal']:
-    with st.expander("🔒 **Trade Journal** - Pro & Pro Trader Feature", expanded=False):
+    with st.expander("🔒 **Trade Journal** - Pro Trader Exclusive Feature", expanded=False):
         st.info("""
-        **Unlock Trade Journal with Pro or Pro Trader:**
+        **Unlock Trade Journal with Pro Trader:**
         - Log every trade with entry/exit prices and reasoning
         - Track win rate, R-multiples, and profit factor
         - Analyze what works and what doesn't
@@ -6564,15 +6564,9 @@ if not tier_info['has_trade_journal']:
         - Improve your trading through data-driven insights
         - Try free for 5-7 days!
         """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_journal_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
+        if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
+            st.session_state.selected_plan = 'pro_trader'
+            st.rerun()
 else:
     # Calculate stats for overview
     workspace_id = st.session_state.get('workspace_id', 'anonymous')
