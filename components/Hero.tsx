@@ -1,17 +1,21 @@
-// components/Hero.tsx
-import HeroShot from "./HeroShot";
-import Link from "next/link";
+import HeroShot from './HeroShot';
 
 export default function Hero() {
   return (
-    <section className="w-full border-b border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-20">
-        <div className="flex flex-col gap-6 md:grid md:grid-cols-2 md:gap-10">
-        
-        {/* Image first on mobile, right on desktop */}
-        <div className="w-full md:order-2 flex items-center justify-center">
-          <HeroShot />
-        </div>
+    <section className="relative pt-20 pb-12">
+      <div className="mx-auto max-w-6xl px-4 text-center">
+        <h1 className="mb-6 text-4xl md:text-6xl font-bold">
+          Powerful market scanner
+        </h1>
+        <p className="mb-10 text-lg md:text-xl text-neutral-400">
+          Get real-time breakout alerts with ease.
+        </p>
+        <HeroShot />
+      </div>
+    </section>
+  );
+}
+
 
         {/* Text second on mobile, left on desktop */}
         <div className="w-full md:order-1">
