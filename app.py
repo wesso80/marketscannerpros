@@ -5285,53 +5285,70 @@ if current_tier == 'free':
 elif current_tier == 'pro':
     st.sidebar.caption(f"✨ Pro: {tier_info['scan_limit']} symbols, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 
-# Top 25 Equities by market cap
-TOP_25_EQUITIES = [
+# Top 100 Equities by market cap
+TOP_100_EQUITIES = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "LLY", "V",
     "UNH", "XOM", "JPM", "JNJ", "WMT", "MA", "PG", "AVGO", "HD", "ORCL",
-    "COST", "ABBV", "MRK", "KO", "PEP"
+    "COST", "ABBV", "MRK", "KO", "PEP", "CSCO", "NFLX", "ACN", "CRM", "AMD",
+    "ADBE", "TMO", "LIN", "MCD", "INTC", "ABT", "DIS", "NKE", "DHR", "VZ",
+    "TXN", "QCOM", "CMCSA", "PM", "INTU", "UNP", "AMGN", "NEE", "AMAT", "HON",
+    "RTX", "LOW", "SPGI", "UPS", "CAT", "ISRG", "ELV", "IBM", "GE", "BA",
+    "SBUX", "PLD", "CVX", "DE", "GILD", "BLK", "MDT", "TJX", "BKNG", "ADI",
+    "AXP", "SYK", "MDLZ", "VRTX", "MMC", "PGR", "LRCX", "REGN", "AMT", "CI",
+    "SCHW", "ADP", "NOW", "TMUS", "PANW", "MO", "C", "PYPL", "CB", "ZTS",
+    "GS", "SO", "BSX", "ETN", "FI", "MS", "ABNB", "DUK", "MU", "ANET"
 ]
 
 # Quick scan toggle for equities
-use_top25_eq = st.sidebar.checkbox("📊 Quick Scan: Top 25 Equities", value=False, key="quick_scan_eq")
+use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
 
 # Multiselect for picking specific equities
-if not use_top25_eq:
+if not use_top100_eq:
     selected_eq_from_list = st.sidebar.multiselect(
-        "Or select from top 25:",
-        options=TOP_25_EQUITIES,
+        "Or select from top 100:",
+        options=TOP_100_EQUITIES,
         default=[],
         key="eq_multiselect"
     )
 else:
-    selected_eq_from_list = TOP_25_EQUITIES
+    selected_eq_from_list = TOP_100_EQUITIES
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
 
-# Top 25 Crypto by market cap
-TOP_25_CRYPTO = [
+# Top 100 Crypto by market cap
+TOP_100_CRYPTO = [
     "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD", "USDC-USD", "XRP-USD", 
     "DOGE-USD", "ADA-USD", "TRX-USD", "AVAX-USD", "SHIB-USD", "DOT-USD", "LINK-USD",
     "BCH-USD", "NEAR-USD", "MATIC-USD", "LTC-USD", "UNI-USD", "PEPE-USD",
-    "ICP-USD", "APT-USD", "FET-USD", "STX-USD", "ARB-USD"
+    "ICP-USD", "APT-USD", "FET-USD", "STX-USD", "ARB-USD", "ATOM-USD", "FIL-USD",
+    "ETC-USD", "HBAR-USD", "VET-USD", "MNT-USD", "IMX-USD", "OP-USD", "RNDR-USD",
+    "INJ-USD", "SUI-USD", "GRT-USD", "RUNE-USD", "SEI-USD", "ALGO-USD", "SAND-USD",
+    "AAVE-USD", "FLR-USD", "TIA-USD", "XLM-USD", "THETA-USD", "AXS-USD", "MANA-USD",
+    "KAS-USD", "FTM-USD", "FLOW-USD", "XTZ-USD", "CHZ-USD", "EGLD-USD", "KAVA-USD",
+    "GALA-USD", "NEO-USD", "EOS-USD", "MINA-USD", "ROSE-USD", "QNT-USD", "MASK-USD",
+    "1INCH-USD", "CRV-USD", "ZIL-USD", "ENJ-USD", "BAT-USD", "COMP-USD", "ZRX-USD",
+    "SUSHI-USD", "SNX-USD", "YFI-USD", "UMA-USD", "BAL-USD", "REN-USD", "KNC-USD",
+    "LRC-USD", "OCEAN-USD", "STORJ-USD", "ANKR-USD", "NKN-USD", "CVC-USD", "SKL-USD",
+    "OMG-USD", "BAND-USD", "COTI-USD", "REQ-USD", "RLC-USD", "NMR-USD", "GNO-USD",
+    "AMP-USD", "POLY-USD", "MLN-USD", "BNT-USD", "FORTH-USD", "CTSI-USD", "API3-USD"
 ]
 
 # Quick scan toggle for crypto
-use_top25_cx = st.sidebar.checkbox("📊 Quick Scan: Top 25 Crypto", value=False, key="quick_scan_cx")
+use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
 
 # Multiselect for picking specific crypto
-if not use_top25_cx:
+if not use_top100_cx:
     selected_cx_from_list = st.sidebar.multiselect(
-        "Or select from top 25:",
-        options=TOP_25_CRYPTO,
+        "Or select from top 100:",
+        options=TOP_100_CRYPTO,
         default=[],
         key="cx_multiselect"
     )
 else:
-    selected_cx_from_list = TOP_25_CRYPTO
+    selected_cx_from_list = TOP_100_CRYPTO
 
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
