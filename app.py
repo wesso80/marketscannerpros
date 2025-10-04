@@ -6281,295 +6281,270 @@ else:
 st.markdown("---")
 st.subheader("💼 Portfolio Tracking")
 
-# Portfolio overview
-col1, col2 = st.columns([2, 1])
+# Check tier access for portfolio
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
 
-with col1:
-    # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
-    portfolio_metrics = calculate_portfolio_metrics()
-    
-# REMOVED CSS FROM HERE - Moving to top of file for better injection
-    
-    # Always display metrics with clean, bold formatting (no faded text)
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-    
-    with metric_col1:
-        market_value = portfolio_metrics.get('total_market_value', 0) if portfolio_metrics else 0
-        st.metric("Market Value", f"${market_value:,.2f}")
+if tier_info['portfolio_limit'] == 3:
+    with st.expander("🔒 **Portfolio Tracking** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Enhanced Portfolio Tracking with Pro or Pro Trader:**
+        - Track up to 8 positions (Pro) or unlimited (Pro Trader)
+        - Real-time P&L tracking and performance analytics
+        - Visual allocation charts and historical performance
+        - Never lose track of your positions
+        - Try free for 5-7 days!
         
-    with metric_col2:
-        total_return = portfolio_metrics.get('total_return_pct', 0) if portfolio_metrics else 0
-        st.metric("Total Return", f"{total_return:.2f}%")
-        
-    with metric_col3:
-        unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0) if portfolio_metrics else 0
-        st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
-        
-    with metric_col4:
-        num_positions = portfolio_metrics.get('total_positions', 0) if portfolio_metrics else 0
-        st.metric("Positions", num_positions)
-
-with col2:
-    # Quick actions
-    if st.button("🔄 Update Prices", width='stretch'):
-        with st.spinner("Updating portfolio prices..."):
-            update_portfolio_prices()
-        st.success("Prices updated!")
-        st.rerun()
-
-# Main portfolio tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Position", "📋 Holdings", "📈 History"])
-
-with tab1:
-    # Portfolio overview with charts
-    positions = get_portfolio_positions()
-    
-    if positions:
+        (Free tier is limited to 3 positions)
+        """)
         col1, col2 = st.columns(2)
-        
         with col1:
-            # Portfolio allocation chart
-            allocation_chart = create_portfolio_chart(positions)
-            if allocation_chart:
-                st.plotly_chart(allocation_chart, use_container_width=True)
-        
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_portfolio_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
         with col2:
-            # Portfolio performance chart
-            performance_chart = create_portfolio_performance_chart()
-            if performance_chart:
-                st.plotly_chart(performance_chart, use_container_width=True)
-        
-        # Key metrics table
-        if portfolio_metrics:
-            st.subheader("📊 Portfolio Metrics")
-            metrics_data = {
-                'Metric': [
-                    'Total Market Value',
-                    'Total Cost Basis', 
-                    'Unrealized P&L',
-                    'Realized P&L',
-                    'Total P&L',
-                    'Total Return %',
-                    'Number of Positions'
-                ],
-                'Value': [
-                    f"${portfolio_metrics.get('total_market_value', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_cost_basis', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_unrealized_pnl', 0):,.2f}",
-                    f"${portfolio_metrics.get('realized_pnl', 0):,.2f}",
-                    f"${portfolio_metrics.get('total_pnl', 0):,.2f}",
-                    f"{portfolio_metrics.get('total_return_pct', 0):.2f}%",
-                    f"{portfolio_metrics.get('total_positions', 0)}"
-                ]
-            }
-            metrics_df = pd.DataFrame(metrics_data)
-            st.dataframe(metrics_df, width='stretch', hide_index=True)
-    else:
-        st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_portfolio_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Portfolio overview
+    col1, col2 = st.columns([2, 1])
 
-with tab2:
-    # Add new position form
-    st.subheader("➕ Add New Position")
-    
-    col1, col2 = st.columns(2)
-    
     with col1:
-        symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
-        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
-        transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
+        # Portfolio metrics at the top - ALWAYS SHOW with clean formatting
+        portfolio_metrics = calculate_portfolio_metrics()
     
+    # REMOVED CSS FROM HERE - Moving to top of file for better injection
+    
+        # Always display metrics with clean, bold formatting (no faded text)
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    
+        with metric_col1:
+            market_value = portfolio_metrics.get('total_market_value', 0) if portfolio_metrics else 0
+            st.metric("Market Value", f"${market_value:,.2f}")
+        
+        with metric_col2:
+            total_return = portfolio_metrics.get('total_return_pct', 0) if portfolio_metrics else 0
+            st.metric("Total Return", f"{total_return:.2f}%")
+        
+        with metric_col3:
+            unrealized_pnl = portfolio_metrics.get('total_unrealized_pnl', 0) if portfolio_metrics else 0
+            st.metric("Unrealized P&L", f"${unrealized_pnl:,.2f}")
+        
+        with metric_col4:
+            num_positions = portfolio_metrics.get('total_positions', 0) if portfolio_metrics else 0
+            st.metric("Positions", num_positions)
+
     with col2:
-        average_cost = st.number_input("Price per Share:", min_value=0.01, step=0.01, key="portfolio_cost")
-        notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
-    
-    if symbol and quantity > 0 and average_cost > 0:
-        total_value = quantity * average_cost
-        st.info(f"Total Transaction Value: ${total_value:,.2f}")
-        
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            if st.button("Add Position", type="primary", width='stretch'):
-                # Check tier limitations for new BUY positions
-                can_add = True
-                if transaction_type == "BUY":
-                    current_tier = st.session_state.user_tier
-                    tier_info = TIER_CONFIG[current_tier]
-                    current_positions = get_portfolio_positions()
-                    position_count = len(current_positions) if current_positions else 0
-                    
-                    # Check if trying to add new position beyond limit
-                    if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
-                        existing_symbols = [p['symbol'] for p in current_positions]
-                        if symbol not in existing_symbols:
-                            st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
-                            if current_tier == 'free':
-                                st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
-                            else:
-                                st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
-                            can_add = False
-                
-                if can_add:
-                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
-                    if success:
-                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                        st.rerun()
+        # Quick actions
+        if st.button("🔄 Update Prices", width='stretch'):
+            with st.spinner("Updating portfolio prices..."):
+                update_portfolio_prices()
+            st.success("Prices updated!")
+            st.rerun()
 
-with tab3:
-    # Current holdings
-    st.subheader("📋 Current Holdings")
+    # Main portfolio tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "➕ Add Position", "📋 Holdings", "📈 History"])
+
+    with tab1:
+        # Portfolio overview with charts
+        positions = get_portfolio_positions()
     
-    positions = get_portfolio_positions()
+        if positions:
+            col1, col2 = st.columns(2)
+        
+            with col1:
+                # Portfolio allocation chart
+                allocation_chart = create_portfolio_chart(positions)
+                if allocation_chart:
+                    st.plotly_chart(allocation_chart, use_container_width=True)
+        
+            with col2:
+                # Portfolio performance chart
+                performance_chart = create_portfolio_performance_chart()
+                if performance_chart:
+                    st.plotly_chart(performance_chart, use_container_width=True)
+        
+            # Key metrics table
+            if portfolio_metrics:
+                st.subheader("📊 Portfolio Metrics")
+                metrics_data = {
+                    'Metric': [
+                        'Total Market Value',
+                        'Total Cost Basis', 
+                        'Unrealized P&L',
+                        'Realized P&L',
+                        'Total P&L',
+                        'Total Return %',
+                        'Number of Positions'
+                    ],
+                    'Value': [
+                        f"${portfolio_metrics.get('total_market_value', 0):,.2f}",
+                        f"${portfolio_metrics.get('total_cost_basis', 0):,.2f}",
+                        f"${portfolio_metrics.get('total_unrealized_pnl', 0):,.2f}",
+                        f"${portfolio_metrics.get('realized_pnl', 0):,.2f}",
+                        f"${portfolio_metrics.get('total_pnl', 0):,.2f}",
+                        f"{portfolio_metrics.get('total_return_pct', 0):.2f}%",
+                        f"{portfolio_metrics.get('total_positions', 0)}"
+                    ]
+                }
+                metrics_df = pd.DataFrame(metrics_data)
+                st.dataframe(metrics_df, width='stretch', hide_index=True)
+        else:
+            st.info("No positions in portfolio. Add your first position using the 'Add Position' tab.")
+
+    with tab2:
+        # Add new position form
+        st.subheader("➕ Add New Position")
     
-    if positions:
-        # Create positions dataframe
-        positions_data = []
-        for pos in positions:
-            positions_data.append({
-                'Symbol': pos['symbol'],
-                'Quantity': f"{float(pos['quantity']):,.4f}",
-                'Avg Cost': f"${float(pos['average_cost']):,.2f}",
-                'Current Price': f"${float(pos['current_price']):,.2f}",
-                'Market Value': f"${float(pos['market_value']):,.2f}",
-                'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
-                'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
-                'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
-            })
-        
-        positions_df = pd.DataFrame(positions_data)
-        st.dataframe(positions_df, width='stretch', hide_index=True)
-        
-        # Quick actions for positions
-        st.subheader("⚡ Quick Actions")
         col1, col2 = st.columns(2)
-        
+    
         with col1:
-            st.markdown("**💰 Sell Position**")
-            sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
-            if sell_symbol:
-                current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
-                if current_pos:
-                    max_qty = float(current_pos['quantity'])
-                    sell_qty = st.number_input(f"Quantity to sell (max {max_qty}):", min_value=0.0001, max_value=max_qty, step=0.1, key="sell_qty")
-                    sell_price = st.number_input("Sell Price:", min_value=0.01, step=0.01, key="sell_price")
+            symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
+            quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
+            transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
+    
+        with col2:
+            average_cost = st.number_input("Price per Share:", min_value=0.01, step=0.01, key="portfolio_cost")
+            notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
+    
+        if symbol and quantity > 0 and average_cost > 0:
+            total_value = quantity * average_cost
+            st.info(f"Total Transaction Value: ${total_value:,.2f}")
+        
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                if st.button("Add Position", type="primary", width='stretch'):
+                    # Check tier limitations for new BUY positions
+                    can_add = True
+                    if transaction_type == "BUY":
+                        current_tier = st.session_state.user_tier
+                        tier_info = TIER_CONFIG[current_tier]
+                        current_positions = get_portfolio_positions()
+                        position_count = len(current_positions) if current_positions else 0
                     
-                    if sell_qty > 0 and sell_price > 0:
-                        if st.button("Sell Position", type="secondary"):
-                            success = add_portfolio_position(sell_symbol, sell_qty, sell_price, "SELL", f"Partial sale of {sell_symbol}")
-                            if success:
-                                st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
-                                st.rerun()
-        
-        with col2:
-            st.markdown("**🗑️ Remove Position**")
-            remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
-            if remove_symbol:
-                st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
+                        # Check if trying to add new position beyond limit
+                        if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
+                            existing_symbols = [p['symbol'] for p in current_positions]
+                            if symbol not in existing_symbols:
+                                st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
+                                if current_tier == 'free':
+                                    st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
+                                else:
+                                    st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
+                                can_add = False
                 
-                # Confirmation checkbox
-                confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
-                
-                if confirm_remove:
-                    if st.button("Remove Position", type="primary"):
-                        success = remove_portfolio_position(remove_symbol)
+                    if can_add:
+                        success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
                         if success:
-                            st.success(f"Successfully removed {remove_symbol} from portfolio")
+                            st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
                             st.rerun()
-                        else:
-                            st.error(f"Failed to remove {remove_symbol}")
-    else:
-        st.info("No positions found. Add your first position using the 'Add Position' tab.")
 
-with tab4:
-    # Transaction history
-    st.subheader("📈 Transaction History")
+    with tab3:
+        # Current holdings
+        st.subheader("📋 Current Holdings")
     
-    transactions = get_portfolio_transactions(100)
+        positions = get_portfolio_positions()
     
-    if transactions:
-        # Create transactions dataframe
-        trans_data = []
-        for trans in transactions:
-            trans_data.append({
-                'Date': pd.to_datetime(trans['transaction_date']).strftime('%Y-%m-%d %H:%M'),
-                'Symbol': trans['symbol'],
-                'Type': trans['transaction_type'],
-                'Quantity': f"{float(trans['quantity']):,.4f}",
-                'Price': f"${float(trans['price']):,.2f}",
-                'Total Amount': f"${float(trans['total_amount']):,.2f}",
-                'Notes': trans.get('notes', '') or '-'
-            })
+        if positions:
+            # Create positions dataframe
+            positions_data = []
+            for pos in positions:
+                positions_data.append({
+                    'Symbol': pos['symbol'],
+                    'Quantity': f"{float(pos['quantity']):,.4f}",
+                    'Avg Cost': f"${float(pos['average_cost']):,.2f}",
+                    'Current Price': f"${float(pos['current_price']):,.2f}",
+                    'Market Value': f"${float(pos['market_value']):,.2f}",
+                    'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
+                    'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
+                    'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
+                })
         
-        trans_df = pd.DataFrame(trans_data)
-        st.dataframe(trans_df, width='stretch', hide_index=True)
+            positions_df = pd.DataFrame(positions_data)
+            st.dataframe(positions_df, width='stretch', hide_index=True)
         
-        # Transaction summary
-        col1, col2, col3 = st.columns(3)
+            # Quick actions for positions
+            st.subheader("⚡ Quick Actions")
+            col1, col2 = st.columns(2)
         
-        with col1:
-            buy_count = len([t for t in transactions if t['transaction_type'] == 'BUY'])
-            st.metric("Buy Transactions", buy_count)
+            with col1:
+                st.markdown("**💰 Sell Position**")
+                sell_symbol = st.selectbox("Select position to sell:", [pos['symbol'] for pos in positions], key="sell_symbol")
+                if sell_symbol:
+                    current_pos = next((pos for pos in positions if pos['symbol'] == sell_symbol), None)
+                    if current_pos:
+                        max_qty = float(current_pos['quantity'])
+                        sell_qty = st.number_input(f"Quantity to sell (max {max_qty}):", min_value=0.0001, max_value=max_qty, step=0.1, key="sell_qty")
+                        sell_price = st.number_input("Sell Price:", min_value=0.01, step=0.01, key="sell_price")
+                    
+                        if sell_qty > 0 and sell_price > 0:
+                            if st.button("Sell Position", type="secondary"):
+                                success = add_portfolio_position(sell_symbol, sell_qty, sell_price, "SELL", f"Partial sale of {sell_symbol}")
+                                if success:
+                                    st.success(f"Successfully sold {sell_qty} shares of {sell_symbol}")
+                                    st.rerun()
         
-        with col2:
-            sell_count = len([t for t in transactions if t['transaction_type'] == 'SELL'])
-            st.metric("Sell Transactions", sell_count)
+            with col2:
+                st.markdown("**🗑️ Remove Position**")
+                remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
+                if remove_symbol:
+                    st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
+                
+                    # Confirmation checkbox
+                    confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
+                
+                    if confirm_remove:
+                        if st.button("Remove Position", type="primary"):
+                            success = remove_portfolio_position(remove_symbol)
+                            if success:
+                                st.success(f"Successfully removed {remove_symbol} from portfolio")
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to remove {remove_symbol}")
+        else:
+            st.info("No positions found. Add your first position using the 'Add Position' tab.")
+
+    with tab4:
+        # Transaction history
+        st.subheader("📈 Transaction History")
+    
+        transactions = get_portfolio_transactions(100)
+    
+        if transactions:
+            # Create transactions dataframe
+            trans_data = []
+            for trans in transactions:
+                trans_data.append({
+                    'Date': pd.to_datetime(trans['transaction_date']).strftime('%Y-%m-%d %H:%M'),
+                    'Symbol': trans['symbol'],
+                    'Type': trans['transaction_type'],
+                    'Quantity': f"{float(trans['quantity']):,.4f}",
+                    'Price': f"${float(trans['price']):,.2f}",
+                    'Total Amount': f"${float(trans['total_amount']):,.2f}",
+                    'Notes': trans.get('notes', '') or '-'
+                })
         
-        with col3:
-            total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
-            st.metric("Total Invested", f"${total_invested:,.2f}")
-    else:
-        st.info("No transactions found. Add your first position to start tracking.")
+            trans_df = pd.DataFrame(trans_data)
+            st.dataframe(trans_df, width='stretch', hide_index=True)
+        
+            # Transaction summary
+            col1, col2, col3 = st.columns(3)
+        
+            with col1:
+                buy_count = len([t for t in transactions if t['transaction_type'] == 'BUY'])
+                st.metric("Buy Transactions", buy_count)
+        
+            with col2:
+                sell_count = len([t for t in transactions if t['transaction_type'] == 'SELL'])
+                st.metric("Sell Transactions", sell_count)
+        
+            with col3:
+                total_invested = sum([float(t['total_amount']) for t in transactions if t['transaction_type'] == 'BUY'])
+                st.metric("Total Invested", f"${total_invested:,.2f}")
+        else:
+            st.info("No transactions found. Add your first position to start tracking.")
 
-# Status information
-st.subheader("📊 Scan Statistics")
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    eq_count = len(st.session_state.eq_results) if not st.session_state.eq_results.empty else 0
-    st.metric("Equity Scanned", eq_count)
-
-with col2:
-    cx_count = len(st.session_state.cx_results) if not st.session_state.cx_results.empty else 0
-    st.metric("Crypto Scanned", cx_count)
-
-with col3:
-    eq_err_count = len(st.session_state.eq_errors) if not st.session_state.eq_errors.empty else 0
-    st.metric("Equity Errors", eq_err_count)
-
-with col4:
-    cx_err_count = len(st.session_state.cx_errors) if not st.session_state.cx_errors.empty else 0
-    st.metric("Crypto Errors", cx_err_count)
-
-# Footer
-st.markdown("---")
-
-# LEGAL DISCLAIMER - REQUIRED FOR LIABILITY PROTECTION
-st.error("""
-🚨 **IMPORTANT LEGAL DISCLAIMER** 🚨
-
-**This is NOT financial or investment advice.** MarketScanner Pro is for educational and informational purposes only.
-
-⚠️ **Trading and investing involves substantial risk of loss and is not suitable for all investors.**
-⚠️ **Past performance does not guarantee future results.**  
-⚠️ **You are solely responsible for your investment decisions.**
-
-**Consult a licensed financial advisor before making investment decisions.**
-""")
-
-st.markdown("""
-**Market Scanner Dashboard** - Real-time technical analysis with risk management
-- Data provided by Yahoo Finance via yfinance library
-- Technical indicators calculated using pandas  
-- Position sizing based on Average True Range (ATR)
-- Email notifications powered by Vercel/Resend API (built-in)
-- In-app notifications provide 100% reliable delivery
-""")
-
-# Add Privacy Policy link separately with proper HTML
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
-with col2:
-    st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
 # ================= Trade Journal =================
 st.markdown("---")
 st.subheader("📔 Trade Journal")
@@ -7301,3 +7276,54 @@ def _msp_button(label, *args, **kwargs):
 
 st.button = _msp_button
 # MSP_MONKEYPATCH_BUTTON_END
+# Status information
+st.subheader("📊 Scan Statistics")
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    eq_count = len(st.session_state.eq_results) if not st.session_state.eq_results.empty else 0
+    st.metric("Equity Scanned", eq_count)
+
+with col2:
+    cx_count = len(st.session_state.cx_results) if not st.session_state.cx_results.empty else 0
+    st.metric("Crypto Scanned", cx_count)
+
+with col3:
+    eq_err_count = len(st.session_state.eq_errors) if not st.session_state.eq_errors.empty else 0
+    st.metric("Equity Errors", eq_err_count)
+
+with col4:
+    cx_err_count = len(st.session_state.cx_errors) if not st.session_state.cx_errors.empty else 0
+    st.metric("Crypto Errors", cx_err_count)
+
+# Footer
+st.markdown("---")
+
+# LEGAL DISCLAIMER - REQUIRED FOR LIABILITY PROTECTION
+st.error("""
+🚨 **IMPORTANT LEGAL DISCLAIMER** 🚨
+
+**This is NOT financial or investment advice.** MarketScanner Pro is for educational and informational purposes only.
+
+⚠️ **Trading and investing involves substantial risk of loss and is not suitable for all investors.**
+⚠️ **Past performance does not guarantee future results.**  
+⚠️ **You are solely responsible for your investment decisions.**
+
+**Consult a licensed financial advisor before making investment decisions.**
+""")
+
+st.markdown("""
+**Market Scanner Dashboard** - Real-time technical analysis with risk management
+- Data provided by Yahoo Finance via yfinance library
+- Technical indicators calculated using pandas  
+- Position sizing based on Average True Range (ATR)
+- Email notifications powered by Vercel/Resend API (built-in)
+- In-app notifications provide 100% reliable delivery
+""")
+
+# Add Privacy Policy link separately with proper HTML
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("**Legal**: <a href='https://marketscannerpros.app/privacy' target='_blank'>Privacy Policy</a> | Contact: support@marketscannerpros.app", unsafe_allow_html=True)
+with col2:
+    st.markdown("**Powered by**: <a href='https://replit.com/refer/bradleywessling' target='_blank'>Replit ⚡</a>", unsafe_allow_html=True)
