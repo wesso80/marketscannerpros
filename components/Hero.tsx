@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import HeroShot from './HeroShot';
 
 export default function Hero() {
@@ -9,31 +10,6 @@ export default function Hero() {
         
         {/* Text Section */}
         <div className="w-full md:order-1 text-center md:text-left">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
-            <span>Try Pro free for 7 days</span>
-            <span className="text-neutral-500">•</span>
-            <span>No credit card required</span>
-          </div>
-          <h1 className="mb-4 text-4xl md:text-6xl font-bold">
-            Powerful Market Scanner
-          </h1>
-          <p className="text-lg md:text-xl text-neutral-400">
-            Find breakouts before they happen 🚀
-          </p>
-        </div>
-
-        {/* Hero Image */}
-        <div className="w-full md:order-2">
-          <HeroShot />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
-        {/* Text second on mobile, left on desktop */}
-        <div className="w-full md:order-1">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
             <span>Try Pro free for 7 days</span>
             <span className="text-neutral-500">•</span>
@@ -69,6 +45,9 @@ export default function Hero() {
           </p>
         </div>
 
+        {/* Hero Image */}
+        <div className="w-full md:order-2">
+          <HeroShot />
         </div>
       </div>
     </section>
