@@ -6,7 +6,7 @@ export default function HeroShot() {
     <div
       className="relative rounded-lg md:rounded-xl border border-neutral-800 bg-neutral-900 p-2 w-full overflow-hidden mx-auto"
       style={{
-        maxWidth: "280px",
+        maxWidth: "200px",
         boxShadow:
           "0 0 0 1px rgba(16,185,129,.08), 0 20px 60px -15px rgba(0,0,0,.5), 0 10px 30px -10px rgba(0,0,0,.4)",
       }}
@@ -15,7 +15,7 @@ export default function HeroShot() {
         src="/marketing/hero-dashboard.png"
         alt="MarketScanner dashboard preview"
         className="rounded-md w-full h-auto mx-auto"
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       />
     </div>
   );

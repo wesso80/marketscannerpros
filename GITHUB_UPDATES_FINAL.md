@@ -163,7 +163,7 @@ export default function Hero() {
 ---
 
 ## 3. components/HeroShot.tsx
-**Issue:** Image way too big
+**Issue:** Image way too big on desktop AND mobile
 **Action:** Replace entire file with this:
 
 ```tsx
@@ -175,7 +175,7 @@ export default function HeroShot() {
     <div
       className="relative rounded-lg md:rounded-xl border border-neutral-800 bg-neutral-900 p-2 w-full overflow-hidden mx-auto"
       style={{
-        maxWidth: "280px",
+        maxWidth: "200px",
         boxShadow:
           "0 0 0 1px rgba(16,185,129,.08), 0 20px 60px -15px rgba(0,0,0,.5), 0 10px 30px -10px rgba(0,0,0,.4)",
       }}
@@ -184,7 +184,7 @@ export default function HeroShot() {
         src="/marketing/hero-dashboard.png"
         alt="MarketScanner dashboard preview"
         className="rounded-md w-full h-auto mx-auto"
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       />
     </div>
   );
@@ -317,8 +317,10 @@ export default function UserGuide() {
 
 1. **app/globals.css** - Removed force-center CSS (line 85-98)
 2. **components/Hero.tsx** - Reduced padding (py-12), fixed guide link (/guide not /user-guide)
-3. **components/HeroShot.tsx** - Shrunk image to 280px max-width
+3. **components/HeroShot.tsx** - Shrunk image to 200px max-width (mobile-friendly!)
 4. **components/SocialProof.tsx** - Fixed corruption (removed extra JSX after component)
 5. **app/guide/page.tsx** - Added complete user guide content
+
+**Mobile Fix:** Hero image now 200px max-width instead of 280px for proper mobile display!
 
 All files are ready to copy-paste directly into GitHub!
