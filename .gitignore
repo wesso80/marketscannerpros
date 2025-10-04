@@ -1,8 +1,10 @@
-.next
-node_modules
-.vercel
-dist
-out
-.DS_Store
-backups
-attached_assets
+# Node/Next build stuff
+node_modules/
+.next/
+out/
+.vercel/
+# Local env
+.env*
+# Your local scratch folders
+backups/
+attached_assets/
