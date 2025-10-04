@@ -4869,13 +4869,14 @@ TIER_CONFIG = {
     'pro_trader': {
         'name': '💎 Pro Trader',
         'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting', 'Trade Journal', 'Full site access', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
         'has_advanced_charts': True,
         'has_backtesting': True,
         'has_trade_journal': True,
+        'has_backtesting_alerts': True,
         'color': '#FF9800'
     }
 }
