@@ -46,7 +46,7 @@ export default function Hero() {
           </div>
 
           <p className="mt-3 text-xs text-neutral-400">
-            No ads • Cancel anytime • Educational only — not financial advice
+            No ads • Cancel anytime — Educational only — not financial advice
           </p>
         </div>
 
