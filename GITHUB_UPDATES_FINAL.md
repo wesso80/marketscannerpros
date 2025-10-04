@@ -330,17 +330,12 @@ export default function Header() {
           MarketScannerPros
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-emerald-300/90">
+        <nav className="flex items-center gap-4 md:gap-6 text-emerald-300/90 text-sm md:text-base">
           <Link href="/blog">Blog</Link>
           <Link href="/guide">User Guide</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/dashboard">Dashboard</Link>
-        </nav>
-
-        <nav className="flex md:hidden items-center gap-4 text-emerald-300/90">
-          <Link href="/blog">Blog</Link>
-          <Link href="/pricing">Pricing</Link>
         </nav>
       </div>
     </header>
