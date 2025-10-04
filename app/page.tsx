@@ -9,8 +9,17 @@ import ReferralBanner from "../components/ReferralBanner";
 import { useState } from "react";
 import "./pricing/styles.css";
 
-export default function Home() {
-  const [loading, setLoading] = useState<string | null>(null);
+import Hero from '../components/Hero';
+
+export default function HomePage() {
+  return (
+    <>
+      <Hero />
+      {/* rest of the page */}
+    </>
+  );
+}
+
 
   // Get Streamlit URL from env or construct it
   const getStreamlitUrl = () => {
