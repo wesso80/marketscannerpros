@@ -45,9 +45,3 @@ export default function HowItWorks() {
     </section>
   );
 }
-
-        </div>
-      </div>
-    </section>
-  );
-}
