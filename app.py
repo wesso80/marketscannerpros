@@ -4845,33 +4845,36 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'features': ['Unlimited market scanning only', 'Upgrade for alerts, charts, portfolio, journal & backtesting', 'Try Pro with 5-7 day trial'],
         'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,
         'has_advanced_charts': False,
+        'has_trade_journal': False,
         'has_backtesting': False,
         'color': '#666666'
     },
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', '5 price alerts', '8 portfolio symbols', 'Advanced charts', 'Trade journal', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': 5,
         'portfolio_limit': 8,
         'has_advanced_charts': True,
+        'has_trade_journal': True,
         'has_backtesting': False,
         'color': '#4CAF50'
     },
     'pro_trader': {
         'name': '💎 Pro Trader',
         'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting', 'Full site access', '5-7 day free trial'],
+        'features': ['Everything in Pro', 'Unlimited alerts', 'Unlimited portfolio', 'Strategy backtesting', 'Full site access', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
         'has_advanced_charts': True,
+        'has_trade_journal': True,
         'has_backtesting': True,
         'color': '#FF9800'
     }
@@ -5914,318 +5917,365 @@ with st.expander("Show details", expanded=False):
 # ================= Price Alerts Management =================
 st.subheader("🚨 Price Alerts")
 
-# Auto-refresh toggle and controls
-col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+# Check tier access for alerts
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+if tier_info['alert_limit'] == 0:
+    with st.expander("🔒 **Price Alerts** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Price Alerts with Pro or Pro Trader:**
+        - Get notified when stocks hit your target prices
+        - Track up to 5 alerts (Pro) or unlimited (Pro Trader)
+        - Never miss an entry or exit opportunity
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_alerts_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_alerts_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Auto-refresh toggle and controls
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 with col1:
     auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
 
-with col2:
-    if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
-        with st.spinner("Checking price alerts..."):
-            triggered_count = check_price_alerts()
-            if triggered_count and triggered_count > 0:
-                st.success(f"🚨 {triggered_count} alert(s) triggered!")
-            else:
-                st.info("No alerts triggered")
-
-with col3:
-    if st.button("➕ New Alert"):
-        st.session_state.show_new_alert = True
-
-# Auto-refresh implementation  
-if auto_check:
-    import time
-    
-    # Initialize auto-check state
-    if 'last_auto_check' not in st.session_state:
-        st.session_state.last_auto_check = time.time()
-    if 'auto_check_interval' not in st.session_state:
-        st.session_state.auto_check_interval = 300  # 5 minutes
-    
-    current_time = time.time()
-    time_since_last_check = current_time - st.session_state.last_auto_check
-    
-    # Show countdown
-    remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
-    with col4:
-        if remaining_time > 0:
-            st.info(f"Next check in: {int(remaining_time)}s")
-        else:
-            st.info("Checking alerts...")
-    
-    # Check alerts if interval has passed
-    if time_since_last_check >= st.session_state.auto_check_interval:
-        triggered_count = check_price_alerts()
-        st.session_state.last_auto_check = current_time
-        
-        if triggered_count and triggered_count > 0:
-            st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
-            st.balloons()  # Celebrate triggered alerts
-        else:
-            st.success("All alerts checked - no triggers")
-    
-    # Auto-refresh every 10 seconds to update countdown and check alerts
-    time.sleep(10)
-    st.rerun()
-else:
-    # Clear auto-check state when disabled
-    if 'last_auto_check' in st.session_state:
-        del st.session_state.last_auto_check
-
-# New alert form
-if st.session_state.get('show_new_alert', False):
-    with st.expander("Create New Price Alert", expanded=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
-            alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
-            
-        with col2:
-            alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-            alert_method = st.selectbox("Notification:", ["in_app", "email", "both"], key="alert_method_v2")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Create Alert", key="create_alert"):
-                # Input validation
-                if not alert_symbol or not alert_symbol.strip():
-                    st.error("Symbol is required")
-                elif alert_price <= 0:
-                    st.error("Price must be positive")
-                elif alert_type not in ['above', 'below']:
-                    st.error("Invalid alert type")
+    with col2:
+        if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
+            with st.spinner("Checking price alerts..."):
+                triggered_count = check_price_alerts()
+                if triggered_count and triggered_count > 0:
+                    st.success(f"🚨 {triggered_count} alert(s) triggered!")
                 else:
-                    # Check tier limitations
-                    current_tier = st.session_state.user_tier
-                    tier_info = TIER_CONFIG[current_tier]
-                    active_alerts = get_active_alerts()
-                    alert_count = len(active_alerts) if active_alerts else 0
-                    
-                    # Check if free tier trying to create alerts
-                    if current_tier == 'free':
-                        st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
-                        st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
-                    # Check if pro tier has reached alert limit
-                    elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
-                        st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
-                        st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
+                    st.info("No alerts triggered")
+
+    with col3:
+        if st.button("➕ New Alert"):
+            st.session_state.show_new_alert = True
+
+    # Auto-refresh implementation  
+    if auto_check:
+        import time
+    
+        # Initialize auto-check state
+        if 'last_auto_check' not in st.session_state:
+            st.session_state.last_auto_check = time.time()
+        if 'auto_check_interval' not in st.session_state:
+            st.session_state.auto_check_interval = 300  # 5 minutes
+    
+        current_time = time.time()
+        time_since_last_check = current_time - st.session_state.last_auto_check
+    
+        # Show countdown
+        remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
+        with col4:
+            if remaining_time > 0:
+                st.info(f"Next check in: {int(remaining_time)}s")
+            else:
+                st.info("Checking alerts...")
+    
+        # Check alerts if interval has passed
+        if time_since_last_check >= st.session_state.auto_check_interval:
+            triggered_count = check_price_alerts()
+            st.session_state.last_auto_check = current_time
+        
+            if triggered_count and triggered_count > 0:
+                st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
+                st.balloons()  # Celebrate triggered alerts
+            else:
+                st.success("All alerts checked - no triggers")
+    
+        # Auto-refresh every 10 seconds to update countdown and check alerts
+        time.sleep(10)
+        st.rerun()
+    else:
+        # Clear auto-check state when disabled
+        if 'last_auto_check' in st.session_state:
+            del st.session_state.last_auto_check
+
+    # New alert form
+    if st.session_state.get('show_new_alert', False):
+        with st.expander("Create New Price Alert", expanded=True):
+            col1, col2 = st.columns(2)
+        
+            with col1:
+                alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
+                alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
+            
+            with col2:
+                alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
+                alert_method = st.selectbox("Notification:", ["in_app", "email", "both"], key="alert_method_v2")
+        
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Create Alert", key="create_alert"):
+                    # Input validation
+                    if not alert_symbol or not alert_symbol.strip():
+                        st.error("Symbol is required")
+                    elif alert_price <= 0:
+                        st.error("Price must be positive")
+                    elif alert_type not in ['above', 'below']:
+                        st.error("Invalid alert type")
                     else:
-                        # Create the alert
-                        symbol_clean = alert_symbol.strip().upper()
-                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                            st.success(f"Alert created for {symbol_clean}")
-                            st.session_state.show_new_alert = False
+                        # Check tier limitations
+                        current_tier = st.session_state.user_tier
+                        tier_info = TIER_CONFIG[current_tier]
+                        active_alerts = get_active_alerts()
+                        alert_count = len(active_alerts) if active_alerts else 0
+                    
+                        # Check if free tier trying to create alerts
+                        if current_tier == 'free':
+                            st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
+                            st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
+                        # Check if pro tier has reached alert limit
+                        elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
+                            st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
+                            st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
+                        else:
+                            # Create the alert
+                            symbol_clean = alert_symbol.strip().upper()
+                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                                st.success(f"Alert created for {symbol_clean}")
+                                st.session_state.show_new_alert = False
+                                st.rerun()
+                            else:
+                                st.error("Failed to create alert - please check database connection")
+        
+            with col3:
+                if st.button("Cancel", key="cancel_alert"):
+                    st.session_state.show_new_alert = False
+                    st.rerun()
+
+    # Display alerts in tabs
+    tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
+
+    with tab1:
+        active_alerts = get_active_alerts()
+        if active_alerts:
+            # Create DataFrame for better display
+            alerts_df = pd.DataFrame(active_alerts)
+            alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
+        
+            display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
+            st.dataframe(alerts_df[display_cols], width='stretch')
+        
+            # Delete alerts
+            st.write("**Manage Alerts:**")
+            for alert in active_alerts:
+                col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                with col1:
+                    st.write(f"{alert['symbol']} - {alert['alert_type']} ${alert['target_price']:.2f}")
+                with col4:
+                    if st.button("Delete", key=f"del_alert_{alert['id']}"):
+                        if delete_alert(alert['id']):
+                            st.success("Alert deleted")
                             st.rerun()
                         else:
-                            st.error("Failed to create alert - please check database connection")
-        
-        with col3:
-            if st.button("Cancel", key="cancel_alert"):
-                st.session_state.show_new_alert = False
-                st.rerun()
+                            st.error("Failed to delete alert")
+        else:
+            st.info("No active alerts. Create one above to get notified when price targets are hit.")
 
-# Display alerts in tabs
-tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
-
-with tab1:
-    active_alerts = get_active_alerts()
-    if active_alerts:
-        # Create DataFrame for better display
-        alerts_df = pd.DataFrame(active_alerts)
-        alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
-        
-        display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
-        st.dataframe(alerts_df[display_cols], width='stretch')
-        
-        # Delete alerts
-        st.write("**Manage Alerts:**")
-        for alert in active_alerts:
-            col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-            with col1:
-                st.write(f"{alert['symbol']} - {alert['alert_type']} ${alert['target_price']:.2f}")
-            with col4:
-                if st.button("Delete", key=f"del_alert_{alert['id']}"):
-                    if delete_alert(alert['id']):
-                        st.success("Alert deleted")
-                        st.rerun()
-                    else:
-                        st.error("Failed to delete alert")
-    else:
-        st.info("No active alerts. Create one above to get notified when price targets are hit.")
-
-with tab2:
-    all_alerts = get_all_alerts()
-    triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
+    with tab2:
+        all_alerts = get_all_alerts()
+        triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
     
-    if triggered_alerts:
-        triggered_df = pd.DataFrame(triggered_alerts)
-        triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
+        if triggered_alerts:
+            triggered_df = pd.DataFrame(triggered_alerts)
+            triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
         
-        display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
-        st.dataframe(triggered_df[display_cols], width='stretch')
-    else:
-        st.info("No triggered alerts yet.")
+            display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
+            st.dataframe(triggered_df[display_cols], width='stretch')
+        else:
+            st.info("No triggered alerts yet.")
 
 
 # ================= Advanced Charting Section =================
 st.subheader("📈 Advanced Technical Analysis Charts")
 
-# Chart controls
-col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+# Check tier access for advanced charts
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+if not tier_info['has_advanced_charts']:
+    with st.expander("🔒 **Advanced Charts** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Advanced Technical Analysis Charts with Pro or Pro Trader:**
+        - Interactive candlestick charts with zoom and pan
+        - Customizable technical indicators (RSI, MACD, Bollinger Bands, Volume)
+        - Multiple timeframes from 5m to 1D
+        - Professional trading tools
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_charts_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_charts_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Chart controls
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
 
 with col1:
     # Get symbols from scan results for quick selection
     available_symbols = []
-    if not st.session_state.eq_results.empty:
-        available_symbols.extend(st.session_state.eq_results['symbol'].tolist())
-    if not st.session_state.cx_results.empty:
-        available_symbols.extend(st.session_state.cx_results['symbol'].tolist())
+        if not st.session_state.eq_results.empty:
+            available_symbols.extend(st.session_state.eq_results['symbol'].tolist())
+        if not st.session_state.cx_results.empty:
+            available_symbols.extend(st.session_state.cx_results['symbol'].tolist())
     
-    if available_symbols:
-        symbol_options = ["Manual Entry"] + available_symbols
-        selected_symbol_option = st.selectbox("Select Symbol:", symbol_options, key="chart_symbol_select")
+        if available_symbols:
+            symbol_options = ["Manual Entry"] + available_symbols
+            selected_symbol_option = st.selectbox("Select Symbol:", symbol_options, key="chart_symbol_select")
         
-        if selected_symbol_option == "Manual Entry":
-            chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="manual_chart_symbol")
+            if selected_symbol_option == "Manual Entry":
+                chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="manual_chart_symbol")
+            else:
+                chart_symbol = selected_symbol_option
         else:
-            chart_symbol = selected_symbol_option
-    else:
-        chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="chart_symbol_input")
+            chart_symbol = st.text_input("Enter Symbol:", placeholder="e.g., AAPL, BTC-USD", key="chart_symbol_input")
 
-with col2:
-    chart_timeframe = st.selectbox("Timeframe:", ["1D", "1h", "30m", "15m", "5m"], key="chart_timeframe")
-
-with col3:
-    chart_period = st.selectbox("Period:", ["3mo", "6mo", "1y", "2y", "5y"], key="chart_period")
-
-with col4:
-    st.write("**Technical Indicators:**")
-    col4a, col4b = st.columns(2)
-    with col4a:
-        show_ema = st.checkbox("EMAs", value=True, key="show_ema")
-        show_rsi = st.checkbox("RSI", value=True, key="show_rsi")
-    with col4b:
-        show_macd = st.checkbox("MACD", value=True, key="show_macd")
-        show_volume = st.checkbox("Volume", value=True, key="show_volume")
-
-# Chart generation
-if chart_symbol and chart_symbol.strip():
-    chart_symbol_clean = chart_symbol.strip().upper()
-    
-    # Display current price summary
-    summary_data = get_chart_data_summary(chart_symbol_clean, chart_timeframe)
-    if summary_data:
-        col1, col2, col3, col4, col5 = st.columns(5)
-        
-        with col1:
-            price = summary_data.get('current_price', 0)
-            st.metric("Current Price", f"${price:.2f}" if price else "N/A")
-        
-        with col2:
-            change = summary_data.get('price_change', 0)
-            change_pct = summary_data.get('price_change_pct', 0)
-            delta_color = "normal" if change >= 0 else "inverse"
-            st.metric("Change", f"${change:.2f}", f"{change_pct:+.2f}%", delta_color=delta_color)
-        
-        with col3:
-            rsi = summary_data.get('rsi')
-            if rsi is not None:
-                rsi_color = "normal" if 30 <= rsi <= 70 else "inverse"
-                st.metric("RSI", f"{rsi:.1f}", delta_color=rsi_color)
-            else:
-                st.metric("RSI", "N/A")
-        
-        with col4:
-            volume = summary_data.get('volume', 0)
-            if volume > 0:
-                if volume >= 1_000_000:
-                    vol_display = f"{volume/1_000_000:.1f}M"
-                elif volume >= 1_000:
-                    vol_display = f"{volume/1_000:.1f}K"
-                else:
-                    vol_display = f"{volume:,.0f}"
-                st.metric("Volume", vol_display)
-            else:
-                st.metric("Volume", "N/A")
-        
-        with col5:
-            ema_trend = summary_data.get('ema50_above_200')
-            if ema_trend is not None:
-                trend_text = "Bullish" if ema_trend else "Bearish"
-                trend_color = "normal" if ema_trend else "inverse"
-                st.metric("Trend", trend_text, delta_color=trend_color)
-            else:
-                st.metric("Trend", "N/A")
-    
-    # Generate chart
-    col1, col2 = st.columns([3, 1])
     with col2:
-        generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
+        chart_timeframe = st.selectbox("Timeframe:", ["1D", "1h", "30m", "15m", "5m"], key="chart_timeframe")
+
+    with col3:
+        chart_period = st.selectbox("Period:", ["3mo", "6mo", "1y", "2y", "5y"], key="chart_period")
+
+    with col4:
+        st.write("**Technical Indicators:**")
+        col4a, col4b = st.columns(2)
+        with col4a:
+            show_ema = st.checkbox("EMAs", value=True, key="show_ema")
+            show_rsi = st.checkbox("RSI", value=True, key="show_rsi")
+        with col4b:
+            show_macd = st.checkbox("MACD", value=True, key="show_macd")
+            show_volume = st.checkbox("Volume", value=True, key="show_volume")
+
+    # Chart generation
+    if chart_symbol and chart_symbol.strip():
+        chart_symbol_clean = chart_symbol.strip().upper()
     
-    # Display chart if requested
-    if generate_chart_clicked or st.session_state.get('chart_generated', False):
-        with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
-            try:
-                # Build indicator list
-                selected_indicators = []
-                if show_ema:
-                    selected_indicators.append("EMA")
-                if show_rsi:
-                    selected_indicators.append("RSI")
-                if show_macd:
-                    selected_indicators.append("MACD")
-                if show_volume:
-                    selected_indicators.append("Volume")
-                
-                # Create chart
-                chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
-                
-                if chart_fig:
-                    st.plotly_chart(chart_fig, width='stretch')
-                    # Set session state to keep chart visible
-                    st.session_state.chart_generated = True
-                    
-                    # Technical analysis summary
-                    with st.expander("📊 Technical Analysis Summary", expanded=False):
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.markdown("**Price Action:**")
-                            if summary_data:
-                                price = summary_data.get('current_price', 0)
-                                change_pct = summary_data.get('price_change_pct', 0)
-                                
-                                if change_pct > 2:
-                                    st.success("🟢 Strong bullish momentum")
-                                elif change_pct > 0:
-                                    st.info("🔵 Mild bullish momentum")
-                                elif change_pct > -2:
-                                    st.warning("🟡 Consolidation")
-                                else:
-                                    st.error("🔴 Bearish momentum")
-                        
-                        with col2:
-                            st.markdown("**RSI Analysis:**")
-                            rsi = summary_data.get('rsi') if summary_data else None
-                            if rsi is not None:
-                                if rsi > 70:
-                                    st.error("🔴 Overbought (RSI > 70)")
-                                elif rsi < 30:
-                                    st.success("🟢 Oversold (RSI < 30)")
-                                elif rsi > 50:
-                                    st.info("🔵 Bullish momentum (RSI > 50)")
-                                else:
-                                    st.warning("🟡 Bearish momentum (RSI < 50)")
-                            else:
-                                st.info("RSI data not available")
+        # Display current price summary
+        summary_data = get_chart_data_summary(chart_symbol_clean, chart_timeframe)
+        if summary_data:
+            col1, col2, col3, col4, col5 = st.columns(5)
+        
+            with col1:
+                price = summary_data.get('current_price', 0)
+                st.metric("Current Price", f"${price:.2f}" if price else "N/A")
+        
+            with col2:
+                change = summary_data.get('price_change', 0)
+                change_pct = summary_data.get('price_change_pct', 0)
+                delta_color = "normal" if change >= 0 else "inverse"
+                st.metric("Change", f"${change:.2f}", f"{change_pct:+.2f}%", delta_color=delta_color)
+        
+            with col3:
+                rsi = summary_data.get('rsi')
+                if rsi is not None:
+                    rsi_color = "normal" if 30 <= rsi <= 70 else "inverse"
+                    st.metric("RSI", f"{rsi:.1f}", delta_color=rsi_color)
                 else:
-                    st.error(f"Unable to generate chart for {chart_symbol_clean}. Please check the symbol and try again.")
+                    st.metric("RSI", "N/A")
+        
+            with col4:
+                volume = summary_data.get('volume', 0)
+                if volume > 0:
+                    if volume >= 1_000_000:
+                        vol_display = f"{volume/1_000_000:.1f}M"
+                    elif volume >= 1_000:
+                        vol_display = f"{volume/1_000:.1f}K"
+                    else:
+                        vol_display = f"{volume:,.0f}"
+                    st.metric("Volume", vol_display)
+                else:
+                    st.metric("Volume", "N/A")
+        
+            with col5:
+                ema_trend = summary_data.get('ema50_above_200')
+                if ema_trend is not None:
+                    trend_text = "Bullish" if ema_trend else "Bearish"
+                    trend_color = "normal" if ema_trend else "inverse"
+                    st.metric("Trend", trend_text, delta_color=trend_color)
+                else:
+                    st.metric("Trend", "N/A")
+    
+        # Generate chart
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
+    
+        # Display chart if requested
+        if generate_chart_clicked or st.session_state.get('chart_generated', False):
+            with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
+                try:
+                    # Build indicator list
+                    selected_indicators = []
+                    if show_ema:
+                        selected_indicators.append("EMA")
+                    if show_rsi:
+                        selected_indicators.append("RSI")
+                    if show_macd:
+                        selected_indicators.append("MACD")
+                    if show_volume:
+                        selected_indicators.append("Volume")
+                
+                    # Create chart
+                    chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
+                
+                    if chart_fig:
+                        st.plotly_chart(chart_fig, width='stretch')
+                        # Set session state to keep chart visible
+                        st.session_state.chart_generated = True
                     
-            except Exception as e:
-                st.error(f"Error generating chart: {str(e)}")
-else:
-    st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
+                        # Technical analysis summary
+                        with st.expander("📊 Technical Analysis Summary", expanded=False):
+                            col1, col2 = st.columns(2)
+                        
+                            with col1:
+                                st.markdown("**Price Action:**")
+                                if summary_data:
+                                    price = summary_data.get('current_price', 0)
+                                    change_pct = summary_data.get('price_change_pct', 0)
+                                
+                                    if change_pct > 2:
+                                        st.success("🟢 Strong bullish momentum")
+                                    elif change_pct > 0:
+                                        st.info("🔵 Mild bullish momentum")
+                                    elif change_pct > -2:
+                                        st.warning("🟡 Consolidation")
+                                    else:
+                                        st.error("🔴 Bearish momentum")
+                        
+                            with col2:
+                                st.markdown("**RSI Analysis:**")
+                                rsi = summary_data.get('rsi') if summary_data else None
+                                if rsi is not None:
+                                    if rsi > 70:
+                                        st.error("🔴 Overbought (RSI > 70)")
+                                    elif rsi < 30:
+                                        st.success("🟢 Oversold (RSI < 30)")
+                                    elif rsi > 50:
+                                        st.info("🔵 Bullish momentum (RSI > 50)")
+                                    else:
+                                        st.warning("🟡 Bearish momentum (RSI < 50)")
+                                else:
+                                    st.info("RSI data not available")
+                    else:
+                        st.error(f"Unable to generate chart for {chart_symbol_clean}. Please check the symbol and try again.")
+                    
+                except Exception as e:
+                    st.error(f"Error generating chart: {str(e)}")
+    else:
+        st.info("Enter a symbol above to generate an advanced technical analysis chart with customizable indicators.")
 
 # ================= Portfolio Tracking =================
 st.markdown("---")
@@ -6473,353 +6523,378 @@ with tab4:
 st.markdown("---")
 st.subheader("📔 Trade Journal")
 
-# Calculate stats for overview
-workspace_id = st.session_state.get('workspace_id', 'anonymous')
-journal_stats = calculate_journal_stats(workspace_id)
+# Check tier access for trade journal
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
 
-# Overview metrics
-col1, col2, col3, col4 = st.columns(4)
+if not tier_info['has_trade_journal']:
+    with st.expander("🔒 **Trade Journal** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Trade Journal with Pro or Pro Trader:**
+        - Log every trade with entry/exit prices and reasoning
+        - Track win rate, R-multiples, and profit factor
+        - Analyze what works and what doesn't
+        - Export trade history to CSV
+        - Improve your trading through data-driven insights
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_journal_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Calculate stats for overview
+    workspace_id = st.session_state.get('workspace_id', 'anonymous')
+    journal_stats = calculate_journal_stats(workspace_id)
+
+    # Overview metrics
+    col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     total_trades = journal_stats.get('total_trades', 0)
     st.metric("Total Trades", total_trades)
 
-with col2:
-    win_rate = journal_stats.get('win_rate', 0)
-    st.metric("Win Rate", f"{win_rate:.1f}%")
-
-with col3:
-    total_pnl = journal_stats.get('total_pnl', 0)
-    pnl_color = "green" if total_pnl >= 0 else "red"
-    st.metric("Total P&L", f"${total_pnl:,.2f}")
-
-with col4:
-    avg_r = journal_stats.get('avg_r', 0)
-    st.metric("Avg R-Multiple", f"{avg_r:.2f}R")
-
-# Main journal tabs
-tab1, tab2, tab3, tab4 = st.tabs(["➕ Log Trade", "📊 Trade History", "📈 Performance Stats", "💡 Insights"])
-
-with tab1:
-    st.subheader("Log New Trade")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
-        direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
-        trade_type = st.selectbox("Trade Type:", ["Spot", "Leverage"], key="journal_trade_type")
-        entry_date = st.date_input("Entry Date:", key="journal_entry_date")
-        entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
-        quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
-    
     with col2:
-        strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", help="For options trades only")
-        expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", help="For options trades only")
-        stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
-        take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
-        setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Other"], key="journal_setup")
-        tags_input = st.text_input("Tags (comma-separated):", placeholder="swing, earnings, technical", key="journal_tags")
-    
-    entry_reason = st.text_area("Entry Reason / Trade Plan:", placeholder="Why did you enter this trade? What's your thesis?", key="journal_entry_reason", height=100)
-    
-    if journal_symbol and entry_price > 0 and quantity > 0:
-        total_value = entry_price * quantity
-        risk_amount = None
-        if stop_loss and stop_loss > 0:
-            risk_per_share = abs(entry_price - stop_loss)
-            risk_amount = risk_per_share * quantity
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.info(f"Position Size: ${total_value:,.2f}")
-        if risk_amount:
-            with col2:
-                st.info(f"Risk Amount: ${risk_amount:,.2f}")
-            with col3:
-                risk_pct = (risk_amount / total_value) * 100
-                st.info(f"Risk %: {risk_pct:.2f}%")
-        
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            if st.button("📝 Log Trade", type="primary", width='stretch'):
-                tags_list = [tag.strip() for tag in tags_input.split(',')] if tags_input else None
-                setup = setup_type if setup_type else None
-                
-                success = add_trade_to_journal(
-                    workspace_id=workspace_id,
-                    symbol=journal_symbol,
-                    entry_date=entry_date,
-                    entry_price=entry_price,
-                    quantity=quantity,
-                    direction=direction,
-                    trade_type=trade_type,
-                    strike_price=strike_price if strike_price > 0 else None,
-                    expiration_date=expiration_date if expiration_date else None,
-                    stop_loss=stop_loss if stop_loss > 0 else None,
-                    take_profit=take_profit if take_profit > 0 else None,
-                    setup_type=setup,
-                    entry_reason=entry_reason if entry_reason else None,
-                    tags=tags_list
-                )
-                
-                if success:
-                    st.success(f"✅ Trade logged: {direction} {quantity} shares of {journal_symbol}")
-                    st.rerun()
+        win_rate = journal_stats.get('win_rate', 0)
+        st.metric("Win Rate", f"{win_rate:.1f}%")
 
-with tab2:
-    st.subheader("Trade History")
+    with col3:
+        total_pnl = journal_stats.get('total_pnl', 0)
+        pnl_color = "green" if total_pnl >= 0 else "red"
+        st.metric("Total P&L", f"${total_pnl:,.2f}")
+
+    with col4:
+        avg_r = journal_stats.get('avg_r', 0)
+        st.metric("Avg R-Multiple", f"{avg_r:.2f}R")
+
+    # Main journal tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["➕ Log Trade", "📊 Trade History", "📈 Performance Stats", "💡 Insights"])
+
+    with tab1:
+        st.subheader("Log New Trade")
     
-    # Filter options
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        show_filter = st.selectbox("Show:", ["All Trades", "Active Only", "Closed Only"], key="journal_filter")
+        col1, col2 = st.columns(2)
     
-    active_only = show_filter == "Active Only"
-    trades = get_trade_journal(workspace_id, active_only=active_only)
+        with col1:
+            journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
+            direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
+            trade_type = st.selectbox("Trade Type:", ["Spot", "Leverage"], key="journal_trade_type")
+            entry_date = st.date_input("Entry Date:", key="journal_entry_date")
+            entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
+            quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
     
-    if not trades:
-        trades = []
+        with col2:
+            strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", help="For options trades only")
+            expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", help="For options trades only")
+            stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
+            take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
+            setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Other"], key="journal_setup")
+            tags_input = st.text_input("Tags (comma-separated):", placeholder="swing, earnings, technical", key="journal_tags")
     
-    if show_filter == "Closed Only":
-        trades = [t for t in trades if not t['is_active']]
+        entry_reason = st.text_area("Entry Reason / Trade Plan:", placeholder="Why did you enter this trade? What's your thesis?", key="journal_entry_reason", height=100)
     
-    if trades:
-        for i, trade in enumerate(trades):
-            with st.expander(f"{'🟢' if trade['is_active'] else '⚫'} {trade['symbol']} - {trade['direction']} ({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})", expanded=False):
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
-                    st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
-                    if trade.get('strike_price'):
-                        st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
-                    if trade.get('expiration_date'):
-                        st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
-                    if trade['stop_loss']:
-                        st.write(f"**Stop Loss:** ${float(trade['stop_loss']):.2f}")
-                    if trade['take_profit']:
-                        st.write(f"**Take Profit:** ${float(trade['take_profit']):.2f}")
-                
+        if journal_symbol and entry_price > 0 and quantity > 0:
+            total_value = entry_price * quantity
+            risk_amount = None
+            if stop_loss and stop_loss > 0:
+                risk_per_share = abs(entry_price - stop_loss)
+                risk_amount = risk_per_share * quantity
+        
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.info(f"Position Size: ${total_value:,.2f}")
+            if risk_amount:
                 with col2:
-                    if not trade['is_active']:
-                        st.write(f"**Exit Price:** ${float(trade['exit_price']):.2f}")
-                        pnl = float(trade['pnl'])
-                        pnl_pct = float(trade['pnl_pct'])
-                        pnl_emoji = "🟢" if pnl >= 0 else "🔴"
-                        st.write(f"**P&L:** {pnl_emoji} ${pnl:,.2f} ({pnl_pct:+.2f}%)")
-                        if trade['r_multiple']:
-                            r_val = float(trade['r_multiple'])
-                            st.write(f"**R-Multiple:** {r_val:.2f}R")
-                    else:
-                        st.write("**Status:** 🟢 Active")
-                        st.write("")
-                
+                    st.info(f"Risk Amount: ${risk_amount:,.2f}")
                 with col3:
-                    if trade.get('trade_type'):
-                        st.write(f"**Type:** {trade['trade_type']}")
-                    if trade['setup_type']:
-                        st.write(f"**Setup:** {trade['setup_type']}")
-                    if trade['tags']:
-                        st.write(f"**Tags:** {', '.join(trade['tags'])}")
+                    risk_pct = (risk_amount / total_value) * 100
+                    st.info(f"Risk %: {risk_pct:.2f}%")
+        
+            col1, col2, col3 = st.columns([1, 1, 1])
+            with col2:
+                if st.button("📝 Log Trade", type="primary", width='stretch'):
+                    tags_list = [tag.strip() for tag in tags_input.split(',')] if tags_input else None
+                    setup = setup_type if setup_type else None
                 
-                if trade['entry_reason']:
-                    st.write(f"**Entry Reason:** {trade['entry_reason']}")
+                    success = add_trade_to_journal(
+                        workspace_id=workspace_id,
+                        symbol=journal_symbol,
+                        entry_date=entry_date,
+                        entry_price=entry_price,
+                        quantity=quantity,
+                        direction=direction,
+                        trade_type=trade_type,
+                        strike_price=strike_price if strike_price > 0 else None,
+                        expiration_date=expiration_date if expiration_date else None,
+                        stop_loss=stop_loss if stop_loss > 0 else None,
+                        take_profit=take_profit if take_profit > 0 else None,
+                        setup_type=setup,
+                        entry_reason=entry_reason if entry_reason else None,
+                        tags=tags_list
+                    )
                 
-                if not trade['is_active']:
-                    if trade['exit_reason']:
-                        st.write(f"**Exit Reason:** {trade['exit_reason']}")
-                    if trade['mistakes_learned']:
-                        st.write(f"**💡 Lessons Learned:** {trade['mistakes_learned']}")
+                    if success:
+                        st.success(f"✅ Trade logged: {direction} {quantity} shares of {journal_symbol}")
+                        st.rerun()
+
+    with tab2:
+        st.subheader("Trade History")
+    
+        # Filter options
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            show_filter = st.selectbox("Show:", ["All Trades", "Active Only", "Closed Only"], key="journal_filter")
+    
+        active_only = show_filter == "Active Only"
+        trades = get_trade_journal(workspace_id, active_only=active_only)
+    
+        if not trades:
+            trades = []
+    
+        if show_filter == "Closed Only":
+            trades = [t for t in trades if not t['is_active']]
+    
+        if trades:
+            for i, trade in enumerate(trades):
+                with st.expander(f"{'🟢' if trade['is_active'] else '⚫'} {trade['symbol']} - {trade['direction']} ({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})", expanded=False):
+                    col1, col2, col3 = st.columns(3)
                 
-                # Actions
-                col1, col2, col3, col4 = st.columns(4)
-                
-                if trade['is_active']:
                     with col1:
-                        if st.button("Close Trade", key=f"close_trade_{i}"):
-                            st.session_state[f'closing_trade_{i}'] = True
-                            st.rerun()
-                    
-                    if st.session_state.get(f'closing_trade_{i}', False):
-                        st.write("**Close Trade:**")
-                        exit_date = st.date_input("Exit Date:", key=f"exit_date_{i}")
-                        exit_price = st.number_input("Exit Price:", min_value=0.01, step=0.01, key=f"exit_price_{i}")
-                        exit_reason = st.text_input("Exit Reason:", key=f"exit_reason_{i}")
-                        mistakes = st.text_area("Mistakes / Lessons Learned:", key=f"mistakes_{i}")
-                        
-                        col1, col2 = st.columns(2)
+                        st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
+                        st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
+                        if trade.get('strike_price'):
+                            st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
+                        if trade.get('expiration_date'):
+                            st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
+                        if trade['stop_loss']:
+                            st.write(f"**Stop Loss:** ${float(trade['stop_loss']):.2f}")
+                        if trade['take_profit']:
+                            st.write(f"**Take Profit:** ${float(trade['take_profit']):.2f}")
+                
+                    with col2:
+                        if not trade['is_active']:
+                            st.write(f"**Exit Price:** ${float(trade['exit_price']):.2f}")
+                            pnl = float(trade['pnl'])
+                            pnl_pct = float(trade['pnl_pct'])
+                            pnl_emoji = "🟢" if pnl >= 0 else "🔴"
+                            st.write(f"**P&L:** {pnl_emoji} ${pnl:,.2f} ({pnl_pct:+.2f}%)")
+                            if trade['r_multiple']:
+                                r_val = float(trade['r_multiple'])
+                                st.write(f"**R-Multiple:** {r_val:.2f}R")
+                        else:
+                            st.write("**Status:** 🟢 Active")
+                            st.write("")
+                
+                    with col3:
+                        if trade.get('trade_type'):
+                            st.write(f"**Type:** {trade['trade_type']}")
+                        if trade['setup_type']:
+                            st.write(f"**Setup:** {trade['setup_type']}")
+                        if trade['tags']:
+                            st.write(f"**Tags:** {', '.join(trade['tags'])}")
+                
+                    if trade['entry_reason']:
+                        st.write(f"**Entry Reason:** {trade['entry_reason']}")
+                
+                    if not trade['is_active']:
+                        if trade['exit_reason']:
+                            st.write(f"**Exit Reason:** {trade['exit_reason']}")
+                        if trade['mistakes_learned']:
+                            st.write(f"**💡 Lessons Learned:** {trade['mistakes_learned']}")
+                
+                    # Actions
+                    col1, col2, col3, col4 = st.columns(4)
+                
+                    if trade['is_active']:
                         with col1:
-                            if st.button("✅ Confirm Close", key=f"confirm_close_{i}"):
-                                success = close_trade(
-                                    trade_id=trade['id'],
-                                    exit_date=exit_date,
-                                    exit_price=exit_price,
-                                    exit_reason=exit_reason if exit_reason else None,
-                                    mistakes_learned=mistakes if mistakes else None
-                                )
-                                if success:
-                                    st.success("Trade closed successfully!")
+                            if st.button("Close Trade", key=f"close_trade_{i}"):
+                                st.session_state[f'closing_trade_{i}'] = True
+                                st.rerun()
+                    
+                        if st.session_state.get(f'closing_trade_{i}', False):
+                            st.write("**Close Trade:**")
+                            exit_date = st.date_input("Exit Date:", key=f"exit_date_{i}")
+                            exit_price = st.number_input("Exit Price:", min_value=0.01, step=0.01, key=f"exit_price_{i}")
+                            exit_reason = st.text_input("Exit Reason:", key=f"exit_reason_{i}")
+                            mistakes = st.text_area("Mistakes / Lessons Learned:", key=f"mistakes_{i}")
+                        
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("✅ Confirm Close", key=f"confirm_close_{i}"):
+                                    success = close_trade(
+                                        trade_id=trade['id'],
+                                        exit_date=exit_date,
+                                        exit_price=exit_price,
+                                        exit_reason=exit_reason if exit_reason else None,
+                                        mistakes_learned=mistakes if mistakes else None
+                                    )
+                                    if success:
+                                        st.success("Trade closed successfully!")
+                                        st.session_state[f'closing_trade_{i}'] = False
+                                        st.rerun()
+                            with col2:
+                                if st.button("Cancel", key=f"cancel_close_{i}"):
                                     st.session_state[f'closing_trade_{i}'] = False
                                     st.rerun()
-                        with col2:
-                            if st.button("Cancel", key=f"cancel_close_{i}"):
-                                st.session_state[f'closing_trade_{i}'] = False
-                                st.rerun()
                 
-                with col4:
-                    if st.button("🗑️ Delete", key=f"delete_trade_{i}"):
-                        if delete_trade(trade['id']):
-                            st.success("Trade deleted")
-                            st.rerun()
+                    with col4:
+                        if st.button("🗑️ Delete", key=f"delete_trade_{i}"):
+                            if delete_trade(trade['id']):
+                                st.success("Trade deleted")
+                                st.rerun()
         
-        # Export option - Single-click CSV download
-        st.markdown("---")
-        df_data = []
-        for trade in trades:
-            df_data.append({
-                'Symbol': trade['symbol'],
-                'Direction': trade['direction'],
-                'Type': trade.get('trade_type', 'Spot'),
-                'Strike': float(trade['strike_price']) if trade.get('strike_price') else '',
-                'Expiration': pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d') if trade.get('expiration_date') else '',
-                'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
-                'Entry Price': float(trade['entry_price']),
-                'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
-                'Exit Price': float(trade['exit_price']) if trade['exit_price'] else '',
-                'Quantity': float(trade['quantity']),
-                'P&L': float(trade['pnl']) if trade['pnl'] else '',
-                'P&L %': float(trade['pnl_pct']) if trade['pnl_pct'] else '',
-                'R-Multiple': float(trade['r_multiple']) if trade['r_multiple'] else '',
-                'Setup': trade['setup_type'] or '',
-                'Tags': ', '.join(trade.get('tags', [])) if trade.get('tags') else '',
-                'Entry Reason': trade.get('entry_reason', ''),
-                'Exit Reason': trade.get('exit_reason', ''),
-                'Lessons Learned': trade.get('mistakes_learned', ''),
-                'Status': 'Active' if trade['is_active'] else 'Closed'
-            })
+            # Export option - Single-click CSV download
+            st.markdown("---")
+            df_data = []
+            for trade in trades:
+                df_data.append({
+                    'Symbol': trade['symbol'],
+                    'Direction': trade['direction'],
+                    'Type': trade.get('trade_type', 'Spot'),
+                    'Strike': float(trade['strike_price']) if trade.get('strike_price') else '',
+                    'Expiration': pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d') if trade.get('expiration_date') else '',
+                    'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
+                    'Entry Price': float(trade['entry_price']),
+                    'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
+                    'Exit Price': float(trade['exit_price']) if trade['exit_price'] else '',
+                    'Quantity': float(trade['quantity']),
+                    'P&L': float(trade['pnl']) if trade['pnl'] else '',
+                    'P&L %': float(trade['pnl_pct']) if trade['pnl_pct'] else '',
+                    'R-Multiple': float(trade['r_multiple']) if trade['r_multiple'] else '',
+                    'Setup': trade['setup_type'] or '',
+                    'Tags': ', '.join(trade.get('tags', [])) if trade.get('tags') else '',
+                    'Entry Reason': trade.get('entry_reason', ''),
+                    'Exit Reason': trade.get('exit_reason', ''),
+                    'Lessons Learned': trade.get('mistakes_learned', ''),
+                    'Status': 'Active' if trade['is_active'] else 'Closed'
+                })
         
-        df = pd.DataFrame(df_data)
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="📥 Download Trade Journal (CSV)",
-            data=csv,
-            file_name=f"trade_journal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    else:
-        st.info("No trades logged yet. Use the 'Log Trade' tab to add your first trade!")
+            df = pd.DataFrame(df_data)
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Trade Journal (CSV)",
+                data=csv,
+                file_name=f"trade_journal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        else:
+            st.info("No trades logged yet. Use the 'Log Trade' tab to add your first trade!")
 
-with tab3:
-    st.subheader("Performance Statistics")
+    with tab3:
+        st.subheader("Performance Statistics")
     
-    if journal_stats.get('total_trades', 0) > 0:
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
+        if journal_stats.get('total_trades', 0) > 0:
+            # Key metrics
+            col1, col2, col3, col4 = st.columns(4)
         
-        with col1:
-            st.metric("Win Rate", f"{journal_stats['win_rate']:.1f}%")
-            st.metric("Winning Trades", journal_stats['winning_trades'])
+            with col1:
+                st.metric("Win Rate", f"{journal_stats['win_rate']:.1f}%")
+                st.metric("Winning Trades", journal_stats['winning_trades'])
         
-        with col2:
-            st.metric("Avg R-Multiple", f"{journal_stats['avg_r']:.2f}R")
-            st.metric("Losing Trades", journal_stats['losing_trades'])
+            with col2:
+                st.metric("Avg R-Multiple", f"{journal_stats['avg_r']:.2f}R")
+                st.metric("Losing Trades", journal_stats['losing_trades'])
         
-        with col3:
-            st.metric("Total P&L", f"${journal_stats['total_pnl']:,.2f}")
-            st.metric("Profit Factor", f"{journal_stats['profit_factor']:.2f}")
+            with col3:
+                st.metric("Total P&L", f"${journal_stats['total_pnl']:,.2f}")
+                st.metric("Profit Factor", f"{journal_stats['profit_factor']:.2f}")
         
-        with col4:
-            st.metric("Active Trades", journal_stats['active_trades'])
-            st.metric("Total Trades", journal_stats['total_trades'])
+            with col4:
+                st.metric("Active Trades", journal_stats['active_trades'])
+                st.metric("Total Trades", journal_stats['total_trades'])
         
-        st.markdown("---")
+            st.markdown("---")
         
-        # Win/Loss breakdown
-        col1, col2 = st.columns(2)
+            # Win/Loss breakdown
+            col1, col2 = st.columns(2)
         
-        with col1:
-            st.subheader("Win/Loss Analysis")
-            st.write(f"**Average Win:** ${journal_stats['avg_win']:,.2f}")
-            st.write(f"**Average Loss:** ${journal_stats['avg_loss']:,.2f}")
-            st.write(f"**Largest Win:** ${journal_stats['largest_win']:,.2f}")
-            st.write(f"**Largest Loss:** ${journal_stats['largest_loss']:,.2f}")
+            with col1:
+                st.subheader("Win/Loss Analysis")
+                st.write(f"**Average Win:** ${journal_stats['avg_win']:,.2f}")
+                st.write(f"**Average Loss:** ${journal_stats['avg_loss']:,.2f}")
+                st.write(f"**Largest Win:** ${journal_stats['largest_win']:,.2f}")
+                st.write(f"**Largest Loss:** ${journal_stats['largest_loss']:,.2f}")
         
-        with col2:
-            st.subheader("Key Insights")
+            with col2:
+                st.subheader("Key Insights")
             
-            if journal_stats['win_rate'] >= 50:
-                st.success(f"✅ Solid win rate of {journal_stats['win_rate']:.1f}%")
-            else:
-                st.warning(f"⚠️ Win rate below 50% ({journal_stats['win_rate']:.1f}%)")
+                if journal_stats['win_rate'] >= 50:
+                    st.success(f"✅ Solid win rate of {journal_stats['win_rate']:.1f}%")
+                else:
+                    st.warning(f"⚠️ Win rate below 50% ({journal_stats['win_rate']:.1f}%)")
             
-            if journal_stats['avg_r'] >= 1.5:
-                st.success(f"✅ Strong average R of {journal_stats['avg_r']:.2f}R")
-            elif journal_stats['avg_r'] >= 1.0:
-                st.info(f"📊 Decent average R of {journal_stats['avg_r']:.2f}R")
-            else:
-                st.warning(f"⚠️ Low average R of {journal_stats['avg_r']:.2f}R")
+                if journal_stats['avg_r'] >= 1.5:
+                    st.success(f"✅ Strong average R of {journal_stats['avg_r']:.2f}R")
+                elif journal_stats['avg_r'] >= 1.0:
+                    st.info(f"📊 Decent average R of {journal_stats['avg_r']:.2f}R")
+                else:
+                    st.warning(f"⚠️ Low average R of {journal_stats['avg_r']:.2f}R")
             
-            if journal_stats['profit_factor'] >= 2.0:
-                st.success(f"✅ Excellent profit factor of {journal_stats['profit_factor']:.2f}")
-            elif journal_stats['profit_factor'] >= 1.5:
-                st.info(f"📊 Good profit factor of {journal_stats['profit_factor']:.2f}")
-            elif journal_stats['profit_factor'] > 1.0:
-                st.warning(f"⚠️ Marginal profit factor of {journal_stats['profit_factor']:.2f}")
-            else:
-                st.error(f"❌ Unprofitable: Profit factor {journal_stats['profit_factor']:.2f}")
-    else:
-        st.info("No completed trades yet. Statistics will appear once you close some trades.")
+                if journal_stats['profit_factor'] >= 2.0:
+                    st.success(f"✅ Excellent profit factor of {journal_stats['profit_factor']:.2f}")
+                elif journal_stats['profit_factor'] >= 1.5:
+                    st.info(f"📊 Good profit factor of {journal_stats['profit_factor']:.2f}")
+                elif journal_stats['profit_factor'] > 1.0:
+                    st.warning(f"⚠️ Marginal profit factor of {journal_stats['profit_factor']:.2f}")
+                else:
+                    st.error(f"❌ Unprofitable: Profit factor {journal_stats['profit_factor']:.2f}")
+        else:
+            st.info("No completed trades yet. Statistics will appear once you close some trades.")
 
-with tab4:
-    st.subheader("Trading Insights & Tips")
+    with tab4:
+        st.subheader("Trading Insights & Tips")
     
-    st.markdown("""
-    ### 📚 How to Use Your Trade Journal
+        st.markdown("""
+        ### 📚 How to Use Your Trade Journal
     
-    **Log Every Trade:**
-    - Record entry immediately after placing trade
-    - Include your reasoning and plan
-    - Set stop loss for R-multiple tracking
+        **Log Every Trade:**
+        - Record entry immediately after placing trade
+        - Include your reasoning and plan
+        - Set stop loss for R-multiple tracking
     
-    **Close Trades Properly:**
-    - Log exit price and reason
-    - Document what went wrong (mistakes)
-    - Note lessons learned for next time
+        **Close Trades Properly:**
+        - Log exit price and reason
+        - Document what went wrong (mistakes)
+        - Note lessons learned for next time
     
-    **Review Regularly:**
-    - Check stats weekly/monthly
-    - Identify patterns in winners/losers
-    - Focus on setup types that work
+        **Review Regularly:**
+        - Check stats weekly/monthly
+        - Identify patterns in winners/losers
+        - Focus on setup types that work
     
-    ### 🎯 What to Track
+        ### 🎯 What to Track
     
-    **Setup Types:**
-    - Which setups have highest win rate?
-    - Which produce best R-multiples?
-    - Which should you avoid?
+        **Setup Types:**
+        - Which setups have highest win rate?
+        - Which produce best R-multiples?
+        - Which should you avoid?
     
-    **Mistakes:**
-    - Are you chasing entries?
-    - Cutting winners too early?
-    - Holding losers too long?
+        **Mistakes:**
+        - Are you chasing entries?
+        - Cutting winners too early?
+        - Holding losers too long?
     
-    **Discipline:**
-    - Following your stop losses?
-    - Taking profits at target?
-    - Sticking to trade plan?
+        **Discipline:**
+        - Following your stop losses?
+        - Taking profits at target?
+        - Sticking to trade plan?
     
-    ### 💡 Pro Tips
+        ### 💡 Pro Tips
     
-    - Aim for win rate >50% OR avg R >1.5R (not both needed)
-    - Profit factor >1.5 = profitable strategy
-    - Review mistakes section often - that's where growth happens
-    - Export to CSV for deeper analysis in spreadsheets
-    """)
+        - Aim for win rate >50% OR avg R >1.5R (not both needed)
+        - Profit factor >1.5 = profitable strategy
+        - Review mistakes section often - that's where growth happens
+        - Export to CSV for deeper analysis in spreadsheets
+        """)
 
-# ================= Backtesting Section =================
-st.subheader("🔬 Strategy Backtesting")
+    # ================= Backtesting Section =================
+    st.subheader("🔬 Strategy Backtesting")
 
 # Check tier access for backtesting
 current_tier = st.session_state.user_tier
