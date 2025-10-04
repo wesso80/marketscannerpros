@@ -22,7 +22,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
         <AppUrlFixer />
         <Header />
-        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+        <main>{children}</main>
         <Footer />
         <CookieBanner />
         <AnalyticsLoader />
