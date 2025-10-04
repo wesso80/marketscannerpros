@@ -38,7 +38,7 @@ export default function Hero() {
               Start Free Now
             </Link>
             <Link
-              href="/user-guide"
+              href="/guide"
               className="rounded-xl border border-neutral-700 px-4 py-2.5 text-sm md:px-5 md:py-3 md:text-base font-medium hover:bg-neutral-900/50"
             >
               See How It Works
@@ -46,7 +46,7 @@ export default function Hero() {
           </div>
 
           <p className="mt-3 text-xs text-neutral-400">
-            No ads • Cancel anytime — Educational only — not financial advice
+            No ads • Cancel anytime • Educational only — not financial advice
           </p>
         </div>
 
