@@ -1,10 +1,7 @@
-# Node/Next build stuff
 node_modules/
 .next/
 out/
 .vercel/
-# Local env
 .env*
-# Your local scratch folders
 backups/
 attached_assets/
