@@ -5,3 +5,6 @@ out/
 .env*
 backups/
 attached_assets/
+marketscannerpros.zip
+.next/
+*.zip
