@@ -6709,37 +6709,41 @@ with tab2:
                             st.success("Trade deleted")
                             st.rerun()
         
-        # Export option
+        # Export option - Single-click CSV download
         st.markdown("---")
-        if st.button("📥 Export to CSV"):
-            df_data = []
-            for trade in trades:
-                df_data.append({
-                    'Symbol': trade['symbol'],
-                    'Direction': trade['direction'],
-                    'Type': trade.get('trade_type', 'Spot'),
-                    'Strike': float(trade['strike_price']) if trade.get('strike_price') else '',
-                    'Expiration': pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d') if trade.get('expiration_date') else '',
-                    'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
-                    'Entry Price': float(trade['entry_price']),
-                    'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
-                    'Exit Price': float(trade['exit_price']) if trade['exit_price'] else '',
-                    'Quantity': float(trade['quantity']),
-                    'P&L': float(trade['pnl']) if trade['pnl'] else '',
-                    'P&L %': float(trade['pnl_pct']) if trade['pnl_pct'] else '',
-                    'R-Multiple': float(trade['r_multiple']) if trade['r_multiple'] else '',
-                    'Setup': trade['setup_type'] or '',
-                    'Status': 'Active' if trade['is_active'] else 'Closed'
-                })
-            
-            df = pd.DataFrame(df_data)
-            csv = df.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name=f"trade_journal_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
+        df_data = []
+        for trade in trades:
+            df_data.append({
+                'Symbol': trade['symbol'],
+                'Direction': trade['direction'],
+                'Type': trade.get('trade_type', 'Spot'),
+                'Strike': float(trade['strike_price']) if trade.get('strike_price') else '',
+                'Expiration': pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d') if trade.get('expiration_date') else '',
+                'Entry Date': pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d'),
+                'Entry Price': float(trade['entry_price']),
+                'Exit Date': pd.to_datetime(trade['exit_date']).strftime('%Y-%m-%d') if trade['exit_date'] else '',
+                'Exit Price': float(trade['exit_price']) if trade['exit_price'] else '',
+                'Quantity': float(trade['quantity']),
+                'P&L': float(trade['pnl']) if trade['pnl'] else '',
+                'P&L %': float(trade['pnl_pct']) if trade['pnl_pct'] else '',
+                'R-Multiple': float(trade['r_multiple']) if trade['r_multiple'] else '',
+                'Setup': trade['setup_type'] or '',
+                'Tags': ', '.join(trade.get('tags', [])) if trade.get('tags') else '',
+                'Entry Reason': trade.get('entry_reason', ''),
+                'Exit Reason': trade.get('exit_reason', ''),
+                'Lessons Learned': trade.get('mistakes_learned', ''),
+                'Status': 'Active' if trade['is_active'] else 'Closed'
+            })
+        
+        df = pd.DataFrame(df_data)
+        csv = df.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Trade Journal (CSV)",
+            data=csv,
+            file_name=f"trade_journal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
     else:
         st.info("No trades logged yet. Use the 'Log Trade' tab to add your first trade!")
 
