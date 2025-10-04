@@ -33,18 +33,12 @@ Thumbs.db
 *.tgz
 *.tar.gz
 
-# Large directories and files (exclude from deployment)
+# Large directories (exclude from deployment)
 attached_assets/
 marketscanner-web/
 icons/
 assets/
-# Exclude images except in public directory
-attached_assets/**/*.png
-marketscanner-web/**/*.png
-icons/**/*.png
-assets/**/*.png
-*.jpg
-*.jpeg
+backups/
 capacitor-build/
 builds/
 android-build/
