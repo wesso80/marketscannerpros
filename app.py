@@ -5144,7 +5144,9 @@ if current_tier == 'free':
             - ✅ Advanced Technical Charts
             - ✅ Unlimited Portfolio Tracking
             - ✅ Trade Journal
-            - ✅ Strategy Backtesting
+            - ✅ Strategy Backtesting with Signal Alerts
+            - ✅ Email Alerts for Buy/Sell Signals
+            - ✅ TradingView Script Integration
             - ✅ Full Site Access
             """)
         
@@ -6664,6 +6666,8 @@ if not tier_info['has_trade_journal']:
         - Analyze what works and what doesn't
         - Export trade history to CSV
         - Improve your trading through data-driven insights
+        - Email alerts for backtesting buy/sell signals
+        - TradingView script integration
         - Try free for 5-7 days!
         """)
         if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
@@ -7027,7 +7031,9 @@ if not tier_info['has_backtesting']:
         st.info("""
         **Unlock Advanced Backtesting with Pro Trader:**
         - Test trading strategies on historical data
+        - Get email alerts for every buy/sell signal
         - Analyze performance metrics and win rates
+        - TradingView script integration
         - Optimize your trading approach
         - Get 5-7 day free trial!
         """)
