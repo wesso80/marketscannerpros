@@ -3,7 +3,7 @@ import BackToTop from "../components/BackToTop";
 import Footer from "../components/Footer";
 import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
-import MobileNav from "../components/MobileNav";
+import Header from "../components/Header";
 
 export const metadata = { 
   title: "MarketScanner Pros",
@@ -20,16 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
-      <AppUrlFixer />
-        <header className="header">
-          <div className="container flex items-center justify-between py-4">
-            <a className="text-xl md:text-2xl font-bold whitespace-nowrap" href="/">
-              MarketScanner<span style={{ color: "#34d399" }}>Pros</span>
-            </a>
-            <MobileNav />
-          </div>
-        </header>
-        <main className="container">{children}</main>
+        <AppUrlFixer />
+        <Header />
+        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
         <Footer />
         <CookieBanner />
         <AnalyticsLoader />
