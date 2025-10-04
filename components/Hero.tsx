@@ -18,7 +18,7 @@ export default function Hero() {
             }}
           >
             <img
-              src="/marketing/hero-top.png"
+              src="/marketing/hero-dashboard.png"
               alt="MarketScanner dashboard preview"
               className="rounded-md md:rounded-xl w-full h-auto"
               style={{ display: 'block' }}
