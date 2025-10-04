@@ -1,5 +1,8 @@
 # GitHub Update Summary - Professional Layout Changes
 
+## 🚨 CRITICAL: Fix Build Error First!
+**The build is failing because Hero.tsx is corrupted on GitHub.** Update Hero.tsx FIRST (Section 2 below), then update the other files.
+
 ## Files to Update on GitHub (wesso80/marketscannerpros repo)
 
 ### 1. app/page.tsx
@@ -147,7 +150,68 @@ export default function Home() {
 }
 ```
 
-### 2. components/SocialProof.tsx
+### 2. components/Hero.tsx (CRITICAL - Fix Build Error)
+```tsx
+// components/Hero.tsx
+import HeroShot from "./HeroShot";
+import Link from "next/link";
+
+export default function Hero() {
+  return (
+    <section className="w-full border-b border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-20">
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-2 md:gap-10">
+        
+        {/* Image first on mobile, right on desktop */}
+        <div className="w-full md:order-2">
+          <HeroShot />
+        </div>
+
+        {/* Text second on mobile, left on desktop */}
+        <div className="w-full md:order-1">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+            <span>Try Pro free for 7 days</span>
+            <span className="text-neutral-500">•</span>
+            <span>Cancel anytime</span>
+          </div>
+
+          <h1 className="mt-2 text-2xl font-bold leading-tight md:text-4xl lg:text-5xl">
+            Find <span className="text-emerald-400">Breakouts</span> Before They Happen 🚀
+          </h1>
+
+          <p className="mt-3 text-sm md:text-base max-w-xl text-neutral-300">
+            Scan crypto & stocks across timeframes in seconds. Get squeeze detection, confluence scoring,
+            and alert hooks—so you act, not react. Trusted by traders who want speed, clarity, and confluence without noise.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link
+              href="/launch"
+              className="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm md:px-5 md:py-3 md:text-base font-medium text-neutral-900 hover:bg-emerald-400"
+            >
+              Start Free Now
+            </Link>
+            <Link
+              href="/user-guide"
+              className="rounded-xl border border-neutral-700 px-4 py-2.5 text-sm md:px-5 md:py-3 md:text-base font-medium hover:bg-neutral-900/50"
+            >
+              See How It Works
+            </Link>
+          </div>
+
+          <p className="mt-3 text-xs text-neutral-400">
+            No ads • Cancel anytime • Educational only — not financial advice
+          </p>
+        </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+```
+
+### 3. components/SocialProof.tsx
 ```tsx
 // components/SocialProof.tsx
 import Image from "next/image";
@@ -214,7 +278,35 @@ export default function Why() {
 }
 ```
 
-### 4. components/HowItWorks.tsx
+### 4. components/Why.tsx
+```tsx
+// components/Why.tsx
+export default function Why() {
+  return (
+    <section className="w-full border-b border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+        <h2 className="text-2xl font-bold md:text-3xl mb-6">Built for Serious Traders</h2>
+        <ul className="space-y-4 text-base md:text-lg">
+          <li className="flex items-start gap-3">
+            <span className="text-emerald-400 text-xl">✓</span>
+            <span className="text-neutral-100">Never miss a squeeze again — get alerted before the crowd</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-emerald-400 text-xl">✓</span>
+            <span className="text-neutral-100">Cut hours of chart-watching into minutes of clarity</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-emerald-400 text-xl">✓</span>
+            <span className="text-neutral-100">Focus only on high-probability setups with multi-timeframe confluence</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+```
+
+### 5. components/HowItWorks.tsx
 ```tsx
 // components/HowItWorks.tsx
 const steps = [
@@ -265,7 +357,7 @@ export default function HowItWorks() {
 }
 ```
 
-### 5. components/Testimonials.tsx
+### 6. components/Testimonials.tsx
 ```tsx
 // components/Testimonials.tsx
 export default function Testimonials() {
@@ -302,7 +394,7 @@ export default function Testimonials() {
 }
 ```
 
-### 6. components/ReferralBanner.tsx
+### 7. components/ReferralBanner.tsx
 ```tsx
 // components/ReferralBanner.tsx
 export default function ReferralBanner() {
@@ -318,7 +410,7 @@ export default function ReferralBanner() {
 }
 ```
 
-### 7. app/layout.tsx (Already updated)
+### 8. app/layout.tsx (Already updated)
 ```tsx
 import "./globals.css";
 import BackToTop from "../components/BackToTop";
@@ -355,7 +447,7 @@ export default function RootLayout({
 }
 ```
 
-### 8. components/Header.tsx (Already updated)
+### 9. components/Header.tsx (Already updated)
 ```tsx
 'use client';
 
@@ -383,7 +475,7 @@ export default function Header() {
 }
 ```
 
-### 9. app/globals.css (Use original - no force-center CSS)
+### 10. app/globals.css (Use original - no force-center CSS)
 ```css
 :root { color-scheme: dark; }
 
