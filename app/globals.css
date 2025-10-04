@@ -81,3 +81,18 @@ html, body { background-color: #0a0a0a; color: #e5e5e5; }
 .header, .nav, .container { color: inherit; background: transparent; }
 a { color: #a7f3d0; }                  /* emerald-200ish for links */
 a:hover { color: #6ee7b7; }            /* emerald-300ish */
+
+/* Force center all content */
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
