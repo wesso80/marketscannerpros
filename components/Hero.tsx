@@ -7,8 +7,7 @@ export default function Hero() {
   return (
     <section className="relative pt-24 pb-16">
       <div className="mx-auto max-w-6xl px-4 grid md:grid-cols-2 gap-10 items-center">
-        
-        {/* Text Section */}
+        {/* Text */}
         <div className="w-full md:order-1 text-center md:text-left">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
             <span>Try Pro free for 7 days</span>
@@ -21,9 +20,8 @@ export default function Hero() {
           </h1>
 
           <p className="mt-3 text-base md:text-lg max-w-xl text-neutral-300">
-            Scan crypto & stocks across timeframes in seconds. 
-            Get squeeze detection, confluence scoring, and alert hooks —
-            so you act, not react. Trusted by traders who want speed, clarity, and confluence without noise.
+            Scan crypto & stocks across timeframes in seconds. Get squeeze detection, confluence scoring,
+            and alert hooks—so you act, not react. Built for speed and clarity without noise.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 justify-center md:justify-start">
@@ -46,9 +44,15 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* Hero Image Section */}
+        {/* Image */}
         <div className="w-full md:order-2">
           <HeroShot />
+        </div>
+      </div>
+    </section>
+  );
+}
+
         </div>
       </div>
     </section>
