@@ -4857,10 +4857,10 @@ TIER_CONFIG = {
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
         'scan_limit': None,
-        'alert_limit': 5,
-        'portfolio_limit': 8,
+        'alert_limit': None,
+        'portfolio_limit': None,
         'has_advanced_charts': True,
         'has_backtesting': False,
         'has_trade_journal': False,
@@ -5926,7 +5926,7 @@ if tier_info['alert_limit'] == 0:
         st.info("""
         **Unlock Price Alerts with Pro or Pro Trader:**
         - Get notified when stocks hit your target prices
-        - Track up to 5 alerts (Pro) or unlimited (Pro Trader)
+        - Unlimited alerts with both Pro and Pro Trader
         - Never miss an entry or exit opportunity
         - Try free for 5-7 days!
         """)
@@ -6289,7 +6289,7 @@ if tier_info['portfolio_limit'] == 3:
     with st.expander("🔒 **Portfolio Tracking** - Pro & Pro Trader Feature", expanded=False):
         st.info("""
         **Unlock Enhanced Portfolio Tracking with Pro or Pro Trader:**
-        - Track up to 8 positions (Pro) or unlimited (Pro Trader)
+        - Unlimited portfolio positions with both Pro and Pro Trader
         - Real-time P&L tracking and performance analytics
         - Visual allocation charts and historical performance
         - Never lose track of your positions
