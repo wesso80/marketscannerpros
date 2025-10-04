@@ -1,34 +1,23 @@
-import './globals.css';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import AnalyticsLoader from '@/components/AnalyticsLoader';
-import CookieBanner from '@/components/CookieBanner';
-import BackToTop from '@/components/BackToTop';
-import AppUrlFixer from '@/components/AppUrlFixer';
+'use client';
 
-export const metadata = {
-  title: 'MarketScanner Pros',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
-};
+import Link from 'next/link';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function Header() {
   return (
-    <html lang="en" className="overflow-x-hidden">
-      <body className="min-h-screen overflow-x-hidden bg-neutral-950 text-neutral-100 antialiased">
-        <AppUrlFixer />
-        <Header />
+    <header className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/70 border-b border-neutral-800">
+      <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
+        <Link href="/" className="text-xl md:text-2xl font-bold">
+          MarketScanner<span className="text-emerald-400">Pros</span>
+        </Link>
 
-        {/* Reserve vertical space for the fixed header */}
-        <div className="h-16" />
-
-        {/* Main content */}
-        <main>{children}</main>
-
-        <Footer />
-        <CookieBanner />
-        <AnalyticsLoader />
-        <BackToTop />
-      </body>
-    </html>
+        <nav className="hidden md:flex items-center gap-6 text-sm">
+          <Link href="/blog" className="hover:text-emerald-400">Blog</Link>
+          <Link href="/user-guide" className="hover:text-emerald-400">User Guide</Link>
+          <Link href="/pricing" className="hover:text-emerald-400">Pricing</Link>
+          <Link href="/contact" className="hover:text-emerald-400">Contact</Link>
+          <Link href="/dashboard" className="hover:text-emerald-400">Dashboard</Link>
+        </nav>
+      </div>
+    </header>
   );
 }
