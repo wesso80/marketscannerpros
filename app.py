@@ -6015,9 +6015,18 @@ else:
             else:
                 st.success("All alerts checked - no triggers")
     
-        # Auto-refresh every 10 seconds to update countdown and check alerts
-        time.sleep(10)
-        st.rerun()
+        # Non-blocking auto-refresh using Streamlit's built-in mechanism
+        # This refreshes the page every 10 seconds without blocking the UI
+        st.markdown(
+            """
+            <script>
+            setTimeout(function() {
+                window.parent.location.reload();
+            }, 10000);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         # Clear auto-check state when disabled
         if 'last_auto_check' in st.session_state:
