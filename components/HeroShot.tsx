@@ -9,9 +9,8 @@ export default function HeroShot() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 p-2 md:rounded-2xl md:p-3 mx-auto"
+      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900 p-2 md:rounded-2xl md:p-3"
       style={{
-        maxWidth: '100%',
         boxShadow:
           '0 0 0 1px rgba(16,185,129,.08), 0 20px 60px -15px rgba(0,0,0,.5), 0 10px 30px -10px rgba(0,0,0,.4)',
       }}
