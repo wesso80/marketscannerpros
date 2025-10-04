@@ -4374,9 +4374,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
         # Determine base URL for redirects
         base_url = os.getenv('DOMAIN_URL')
         if not base_url:
-            repl_slug = os.getenv('REPL_SLUG', 'app')
-            repl_owner = os.getenv('REPL_OWNER', 'user')
-            base_url = f'https://{repl_slug}.{repl_owner}.repl.co'
+            # Use the actual Streamlit app domain
+            base_url = 'https://app.marketscannerpros.app'
         
         # Create checkout session with free trial
         session_params = {
