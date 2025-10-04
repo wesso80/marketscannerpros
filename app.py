@@ -5285,18 +5285,70 @@ if current_tier == 'free':
 elif current_tier == 'pro':
     st.sidebar.caption(f"✨ Pro: {tier_info['scan_limit']} symbols, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 
+# Top 25 Equities by market cap
+TOP_25_EQUITIES = [
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "LLY", "V",
+    "UNH", "XOM", "JPM", "JNJ", "WMT", "MA", "PG", "AVGO", "HD", "ORCL",
+    "COST", "ABBV", "MRK", "KO", "PEP"
+]
+
+# Quick scan toggle for equities
+use_top25_eq = st.sidebar.checkbox("📊 Quick Scan: Top 25 Equities", value=False, key="quick_scan_eq")
+
+# Multiselect for picking specific equities
+if not use_top25_eq:
+    selected_eq_from_list = st.sidebar.multiselect(
+        "Or select from top 25:",
+        options=TOP_25_EQUITIES,
+        default=[],
+        key="eq_multiselect"
+    )
+else:
+    selected_eq_from_list = TOP_25_EQUITIES
+
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
+
+# Top 25 Crypto by market cap
+TOP_25_CRYPTO = [
+    "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD", "USDC-USD", "XRP-USD", 
+    "DOGE-USD", "ADA-USD", "TRX-USD", "AVAX-USD", "SHIB-USD", "DOT-USD", "LINK-USD",
+    "BCH-USD", "NEAR-USD", "MATIC-USD", "LTC-USD", "UNI-USD", "PEPE-USD",
+    "ICP-USD", "APT-USD", "FET-USD", "STX-USD", "ARB-USD"
+]
+
+# Quick scan toggle for crypto
+use_top25_cx = st.sidebar.checkbox("📊 Quick Scan: Top 25 Crypto", value=False, key="quick_scan_cx")
+
+# Multiselect for picking specific crypto
+if not use_top25_cx:
+    selected_cx_from_list = st.sidebar.multiselect(
+        "Or select from top 25:",
+        options=TOP_25_CRYPTO,
+        default=[],
+        key="cx_multiselect"
+    )
+else:
+    selected_cx_from_list = TOP_25_CRYPTO
+
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
 
 # Show current symbol count for free tier users
 if current_tier == 'free':
-    eq_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
-    cx_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
-    total_count = eq_count + cx_count
+    # Count symbols from both text areas and dropdowns
+    eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
+    cx_text_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
+    eq_dropdown_count = len(selected_eq_from_list)
+    cx_dropdown_count = len(selected_cx_from_list)
+    
+    # Total unique symbols (account for potential duplicates)
+    all_eq = set([s.strip().upper() for s in eq_input.splitlines() if s.strip()] + [s.upper() for s in selected_eq_from_list])
+    all_cx = set([s.strip().upper() for s in cx_input.splitlines() if s.strip()] + [s.upper() for s in selected_cx_from_list])
+    total_count = len(all_eq) + len(all_cx)
+    
     limit = TIER_CONFIG['free']['scan_limit']
     
     if total_count > limit:
@@ -5591,9 +5643,14 @@ if run_clicked:
     elif not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
     else:
-        # Get symbols from inputs
-        eq_syms = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
-        cx_syms = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
+        # Get symbols from inputs (merge text area + selected from dropdown)
+        eq_syms_from_text = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
+        eq_syms_from_list = [s.strip().upper() for s in selected_eq_from_list] if scan_equities else []
+        eq_syms = list(set(eq_syms_from_text + eq_syms_from_list))  # Combine and remove duplicates
+        
+        cx_syms_from_text = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
+        cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
+        cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
         
         # Check tier limitations
         current_tier = st.session_state.user_tier
