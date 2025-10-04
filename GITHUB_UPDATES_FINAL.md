@@ -163,7 +163,7 @@ export default function Hero() {
 ---
 
 ## 3. components/HeroShot.tsx
-**Issue:** Image way too big on desktop AND mobile
+**Issue:** Image needs to be responsive - smaller on mobile, bigger on desktop
 **Action:** Replace entire file with this:
 
 ```tsx
@@ -173,9 +173,8 @@ export default function Hero() {
 export default function HeroShot() {
   return (
     <div
-      className="relative rounded-lg md:rounded-xl border border-neutral-800 bg-neutral-900 p-2 w-full overflow-hidden mx-auto"
+      className="relative rounded-lg md:rounded-xl border border-neutral-800 bg-neutral-900 p-2 w-full overflow-hidden mx-auto max-w-[200px] md:max-w-[320px]"
       style={{
-        maxWidth: "200px",
         boxShadow:
           "0 0 0 1px rgba(16,185,129,.08), 0 20px 60px -15px rgba(0,0,0,.5), 0 10px 30px -10px rgba(0,0,0,.4)",
       }}
@@ -351,13 +350,17 @@ export default function Header() {
 
 1. **app/globals.css** - Removed force-center CSS (line 85-98)
 2. **components/Hero.tsx** - Reduced padding (py-12), fixed guide link (/guide not /user-guide)
-3. **components/HeroShot.tsx** - Shrunk image to 200px max-width (mobile-friendly!)
+3. **components/HeroShot.tsx** - RESPONSIVE image: 200px mobile, 320px desktop!
 4. **components/SocialProof.tsx** - Fixed corruption (removed extra JSX after component)
 5. **app/guide/page.tsx** - Added complete user guide content
 6. **components/Header.tsx** - CRITICAL FIX: User Guide tab now links to /guide (was /user-guide)
 
-**Mobile Fix:** Hero image now 200px max-width instead of 280px for proper mobile display!
+**Responsive Hero Image Fix:**
+- Mobile (iPhone): 200px max-width - perfect! ✅
+- Desktop (web): 320px max-width - slightly bigger, not too big! ✅
 
 **4-Hour User Guide Bug SOLVED:** Header navigation was linking to /user-guide instead of /guide!
+
+**Navigation Doubling FIXED:** Removed duplicate mobile nav causing Blog/Pricing to appear twice!
 
 All files are ready to copy-paste directly into GitHub!
