@@ -1,10 +1,9 @@
-// app/layout.tsx
 import './globals.css';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import AnalyticsLoader from '../components/AnalyticsLoader';
-import CookieBanner from '../components/CookieBanner';
-import BackToTop from '../components/BackToTop';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import AnalyticsLoader from '@/components/AnalyticsLoader';
+import CookieBanner from '@/components/CookieBanner';
+import BackToTop from '@/components/BackToTop';
 import AppUrlFixer from '@/components/AppUrlFixer';
 
 export const metadata = {
@@ -14,11 +13,17 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+    <html lang="en" className="overflow-x-hidden">
+      <body className="min-h-screen overflow-x-hidden bg-neutral-950 text-neutral-100 antialiased">
         <AppUrlFixer />
-        <Header />   {/* ✅ only one header */}
-        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+        <Header />
+
+        {/* Reserve vertical space for the fixed header */}
+        <div className="h-16" />
+
+        {/* Main content */}
+        <main>{children}</main>
+
         <Footer />
         <CookieBanner />
         <AnalyticsLoader />
