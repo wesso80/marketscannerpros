@@ -1,6 +1,6 @@
 'use client';
 
-import Link from "next/link";
+import Link from 'next/link';
 
 export default function Header() {
   return (
@@ -10,17 +10,13 @@ export default function Header() {
           MarketScannerPros
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-emerald-300/90">
+        {/* Single nav (no mobile duplicate) */}
+        <nav className="flex items-center gap-6 text-emerald-300/90">
           <Link href="/blog">Blog</Link>
           <Link href="/guide">User Guide</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/dashboard">Dashboard</Link>
-        </nav>
-
-        <nav className="flex md:hidden items-center gap-4 text-emerald-300/90">
-          <Link href="/blog">Blog</Link>
-          <Link href="/pricing">Pricing</Link>
         </nav>
       </div>
     </header>
