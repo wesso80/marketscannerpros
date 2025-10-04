@@ -64,18 +64,18 @@ export default function Home() {
       <Why />
       <HowItWorks />
       <Testimonials />
-      <ReferralBanner />
       
       {/* Pricing Section */}
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-        <h2 className="text-2xl md:text-3xl font-bold mb-2">
-          Pricing & Plans
-        </h2>
-        <p className="opacity-85 mb-8 text-sm md:text-base">
-          Start free. Upgrade any time. Cancel in your Stripe portal.
-        </p>
+      <section className="w-full border-b border-neutral-800 bg-neutral-950">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">
+            Pricing & Plans
+          </h2>
+          <p className="opacity-85 mb-10 text-base md:text-lg">
+            Start free. Upgrade any time. Cancel in your Stripe portal.
+          </p>
 
-        <div className="plans">
+          <div className="plans">
           {/* Free Plan */}
           <div className="plan">
             <h2>Free</h2>
@@ -132,7 +132,10 @@ export default function Home() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      </section>
+      
+      <ReferralBanner />
     </>
   );
 }

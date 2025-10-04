@@ -11,13 +11,13 @@ const logos = [
 
 export default function SocialProof() {
   return (
-    <section className="border-t border-neutral-800 bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="mb-6 text-center text-xs uppercase tracking-wide text-neutral-500">
+    <section className="w-full border-b border-neutral-800 bg-neutral-950">
+      <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+        <p className="mb-8 text-center text-xs uppercase tracking-wide text-neutral-500">
           As seen on
         </p>
 
-        <div className="grid grid-cols-2 items-center justify-items-center gap-6 sm:grid-cols-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 items-center justify-items-center gap-8 sm:grid-cols-3 md:grid-cols-5">
           {logos.map((l) => (
             <Image
               key={l.alt}
