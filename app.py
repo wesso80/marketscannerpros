@@ -4845,8 +4845,8 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Market scanning (6 symbols)', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
-        'scan_limit': 6,
+        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,
         'has_advanced_charts': False,
@@ -4856,8 +4856,8 @@ TIER_CONFIG = {
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['12 symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
-        'scan_limit': 12,
+        'features': ['Unlimited symbol scanner', '5 alerts & notifications', '8 portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'scan_limit': None,
         'alert_limit': 5,
         'portfolio_limit': 8,
         'has_advanced_charts': True,
@@ -5277,13 +5277,13 @@ else:
 
 st.sidebar.header("Equity Symbols")
 
-# Show tier limitations
+# Show tier info
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 if current_tier == 'free':
-    st.sidebar.caption(f"🚀 Free tier: {tier_info['scan_limit']} scanner symbols, {tier_info['portfolio_limit']} portfolio symbols • Upgrade for more!")
+    st.sidebar.caption(f"🚀 Free tier: Unlimited scanning, {tier_info['portfolio_limit']} portfolio symbols • Upgrade for advanced features!")
 elif current_tier == 'pro':
-    st.sidebar.caption(f"✨ Pro: {tier_info['scan_limit']} symbols, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
+    st.sidebar.caption(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 
 # Top 100 Equities by market cap
 TOP_100_EQUITIES = [
@@ -5311,16 +5311,10 @@ if not use_top100_eq:
         key="eq_multiselect"
     )
     if selected_eq_from_list:
-        if current_tier == 'free':
-            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} selected (Free tier scans first 6 total)")
-        else:
-            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+        st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
 else:
     selected_eq_from_list = TOP_100_EQUITIES
-    if current_tier == 'free':
-        st.sidebar.warning(f"⚠️ 100 selected, but Free tier scans only first 6 total")
-    else:
-        st.sidebar.success(f"✅ All 100 equities selected!")
+    st.sidebar.success(f"✅ All 100 equities selected!")
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
@@ -5357,41 +5351,27 @@ if not use_top100_cx:
         key="cx_multiselect"
     )
     if selected_cx_from_list:
-        if current_tier == 'free':
-            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} selected (Free tier scans first 6 total)")
-        else:
-            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+        st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
 else:
     selected_cx_from_list = TOP_100_CRYPTO
-    if current_tier == 'free':
-        st.sidebar.warning(f"⚠️ 100 selected, but Free tier scans only first 6 total")
-    else:
-        st.sidebar.success(f"✅ All 100 crypto selected!")
+    st.sidebar.success(f"✅ All 100 crypto selected!")
 
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
 
-# Show current symbol count for free tier users
-if current_tier == 'free':
-    # Count symbols from both text areas and dropdowns
-    eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
-    cx_text_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
-    eq_dropdown_count = len(selected_eq_from_list)
-    cx_dropdown_count = len(selected_cx_from_list)
-    
-    # Total unique symbols (account for potential duplicates)
-    all_eq = set([s.strip().upper() for s in eq_input.splitlines() if s.strip()] + [s.upper() for s in selected_eq_from_list])
-    all_cx = set([s.strip().upper() for s in cx_input.splitlines() if s.strip()] + [s.upper() for s in selected_cx_from_list])
-    total_count = len(all_eq) + len(all_cx)
-    
-    limit = TIER_CONFIG['free']['scan_limit']
-    
-    if total_count > limit:
-        st.sidebar.error(f"⚠️ {total_count}/{limit} symbols (over limit)")
-    elif total_count > limit * 0.8:
-        st.sidebar.warning(f"⚠️ {total_count}/{limit} symbols (near limit)")
-    else:
-        st.sidebar.info(f"📊 {total_count}/{limit} symbols")
+# Show current symbol count for all users
+eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
+cx_text_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
+eq_dropdown_count = len(selected_eq_from_list)
+cx_dropdown_count = len(selected_cx_from_list)
+
+# Total unique symbols (account for potential duplicates)
+all_eq = set([s.strip().upper() for s in eq_input.splitlines() if s.strip()] + [s.upper() for s in selected_eq_from_list])
+all_cx = set([s.strip().upper() for s in cx_input.splitlines() if s.strip()] + [s.upper() for s in selected_cx_from_list])
+total_count = len(all_eq) + len(all_cx)
+
+if total_count > 0:
+    st.sidebar.info(f"📊 {total_count} symbols ready to scan")
 
 st.sidebar.header("Timeframes")
 tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], index=0)
@@ -5686,25 +5666,6 @@ if run_clicked:
         cx_syms_from_text = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
         cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
         cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
-        
-        # Check tier limitations
-        current_tier = st.session_state.user_tier
-        tier_info = TIER_CONFIG[current_tier]
-        total_symbols = len(eq_syms) + len(cx_syms)
-        
-        # Apply scan limits for free tier
-        if current_tier == 'free' and tier_info['scan_limit'] and total_symbols > tier_info['scan_limit']:
-            st.warning(f"⚠️ Free tier limited to {tier_info['scan_limit']} symbols total. You entered {total_symbols} symbols.")
-            st.info(f"🚀 **Scanning first {tier_info['scan_limit']} symbols for you!** Upgrade to Pro for unlimited symbols!")
-            
-            # Slice to first 6 symbols for free tier
-            limit = tier_info['scan_limit']
-            if eq_syms and len(eq_syms) > limit:
-                eq_syms = eq_syms[:limit]
-                cx_syms = []  # If we hit equity limit, no crypto
-            elif len(eq_syms) + len(cx_syms) > limit:
-                remaining_limit = limit - len(eq_syms)
-                cx_syms = cx_syms[:remaining_limit] if remaining_limit > 0 else []
         
         with st.spinner("Scanning markets..."):
             # Scan equity markets (only if toggle is enabled)
