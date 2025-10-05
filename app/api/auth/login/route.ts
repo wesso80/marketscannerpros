@@ -48,14 +48,18 @@ export async function POST(req: NextRequest) {
 
     // Determine tier
     let tier: "free" | "pro" | "pro_trader" = "free";
-    const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO!;
-    const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER!;
+    const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO || "";
+    const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER || "price_1SEhYxLyhHN1qVrAWiuGgO0q";
 
-    if (priceIds.includes(PRICE_PRO_TRADER)) {
+    console.log("Price detection:", { priceIds, PRICE_PRO, PRICE_PRO_TRADER });
+
+    if (PRICE_PRO_TRADER && priceIds.includes(PRICE_PRO_TRADER)) {
       tier = "pro_trader";
-    } else if (priceIds.includes(PRICE_PRO)) {
+    } else if (PRICE_PRO && priceIds.includes(PRICE_PRO)) {
       tier = "pro";
     }
+    
+    console.log("Detected tier:", tier);
 
     // Update customer metadata with tier and workspace ID
     await stripe.customers.update(customerId, {
