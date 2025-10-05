@@ -1596,10 +1596,18 @@ def generate_device_fingerprint() -> str:
     return str(uuid.uuid4())
 
 def get_persistent_device_fingerprint() -> str:
-    """Get or create a persistent device fingerprint - SECURE approach"""
+    """Get or create a persistent device fingerprint - SECURE approach with browser persistence"""
     # Check if we already have a device fingerprint in session state
-    if 'device_fingerprint' in st.session_state:
+    if 'device_fingerprint' in st.session_state and st.session_state.device_fingerprint:
         return st.session_state.device_fingerprint
+    
+    # Try to load from browser localStorage using JavaScript
+    device_fp_from_storage = st.query_params.get('loaded_fp', None)
+    if device_fp_from_storage:
+        # Remove from URL immediately for security
+        st.query_params.pop('loaded_fp', None)
+        st.session_state.device_fingerprint = device_fp_from_storage
+        return device_fp_from_storage
     
     # Check for pairing token in URL (from QR code scan) - ONLY trusted auth method
     query_params = st.query_params
@@ -1615,6 +1623,12 @@ def get_persistent_device_fingerprint() -> str:
         if workspace_id:
             st.session_state.device_fingerprint = new_fingerprint
             st.session_state.workspace_id = workspace_id
+            # Store in browser localStorage
+            st.components.v1.html(f"""
+                <script>
+                    localStorage.setItem('device_fingerprint', '{new_fingerprint}');
+                </script>
+            """, height=0)
             # Remove ALL auth-related parameters from URL for security
             st.query_params.clear()
             st.success("🎉 Device successfully paired! You now have access to all your Pro features.")
@@ -1627,6 +1641,13 @@ def get_persistent_device_fingerprint() -> str:
     # This prevents account takeover via URL spoofing
     new_fingerprint = str(uuid.uuid4())
     st.session_state.device_fingerprint = new_fingerprint
+    
+    # Store fingerprint in browser localStorage for persistence across page reloads
+    st.components.v1.html(f"""
+        <script>
+            localStorage.setItem('device_fingerprint', '{new_fingerprint}');
+        </script>
+    """, height=0)
     
     # NOTE: We intentionally do NOT persist device_id in URL for security
     # Users must use pairing tokens for cross-device access
@@ -4498,6 +4519,21 @@ def cancel_stripe_subscription(workspace_id: str):
 
 # ================= Anonymous Workspace System =================
 # Initialize anonymous device and workspace for data sync
+
+# CRITICAL: Load device fingerprint from browser localStorage on page load
+# This ensures the same workspace persists across page refreshes
+if 'loaded_fp' not in st.query_params:
+    # Check if fingerprint exists in localStorage and auto-reload with it
+    st.components.v1.html("""
+        <script>
+            const savedFp = localStorage.getItem('device_fingerprint');
+            if (savedFp && !window.location.search.includes('loaded_fp=')) {
+                // Reload page with fingerprint to restore session
+                window.location.href = window.location.pathname + '?loaded_fp=' + savedFp;
+            }
+        </script>
+    """, height=0)
+
 # Initialize persistent device fingerprint
 if 'device_fingerprint' not in st.session_state:
     st.session_state.device_fingerprint = get_persistent_device_fingerprint()
