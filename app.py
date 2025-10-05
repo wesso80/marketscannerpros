@@ -4537,7 +4537,7 @@ if f'cookie_{cookie_key}' not in st.session_state:
                 }}, '*');
             }}
         </script>
-    """, height=0, key="cookie_loader")
+    """, height=0)
     
     if cookie_loader:
         st.session_state[f'cookie_{cookie_key}'] = cookie_loader
@@ -4554,7 +4554,7 @@ if 'device_fingerprint' not in st.session_state:
             expires.setFullYear(expires.getFullYear() + 1);
             document.cookie = '{cookie_key}={fingerprint}; expires=' + expires.toUTCString() + '; path=/; SameSite=Lax';
         </script>
-    """, height=0, key="cookie_setter")
+    """, height=0)
 
 if 'workspace_id' not in st.session_state:
     # Get or create workspace for this device
