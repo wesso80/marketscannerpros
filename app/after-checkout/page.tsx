@@ -1,8 +1,8 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AfterCheckout() {
+function AfterCheckoutContent() {
   const sp = useSearchParams();
   const router = useRouter();
 
@@ -43,5 +43,19 @@ export default function AfterCheckout() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
       </div>
     </main>
+  );
+}
+
+export default function AfterCheckout() {
+  return (
+    <Suspense fallback={
+      <main className="mx-auto max-w-xl p-8 min-h-screen flex flex-col items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        </div>
+      </main>
+    }>
+      <AfterCheckoutContent />
+    </Suspense>
   );
 }
