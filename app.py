@@ -5032,6 +5032,10 @@ if not existing_subscription and not st.session_state.subscription_linked:
                                 """
                                 stripe_sub_result = execute_db_query(sub_query, (stripe_workspace_id,))
                                 
+                                # Debug output
+                                st.write(f"DEBUG: Stripe workspace = {stripe_workspace_id}")
+                                st.write(f"DEBUG: Query result = {stripe_sub_result}")
+                                
                                 if stripe_sub_result and len(stripe_sub_result) > 0:
                                     # Create subscription for current workspace
                                     plan_id = stripe_sub_result[0].get('plan_id', 2)
