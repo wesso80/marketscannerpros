@@ -4224,26 +4224,31 @@ if 'session_id' in st.query_params:
             session = stripe.checkout.Session.retrieve(session_id)
             if session and session.payment_status == 'paid':
                 # Extract subscription details from session metadata
-                workspace_id = session.metadata.get('workspace_id')
+                workspace_id_from_stripe = session.metadata.get('workspace_id')
                 plan_code = session.metadata.get('plan_code')
                 
-                if workspace_id and plan_code:
+                if workspace_id_from_stripe and plan_code:
                     # Create the subscription in the database
-                    success, result = create_subscription(workspace_id, plan_code, 'web')
+                    success, result = create_subscription(workspace_id_from_stripe, plan_code, 'web')
                     if success:
-                        st.success("🎉 Payment successful! Your subscription is now active.")
+                        # Force update session state with new tier immediately
+                        st.session_state.user_tier = plan_code
+                        st.session_state.workspace_id = workspace_id_from_stripe
+                        
+                        st.success(f"🎉 Payment successful! Your {plan_code.replace('_', ' ').title()} subscription is now active.")
                         st.balloons()
+                        
+                        # Clear the query parameter and reload
+                        st.query_params.clear()
+                        st.rerun()
                     else:
-                        st.warning(f"⚠️ Payment received but subscription sync failed: {result}")
-                        st.info("Don't worry - contact support and we'll activate your account manually.")
+                        st.error(f"⚠️ Subscription activation failed: {result}")
+                        st.info("Your payment was successful. Please contact support to activate your account.")
                 else:
-                    st.error("Error: Could not retrieve subscription details. Please contact support.")
-                
-                # Clear the query parameter to avoid repeated success messages
-                st.query_params.clear()
-                st.rerun()
+                    st.error(f"Error: Missing subscription details (workspace: {bool(workspace_id_from_stripe)}, plan: {bool(plan_code)}). Please contact support with your payment confirmation.")
         except Exception as e:
             st.error(f"Error verifying payment: {str(e)}")
+            st.info("Please refresh the page or contact support if the issue persists.")
 
 # Handle successful payment return from new Stripe redirect
 if st.query_params.get('stripe_success') == 'true':
