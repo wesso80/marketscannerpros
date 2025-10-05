@@ -1,18 +1,6 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  output: "standalone",
-  poweredByHeader: false,
+const nextConfig = {
   async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "app.marketscannerpros.app" }],
-        destination: "https://market-scanner-1-wesso80.replit.app/:path*",
-        permanent: true,
-      },
-    ];
+    return []; // no global redirect
   },
 };
-
-export default nextConfig;
+module.exports = nextConfig;
