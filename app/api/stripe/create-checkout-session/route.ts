@@ -1,76 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+  throw new Error("STRIPE_SECRET_KEY is not set");
 }
+if (!process.env.NEXT_PUBLIC_APP_URL) {
+  throw new Error("NEXT_PUBLIC_APP_URL is not set");
+}
+if (!process.env.NEXT_PUBLIC_PRICE_PRO) {
+  throw new Error("NEXT_PUBLIC_PRICE_PRO is not set");
+}
+// Optional but recommended if you sell Pro Trader:
+const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER || "";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-08-27.basil',
+  // Use a stable, official version. Update later if/when you consciously upgrade.
+  apiVersion: "2024-06-20",
 });
 
-const PLAN_CONFIG = {
-  pro: {
-    name: 'MarketScanner Pro',
-    description: 'Multi-TF confluence, Squeezes, Exports',
-    price: 4.99,
-    trial_days: 7,
-  },
-  pro_trader: {
-    name: 'MarketScanner Pro Trader', 
-    description: 'All Pro features, Advanced alerts, Priority support',
-    price: 9.99,
-    trial_days: 5,
-  }
+const PLAN_TO_PRICE: Record<string, string> = {
+  pro: process.env.NEXT_PUBLIC_PRICE_PRO!,
+  pro_trader: PRICE_PRO_TRADER, // set this env if you offer Pro Trader
 };
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { plan } = await request.json();
+    const { plan = "pro" } = await req.json().catch(() => ({ plan: "pro" }));
 
-    if (!plan || !PLAN_CONFIG[plan as keyof typeof PLAN_CONFIG]) {
-      return NextResponse.json(
-        { error: 'Invalid plan specified' },
-        { status: 400 }
-      );
+    const priceId = PLAN_TO_PRICE[plan];
+    if (!priceId) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    const planConfig = PLAN_CONFIG[plan as keyof typeof PLAN_CONFIG];
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: planConfig.name,
-              description: planConfig.description,
-            },
-            unit_amount: Math.round(planConfig.price * 100), // Convert to cents
-            recurring: {
-              interval: 'month',
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `https://app.marketscannerpros.app/?access=${plan}&stripe_success=true`,
-      cancel_url: `${request.nextUrl.origin}/pricing?canceled=true`,
-      subscription_data: {
-        trial_period_days: planConfig.trial_days,
-      },
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${APP_URL}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${APP_URL}/pricing?canceled=true`,
       allow_promotion_codes: true,
-      billing_address_collection: 'required',
+      // Prefer configuring trials on the Price in Stripe.
+      // If you must override here, uncomment and set days:
+      // subscription_data: { trial_period_days: plan === "pro" ? 7 : 5 },
+      billing_address_collection: "required",
+      // Let Stripe choose valid methods; explicit payment_method_types is unnecessary for Checkout.
     });
 
     return NextResponse.json({ url: session.url });
-
-  } catch (error: any) {
-    console.error('Stripe checkout error:', error);
+  } catch (err: any) {
+    console.error("checkout create error:", err);
     return NextResponse.json(
-      { error: error?.message || 'Failed to create checkout session' },
+      { error: err?.message || "Failed to create checkout session" },
       { status: 500 }
     );
   }

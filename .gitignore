@@ -13,3 +13,5 @@ marketscannerpros.zip
 *.zip
 *.zip
 *.zip
+.vercel
+.env.local
