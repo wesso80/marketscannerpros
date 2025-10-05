@@ -4604,9 +4604,9 @@ if 'workspace_id' not in st.session_state:
 def check_nextjs_auth():
     """Check if user is authenticated via Next.js (marketscannerpros.app)"""
     try:
-        import streamlit.web.server.websocket_headers as ws_headers
-        headers = ws_headers._get_websocket_headers() or {}
-        cookie_header = headers.get('Cookie', '')
+        # Use the modern st.context.headers API
+        headers = st.context.headers if hasattr(st, 'context') else {}
+        cookie_header = headers.get('Cookie', '') if headers else ''
         
         if 'ms_auth=' in cookie_header:
             # Extract the cookie value
