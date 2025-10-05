@@ -4190,9 +4190,14 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
     try:
         import hashlib
         
+        # Initialize Stripe with API key
+        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        if not stripe.api_key:
+            return False, "Stripe not configured", None
+        
         # Find customer in Stripe
         customers = stripe.Customer.list(email=email.lower().strip(), limit=1)
-        if not customers.data:
+        if not customers or not customers.data:
             return False, "No subscription found for this email", None
         
         customer = customers.data[0]
