@@ -5022,36 +5022,54 @@ if not existing_subscription and not st.session_state.subscription_linked:
                             customer = customers.data[0]
                             stripe_workspace_id = customer.metadata.get('workspace_id')
                             if stripe_workspace_id:
-                                # Query database directly for subscription (bypass function that might fail)
-                                sub_query = """
-                                    SELECT plan_id FROM user_subscriptions 
-                                    WHERE workspace_id = %s 
-                                    AND subscription_status = 'active'
-                                    ORDER BY created_at DESC
-                                    LIMIT 1
-                                """
-                                stripe_sub_result = execute_db_query(sub_query, (stripe_workspace_id,))
+                                # Use direct database connection (execute_db_query fails silently in Streamlit)
+                                import psycopg2
+                                from psycopg2.extras import RealDictCursor
                                 
-                                # Debug output
-                                st.write(f"DEBUG: Stripe workspace = {stripe_workspace_id}")
-                                st.write(f"DEBUG: Query result = {stripe_sub_result}")
-                                
-                                if stripe_sub_result and len(stripe_sub_result) > 0:
-                                    # Create subscription for current workspace
-                                    plan_id = stripe_sub_result[0].get('plan_id', 2)
-                                    query = """
-                                        INSERT INTO user_subscriptions 
-                                        (workspace_id, plan_id, subscription_status, platform, billing_period, current_period_start, current_period_end, created_at, updated_at)
-                                        VALUES (%s, %s, 'active', 'web', 'monthly', NOW(), NOW() + INTERVAL '1 month', NOW(), NOW())
-                                        ON CONFLICT (workspace_id) DO UPDATE 
-                                        SET plan_id = EXCLUDED.plan_id, subscription_status = 'active', updated_at = NOW()
-                                    """
-                                    execute_db_write(query, (workspace_id, plan_id))
-                                    st.session_state.subscription_linked = True
-                                    st.success("✅ Subscription linked! Refreshing...")
-                                    st.rerun()
-                                else:
-                                    st.error(f"No active subscription found for workspace {stripe_workspace_id[:8]}...")
+                                try:
+                                    conn = psycopg2.connect(
+                                        host=os.getenv("PGHOST"),
+                                        port=os.getenv("PGPORT"),
+                                        database=os.getenv("PGDATABASE"),
+                                        user=os.getenv("PGUSER"),
+                                        password=os.getenv("PGPASSWORD")
+                                    )
+                                    
+                                    # Get plan from stripe workspace
+                                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                                        cur.execute("""
+                                            SELECT plan_id FROM user_subscriptions 
+                                            WHERE workspace_id = %s 
+                                            AND subscription_status = 'active'
+                                            ORDER BY created_at DESC
+                                            LIMIT 1
+                                        """, (stripe_workspace_id,))
+                                        result = cur.fetchone()
+                                    
+                                    if result:
+                                        plan_id = result['plan_id']
+                                        
+                                        # Copy subscription to current workspace
+                                        with conn.cursor() as cur:
+                                            cur.execute("""
+                                                INSERT INTO user_subscriptions 
+                                                (workspace_id, plan_id, subscription_status, platform, billing_period, current_period_start, current_period_end, created_at, updated_at)
+                                                VALUES (%s, %s, 'active', 'web', 'monthly', NOW(), NOW() + INTERVAL '1 month', NOW(), NOW())
+                                                ON CONFLICT (workspace_id) DO UPDATE 
+                                                SET plan_id = EXCLUDED.plan_id, subscription_status = 'active', updated_at = NOW()
+                                            """, (workspace_id, plan_id))
+                                            conn.commit()
+                                        
+                                        conn.close()
+                                        st.session_state.subscription_linked = True
+                                        st.success("✅ Subscription linked! Refreshing...")
+                                        st.rerun()
+                                    else:
+                                        conn.close()
+                                        st.error(f"No active subscription found for workspace {stripe_workspace_id[:8]}...")
+                                        
+                                except Exception as db_err:
+                                    st.error(f"Database error: {str(db_err)}")
                             else:
                                 st.error("Email found but no workspace linked in Stripe metadata")
                         else:
