@@ -5006,88 +5006,12 @@ existing_subscription = None
 if workspace_id:
     existing_subscription = get_workspace_subscription(workspace_id)
 
-# If no subscription, show email linking option
+# If no subscription, show link to activate
 if not existing_subscription and not st.session_state.subscription_linked:
-    with st.sidebar.expander("🔗 Link Your Subscription", expanded=True):
-        st.write("**Already paid? Link your subscription:**")
-        email_input = st.text_input("Enter your email from Stripe:", key="link_email")
-        if st.button("🔗 Link Subscription", key="link_sub_btn"):
-            if email_input and '@' in email_input:
-                # Check Stripe for this email
-                try:
-                    import stripe
-                    if stripe.api_key:
-                        customers = stripe.Customer.list(email=email_input.lower().strip(), limit=1)
-                        if customers.data:
-                            customer = customers.data[0]
-                            stripe_workspace_id = customer.metadata.get('workspace_id')
-                            if stripe_workspace_id:
-                                # Use direct database connection (execute_db_query fails silently in Streamlit)
-                                import psycopg2
-                                from psycopg2.extras import RealDictCursor
-                                
-                                try:
-                                    conn = psycopg2.connect(
-                                        host=os.getenv("PGHOST"),
-                                        port=os.getenv("PGPORT"),
-                                        database=os.getenv("PGDATABASE"),
-                                        user=os.getenv("PGUSER"),
-                                        password=os.getenv("PGPASSWORD")
-                                    )
-                                    
-                                    # Get plan from stripe workspace
-                                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                                        cur.execute("""
-                                            SELECT plan_id FROM user_subscriptions 
-                                            WHERE workspace_id = %s 
-                                            AND subscription_status = 'active'
-                                            ORDER BY created_at DESC
-                                            LIMIT 1
-                                        """, (stripe_workspace_id,))
-                                        result = cur.fetchone()
-                                        st.info(f"🔍 Query result: {result}")  # DEBUG
-                                    
-                                    if result:
-                                        plan_id = result['plan_id']
-                                        st.info(f"✅ Found plan_id: {plan_id}")  # DEBUG
-                                        
-                                        # Copy subscription to current workspace - REMOVE ON CONFLICT (it's broken)
-                                        with conn.cursor() as cur:
-                                            # First delete any existing subscription for this workspace
-                                            cur.execute("DELETE FROM user_subscriptions WHERE workspace_id = %s", (workspace_id,))
-                                            
-                                            # Then insert new one
-                                            cur.execute("""
-                                                INSERT INTO user_subscriptions 
-                                                (workspace_id, plan_id, subscription_status, platform, billing_period, current_period_start, current_period_end, created_at, updated_at)
-                                                VALUES (%s, %s, 'active', 'web', 'monthly', NOW(), NOW() + INTERVAL '1 month', NOW(), NOW())
-                                            """, (workspace_id, plan_id))
-                                            conn.commit()
-                                            st.info(f"✅ Inserted subscription for workspace {workspace_id[:8]}")  # DEBUG
-                                        
-                                        conn.close()
-                                        st.session_state.subscription_linked = True
-                                        st.success("✅ Subscription linked! Refreshing...")
-                                        time.sleep(1)
-                                        st.rerun()
-                                    else:
-                                        conn.close()
-                                        st.error(f"❌ Query returned no results for workspace {stripe_workspace_id[:8]}...")
-                                        
-                                except Exception as db_err:
-                                    import traceback
-                                    st.error(f"💥 Database error: {str(db_err)}")
-                                    st.code(traceback.format_exc())
-                            else:
-                                st.error("Email found but no workspace linked in Stripe metadata")
-                        else:
-                            st.error("No Stripe customer found with this email")
-                    else:
-                        st.error("Stripe not configured - please contact support")
-                except Exception as e:
-                    st.error(f"Error linking subscription: {str(e)}")
-            else:
-                st.error("Please enter a valid email")
+    with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
+        st.write("**Already purchased? Activate your subscription:**")
+        st.info("Visit **marketscannerpros.com/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
+        st.write("This will link your subscription to all your devices permanently.")
 
 # ================= Subscription Summary (Compact) =================
 # Show compact subscription summary instead of full tier cards
