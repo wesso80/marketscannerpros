@@ -4199,16 +4199,9 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
         import stripe as stripe_sdk
         stripe_sdk.api_key = api_key
         
-        # DEBUG: Log key type
-        key_mode = "LIVE" if api_key.startswith('sk_live') else "TEST"
-        print(f"[ACTIVATION DEBUG] Using {key_mode} Stripe key")
-        
         # Find customer in Stripe
         email_clean = email.lower().strip()
-        print(f"[ACTIVATION DEBUG] Searching for: {email_clean}")
-        
         customers_response = stripe_sdk.Customer.list(email=email_clean, limit=1)
-        print(f"[ACTIVATION DEBUG] Customers found: {len(customers_response.data) if customers_response else 0}")
         
         if not customers_response or not hasattr(customers_response, 'data') or len(customers_response.data) == 0:
             return False, f"No Stripe customer found for {email_clean}", None
