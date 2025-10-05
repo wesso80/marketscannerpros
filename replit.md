@@ -69,6 +69,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes & Important Fixes (October 2025)
 
+### **CRITICAL FIX: Stable Workspace ID System (October 5, 2025)**
+**Issue**: Workspace ID changed on every page refresh, breaking all subscriptions, friend codes, watchlists, and portfolio tracking
+**Root Cause**: Streamlit session state cleared on refresh; localStorage/cookies attempted but failed
+**PERMANENT SOLUTION**: Stripe-based stable workspace ID with signed cookies
+**Implementation**:
+- **lib/stripe.ts**: Centralized Stripe client initialization
+- **lib/auth.ts**: Cookie signing/verification using HMAC-SHA256, deterministic workspace ID from Stripe customer ID
+- **/api/stripe/checkout**: Creates checkout session with Pro ($4.99) or Pro Trader ($9.99)
+- **/api/stripe/confirm**: Post-payment endpoint that sets secure cookie with workspace ID, tier, expiry
+- **/after-checkout**: Client page that calls confirm API and redirects to dashboard
+- **/api/stripe/webhook**: Syncs tier changes to Stripe customer metadata (single source of truth)
+- **/api/me**: Exposes workspace ID and tier to client via cookie verification
+- **Pricing page**: Updated to use new checkout flow
+**Security**: 7-day signed cookies with APP_SIGNING_SECRET, httpOnly, sameSite=lax
+**Result**: Workspace ID is now stable, tied to Stripe customer ID, persists across refreshes and devices
+**Impact**: Fixes ALL subscription persistence bugs - users can now upgrade and keep their data
+
 ### Trade Journal Feature Added (October 3, 2025)
 **Added**: Complete trade journal system for performance tracking and trading improvement
 **Features**:
