@@ -4185,6 +4185,55 @@ def cancel_subscription(workspace_id: str):
         st.error(f"Error cancelling subscription: {str(e)}")
         return False
 
+def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]]:
+    """Activate subscription by email - check Stripe and create/update workspace"""
+    try:
+        import hashlib
+        
+        # Find customer in Stripe
+        customers = stripe.Customer.list(email=email.lower().strip(), limit=1)
+        if not customers.data:
+            return False, "No subscription found for this email", None
+        
+        customer = customers.data[0]
+        customer_id = customer.id
+        
+        # Get subscriptions (including trials)
+        subs = stripe.Subscription.list(customer=customer_id, limit=10)
+        valid_subs = [s for s in subs.data if s.status in ['active', 'trialing']]
+        
+        if not valid_subs:
+            return False, "No active subscription found", None
+        
+        subscription = valid_subs[0]
+        price_ids = [item.price.id for item in subscription.items.data]
+        
+        # Determine tier
+        tier = 'free'
+        PRICE_PRO = os.getenv('NEXT_PUBLIC_PRICE_PRO', '')
+        PRICE_PRO_TRADER = os.getenv('NEXT_PUBLIC_PRICE_PRO_TRADER', 'price_1SEhYxLyhHN1qVrAWiuGgO0q')
+        
+        if PRICE_PRO_TRADER in price_ids:
+            tier = 'pro_trader'
+        elif PRICE_PRO in price_ids:
+            tier = 'pro'
+        
+        # Create deterministic workspace ID from Stripe customer ID
+        workspace_id = hashlib.sha256(customer_id.encode()).hexdigest()[:16]
+        
+        # Ensure workspace exists
+        create_query = "INSERT INTO workspaces (id) VALUES (%s) ON CONFLICT (id) DO NOTHING"
+        execute_db_write(create_query, (workspace_id,))
+        
+        # Set subscription override
+        if set_subscription_override(workspace_id, tier, f"stripe_{customer_id}", None):
+            return True, f"✅ {tier.replace('_', ' ').title()} activated!", workspace_id
+        
+        return False, "Failed to activate subscription", None
+        
+    except Exception as e:
+        return False, f"Error: {str(e)}", None
+
 def get_user_tier_from_subscription(workspace_id: str):
     """Get user tier based on active subscription and admin overrides"""
     # Check for admin override first
@@ -4544,6 +4593,33 @@ if 'workspace_id' not in st.session_state:
         except Exception as e:
             # Silent fail - don't break app if sync fails
             pass
+
+# ================= EMAIL LOGIN ACTIVATION =================
+# Check for email login parameter first
+query_params_login = st.query_params
+email_login = query_params_login.get('activate_email', None)
+if isinstance(email_login, list):
+    email_login = email_login[0] if email_login else None
+
+if email_login and '@' in email_login:
+    st.info("🔄 Activating your subscription...")
+    success, message, new_workspace_id = activate_subscription_by_email(email_login)
+    
+    if success and new_workspace_id:
+        # Update session state with new workspace
+        st.session_state.workspace_id = new_workspace_id
+        st.session_state.device_fingerprint = new_workspace_id
+        
+        # Update URL with stable workspace ID
+        st.query_params.clear()
+        st.query_params['wid'] = new_workspace_id
+        
+        st.success(message)
+        st.balloons()
+        st.rerun()
+    else:
+        st.error(message)
+        st.stop()
 
 # Update user tier based on active subscription (CRITICAL FIX)
 workspace_id_for_tier = st.session_state.get('workspace_id')
