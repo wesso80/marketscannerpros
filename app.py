@@ -5045,31 +5045,39 @@ if not existing_subscription and not st.session_state.subscription_linked:
                                             LIMIT 1
                                         """, (stripe_workspace_id,))
                                         result = cur.fetchone()
+                                        st.info(f"🔍 Query result: {result}")  # DEBUG
                                     
                                     if result:
                                         plan_id = result['plan_id']
+                                        st.info(f"✅ Found plan_id: {plan_id}")  # DEBUG
                                         
-                                        # Copy subscription to current workspace
+                                        # Copy subscription to current workspace - REMOVE ON CONFLICT (it's broken)
                                         with conn.cursor() as cur:
+                                            # First delete any existing subscription for this workspace
+                                            cur.execute("DELETE FROM user_subscriptions WHERE workspace_id = %s", (workspace_id,))
+                                            
+                                            # Then insert new one
                                             cur.execute("""
                                                 INSERT INTO user_subscriptions 
                                                 (workspace_id, plan_id, subscription_status, platform, billing_period, current_period_start, current_period_end, created_at, updated_at)
                                                 VALUES (%s, %s, 'active', 'web', 'monthly', NOW(), NOW() + INTERVAL '1 month', NOW(), NOW())
-                                                ON CONFLICT (workspace_id) DO UPDATE 
-                                                SET plan_id = EXCLUDED.plan_id, subscription_status = 'active', updated_at = NOW()
                                             """, (workspace_id, plan_id))
                                             conn.commit()
+                                            st.info(f"✅ Inserted subscription for workspace {workspace_id[:8]}")  # DEBUG
                                         
                                         conn.close()
                                         st.session_state.subscription_linked = True
                                         st.success("✅ Subscription linked! Refreshing...")
+                                        time.sleep(1)
                                         st.rerun()
                                     else:
                                         conn.close()
-                                        st.error(f"No active subscription found for workspace {stripe_workspace_id[:8]}...")
+                                        st.error(f"❌ Query returned no results for workspace {stripe_workspace_id[:8]}...")
                                         
                                 except Exception as db_err:
-                                    st.error(f"Database error: {str(db_err)}")
+                                    import traceback
+                                    st.error(f"💥 Database error: {str(db_err)}")
+                                    st.code(traceback.format_exc())
                             else:
                                 st.error("Email found but no workspace linked in Stripe metadata")
                         else:
