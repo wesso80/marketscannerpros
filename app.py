@@ -4238,8 +4238,10 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
         elif PRICE_PRO in price_ids:
             tier = 'pro'
         
-        # Create deterministic workspace ID from Stripe customer ID
-        workspace_id = hashlib.sha256(customer_id.encode()).hexdigest()[:16]
+        # Create deterministic workspace ID from Stripe customer ID (UUID format)
+        hash_bytes = hashlib.sha256(customer_id.encode()).digest()
+        # Format as UUID: 8-4-4-4-12 characters
+        workspace_id = f"{hash_bytes[:4].hex()}-{hash_bytes[4:6].hex()}-{hash_bytes[6:8].hex()}-{hash_bytes[8:10].hex()}-{hash_bytes[10:16].hex()}"
         
         # Ensure workspace exists
         create_query = "INSERT INTO workspaces (id) VALUES (%s) ON CONFLICT (id) DO NOTHING"
