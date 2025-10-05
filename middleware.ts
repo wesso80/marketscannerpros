@@ -50,7 +50,7 @@ export async function middleware(req: NextRequest) {
   const cookie = req.cookies.get('ms_auth')?.value;
   
   if (cookie) {
-    const session = verify(cookie);
+    const session = await verify(cookie);
     
     if (session) {
       // Check if cookie expires in less than 3 days - refresh it
@@ -59,7 +59,7 @@ export async function middleware(req: NextRequest) {
       if (daysUntilExpiry < 3) {
         // Refresh the cookie with new 7-day expiry
         const newExp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
-        const newToken = signToken({ 
+        const newToken = await signToken({ 
           cid: session.cid, 
           tier: session.tier, 
           workspaceId: session.workspaceId, 
