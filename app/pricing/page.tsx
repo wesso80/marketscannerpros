@@ -21,10 +21,10 @@ export default function PricingPage() {
   const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
     setLoading(plan);
     try {
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan })
+        body: JSON.stringify({ tier: plan })
       });
       
       const data = await response.json();
