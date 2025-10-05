@@ -5022,11 +5022,19 @@ if not existing_subscription and not st.session_state.subscription_linked:
                             customer = customers.data[0]
                             stripe_workspace_id = customer.metadata.get('workspace_id')
                             if stripe_workspace_id:
-                                # Copy subscription from Stripe workspace to current workspace
-                                stripe_sub = get_workspace_subscription(stripe_workspace_id)
-                                if stripe_sub:
+                                # Query database directly for subscription (bypass function that might fail)
+                                sub_query = """
+                                    SELECT plan_id FROM user_subscriptions 
+                                    WHERE workspace_id = %s 
+                                    AND subscription_status = 'active'
+                                    ORDER BY created_at DESC
+                                    LIMIT 1
+                                """
+                                stripe_sub_result = execute_db_query(sub_query, (stripe_workspace_id,))
+                                
+                                if stripe_sub_result and len(stripe_sub_result) > 0:
                                     # Create subscription for current workspace
-                                    plan_id = stripe_sub.get('plan_id', 2)
+                                    plan_id = stripe_sub_result[0].get('plan_id', 2)
                                     query = """
                                         INSERT INTO user_subscriptions 
                                         (workspace_id, plan_id, subscription_status, platform, billing_period, current_period_start, current_period_end, created_at, updated_at)
@@ -5039,13 +5047,15 @@ if not existing_subscription and not st.session_state.subscription_linked:
                                     st.success("✅ Subscription linked! Refreshing...")
                                     st.rerun()
                                 else:
-                                    st.error("No active subscription found for this email")
+                                    st.error(f"No active subscription found for workspace {stripe_workspace_id[:8]}...")
                             else:
-                                st.error("Email found but no workspace linked")
+                                st.error("Email found but no workspace linked in Stripe metadata")
                         else:
                             st.error("No Stripe customer found with this email")
+                    else:
+                        st.error("Stripe not configured - please contact support")
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.error(f"Error linking subscription: {str(e)}")
             else:
                 st.error("Please enter a valid email")
 
