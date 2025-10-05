@@ -4223,8 +4223,22 @@ if 'session_id' in st.query_params:
         try:
             session = stripe.checkout.Session.retrieve(session_id)
             if session and session.payment_status == 'paid':
-                st.success("🎉 Payment successful! Your subscription is now active.")
-                st.balloons()
+                # Extract subscription details from session metadata
+                workspace_id = session.metadata.get('workspace_id')
+                plan_code = session.metadata.get('plan_code')
+                
+                if workspace_id and plan_code:
+                    # Create the subscription in the database
+                    success, result = create_subscription(workspace_id, plan_code, 'web')
+                    if success:
+                        st.success("🎉 Payment successful! Your subscription is now active.")
+                        st.balloons()
+                    else:
+                        st.warning(f"⚠️ Payment received but subscription sync failed: {result}")
+                        st.info("Don't worry - contact support and we'll activate your account manually.")
+                else:
+                    st.error("Error: Could not retrieve subscription details. Please contact support.")
+                
                 # Clear the query parameter to avoid repeated success messages
                 st.query_params.clear()
                 st.rerun()
