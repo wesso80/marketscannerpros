@@ -4879,7 +4879,7 @@ with st.sidebar.expander("📱 Device Sync", expanded=False):
         # Pair with token section
         with st.expander("🔢 Enter Pairing Code", expanded=False):
             st.write("**Have a pairing code from another device?**")
-            pair_token = st.text_input("Enter pairing code:", max_chars=6, key="pair_token_input")
+            pair_token = st.text_input("Enter pairing code:", max_chars=10, key="pair_token_input")
             if st.button("📲 Pair Device", key="pair_device"):
                 if pair_token:
                     new_device_fp = generate_device_fingerprint()
