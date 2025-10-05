@@ -26,20 +26,24 @@ export async function POST(req: NextRequest) {
     const customer = customers.data[0];
     const customerId = customer.id;
 
-    // Get active subscriptions for this customer
+    // Get active or trialing subscriptions for this customer
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
 
-    if (!subscriptions.data || subscriptions.data.length === 0) {
+    // Filter for active or trialing subscriptions
+    const validSubscriptions = subscriptions.data.filter(
+      sub => sub.status === "active" || sub.status === "trialing"
+    );
+
+    if (!validSubscriptions || validSubscriptions.length === 0) {
       return NextResponse.json({ 
         error: "No active subscription found" 
       }, { status: 404 });
     }
 
-    const subscription = subscriptions.data[0];
+    const subscription = validSubscriptions[0];
     const priceIds = subscription.items.data.map((item) => item.price.id);
 
     // Determine tier
