@@ -1,82 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { stripe } from '@/lib/stripe';
+import { hashWorkspaceId } from '@/lib/auth';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-});
+const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export async function POST(req: NextRequest) {
+  const sig = req.headers.get("stripe-signature");
+  const rawBody = await req.text();
 
-export async function POST(request: NextRequest) {
+  let event: Stripe.Event;
   try {
-    const body = await request.text();
-    const signature = request.headers.get('stripe-signature')!;
+    event = stripe.webhooks.constructEvent(rawBody, sig!, WEBHOOK_SECRET);
+  } catch (err: any) {
+    console.error("Webhook signature verification failed.", err.message);
+    return new NextResponse("Bad signature", { status: 400 });
+  }
 
-    let event: Stripe.Event;
+  try {
+    // Handle subscription created or updated - sync tier to customer metadata
+    if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.created") {
+      const sub: any = event.data.object;
+      const customerId = sub.customer as string;
+      const status = sub.status as string;
+      const priceIds: string[] = (sub.items?.data ?? []).map((it: any) => it.price?.id).filter(Boolean);
 
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, endpointSecret!);
-    } catch (err: any) {
-      console.log(`Webhook signature verification failed:`, err.message);
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-    }
-
-    // Handle successful checkout completion
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      
-      if (session.mode === 'subscription' && session.subscription) {
-        // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+      let tier: "free" | "pro" | "pro_trader" = "free";
+      if (["active", "trialing", "past_due"].includes(status) && priceIds.length) {
+        const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO!;
+        const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER!;
         
-        // Determine plan type based on amount
-        const unitAmount = subscription.items.data[0]?.price?.unit_amount || 0;
-        let planType = 'pro';
-        if (unitAmount >= 999) { // $9.99 or more
-          planType = 'pro_trader';
-        }
-        
-        console.log(`Subscription created: ${subscription.id}, Plan: ${planType}, Customer: ${session.customer_email}`);
-        
-        // Call our internal API to update subscription status
-        const updateUrl = `${request.nextUrl.origin}/api/subscription/update`;
-        await fetch(updateUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            stripeSubscriptionId: subscription.id,
-            customerEmail: session.customer_email,
-            planType: planType,
-            status: 'active'
-          })
-        });
+        if (priceIds.includes(PRICE_PRO_TRADER)) tier = "pro_trader";
+        else if (priceIds.includes(PRICE_PRO)) tier = "pro";
       }
+
+      // Store tier and stable workspace ID in Stripe customer metadata (source of truth)
+      await stripe.customers.update(customerId, {
+        metadata: { 
+          marketscanner_tier: tier,
+          workspace_id: hashWorkspaceId(customerId)
+        },
+      });
+      
+      console.log(`Updated customer ${customerId} to tier ${tier}`);
     }
 
-    // Handle subscription cancellation
-    if (event.type === 'customer.subscription.deleted') {
-      const subscription = event.data.object as Stripe.Subscription;
-      
-      console.log(`Subscription cancelled: ${subscription.id}`);
-      
-      // Call our internal API to cancel subscription
-      const updateUrl = `${request.nextUrl.origin}/api/subscription/update`;
-      await fetch(updateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripeSubscriptionId: subscription.id,
-          status: 'cancelled'
-        })
+    // Handle subscription cancellation - set tier to free
+    if (event.type === "customer.subscription.deleted") {
+      const sub: any = event.data.object;
+      const customerId = sub.customer as string;
+      await stripe.customers.update(customerId, { 
+        metadata: { 
+          marketscanner_tier: "free",
+          workspace_id: hashWorkspaceId(customerId)
+        } 
       });
+      
+      console.log(`Cancelled subscription for customer ${customerId}`);
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
-    console.error('Webhook error:', error);
-    return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("Webhook handler error", e);
+    return new NextResponse("Webhook handler error", { status: 500 });
   }
 }
