@@ -1596,18 +1596,10 @@ def generate_device_fingerprint() -> str:
     return str(uuid.uuid4())
 
 def get_persistent_device_fingerprint() -> str:
-    """Get or create a persistent device fingerprint - SECURE approach with browser persistence"""
+    """Get or create a persistent device fingerprint - SECURE approach with cookie persistence"""
     # Check if we already have a device fingerprint in session state
     if 'device_fingerprint' in st.session_state and st.session_state.device_fingerprint:
         return st.session_state.device_fingerprint
-    
-    # Try to load from browser localStorage using JavaScript
-    device_fp_from_storage = st.query_params.get('loaded_fp', None)
-    if device_fp_from_storage:
-        # Remove from URL immediately for security
-        st.query_params.pop('loaded_fp', None)
-        st.session_state.device_fingerprint = device_fp_from_storage
-        return device_fp_from_storage
     
     # Check for pairing token in URL (from QR code scan) - ONLY trusted auth method
     query_params = st.query_params
@@ -1623,12 +1615,6 @@ def get_persistent_device_fingerprint() -> str:
         if workspace_id:
             st.session_state.device_fingerprint = new_fingerprint
             st.session_state.workspace_id = workspace_id
-            # Store in browser localStorage
-            st.components.v1.html(f"""
-                <script>
-                    localStorage.setItem('device_fingerprint', '{new_fingerprint}');
-                </script>
-            """, height=0)
             # Remove ALL auth-related parameters from URL for security
             st.query_params.clear()
             st.success("🎉 Device successfully paired! You now have access to all your Pro features.")
@@ -1637,20 +1623,20 @@ def get_persistent_device_fingerprint() -> str:
         else:
             st.error("❌ Invalid or expired pairing code. Please try again.")
     
-    # SECURITY: Never trust device_id from URL - generate new fingerprint
-    # This prevents account takeover via URL spoofing
+    # Try to restore from cookie using hidden HTML component
+    # This creates a cookie-based persistence that survives page refreshes
+    cookie_key = 'msp_device_fp'
+    
+    # Check if cookie was loaded in this session
+    if f'cookie_{cookie_key}' in st.session_state:
+        fingerprint = st.session_state[f'cookie_{cookie_key}']
+        st.session_state.device_fingerprint = fingerprint
+        return fingerprint
+    
+    # Generate new fingerprint only if cookie doesn't exist
+    # The cookie check/set happens via JavaScript in the main app initialization
     new_fingerprint = str(uuid.uuid4())
     st.session_state.device_fingerprint = new_fingerprint
-    
-    # Store fingerprint in browser localStorage for persistence across page reloads
-    st.components.v1.html(f"""
-        <script>
-            localStorage.setItem('device_fingerprint', '{new_fingerprint}');
-        </script>
-    """, height=0)
-    
-    # NOTE: We intentionally do NOT persist device_id in URL for security
-    # Users must use pairing tokens for cross-device access
     
     return new_fingerprint
 
@@ -4520,23 +4506,55 @@ def cancel_stripe_subscription(workspace_id: str):
 # ================= Anonymous Workspace System =================
 # Initialize anonymous device and workspace for data sync
 
-# CRITICAL: Load device fingerprint from browser localStorage on page load
-# This ensures the same workspace persists across page refreshes
-if 'loaded_fp' not in st.query_params:
-    # Check if fingerprint exists in localStorage and auto-reload with it
-    st.components.v1.html("""
+# Cookie-based device fingerprint persistence
+# This JavaScript runs first to restore fingerprint from cookie
+cookie_key = 'msp_device_fp'
+
+# Load fingerprint from cookie into session state
+if f'cookie_{cookie_key}' not in st.session_state:
+    # Inject JavaScript to read cookie and store in Streamlit session
+    cookie_loader = st.components.v1.html(f"""
         <script>
-            const savedFp = localStorage.getItem('device_fingerprint');
-            if (savedFp && !window.location.search.includes('loaded_fp=')) {
-                // Reload page with fingerprint to restore session
-                window.location.href = window.location.pathname + '?loaded_fp=' + savedFp;
-            }
+            function getCookie(name) {{
+                const value = `; ${{document.cookie}}`;
+                const parts = value.split(`; ${{name}}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            }}
+            
+            const fingerprint = getCookie('{cookie_key}');
+            if (fingerprint) {{
+                // Send to Streamlit
+                window.parent.postMessage({{
+                    type: 'streamlit:setComponentValue',
+                    value: fingerprint
+                }}, '*');
+            }} else {{
+                // No cookie found, signal to generate new
+                window.parent.postMessage({{
+                    type: 'streamlit:setComponentValue',
+                    value: null
+                }}, '*');
+            }}
         </script>
-    """, height=0)
+    """, height=0, key="cookie_loader")
+    
+    if cookie_loader:
+        st.session_state[f'cookie_{cookie_key}'] = cookie_loader
 
 # Initialize persistent device fingerprint
 if 'device_fingerprint' not in st.session_state:
     st.session_state.device_fingerprint = get_persistent_device_fingerprint()
+    
+    # Set cookie with the fingerprint (expires in 1 year)
+    fingerprint = st.session_state.device_fingerprint
+    st.components.v1.html(f"""
+        <script>
+            const expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = '{cookie_key}={fingerprint}; expires=' + expires.toUTCString() + '; path=/; SameSite=Lax';
+        </script>
+    """, height=0, key="cookie_setter")
 
 if 'workspace_id' not in st.session_state:
     # Get or create workspace for this device
