@@ -4599,8 +4599,52 @@ if 'workspace_id' not in st.session_state:
             # Silent fail - don't break app if sync fails
             pass
 
-# ================= EMAIL LOGIN ACTIVATION =================
-# Check for email login parameter first
+# ================= CROSS-SYSTEM AUTHENTICATION =================
+# Check Next.js auth cookie and sync with Streamlit
+def check_nextjs_auth():
+    """Check if user is authenticated via Next.js (marketscannerpros.app)"""
+    try:
+        import streamlit.web.server.websocket_headers as ws_headers
+        headers = ws_headers._get_websocket_headers() or {}
+        cookie_header = headers.get('Cookie', '')
+        
+        if 'ms_auth=' in cookie_header:
+            # Extract the cookie value
+            for cookie in cookie_header.split(';'):
+                if 'ms_auth=' in cookie:
+                    ms_auth = cookie.split('ms_auth=')[1].strip()
+                    
+                    # Call Next.js API to verify and get user info
+                    response = requests.get(
+                        'https://marketscannerpros.app/api/me',
+                        headers={'Cookie': f'ms_auth={ms_auth}'},
+                        timeout=3
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        return data.get('workspaceId'), data.get('tier')
+        
+        return None, None
+    except Exception:
+        return None, None
+
+# Try to get auth from Next.js first
+nextjs_workspace_id, nextjs_tier = check_nextjs_auth()
+if nextjs_workspace_id and nextjs_tier:
+    # User authenticated via Next.js - sync to Streamlit
+    st.session_state.workspace_id = nextjs_workspace_id
+    st.session_state.device_fingerprint = nextjs_workspace_id
+    
+    # Set subscription override
+    if nextjs_tier != 'free':
+        set_subscription_override(nextjs_workspace_id, nextjs_tier, "nextjs_auth", None)
+    
+    # Update URL
+    st.query_params['wid'] = nextjs_workspace_id
+
+# ================= EMAIL LOGIN ACTIVATION (Fallback) =================
+# Check for email login parameter
 query_params_login = st.query_params
 email_login = query_params_login.get('activate_email', None)
 if isinstance(email_login, list):
