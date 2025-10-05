@@ -81,3 +81,11 @@ waitForPort = 3000
 
 [agent]
 integrations = ["python_sendgrid:1.0.0"]
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
