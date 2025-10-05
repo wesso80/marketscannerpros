@@ -4191,21 +4191,27 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
         import hashlib
         
         # Initialize Stripe with API key
-        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-        if not stripe.api_key:
+        api_key = os.getenv('STRIPE_SECRET_KEY')
+        if not api_key:
             return False, "Stripe not configured", None
         
-        # Find customer in Stripe
-        customers = stripe.Customer.list(email=email.lower().strip(), limit=1)
-        if not customers or not customers.data:
-            return False, "No subscription found for this email", None
+        # Re-import stripe to ensure fresh instance
+        import stripe as stripe_sdk
+        stripe_sdk.api_key = api_key
         
-        customer = customers.data[0]
+        # Find customer in Stripe
+        email_clean = email.lower().strip()
+        customers_response = stripe_sdk.Customer.list(email=email_clean, limit=1)
+        
+        if not customers_response or not hasattr(customers_response, 'data') or len(customers_response.data) == 0:
+            return False, f"No Stripe customer found for {email_clean}", None
+        
+        customer = customers_response.data[0]
         customer_id = customer.id
         
         # Get subscriptions (including trials)
-        subs = stripe.Subscription.list(customer=customer_id, limit=10)
-        valid_subs = [s for s in subs.data if s.status in ['active', 'trialing']]
+        subs_response = stripe_sdk.Subscription.list(customer=customer_id, limit=10)
+        valid_subs = [s for s in subs_response.data if s.status in ['active', 'trialing']]
         
         if not valid_subs:
             return False, "No active subscription found", None
