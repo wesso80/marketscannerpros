@@ -1,1 +1,3 @@
-{}
+{
+  "/api/env-check/route": "app/api/env-check/route.js"
+}

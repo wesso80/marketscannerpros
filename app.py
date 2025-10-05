@@ -4217,7 +4217,9 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
             return False, "No active subscription found", None
         
         subscription = valid_subs[0]
-        price_ids = [item.price.id for item in subscription.items.data]
+        # Access items via dict to avoid conflict with Python's .items() method
+        sub_dict = dict(subscription)
+        price_ids = [item.price.id for item in sub_dict['items'].data]
         
         # Determine tier
         tier = 'free'
