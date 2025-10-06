@@ -12,9 +12,9 @@ import "./pricing/styles.css";
 export default function Home() {
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Get Streamlit URL - always use Replit deployment
+  // Get Streamlit URL - use production deployment
   const getStreamlitUrl = () => {
-    return "https://ff7eeae1-4b97-4c35-9c82-b880d1c3edc8-00-1ey99t6r62pga.janeway.replit.dev";
+    return "https://app.marketscannerpros.app";
   };
 
   const handleCheckout = async (plan: "pro" | "pro_trader") => {
