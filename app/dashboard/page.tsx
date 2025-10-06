@@ -9,7 +9,7 @@ function DashboardContent() {
   const params = useSearchParams();              // ✅ always defined
   const [subscriptionStatus, setSubscriptionStatus] = useState('');
 
-  useEffect() => {
+  useEffect(() => {
     const success = params?.get('success') ?? '';   // TS-safe with optional chaining
     if (success === 'true') {
       setSubscriptionStatus('✅ Payment successful! Your Pro subscription is now active.');
