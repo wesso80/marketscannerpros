@@ -48,13 +48,6 @@ async function verify(token: string) {
 export async function middleware(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase();
 
-  // OPTIONAL: redirect apex → app.  (No redirects to Replit.)
-  if (host === 'marketscannerpros.app') {
-    const url = new URL(req.url);
-    url.host = 'app.marketscannerpros.app';
-    return NextResponse.redirect(url, 308);
-  }
-
   // Refresh signed session cookie if it will expire in < 3 days
   const cookie = req.cookies.get('ms_auth')?.value;
   if (cookie) {

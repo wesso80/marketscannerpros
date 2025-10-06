@@ -12,26 +12,9 @@ import "./pricing/styles.css";
 export default function Home() {
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Get Streamlit URL from env or construct it
+  // Get Streamlit URL - always use Replit deployment
   const getStreamlitUrl = () => {
-    // Use environment variable if set
-    if (process.env.NEXT_PUBLIC_STREAMLIT_URL) {
-      return process.env.NEXT_PUBLIC_STREAMLIT_URL;
-    }
-
-    // Fallback for local development
-    if (typeof window !== "undefined") {
-      const currentUrl = window.location.href;
-      if (
-        currentUrl.includes("localhost") ||
-        currentUrl.includes("127.0.0.1")
-      ) {
-        return "http://localhost:5000";
-      }
-    }
-
-    // Default fallback
-    return "https://app.marketscannerpros.app";
+    return "https://ff7eeae1-4b97-4c35-9c82-b880d1c3edc8-00-1ey99t6r62pga.janeway.replit.dev";
   };
 
   const handleCheckout = async (plan: "pro" | "pro_trader") => {
