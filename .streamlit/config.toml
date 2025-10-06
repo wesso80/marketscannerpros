@@ -2,8 +2,9 @@
 headless = true
 address = "0.0.0.0"
 port = 5000
-enableCORS = false
-enableXsrfProtection = false
+enableCORS = true
+enableXsrfProtection = true
+maxUploadSize = 200
 
 [browser]
 gatherUsageStats = false

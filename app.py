@@ -10,31 +10,24 @@ import streamlit as st
 from datetime import datetime
 
 # ================= HEALTH CHECK ENDPOINT =================
-# Simple health check for deployment readiness - MUST BE FIRST
-health_check = ''
+# Ultra-fast health check for Autoscale deployment - MUST BE FIRST
+# Responds immediately without any heavy processing
 try:
-    qp = st.query_params if hasattr(st, 'query_params') else st.experimental_get_query_params()
-    health_param = qp.get('health', [''])
-    health_check = str(health_param[0] if isinstance(health_param, list) else health_param).lower()
+    qp = st.query_params if hasattr(st, 'query_params') else {}
+    if isinstance(qp, dict):
+        health_param = qp.get('health', '')
+    else:
+        try:
+            health_param = qp.get('health', [''])[0]
+        except:
+            health_param = ''
     
-    if health_check in ('check', '1', 'true', 'ping'):
-        st.json({
-            "status": "healthy",
-            "service": "market-scanner",
-            "version": "1.0.0",
-            "timestamp": datetime.now().isoformat(),
-            "database": "connected" if os.getenv("DATABASE_URL") else "not_configured",
-            "stripe": "configured" if os.getenv("STRIPE_SECRET_KEY") else "not_configured"
-        })
-        st.stop()  # Return only health check response
-except Exception as e:
-    try:
-        if health_check in ('check', '1', 'true', 'ping'):
-            st.json({"status": "error", "error": str(e)})
-            st.stop()
-    except NameError:
-        # health_check not defined, ignore
-        pass
+    if str(health_param).lower() in ('check', '1', 'true', 'ping', 'ready'):
+        # Immediate health response - no database checks
+        st.write('{"status":"healthy","service":"market-scanner","timestamp":"' + datetime.now().isoformat() + '"}')
+        st.stop()
+except:
+    pass  # Continue to normal app if health check fails
 
 # ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
 # Import heavy dependencies only after health check
@@ -221,12 +214,12 @@ is_mobile = st.session_state.is_mobile
 # ================= PWA Configuration =================
 st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
 
-# Show mode in sidebar with compact chip design
-st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if is_mobile else "💻 Web"}</div>', unsafe_allow_html=True)
-
-
-# ================= Professional Styling - Marketing Page Theme =================
-st.markdown("""
+# ================= LAZY-LOAD CSS STYLING =================
+# Load CSS only when needed (not during health checks) for faster startup
+@st.cache_resource
+def load_app_styling():
+    """Lazy-load CSS styling to speed up initial app startup"""
+    st.markdown("""
 <style>
 /* PORTFOLIO FIX v3.0 - FORCE DARK STYLING ON ALL URLS - UNIVERSAL OVERRIDE */
 /* Remove conditional logic - apply dark styling everywhere */
@@ -1216,6 +1209,12 @@ textarea {
 }
 </style>
 """, unsafe_allow_html=True)
+    
+    # Mobile mode indicator
+    st.sidebar.markdown(f'<div class="mode-chip">Mode: {"📱 Mobile" if st.session_state.get("is_mobile", False) else "💻 Web"}</div>', unsafe_allow_html=True)
+
+# Call the lazy-load styling function
+load_app_styling()
 
 # Mobile detection with tab click fix
 st.markdown("""
