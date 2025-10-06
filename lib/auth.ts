@@ -36,3 +36,13 @@ export function signToken(payload: object) {
   const sig = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
+function secret(){const s=process.env.APP_SIGNING_SECRET||process.env.NEXTAUTH_SECRET||"";if(!s)throw new Error("Missing signing secret");return s;}
+export function verifyToken(t:string){
+  if(!t||typeof t!=="string") throw new Error("No token");
+  const [p,sig]=t.split("."); if(!p||!sig) throw new Error("Malformed");
+  const expSig=crypto.createHmac("sha256",secret()).update(p).digest("base64url");
+  if(expSig!==sig) throw new Error("Bad signature");
+  const payload=JSON.parse(Buffer.from(p,"base64url").toString("utf8"));
+  if(payload?.exp && Number(payload.exp) < Math.floor(Date.now()/1000)) throw new Error("Expired");
+  return payload;
+}

@@ -72,10 +72,11 @@ export async function POST(req: NextRequest) {
       };
     }
     const res = NextResponse.json(body);
-    res.cookies.set("ms_auth", token, {
+        res.cookies.set("ms_auth", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
+      sameSite: "none",
+      domain: ".marketscannerpros.app",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });

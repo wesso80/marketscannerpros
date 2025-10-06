@@ -88,13 +88,15 @@ export async function POST(req: NextRequest) {
     }
 
     const res = NextResponse.json(body);
-    res.cookies.set("ms_auth", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+   res.cookies.set("ms_auth", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",              // cross-site cookie from api → app
+  domain: ".marketscannerpros.app", // usable on app., www., root
+  path: "/",
+  maxAge: 60 * 60 * 24 * 7,
+});
+
 
     const origin = req.headers.get("origin");
     const headers = corsHeaders(origin);

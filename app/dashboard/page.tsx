@@ -1,4 +1,5 @@
 'use client';
+import SessionBadge from '@/components/SessionBadge';
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -27,7 +28,7 @@ function DashboardContent() {
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <div className="mb-6 flex items-center gap-3"><h1 className="text-3xl font-bold">Dashboard</h1><SessionBadge /></div>
 
       {subscriptionStatus && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
