@@ -1,6 +1,9 @@
+/** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   async redirects() {
-    return []; // no global redirect
+    // No global redirects here. We handle apex->app in middleware (host check).
+    return [];
   },
 };
-module.exports = nextConfig;
+export default nextConfig;
