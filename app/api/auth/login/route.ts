@@ -104,7 +104,8 @@ export async function POST(req: NextRequest) {
 
 const ALLOWED_ORIGINS = new Set([
   "https://app.marketscannerpros.app",
-  "https://marketscannerpros.app"
+  "https://marketscannerpros.app",
+  "https://www.marketscannerpros.app"
 ]);
 
 function corsHeaders(origin: string | null) {
