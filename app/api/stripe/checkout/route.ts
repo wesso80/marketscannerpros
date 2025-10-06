@@ -1,29 +1,40 @@
-// app/api/stripe/checkout/route.ts
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://marketscannerpros.app";
-const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO!;
-const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER!;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { tier } = body; // "pro" or "pro_trader"
-    
-    const priceId = tier === "pro_trader" ? PRICE_PRO_TRADER : PRICE_PRO;
-    
+    const { plan } = await req.json(); // "pro" or "protrader"
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2025-08-27.basil",
+    });
+    const price =
+      plan === "protrader"
+        ? process.env.STRIPE_PROTRADER_PRICE_ID
+        : process.env.STRIPE_PRO_PRICE_ID;
+
+    if (!price?.startsWith("price_")) {
+      throw new Error("missing_price_id");
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${APP_URL}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${APP_URL}/pricing`,
+      payment_method_types: ["card"],
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       allow_promotion_codes: true,
     });
 
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
-    console.error("checkout create error", err);
-    return NextResponse.json({ error: err.message ?? "stripe error" }, { status: 500 });
+    console.error("Stripe checkout error:", err);
+    return NextResponse.json(
+      { error: err.message || "internal_error" },
+      { status: 400 }
+    );
   }
 }
