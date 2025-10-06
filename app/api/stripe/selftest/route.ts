@@ -8,7 +8,7 @@ export async function GET() {
   const looksLive = key.startsWith("sk_live_") && key.length > 20;
   try {
     if (!looksLive) throw new Error("key_missing_or_not_live");
-    const stripe = new Stripe(key, { apiVersion: "2024-09-30" });
+    const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
     const acct = await stripe.accounts.retrieve();
     return NextResponse.json({ ok: true, acct: { id: acct.id, country: acct.country } });
   } catch (e:any) {
