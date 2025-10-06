@@ -16,6 +16,8 @@ export async function POST(req: Request) {
         ? process.env.STRIPE_PROTRADER_PRICE_ID
         : process.env.STRIPE_PRO_PRICE_ID;
 
+    console.log(`Checkout for plan: ${plan}, using price ID: ${price}`);
+
     if (!price?.startsWith("price_")) {
       throw new Error("missing_price_id");
     }
