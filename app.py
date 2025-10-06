@@ -5144,7 +5144,7 @@ if workspace_id:
 if not existing_subscription and not st.session_state.subscription_linked:
     with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
         st.write("**Already purchased? Activate your subscription:**")
-        st.info("Visit **marketscannerpros.com/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
+        st.info("Visit **marketscannerpros.app/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
         st.write("This will link your subscription to all your devices permanently.")
 
 # ================= Subscription Summary (Compact) =================
