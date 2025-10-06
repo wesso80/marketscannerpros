@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    const origin = req.headers.get("origin");
+    const headers = corsHeaders(origin);
+    for (const [k,v] of Object.entries(headers)) res.headers.set(k,v);
     return res;
   } catch (err: any) {
     console.error("Login error:", err);
@@ -97,4 +100,28 @@ export async function POST(req: NextRequest) {
       error: "Authentication failed. Please try again." 
     }, { status: 500 });
   }
+}
+
+const ALLOWED_ORIGINS = new Set([
+  "https://app.marketscannerpros.app",
+  "https://marketscannerpros.app"
+]);
+
+function corsHeaders(origin: string | null) {
+  const o = origin && ALLOWED_ORIGINS.has(origin) ? origin : "";
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400",
+  };
+  if (o) {
+    headers["Access-Control-Allow-Origin"] = o;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
+}
+
+export async function OPTIONS(req: Request) {
+  const headers = corsHeaders(req.headers.get("origin"));
+  return new Response(null, { status: 204, headers });
 }
