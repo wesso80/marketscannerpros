@@ -2,7 +2,11 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 
-const APP_SIGNING_SECRET = process.env.APP_SIGNING_SECRET!;
+const APP_SIGNING_SECRET = process.env.APP_SIGNING_SECRET;
+
+if (!APP_SIGNING_SECRET) {
+  throw new Error("APP_SIGNING_SECRET environment variable is required");
+}
 
 function verify(token: string) {
   const [body, sig] = token.split(".");

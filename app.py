@@ -5560,10 +5560,10 @@ st.sidebar.header("Equity Symbols")
 # Show tier info
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
-if current_tier == 'free':
-    st.sidebar.caption(f"🚀 Free tier: Unlimited scanning, {tier_info['portfolio_limit']} portfolio symbols • Upgrade for advanced features!")
-elif current_tier == 'pro':
-    st.sidebar.caption(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
+if current_tier == 'pro':
+    st.sidebar.success(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
+elif current_tier == 'pro_trader':
+    st.sidebar.success(f"🎯 Pro Trader: Full access - unlimited everything, Trade Journal, Backtesting, TradingView integration")
 
 # Top 100 Equities by market cap
 TOP_100_EQUITIES = [
