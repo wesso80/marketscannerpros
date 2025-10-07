@@ -4148,7 +4148,7 @@ header_html = """
 """
 
 # Display hero banner image at the very top
-col_left, col_center, col_right = st.columns([1, 3, 1])
+col_left, col_center, col_right = st.columns([2, 2, 2])
 with col_center:
     st.image("scan-banner.png", width="stretch")
 
