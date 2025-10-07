@@ -5430,12 +5430,34 @@ if current_tier == 'free':
             plan_emoji = "🚀" if st.session_state.selected_plan == 'pro' else "💎"
             plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
             plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
+            trial_days = "7 days" if st.session_state.selected_plan == 'pro' else "5 days"
             
-            if st.button(f"{plan_emoji} Complete {plan_name} Subscription\n{plan_price} per month", key=f"upgrade_{st.session_state.selected_plan}", help=f"Secure checkout for {plan_name} plan"):
+            # Email collection for trial eligibility
+            st.markdown("**📧 Enter your email to check trial eligibility:**")
+            checkout_email = st.text_input(
+                "Email address:",
+                placeholder="your@email.com",
+                key=f"checkout_email_{st.session_state.selected_plan}",
+                help="Required to verify trial eligibility and send receipt"
+            )
+            
+            # Check trial eligibility if email provided
+            if checkout_email and '@' in checkout_email:
+                trial_used = has_used_trial(checkout_email, st.session_state.selected_plan)
+                if trial_used:
+                    st.warning(f"⚠️ This email has already used the {plan_name} free trial. Subscription will start immediately at {plan_price}/month.")
+                else:
+                    st.success(f"✅ {trial_days} FREE TRIAL available! You won't be charged until the trial ends.")
+            
+            # Checkout button
+            button_disabled = not checkout_email or '@' not in checkout_email
+            button_label = f"{plan_emoji} Start {trial_days} Free Trial" if checkout_email and '@' in checkout_email and not has_used_trial(checkout_email, st.session_state.selected_plan) else f"{plan_emoji} Subscribe to {plan_name} - {plan_price}/month"
+            
+            if st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
                 if workspace_id:
-                    # Create Stripe checkout session directly
+                    # Create Stripe checkout session with email for trial tracking
                     with st.spinner("🔄 Creating secure checkout..."):
-                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id)
+                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id, checkout_email)
                         
                         if checkout_url:
                             st.success("✅ Redirecting to secure Stripe checkout...")
