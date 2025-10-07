@@ -5453,6 +5453,34 @@ elif current_tier in ['pro', 'pro_trader']:
         st.info("💡 **Subscription management options moved to main content area for better visibility!**")
         st.markdown("**Your subscription details and options below:**")
     
+    # Cancel subscription button
+    if 'confirm_cancel' not in st.session_state:
+        st.session_state.confirm_cancel = False
+    
+    if not st.session_state.confirm_cancel:
+        if st.sidebar.button("🚫 **Cancel Subscription**", help="Cancel your subscription (access until period ends)"):
+            st.session_state.confirm_cancel = True
+            st.rerun()
+    else:
+        st.sidebar.warning("⚠️ **Are you sure?**")
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            if st.button("✅ Yes, Cancel", key="confirm_cancel_yes"):
+                with st.spinner("Cancelling subscription..."):
+                    success, message = cancel_stripe_subscription(workspace_id)
+                    if success:
+                        st.success("✅ Subscription cancelled successfully!")
+                        st.session_state.user_tier = 'free'
+                        st.session_state.confirm_cancel = False
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        st.session_state.confirm_cancel = False
+        with col2:
+            if st.button("❌ No", key="confirm_cancel_no"):
+                st.session_state.confirm_cancel = False
+                st.rerun()
+    
     # Compact upgrade button for Pro users
     if current_tier == 'pro':
         if st.sidebar.button("⬆️ **Upgrade to Pro Trader** - $9.99/month", help="Unlock advanced features"):
