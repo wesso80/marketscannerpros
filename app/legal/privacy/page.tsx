@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <main className="prose prose-invert mx-auto max-w-3xl px-4 py-10">
       <h1>Privacy Policy</h1>
-      <p><strong>Effective date:</strong> 28 September 2025</p>
+      <p><strong>Effective date:</strong> 7 October 2025</p>
 
       <h2>Overview</h2>
       <p>
@@ -22,16 +22,23 @@ export default function PrivacyPage() {
 
       <h2>Information we collect</h2>
       <ul>
-        <li><strong>Account:</strong> Secure access code authentication (no personal information collected).</li>
-        <li><strong>Billing:</strong> Processed by Stripe; we keep minimal subscription status.</li>
-        <li><strong>Usage & Logs:</strong> Diagnostics and server logs for reliability/abuse prevention.</li>
-        <li><strong>Cookies/Storage:</strong> Auth/session cookies and preferences.</li>
+        <li><strong>Email Address:</strong> Collected during checkout to verify trial eligibility and send receipts. Required for all paid subscriptions.</li>
+        <li><strong>Account:</strong> Workspace ID (device identifier) for authentication and subscription tracking.</li>
+        <li><strong>Billing:</strong> Processed by Stripe (web/Android) or Apple (iOS); we store minimal subscription status and payment metadata.</li>
+        <li><strong>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
+        <li><strong>Usage & Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
+        <li><strong>Cookies/Storage:</strong> Session cookies for authentication, workspace ID tracking, and user preferences.</li>
+        <li><strong>Device Information:</strong> Browser type, IP address, and device fingerprints for fraud prevention and rate limiting.</li>
       </ul>
 
       <h2>How we use information</h2>
       <ul>
-        <li>Authenticate accounts and secure access to the dashboard.</li>
-        <li>Process subscriptions and let you manage billing in Stripe's Customer Portal.</li>
+        <li>Authenticate accounts and secure access to the dashboard via workspace IDs.</li>
+        <li>Verify trial eligibility and prevent trial abuse (one trial per email address).</li>
+        <li>Process subscriptions and let you manage billing in Stripe's Customer Portal or Apple's App Store.</li>
+        <li>Send transactional emails (receipts, subscription confirmations, trial reminders).</li>
+        <li>Detect and prevent fraud, abuse, and unauthorized access.</li>
+        <li>Monitor performance, track errors, and improve service reliability.</li>
         <li>Operate, maintain, and improve the service; comply with legal obligations.</li>
       </ul>
 
@@ -47,7 +54,13 @@ export default function PrivacyPage() {
       <p>Data may be processed outside your country; we use appropriate safeguards where required.</p>
 
       <h2>Retention</h2>
-      <p>We keep personal data only as long as necessary for the purposes above or as required by law.</p>
+      <ul>
+        <li><strong>Email & Trial Records:</strong> Retained indefinitely to prevent trial abuse. Required for fraud prevention.</li>
+        <li><strong>Subscription Data:</strong> Retained while subscription is active, plus 7 years for tax/legal compliance.</li>
+        <li><strong>Workspace IDs:</strong> Retained for account continuity; deleted upon account deletion request.</li>
+        <li><strong>Logs & Analytics:</strong> Retained for 90 days, then automatically deleted.</li>
+        <li><strong>Other Personal Data:</strong> Kept only as long as necessary for stated purposes or as required by law.</li>
+      </ul>
 
       <h2>Your rights</h2>
       <p>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
