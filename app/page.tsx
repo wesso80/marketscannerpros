@@ -44,6 +44,19 @@ export default function Home() {
     <>
       <Hero />
       <SocialProof />
+      
+      {/* Already subscribed login link */}
+      <section className="w-full bg-neutral-950">
+        <div className="mx-auto max-w-6xl px-4 py-4 text-center">
+          <a
+            href="/auth"
+            className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Already subscribed? Login →
+          </a>
+        </div>
+      </section>
+      
       <Why />
       <HowItWorks />
       <Testimonials />
@@ -51,21 +64,13 @@ export default function Home() {
       {/* Pricing Section */}
       <section className="w-full border-b border-neutral-800 bg-neutral-950">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                Pricing & Plans
-              </h2>
-              <p className="opacity-85 text-base md:text-lg">
-                Start free. Upgrade any time. Cancel in your Stripe portal.
-              </p>
-            </div>
-            <a
-              href="/auth"
-              className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap"
-            >
-              Already subscribed? Login →
-            </a>
+          <div className="mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              Pricing & Plans
+            </h2>
+            <p className="opacity-85 text-base md:text-lg">
+              Start free. Upgrade any time. Cancel in your Stripe portal.
+            </p>
           </div>
 
           <div className="plans">
