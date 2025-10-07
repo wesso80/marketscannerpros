@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       };
     }
     const res = NextResponse.json(body);
-        res.cookies.set("ms_auth", token, {
+    res.cookies.set("ms_auth", token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",

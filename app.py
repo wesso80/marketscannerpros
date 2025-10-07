@@ -4625,14 +4625,15 @@ def check_nextjs_auth():
                     
                     # Call Next.js API to verify and get user info
                     response = requests.get(
-                        'https://marketscannerpros.app/api/me',
+                        'https://www.marketscannerpros.app/api/auth/session',
                         headers={'Cookie': f'ms_auth={ms_auth}'},
                         timeout=3
                     )
                     
                     if response.status_code == 200:
                         data = response.json()
-                        return data.get('workspaceId'), data.get('tier')
+                        if data.get('authenticated'):
+                            return data.get('workspaceId'), data.get('tier')
         
         return None, None
     except Exception:
