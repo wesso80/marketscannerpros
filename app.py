@@ -1901,16 +1901,86 @@ def get_friend_access_codes_status() -> list:
     return result if result else []
 
 # ================= TradingView Integration =================
-def save_tradingview_username(workspace_id: str, username: str) -> bool:
-    """Save TradingView username for Pro Trader member"""
+def send_tradingview_notification_to_admin(customer_email: str, tradingview_username: str, workspace_id: str) -> bool:
+    """Send email notification to admin when Pro Trader submits TradingView username"""
     try:
+        admin_email = os.getenv('ADMIN_EMAIL', 'support@marketscannerpros.app')
+        
+        subject = f"🎯 New TradingView Access Request - {tradingview_username}"
+        
+        body = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 20px; color: white; border-radius: 8px 8px 0 0;">
+        <h2 style="margin: 0; color: #10B981;">🎯 TradingView Access Request</h2>
+    </div>
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
+        <h3 style="color: #0F172A; margin-top: 0;">Pro Trader Member Submitted TradingView Username</h3>
+        
+        <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Customer Email:</strong> {customer_email}</p>
+            <p style="margin: 5px 0;"><strong>TradingView Username:</strong> <span style="color: #10B981; font-weight: bold;">{tradingview_username}</span></p>
+            <p style="margin: 5px 0;"><strong>Workspace ID:</strong> {workspace_id}</p>
+        </div>
+        
+        <div style="background: #fef3c7; padding: 15px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e;">
+                <strong>⚡ Action Required:</strong><br/>
+                Add <strong>{tradingview_username}</strong> to the invite-only Pine Scripts in TradingView:
+            </p>
+            <ul style="margin: 10px 0; color: #92400e;">
+                <li>MarketScanner Pros — Confluence Strategy</li>
+                <li>MarketScanner Pros — Live Signals</li>
+            </ul>
+        </div>
+        
+        <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
+            Customer expects access within 24 hours. They will receive a TradingView notification when added.
+        </p>
+    </div>
+</div>
+"""
+        
+        # Use existing email function to send to admin
+        return send_email_to_user(subject, body, admin_email)
+        
+    except Exception as e:
+        print(f"Error sending TradingView notification to admin: {e}")
+        return False
+
+def save_tradingview_username(workspace_id: str, username: str) -> bool:
+    """Save TradingView username for Pro Trader member and notify admin"""
+    try:
+        # Save to database
         query = """
             UPDATE workspaces 
             SET tradingview_username = %s, tradingview_submitted_at = NOW()
             WHERE id = %s
         """
         result = execute_db_write(query, (username.strip(), workspace_id))
-        return result is not None and result >= 0
+        
+        if result is not None and result >= 0:
+            # Get customer email from session state
+            customer_email = st.session_state.get('user_email', 'No email provided')
+            
+            # If no email in session, try to get from subscription/Stripe
+            if not customer_email or customer_email == 'No email provided':
+                try:
+                    subscription = get_workspace_subscription(workspace_id)
+                    if subscription and subscription.get('stripe_customer_id'):
+                        # Try to get email from Stripe customer
+                        import stripe
+                        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+                        customer = stripe.Customer.retrieve(subscription['stripe_customer_id'])
+                        customer_email = customer.email or 'No email provided'
+                except:
+                    customer_email = 'No email provided'
+            
+            # Send notification to admin
+            send_tradingview_notification_to_admin(customer_email, username.strip(), workspace_id)
+            
+            return True
+        return False
+        
     except Exception as e:
         print(f"Error saving TradingView username: {e}")
         return False
