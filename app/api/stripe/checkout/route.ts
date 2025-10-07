@@ -6,15 +6,15 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const { plan } = await req.json(); // "pro" or "protrader"
+    const { tier } = await req.json(); // "pro" or "pro_trader"
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
     const price =
-      plan === "protrader"
+      tier === "pro_trader"
         ? process.env.NEXT_PUBLIC_PRICE_PRO_TRADER
         : process.env.NEXT_PUBLIC_PRICE_PRO;
 
-    console.log(`Checkout for plan: ${plan}, using price ID: ${price}`);
+    console.log(`Checkout for tier: ${tier}, using price ID: ${price}`);
 
     if (!price?.startsWith("price_")) {
       throw new Error("missing_price_id");
