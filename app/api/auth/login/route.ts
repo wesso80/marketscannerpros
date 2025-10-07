@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signToken } from "@/lib/auth";
 // server-side envs
-const PRICE_PRO = process.env.STRIPE_PRO_PRICE_ID ?? "";
-const PRICE_PRO_TRADER = process.env.STRIPE_PROTRADER_PRICE_ID ?? "";
+const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
+const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
 const FALLBACK_PRO_TRADER = "price_1SEhYxLyhHN1qVrAWiuGgO0q";
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
       body.debug = {
         priceIds,
         env: {
-          STRIPE_PRO_PRICE_ID: process.env.STRIPE_PRO_PRICE_ID ?? "",
-          STRIPE_PROTRADER_PRICE_ID: process.env.STRIPE_PROTRADER_PRICE_ID ?? "",
+          NEXT_PUBLIC_PRICE_PRO: process.env.NEXT_PUBLIC_PRICE_PRO ?? "",
+          NEXT_PUBLIC_PRICE_PRO_TRADER: process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "",
         },
       };
     }
