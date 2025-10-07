@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     if (!subId)
       return NextResponse.json({ error: "Missing subscriptionId or customerId" }, { status: 400 });
-    const canceled = await stripe.subscriptions.update(subId, {
+    const canceled = (await stripe.subscriptions.update(subId, { cancel_at_period_end: true })) as any;
       cancel_at_period_end: true,
     });
 
