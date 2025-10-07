@@ -121,6 +121,15 @@ export default function PricingPage() {
           Access our advanced strategy and live-signal indicators on TradingView (Pro Trader members only)
         </p>
         
+        {/* TradingView Chart Preview */}
+        <div style={{ marginBottom: '2rem', borderRadius: '8px', overflow: 'hidden', border: '2px solid #10b981' }}>
+          <img 
+            src="/attached_assets/image_1759816221506.png" 
+            alt="MarketScanner Pros Confluence Strategy on TradingView" 
+            style={{ width: '100%', display: 'block' }}
+          />
+        </div>
+        
         <div style={{ 
           background: 'rgba(0,0,0,0.3)', 
           padding: '1.5rem', 
