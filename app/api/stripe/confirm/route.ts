@@ -54,8 +54,9 @@ export async function GET(req: NextRequest) {
     const res = NextResponse.json({ ok: true, tier, workspaceId, cid: customerId });
     res.cookies.set("ms_auth", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      secure: true,
+      domain: ".marketscannerpros.app",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
