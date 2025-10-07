@@ -13,8 +13,8 @@ export async function POST(req: Request) {
     });
     const price =
       plan === "protrader"
-        ? process.env.STRIPE_PROTRADER_PRICE_ID
-        : process.env.STRIPE_PRO_PRICE_ID;
+        ? process.env.NEXT_PUBLIC_PRICE_PRO_TRADER
+        : process.env.NEXT_PUBLIC_PRICE_PRO;
 
     console.log(`Checkout for plan: ${plan}, using price ID: ${price}`);
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
       allow_promotion_codes: true,
     });
