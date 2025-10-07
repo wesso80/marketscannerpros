@@ -4857,6 +4857,9 @@ if 'pairing_token' not in st.session_state:
 if 'saved_watchlist' not in st.session_state:
     st.session_state.saved_watchlist = []
 
+# Display scan banner image
+st.image("scan-banner.png", width="stretch")
+
 # Market selection toggles
 col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
 with col_toggle1:
