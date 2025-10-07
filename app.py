@@ -3820,8 +3820,19 @@ def remove_portfolio_position(symbol: str) -> bool:
         st.error(f"Error removing position: {str(e)}")
         return False
 
+def get_aud_to_usd_rate() -> float:
+    """Get current AUD to USD exchange rate"""
+    try:
+        ticker = yf.Ticker("AUDUSD=X")
+        hist = ticker.history(period="1d")
+        if not hist.empty:
+            return float(hist['Close'].iloc[-1])
+    except:
+        pass
+    return 0.65  # Fallback rate if API fails
+
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
-    """Get current price for portfolio calculations with robust fallbacks"""
+    """Get current price for portfolio calculations with robust fallbacks - returns USD normalized price"""
     # First try the original symbol
     for attempt_symbol in [symbol]:
         try:
@@ -3831,7 +3842,12 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
             try:
                 price = ticker.fast_info.get('lastPrice')
                 if price and price > 0:
-                    return float(price)
+                    price = float(price)
+                    # Convert AUD to USD if needed
+                    if symbol.endswith('-AUD'):
+                        aud_usd_rate = get_aud_to_usd_rate()
+                        price = price * aud_usd_rate
+                    return price
             except Exception:
                 pass
             
@@ -3839,7 +3855,12 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
             try:
                 hist = ticker.history(period="1d", interval="1m")
                 if not hist.empty:
-                    return float(hist['Close'].iloc[-1])
+                    price = float(hist['Close'].iloc[-1])
+                    # Convert AUD to USD if needed
+                    if symbol.endswith('-AUD'):
+                        aud_usd_rate = get_aud_to_usd_rate()
+                        price = price * aud_usd_rate
+                    return price
             except Exception:
                 pass
                 
@@ -3847,7 +3868,12 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
             try:
                 hist = ticker.history(period="2d")
                 if not hist.empty:
-                    return float(hist['Close'].iloc[-1])
+                    price = float(hist['Close'].iloc[-1])
+                    # Convert AUD to USD if needed
+                    if symbol.endswith('-AUD'):
+                        aud_usd_rate = get_aud_to_usd_rate()
+                        price = price * aud_usd_rate
+                    return price
             except Exception:
                 pass
                 
