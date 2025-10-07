@@ -106,6 +106,47 @@ export default function PricingPage() {
         </div>
       </div>
 
+      {/* TradingView Chart Showcase */}
+      <div style={{ 
+        marginTop: '4rem', 
+        marginBottom: '3rem',
+        textAlign: 'center'
+      }}>
+        <h2 style={{ 
+          color: '#10b981', 
+          fontSize: '2rem', 
+          marginBottom: '1rem',
+          fontWeight: 'bold'
+        }}>
+          🎯 Pro Trader Exclusive: TradingView Invite-Only Scripts
+        </h2>
+        <p style={{ 
+          color: '#9ca3af', 
+          fontSize: '1.2rem', 
+          marginBottom: '2rem',
+          maxWidth: '800px',
+          margin: '0 auto 2rem auto'
+        }}>
+          Get access to our professional-grade indicators on TradingView
+        </p>
+        
+        <div style={{ 
+          marginTop: '2rem',
+          borderRadius: '12px', 
+          overflow: 'hidden', 
+          border: '3px solid #10b981',
+          boxShadow: '0 10px 40px rgba(16, 185, 129, 0.3)',
+          maxWidth: '1200px',
+          margin: '0 auto'
+        }}>
+          <img 
+            src="/attached_assets/image_1759816221506.png" 
+            alt="MarketScanner Pros Confluence Strategy on TradingView" 
+            style={{ width: '100%', display: 'block' }}
+          />
+        </div>
+      </div>
+
       {/* TradingView Access Instructions - Pro Trader Only */}
       <div style={{ 
         marginTop: '3rem', 
@@ -115,20 +156,11 @@ export default function PricingPage() {
         border: '1px solid #10b981'
       }}>
         <h3 style={{ color: '#10b981', marginBottom: '1rem', fontSize: '1.5rem' }}>
-          🎯 Pro Trader Exclusive: TradingView Invite-Only Scripts
+          🔑 How to Activate Your TradingView Scripts
         </h3>
         <p style={{ color: '#d1fae5', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
-          Access our advanced strategy and live-signal indicators on TradingView (Pro Trader members only)
+          Pro Trader members get instant access to our invite-only indicators
         </p>
-        
-        {/* TradingView Chart Preview */}
-        <div style={{ marginBottom: '2rem', borderRadius: '8px', overflow: 'hidden', border: '2px solid #10b981' }}>
-          <img 
-            src="/attached_assets/image_1759816221506.png" 
-            alt="MarketScanner Pros Confluence Strategy on TradingView" 
-            style={{ width: '100%', display: 'block' }}
-          />
-        </div>
         
         <div style={{ 
           background: 'rgba(0,0,0,0.3)', 
