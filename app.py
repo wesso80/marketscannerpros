@@ -1900,6 +1900,32 @@ def get_friend_access_codes_status() -> list:
     result = execute_db_query(query)
     return result if result else []
 
+# ================= TradingView Integration =================
+def save_tradingview_username(workspace_id: str, username: str) -> bool:
+    """Save TradingView username for Pro Trader member"""
+    try:
+        query = """
+            UPDATE workspaces 
+            SET tradingview_username = %s, tradingview_submitted_at = NOW()
+            WHERE id = %s
+        """
+        result = execute_db_write(query, (username.strip(), workspace_id))
+        return result is not None and result >= 0
+    except Exception as e:
+        print(f"Error saving TradingView username: {e}")
+        return False
+
+def get_tradingview_username(workspace_id: str) -> Optional[str]:
+    """Get stored TradingView username"""
+    try:
+        query = "SELECT tradingview_username FROM workspaces WHERE id = %s"
+        result = execute_db_query(query, (workspace_id,))
+        if result and len(result) > 0:
+            return result[0].get('tradingview_username')
+        return None
+    except:
+        return None
+
 def is_admin(workspace_id: str, device_fingerprint: str) -> bool:
     """Check if user has admin access"""
     if not workspace_id or not device_fingerprint:
@@ -5680,6 +5706,53 @@ if current_tier == 'pro':
     st.sidebar.success(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 elif current_tier == 'pro_trader':
     st.sidebar.success(f"🎯 Pro Trader: Full access - unlimited everything, Trade Journal, Backtesting, TradingView integration")
+    
+    # TradingView Integration for Pro Trader members
+    with st.sidebar.expander("📊 TradingView Integration", expanded=False):
+        st.markdown("### 🎉 You're now a Pro Trader member!")
+        
+        # Check if username already submitted
+        existing_username = get_tradingview_username(workspace_id) if workspace_id else None
+        
+        if existing_username:
+            st.success(f"✅ TradingView username submitted: **{existing_username}**")
+            st.caption("Access will be granted within 24 hours. You'll receive a TradingView notification.")
+            
+            # Option to update username
+            if st.button("🔄 Update Username", key="update_tradingview"):
+                st.session_state.update_tradingview = True
+                st.rerun()
+        
+        if not existing_username or st.session_state.get('update_tradingview', False):
+            st.markdown("""
+            **To activate your TradingView scripts:**
+            
+            1️⃣ Copy your TradingView username (case-sensitive)  
+            2️⃣ Paste it in the field below  
+            
+            Access will be granted within 24 hours.
+            """)
+            
+            tv_username = st.text_input(
+                "TradingView Username:",
+                placeholder="Enter your exact TradingView username",
+                key="tv_username_input",
+                help="Case-sensitive - must match exactly as shown in TradingView"
+            )
+            
+            if st.button("🚀 Submit Username", type="primary", key="submit_tradingview"):
+                if tv_username and len(tv_username.strip()) > 0:
+                    if workspace_id and save_tradingview_username(workspace_id, tv_username):
+                        st.success("✅ Username submitted! Access will be granted within 24 hours.")
+                        st.session_state.update_tradingview = False
+                        st.balloons()
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save username. Please try again.")
+                else:
+                    st.warning("⚠️ Please enter your TradingView username")
+            
+            st.caption("Questions? Contact support@marketscannerpros.app")
 
 # Top 100 Equities by market cap
 TOP_100_EQUITIES = [
