@@ -4294,8 +4294,9 @@ if 'session_id' in st.query_params:
     session_id = st.query_params.get('session_id')
     if session_id:
         try:
-            session = stripe.checkout.Session.retrieve(session_id)
-            if session and session.payment_status == 'paid':
+            session = stripe.checkout.Session.retrieve(session_id, expand=['subscription'])
+            # For subscriptions, check if session was completed (works for both paid and trial)
+            if session and session.status == 'complete':
                 # Extract subscription details from session metadata
                 workspace_id_from_stripe = session.metadata.get('workspace_id')
                 plan_code = session.metadata.get('plan_code')
