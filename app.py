@@ -4149,6 +4149,11 @@ header_html = """
 
 st.markdown(header_html, unsafe_allow_html=True)
 
+# Display hero banner image at the top
+col_left, col_center, col_right = st.columns([1, 3, 1])
+with col_center:
+    st.image("scan-banner.png", width="stretch")
+
 # Initialize session state
 if 'eq_results' not in st.session_state:
     st.session_state.eq_results = pd.DataFrame()
@@ -4856,9 +4861,6 @@ if 'pairing_token' not in st.session_state:
 
 if 'saved_watchlist' not in st.session_state:
     st.session_state.saved_watchlist = []
-
-# Display scan banner image
-st.image("scan-banner.png", width="stretch")
 
 # Market selection toggles
 col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
