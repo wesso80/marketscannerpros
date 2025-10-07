@@ -29,7 +29,7 @@ export default function TermsPage() {
         <strong style={{ display: "block", marginBottom: ".25rem" }}>On this page</strong>
         <a href="#eligibility">Eligibility</a> · <a href="#use">Use</a> · <a href="#billing">Subscriptions</a> ·{" "}
         <a href="#ip">IP</a> · <a href="#warranty">Warranties</a> · <a href="#liability">Liability</a> ·{" "}
-        <a href="#privacy">Privacy</a> · <a href="#termination">Termination</a> ·{" "}
+        <a href="#privacy">Privacy & Cookies</a> · <a href="#termination">Termination</a> ·{" "}
         <a href="#changes">Changes</a> · <a href="#contact">Contact</a>
       </nav>
 
@@ -74,8 +74,9 @@ export default function TermsPage() {
         or damages arising from use of the App, including but not limited to trading losses.
       </p>
 
-      <h2 id="privacy">7. Privacy</h2>
+      <h2 id="privacy">7. Privacy &amp; Cookies</h2>
       <p>Our use of your data is governed by our <a href="/privacy">Privacy Policy</a>.</p>
+      <p>Our use of cookies and tracking technologies is explained in our <a href="/cookie-policy">Cookie Policy</a>.</p>
 
       <h2 id="termination">8. Termination</h2>
       <p>We may suspend or terminate your access if you violate these Terms. You may stop using the App at any time.</p>

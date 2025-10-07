@@ -69,6 +69,49 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes & Important Fixes (October 2025)
 
+### **Trial Abuse Prevention System (October 7, 2025)**
+**Added**: Comprehensive 3-layer trial abuse prevention to protect free trials
+**Implementation**:
+- **Email Collection UI**: Users must enter email before checkout to verify trial eligibility
+- **Trial Tracking Database**: `trial_usage` table stores email, plan, workspace_id, and Stripe customer ID
+- **Pre-Checkout Validation**: System checks if email has used trial before creating checkout session
+- **Trial Eligibility Display**: Shows "✅ 7-day FREE TRIAL available" or "⚠️ Email already used trial" before checkout
+- **Post-Payment Recording**: Records trial usage after successful checkout to prevent future abuse
+- **Stripe Integration**: Trial only included in checkout if email hasn't used it before
+**Policy**: One trial per email per plan (7 days for Pro, 5 days for Pro Trader)
+**Result**: Prevents users from abusing trials with multiple accounts/emails/devices
+
+### **Legal Documentation Update (October 7, 2025)**
+**Added**: Complete legal framework for trial tracking and email collection
+**Documents Updated**:
+- **Terms of Service** (app/legal/terms/page.tsx):
+  - Free trial policies (7-day Pro, 5-day Pro Trader)
+  - Email collection requirement
+  - One trial per email policy
+  - Trial abuse consequences (termination without refund)
+  - Link to Refund Policy and Cookie Policy
+- **Privacy Policy** (app/legal/privacy/page.tsx):
+  - Email collection disclosure
+  - Trial usage tracking database
+  - Data retention policies (trial records retained indefinitely for fraud prevention)
+  - Device/workspace ID tracking
+  - Sentry error tracking disclosure
+**Documents Created**:
+- **Refund Policy** (app/legal/refund-policy/page.tsx):
+  - No pro-rated refund policy
+  - Trial cancellation instructions
+  - Platform-specific refund processes (Stripe vs Apple)
+  - Billing error exceptions
+  - Contact information for disputes
+- **Cookie Policy** (app/legal/cookie-policy/page.tsx):
+  - Essential cookies (workspace ID, auth, session)
+  - Trial tracking cookies (fraud prevention)
+  - Third-party cookies (Stripe, Apple, Sentry)
+  - Browser controls and opt-out options
+  - GDPR/CCPA compliance information
+**Routes**: All policies accessible at /terms, /privacy, /refund-policy, /cookie-policy
+**Effective Date**: October 7, 2025
+
 ### **CRITICAL FIX: Stable Workspace ID System (October 5, 2025)**
 **Issue**: Workspace ID changed on every page refresh, breaking all subscriptions, friend codes, watchlists, and portfolio tracking
 **Root Cause**: Streamlit session state cleared on refresh; localStorage/cookies attempted but failed
