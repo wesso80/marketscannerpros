@@ -42,8 +42,19 @@ export default function PricingPage() {
   };
   return (
     <main>
-      <h1>Pricing</h1>
+      <h1>Pricing & Plans</h1>
       <p>Start free. Upgrade any time. Cancel in your Stripe portal.</p>
+      <p style={{ marginTop: '0.5rem' }}>
+        Already subscribed?{' '}
+        <a 
+          href={getStreamlitUrl()} 
+          style={{ color: '#10b981', textDecoration: 'underline', fontWeight: '500' }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Login →
+        </a>
+      </p>
 
       <div className="plans">
         {/* Free Plan */}
