@@ -4147,12 +4147,12 @@ header_html = """
 </div>
 """
 
-st.markdown(header_html, unsafe_allow_html=True)
-
-# Display hero banner image at the top
+# Display hero banner image at the very top
 col_left, col_center, col_right = st.columns([1, 3, 1])
 with col_center:
     st.image("scan-banner.png", width="stretch")
+
+st.markdown(header_html, unsafe_allow_html=True)
 
 # Initialize session state
 if 'eq_results' not in st.session_state:
