@@ -105,6 +105,58 @@ export default function PricingPage() {
           </button>
         </div>
       </div>
+
+      {/* TradingView Access Instructions - Pro Trader Only */}
+      <div style={{ 
+        marginTop: '3rem', 
+        padding: '2rem', 
+        background: 'linear-gradient(135deg, #1a472a 0%, #0f2e1a 100%)',
+        borderRadius: '12px',
+        border: '1px solid #10b981'
+      }}>
+        <h3 style={{ color: '#10b981', marginBottom: '1rem', fontSize: '1.5rem' }}>
+          🎯 Pro Trader Exclusive: TradingView Invite-Only Scripts
+        </h3>
+        <p style={{ color: '#d1fae5', marginBottom: '1.5rem', fontSize: '1.1rem' }}>
+          Access our advanced strategy and live-signal indicators on TradingView (Pro Trader members only)
+        </p>
+        
+        <div style={{ 
+          background: 'rgba(0,0,0,0.3)', 
+          padding: '1.5rem', 
+          borderRadius: '8px',
+          borderLeft: '4px solid #10b981'
+        }}>
+          <h4 style={{ color: '#10b981', marginBottom: '1rem' }}>🔑 To Activate Your Invite-Only Scripts:</h4>
+          <ol style={{ color: '#d1fae5', lineHeight: '1.8', paddingLeft: '1.5rem' }}>
+            <li>Log in to your TradingView account</li>
+            <li>Copy your <strong>TradingView username</strong> (exactly as it appears — it's case-sensitive)</li>
+            <li>Submit it here → <a href="https://marketscannerpros.app/tradingview-access" style={{ color: '#10b981', textDecoration: 'underline' }}>marketscannerpros.app/tradingview-access</a><br/>
+                or reply to your welcome email with your username</li>
+          </ol>
+          
+          <div style={{ 
+            marginTop: '1.5rem', 
+            padding: '1rem', 
+            background: 'rgba(16, 185, 129, 0.1)',
+            borderRadius: '6px'
+          }}>
+            <p style={{ color: '#d1fae5', marginBottom: '0.5rem' }}><strong>Once verified, you'll get access to:</strong></p>
+            <ul style={{ color: '#d1fae5', paddingLeft: '1.5rem', marginBottom: '0' }}>
+              <li>✅ MarketScanner Pros — Confluence Strategy</li>
+              <li>✅ MarketScanner Pros — Live Signals</li>
+            </ul>
+          </div>
+          
+          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginTop: '1rem', marginBottom: '0' }}>
+            ⏱️ Access is usually activated within <strong>24 hours</strong> — you'll receive a TradingView notification once added.
+          </p>
+        </div>
+        
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem', marginTop: '1rem', fontStyle: 'italic' }}>
+          💡 Can't find the scripts after 24 hours? Check <strong>Indicators → Invite-only scripts</strong> tab in TradingView and make sure you're logged into the correct account.
+        </p>
+      </div>
           {/* MSP ANCHORS (auto-insert) */}
       <div id="pro" className="scroll-mt-24"></div>
       <div id="protrader" className="scroll-mt-24"></div>
