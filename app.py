@@ -4294,17 +4294,37 @@ if 'session_id' in st.query_params:
     session_id = st.query_params.get('session_id')
     if session_id:
         try:
-            session = stripe.checkout.Session.retrieve(session_id, expand=['subscription'])
+            session = stripe.checkout.Session.retrieve(session_id, expand=['subscription', 'customer'])
             # For subscriptions, check if session was completed (works for both paid and trial)
             if session and session.status == 'complete':
                 # Extract subscription details from session metadata
                 workspace_id_from_stripe = session.metadata.get('workspace_id')
                 plan_code = session.metadata.get('plan_code')
                 
+                # Get customer email if available
+                customer_email = None
+                if hasattr(session, 'customer_details') and session.customer_details:
+                    customer_email = session.customer_details.get('email')
+                elif hasattr(session, 'customer'):
+                    customer = session.customer
+                    if isinstance(customer, str):
+                        try:
+                            customer_obj = stripe.Customer.retrieve(customer)
+                            customer_email = customer_obj.email
+                        except:
+                            pass
+                    elif hasattr(customer, 'email'):
+                        customer_email = customer.email
+                
                 if workspace_id_from_stripe and plan_code:
                     # Create the subscription in the database
                     success, result = create_subscription(workspace_id_from_stripe, plan_code, 'web')
                     if success:
+                        # Record trial usage to prevent abuse
+                        if customer_email:
+                            stripe_customer_id = session.customer if isinstance(session.customer, str) else session.customer.id if session.customer else None
+                            record_trial_usage(customer_email, plan_code, workspace_id_from_stripe, stripe_customer_id)
+                        
                         # Force update session state with new tier immediately
                         st.session_state.user_tier = plan_code
                         st.session_state.workspace_id = workspace_id_from_stripe
@@ -4437,8 +4457,30 @@ def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_i
         print(f"Apple IAP processing error: {e}")
         return False, str(e)
 
+# ================= Trial Abuse Prevention =================
+def has_used_trial(email: str, plan_code: str) -> bool:
+    """Check if email has already used a free trial for this plan"""
+    try:
+        query = "SELECT id FROM trial_usage WHERE LOWER(email) = LOWER(%s) AND plan_code = %s"
+        result = execute_db_query(query, (email.strip(), plan_code))
+        return bool(result and len(result) > 0)
+    except:
+        return False
+
+def record_trial_usage(email: str, plan_code: str, workspace_id: str, stripe_customer_id: Optional[str] = None):
+    """Record that an email has used a free trial"""
+    try:
+        query = """
+            INSERT INTO trial_usage (email, stripe_customer_id, plan_code, workspace_id)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (email, plan_code) DO NOTHING
+        """
+        execute_db_write(query, (email.lower().strip(), stripe_customer_id, plan_code, workspace_id))
+    except Exception as e:
+        print(f"Error recording trial usage: {e}")
+
 # ================= Stripe Integration Functions =================
-def create_stripe_checkout_session(plan_code: str, workspace_id: str):
+def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_email: Optional[str] = None):
     """Create a Stripe checkout session for subscription"""
     try:
         if not stripe.api_key:
@@ -4451,18 +4493,27 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
         
         # Create or get customer
         customer = None
+        customer_params = {
+            "metadata": {"workspace_id": workspace_id},
+            "description": f"Market Scanner - Workspace {workspace_id[:8]}"
+        }
+        
+        # If email provided, add it to customer (helps with trial tracking)
+        if customer_email:
+            customer_params["email"] = customer_email.lower().strip()
+        
         try:
             customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})  # type: ignore
             if customers.data:
                 customer = customers.data[0]
+                # Update email if provided
+                if customer_email and customer.email != customer_email:
+                    stripe.Customer.modify(customer.id, email=customer_email)
         except:
             pass
         
         if not customer:
-            customer = stripe.Customer.create(
-                metadata={"workspace_id": workspace_id},
-                description=f"Market Scanner - Workspace {workspace_id[:8]}"
-            )
+            customer = stripe.Customer.create(**customer_params)
         
         # Determine base URL for redirects
         base_url = os.getenv('DOMAIN_URL')
@@ -4495,8 +4546,21 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str):
             'cancel_url': base_url
         }
         
-        # Add free trial if configured
+        # Add free trial ONLY if:
+        # 1. Plan has trial configured AND
+        # 2. Email hasn't used trial before (if email provided) AND  
+        # 3. Customer hasn't had trial before (Stripe prevents duplicate trials per customer)
+        include_trial = False
         if 'free_trial_days' in plan and plan['free_trial_days'] > 0:
+            if customer_email:
+                # Check if email has used trial before
+                if not has_used_trial(customer_email, plan_code):
+                    include_trial = True
+            else:
+                # No email check possible - let Stripe handle duplicate prevention
+                include_trial = True
+        
+        if include_trial:
             session_params['subscription_data'] = {
                 'trial_period_days': plan['free_trial_days']
             }
