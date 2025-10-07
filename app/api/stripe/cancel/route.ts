@@ -6,8 +6,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(req: Request) {
   try {
     const { customerId, subscriptionId } = await req.json();
-    let subId = subscriptionId as string | undefined;
 
+    // find subscription id
+    let subId = subscriptionId;
     if (!subId && customerId) {
       const list = await stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 });
       if (!list.data.length)
@@ -17,9 +18,9 @@ export async function POST(req: Request) {
 
     if (!subId)
       return NextResponse.json({ error: "Missing subscriptionId or customerId" }, { status: 400 });
-    const canceled = (await stripe.subscriptions.update(subId, { cancel_at_period_end: true })) as any;
-      cancel_at_period_end: true,
-    });
+
+    // cancel at period end
+    const canceled: any = await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
 
     return NextResponse.json({
       ok: true,
@@ -29,6 +30,9 @@ export async function POST(req: Request) {
       current_period_end: canceled.current_period_end,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    console.error("Stripe cancellation error:", err);
+    return NextResponse.json({ 
+      error: err.message || "Failed to cancel subscription" 
+    }, { status: 400 });
   }
 }
