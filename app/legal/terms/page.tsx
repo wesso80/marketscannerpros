@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true }
 };
 
-const effective = "26 September 2025";
+const effective = "7 October 2025";
 
 export default function TermsPage() {
   return (
@@ -45,10 +45,15 @@ export default function TermsPage() {
 
       <h2 id="billing">3. Subscriptions &amp; Billing</h2>
       <ul>
-        <li>The App offers Free, Pro ($4.99/mo), and Full Pro Trader ($9.99/mo) plans.</li>
-        <li>Payments are processed securely via Stripe.</li>
-        <li>Subscriptions renew automatically until cancelled through your account or app store settings.</li>
-        <li>We do not provide pro-rated refunds for unused time after cancellation.</li>
+        <li>The App offers Free, Pro ($4.99/mo), and Pro Trader ($9.99/mo) plans.</li>
+        <li>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
+        <li><strong>Free Trials:</strong> Pro includes a 7-day free trial; Pro Trader includes a 5-day free trial.</li>
+        <li><strong>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
+        <li><strong>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
+        <li>After your trial period ends, you will be automatically charged the monthly subscription fee unless you cancel before the trial expires.</li>
+        <li>Subscriptions renew automatically until cancelled through your account, Stripe Customer Portal, or app store settings.</li>
+        <li><strong>Refunds:</strong> We do not provide pro-rated refunds for unused time after cancellation. See our <a href="/refund-policy">Refund Policy</a> for details.</li>
+        <li><strong>Trial Abuse Prevention:</strong> We track trial usage by email address and device to prevent abuse. Attempting to circumvent trial limitations may result in immediate subscription termination without refund.</li>
       </ul>
 
       <h2 id="ip">4. Intellectual Property</h2>
