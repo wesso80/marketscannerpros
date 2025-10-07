@@ -140,7 +140,7 @@ export default function PricingPage() {
           margin: '0 auto'
         }}>
           <img 
-            src="/attached_assets/image_1759816221506.png" 
+            src="/tradingview-chart.png" 
             alt="MarketScanner Pros Confluence Strategy on TradingView" 
             style={{ width: '100%', display: 'block' }}
           />
