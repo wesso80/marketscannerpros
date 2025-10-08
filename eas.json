@@ -1,7 +1,15 @@
 {
+  "cli": { "appVersionSource": "remote" },
   "build": {
     "production": {
-      "ios": { "autoIncrement": "buildNumber" }
+      "ios": { "simulator": false }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": null
+      }
     }
   }
 }
