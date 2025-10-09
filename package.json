@@ -21,6 +21,7 @@
     "@types/node": "^20.19.17",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   },
   "main": "index.js",
