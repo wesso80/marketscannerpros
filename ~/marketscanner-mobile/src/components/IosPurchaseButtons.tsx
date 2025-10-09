@@ -17,7 +17,7 @@ export default function IosPurchaseButtons() {
       try {
         await IAP.connectAsync();
         
-        IAP.setPurchaseListener(async ({ responseCode, results }) => {
+        IAP.setPurchaseListener(async ({ responseCode, results }: any) => {
           if (!mounted) return;
           if (responseCode === IAP.IAPResponseCode.OK && results) {
             for (const p of results) {
@@ -91,7 +91,6 @@ export default function IosPurchaseButtons() {
 
   return (
     <View style={styles.container}>
-      {/* Pro Plan */}
       <TouchableOpacity 
         style={styles.button}
         onPress={() => buy(PRODUCTS[0])}
@@ -101,7 +100,6 @@ export default function IosPurchaseButtons() {
         <Text style={styles.buttonTrial}>7-day free trial</Text>
       </TouchableOpacity>
 
-      {/* Pro Trader */}
       <TouchableOpacity 
         style={[styles.button, styles.proTraderButton]}
         onPress={() => buy(PRODUCTS[1])}
@@ -111,7 +109,6 @@ export default function IosPurchaseButtons() {
         <Text style={styles.buttonTrial}>5-day free trial</Text>
       </TouchableOpacity>
 
-      {/* Restore */}
       <TouchableOpacity 
         style={styles.restoreButton}
         onPress={restore}
@@ -119,7 +116,6 @@ export default function IosPurchaseButtons() {
         <Text style={styles.restoreText}>Restore Purchases</Text>
       </TouchableOpacity>
 
-      {/* Apple Required Disclaimers */}
       <View style={styles.disclaimerContainer}>
         <Text style={styles.disclaimer}>
           • Payment charged to iTunes Account at confirmation of purchase{'\n'}
