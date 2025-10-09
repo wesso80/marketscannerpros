@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" width="device-width, initial-scale=1.0">
+    <title>Market Scanner Mobile - iOS App Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 40px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 30px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .status-bar {
+            height: 44px;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 12px;
+        }
+        .header {
+            background: #1a1a1a;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #fff;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .header p {
+            color: #aaa;
+            font-size: 16px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .section-desc {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .purchase-section {
+            padding: 20px;
+        }
+        .purchase-btn {
+            background: #007AFF;
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .purchase-btn:active {
+            transform: scale(0.98);
+        }
+        .purchase-btn.pro-trader {
+            background: #5856D6;
+        }
+        .btn-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .btn-price {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        .btn-trial {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .restore-btn {
+            text-align: center;
+            padding: 16px;
+            color: #007AFF;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .disclaimer {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .disclaimer-text {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+        .features {
+            margin-top: 20px;
+        }
+        .features-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .feature-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        .feature-text {
+            font-size: 16px;
+            color: #333;
+        }
+        .web-app-btn {
+            background: #34C759;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 30px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="notch"></div>
+        <div class="screen">
+            <div class="status-bar">9:41</div>
+            
+            <div class="header">
+                <h1>Market Scanner Pro</h1>
+                <p>Professional Market Analysis</p>
+            </div>
+
+            <div class="content">
+                <div class="section-title">Choose Your Plan</div>
+                <div class="section-desc">Unlock powerful market scanning and analysis tools</div>
+
+                <div class="purchase-section">
+                    <div class="purchase-btn">
+                        <div class="btn-title">🚀 Pro Plan</div>
+                        <div class="btn-price">$4.99/month</div>
+                        <div class="btn-trial">7-day free trial</div>
+                    </div>
+
+                    <div class="purchase-btn pro-trader">
+                        <div class="btn-title">💎 Pro Trader</div>
+                        <div class="btn-price">$9.99/month</div>
+                        <div class="btn-trial">5-day free trial</div>
+                    </div>
+
+                    <div class="restore-btn">Restore Purchases</div>
+
+                    <div class="disclaimer">
+                        <div class="disclaimer-text">
+                            • Payment charged to iTunes Account at confirmation of purchase<br>
+                            • Subscription auto-renews unless turned off 24hrs before period ends<br>
+                            • Account charged for renewal within 24hrs prior to end of current period<br>
+                            • Manage subscriptions in Account Settings after purchase<br>
+                            • Any unused trial forfeited when purchasing a subscription
+                        </div>
+                    </div>
+                </div>
+
+                <div class="features">
+                    <div class="features-title">Features Include:</div>
+                    <div class="feature">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">Real-time market scanning</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📈</span>
+                        <span class="feature-text">Technical indicators (RSI, MACD, ATR)</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💼</span>
+                        <span class="feature-text">Portfolio tracking</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📝</span>
+                        <span class="feature-text">Trade journal (Pro Trader)</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🔄</span>
+                        <span class="feature-text">Backtesting (Pro Trader)</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">📱</span>
+                        <span class="feature-text">Multi-platform access</span>
+                    </div>
+                </div>
+
+                <div class="web-app-btn">Open Web App →</div>
+
+                <div class="footer">
+                    Terms of Service • Privacy Policy • Support
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
