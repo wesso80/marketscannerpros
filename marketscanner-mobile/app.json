@@ -16,12 +16,6 @@
     "plugins": [
       "expo-build-properties",
       [
-        "react-native-purchases",
-        {
-          "useAmazon": false
-        }
-      ],
-      [
         "expo-notifications"
       ],
       "expo-router"

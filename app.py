@@ -5583,7 +5583,11 @@ if current_tier == 'free':
             button_disabled = not checkout_email or '@' not in checkout_email
             button_label = f"{plan_emoji} Start {trial_days} Free Trial" if checkout_email and '@' in checkout_email and not has_used_trial(checkout_email, st.session_state.selected_plan) else f"{plan_emoji} Subscribe to {plan_name} - {plan_price}/month"
             
-            if st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
+            # TEMPORARILY DISABLED - PAYMENT PROCESSING UNDER MAINTENANCE
+            st.error("🚧 **Subscription payments temporarily disabled for maintenance**")
+            st.info("We're fixing critical payment processing issues. Please check back in 24 hours or contact support@marketscannerpros.app")
+            
+            if False and st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
                 if workspace_id:
                     # Create Stripe checkout session with email for trial tracking
                     with st.spinner("🔄 Creating secure checkout..."):
