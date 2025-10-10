@@ -1,14 +1,9 @@
-# big assets / local build outputs
-attached_assets/
-android-build/
-builds/
+# local build outputs
 .android/
 .ios/
 .expo/
 dist/
 coverage/
-marketscanner-mobile/
-src/
 
 # caches & virtual envs
 .cache/
