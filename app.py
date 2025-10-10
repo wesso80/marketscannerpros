@@ -1598,6 +1598,7 @@ def get_persistent_device_fingerprint() -> str:
     """Get or create a persistent device fingerprint - URL-based persistence"""
     # Check if we already have a device fingerprint in session state
     if 'device_fingerprint' in st.session_state and st.session_state.device_fingerprint:
+        print(f"[WORKSPACE DEBUG] Using existing fingerprint from session: {st.session_state.device_fingerprint[:8]}...")
         return st.session_state.device_fingerprint
     
     # Check for workspace ID in URL (primary persistence method)
@@ -1608,6 +1609,7 @@ def get_persistent_device_fingerprint() -> str:
     
     if workspace_id_from_url:
         # Use existing workspace ID from URL
+        print(f"[WORKSPACE DEBUG] Using workspace_id from URL: {workspace_id_from_url[:8]}...")
         st.session_state.device_fingerprint = workspace_id_from_url
         st.session_state.workspace_id = workspace_id_from_url
         return workspace_id_from_url
@@ -1635,6 +1637,7 @@ def get_persistent_device_fingerprint() -> str:
     
     # Generate new fingerprint and add to URL
     new_fingerprint = str(uuid.uuid4())
+    print(f"[WORKSPACE DEBUG] Generated NEW workspace_id: {new_fingerprint[:8]}...")
     st.session_state.device_fingerprint = new_fingerprint
     
     # Add workspace ID to URL for persistence
@@ -4609,6 +4612,7 @@ def record_trial_usage(email: str, plan_code: str, workspace_id: str, stripe_cus
 # ================= Stripe Integration Functions =================
 def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_email: Optional[str] = None):
     """Create a Stripe checkout session for subscription"""
+    print(f"[STRIPE DEBUG] Creating checkout for workspace: {workspace_id[:8]}... plan: {plan_code}")
     try:
         if not stripe.api_key:
             return None, "Stripe not configured"
