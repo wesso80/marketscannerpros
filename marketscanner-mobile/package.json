@@ -1,0 +1,36 @@
+{
+  "name": "marketscanner-mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-query-persist-client": "^5.90.2",
+    "date-fns": "^4.1.0",
+    "expo": "~54.0.13",
+    "expo-notifications": "~0.32.12",
+    "expo-router": "~6.0.11",
+    "expo-secure-store": "^15.0.7",
+    "expo-sqlite": "^16.0.8",
+    "expo-status-bar": "~3.0.8",
+    "immer": "^10.1.3",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-purchases": "^9.5.3",
+    "react-native-svg": "^15.14.0",
+    "react-native-web": "^0.21.0",
+    "victory-native": "^41.20.1",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2"
+  },
+  "private": true
+}

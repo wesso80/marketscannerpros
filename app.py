@@ -4751,13 +4751,16 @@ def cancel_stripe_subscription(workspace_id: str):
         if not subscription or not subscription.get('stripe_subscription_id'):
             return False, "No active Stripe subscription found"
         
-        # Cancel in Stripe
-        stripe.Subscription.delete(subscription['stripe_subscription_id'])
+        # Cancel in Stripe (at period end - user keeps access until then)
+        stripe.Subscription.modify(
+            subscription['stripe_subscription_id'],
+            cancel_at_period_end=True
+        )
         
-        # Cancel in database
+        # Mark as cancelled in database
         cancel_subscription(workspace_id)
         
-        return True, "Subscription cancelled"
+        return True, "Subscription will cancel at period end. You'll keep access until then."
     except Exception as e:
         return False, f"Error cancelling subscription: {str(e)}"
 
