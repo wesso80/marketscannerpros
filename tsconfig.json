@@ -37,6 +37,7 @@
     "node_modules",
     "backups",
     "attached_assets",
-    "marketscanner-mobile"
+    "marketscanner-mobile",
+    "src"
   ]
 }
