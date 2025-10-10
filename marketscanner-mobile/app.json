@@ -14,7 +14,7 @@
       "backgroundColor": "#ffffff"
     },
     "plugins": [
-      "expo-router",
+      "expo-build-properties",
       [
         "react-native-purchases",
         {
@@ -23,7 +23,8 @@
       ],
       [
         "expo-notifications"
-      ]
+      ],
+      "expo-router"
     ],
     "ios": {
       "bundleIdentifier": "app.marketscannerpros.mobile",

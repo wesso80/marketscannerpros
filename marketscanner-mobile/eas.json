@@ -1,11 +1,13 @@
 {
   "build": {
     "production": {
-      "autoIncrement": "buildNumber",
+      "autoIncrement": true,
       "ios": { "resourceClass": "m-medium" },
       "android": { "gradleCommand": ":app:bundleRelease" }
     }
   },
-  "submit": { "production": {} },
+  "submit": {
+    "production": {}
+  },
   "cli": { "appVersionSource": "remote" }
 }
