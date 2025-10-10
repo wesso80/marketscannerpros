@@ -4669,8 +4669,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_e
                 'workspace_id': workspace_id,
                 'plan_code': plan_code
             },
-            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}",
-            'cancel_url': base_url
+            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}&wid={workspace_id}",
+            'cancel_url': f"{base_url}?wid={workspace_id}"
         }
         
         # Add free trial ONLY if:
