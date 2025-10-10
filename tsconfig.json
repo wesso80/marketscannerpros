@@ -36,6 +36,7 @@
   "exclude": [
     "node_modules",
     "backups",
-    "attached_assets"
+    "attached_assets",
+    "marketscanner-mobile"
   ]
 }

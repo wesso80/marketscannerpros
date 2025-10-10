@@ -7,6 +7,7 @@ builds/
 .expo/
 dist/
 coverage/
+marketscanner-mobile/
 
 # caches & virtual envs
 .cache/
