@@ -66,10 +66,10 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              Pricing & Plans
+              🎉 Free for Everyone!
             </h2>
             <p className="opacity-85 text-base md:text-lg">
-              Start free. Upgrade any time. Cancel in your Stripe portal.
+              All Pro Trader features are now completely free. No credit card required.
             </p>
           </div>
 
