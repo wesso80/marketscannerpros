@@ -4380,6 +4380,9 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
 
 def get_user_tier_from_subscription(workspace_id: str):
     """Get user tier based on active subscription and admin overrides"""
+    # TEMPORARY: Auto-grant Pro Trader to everyone while fixing subscription bugs
+    return 'pro_trader'
+    
     # Check for admin override first
     override_tier = get_subscription_override(workspace_id)
     if override_tier:
