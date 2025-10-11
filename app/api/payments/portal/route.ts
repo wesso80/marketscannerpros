@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createPortal } from "@/lib/payments";
+import { getCustomer } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -10,9 +11,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing workspaceId" }, { status: 400 });
     }
 
+    const customer = await getCustomer(wid);
+    
+    if (!customer?.stripe_customer_id) {
+      return NextResponse.json({ error: "No active subscription" }, { status: 404 });
+    }
+
     const { url } = await createPortal({
-      workspaceId: wid,
-      returnUrl: process.env.PORTAL_RETURN_URL || `${process.env.NEXT_PUBLIC_APP_URL}/account`
+      customerId: customer.stripe_customer_id,
+      returnUrl: process.env.PORTAL_RETURN_URL || `${process.env.NEXT_PUBLIC_APP_URL}/account?wid=${wid}`
     });
 
     return NextResponse.json({ url });
