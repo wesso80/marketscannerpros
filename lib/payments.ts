@@ -1,8 +1,8 @@
+import Stripe from 'stripe';
 import { Tier } from './db';
 
-const PADDLE_ENV = process.env.PADDLE_ENVIRONMENT || 'sandbox';
-const PADDLE_VENDOR_ID = process.env.PADDLE_VENDOR_ID || '';
-const PADDLE_API_KEY = process.env.PADDLE_API_KEY || '';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2025-09-30.clover' });
 
 export function planToTier(plan: 'pro' | 'pro_trader'): Tier {
   return plan === 'pro_trader' ? 'pro_trader' : 'pro';
@@ -14,59 +14,55 @@ export async function createCheckout(params: {
   successUrl: string;
   cancelUrl: string;
 }) {
-  // In sandbox mode, return simulated checkout
-  if (PADDLE_ENV === 'sandbox') {
-    const url = `${params.successUrl}?wid=${params.workspaceId}&plan=${params.plan}&simulated=1`;
-    return { url };
+  const priceId = params.plan === 'pro_trader' 
+    ? process.env.STRIPE_PRICE_PRO_TRADER 
+    : process.env.STRIPE_PRICE_PRO;
+
+  if (!priceId) {
+    throw new Error(`Missing Stripe price ID for plan: ${params.plan}`);
   }
 
-  // Production Paddle checkout
-  const priceId = params.plan === 'pro_trader' 
-    ? process.env.PADDLE_PRICE_PRO_TRADER 
-    : process.env.PADDLE_PRICE_PRO;
-
-  const response = await fetch('https://api.paddle.com/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${PADDLE_API_KEY}`,
-      'Content-Type': 'application/json',
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    line_items: [
+      {
+        price: priceId,
+        quantity: 1,
+      },
+    ],
+    success_url: `${params.successUrl}?wid=${params.workspaceId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${params.cancelUrl}?wid=${params.workspaceId}`,
+    metadata: {
+      workspace_id: params.workspaceId,
+      plan: params.plan,
     },
-    body: JSON.stringify({
-      items: [{ price_id: priceId, quantity: 1 }],
-      customer_id: PADDLE_VENDOR_ID,
-      custom_data: { workspace_id: params.workspaceId },
-      success_url: `${params.successUrl}?wid=${params.workspaceId}`,
-      cancel_url: `${params.cancelUrl}?wid=${params.workspaceId}`,
-    }),
+    subscription_data: {
+      metadata: {
+        workspace_id: params.workspaceId,
+        plan: params.plan,
+      },
+    },
   });
 
-  const data = await response.json();
-  return { url: data.url };
+  return { url: session.url };
 }
 
 export async function createPortal(params: {
-  workspaceId: string;
+  customerId: string;
   returnUrl: string;
 }) {
-  // In sandbox mode, return simulated portal
-  if (PADDLE_ENV === 'sandbox') {
-    const url = `${params.returnUrl}?wid=${params.workspaceId}&portal=simulated`;
-    return { url };
-  }
-
-  // Production Paddle portal
-  const response = await fetch('https://api.paddle.com/customer-portal-sessions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${PADDLE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      customer_id: PADDLE_VENDOR_ID,
-      return_url: `${params.returnUrl}?wid=${params.workspaceId}`,
-    }),
+  const session = await stripe.billingPortal.sessions.create({
+    customer: params.customerId,
+    return_url: params.returnUrl,
   });
 
-  const data = await response.json();
-  return { url: data.url };
+  return { url: session.url };
+}
+
+export async function getSubscription(subscriptionId: string) {
+  return await stripe.subscriptions.retrieve(subscriptionId);
+}
+
+export async function cancelSubscription(subscriptionId: string) {
+  return await stripe.subscriptions.cancel(subscriptionId);
 }
