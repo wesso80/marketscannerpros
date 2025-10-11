@@ -37,7 +37,7 @@ try:
     from psycopg2.extras import RealDictCursor
     import psycopg2.extensions
     from psycopg2 import pool
-    from dataclasses import dataclassne
+    from dataclasses import dataclass
     from typing import List, Tuple, Optional, Dict, Any
     from datetime import timezone
     from dateutil import tz
