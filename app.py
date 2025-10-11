@@ -4379,20 +4379,15 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
         return False, f"Error: {str(e)}", None
 
 def get_user_tier_from_subscription(workspace_id: str):
-    """Get user tier based on active subscription and admin overrides"""
-    # TEMPORARY: Auto-grant Pro Trader to everyone while fixing subscription bugs
-    return 'pro_trader'
-    
-    # Check for admin override first
-    override_tier = get_subscription_override(workspace_id)
-    if override_tier:
-        return override_tier
-    
-    # Fall back to regular subscription
-    subscription = get_workspace_subscription(workspace_id)
-    if subscription:
-        return subscription['plan_code']
-    return 'free'
+    """Get user tier from Next.js API using workspace ID"""
+    try:
+        from streamlit_billing_client import get_tier
+        tier = get_tier(workspace_id)
+        print(f"[BILLING] Workspace {workspace_id[:8]}... has tier: {tier}")
+        return tier
+    except Exception as e:
+        print(f"[BILLING ERROR] Failed to get tier: {e}")
+        return 'free'
 
 # ================= Stripe Webhook Endpoint =================
 # Handle webhook in query parameters for Streamlit limitations  
