@@ -29,9 +29,11 @@ export async function setSubscription(
   currentPeriodEnd?: Date,
   stripeSubscriptionId?: string
 ) {
+  const periodEnd = currentPeriodEnd ? currentPeriodEnd.toISOString() : null;
+  
   await sql`
     INSERT INTO subscriptions (workspace_id, tier, status, current_period_end, stripe_subscription_id, updated_at)
-    VALUES (${workspaceId}, ${tier}, ${status}, ${currentPeriodEnd || null}, ${stripeSubscriptionId || null}, NOW())
+    VALUES (${workspaceId}, ${tier}, ${status}, ${periodEnd}, ${stripeSubscriptionId || null}, NOW())
     ON CONFLICT (workspace_id)
     DO UPDATE SET
       tier = EXCLUDED.tier,

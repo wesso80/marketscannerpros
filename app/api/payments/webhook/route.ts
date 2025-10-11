@@ -60,7 +60,8 @@ export async function POST(req: Request) {
           else if (subscription.status === 'past_due') status = 'past_due';
           else if (subscription.status === 'canceled' || subscription.status === 'unpaid') status = 'canceled';
 
-          const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+          const periodEnd = (subscription as any).current_period_end;
+          const currentPeriodEnd = periodEnd ? new Date(periodEnd * 1000) : undefined;
 
           await setSubscription(
             workspaceId,
