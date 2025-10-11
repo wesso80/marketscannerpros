@@ -1,34 +1,25 @@
 import { NextResponse } from "next/server";
-import { createCheckout, planToTier } from "@/lib/payments";
-import { upsertCustomer } from "@/lib/db";
+import { stripe, PRICE_IDS, appBaseUrl } from "@/lib/stripe";
 
 export async function POST(req: Request) {
   try {
-    // Check if payments are enabled
-    if (process.env.ENABLE_PAYMENTS !== 'true') {
-      return NextResponse.json({ error: "Payments not enabled" }, { status: 403 });
+    const { plan } = await req.json();
+    const price = plan === "pro_trader" ? PRICE_IDS.pro_trader : PRICE_IDS.pro;
+    if (!price) {
+      return NextResponse.json({ error: "Missing price id" }, { status: 400 });
     }
 
-    const b = await req.json().catch(() => ({}));
-    const plan = (b.plan || "pro") as "pro" | "pro_trader";
-    const wid = String(b.workspaceId || "");
-    
-    if (!wid) {
-      return NextResponse.json({ error: "Missing workspaceId" }, { status: 400 });
-    }
-
-    await upsertCustomer(wid);
-
-    const { url } = await createCheckout({
-      plan,
-      workspaceId: wid,
-      successUrl: process.env.CHECKOUT_SUCCESS_URL || `${process.env.NEXT_PUBLIC_APP_URL}/success`,
-      cancelUrl: process.env.CHECKOUT_CANCEL_URL || `${process.env.NEXT_PUBLIC_APP_URL}/cancel`
+    const base = appBaseUrl();
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price, quantity: 1 }],
+      success_url: `${base}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/billing/cancelled`,
+      allow_promotion_codes: true
     });
 
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: session.url });
   } catch (e: any) {
-    console.error("Checkout error:", e);
-    return NextResponse.json({ error: e.message || "checkout failed" }, { status: 500 });
+    return NextResponse.json({ error: e.message || "Checkout error" }, { status: 500 });
   }
 }
