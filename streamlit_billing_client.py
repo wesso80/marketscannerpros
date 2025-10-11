@@ -2,10 +2,10 @@ import hmac, hashlib, base64, os, requests
 try:
     import streamlit as st
     S = st.secrets.get("APP_SIGNING_SECRET", os.getenv("APP_SIGNING_SECRET", "dev"))
-    API = st.secrets.get("MARKET_API_URL", os.getenv("MARKET_API_URL", "http://localhost:3001"))
+    API = st.secrets.get("MARKET_API_URL", os.getenv("MARKET_API_URL", "https://marketscannerpros.app"))
 except Exception:
     S = os.getenv("APP_SIGNING_SECRET", "dev")
-    API = os.getenv("MARKET_API_URL", "http://localhost:3001")
+    API = os.getenv("MARKET_API_URL", "https://marketscannerpros.app")
 
 def _sig(wid: str) -> str:
     d = hmac.new(S.encode(), wid.encode(), hashlib.sha256).digest()
