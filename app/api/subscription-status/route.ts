@@ -16,6 +16,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Bad signature" }, { status: 401 });
     }
     
+    // If payments disabled, everyone gets pro_trader for free
+    if (process.env.ENABLE_PAYMENTS !== 'true') {
+      return NextResponse.json({ wid, tier: 'pro_trader' });
+    }
+    
     const tier = await getEffectiveTier(wid);
     return NextResponse.json({ wid, tier });
   } catch (e: any) {

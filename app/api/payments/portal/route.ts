@@ -4,6 +4,11 @@ import { getCustomer } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
+    // Check if payments are enabled
+    if (process.env.ENABLE_PAYMENTS !== 'true') {
+      return NextResponse.json({ error: "Payments not enabled" }, { status: 403 });
+    }
+
     const b = await req.json().catch(() => ({}));
     const wid = String(b.workspaceId || "");
     
