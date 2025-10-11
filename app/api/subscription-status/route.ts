@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { getEffectiveTier } from "@/lib/db";
 import { verify } from "@/lib/signer";
