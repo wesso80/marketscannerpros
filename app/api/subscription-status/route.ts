@@ -1,31 +1,23 @@
-export const dynamic = "force-dynamic";
-import { NextResponse } from "next/server";
-import { getEffectiveTier } from "@/lib/db";
-import { verify } from "@/lib/signer";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@vercel/postgres";
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const wid = searchParams.get("wid") || "";
-    const sig = searchParams.get("sig") || "";
-    
-    if (!wid) {
-      return NextResponse.json({ error: "Missing wid" }, { status: 400 });
-    }
-    
-    if (!verify(wid, sig)) {
-      return NextResponse.json({ error: "Bad signature" }, { status: 401 });
-    }
-    
-    // If payments disabled, everyone gets pro_trader for free
-    if (process.env.ENABLE_PAYMENTS !== 'true') {
-      return NextResponse.json({ wid, tier: 'pro_trader' });
-    }
-    
-    const tier = await getEffectiveTier(wid);
-    return NextResponse.json({ wid, tier });
-  } catch (e: any) {
-    console.error("Subscription status error:", e);
-    return NextResponse.json({ error: e.message || "failed" }, { status: 500 });
-  }
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(req: NextRequest) {
+  const wid = req.nextUrl.searchParams.get("wid");
+  if (!wid) return NextResponse.json({ error: "Missing wid" }, { status: 400 });
+
+  const client = createClient({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  const { rows } = await client.query(
+    "SELECT plan_code, subscription_status FROM user_subscriptions WHERE workspace_id=$1 LIMIT 1",
+    [wid]
+  );
+  await client.end();
+
+  const r = rows[0];
+  const tier =
+    r && r.subscription_status === "active" && r.plan_code === "pro" ? "pro" : "free";
+  return NextResponse.json({ workspace_id: wid, tier });
 }
