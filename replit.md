@@ -6,6 +6,20 @@ A multi-platform market scanning application that analyzes equity and cryptocurr
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Bug Fixes (October 2025)
+- **Authentication Security**: Added try-catch blocks around JSON parsing in auth system to prevent crashes from malformed tokens
+- **Production Safety**: Removed unsafe runtime package installation; packages must be pre-installed
+- **Email Configuration**: Improved fallback logic for API keys with safer Streamlit secrets handling
+- **Error Handling**: Replaced broad exception handling with specific exception types for better debugging
+- **Configuration Management**: Removed hardcoded domains and URLs; now using environment variables:
+  - `COOKIE_DOMAIN` for cookie domain configuration
+  - `ALLOWED_ORIGINS` for CORS allowed origins
+  - `NEXT_PUBLIC_APP_URL` for app URL (required)
+- **Mobile Detection**: Fixed redundant mobile detection logic; now uses single source of truth from session state
+- **Code Cleanup**: Removed unused functions and improved code organization
+
 ## System Architecture
 
 ### UI/UX Decisions
