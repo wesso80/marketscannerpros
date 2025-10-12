@@ -18,29 +18,6 @@ export default function PricingPage() {
 
   const paymentsEnabled = process.env.NEXT_PUBLIC_ENABLE_PAYMENTS === 'true';
 
-  const handleUpgrade = async () => {
-    try {
-      const workspaceId = 'user-' + Date.now();
-      
-      const res = await fetch('/api/payments/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId })
-      });
-      
-      const data = await res.json();
-      
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data?.error || 'Checkout failed');
-      }
-    } catch (err) {
-      console.error('Checkout error:', err);
-      alert('Failed to start checkout');
-    }
-  };
-
   if (!paymentsEnabled) {
     return (
       <main>
@@ -138,13 +115,19 @@ export default function PricingPage() {
             <li>✅ Email Notifications</li>
             <li>✅ Priority Support</li>
           </ul>
-          <button 
+          <a 
+            href="https://buy.stripe.com/test_aFacN6dl0c1peEg8iX9sk00"
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn" 
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
-            onClick={handleUpgrade}
+            style={{ 
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              display: 'inline-block',
+              textDecoration: 'none'
+            }}
           >
             Upgrade to Pro
-          </button>
+          </a>
         </div>
       </div>
     </main>
