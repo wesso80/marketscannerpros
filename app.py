@@ -5343,44 +5343,17 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= TIER CHECK & SUBSCRIPTION STATUS =================
+# ================= FULL ACCESS FOR EVERYONE =================
 workspace_id = st.session_state.get('workspace_id')
 
-# Check if payments are enabled
-payments_enabled = os.getenv('NEXT_PUBLIC_ENABLE_PAYMENTS', 'false').lower() == 'true'
+# Everyone gets full access (all features unlocked)
+current_tier = 'paid'
+st.session_state.user_tier = current_tier
+tier_info = TIER_CONFIG[current_tier]
 
-if not payments_enabled:
-    # Free for everyone mode
-    current_tier = 'paid'  # Everyone gets paid features for free
-    st.session_state.user_tier = current_tier
-    tier_info = TIER_CONFIG[current_tier]
-    
-    st.sidebar.header("🎉 Free Access")
-    st.sidebar.success("**All Features Unlocked**")
-    st.sidebar.caption("Enjoying the free access while we improve!")
-else:
-    # Paid subscription mode - check database
-    if workspace_id:
-        current_tier = get_user_tier_from_subscription(workspace_id)
-    else:
-        current_tier = 'free'
-    
-    st.session_state.user_tier = current_tier
-    tier_info = TIER_CONFIG.get(current_tier, TIER_CONFIG['free'])
-    
-    # Display tier status
-    if current_tier == 'paid':
-        st.sidebar.header("✨ Pro Member")
-        st.sidebar.success("**Pro** - All Features Unlocked!")
-        st.sidebar.caption("Unlimited alerts, trade journal & more")
-    elif current_tier in ['pro', 'pro_trader']:
-        # Legacy tiers
-        st.sidebar.header(f"✨ {tier_info['name']}")
-        st.sidebar.success("All Features Active")
-    else:
-        st.sidebar.header("📱 Free Tier")
-        st.sidebar.info("Upgrade to unlock all features")
-        st.sidebar.markdown("[🚀 Upgrade to Pro](https://marketscannerpros.app/pricing)")
+st.sidebar.header("🎉 Full Access")
+st.sidebar.success("**All Features Unlocked!**")
+st.sidebar.caption("Free while we improve the platform")
 
 # End of subscription UI section
 
