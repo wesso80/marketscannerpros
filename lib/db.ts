@@ -1,6 +1,6 @@
 import { sql } from '@vercel/postgres';
 
-export type Tier = 'free' | 'pro' | 'pro_trader';
+export type Tier = 'free' | 'paid';
 export type Status = 'active' | 'trialing' | 'past_due' | 'canceled' | 'inactive';
 
 export async function upsertCustomer(workspaceId: string, stripeCustomerId?: string) {
