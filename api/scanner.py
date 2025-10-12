@@ -5,11 +5,24 @@ import os
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Install streamlit if not available
+        # Verify streamlit is available (should be pre-installed)
         try:
             import streamlit
         except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "streamlit"])
+            self.send_response(500)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            error_html = """
+            <html>
+            <body>
+                <h1>Configuration Error</h1>
+                <p>Streamlit is not installed. Please ensure all dependencies are properly configured.</p>
+                <p><a href="/">Return to Dashboard</a></p>
+            </body>
+            </html>
+            """
+            self.wfile.write(error_html.encode())
+            return
         
         # Set up Streamlit to run in headless mode
         os.environ['STREAMLIT_SERVER_HEADLESS'] = 'true'
