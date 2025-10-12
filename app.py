@@ -5841,7 +5841,7 @@ if run_clicked:
     
     if not allowed:
         st.error(f"🚫 {message}")
-        st.info("Please wait a moment before scanning again. Upgrade to Pro for higher limits!")
+        st.info("Please wait a moment before scanning again.")
     # Check if at least one market is selected
     elif not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
@@ -5942,16 +5942,12 @@ def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
                 • Stay tuned for iOS-compatible updates!
                 """)
                 
-                # Show upgrade prompt since other features work
-                if st.session_state.get('user_tier', 'free') == 'free':
-                    st.markdown("""
-                    ---
-                    ### 🚀 **Upgrade to Pro While You Wait**
-                    Premium features like **Price Alerts** and **Portfolio Tracking** work great on iOS!
-                    
-                    **Pro ($4.99/month):** Real-time alerts, basic analytics
-                    **Pro Trader ($9.99/month):** Advanced features, priority support
-                    """)
+                # All features are free - no upgrade needed
+                st.markdown("""
+                ---
+                ### ✨ **All Features Unlocked for Free!**
+                Premium features like **Price Alerts** and **Portfolio Tracking** work great on iOS!
+                """)
                 
                 return True  # Indicates iOS issue detected
     
@@ -6106,25 +6102,8 @@ st.subheader("🚨 Price Alerts")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-if tier_info['alert_limit'] == 0:
-    with st.expander("🔒 **Price Alerts** - Pro & Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Price Alerts with Pro or Pro Trader:**
-        - Get notified when stocks hit your target prices
-        - Unlimited alerts with both Pro and Pro Trader
-        - Never miss an entry or exit opportunity
-        - Try free for 5-7 days!
-        """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_alerts_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_alerts_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
-else:
+# Price Alerts - FREE for everyone (no tier restrictions)
+if True:
     # Auto-refresh toggle and controls
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
@@ -6216,29 +6195,14 @@ else:
                     elif alert_type not in ['above', 'below']:
                         st.error("Invalid alert type")
                     else:
-                        # Check tier limitations
-                        current_tier = st.session_state.user_tier
-                        tier_info = TIER_CONFIG[current_tier]
-                        active_alerts = get_active_alerts()
-                        alert_count = len(active_alerts) if active_alerts else 0
-                    
-                        # Check if free tier trying to create alerts
-                        if current_tier == 'free':
-                            st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
-                            st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
-                        # Check if pro tier has reached alert limit
-                        elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
-                            st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
-                            st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
+                        # Create the alert (no tier restrictions - everyone gets unlimited)
+                        symbol_clean = alert_symbol.strip().upper()
+                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                            st.success(f"Alert created for {symbol_clean}")
+                            st.session_state.show_new_alert = False
+                            st.rerun()
                         else:
-                            # Create the alert
-                            symbol_clean = alert_symbol.strip().upper()
-                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                                st.success(f"Alert created for {symbol_clean}")
-                                st.session_state.show_new_alert = False
-                                st.rerun()
-                            else:
-                                st.error("Failed to create alert - please check database connection")
+                            st.error("Failed to create alert - please check database connection")
         
             with col3:
                 if st.button("Cancel", key="cancel_alert"):
@@ -6295,26 +6259,8 @@ st.subheader("📈 Advanced Technical Analysis Charts")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-if not tier_info['has_advanced_charts']:
-    with st.expander("🔒 **Advanced Charts** - Pro & Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Advanced Technical Analysis Charts with Pro or Pro Trader:**
-        - Interactive candlestick charts with zoom and pan
-        - Customizable technical indicators (RSI, MACD, Bollinger Bands, Volume)
-        - Multiple timeframes from 5m to 1D
-        - Professional trading tools
-        - Try free for 5-7 days!
-        """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_charts_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_charts_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
-else:
+# Advanced Charts - FREE for everyone (no tier restrictions)
+if True:
     # Chart controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
 
@@ -6479,28 +6425,8 @@ st.subheader("💼 Portfolio Tracking")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-if tier_info['portfolio_limit'] == 3:
-    with st.expander("🔒 **Portfolio Tracking** - Pro & Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Enhanced Portfolio Tracking with Pro or Pro Trader:**
-        - Unlimited portfolio positions with both Pro and Pro Trader
-        - Real-time P&L tracking and performance analytics
-        - Visual allocation charts and historical performance
-        - Never lose track of your positions
-        - Try free for 5-7 days!
-        
-        (Free tier is limited to 3 positions)
-        """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_portfolio_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_portfolio_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
-else:
+# Portfolio Tracking - FREE for everyone (no tier restrictions)
+if True:
     # Portfolio overview
     col1, col2 = st.columns([2, 1])
 
@@ -6609,30 +6535,11 @@ else:
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
                 if st.button("Add Position", type="primary", width='stretch'):
-                    # Check tier limitations for new BUY positions
-                    can_add = True
-                    if transaction_type == "BUY":
-                        current_tier = st.session_state.user_tier
-                        tier_info = TIER_CONFIG[current_tier]
-                        current_positions = get_portfolio_positions()
-                        position_count = len(current_positions) if current_positions else 0
-                    
-                        # Check if trying to add new position beyond limit
-                        if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
-                            existing_symbols = [p['symbol'] for p in current_positions]
-                            if symbol not in existing_symbols:
-                                st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
-                                if current_tier == 'free':
-                                    st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
-                                else:
-                                    st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
-                                can_add = False
-                
-                    if can_add:
-                        success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
-                        if success:
-                            st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                            st.rerun()
+                    # No tier limitations - everyone gets unlimited portfolio access
+                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                    if success:
+                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                        st.rerun()
 
     with tab3:
         # Current holdings
@@ -6747,23 +6654,8 @@ st.subheader("📔 Trade Journal")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-if not tier_info['has_trade_journal']:
-    with st.expander("🔒 **Trade Journal** - Pro Trader Exclusive Feature", expanded=False):
-        st.info("""
-        **Unlock Trade Journal with Pro Trader:**
-        - Log every trade with entry/exit prices and reasoning
-        - Track win rate, R-multiples, and profit factor
-        - Analyze what works and what doesn't
-        - Export trade history to CSV
-        - Improve your trading through data-driven insights
-        - Email alerts for backtesting buy/sell signals
-        - TradingView script integration
-        - Try free for 5-7 days!
-        """)
-        if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
-            st.session_state.selected_plan = 'pro_trader'
-            st.rerun()
-else:
+# Trade Journal - FREE for everyone (no tier restrictions)
+if True:
     # Calculate stats for overview
     workspace_id = st.session_state.get('workspace_id', 'anonymous')
     journal_stats = calculate_journal_stats(workspace_id)
@@ -7116,21 +7008,8 @@ st.subheader("🔬 Strategy Backtesting")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-if not tier_info['has_backtesting']:
-    with st.expander("🔒 **Strategy Backtesting** - Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Advanced Backtesting with Pro Trader:**
-        - Test trading strategies on historical data
-        - Get email alerts for every buy/sell signal
-        - Analyze performance metrics and win rates
-        - TradingView script integration
-        - Optimize your trading approach
-        - Get 5-7 day free trial!
-        """)
-        if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
-            st.session_state.selected_plan = 'pro_trader'
-            st.rerun()
-else:
+# Strategy Backtesting - FREE for everyone (no tier restrictions)
+if True:
 
     # Backtest controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
