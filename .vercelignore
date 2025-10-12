@@ -1,4 +1,7 @@
-# local build outputs
+# big assets / local build outputs
+attached_assets/
+android-build/
+builds/
 .android/
 .ios/
 .expo/

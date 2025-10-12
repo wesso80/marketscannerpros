@@ -5331,23 +5331,415 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= SUBSCRIPTION UI REMOVED =================
-# TEMPORARY: All users get Pro Trader for free while fixing subscription bugs
-# Subscription UI and payment flow removed
+# ================= Email-Based Subscription Linking =================
+# CRITICAL FIX: Allow users to link their Stripe subscription via email
+if 'subscription_linked' not in st.session_state:
+    st.session_state.subscription_linked = False
 
 workspace_id = st.session_state.get('workspace_id')
 
-# Show simple tier status in sidebar
-current_tier = 'pro_trader'  # Everyone gets Pro Trader now
+# Check if this workspace already has a subscription
+existing_subscription = None
+if workspace_id:
+    existing_subscription = get_workspace_subscription(workspace_id)
+
+# If no subscription, show link to activate
+if not existing_subscription and not st.session_state.subscription_linked:
+    with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
+        st.write("**Already purchased? Activate your subscription:**")
+        st.info("Visit **marketscannerpros.app/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
+        st.write("This will link your subscription to all your devices permanently.")
+
+# ================= Subscription Summary (Compact) =================
+# Show compact subscription summary instead of full tier cards
+st.sidebar.header("💳 Subscription")
+
+# Get current subscription from database with admin override support
+current_subscription = None
+
+if workspace_id:
+    # Use the proper function that checks admin overrides first, then subscriptions
+    current_tier = get_user_tier_from_subscription(workspace_id)
+    # Also get subscription info for display purposes
+    current_subscription = get_workspace_subscription(workspace_id)
+else:
+    # No workspace - default to free
+    current_tier = 'free'
+
+# TEMPORARY: Manual Pro access for testing (NO SUCCESS MESSAGES to avoid layout issues)
+# Check if user should have Pro access (temporary override)
+query_params = st.query_params
+if query_params.get("access") == "pro":
+    current_tier = 'pro'
+    # Removed success message that was causing layout/styling issues
+elif query_params.get("access") == "pro_trader":
+    current_tier = 'pro_trader'
+    # Removed success message that was causing layout/styling issues
+
+# Update session state to match current tier
 st.session_state.user_tier = current_tier
+    
 tier_info = TIER_CONFIG[current_tier]
 
-# Display Pro Trader status
-st.sidebar.header("✨ Full Access")
-st.sidebar.success("**Pro Trader** - All Features Unlocked!")
-st.sidebar.caption("Unlimited scanning, alerts, trade journal & more")
+# Display current tier status with expiry information
+expiry_text = "Limited features"
+if current_tier != 'free':
+    expiry_text = "Active Plan"
+    
+    # Check for friend code expiry (subscription overrides)
+    if workspace_id:
+        override_query = """
+            SELECT expires_at, set_by FROM subscription_overrides 
+            WHERE workspace_id = %s AND expires_at IS NOT NULL
+            LIMIT 1
+        """
+        override_result = execute_db_query(override_query, (workspace_id,))
+        
+        if override_result and len(override_result) > 0:
+            expires_at = override_result[0]['expires_at']
+            set_by = override_result[0]['set_by']
+            
+            # Convert to datetime and calculate days remaining
+            from datetime import datetime
+            import pytz
+            
+            if expires_at:
+                if isinstance(expires_at, str):
+                    expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expires_dt = expires_at
+                
+                now_dt = datetime.now(pytz.UTC)
+                days_remaining = (expires_dt - now_dt).days
+                
+                if days_remaining > 0:
+                    if 'friend_code_' in set_by:
+                        expiry_text = f"Friend Access • {days_remaining} days left"
+                    else:
+                        expiry_text = f"Active Plan • Expires in {days_remaining} days"
+                else:
+                    expiry_text = "Expired Access"
 
-# End of subscription UI section
+with st.sidebar.container():
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
+        border: 1px solid {tier_info['color']}44;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 8px 0;
+    ">
+        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
+        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
+            {expiry_text}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Apple-compliant subscription management link (required)
+is_mobile = is_mobile_app()
+if is_mobile:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("📱 **Manage Subscription**")
+    st.sidebar.caption("Tap to manage your subscription through the App Store")
+    # Note: In actual iOS app, this would link to subscription management
+
+# Friend Access Code - collapsed by default for cleaner sidebar  
+with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
+    st.caption("Redeem a friend access code for premium features")
+    
+    friend_code_input = st.text_input(
+        "Enter friend code:",
+        placeholder="ABCD1234EFGH",
+        max_chars=12,
+        key="friend_code_input"
+    )
+    
+    if st.button("🎫 Redeem Code", type="primary", key="redeem_friend_code"):
+        if friend_code_input and len(friend_code_input.strip()) >= 8:
+            # Get user's workspace info
+            device_fingerprint = get_persistent_device_fingerprint()
+            workspace_id = get_or_create_workspace_for_device(device_fingerprint)
+            
+            if workspace_id:
+                success, message = consume_friend_access_code(
+                    friend_code_input.strip().upper(), 
+                    workspace_id, 
+                    device_fingerprint
+                )
+                
+                if success:
+                    st.success(message)
+                    st.balloons()
+                    st.rerun()  # Refresh to show new tier
+                else:
+                    st.error(message)
+            else:
+                st.error("❌ Could not link to your device - please try again")
+        else:
+            st.warning("Please enter a valid friend code (8+ characters)")
+    
+    st.caption("🔒 Codes work once per device only")
+
+# Compact subscription summary for sidebar
+if current_tier == 'free':
+    st.sidebar.info("📱 **Free Tier** - Limited features")
+    
+    # Show both upgrade options in sidebar for better visibility
+    st.sidebar.markdown("**💼 Upgrade Plans:**")
+    
+    # Initialize session state for plan selection
+    if 'selected_plan' not in st.session_state:
+        st.session_state.selected_plan = None
+    
+    # Pro Plan - $4.99/month
+    if st.sidebar.button("🚀 **Pro Plan** - $4.99/month", help="7-day free trial • Unlimited scans & alerts", key="sidebar_pro"):
+        st.session_state.selected_plan = 'pro'
+    
+    # Pro Trader Plan - $9.99/month  
+    if st.sidebar.button("💎 **Pro Trader** - $9.99/month", help="5-day free trial • Everything in Pro + backtesting", key="sidebar_trader"):
+        st.session_state.selected_plan = 'pro_trader'
+    
+    # Show upgrade section if a plan is selected
+    if st.session_state.selected_plan:
+        plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
+        plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
+        
+        st.info(f"💡 **{plan_name} Plan Selected** - Complete purchase below:")
+        st.markdown(f"**{plan_name} Plan - {plan_price}/month**")
+        
+        # Show detailed feature list
+        if st.session_state.selected_plan == 'pro':
+            st.markdown("""
+            **✅ Included in Pro:**
+            - ✅ Unlimited Market Scanner
+            - ✅ Unlimited Price Alerts
+            - ✅ Advanced Technical Charts
+            - ✅ Unlimited Portfolio Tracking
+            
+            **🔒 Pro Trader Exclusive:**
+            - 🔒 Trade Journal (Pro Trader only)
+            - 🔒 Strategy Backtesting (Pro Trader only)
+            """)
+        else:  # pro_trader
+            st.markdown("""
+            **✅ Everything Included:**
+            - ✅ Unlimited Market Scanner
+            - ✅ Unlimited Price Alerts
+            - ✅ Advanced Technical Charts
+            - ✅ Unlimited Portfolio Tracking
+            - ✅ Trade Journal
+            - ✅ Strategy Backtesting with Signal Alerts
+            - ✅ Email Alerts for Buy/Sell Signals
+            - ✅ TradingView Script Integration
+            - ✅ Full Site Access
+            """)
+        
+        st.markdown("---")
+        
+        # Platform-specific payment buttons (Apple IAP compliance)
+        platform = get_platform_type()
+        
+        if platform == 'ios':
+            # Apple App Store Compliance: NO STRIPE on iOS
+            st.error("🍎 **Apple App Store Policy**")
+            st.markdown("""
+            **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
+            
+            🚫 **Web payments are not available on iOS devices**
+            
+            **To subscribe:**
+            1. Download the Market Scanner app from the App Store
+            2. Open the app on your iOS device  
+            3. Go to Settings → Subscription
+            4. Choose Pro ($4.99/month) or Pro Trader ($9.99/month)
+            5. Complete purchase through your Apple ID
+            
+            **Need help?** Contact support through the iOS app.
+            """)
+            
+            # No subscription buttons for iOS - redirect to app
+            if st.button("📱 Download iOS App", key="download_ios_app"):
+                st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
+                # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
+        else:
+            # Web/Android Stripe button for selected plan
+            plan_emoji = "🚀" if st.session_state.selected_plan == 'pro' else "💎"
+            plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
+            plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
+            trial_days = "7 days" if st.session_state.selected_plan == 'pro' else "5 days"
+            
+            # Email collection for trial eligibility
+            st.markdown("**📧 Enter your email to check trial eligibility:**")
+            checkout_email = st.text_input(
+                "Email address:",
+                placeholder="your@email.com",
+                key=f"checkout_email_{st.session_state.selected_plan}",
+                help="Required to verify trial eligibility and send receipt"
+            )
+            
+            # Check trial eligibility if email provided
+            if checkout_email and '@' in checkout_email:
+                trial_used = has_used_trial(checkout_email, st.session_state.selected_plan)
+                if trial_used:
+                    st.warning(f"⚠️ This email has already used the {plan_name} free trial. Subscription will start immediately at {plan_price}/month.")
+                else:
+                    st.success(f"✅ {trial_days} FREE TRIAL available! You won't be charged until the trial ends.")
+            
+            # Checkout button
+            button_disabled = not checkout_email or '@' not in checkout_email
+            button_label = f"{plan_emoji} Start {trial_days} Free Trial" if checkout_email and '@' in checkout_email and not has_used_trial(checkout_email, st.session_state.selected_plan) else f"{plan_emoji} Subscribe to {plan_name} - {plan_price}/month"
+            
+            if st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
+                if workspace_id:
+                    # Create Stripe checkout session with email for trial tracking
+                    with st.spinner("🔄 Creating secure checkout..."):
+                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id, checkout_email)
+                        
+                        if checkout_url:
+                            st.success("✅ Redirecting to secure Stripe checkout...")
+                            st.markdown(f"""
+                            <meta http-equiv="refresh" content="0;url={checkout_url}">
+                            <a href="{checkout_url}" target="_blank" style="
+                                display: inline-block;
+                                padding: 0.75rem 1.5rem;
+                                background: linear-gradient(135deg, #10b981, #059669);
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                margin-top: 0.5rem;
+                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                            ">🚀 Complete Checkout</a>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.error(f"❌ {error or 'Could not create checkout session'}")
+                            st.info("Please try again or contact support if the problem persists.")
+                else:
+                    st.error("❌ Workspace not initialized. Please refresh the page.")
+            
+            # Reset plan selection button
+            if st.button("← Choose Different Plan", key="reset_plan"):
+                st.session_state.selected_plan = None
+                st.rerun()
+        
+        # Apple-required billing disclosures and controls
+        st.markdown("---")
+        st.markdown("**📋 Billing Information**")
+        st.caption("• Payment will be charged to your Apple ID account")
+        st.caption("• Subscription automatically renews unless cancelled at least 24 hours before the end of the current period")
+        st.caption("• Your account will be charged for renewal within 24 hours prior to the end of the current period")
+        st.caption("• You can manage and cancel subscriptions in your device's subscription settings")
+        
+        # Apple-required links (Terms and Privacy Policy)
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("📄 [Terms of Service](https://marketscannerpros.app/terms)")
+        with col2:
+            st.markdown("🔒 [Privacy Policy](https://marketscannerpros.app/privacy)")
+        
+        # Apple-required subscription management controls
+        if is_mobile:
+            st.markdown("---")
+            st.markdown("**📱 Subscription Management**")
+            if st.button("⚙️ Manage Subscriptions", key="manage_subscriptions"):
+                st.info("🔗 Opens: Settings > [Your Name] > Subscriptions")
+                # In actual iOS app: itms-apps://apps.apple.com/account/subscriptions
+            
+            if st.button("🔄 Restore Purchases", key="restore_purchases"):
+                st.info("🔄 Restoring previous purchases...")
+                # In actual iOS app: StoreKit.restorePurchases()
+        
+        # Demo mode for testing (HIDE IN PRODUCTION iOS BUILDS)
+        if not is_mobile:  # Only show on web, not in mobile app builds
+            st.markdown("---")
+            st.caption("🧪 Demo Mode - Testing Only (Hidden in production):")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Free", key="demo_free"):
+                    st.session_state.user_tier = 'free'
+                    st.rerun()
+            with col2:
+                if st.button("Pro", key="demo_pro"):
+                    st.session_state.user_tier = 'pro'
+                    st.rerun()
+            with col3:
+                if st.button("Trader", key="demo_trader"):
+                    st.session_state.user_tier = 'pro_trader'
+                    st.rerun()
+
+# Compact subscription status for paid users
+elif current_tier in ['pro', 'pro_trader']:
+    st.sidebar.success(f"✨ **{tier_info['name']}** - {expiry_text}")
+    
+    # Single manage button instead of expanded benefits
+    if st.sidebar.button("⚙️ **Manage Subscription**", help="View benefits, billing, and account options"):
+        st.info("💡 **Subscription management options moved to main content area for better visibility!**")
+        st.markdown("**Your subscription details and options below:**")
+    
+    # Cancel subscription button
+    if 'confirm_cancel' not in st.session_state:
+        st.session_state.confirm_cancel = False
+    
+    if not st.session_state.confirm_cancel:
+        if st.sidebar.button("🚫 **Cancel Subscription**", help="Cancel your subscription (access until period ends)"):
+            st.session_state.confirm_cancel = True
+            st.rerun()
+    else:
+        st.sidebar.warning("⚠️ **Are you sure?**")
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            if st.button("✅ Yes, Cancel", key="confirm_cancel_yes"):
+                with st.spinner("Cancelling subscription..."):
+                    success, message = cancel_stripe_subscription(workspace_id)
+                    if success:
+                        st.success("✅ Subscription cancelled successfully!")
+                        st.session_state.user_tier = 'free'
+                        st.session_state.confirm_cancel = False
+                        st.rerun()
+                    else:
+                        st.error(f"❌ {message}")
+                        st.session_state.confirm_cancel = False
+        with col2:
+            if st.button("❌ No", key="confirm_cancel_no"):
+                st.session_state.confirm_cancel = False
+                st.rerun()
+    
+    # Compact upgrade button for Pro users
+    if current_tier == 'pro':
+        if st.sidebar.button("⬆️ **Upgrade to Pro Trader** - $9.99/month", help="Unlock advanced features"):
+            if workspace_id:
+                if is_mobile:
+                    st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
+                else:
+                    # Create Stripe checkout session directly
+                    with st.spinner("🔄 Creating secure checkout..."):
+                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
+                        
+                        if checkout_url:
+                            st.success("✅ Redirecting to secure Stripe checkout...")
+                            st.markdown(f"""
+                            <meta http-equiv="refresh" content="0;url={checkout_url}">
+                            <a href="{checkout_url}" target="_blank" style="
+                                display: inline-block;
+                                padding: 0.75rem 1.5rem;
+                                background: linear-gradient(135deg, #10b981, #059669);
+                                color: white;
+                                text-decoration: none;
+                                border-radius: 12px;
+                                font-weight: 700;
+                                margin-top: 0.5rem;
+                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                            ">💎 Upgrade Now</a>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.error(f"❌ {error or 'Could not create checkout session'}")
+                            st.info("Please try again or contact support if the problem persists.")
+            else:
+                st.error("❌ Workspace not initialized. Please refresh the page.")
+
+# End of subscription UI section (hidden for mobile apps)
 
 # Edit watchlist modal
 if st.session_state.get('edit_watchlist_id'):
@@ -5841,7 +6233,7 @@ if run_clicked:
     
     if not allowed:
         st.error(f"🚫 {message}")
-        st.info("Please wait a moment before scanning again.")
+        st.info("Please wait a moment before scanning again. Upgrade to Pro for higher limits!")
     # Check if at least one market is selected
     elif not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
@@ -5942,12 +6334,16 @@ def detect_ios_webview_issues(eq_results, cx_results, eq_errors, cx_errors):
                 • Stay tuned for iOS-compatible updates!
                 """)
                 
-                # All features are free - no upgrade needed
-                st.markdown("""
-                ---
-                ### ✨ **All Features Unlocked for Free!**
-                Premium features like **Price Alerts** and **Portfolio Tracking** work great on iOS!
-                """)
+                # Show upgrade prompt since other features work
+                if st.session_state.get('user_tier', 'free') == 'free':
+                    st.markdown("""
+                    ---
+                    ### 🚀 **Upgrade to Pro While You Wait**
+                    Premium features like **Price Alerts** and **Portfolio Tracking** work great on iOS!
+                    
+                    **Pro ($4.99/month):** Real-time alerts, basic analytics
+                    **Pro Trader ($9.99/month):** Advanced features, priority support
+                    """)
                 
                 return True  # Indicates iOS issue detected
     
@@ -6102,8 +6498,25 @@ st.subheader("🚨 Price Alerts")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-# Price Alerts - FREE for everyone (no tier restrictions)
-if True:
+if tier_info['alert_limit'] == 0:
+    with st.expander("🔒 **Price Alerts** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Price Alerts with Pro or Pro Trader:**
+        - Get notified when stocks hit your target prices
+        - Unlimited alerts with both Pro and Pro Trader
+        - Never miss an entry or exit opportunity
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_alerts_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_alerts_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
     # Auto-refresh toggle and controls
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
@@ -6195,14 +6608,29 @@ if True:
                     elif alert_type not in ['above', 'below']:
                         st.error("Invalid alert type")
                     else:
-                        # Create the alert (no tier restrictions - everyone gets unlimited)
-                        symbol_clean = alert_symbol.strip().upper()
-                        if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                            st.success(f"Alert created for {symbol_clean}")
-                            st.session_state.show_new_alert = False
-                            st.rerun()
+                        # Check tier limitations
+                        current_tier = st.session_state.user_tier
+                        tier_info = TIER_CONFIG[current_tier]
+                        active_alerts = get_active_alerts()
+                        alert_count = len(active_alerts) if active_alerts else 0
+                    
+                        # Check if free tier trying to create alerts
+                        if current_tier == 'free':
+                            st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
+                            st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
+                        # Check if pro tier has reached alert limit
+                        elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
+                            st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
+                            st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
                         else:
-                            st.error("Failed to create alert - please check database connection")
+                            # Create the alert
+                            symbol_clean = alert_symbol.strip().upper()
+                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                                st.success(f"Alert created for {symbol_clean}")
+                                st.session_state.show_new_alert = False
+                                st.rerun()
+                            else:
+                                st.error("Failed to create alert - please check database connection")
         
             with col3:
                 if st.button("Cancel", key="cancel_alert"):
@@ -6259,8 +6687,26 @@ st.subheader("📈 Advanced Technical Analysis Charts")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-# Advanced Charts - FREE for everyone (no tier restrictions)
-if True:
+if not tier_info['has_advanced_charts']:
+    with st.expander("🔒 **Advanced Charts** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Advanced Technical Analysis Charts with Pro or Pro Trader:**
+        - Interactive candlestick charts with zoom and pan
+        - Customizable technical indicators (RSI, MACD, Bollinger Bands, Volume)
+        - Multiple timeframes from 5m to 1D
+        - Professional trading tools
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_charts_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_charts_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
     # Chart controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
 
@@ -6425,8 +6871,28 @@ st.subheader("💼 Portfolio Tracking")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-# Portfolio Tracking - FREE for everyone (no tier restrictions)
-if True:
+if tier_info['portfolio_limit'] == 3:
+    with st.expander("🔒 **Portfolio Tracking** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Enhanced Portfolio Tracking with Pro or Pro Trader:**
+        - Unlimited portfolio positions with both Pro and Pro Trader
+        - Real-time P&L tracking and performance analytics
+        - Visual allocation charts and historical performance
+        - Never lose track of your positions
+        - Try free for 5-7 days!
+        
+        (Free tier is limited to 3 positions)
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_portfolio_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_portfolio_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
     # Portfolio overview
     col1, col2 = st.columns([2, 1])
 
@@ -6535,11 +7001,30 @@ if True:
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
                 if st.button("Add Position", type="primary", width='stretch'):
-                    # No tier limitations - everyone gets unlimited portfolio access
-                    success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
-                    if success:
-                        st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
-                        st.rerun()
+                    # Check tier limitations for new BUY positions
+                    can_add = True
+                    if transaction_type == "BUY":
+                        current_tier = st.session_state.user_tier
+                        tier_info = TIER_CONFIG[current_tier]
+                        current_positions = get_portfolio_positions()
+                        position_count = len(current_positions) if current_positions else 0
+                    
+                        # Check if trying to add new position beyond limit
+                        if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
+                            existing_symbols = [p['symbol'] for p in current_positions]
+                            if symbol not in existing_symbols:
+                                st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
+                                if current_tier == 'free':
+                                    st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
+                                else:
+                                    st.info("✨ Upgrade to Pro Trader for unlimited portfolio symbols!")
+                                can_add = False
+                
+                    if can_add:
+                        success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                        if success:
+                            st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                            st.rerun()
 
     with tab3:
         # Current holdings
@@ -6654,8 +7139,23 @@ st.subheader("📔 Trade Journal")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-# Trade Journal - FREE for everyone (no tier restrictions)
-if True:
+if not tier_info['has_trade_journal']:
+    with st.expander("🔒 **Trade Journal** - Pro Trader Exclusive Feature", expanded=False):
+        st.info("""
+        **Unlock Trade Journal with Pro Trader:**
+        - Log every trade with entry/exit prices and reasoning
+        - Track win rate, R-multiples, and profit factor
+        - Analyze what works and what doesn't
+        - Export trade history to CSV
+        - Improve your trading through data-driven insights
+        - Email alerts for backtesting buy/sell signals
+        - TradingView script integration
+        - Try free for 5-7 days!
+        """)
+        if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
+            st.session_state.selected_plan = 'pro_trader'
+            st.rerun()
+else:
     # Calculate stats for overview
     workspace_id = st.session_state.get('workspace_id', 'anonymous')
     journal_stats = calculate_journal_stats(workspace_id)
@@ -7008,8 +7508,21 @@ st.subheader("🔬 Strategy Backtesting")
 current_tier = st.session_state.user_tier
 tier_info = TIER_CONFIG[current_tier]
 
-# Strategy Backtesting - FREE for everyone (no tier restrictions)
-if True:
+if not tier_info['has_backtesting']:
+    with st.expander("🔒 **Strategy Backtesting** - Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Advanced Backtesting with Pro Trader:**
+        - Test trading strategies on historical data
+        - Get email alerts for every buy/sell signal
+        - Analyze performance metrics and win rates
+        - TradingView script integration
+        - Optimize your trading approach
+        - Get 5-7 day free trial!
+        """)
+        if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
+            st.session_state.selected_plan = 'pro_trader'
+            st.rerun()
+else:
 
     # Backtest controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])

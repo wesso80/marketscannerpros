@@ -1,0 +1,5 @@
+{
+  "build": { "production": { "autoIncrement": true, "ios": { "resourceClass": "m-medium" } } },
+  "submit": { "production": {} },
+  "cli": { "appVersionSource": "remote" }
+}
