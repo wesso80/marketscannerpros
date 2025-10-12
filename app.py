@@ -5430,7 +5430,7 @@ with st.sidebar.container():
     """, unsafe_allow_html=True)
 
 # Apple-compliant subscription management link (required)
-is_mobile = is_mobile_app()
+# Use the already-set is_mobile from session state (line 212)
 if is_mobile:
     st.sidebar.markdown("---")
     st.sidebar.markdown("📱 **Manage Subscription**")
