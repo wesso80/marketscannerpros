@@ -20,10 +20,11 @@ function AfterCheckoutContent() {
         });
         
         if (res.ok) {
-          // Cookie is set server-side, redirect to dashboard
+          // Cookie is set server-side, redirect to Streamlit app
+          const streamlitUrl = process.env.NEXT_PUBLIC_STREAMLIT_URL || 'https://app.marketscannerpros.app';
           setTimeout(() => {
-            router.replace("/dashboard");
-          }, 1000);
+            window.location.href = streamlitUrl;
+          }, 1500);
         } else {
           console.error("Confirmation failed");
           router.replace("/pricing");
