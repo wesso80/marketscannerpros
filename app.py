@@ -1598,7 +1598,6 @@ def get_persistent_device_fingerprint() -> str:
     """Get or create a persistent device fingerprint - URL-based persistence"""
     # Check if we already have a device fingerprint in session state
     if 'device_fingerprint' in st.session_state and st.session_state.device_fingerprint:
-        print(f"[WORKSPACE DEBUG] Using existing fingerprint from session: {st.session_state.device_fingerprint[:8]}...")
         return st.session_state.device_fingerprint
     
     # Check for workspace ID in URL (primary persistence method)
@@ -1609,7 +1608,6 @@ def get_persistent_device_fingerprint() -> str:
     
     if workspace_id_from_url:
         # Use existing workspace ID from URL
-        print(f"[WORKSPACE DEBUG] Using workspace_id from URL: {workspace_id_from_url[:8]}...")
         st.session_state.device_fingerprint = workspace_id_from_url
         st.session_state.workspace_id = workspace_id_from_url
         return workspace_id_from_url
@@ -1637,7 +1635,6 @@ def get_persistent_device_fingerprint() -> str:
     
     # Generate new fingerprint and add to URL
     new_fingerprint = str(uuid.uuid4())
-    print(f"[WORKSPACE DEBUG] Generated NEW workspace_id: {new_fingerprint[:8]}...")
     st.session_state.device_fingerprint = new_fingerprint
     
     # Add workspace ID to URL for persistence
@@ -4380,9 +4377,6 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
 
 def get_user_tier_from_subscription(workspace_id: str):
     """Get user tier based on active subscription and admin overrides"""
-    # TEMPORARY: Auto-grant Pro Trader to everyone while fixing subscription bugs
-    return 'pro_trader'
-    
     # Check for admin override first
     override_tier = get_subscription_override(workspace_id)
     if override_tier:
@@ -4615,7 +4609,6 @@ def record_trial_usage(email: str, plan_code: str, workspace_id: str, stripe_cus
 # ================= Stripe Integration Functions =================
 def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_email: Optional[str] = None):
     """Create a Stripe checkout session for subscription"""
-    print(f"[STRIPE DEBUG] Creating checkout for workspace: {workspace_id[:8]}... plan: {plan_code}")
     try:
         if not stripe.api_key:
             return None, "Stripe not configured"
@@ -4676,8 +4669,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_e
                 'workspace_id': workspace_id,
                 'plan_code': plan_code
             },
-            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}&wid={workspace_id}",
-            'cancel_url': f"{base_url}?wid={workspace_id}"
+            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}",
+            'cancel_url': base_url
         }
         
         # Add free trial ONLY if:
@@ -5331,25 +5324,120 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= SUBSCRIPTION UI DISABLED =================
-# TEMPORARY: All users get Pro Trader for free while fixing subscription bugs
-# Subscription UI and payment system are hidden until workspace persistence is fixed
+# ================= Email-Based Subscription Linking =================
+# CRITICAL FIX: Allow users to link their Stripe subscription via email
+if 'subscription_linked' not in st.session_state:
+    st.session_state.subscription_linked = False
 
 workspace_id = st.session_state.get('workspace_id')
 
-# Get current subscription - EVERYONE GETS PRO TRADER
+# Check if this workspace already has a subscription
+existing_subscription = None
 if workspace_id:
-    current_tier = get_user_tier_from_subscription(workspace_id)  # Returns 'pro_trader' for everyone
-else:
-    current_tier = 'pro_trader'  # Even new users get Pro Trader
+    existing_subscription = get_workspace_subscription(workspace_id)
 
-# Update session state
+# If no subscription, show link to activate
+if not existing_subscription and not st.session_state.subscription_linked:
+    with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
+        st.write("**Already purchased? Activate your subscription:**")
+        st.info("Visit **marketscannerpros.app/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
+        st.write("This will link your subscription to all your devices permanently.")
+
+# ================= Subscription Summary (Compact) =================
+# Show compact subscription summary instead of full tier cards
+st.sidebar.header("💳 Subscription")
+
+# Get current subscription from database with admin override support
+current_subscription = None
+
+if workspace_id:
+    # Use the proper function that checks admin overrides first, then subscriptions
+    current_tier = get_user_tier_from_subscription(workspace_id)
+    # Also get subscription info for display purposes
+    current_subscription = get_workspace_subscription(workspace_id)
+else:
+    # No workspace - default to free
+    current_tier = 'free'
+
+# TEMPORARY: Manual Pro access for testing (NO SUCCESS MESSAGES to avoid layout issues)
+# Check if user should have Pro access (temporary override)
+query_params = st.query_params
+if query_params.get("access") == "pro":
+    current_tier = 'pro'
+    # Removed success message that was causing layout/styling issues
+elif query_params.get("access") == "pro_trader":
+    current_tier = 'pro_trader'
+    # Removed success message that was causing layout/styling issues
+
+# Update session state to match current tier
 st.session_state.user_tier = current_tier
     
-# SUBSCRIPTION UI HIDDEN - Everyone has Pro Trader access
-# All subscription/payment UI is commented out until workspace persistence bug is fixed
+tier_info = TIER_CONFIG[current_tier]
 
-# Friend Access Code still available
+# Display current tier status with expiry information
+expiry_text = "Limited features"
+if current_tier != 'free':
+    expiry_text = "Active Plan"
+    
+    # Check for friend code expiry (subscription overrides)
+    if workspace_id:
+        override_query = """
+            SELECT expires_at, set_by FROM subscription_overrides 
+            WHERE workspace_id = %s AND expires_at IS NOT NULL
+            LIMIT 1
+        """
+        override_result = execute_db_query(override_query, (workspace_id,))
+        
+        if override_result and len(override_result) > 0:
+            expires_at = override_result[0]['expires_at']
+            set_by = override_result[0]['set_by']
+            
+            # Convert to datetime and calculate days remaining
+            from datetime import datetime
+            import pytz
+            
+            if expires_at:
+                if isinstance(expires_at, str):
+                    expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                else:
+                    expires_dt = expires_at
+                
+                now_dt = datetime.now(pytz.UTC)
+                days_remaining = (expires_dt - now_dt).days
+                
+                if days_remaining > 0:
+                    if 'friend_code_' in set_by:
+                        expiry_text = f"Friend Access • {days_remaining} days left"
+                    else:
+                        expiry_text = f"Active Plan • Expires in {days_remaining} days"
+                else:
+                    expiry_text = "Expired Access"
+
+with st.sidebar.container():
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
+        border: 1px solid {tier_info['color']}44;
+        border-radius: 10px;
+        padding: 16px;
+        margin: 8px 0;
+    ">
+        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
+        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
+            {expiry_text}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Apple-compliant subscription management link (required)
+is_mobile = is_mobile_app()
+if is_mobile:
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("📱 **Manage Subscription**")
+    st.sidebar.caption("Tap to manage your subscription through the App Store")
+    # Note: In actual iOS app, this would link to subscription management
+
+# Friend Access Code - collapsed by default for cleaner sidebar  
 with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
     st.caption("Redeem a friend access code for premium features")
     
@@ -5386,9 +5474,8 @@ with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
     
     st.caption("🔒 Codes work once per device only")
 
-# ALL SUBSCRIPTION/PAYMENT UI REMOVED - EVERYONE HAS PRO TRADER
-# This code is disabled until workspace persistence bugs are fixed
-if False and current_tier == 'free':
+# Compact subscription summary for sidebar
+if current_tier == 'free':
     st.sidebar.info("📱 **Free Tier** - Limited features")
     
     # Show both upgrade options in sidebar for better visibility
@@ -5496,7 +5583,11 @@ if False and current_tier == 'free':
             button_disabled = not checkout_email or '@' not in checkout_email
             button_label = f"{plan_emoji} Start {trial_days} Free Trial" if checkout_email and '@' in checkout_email and not has_used_trial(checkout_email, st.session_state.selected_plan) else f"{plan_emoji} Subscribe to {plan_name} - {plan_price}/month"
             
-            if st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
+            # TEMPORARILY DISABLED - PAYMENT PROCESSING UNDER MAINTENANCE
+            st.error("🚧 **Subscription payments temporarily disabled for maintenance**")
+            st.info("We're fixing critical payment processing issues. Please check back in 24 hours or contact support@marketscannerpros.app")
+            
+            if False and st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
                 if workspace_id:
                     # Create Stripe checkout session with email for trial tracking
                     with st.spinner("🔄 Creating secure checkout..."):
@@ -5575,8 +5666,8 @@ if False and current_tier == 'free':
                     st.session_state.user_tier = 'pro_trader'
                     st.rerun()
 
-# Paid user subscription UI also disabled
-elif False and current_tier in ['pro', 'pro_trader']:
+# Compact subscription status for paid users
+elif current_tier in ['pro', 'pro_trader']:
     st.sidebar.success(f"✨ **{tier_info['name']}** - {expiry_text}")
     
     # Single manage button instead of expanded benefits
