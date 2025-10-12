@@ -27,20 +27,20 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <div className="mb-6">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">
-              🚀 Full Access Beta
+              🎉 Free for Everyone!
             </h2>
             <p className="opacity-85 text-base md:text-lg">
-              All features are free while we fine-tune based on trader feedback.
+              All Pro Trader features are now completely free. No credit card required.
             </p>
           </div>
 
           <div className="plans" style={{ justifyContent: 'center' }}>
-          {/* Full Access Beta */}
+          {/* Pro Trader - FREE */}
           <div className="plan" style={{ maxWidth: '400px' }}>
-            <h2>Beta Access</h2>
+            <h2>Pro Trader - FREE</h2>
             <p>$0</p>
             <p style={{ fontSize: '0.9em', opacity: 0.8, marginTop: '0.5em' }}>
-              Beta access — All features unlocked while we improve!
+              All features unlocked. No credit card required.
             </p>
             <ul>
               <li>✅ Unlimited Market Scanner</li>

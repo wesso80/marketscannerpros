@@ -1399,9 +1399,6 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-# Payments feature flag - controls whether payment system is active
-ENABLE_PAYMENTS = os.getenv("ENABLE_PAYMENTS", "false").lower() == "true"
-
 # Subscription pricing configuration
 SUBSCRIPTION_PLANS = {
     "pro": {
@@ -4382,15 +4379,20 @@ def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]
         return False, f"Error: {str(e)}", None
 
 def get_user_tier_from_subscription(workspace_id: str):
-    """Get user tier from Next.js API using workspace ID"""
-    try:
-        from streamlit_billing_client import get_tier
-        tier = get_tier(workspace_id)
-        print(f"[BILLING] Workspace {workspace_id[:8]}... has tier: {tier}")
-        return tier
-    except Exception as e:
-        print(f"[BILLING ERROR] Failed to get tier: {e}")
-        return 'free'
+    """Get user tier based on active subscription and admin overrides"""
+    # TEMPORARY: Auto-grant Pro Trader to everyone while fixing subscription bugs
+    return 'pro_trader'
+    
+    # Check for admin override first
+    override_tier = get_subscription_override(workspace_id)
+    if override_tier:
+        return override_tier
+    
+    # Fall back to regular subscription
+    subscription = get_workspace_subscription(workspace_id)
+    if subscription:
+        return subscription['plan_code']
+    return 'free'
 
 # ================= Stripe Webhook Endpoint =================
 # Handle webhook in query parameters for Streamlit limitations  
@@ -5277,33 +5279,19 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Unlimited market scanning', 'Advanced charts', 'Real-time data'],
+        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
         'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,
-        'has_advanced_charts': True,
+        'has_advanced_charts': False,
         'has_backtesting': False,
         'has_trade_journal': False,
         'color': '#666666'
     },
-    'paid': {
-        'name': '🚀 Pro',
-        'price': '$4.99/month',
-        'features': ['Everything in Free', 'Unlimited price alerts', 'Trade Journal', 'Strategy Backtesting', 'Email notifications', 'Priority support'],
-        'scan_limit': None,
-        'alert_limit': None,
-        'portfolio_limit': None,
-        'has_advanced_charts': True,
-        'has_backtesting': True,
-        'has_trade_journal': True,
-        'has_backtesting_alerts': True,
-        'color': '#10b981'
-    },
-    # Legacy tiers for compatibility
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
@@ -5315,7 +5303,7 @@ TIER_CONFIG = {
     'pro_trader': {
         'name': '💎 Pro Trader',
         'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access', '5-7 day free trial'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
@@ -5343,17 +5331,21 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= BETA ACCESS =================
+# ================= SUBSCRIPTION UI REMOVED =================
+# TEMPORARY: All users get Pro Trader for free while fixing subscription bugs
+# Subscription UI and payment flow removed
+
 workspace_id = st.session_state.get('workspace_id')
 
-# Everyone gets full access during beta
-current_tier = 'paid'
+# Show simple tier status in sidebar
+current_tier = 'pro_trader'  # Everyone gets Pro Trader now
 st.session_state.user_tier = current_tier
 tier_info = TIER_CONFIG[current_tier]
 
-st.sidebar.header("🚀 Full Access Beta")
-st.sidebar.success("**All Features Unlocked!**")
-st.sidebar.info("You're using the Beta — enjoy full access while we improve. Feedback? Email support@marketscannerpros.app")
+# Display Pro Trader status
+st.sidebar.header("✨ Full Access")
+st.sidebar.success("**Pro Trader** - All Features Unlocked!")
+st.sidebar.caption("Unlimited scanning, alerts, trade journal & more")
 
 # End of subscription UI section
 
@@ -5428,11 +5420,9 @@ st.sidebar.header("Equity Symbols")
 
 # Show tier info
 current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG.get(current_tier, TIER_CONFIG['free'])
-if current_tier == 'paid':
-    st.sidebar.success(f"🚀 Pro: All features unlocked - Alerts, Trade Journal, Backtesting")
-elif current_tier == 'pro':
-    st.sidebar.success(f"✨ Pro: Unlimited scanning, alerts, and portfolio tracking")
+tier_info = TIER_CONFIG[current_tier]
+if current_tier == 'pro':
+    st.sidebar.success(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
 elif current_tier == 'pro_trader':
     st.sidebar.success(f"🎯 Pro Trader: Full access - unlimited everything, Trade Journal, Backtesting, TradingView integration")
     

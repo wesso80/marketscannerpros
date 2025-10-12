@@ -16,9 +16,9 @@ export default function Hero() {
         {/* Text second on mobile, left on desktop */}
         <div className="w-full md:order-1">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
-            <span>🚀 Beta Access</span>
+            <span>Try Pro free for 7 days</span>
             <span className="text-neutral-500">•</span>
-            <span>All Features Free</span>
+            <span>Cancel anytime</span>
           </div>
 
           <h1 className="mt-2 text-2xl font-bold leading-tight md:text-4xl lg:text-5xl">
