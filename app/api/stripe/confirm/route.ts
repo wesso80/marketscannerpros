@@ -11,15 +11,25 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('session_id');
 
+    console.log('[CONFIRM] Session ID:', sessionId);
+
     if (!sessionId) {
+      console.error('[CONFIRM] Missing session_id');
       return NextResponse.json({ error: 'Missing session_id' }, { status: 400 });
     }
 
     // Retrieve the checkout session from Stripe
+    console.log('[CONFIRM] Retrieving session from Stripe...');
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log('[CONFIRM] Session retrieved:', { 
+      payment_status: session.payment_status, 
+      customer: session.customer,
+      subscription: session.subscription 
+    });
 
     if (!session || session.payment_status !== 'paid') {
-      return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
+      console.error('[CONFIRM] Payment not completed');
+      return NextResponse.json({ error: 'Payment not completed', payment_status: session.payment_status }, { status: 400 });
     }
 
     const workspaceId = session.metadata?.workspace_id;
