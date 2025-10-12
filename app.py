@@ -5277,19 +5277,33 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'features': ['Unlimited market scanning', 'Advanced charts', 'Real-time data'],
         'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,
-        'has_advanced_charts': False,
+        'has_advanced_charts': True,
         'has_backtesting': False,
         'has_trade_journal': False,
         'color': '#666666'
     },
+    'paid': {
+        'name': '🚀 Pro',
+        'price': '$4.99/month',
+        'features': ['Everything in Free', 'Unlimited price alerts', 'Trade Journal', 'Strategy Backtesting', 'Email notifications', 'Priority support'],
+        'scan_limit': None,
+        'alert_limit': None,
+        'portfolio_limit': None,
+        'has_advanced_charts': True,
+        'has_backtesting': True,
+        'has_trade_journal': True,
+        'has_backtesting_alerts': True,
+        'color': '#10b981'
+    },
+    # Legacy tiers for compatibility
     'pro': {
         'name': '🚀 Pro Tier',
         'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
@@ -5301,7 +5315,7 @@ TIER_CONFIG = {
     'pro_trader': {
         'name': '💎 Pro Trader',
         'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access', '5-7 day free trial'],
+        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
@@ -5329,21 +5343,44 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= SUBSCRIPTION UI REMOVED =================
-# TEMPORARY: All users get Pro Trader for free while fixing subscription bugs
-# Subscription UI and payment flow removed
-
+# ================= TIER CHECK & SUBSCRIPTION STATUS =================
 workspace_id = st.session_state.get('workspace_id')
 
-# Show simple tier status in sidebar
-current_tier = 'pro_trader'  # Everyone gets Pro Trader now
-st.session_state.user_tier = current_tier
-tier_info = TIER_CONFIG[current_tier]
+# Check if payments are enabled
+payments_enabled = os.getenv('NEXT_PUBLIC_ENABLE_PAYMENTS', 'false').lower() == 'true'
 
-# Display Pro Trader status
-st.sidebar.header("✨ Full Access")
-st.sidebar.success("**Pro Trader** - All Features Unlocked!")
-st.sidebar.caption("Unlimited scanning, alerts, trade journal & more")
+if not payments_enabled:
+    # Free for everyone mode
+    current_tier = 'paid'  # Everyone gets paid features for free
+    st.session_state.user_tier = current_tier
+    tier_info = TIER_CONFIG[current_tier]
+    
+    st.sidebar.header("🎉 Free Access")
+    st.sidebar.success("**All Features Unlocked**")
+    st.sidebar.caption("Enjoying the free access while we improve!")
+else:
+    # Paid subscription mode - check database
+    if workspace_id:
+        current_tier = get_user_tier_from_subscription(workspace_id)
+    else:
+        current_tier = 'free'
+    
+    st.session_state.user_tier = current_tier
+    tier_info = TIER_CONFIG.get(current_tier, TIER_CONFIG['free'])
+    
+    # Display tier status
+    if current_tier == 'paid':
+        st.sidebar.header("✨ Pro Member")
+        st.sidebar.success("**Pro** - All Features Unlocked!")
+        st.sidebar.caption("Unlimited alerts, trade journal & more")
+    elif current_tier in ['pro', 'pro_trader']:
+        # Legacy tiers
+        st.sidebar.header(f"✨ {tier_info['name']}")
+        st.sidebar.success("All Features Active")
+    else:
+        st.sidebar.header("📱 Free Tier")
+        st.sidebar.info("Upgrade to unlock all features")
+        st.sidebar.markdown("[🚀 Upgrade to Pro](https://marketscannerpros.app/pricing)")
 
 # End of subscription UI section
 
@@ -5418,9 +5455,11 @@ st.sidebar.header("Equity Symbols")
 
 # Show tier info
 current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
-if current_tier == 'pro':
-    st.sidebar.success(f"✨ Pro: Unlimited scanning, {tier_info['alert_limit']} alerts, {tier_info['portfolio_limit']} portfolio")
+tier_info = TIER_CONFIG.get(current_tier, TIER_CONFIG['free'])
+if current_tier == 'paid':
+    st.sidebar.success(f"🚀 Pro: All features unlocked - Alerts, Trade Journal, Backtesting")
+elif current_tier == 'pro':
+    st.sidebar.success(f"✨ Pro: Unlimited scanning, alerts, and portfolio tracking")
 elif current_tier == 'pro_trader':
     st.sidebar.success(f"🎯 Pro Trader: Full access - unlimited everything, Trade Journal, Backtesting, TradingView integration")
     
