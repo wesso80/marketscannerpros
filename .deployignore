@@ -1,0 +1,24 @@
+# Ignore Next.js files for Replit deployment (Streamlit only)
+package.json
+package-lock.json
+node_modules/
+.next/
+app/
+components/
+lib/
+public/
+next.config.mjs
+next-env.d.ts
+tsconfig.json
+middleware.ts
+*.tsx
+*.ts
+!pyproject.toml
+!app.py
+!app.json
+
+# Keep Python files
+!*.py
+!.streamlit/
+!static/
+!utils/
