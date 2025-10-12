@@ -5331,120 +5331,25 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= Email-Based Subscription Linking =================
-# CRITICAL FIX: Allow users to link their Stripe subscription via email
-if 'subscription_linked' not in st.session_state:
-    st.session_state.subscription_linked = False
+# ================= SUBSCRIPTION UI DISABLED =================
+# TEMPORARY: All users get Pro Trader for free while fixing subscription bugs
+# Subscription UI and payment system are hidden until workspace persistence is fixed
 
 workspace_id = st.session_state.get('workspace_id')
 
-# Check if this workspace already has a subscription
-existing_subscription = None
+# Get current subscription - EVERYONE GETS PRO TRADER
 if workspace_id:
-    existing_subscription = get_workspace_subscription(workspace_id)
-
-# If no subscription, show link to activate
-if not existing_subscription and not st.session_state.subscription_linked:
-    with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
-        st.write("**Already purchased? Activate your subscription:**")
-        st.info("Visit **marketscannerpros.app/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
-        st.write("This will link your subscription to all your devices permanently.")
-
-# ================= Subscription Summary (Compact) =================
-# Show compact subscription summary instead of full tier cards
-st.sidebar.header("💳 Subscription")
-
-# Get current subscription from database with admin override support
-current_subscription = None
-
-if workspace_id:
-    # Use the proper function that checks admin overrides first, then subscriptions
-    current_tier = get_user_tier_from_subscription(workspace_id)
-    # Also get subscription info for display purposes
-    current_subscription = get_workspace_subscription(workspace_id)
+    current_tier = get_user_tier_from_subscription(workspace_id)  # Returns 'pro_trader' for everyone
 else:
-    # No workspace - default to free
-    current_tier = 'free'
+    current_tier = 'pro_trader'  # Even new users get Pro Trader
 
-# TEMPORARY: Manual Pro access for testing (NO SUCCESS MESSAGES to avoid layout issues)
-# Check if user should have Pro access (temporary override)
-query_params = st.query_params
-if query_params.get("access") == "pro":
-    current_tier = 'pro'
-    # Removed success message that was causing layout/styling issues
-elif query_params.get("access") == "pro_trader":
-    current_tier = 'pro_trader'
-    # Removed success message that was causing layout/styling issues
-
-# Update session state to match current tier
+# Update session state
 st.session_state.user_tier = current_tier
     
-tier_info = TIER_CONFIG[current_tier]
+# SUBSCRIPTION UI HIDDEN - Everyone has Pro Trader access
+# All subscription/payment UI is commented out until workspace persistence bug is fixed
 
-# Display current tier status with expiry information
-expiry_text = "Limited features"
-if current_tier != 'free':
-    expiry_text = "Active Plan"
-    
-    # Check for friend code expiry (subscription overrides)
-    if workspace_id:
-        override_query = """
-            SELECT expires_at, set_by FROM subscription_overrides 
-            WHERE workspace_id = %s AND expires_at IS NOT NULL
-            LIMIT 1
-        """
-        override_result = execute_db_query(override_query, (workspace_id,))
-        
-        if override_result and len(override_result) > 0:
-            expires_at = override_result[0]['expires_at']
-            set_by = override_result[0]['set_by']
-            
-            # Convert to datetime and calculate days remaining
-            from datetime import datetime
-            import pytz
-            
-            if expires_at:
-                if isinstance(expires_at, str):
-                    expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                else:
-                    expires_dt = expires_at
-                
-                now_dt = datetime.now(pytz.UTC)
-                days_remaining = (expires_dt - now_dt).days
-                
-                if days_remaining > 0:
-                    if 'friend_code_' in set_by:
-                        expiry_text = f"Friend Access • {days_remaining} days left"
-                    else:
-                        expiry_text = f"Active Plan • Expires in {days_remaining} days"
-                else:
-                    expiry_text = "Expired Access"
-
-with st.sidebar.container():
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, {tier_info['color']}22, {tier_info['color']}11);
-        border: 1px solid {tier_info['color']}44;
-        border-radius: 10px;
-        padding: 16px;
-        margin: 8px 0;
-    ">
-        <h4 style="margin: 0; color: {tier_info['color']};">{tier_info['name']}</h4>
-        <p style="margin: 8px 0 0 0; font-size: 0.9em; opacity: 0.8;">
-            {expiry_text}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Apple-compliant subscription management link (required)
-is_mobile = is_mobile_app()
-if is_mobile:
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("📱 **Manage Subscription**")
-    st.sidebar.caption("Tap to manage your subscription through the App Store")
-    # Note: In actual iOS app, this would link to subscription management
-
-# Friend Access Code - collapsed by default for cleaner sidebar  
+# Friend Access Code still available
 with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
     st.caption("Redeem a friend access code for premium features")
     
@@ -5481,8 +5386,9 @@ with st.sidebar.expander("🎫 Friend Access Code", expanded=False):
     
     st.caption("🔒 Codes work once per device only")
 
-# Compact subscription summary for sidebar
-if current_tier == 'free':
+# ALL SUBSCRIPTION/PAYMENT UI REMOVED - EVERYONE HAS PRO TRADER
+# This code is disabled until workspace persistence bugs are fixed
+if False and current_tier == 'free':
     st.sidebar.info("📱 **Free Tier** - Limited features")
     
     # Show both upgrade options in sidebar for better visibility
@@ -5669,8 +5575,8 @@ if current_tier == 'free':
                     st.session_state.user_tier = 'pro_trader'
                     st.rerun()
 
-# Compact subscription status for paid users
-elif current_tier in ['pro', 'pro_trader']:
+# Paid user subscription UI also disabled
+elif False and current_tier in ['pro', 'pro_trader']:
     st.sidebar.success(f"✨ **{tier_info['name']}** - {expiry_text}")
     
     # Single manage button instead of expanded benefits
