@@ -9,13 +9,17 @@ if (!process.env.APP_SIGNING_SECRET) {
 const APP_SIGNING_SECRET: string = process.env.APP_SIGNING_SECRET;
 
 function verify(token: string) {
-  const [body, sig] = token.split(".");
-  if (!body || !sig) return null;
-  const expected = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(body).digest("base64url");
-  if (sig !== expected) return null;
-  const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
-  return payload as { cid: string; tier: string; workspaceId: string; exp: number };
+  try {
+    const [body, sig] = token.split(".");
+    if (!body || !sig) return null;
+    const expected = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(body).digest("base64url");
+    if (sig !== expected) return null;
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
+    return payload as { cid: string; tier: string; workspaceId: string; exp: number };
+  } catch (error) {
+    return null;
+  }
 }
 
 export function getSessionFromCookie() {
@@ -42,7 +46,11 @@ export function verifyToken(t:string){
   const [p,sig]=t.split("."); if(!p||!sig) throw new Error("Malformed");
   const expSig=crypto.createHmac("sha256",secret()).update(p).digest("base64url");
   if(expSig!==sig) throw new Error("Bad signature");
-  const payload=JSON.parse(Buffer.from(p,"base64url").toString("utf8"));
-  if(payload?.exp && Number(payload.exp) < Math.floor(Date.now()/1000)) throw new Error("Expired");
-  return payload;
+  try {
+    const payload=JSON.parse(Buffer.from(p,"base64url").toString("utf8"));
+    if(payload?.exp && Number(payload.exp) < Math.floor(Date.now()/1000)) throw new Error("Expired");
+    return payload;
+  } catch (error) {
+    throw new Error("Invalid token payload");
+  }
 }
