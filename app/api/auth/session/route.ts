@@ -3,11 +3,21 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
-const ALLOWED = new Set([
-  "https://app.marketscannerpros.app",
-  "https://marketscannerpros.app",
-  "https://www.marketscannerpros.app",
-]);
+// Get allowed origins from environment variable or use defaults
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.ALLOWED_ORIGINS;
+  if (envOrigins) {
+    return new Set(envOrigins.split(',').map(o => o.trim()));
+  }
+  // Fallback to defaults for backward compatibility
+  return new Set([
+    "https://app.marketscannerpros.app",
+    "https://marketscannerpros.app",
+    "https://www.marketscannerpros.app",
+  ]);
+};
+
+const ALLOWED = getAllowedOrigins();
 
 function cors(origin: string | null) {
   const o = origin && ALLOWED.has(origin) ? origin : "";

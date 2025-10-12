@@ -5,19 +5,28 @@ import { hashWorkspaceId, signToken } from "@/lib/auth";
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
-const FALLBACK_PRO_TRADER = "price_1SEhYxLyhHN1qVrAWiuGgO0q";
+
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
-  if ((PRICE_PRO_TRADER || FALLBACK_PRO_TRADER) &&
-      arr.includes(PRICE_PRO_TRADER || FALLBACK_PRO_TRADER)) return "pro_trader";
+  if (PRICE_PRO_TRADER && arr.includes(PRICE_PRO_TRADER)) return "pro_trader";
   if (PRICE_PRO && arr.includes(PRICE_PRO)) return "pro";
   return "free";
 }
-const ALLOWED_ORIGINS = new Set([
-  "https://app.marketscannerpros.app",
-  "https://marketscannerpros.app",
-  "https://www.marketscannerpros.app",
-]);
+// Get allowed origins from environment variable or use defaults
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.ALLOWED_ORIGINS;
+  if (envOrigins) {
+    return new Set(envOrigins.split(',').map(o => o.trim()));
+  }
+  // Fallback to defaults for backward compatibility
+  return new Set([
+    "https://app.marketscannerpros.app",
+    "https://marketscannerpros.app",
+    "https://www.marketscannerpros.app",
+  ]);
+};
+
+const ALLOWED_ORIGINS = getAllowedOrigins();
 function corsHeaders(origin: string | null) {
   const o = origin && ALLOWED_ORIGINS.has(origin) ? origin : "";
   const headers: Record<string, string> = {

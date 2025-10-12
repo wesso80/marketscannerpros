@@ -52,11 +52,15 @@ export async function GET(req: NextRequest) {
     const token = signToken({ cid: customerId, tier, workspaceId, exp });
 
     const res = NextResponse.json({ ok: true, tier, workspaceId, cid: customerId });
+    
+    // Get domain from environment variable or extract from request
+    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+    
     res.cookies.set("ms_auth", token, {
       httpOnly: true,
       sameSite: "none",
       secure: true,
-      domain: ".marketscannerpros.app",
+      domain: cookieDomain,
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
