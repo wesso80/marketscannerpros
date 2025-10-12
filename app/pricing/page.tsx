@@ -18,16 +18,16 @@ export default function PricingPage() {
 
   return (
     <main>
-      <h1>🎉 Free for Everyone!</h1>
+      <h1>🚀 MarketScanner Pros — Full Access Beta</h1>
       <p style={{ fontSize: '1.2rem', marginTop: '1rem', marginBottom: '2rem' }}>
-        All features are now <strong>completely free</strong> while we improve our platform.
+        All features are <strong>free</strong> while we fine-tune based on trader feedback.
       </p>
 
       <div className="plans">
         <div className="plan" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h2>Market Scanner - FREE</h2>
+          <h2>Full Access Beta</h2>
           <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>$0</p>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1.5rem' }}>All features unlocked. No credit card required.</p>
+          <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1.5rem' }}>Beta access — All features unlocked while we improve!</p>
           <ul>
             <li>✅ Unlimited Market Scanner</li>
             <li>✅ Advanced Technical Charts</li>

@@ -5343,17 +5343,17 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= FULL ACCESS FOR EVERYONE =================
+# ================= BETA ACCESS =================
 workspace_id = st.session_state.get('workspace_id')
 
-# Everyone gets full access (all features unlocked)
+# Everyone gets full access during beta
 current_tier = 'paid'
 st.session_state.user_tier = current_tier
 tier_info = TIER_CONFIG[current_tier]
 
-st.sidebar.header("🎉 Full Access")
+st.sidebar.header("🚀 Full Access Beta")
 st.sidebar.success("**All Features Unlocked!**")
-st.sidebar.caption("Free while we improve the platform")
+st.sidebar.info("You're using the Beta — enjoy full access while we improve. Feedback? Email support@marketscannerpros.app")
 
 # End of subscription UI section
 
