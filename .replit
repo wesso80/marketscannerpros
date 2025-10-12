@@ -5,7 +5,7 @@ channel = "stable-24_05"
 packages = ["cargo", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib", "openssh", "zip", "dig", "iproute2", "gh", "try"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
 run = [
   "streamlit",
   "run",
