@@ -22,6 +22,10 @@ Preferred communication style: Simple, everyday language.
 - **Free Access Model**: Converted entire app to free access - all features unlocked for everyone
   - Removed paid tier restrictions
   - All features (alerts, charts, backtesting, trade journal) now available without subscription
+- **Deployment Configuration Fix**: Resolved Node.js detection issue
+  - Moved `package.json` and Next.js config files to `nextjs-web/` subdirectory
+  - Prevents deployment system from incorrectly treating Python Streamlit app as Node.js project
+  - Main deployment now correctly identified as Python/Streamlit application
 
 ## System Architecture
 

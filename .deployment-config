@@ -1,0 +1,14 @@
+# Deployment Configuration for Replit
+
+# This is a Python Streamlit application
+# Main entry point: app.py
+# Run command: streamlit run app.py --server.port 5000 --server.address 0.0.0.0
+
+# The package.json and Next.js files have been moved to nextjs-web/
+# to prevent deployment detection issues. This ensures the deployment
+# system correctly identifies this as a Python project.
+
+# For Python deployments, the system should:
+# 1. Install dependencies from pyproject.toml and uv.lock
+# 2. Use Python 3.11 environment
+# 3. Run Streamlit on port 5000
