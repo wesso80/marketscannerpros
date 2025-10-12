@@ -4885,9 +4885,7 @@ if workspace_id_for_tier and isinstance(workspace_id_for_tier, str):
         if current_tier in ['pro', 'pro_trader']:
             st.success(f"🎉 {current_tier.replace('_', ' ').title()} subscription active!")
 
-# 🔓 DEVELOPMENT MODE: Unlock all features for testing
-# TODO: Remove this override before production deployment
-st.session_state.user_tier = 'pro_trader'
+# All features are now free - no tier restrictions
 
 if 'pairing_token' not in st.session_state:
     st.session_state.pairing_token = None
@@ -5272,35 +5270,36 @@ def is_ios_app() -> bool:
     """Check if request is specifically from iOS app"""
     return get_platform_type() == 'ios'
 
-# Define tier configurations (needed for app functionality)
+# Define tier configurations - ALL FEATURES FREE
 TIER_CONFIG = {
     'free': {
-        'name': '📱 Free Tier',
-        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'name': '📱 Market Scanner Pro',
+        'features': ['Unlimited market scanning', 'Unlimited alerts & notifications', 'Unlimited portfolio tracking', 'Advanced charts', 'Backtesting', 'Trade journal', 'All features included'],
         'scan_limit': None,
-        'alert_limit': 0,
-        'portfolio_limit': 3,
-        'has_advanced_charts': False,
-        'has_backtesting': False,
-        'has_trade_journal': False,
-        'color': '#666666'
+        'alert_limit': None,  # Unlimited alerts
+        'portfolio_limit': None,  # Unlimited portfolio
+        'has_advanced_charts': True,
+        'has_backtesting': True,
+        'has_trade_journal': True,
+        'has_backtesting_alerts': True,
+        'color': '#4CAF50'
     },
     'pro': {
-        'name': '🚀 Pro Tier',
-        'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'name': '🚀 Market Scanner Pro',
+        'price': 'Free',
+        'features': ['Unlimited market scanning', 'Unlimited alerts & notifications', 'Unlimited portfolio tracking', 'Advanced charts', 'Backtesting', 'Trade journal', 'All features included'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
         'has_advanced_charts': True,
-        'has_backtesting': False,
-        'has_trade_journal': False,
+        'has_backtesting': True,
+        'has_trade_journal': True,
         'color': '#4CAF50'
     },
     'pro_trader': {
-        'name': '💎 Pro Trader',
-        'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access', '5-7 day free trial'],
+        'name': '💎 Market Scanner Pro',
+        'price': 'Free',
+        'features': ['Unlimited market scanning', 'Unlimited alerts & notifications', 'Unlimited portfolio tracking', 'Advanced charts', 'Backtesting', 'Trade journal', 'All features included'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
@@ -5308,7 +5307,7 @@ TIER_CONFIG = {
         'has_backtesting': True,
         'has_trade_journal': True,
         'has_backtesting_alerts': True,
-        'color': '#FF9800'
+        'color': '#4CAF50'
     }
 }
 

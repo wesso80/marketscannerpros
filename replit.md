@@ -19,8 +19,9 @@ Preferred communication style: Simple, everyday language.
   - `NEXT_PUBLIC_APP_URL` for app URL (required)
 - **Mobile Detection**: Fixed redundant mobile detection logic; now uses single source of truth from session state
 - **Code Cleanup**: Removed unused functions and improved code organization
-- **Development Mode**: Added feature unlock override for testing (line 4893 in app.py)
-  - ⚠️ **TODO**: Remove `st.session_state.user_tier = 'pro_trader'` before production deployment
+- **Free Access Model**: Converted entire app to free access - all features unlocked for everyone
+  - Removed paid tier restrictions
+  - All features (alerts, charts, backtesting, trade journal) now available without subscription
 
 ## System Architecture
 
