@@ -19,6 +19,8 @@ Preferred communication style: Simple, everyday language.
   - `NEXT_PUBLIC_APP_URL` for app URL (required)
 - **Mobile Detection**: Fixed redundant mobile detection logic; now uses single source of truth from session state
 - **Code Cleanup**: Removed unused functions and improved code organization
+- **Development Mode**: Added feature unlock override for testing (line 4893 in app.py)
+  - ⚠️ **TODO**: Remove `st.session_state.user_tier = 'pro_trader'` before production deployment
 
 ## System Architecture
 

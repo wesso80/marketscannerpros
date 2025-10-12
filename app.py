@@ -4885,6 +4885,10 @@ if workspace_id_for_tier and isinstance(workspace_id_for_tier, str):
         if current_tier in ['pro', 'pro_trader']:
             st.success(f"🎉 {current_tier.replace('_', ' ').title()} subscription active!")
 
+# 🔓 DEVELOPMENT MODE: Unlock all features for testing
+# TODO: Remove this override before production deployment
+st.session_state.user_tier = 'pro_trader'
+
 if 'pairing_token' not in st.session_state:
     st.session_state.pairing_token = None
 
