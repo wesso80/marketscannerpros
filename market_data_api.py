@@ -100,8 +100,12 @@ class YFinanceProvider(DataProvider):
                     timestamp=str(current.name)
                 )
                 
+        except (KeyError, ValueError, TypeError) as e:
+            logger.error(f"YFinance quote data error for {symbol}: {e}")
+        except ConnectionError as e:
+            logger.error(f"YFinance connection error for {symbol}: {e}")
         except Exception as e:
-            logger.error(f"YFinance quote error for {symbol}: {e}")
+            logger.error(f"YFinance unexpected error for {symbol}: {type(e).__name__}: {e}")
             
         return None
     
@@ -144,8 +148,14 @@ class YFinanceProvider(DataProvider):
             
             return ohlcv_data
             
+        except (KeyError, ValueError, TypeError) as e:
+            logger.error(f"YFinance OHLCV data error for {symbol}: {e}")
+            return []
+        except ConnectionError as e:
+            logger.error(f"YFinance connection error for {symbol}: {e}")
+            return []
         except Exception as e:
-            logger.error(f"YFinance OHLCV error for {symbol}: {e}")
+            logger.error(f"YFinance unexpected error for {symbol}: {type(e).__name__}: {e}")
             return []
     
     def get_name(self) -> str:
