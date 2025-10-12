@@ -6,7 +6,6 @@ requires-python = ">=3.11"
 dependencies = [
     "cffi>=2.0.0",
     "cryptography>=46.0.1",
-    "fastapi[all]>=0.117.1",
     "pillow>=11.3.0",
     "plotly>=6.3.0",
     "psycopg2-binary>=2.9.10",
@@ -18,10 +17,8 @@ dependencies = [
     "sendgrid>=6.12.5",
     "streamlit>=1.49.1",
     "stripe>=12.5.1",
-    "uvicorn[standard]>=0.37.0",
     "yfinance>=0.2.66",
     "numpy>=2.3.3",
     "pandas>=2.3.2",
     "sentry-sdk>=2.38.0",
-    "psycopg2-pool>=1.2",
 ]
