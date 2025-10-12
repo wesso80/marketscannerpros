@@ -1,21 +1,15 @@
 import Stripe from "stripe";
 
-const secret = process.env.STRIPE_SECRET_KEY;
-if (!secret) {
-  throw new Error("STRIPE_SECRET_KEY is missing");
-}
+if (!process.env.STRIPE_SECRET_KEY) throw new Error("Missing STRIPE_SECRET_KEY");
 
-export const stripe = new Stripe(secret, {
-  apiVersion: undefined,
-});
-
-export const PRICE_IDS = {
-  pro: process.env.STRIPE_PRICE_PRO ?? process.env.NEXT_PUBLIC_PRICE_PRO,
-  pro_trader:
-    process.env.STRIPE_PRICE_PRO_TRADER ??
-    process.env.NEXT_PUBLIC_PRICE_PRO_TRADER,
-};
+// Use SDK default version to satisfy TS literal type
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export function appBaseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.VERCEL_URL ?? ""}`;
+  const base = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || "";
+  return base.startsWith("http") ? base : `https://${base}`;
 }
+
+export const PRICE_IDS = {
+  pro: process.env.STRIPE_PRICE_PRO!,
+} as const;
