@@ -26,6 +26,11 @@ Preferred communication style: Simple, everyday language.
   - Moved `package.json` and Next.js config files to `nextjs-web/` subdirectory
   - Prevents deployment system from incorrectly treating Python Streamlit app as Node.js project
   - Main deployment now correctly identified as Python/Streamlit application
+- **Project Cleanup (October 2025)**: Removed duplicate and outdated files
+  - Deleted duplicate manifests, outdated docs (DEPLOYMENT.md, GITHUB update files)
+  - Moved Next.js files (middleware.ts, vercel.json) to `nextjs-web/`
+  - Moved mobile config files (eas.json) to `marketscanner-mobile/`
+  - Removed temporary files (cookies.txt, empty build fix files)
 
 ## System Architecture
 

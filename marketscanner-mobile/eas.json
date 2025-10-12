@@ -1,13 +1,15 @@
 {
+  "cli": { "appVersionSource": "remote" },
   "build": {
     "production": {
-      "autoIncrement": true,
-      "ios": { "resourceClass": "m-medium" },
-      "android": { "gradleCommand": ":app:bundleRelease" }
+      "ios": { "simulator": false }
     }
   },
   "submit": {
-    "production": {}
-  },
-  "cli": { "appVersionSource": "remote" }
+    "production": {
+      "ios": {
+        "ascAppId": null
+      }
+    }
+  }
 }
