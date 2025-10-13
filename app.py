@@ -50,7 +50,6 @@ try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     import plotly.express as px
-    import sentry_sdk
     from collections import defaultdict
     import secrets
     import string
@@ -60,17 +59,7 @@ except ImportError as e:
     st.info("🔧 Please check the deployment environment and package installation.")
     st.stop()
 
-# ================= ERROR MONITORING SETUP (SENTRY) =================
-# Initialize Sentry for production error tracking
-SENTRY_DSN = os.getenv('SENTRY_DSN')
-if SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
-        profiles_sample_rate=0.1,
-        environment=os.getenv('DEPLOYMENT_ENV', 'production'),
-        release=f"market-scanner@1.0.0"
-    )
+# Error monitoring removed - all features are free and open
 
 # ================= RATE LIMITING =================
 # Simple in-memory rate limiter to prevent abuse
@@ -3042,8 +3031,6 @@ def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price
         return result is not None
     except Exception as e:
         st.error(f"Failed to add trade: {e}")
-        if SENTRY_DSN:
-            sentry_sdk.capture_exception(e)
         return False
 
 def close_trade(trade_id: int, exit_date, exit_price: float, 
@@ -3086,8 +3073,6 @@ def close_trade(trade_id: int, exit_date, exit_price: float,
         return True
     except Exception as e:
         st.error(f"Failed to close trade: {e}")
-        if SENTRY_DSN:
-            sentry_sdk.capture_exception(e)
         return False
 
 def get_trade_journal(workspace_id: str, active_only: bool = False, 
