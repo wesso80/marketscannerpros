@@ -5158,33 +5158,8 @@ if current_tier == 'free':
             st.error("🚧 **Subscription payments temporarily disabled for maintenance**")
             st.info("We're fixing critical payment processing issues. Please check back in 24 hours or contact support@marketscannerpros.app")
             
-            if False and st.button(button_label, key=f"upgrade_{st.session_state.selected_plan}", help="Secure checkout via Stripe", disabled=button_disabled, type="primary"):
-                if workspace_id:
-                    # Create Stripe checkout session with email for trial tracking
-                    with st.spinner("🔄 Creating secure checkout..."):
-                        checkout_url, error = create_stripe_checkout_session(st.session_state.selected_plan, workspace_id, checkout_email)
-                        
-                        if checkout_url:
-                            st.success("✅ Redirecting to secure Stripe checkout...")
-                            st.markdown(f"""
-                            <meta http-equiv="refresh" content="0;url={checkout_url}">
-                            <a href="{checkout_url}" target="_blank" style="
-                                display: inline-block;
-                                padding: 0.75rem 1.5rem;
-                                background: linear-gradient(135deg, #10b981, #059669);
-                                color: white;
-                                text-decoration: none;
-                                border-radius: 12px;
-                                font-weight: 700;
-                                margin-top: 0.5rem;
-                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-                            ">🚀 Complete Checkout</a>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.error(f"❌ {error or 'Could not create checkout session'}")
-                            st.info("Please try again or contact support if the problem persists.")
-                else:
-                    st.error("❌ Workspace not initialized. Please refresh the page.")
+            # All features are now free - no payment needed
+            st.success("🎉 All features are completely free! No subscription required.")
             
             # Reset plan selection button
             if st.button("← Choose Different Plan", key="reset_plan"):
@@ -5259,16 +5234,10 @@ elif current_tier in ['pro', 'pro_trader']:
         col1, col2 = st.sidebar.columns(2)
         with col1:
             if st.button("✅ Yes, Cancel", key="confirm_cancel_yes"):
-                with st.spinner("Cancelling subscription..."):
-                    success, message = cancel_stripe_subscription(workspace_id)
-                    if success:
-                        st.success("✅ Subscription cancelled successfully!")
-                        st.session_state.user_tier = 'free'
-                        st.session_state.confirm_cancel = False
-                        st.rerun()
-                    else:
-                        st.error(f"❌ {message}")
-                        st.session_state.confirm_cancel = False
+                st.success("✅ All features are now free - no subscription to cancel!")
+                st.session_state.user_tier = 'free'
+                st.session_state.confirm_cancel = False
+                st.rerun()
         with col2:
             if st.button("❌ No", key="confirm_cancel_no"):
                 st.session_state.confirm_cancel = False
@@ -5281,29 +5250,8 @@ elif current_tier in ['pro', 'pro_trader']:
                 if is_mobile:
                     st.info("💎 In mobile app, this would trigger In-App Purchase upgrade")
                 else:
-                    # Create Stripe checkout session directly
-                    with st.spinner("🔄 Creating secure checkout..."):
-                        checkout_url, error = create_stripe_checkout_session('pro_trader', workspace_id)
-                        
-                        if checkout_url:
-                            st.success("✅ Redirecting to secure Stripe checkout...")
-                            st.markdown(f"""
-                            <meta http-equiv="refresh" content="0;url={checkout_url}">
-                            <a href="{checkout_url}" target="_blank" style="
-                                display: inline-block;
-                                padding: 0.75rem 1.5rem;
-                                background: linear-gradient(135deg, #10b981, #059669);
-                                color: white;
-                                text-decoration: none;
-                                border-radius: 12px;
-                                font-weight: 700;
-                                margin-top: 0.5rem;
-                                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-                            ">💎 Upgrade Now</a>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.error(f"❌ {error or 'Could not create checkout session'}")
-                            st.info("Please try again or contact support if the problem persists.")
+                    # All features are now free
+                    st.success("✅ All features are now completely free - no upgrade needed!")
             else:
                 st.error("❌ Workspace not initialized. Please refresh the page.")
 
