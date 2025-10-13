@@ -4,9 +4,17 @@
 
 A real-time market scanning application that analyzes equities and cryptocurrencies using technical indicators. The system fetches market data via yfinance, calculates ATR-based position sizing, and provides a Streamlit-based dashboard for visualization and analysis. The application supports both equity symbols (AAPL, MSFT) and cryptocurrency pairs (BTC-USD, ETH-USD) with capabilities for data export, email notifications, and Slack integration.
 
+**All features are completely free with no tier restrictions or payments required.**
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes (October 2025)
+- **Removed all Stripe payment integration** - App is now completely free
+- **Removed subscription tiers** - All features accessible to everyone
+- **Reduced dependencies** from 11 to 10 packages (removed stripe)
+- **Optimized for deployment** - Cleaner codebase, smaller package size
 
 ## System Architecture
 
