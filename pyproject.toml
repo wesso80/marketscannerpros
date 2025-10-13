@@ -14,5 +14,4 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "qrcode[pil]>=8.2",
     "pillow>=11.3.0",
-    "stripe>=12.5.1",
 ]
