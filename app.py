@@ -50,7 +50,6 @@ try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     import plotly.express as px
-    import stripe
     import sentry_sdk
     from collections import defaultdict
     import secrets
@@ -1394,29 +1393,6 @@ CFG = ScanConfig(
 
 SYD = tz.gettz("Australia/Sydney")
 
-# ================= Stripe Configuration =================
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-
-# Subscription pricing configuration
-SUBSCRIPTION_PLANS = {
-    "pro": {
-        "name": "Pro",
-        "price": 4.99,
-        "free_trial_days": 7,
-        "price_id": None,  # Will be set when creating Stripe products
-        "features": ["Multi-TF confluence", "Squeezes", "Exports"]
-    },
-    "pro_trader": {
-        "name": "Full Pro Trader", 
-        "price": 9.99,
-        "free_trial_days": 5,
-        "price_id": None,  # Will be set when creating Stripe products
-        "features": ["All Pro features", "Advanced alerts", "Priority support"]
-    }
-}
-
 # ================= Utilities =================
 def _yf_interval_period(tf: str) -> Tuple[str, str]:
     t = tf.lower().strip()
@@ -1962,18 +1938,9 @@ def save_tradingview_username(workspace_id: str, username: str) -> bool:
             # Get customer email from session state
             customer_email = st.session_state.get('user_email', 'No email provided')
             
-            # If no email in session, try to get from subscription/Stripe
+            # If no email in session, use default
             if not customer_email or customer_email == 'No email provided':
-                try:
-                    subscription = get_workspace_subscription(workspace_id)
-                    if subscription and subscription.get('stripe_customer_id'):
-                        # Try to get email from Stripe customer
-                        import stripe
-                        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-                        customer = stripe.Customer.retrieve(subscription['stripe_customer_id'])
-                        customer_email = customer.email or 'No email provided'
-                except:
-                    customer_email = 'No email provided'
+                customer_email = 'No email provided'
             
             # Send notification to admin
             send_tradingview_notification_to_admin(customer_email, username.strip(), workspace_id)
@@ -4307,70 +4274,6 @@ def cancel_subscription(workspace_id: str):
         st.error(f"Error cancelling subscription: {str(e)}")
         return False
 
-def activate_subscription_by_email(email: str) -> Tuple[bool, str, Optional[str]]:
-    """Activate subscription by email - check Stripe and create/update workspace"""
-    try:
-        import hashlib
-        
-        # Initialize Stripe with API key
-        api_key = os.getenv('STRIPE_SECRET_KEY')
-        if not api_key:
-            return False, "Stripe not configured", None
-        
-        # Re-import stripe to ensure fresh instance
-        import stripe as stripe_sdk
-        stripe_sdk.api_key = api_key
-        
-        # Find customer in Stripe
-        email_clean = email.lower().strip()
-        customers_response = stripe_sdk.Customer.list(email=email_clean, limit=1)
-        
-        if not customers_response or not hasattr(customers_response, 'data') or len(customers_response.data) == 0:
-            return False, f"No Stripe customer found for {email_clean}", None
-        
-        customer = customers_response.data[0]
-        customer_id = customer.id
-        
-        # Get subscriptions (including trials)
-        subs_response = stripe_sdk.Subscription.list(customer=customer_id, limit=10)
-        valid_subs = [s for s in subs_response.data if s.status in ['active', 'trialing']]
-        
-        if not valid_subs:
-            return False, "No active subscription found", None
-        
-        subscription = valid_subs[0]
-        # Access items via dict to avoid conflict with Python's .items() method
-        sub_dict = dict(subscription)
-        price_ids = [item.price.id for item in sub_dict['items'].data]
-        
-        # Determine tier
-        tier = 'free'
-        PRICE_PRO = os.getenv('NEXT_PUBLIC_PRICE_PRO', '')
-        PRICE_PRO_TRADER = os.getenv('NEXT_PUBLIC_PRICE_PRO_TRADER', 'price_1SEhYxLyhHN1qVrAWiuGgO0q')
-        
-        if PRICE_PRO_TRADER in price_ids:
-            tier = 'pro_trader'
-        elif PRICE_PRO in price_ids:
-            tier = 'pro'
-        
-        # Create deterministic workspace ID from Stripe customer ID (UUID format)
-        hash_bytes = hashlib.sha256(customer_id.encode()).digest()
-        # Format as UUID: 8-4-4-4-12 characters
-        workspace_id = f"{hash_bytes[:4].hex()}-{hash_bytes[4:6].hex()}-{hash_bytes[6:8].hex()}-{hash_bytes[8:10].hex()}-{hash_bytes[10:16].hex()}"
-        
-        # Ensure workspace exists
-        create_query = "INSERT INTO workspaces (id) VALUES (%s) ON CONFLICT (id) DO NOTHING"
-        execute_db_write(create_query, (workspace_id,))
-        
-        # Set subscription override
-        if set_subscription_override(workspace_id, tier, f"stripe_{customer_id}", None):
-            return True, f"✅ {tier.replace('_', ' ').title()} activated!", workspace_id
-        
-        return False, "Failed to activate subscription", None
-        
-    except Exception as e:
-        return False, f"Error: {str(e)}", None
-
 def get_user_tier_from_subscription(workspace_id: str):
     """Get user tier based on active subscription and admin overrides"""
     # Check for admin override first
@@ -4384,26 +4287,6 @@ def get_user_tier_from_subscription(workspace_id: str):
         return subscription['plan_code']
     return 'free'
 
-# ================= Stripe Webhook Endpoint =================
-# Handle webhook in query parameters for Streamlit limitations  
-# (DISABLED - function called before definition)
-# if 'webhook' in st.query_params:
-#     webhook_payload = st.query_params.get('payload', '')
-#     webhook_signature = st.query_params.get('signature', '')
-#     
-#     if webhook_payload and webhook_signature:
-#         try:
-#             import urllib.parse
-#             decoded_payload = urllib.parse.unquote(webhook_payload)
-#             success, message = handle_stripe_webhook(decoded_payload, webhook_signature)
-#             if success:
-#                 st.write("Webhook processed successfully")
-#             else:
-#                 st.error(f"Webhook error: {message}")
-#         except Exception as e:
-#             st.error(f"Webhook processing failed: {str(e)}")
-#         st.stop()
-
 # Handle Apple IAP Receipt Validation (API endpoint)
 if 'iap' in st.query_params and st.query_params.get('action') == 'validate-receipt':
     st.write("Apple IAP Receipt Validation Endpoint")
@@ -4411,94 +4294,6 @@ if 'iap' in st.query_params and st.query_params.get('action') == 'validate-recei
         # This would be called via API, not through Streamlit UI
         st.info("⚙️ Receipt validation endpoint ready for iOS app")
     st.stop()
-
-# Handle successful payment return from Stripe (original method)
-if 'session_id' in st.query_params:
-    session_id = st.query_params.get('session_id')
-    if session_id:
-        try:
-            session = stripe.checkout.Session.retrieve(session_id, expand=['subscription', 'customer'])
-            # For subscriptions, check if session was completed (works for both paid and trial)
-            if session and session.status == 'complete':
-                # Extract subscription details from session metadata
-                workspace_id_from_stripe = session.metadata.get('workspace_id')
-                plan_code = session.metadata.get('plan_code')
-                
-                # Get customer email if available
-                customer_email = None
-                if hasattr(session, 'customer_details') and session.customer_details:
-                    customer_email = session.customer_details.get('email')
-                elif hasattr(session, 'customer'):
-                    customer = session.customer
-                    if isinstance(customer, str):
-                        try:
-                            customer_obj = stripe.Customer.retrieve(customer)
-                            customer_email = customer_obj.email
-                        except:
-                            pass
-                    elif hasattr(customer, 'email'):
-                        customer_email = customer.email
-                
-                if workspace_id_from_stripe and plan_code:
-                    # Create the subscription in the database
-                    success, result = create_subscription(workspace_id_from_stripe, plan_code, 'web')
-                    if success:
-                        # Record trial usage to prevent abuse
-                        if customer_email:
-                            stripe_customer_id = session.customer if isinstance(session.customer, str) else session.customer.id if session.customer else None
-                            record_trial_usage(customer_email, plan_code, workspace_id_from_stripe, stripe_customer_id)
-                        
-                        # Force update session state with new tier immediately
-                        st.session_state.user_tier = plan_code
-                        st.session_state.workspace_id = workspace_id_from_stripe
-                        
-                        st.success(f"🎉 Payment successful! Your {plan_code.replace('_', ' ').title()} subscription is now active.")
-                        st.balloons()
-                        
-                        # Clear the query parameter and reload
-                        st.query_params.clear()
-                        st.rerun()
-                    else:
-                        st.error(f"⚠️ Subscription activation failed: {result}")
-                        st.info("Your payment was successful. Please contact support to activate your account.")
-                else:
-                    st.error(f"Error: Missing subscription details (workspace: {bool(workspace_id_from_stripe)}, plan: {bool(plan_code)}). Please contact support with your payment confirmation.")
-        except Exception as e:
-            st.error(f"Error verifying payment: {str(e)}")
-            st.info("Please refresh the page or contact support if the issue persists.")
-
-# Handle successful payment return from new Stripe redirect
-if st.query_params.get('stripe_success') == 'true':
-    access_level = st.query_params.get('access', '')
-    if access_level in ['pro', 'pro_trader']:
-        try:
-            # Get workspace ID for current user
-            device_fp = get_persistent_device_fingerprint()
-            workspace_id = get_or_create_workspace_for_device(device_fp)
-            
-            if workspace_id:
-                # Create subscription automatically 
-                success, result = create_subscription(workspace_id, access_level, 'web', 'monthly')
-                if success:
-                    st.success(f"🎉 Payment successful! Your {access_level.replace('_', ' ').title()} subscription is now active.")
-                    st.balloons()
-                    # Clear stripe_success but keep access parameter
-                    new_params = dict(st.query_params)
-                    new_params.pop('stripe_success', None)
-                    st.query_params.clear()
-                    for key, value in new_params.items():
-                        st.query_params[key] = value
-                    st.rerun()
-                else:
-                    # Show error but DON'T clear access parameter - user still gets Pro via temporary override
-                    st.warning(f"⚠️ Subscription database error: {result}")
-                    st.info("✨ Don't worry - your Pro access is active! This is just a database sync issue.")
-            else:
-                st.error("Error: Could not identify your account. Please contact support.")
-        except Exception as e:
-            # Show error but DON'T clear access parameter - user still gets Pro via temporary override
-            st.warning(f"⚠️ Subscription activation error: {str(e)}")
-            st.info("✨ Don't worry - your Pro access is active! This is just a database sync issue.")
 
 # ================= Apple IAP Receipt Validation =================
 def validate_apple_iap_receipt(receipt_data: str, product_id: str, transaction_id: str):
@@ -4579,186 +4374,6 @@ def process_apple_iap_purchase(receipt_data: str, product_id: str, transaction_i
     except Exception as e:
         print(f"Apple IAP processing error: {e}")
         return False, str(e)
-
-# ================= Trial Abuse Prevention =================
-def has_used_trial(email: str, plan_code: str) -> bool:
-    """Check if email has already used a free trial for this plan"""
-    try:
-        query = "SELECT id FROM trial_usage WHERE LOWER(email) = LOWER(%s) AND plan_code = %s"
-        result = execute_db_query(query, (email.strip(), plan_code))
-        return bool(result and len(result) > 0)
-    except:
-        return False
-
-def record_trial_usage(email: str, plan_code: str, workspace_id: str, stripe_customer_id: Optional[str] = None):
-    """Record that an email has used a free trial"""
-    try:
-        query = """
-            INSERT INTO trial_usage (email, stripe_customer_id, plan_code, workspace_id)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (email, plan_code) DO NOTHING
-        """
-        execute_db_write(query, (email.lower().strip(), stripe_customer_id, plan_code, workspace_id))
-    except Exception as e:
-        print(f"Error recording trial usage: {e}")
-
-# ================= Stripe Integration Functions =================
-def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_email: Optional[str] = None):
-    """Create a Stripe checkout session for subscription"""
-    try:
-        if not stripe.api_key:
-            return None, "Stripe not configured"
-        
-        # Get plan details
-        plan = SUBSCRIPTION_PLANS.get(plan_code)
-        if not plan:
-            return None, "Invalid plan"
-        
-        # Create or get customer
-        customer = None
-        customer_params = {
-            "metadata": {"workspace_id": workspace_id},
-            "description": f"Market Scanner - Workspace {workspace_id[:8]}"
-        }
-        
-        # If email provided, add it to customer (helps with trial tracking)
-        if customer_email:
-            customer_params["email"] = customer_email.lower().strip()
-        
-        try:
-            customers = stripe.Customer.list(metadata={"workspace_id": workspace_id})  # type: ignore
-            if customers.data:
-                customer = customers.data[0]
-                # Update email if provided
-                if customer_email and customer.email != customer_email:
-                    stripe.Customer.modify(customer.id, email=customer_email)
-        except:
-            pass
-        
-        if not customer:
-            customer = stripe.Customer.create(**customer_params)
-        
-        # Determine base URL for redirects
-        base_url = os.getenv('DOMAIN_URL')
-        if not base_url:
-            # Use the actual Streamlit app domain
-            base_url = 'https://app.marketscannerpros.app'
-        
-        # Create checkout session with free trial
-        session_params = {
-            'customer': customer.id,
-            'payment_method_types': ['card'],
-            'mode': 'subscription',
-            'line_items': [{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {
-                        'name': plan['name'],
-                        'description': ', '.join(plan['features'])
-                    },
-                    'unit_amount': int(plan['price'] * 100),
-                    'recurring': {'interval': 'month'}
-                },
-                'quantity': 1,
-            }],
-            'metadata': {
-                'workspace_id': workspace_id,
-                'plan_code': plan_code
-            },
-            'success_url': f"{base_url}?session_id={{CHECKOUT_SESSION_ID}}",
-            'cancel_url': base_url
-        }
-        
-        # Add free trial ONLY if:
-        # 1. Plan has trial configured AND
-        # 2. Email hasn't used trial before (if email provided) AND  
-        # 3. Customer hasn't had trial before (Stripe prevents duplicate trials per customer)
-        include_trial = False
-        if 'free_trial_days' in plan and plan['free_trial_days'] > 0:
-            if customer_email:
-                # Check if email has used trial before
-                if not has_used_trial(customer_email, plan_code):
-                    include_trial = True
-            else:
-                # No email check possible - let Stripe handle duplicate prevention
-                include_trial = True
-        
-        if include_trial:
-            session_params['subscription_data'] = {
-                'trial_period_days': plan['free_trial_days']
-            }
-        
-        session = stripe.checkout.Session.create(**session_params)
-        
-        return session.url, None
-    except Exception as e:
-        return None, f"Stripe error: {str(e)}"
-
-def handle_stripe_webhook(webhook_data: dict, signature: str):
-    """Handle Stripe webhook events"""
-    try:
-        if not STRIPE_WEBHOOK_SECRET:
-            return False, "Webhook secret not configured"
-        
-        # Verify webhook signature
-        event = stripe.Webhook.construct_event(
-            webhook_data, signature, STRIPE_WEBHOOK_SECRET
-        )
-        
-        if event['type'] == 'checkout.session.completed':
-            session = event['data']['object']
-            workspace_id = session['metadata'].get('workspace_id')
-            plan_code = session['metadata'].get('plan_code')
-            
-            if workspace_id and plan_code:
-                # Create subscription in database
-                success, result = create_subscription(workspace_id, plan_code, 'web')
-                if not success:
-                    return False, f"Failed to create subscription: {result}"
-                
-                # Store Stripe subscription ID
-                stripe_subscription_id = session.get('subscription')
-                if stripe_subscription_id:
-                    update_query = """
-                        UPDATE user_subscriptions 
-                        SET stripe_subscription_id = %s
-                        WHERE workspace_id = %s AND subscription_status = 'active'
-                    """
-                    execute_db_write(update_query, (stripe_subscription_id, workspace_id))
-        
-        elif event['type'] == 'customer.subscription.deleted':
-            subscription = event['data']['object']
-            # Cancel subscription in database
-            cancel_query = """
-                UPDATE user_subscriptions 
-                SET subscription_status = 'cancelled', cancelled_at = now()
-                WHERE stripe_subscription_id = %s
-            """
-            execute_db_write(cancel_query, (subscription['id'],))
-            
-        return True, "Webhook processed"
-    except Exception as e:
-        return False, f"Webhook error: {str(e)}"
-
-def cancel_stripe_subscription(workspace_id: str):
-    """Cancel a Stripe subscription"""
-    try:
-        subscription = get_workspace_subscription(workspace_id)
-        if not subscription or not subscription.get('stripe_subscription_id'):
-            return False, "No active Stripe subscription found"
-        
-        # Cancel in Stripe (at period end - user keeps access until then)
-        stripe.Subscription.modify(
-            subscription['stripe_subscription_id'],
-            cancel_at_period_end=True
-        )
-        
-        # Mark as cancelled in database
-        cancel_subscription(workspace_id)
-        
-        return True, "Subscription will cancel at period end. You'll keep access until then."
-    except Exception as e:
-        return False, f"Error cancelling subscription: {str(e)}"
 
 # ================= Anonymous Workspace System =================
 # Initialize anonymous device and workspace for data sync
@@ -4843,33 +4458,6 @@ if nextjs_workspace_id and nextjs_tier:
     
     # Update URL
     st.query_params['wid'] = nextjs_workspace_id
-
-# ================= EMAIL LOGIN ACTIVATION (Fallback) =================
-# Check for email login parameter
-query_params_login = st.query_params
-email_login = query_params_login.get('activate_email', None)
-if isinstance(email_login, list):
-    email_login = email_login[0] if email_login else None
-
-if email_login and '@' in email_login:
-    st.info("🔄 Activating your subscription...")
-    success, message, new_workspace_id = activate_subscription_by_email(email_login)
-    
-    if success and new_workspace_id:
-        # Update session state with new workspace
-        st.session_state.workspace_id = new_workspace_id
-        st.session_state.device_fingerprint = new_workspace_id
-        
-        # Update URL with stable workspace ID
-        st.query_params.clear()
-        st.query_params['wid'] = new_workspace_id
-        
-        st.success(message)
-        st.balloons()
-        st.rerun()
-    else:
-        st.error(message)
-        st.stop()
 
 # Update user tier based on active subscription (CRITICAL FIX)
 workspace_id_for_tier = st.session_state.get('workspace_id')
@@ -5323,24 +4911,8 @@ current_device_id = st.session_state.get('device_fingerprint', '')
 # Remove this section from here - moving to top of sidebar
 
 
-# ================= Email-Based Subscription Linking =================
-# CRITICAL FIX: Allow users to link their Stripe subscription via email
-if 'subscription_linked' not in st.session_state:
-    st.session_state.subscription_linked = False
-
+# All features are now completely free - no subscriptions needed
 workspace_id = st.session_state.get('workspace_id')
-
-# Check if this workspace already has a subscription
-existing_subscription = None
-if workspace_id:
-    existing_subscription = get_workspace_subscription(workspace_id)
-
-# If no subscription, show link to activate
-if not existing_subscription and not st.session_state.subscription_linked:
-    with st.sidebar.expander("🔗 Activate Your Subscription", expanded=True):
-        st.write("**Already purchased? Activate your subscription:**")
-        st.info("Visit **marketscannerpros.app/auth** to activate your Pro or Pro Trader subscription with your Stripe email.")
-        st.write("This will link your subscription to all your devices permanently.")
 
 # ================= Subscription Summary (Compact) =================
 # Show compact subscription summary instead of full tier cards
