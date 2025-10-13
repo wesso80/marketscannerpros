@@ -31,6 +31,12 @@ Preferred communication style: Simple, everyday language.
   - Moved Next.js files (middleware.ts, vercel.json) to `nextjs-web/`
   - Removed mobile app directory and documentation (marketscanner-mobile/)
   - Removed temporary files (cookies.txt, empty build fix files)
+- **Deployment Optimization (October 2025)**: Fixed disk quota issues
+  - Removed unused dependencies (sendgrid, psycopg2-pool, redundant packages)
+  - Optimized FastAPI and uvicorn (removed [all] and [standard] extras)
+  - Deleted large marketing images (dashboard-screenshot.png, hero-image.png)
+  - Removed assetlinks.json (not needed for Streamlit deployment)
+  - Total space freed: ~12MB, optimized for deployment
 
 ## System Architecture
 
