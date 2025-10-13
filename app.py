@@ -5105,7 +5105,7 @@ if current_tier == 'free':
         platform = get_platform_type()
         
         if platform == 'ios':
-            # Apple App Store Compliance: NO STRIPE on iOS
+            # Apple App Store Compliance
             st.error("🍎 **Apple App Store Policy**")
             st.markdown("""
             **Subscriptions must be purchased through the iOS app using Apple's In-App Purchase system.**
@@ -5127,7 +5127,7 @@ if current_tier == 'free':
                 st.info("🔗 Opens App Store link (would redirect to Market Scanner iOS app)")
                 # In production: st.markdown('[Download Market Scanner](https://apps.apple.com/app/market-scanner/YOUR_APP_ID)')
         else:
-            # Web/Android Stripe button for selected plan
+            # All features are free - no payment needed
             plan_emoji = "🚀" if st.session_state.selected_plan == 'pro' else "💎"
             plan_name = "Pro" if st.session_state.selected_plan == 'pro' else "Pro Trader"
             plan_price = "$4.99" if st.session_state.selected_plan == 'pro' else "$9.99"
@@ -5142,17 +5142,8 @@ if current_tier == 'free':
                 help="Required to verify trial eligibility and send receipt"
             )
             
-            # Check trial eligibility if email provided
-            if checkout_email and '@' in checkout_email:
-                trial_used = has_used_trial(checkout_email, st.session_state.selected_plan)
-                if trial_used:
-                    st.warning(f"⚠️ This email has already used the {plan_name} free trial. Subscription will start immediately at {plan_price}/month.")
-                else:
-                    st.success(f"✅ {trial_days} FREE TRIAL available! You won't be charged until the trial ends.")
-            
-            # Checkout button
-            button_disabled = not checkout_email or '@' not in checkout_email
-            button_label = f"{plan_emoji} Start {trial_days} Free Trial" if checkout_email and '@' in checkout_email and not has_used_trial(checkout_email, st.session_state.selected_plan) else f"{plan_emoji} Subscribe to {plan_name} - {plan_price}/month"
+            # All features are completely free now
+            st.info("✨ All features are completely free! No email or payment required.")
             
             # TEMPORARILY DISABLED - PAYMENT PROCESSING UNDER MAINTENANCE
             st.error("🚧 **Subscription payments temporarily disabled for maintenance**")
