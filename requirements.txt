@@ -15,3 +15,7 @@ streamlit>=1.37
 yfinance>=0.2.43
 
 psycopg2-binary>=2.9,<3
+
+qrcode[pil]>=7.4
+
+pillow>=10.0
