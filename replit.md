@@ -1,102 +1,81 @@
 # Market Scanner Application
 
 ## Overview
-A multi-platform market scanning application that analyzes equity and cryptocurrency markets using technical indicators and risk management. It fetches real-time data, performs technical analysis, and provides ATR-based position sizing. The application includes a web dashboard, automated notifications, and a comprehensive trade journal. It is distributed as a Progressive Web App (PWA), Android TWA, and Capacitor-based native iOS/Android apps, targeting both mobile and web platforms for broad accessibility.
+
+A real-time market scanning application that analyzes equities and cryptocurrencies using technical indicators. The system fetches market data via yfinance, calculates ATR-based position sizing, and provides a Streamlit-based dashboard for visualization and analysis. The application supports both equity symbols (AAPL, MSFT) and cryptocurrency pairs (BTC-USD, ETH-USD) with capabilities for data export, email notifications, and Slack integration.
 
 ## User Preferences
+
 Preferred communication style: Simple, everyday language.
-
-## Recent Changes
-
-### Bug Fixes (October 2025)
-- **Authentication Security**: Added try-catch blocks around JSON parsing in auth system to prevent crashes from malformed tokens
-- **Production Safety**: Removed unsafe runtime package installation; packages must be pre-installed
-- **Email Configuration**: Improved fallback logic for API keys with safer Streamlit secrets handling
-- **Error Handling**: Replaced broad exception handling with specific exception types for better debugging
-- **Configuration Management**: Removed hardcoded domains and URLs; now using environment variables:
-  - `COOKIE_DOMAIN` for cookie domain configuration
-  - `ALLOWED_ORIGINS` for CORS allowed origins
-  - `NEXT_PUBLIC_APP_URL` for app URL (required)
-- **Mobile Detection**: Fixed redundant mobile detection logic; now uses single source of truth from session state
-- **Code Cleanup**: Removed unused functions and improved code organization
-- **Free Access Model**: Converted entire app to free access - all features unlocked for everyone
-  - Removed paid tier restrictions
-  - All features (alerts, charts, backtesting, trade journal) now available without subscription
-- **Deployment Configuration Fix**: Resolved Node.js detection issue
-  - Moved `package.json` and Next.js config files to `nextjs-web/` subdirectory
-  - Prevents deployment system from incorrectly treating Python Streamlit app as Node.js project
-  - Main deployment now correctly identified as Python/Streamlit application
-- **Project Cleanup (October 2025)**: Removed duplicate and outdated files
-  - Deleted duplicate manifests, outdated docs (DEPLOYMENT.md, GITHUB update files)
-  - Moved Next.js files (middleware.ts, vercel.json) to `nextjs-web/`
-  - Removed mobile app directory and documentation (marketscanner-mobile/)
-  - Removed temporary files (cookies.txt, empty build fix files)
-- **Deployment Optimization (October 2025)**: Fixed disk quota issues
-  - Removed unused dependencies (sendgrid, psycopg2-pool, redundant packages)
-  - Optimized FastAPI and uvicorn (removed [all] and [standard] extras)
-  - Deleted large marketing images (dashboard-screenshot.png, hero-image.png)
-  - Removed assetlinks.json (not needed for Streamlit deployment)
-  - Total space freed: ~12MB, optimized for deployment
 
 ## System Architecture
 
-### UI/UX Decisions
-- **Streamlit Dashboard**: Interactive web-based interface.
-- **Plotly Integration**: Advanced charting for technical analysis visualization.
-- **Real-time Data Display**: Live market data with filtering and sorting.
-- **PWA Integration**: Installable web app experience with manifest and service worker.
-- **Dark Theme**: Consistent dark backgrounds for all UI elements and charts.
+### Application Framework
+- **Frontend/Dashboard**: Streamlit-based web interface providing real-time market data visualization and interactive controls
+- **Data Processing**: Pure pandas-based data pipeline for market analysis and technical indicator calculations
+- **Deployment Strategy**: Autoscale-ready architecture with health check endpoint optimization
 
-### Technical Implementations
-- **Single-File Design**: Monolithic `market_scanner_app.py` for simplicity.
-- **Pandas-Based Analysis**: Core engine for technical indicator calculations.
-- **Dataclass Configuration**: `ScanConfig` for centralized settings.
-- **ATR-Based Risk Management**: Position sizing with configurable risk parameters.
-- **Multi-Timeframe Support**: Configurable timeframes for different asset classes.
-- **Multi-Channel Notifications**: Email (SMTP) and Slack webhook integrations.
-- **Trade Journal**: PostgreSQL-backed system for logging trades, tracking performance (P&L, R-multiple, win rate), and self-analysis.
-- **Stable Workspace ID**: Stripe-based, signed cookie system for persistent user data across sessions and devices.
-- **Trial Abuse Prevention**: Three-layer system involving email collection, trial tracking database, and pre-checkout validation.
-- **TradingView Integration**: System for Pro Trader members to submit TradingView usernames for invite-only script access, with admin email notifications.
-- **In-App Purchase (IAP)**: Apple StoreKit integration for iOS subscriptions (via `react-native-iap`) and Stripe for web/Android.
-- **Error Monitoring**: Sentry integration for real-time error tracking and performance monitoring.
-- **Rate Limiting**: In-memory rate limiter (60 requests/min, 1000 requests/hour per user).
-- **Database Connection Pooling**: `psycopg2` pool with health checks and retry logic.
-- **Automated Backups**: Daily PostgreSQL backups with `pg_dump` and 7-day retention.
-- **Health Check Endpoint**: For monitoring services.
-- **Code Quality**: Extensive type hinting and LSP error resolution for improved maintainability.
+### Performance Optimization
+- **Lazy Loading Pattern**: Heavy dependencies (pandas, numpy, yfinance, psycopg2, plotly) are imported only after health check validation to ensure sub-second health endpoint responses
+- **Health Check First**: Ultra-fast health check endpoint processes query parameters before any module imports, critical for autoscale deployment environments
+- **Query Parameter Detection**: Multiple fallback mechanisms to detect health check requests across different Streamlit versions
 
-### System Design Choices
-- **Multi-Platform Strategy**: PWA, Android TWA, and Capacitor for comprehensive mobile and web distribution.
-- **Secure Configuration**: Environment variables for sensitive credentials.
-- **Data Persistence**: CSV export and PostgreSQL for trade journal.
-- **Scalability**: Designed with production features like rate limiting, connection pooling, and error monitoring.
-- **Legal Compliance**: Integrated legal documentation (Terms of Service, Privacy Policy, Refund Policy, Cookie Policy) addressing trial policies, data collection, and platform-specific guidelines.
+### Data Architecture
+- **Market Data Source**: yfinance API for real-time and historical market data retrieval
+- **Data Storage**: PostgreSQL database with connection pooling via psycopg2
+- **Data Format**: Pandas DataFrames for in-memory processing and CSV export capability
+
+### Technical Indicators & Analysis
+- **Position Sizing**: ATR (Average True Range) based position sizing calculations
+- **Risk Management**: Volatility-based position calculations to manage portfolio risk
+- **Multi-Asset Support**: Unified processing pipeline for both traditional equities and cryptocurrency markets
+
+### Visualization Layer
+- **Charting**: Plotly for interactive financial charts and technical analysis visualizations
+- **QR Code Generation**: PIL and qrcode libraries for generating shareable QR codes
+- **Data Export**: CSV download functionality for offline analysis
+
+### Integration Architecture
+- **Notification Systems**: 
+  - Email notifications for market alerts and summaries
+  - Slack webhook integration for team collaboration
+- **External APIs**: REST-based integrations via requests library
+
+### Database Design
+- **Connection Management**: psycopg2 connection pooling for efficient database resource utilization
+- **Cursor Strategy**: RealDictCursor for dictionary-based result sets enabling cleaner data handling
+- **Timezone Handling**: dateutil.tz and datetime.timezone for proper temporal data management across markets
+
+### Deployment Considerations
+- **Health Endpoint**: Implements `/health` query parameter check returning JSON status without database dependencies
+- **Environment Configuration**: OS environment variables for sensitive configuration (database credentials, API keys)
+- **Stateless Design**: Application designed for horizontal scaling in autoscale environments
 
 ## External Dependencies
 
-### Market Data APIs
-- **yfinance**: Equity and cryptocurrency market data.
-- **Yahoo Finance**: Underlying data provider for yfinance.
+### Market Data Provider
+- **yfinance**: Yahoo Finance API wrapper for fetching equity and cryptocurrency market data, historical prices, and fundamental information
 
-### Communication Services
-- **SMTP Email Services**: For email notifications.
-- **Slack Webhooks**: For team notifications.
+### Database
+- **PostgreSQL**: Primary relational database for persistent storage
+- **psycopg2**: PostgreSQL adapter with connection pooling and RealDictCursor support
 
-### Mobile Development Frameworks
-- **@capacitor/cli**, **@capacitor/core**, **@capacitor/ios**, **@capacitor/android**: For native mobile app development.
-- **@bubblewrap/cli**: For Android TWA creation.
+### Data Processing & Analysis
+- **pandas**: Core data manipulation and analysis library
+- **numpy**: Numerical computing for technical indicator calculations
 
-### Python Libraries
-- **Streamlit**: Web application framework.
-- **Pandas & NumPy**: Data manipulation and numerical operations.
-- **Plotly**: Interactive charting.
-- **Requests**: HTTP client.
-- **psycopg2**: PostgreSQL database adapter.
+### Visualization & UI
+- **Streamlit**: Web application framework for dashboard interface
+- **Plotly**: Interactive charting library for financial visualizations
+- **PIL (Pillow)**: Image processing for QR code generation
+- **qrcode**: QR code generation library
 
-### Infrastructure Dependencies
-- **Stripe**: Payment processing for subscriptions and managing workspace IDs.
-- **Apple App Store Connect**: For iOS in-app purchase configuration.
-- **Sentry**: Error tracking and performance monitoring.
-- **PostgreSQL**: Database for trade journaling and system data.
-- **Environment Variables**: For sensitive credentials (e.g., `APP_SIGNING_SECRET`, `SENTRY_DSN`).
+### Communication & Notifications
+- **requests**: HTTP library for Slack webhook integration and external API calls
+- **Email**: Built-in Python email capabilities (implied from feature description)
+
+### Utilities
+- **dateutil**: Advanced date/time parsing and timezone handling
+- **dataclasses**: Type-safe data structure definitions
+- **json**: JSON serialization for API responses and configuration
+- **base64**: Encoding for image embedding and data transmission
