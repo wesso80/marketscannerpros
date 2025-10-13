@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 - **Project Cleanup (October 2025)**: Removed duplicate and outdated files
   - Deleted duplicate manifests, outdated docs (DEPLOYMENT.md, GITHUB update files)
   - Moved Next.js files (middleware.ts, vercel.json) to `nextjs-web/`
-  - Moved mobile config files (eas.json) to `marketscanner-mobile/`
+  - Removed mobile app directory and documentation (marketscanner-mobile/)
   - Removed temporary files (cookies.txt, empty build fix files)
 
 ## System Architecture
