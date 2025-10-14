@@ -4485,7 +4485,7 @@ with col_results1:
 with col_results2:
     if 'topk' not in st.session_state:
         st.session_state.topk = CFG.top_k
-    topk = st.number_input("", min_value=5, max_value=100, value=st.session_state.topk, step=5, key="topk_display", label_visibility="collapsed")
+    topk = st.number_input("Number of results", min_value=5, max_value=100, value=st.session_state.topk, step=5, key="topk_display", label_visibility="collapsed")
     st.session_state.topk = topk
 with col_results3:
     col_minus, col_plus = st.columns(2)
