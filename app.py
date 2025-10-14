@@ -4478,6 +4478,28 @@ refresh_clicked = c2.button("🔁 Refresh Data", width='stretch')
 now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
 c3.info(f"Last scan: {now_syd}")
 
+# Results display control
+col_results1, col_results2, col_results3 = st.columns([2, 1, 1])
+with col_results1:
+    st.markdown("**Results to Display:**")
+with col_results2:
+    if 'topk' not in st.session_state:
+        st.session_state.topk = CFG.top_k
+    topk = st.number_input("", min_value=5, max_value=100, value=st.session_state.topk, step=5, key="topk_display", label_visibility="collapsed")
+    st.session_state.topk = topk
+with col_results3:
+    col_minus, col_plus = st.columns(2)
+    with col_minus:
+        if st.button("➖", key="topk_minus", help="Decrease results"):
+            if st.session_state.topk > 5:
+                st.session_state.topk -= 5
+                st.rerun()
+    with col_plus:
+        if st.button("➕", key="topk_plus", help="Increase results"):
+            if st.session_state.topk < 100:
+                st.session_state.topk += 5
+                st.rerun()
+
 # Removed outdated freemium banner - tier limits now properly enforced throughout app
 
 # Clear cache if refresh clicked
@@ -5450,7 +5472,6 @@ tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], 
 tf_cx = st.sidebar.selectbox("Crypto Timeframe:", ["1h","4h","1D","15m","5m"], index=0)
 
 st.sidebar.header("Filters")
-topk = st.sidebar.number_input("Top K Results:", 5, 100, value=CFG.top_k, step=1)
 minvol = st.sidebar.number_input("Min Dollar Volume:", 0, 200_000_000, value=int(CFG.min_dollar_vol), step=100000)
 
 st.sidebar.header("Risk / Sizing")
@@ -5762,7 +5783,7 @@ if run_clicked:
     if send_email_summary_toggle or send_email_toggle:
         combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
         if not combined_results.empty:
-            top_results = combined_results.head(topk)
+            top_results = combined_results.head(st.session_state.topk)
             
             if (send_email_toggle or send_email_summary_toggle) and user_email:
                 email_subject = f"Market Scanner: Top {len(top_results)} Picks"
@@ -5860,11 +5881,11 @@ st.markdown("""
 if not ios_issue_detected and not st.session_state.eq_results.empty:
     # Show info about display limit
     total_eq_scanned = len(st.session_state.eq_results)
-    if total_eq_scanned > topk:
-        st.info(f"📊 Showing top {topk} of {total_eq_scanned} scanned equities. Download CSV for all results. Adjust 'Top K Results' in sidebar to show more.")
+    if total_eq_scanned > st.session_state.topk:
+        st.info(f"📊 Showing top {st.session_state.topk} of {total_eq_scanned} scanned equities. Download CSV for all results. Adjust 'Results to Display' above to show more.")
     
     # Limit display to top K
-    display_eq = st.session_state.eq_results.head(topk)
+    display_eq = st.session_state.eq_results.head(st.session_state.topk)
     
     # Enhanced styling for direction column
     def highlight_direction(val):
@@ -5910,11 +5931,11 @@ st.markdown("""
 if not ios_issue_detected and not st.session_state.cx_results.empty:
     # Show info about display limit
     total_cx_scanned = len(st.session_state.cx_results)
-    if total_cx_scanned > topk:
-        st.info(f"📊 Showing top {topk} of {total_cx_scanned} scanned crypto. Download CSV for all results. Adjust 'Top K Results' in sidebar to show more.")
+    if total_cx_scanned > st.session_state.topk:
+        st.info(f"📊 Showing top {st.session_state.topk} of {total_cx_scanned} scanned crypto. Download CSV for all results. Adjust 'Results to Display' above to show more.")
     
     # Limit display to top K
-    display_cx = st.session_state.cx_results.head(topk)
+    display_cx = st.session_state.cx_results.head(st.session_state.topk)
     
     # Enhanced styling for direction column (same as equity)
     def highlight_direction(val):
