@@ -7219,70 +7219,40 @@ else:
                 
                     # Symbol performance breakdown
                     symbol_perf = results.get('symbol_performance', {})
-                    st.write(f"DEBUG: symbol_perf type={type(symbol_perf)}, len={len(symbol_perf) if symbol_perf else 0}, keys={list(symbol_perf.keys()) if isinstance(symbol_perf, dict) else 'N/A'}")
-                    with st.expander("📊 Symbol Performance Breakdown", expanded=True):
-                        st.write("Inside expander - checking data...")
-                        if symbol_perf and len(symbol_perf) > 0:
-                            st.write(f"Condition TRUE - processing {len(symbol_perf)} symbols")
-                            try:
-                                symbol_perf_data = []
-                                st.write("Starting loop...")
-                                for symbol, perf in symbol_perf.items():
-                                    st.write(f"Processing {symbol}: {perf}")
-                                    symbol_perf_data.append({
-                                        'Symbol': symbol,
-                                        'Trades': perf.get('total_trades', 0),
-                                        'Win Rate': f"{perf.get('win_rate', 0)*100:.1f}%",
-                                        'Total P&L': f"${perf.get('total_pnl', 0):,.2f}",
-                                        'Avg Return': f"{perf.get('avg_return', 0)*100:.2f}%"
-                                    })
-                            
-                                st.write(f"Created {len(symbol_perf_data)} rows")
-                                if symbol_perf_data:
-                                    symbol_df = pd.DataFrame(symbol_perf_data)
-                                    st.write(f"DataFrame shape: {symbol_df.shape}")
-                                    st.table(symbol_df)
-                                else:
-                                    st.info("No symbol performance data available")
-                            except Exception as e:
-                                st.error(f"Error displaying symbol performance: {str(e)}")
-                                import traceback
-                                st.code(traceback.format_exc())
-                        else:
-                            st.info(f"Condition FALSE - No symbol performance data (found {len(symbol_perf)} symbols)")
+                    if symbol_perf and len(symbol_perf) > 0:
+                        with st.expander("📊 Symbol Performance Breakdown", expanded=True):
+                            symbol_perf_data = []
+                            for symbol, perf in symbol_perf.items():
+                                symbol_perf_data.append({
+                                    'Symbol': symbol,
+                                    'Trades': perf.get('total_trades', 0),
+                                    'Win Rate': f"{perf.get('win_rate', 0)*100:.1f}%",
+                                    'Total P&L': f"${perf.get('total_pnl', 0):,.2f}",
+                                    'Avg Return': f"{perf.get('avg_return', 0)*100:.2f}%"
+                                })
+                        
+                            if symbol_perf_data:
+                                symbol_df = pd.DataFrame(symbol_perf_data)
+                                st.table(symbol_df)
                 
                     # Trade log
                     trades_list = results.get('trades', [])
-                    st.write(f"DEBUG: trades type={type(trades_list)}, count={len(trades_list) if trades_list else 0}")
                     if trades_list and len(trades_list) > 0:
-                        st.write(f"DEBUG: First trade keys: {list(trades_list[0].keys()) if isinstance(trades_list[0], dict) else 'N/A'}")
-                    with st.expander("📋 Trade Log", expanded=True):
-                        st.write("Inside trade log expander...")
-                        if trades_list and len(trades_list) > 0:
-                            st.write(f"Processing {len(trades_list)} trades")
-                            try:
-                                trades_df = pd.DataFrame(trades_list)
-                                st.write(f"DataFrame created with shape: {trades_df.shape}, columns: {list(trades_df.columns)}")
-                                
-                                if 'entry_date' in trades_df.columns:
-                                    trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
-                                if 'exit_date' in trades_df.columns:
-                                    trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
-                                if 'trade_return' in trades_df.columns:
-                                    trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
-                                if 'trade_pnl' in trades_df.columns:
-                                    trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
+                        with st.expander("📋 Trade Log", expanded=True):
+                            trades_df = pd.DataFrame(trades_list)
                             
-                                display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
-                                available_cols = [col for col in display_cols if col in trades_df.columns]
-                                st.write(f"Displaying columns: {available_cols}")
-                                st.table(trades_df[available_cols])
-                            except Exception as e:
-                                st.error(f"Error displaying trade log: {str(e)}")
-                                import traceback
-                                st.code(traceback.format_exc())
-                        else:
-                            st.info(f"No trades found (count: {len(trades_list)})")
+                            if 'entry_date' in trades_df.columns:
+                                trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
+                            if 'exit_date' in trades_df.columns:
+                                trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
+                            if 'trade_return' in trades_df.columns:
+                                trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
+                            if 'trade_pnl' in trades_df.columns:
+                                trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
+                        
+                            display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
+                            available_cols = [col for col in display_cols if col in trades_df.columns]
+                            st.table(trades_df[available_cols])
                 
                     # Errors if any
                     if results.get('errors'):
