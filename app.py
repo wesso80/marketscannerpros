@@ -7050,7 +7050,7 @@ else:
         end_date = st.date_input("End Date:", value=pd.to_datetime("2024-01-01"), key="backtest_end")
 
     with col4:
-        backtest_timeframe = st.selectbox("Timeframe:", ["1D", "1h"], key="backtest_timeframe")
+        backtest_timeframe = st.selectbox("Timeframe:", ["1D", "4h", "1h", "30m", "15m", "5m"], key="backtest_timeframe")
 
     # Backtest parameters - using wider columns for better readability
     col1, col2 = st.columns(2)
