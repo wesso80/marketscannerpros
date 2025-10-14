@@ -7219,6 +7219,7 @@ else:
                 
                     # Symbol performance breakdown
                     symbol_perf = results.get('symbol_performance', {})
+                    st.write(f"DEBUG: symbol_perf type={type(symbol_perf)}, len={len(symbol_perf) if symbol_perf else 0}, keys={list(symbol_perf.keys()) if isinstance(symbol_perf, dict) else 'N/A'}")
                     with st.expander("📊 Symbol Performance Breakdown", expanded=True):
                         if symbol_perf and len(symbol_perf) > 0:
                             try:
@@ -7244,6 +7245,9 @@ else:
                 
                     # Trade log
                     trades_list = results.get('trades', [])
+                    st.write(f"DEBUG: trades type={type(trades_list)}, count={len(trades_list) if trades_list else 0}")
+                    if trades_list and len(trades_list) > 0:
+                        st.write(f"DEBUG: First trade keys: {list(trades_list[0].keys()) if isinstance(trades_list[0], dict) else 'N/A'}")
                     with st.expander("📋 Trade Log", expanded=True):
                         if trades_list and len(trades_list) > 0:
                             try:
