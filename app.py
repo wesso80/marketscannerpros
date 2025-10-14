@@ -7219,7 +7219,7 @@ else:
                 
                     # Symbol performance breakdown
                     if results.get('symbol_performance') and len(results['symbol_performance']) > 0:
-                        with st.expander("📊 Symbol Performance Breakdown", expanded=False):
+                        with st.expander("📊 Symbol Performance Breakdown", expanded=True):
                             symbol_perf_data = []
                             for symbol, perf in results['symbol_performance'].items():
                                 symbol_perf_data.append({
@@ -7238,7 +7238,7 @@ else:
                 
                     # Trade log
                     if results.get('trades') and len(results['trades']) > 0:
-                        with st.expander("📋 Trade Log", expanded=False):
+                        with st.expander("📋 Trade Log", expanded=True):
                             trades_df = pd.DataFrame(results['trades'])
                             trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
                             trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
