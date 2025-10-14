@@ -7218,7 +7218,7 @@ else:
                             st.write(f"• Profit Factor: {metrics.get('profit_factor', 0):.2f}")
                 
                     # Symbol performance breakdown
-                    if results.get('symbol_performance'):
+                    if results.get('symbol_performance') and len(results['symbol_performance']) > 0:
                         with st.expander("📊 Symbol Performance Breakdown", expanded=False):
                             symbol_perf_data = []
                             for symbol, perf in results['symbol_performance'].items():
@@ -7233,9 +7233,11 @@ else:
                             if symbol_perf_data:
                                 symbol_df = pd.DataFrame(symbol_perf_data)
                                 st.dataframe(symbol_df, width='stretch')
+                            else:
+                                st.info("No symbol performance data available")
                 
                     # Trade log
-                    if results.get('trades'):
+                    if results.get('trades') and len(results['trades']) > 0:
                         with st.expander("📋 Trade Log", expanded=False):
                             trades_df = pd.DataFrame(results['trades'])
                             trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
@@ -7245,6 +7247,8 @@ else:
                         
                             display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
                             st.dataframe(trades_df[display_cols], width='stretch')
+                    else:
+                        st.info("💡 No trades were generated. Try adjusting the date range or minimum score threshold.")
                 
                     # Errors if any
                     if results.get('errors'):
