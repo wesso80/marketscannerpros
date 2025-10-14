@@ -7219,45 +7219,51 @@ else:
                 
                     # Symbol performance breakdown
                     symbol_perf = results.get('symbol_performance', {})
-                    if symbol_perf and len(symbol_perf) > 0:
-                        with st.expander("📊 Symbol Performance Breakdown", expanded=True):
-                            symbol_perf_data = []
-                            for symbol, perf in symbol_perf.items():
-                                symbol_perf_data.append({
-                                    'Symbol': symbol,
-                                    'Trades': perf.get('total_trades', 0),
-                                    'Win Rate': f"{perf.get('win_rate', 0)*100:.1f}%",
-                                    'Total P&L': f"${perf.get('total_pnl', 0):,.2f}",
-                                    'Avg Return': f"{perf.get('avg_return', 0)*100:.2f}%"
-                                })
-                        
-                            if symbol_perf_data:
-                                symbol_df = pd.DataFrame(symbol_perf_data)
-                                st.dataframe(symbol_df, width='stretch')
-                            else:
-                                st.info("No symbol performance data available")
-                    else:
-                        st.info(f"📊 Symbol Performance: No data available (found {len(symbol_perf)} symbols)")
+                    with st.expander("📊 Symbol Performance Breakdown", expanded=True):
+                        if symbol_perf and len(symbol_perf) > 0:
+                            try:
+                                symbol_perf_data = []
+                                for symbol, perf in symbol_perf.items():
+                                    symbol_perf_data.append({
+                                        'Symbol': symbol,
+                                        'Trades': perf.get('total_trades', 0),
+                                        'Win Rate': f"{perf.get('win_rate', 0)*100:.1f}%",
+                                        'Total P&L': f"${perf.get('total_pnl', 0):,.2f}",
+                                        'Avg Return': f"{perf.get('avg_return', 0)*100:.2f}%"
+                                    })
+                            
+                                if symbol_perf_data:
+                                    symbol_df = pd.DataFrame(symbol_perf_data)
+                                    st.dataframe(symbol_df, use_container_width=True)
+                                else:
+                                    st.info("No symbol performance data available")
+                            except Exception as e:
+                                st.error(f"Error displaying symbol performance: {str(e)}")
+                        else:
+                            st.info(f"No symbol performance data (found {len(symbol_perf)} symbols)")
                 
                     # Trade log
                     trades_list = results.get('trades', [])
-                    if trades_list and len(trades_list) > 0:
-                        with st.expander("📋 Trade Log", expanded=True):
-                            trades_df = pd.DataFrame(trades_list)
-                            if 'entry_date' in trades_df.columns:
-                                trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
-                            if 'exit_date' in trades_df.columns:
-                                trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
-                            if 'trade_return' in trades_df.columns:
-                                trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
-                            if 'trade_pnl' in trades_df.columns:
-                                trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
-                        
-                            display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
-                            available_cols = [col for col in display_cols if col in trades_df.columns]
-                            st.dataframe(trades_df[available_cols], width='stretch')
-                    else:
-                        st.info(f"💡 No trades found. Trades count: {len(trades_list)}. Try adjusting the date range or minimum score threshold.")
+                    with st.expander("📋 Trade Log", expanded=True):
+                        if trades_list and len(trades_list) > 0:
+                            try:
+                                trades_df = pd.DataFrame(trades_list)
+                                if 'entry_date' in trades_df.columns:
+                                    trades_df['entry_date'] = pd.to_datetime(trades_df['entry_date']).dt.strftime('%Y-%m-%d')
+                                if 'exit_date' in trades_df.columns:
+                                    trades_df['exit_date'] = pd.to_datetime(trades_df['exit_date']).dt.strftime('%Y-%m-%d')
+                                if 'trade_return' in trades_df.columns:
+                                    trades_df['trade_return'] = (trades_df['trade_return'] * 100).round(2)
+                                if 'trade_pnl' in trades_df.columns:
+                                    trades_df['trade_pnl'] = trades_df['trade_pnl'].round(2)
+                            
+                                display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
+                                available_cols = [col for col in display_cols if col in trades_df.columns]
+                                st.dataframe(trades_df[available_cols], use_container_width=True)
+                            except Exception as e:
+                                st.error(f"Error displaying trade log: {str(e)}")
+                        else:
+                            st.info(f"No trades found (count: {len(trades_list)}). Try lowering the minimum score or adjusting dates.")
                 
                     # Errors if any
                     if results.get('errors'):
