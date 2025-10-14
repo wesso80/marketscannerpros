@@ -7241,7 +7241,7 @@ else:
                                 if symbol_perf_data:
                                     symbol_df = pd.DataFrame(symbol_perf_data)
                                     st.write(f"DataFrame shape: {symbol_df.shape}")
-                                    st.dataframe(symbol_df)
+                                    st.table(symbol_df)
                                 else:
                                     st.info("No symbol performance data available")
                             except Exception as e:
@@ -7276,7 +7276,7 @@ else:
                                 display_cols = ['symbol', 'direction', 'entry_date', 'exit_date', 'entry_price', 'exit_price', 'trade_return', 'trade_pnl', 'exit_reason']
                                 available_cols = [col for col in display_cols if col in trades_df.columns]
                                 st.write(f"Displaying columns: {available_cols}")
-                                st.dataframe(trades_df[available_cols])
+                                st.table(trades_df[available_cols])
                             except Exception as e:
                                 st.error(f"Error displaying trade log: {str(e)}")
                                 import traceback
