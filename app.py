@@ -5896,14 +5896,32 @@ if run_clicked:
         eq_syms_combined = list(set(eq_syms + forex_syms + commodity_syms))
         
         with st.spinner("Scanning markets..."):
-            # Scan equity markets (including forex and commodities with equities timeframe)
-            if scan_equities and eq_syms_combined:
+            # Scan equity markets only
+            if scan_equities and eq_syms:
                 st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
-                    eq_syms_combined, tf_eq, False, acct, risk, stop_mult, minvol
+                    eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
                 )
             else:
                 st.session_state.eq_results = pd.DataFrame()
                 st.session_state.eq_errors = pd.DataFrame()
+            
+            # Scan forex markets
+            if scan_equities and forex_syms:
+                st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
+                    forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                )
+            else:
+                st.session_state.forex_results = pd.DataFrame()
+                st.session_state.forex_errors = pd.DataFrame()
+            
+            # Scan commodities markets
+            if scan_equities and commodity_syms:
+                st.session_state.commodity_results, st.session_state.commodity_errors = scan_universe(
+                    commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                )
+            else:
+                st.session_state.commodity_results = pd.DataFrame()
+                st.session_state.commodity_errors = pd.DataFrame()
             
             # Scan crypto markets (only if toggle is enabled)
             if scan_crypto and cx_syms:
@@ -5916,7 +5934,12 @@ if run_clicked:
     
     # Send email notifications if enabled
     if send_email_summary_toggle or send_email_toggle:
-        combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
+        combined_results = pd.concat([
+            st.session_state.eq_results, 
+            st.session_state.forex_results,
+            st.session_state.commodity_results,
+            st.session_state.cx_results
+        ], ignore_index=True)
         if not combined_results.empty:
             top_results = combined_results.head(st.session_state.topk)
             
@@ -6005,6 +6028,14 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('eq_errors', pd.DataFrame()),
     st.session_state.get('cx_errors', pd.DataFrame())
 )
+
+# Initialize forex and commodity results if not present
+if 'forex_results' not in st.session_state:
+    st.session_state.forex_results = pd.DataFrame()
+    st.session_state.forex_errors = pd.DataFrame()
+if 'commodity_results' not in st.session_state:
+    st.session_state.commodity_results = pd.DataFrame()
+    st.session_state.commodity_errors = pd.DataFrame()
 
 # Equity Markets Section with Professional Cards
 st.markdown("""
@@ -6107,9 +6138,115 @@ if not ios_issue_detected and not st.session_state.cx_errors.empty:
         st.dataframe(st.session_state.cx_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
 
+# Forex Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>💱 Forex Markets</h3>
+""", unsafe_allow_html=True)
+
+if not ios_issue_detected and not st.session_state.forex_results.empty:
+    # Show info about display limit
+    total_forex_scanned = len(st.session_state.forex_results)
+    if total_forex_scanned > st.session_state.topk:
+        st.info(f"📊 Showing top {st.session_state.topk} of {total_forex_scanned} scanned forex pairs. Download CSV for all results. Adjust 'Results to Display' above to show more.")
+    
+    # Limit display to top K
+    display_forex = st.session_state.forex_results.head(st.session_state.topk)
+    
+    # Enhanced styling for direction column
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        elif val == 'Bearish':
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        return ''
+    
+    # Apply professional styling to direction column
+    if 'direction' in display_forex.columns:
+        styled_forex = display_forex.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_forex, width='stretch', use_container_width=True)
+    else:
+        st.dataframe(display_forex, width='stretch', use_container_width=True)
+    
+    # CSV download for forex results
+    csv_forex = to_csv_download(st.session_state.forex_results, "forex_scan.csv")
+    st.download_button(
+        label="📥 Download Forex Results (CSV)",
+        data=csv_forex,
+        file_name=f"forex_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv"
+    )
+elif not ios_issue_detected:
+    st.info("No forex results to display. Select forex pairs from the sidebar and click 'Run Scanner'.")
+
+# Close forex card
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Forex errors (only show if not iOS WebView issue)
+if not ios_issue_detected and not st.session_state.forex_errors.empty:
+    with st.expander("⚠️ Forex Scan Errors", expanded=False):
+        st.dataframe(st.session_state.forex_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
+# Commodities Markets Section with Professional Cards
+st.markdown("""
+<div class="pro-card">
+    <h3>🛢️ Commodities</h3>
+""", unsafe_allow_html=True)
+
+if not ios_issue_detected and not st.session_state.commodity_results.empty:
+    # Show info about display limit
+    total_commodity_scanned = len(st.session_state.commodity_results)
+    if total_commodity_scanned > st.session_state.topk:
+        st.info(f"📊 Showing top {st.session_state.topk} of {total_commodity_scanned} scanned commodities. Download CSV for all results. Adjust 'Results to Display' above to show more.")
+    
+    # Limit display to top K
+    display_commodity = st.session_state.commodity_results.head(st.session_state.topk)
+    
+    # Enhanced styling for direction column
+    def highlight_direction(val):
+        if val == 'Bullish':
+            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        elif val == 'Bearish':
+            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
+        return ''
+    
+    # Apply professional styling to direction column
+    if 'direction' in display_commodity.columns:
+        styled_commodity = display_commodity.style.applymap(highlight_direction, subset=['direction'])
+        st.dataframe(styled_commodity, width='stretch', use_container_width=True)
+    else:
+        st.dataframe(display_commodity, width='stretch', use_container_width=True)
+    
+    # CSV download for commodity results
+    csv_commodity = to_csv_download(st.session_state.commodity_results, "commodity_scan.csv")
+    st.download_button(
+        label="📥 Download Commodities Results (CSV)",
+        data=csv_commodity,
+        file_name=f"commodity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        mime="text/csv"
+    )
+elif not ios_issue_detected:
+    st.info("No commodities results to display. Enable 'Scan Commodities' from the sidebar and click 'Run Scanner'.")
+
+# Close commodities card
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Commodities errors (only show if not iOS WebView issue)
+if not ios_issue_detected and not st.session_state.commodity_errors.empty:
+    with st.expander("⚠️ Commodities Scan Errors", expanded=False):
+        st.dataframe(st.session_state.commodity_errors, width='stretch')
+        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
+
 # Combined CSV download
-if not st.session_state.eq_results.empty or not st.session_state.cx_results.empty:
-    combined_results = pd.concat([st.session_state.eq_results, st.session_state.cx_results], ignore_index=True)
+if (not st.session_state.eq_results.empty or not st.session_state.cx_results.empty or 
+    not st.session_state.forex_results.empty or not st.session_state.commodity_results.empty):
+    combined_results = pd.concat([
+        st.session_state.eq_results, 
+        st.session_state.forex_results,
+        st.session_state.commodity_results,
+        st.session_state.cx_results
+    ], ignore_index=True)
     if not combined_results.empty:
         combined_results_sorted = combined_results.sort_values("score", ascending=False)
         csv_combined = to_csv_download(combined_results_sorted, "market_scan_combined.csv")
