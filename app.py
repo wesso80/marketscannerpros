@@ -5468,11 +5468,42 @@ TOP_100_CRYPTO = [
     "AMP-USD", "POLY-USD", "MLN-USD", "BNT-USD", "FORTH-USD", "CTSI-USD", "API3-USD"
 ]
 
-# Quick scan toggle for crypto
-use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
+# Crypto Coins Ranked 100-300 by Market Cap (Mid & Small Cap Alts)
+CRYPTO_100_300 = [
+    "STRK-USD", "ORDI-USD", "BONK-USD", "WIF-USD", "BRETT-USD", "FLOKI-USD", "JASMY-USD", "PENDLE-USD",
+    "PYTH-USD", "NEXO-USD", "AIOZ-USD", "BLUR-USD", "DYDX-USD", "GMT-USD", "CFX-USD", "XEC-USD",
+    "ONDO-USD", "SUPER-USD", "CAKE-USD", "KLAY-USD", "WOO-USD", "LDO-USD", "AGIX-USD", "LUNC-USD",
+    "C98-USD", "GMX-USD", "AUDIO-USD", "GLM-USD", "SPELL-USD", "HOT-USD", "SLP-USD", "QTUM-USD",
+    "RSR-USD", "GLMR-USD", "IOTX-USD", "HIVE-USD", "WIN-USD", "IOST-USD", "ACH-USD", "PAXG-USD",
+    "TFUEL-USD", "SFP-USD", "LEVER-USD", "ONT-USD", "SYN-USD", "LSK-USD", "DENT-USD", "SC-USD",
+    "SCRT-USD", "ARDR-USD", "STEEM-USD", "XEM-USD", "BORA-USD", "LPT-USD", "HIGH-USD", "MXC-USD",
+    "DOCK-USD", "POWR-USD", "SYS-USD", "TROY-USD", "VOXEL-USD", "ALICE-USD", "OGN-USD", "ACA-USD",
+    "MDX-USD", "PERP-USD", "RAY-USD", "RARE-USD", "POLS-USD", "VGX-USD", "BICO-USD", "ALPHA-USD",
+    "MOVR-USD", "ORN-USD", "PYR-USD", "TLM-USD", "IRIS-USD", "VITE-USD", "BURGER-USD", "ILV-USD",
+    "HARD-USD", "QUICK-USD", "FIDA-USD", "FIS-USD", "STMX-USD", "DATA-USD", "ADX-USD", "ERN-USD",
+    "GHST-USD", "PLA-USD", "BADGER-USD", "LOKA-USD", "CLV-USD", "TVK-USD", "FARM-USD", "PSG-USD",
+    "FORTH-USD", "DUSK-USD", "IDEX-USD", "MDT-USD", "SUN-USD", "AST-USD", "BETA-USD", "POND-USD"
+]
 
-# Multiselect for picking specific crypto
-if not use_top100_cx:
+# Crypto scan options
+crypto_scan_option = st.sidebar.radio(
+    "📊 Crypto Scan Options:",
+    ["Custom Selection", "Top 100", "Rank 100-300 (Alt Coins)"],
+    key="crypto_scan_option"
+)
+
+use_top100_cx = (crypto_scan_option == "Top 100")
+use_crypto_100_300 = (crypto_scan_option == "Rank 100-300 (Alt Coins)")
+
+# Handle different crypto scan options
+if use_top100_cx:
+    selected_cx_from_list = TOP_100_CRYPTO
+    st.sidebar.success(f"✅ All 100 top crypto selected!")
+elif use_crypto_100_300:
+    selected_cx_from_list = CRYPTO_100_300
+    st.sidebar.success(f"✅ {len(CRYPTO_100_300)} alt coins (rank 100-300) selected!")
+else:
+    # Custom selection
     selected_cx_from_list = st.sidebar.multiselect(
         "Or select from top 100:",
         options=TOP_100_CRYPTO,
@@ -5481,9 +5512,6 @@ if not use_top100_cx:
     )
     if selected_cx_from_list:
         st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
-else:
-    selected_cx_from_list = TOP_100_CRYPTO
-    st.sidebar.success(f"✅ All 100 crypto selected!")
 
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
