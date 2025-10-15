@@ -5516,16 +5516,81 @@ else:
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
 
+st.sidebar.header("💱 Forex Pairs")
+
+# Major Forex Pairs
+MAJOR_FOREX = [
+    "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "AUDUSD=X", "USDCAD=X", "NZDUSD=X"
+]
+
+# Minor & Exotic Forex Pairs
+MINOR_FOREX = [
+    "EURGBP=X", "EURJPY=X", "EURCHF=X", "GBPJPY=X", "GBPCHF=X", "AUDJPY=X", "NZDJPY=X",
+    "EURAUD=X", "EURNZD=X", "EURCAD=X", "GBPAUD=X", "GBPNZD=X", "GBPCAD=X", "AUDNZD=X",
+    "AUDCAD=X", "AUDCHF=X", "NZDCAD=X", "NZDCHF=X", "CADCHF=X", "CADJPY=X"
+]
+
+forex_option = st.sidebar.radio(
+    "Forex Scan Options:",
+    ["None", "Major Pairs (7)", "All Pairs (27)"],
+    key="forex_scan_option"
+)
+
+if forex_option == "Major Pairs (7)":
+    selected_forex = MAJOR_FOREX
+    st.sidebar.success(f"✅ {len(MAJOR_FOREX)} major forex pairs selected!")
+elif forex_option == "All Pairs (27)":
+    selected_forex = MAJOR_FOREX + MINOR_FOREX
+    st.sidebar.success(f"✅ {len(MAJOR_FOREX + MINOR_FOREX)} forex pairs selected!")
+else:
+    selected_forex = []
+
+st.sidebar.header("🛢️ Commodities")
+
+# Commodities list
+COMMODITIES = [
+    "GC=F",    # Gold
+    "SI=F",    # Silver
+    "PL=F",    # Platinum
+    "PA=F",    # Palladium
+    "HG=F",    # Copper
+    "CL=F",    # Crude Oil WTI
+    "BZ=F",    # Brent Crude Oil
+    "NG=F",    # Natural Gas
+    "RB=F",    # Gasoline
+    "HO=F",    # Heating Oil
+    "ZC=F",    # Corn
+    "ZW=F",    # Wheat
+    "ZS=F",    # Soybeans
+    "KC=F",    # Coffee
+    "SB=F",    # Sugar
+    "CC=F",    # Cocoa
+    "CT=F",    # Cotton
+    "LBS=F",   # Lumber
+]
+
+use_commodities = st.sidebar.checkbox("📊 Scan Commodities", value=False, key="commodities_scan")
+
+if use_commodities:
+    selected_commodities = COMMODITIES
+    st.sidebar.success(f"✅ {len(COMMODITIES)} commodities selected!")
+else:
+    selected_commodities = []
+
 # Show current symbol count for all users
 eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
 cx_text_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
 eq_dropdown_count = len(selected_eq_from_list)
 cx_dropdown_count = len(selected_cx_from_list)
+forex_count = len(selected_forex)
+commodities_count = len(selected_commodities)
 
 # Total unique symbols (account for potential duplicates)
 all_eq = set([s.strip().upper() for s in eq_input.splitlines() if s.strip()] + [s.upper() for s in selected_eq_from_list])
 all_cx = set([s.strip().upper() for s in cx_input.splitlines() if s.strip()] + [s.upper() for s in selected_cx_from_list])
-total_count = len(all_eq) + len(all_cx)
+all_forex = set([s.upper() for s in selected_forex])
+all_commodities = set([s.upper() for s in selected_commodities])
+total_count = len(all_eq) + len(all_cx) + len(all_forex) + len(all_commodities)
 
 if total_count > 0:
     st.sidebar.info(f"📊 {total_count} symbols ready to scan")
@@ -5823,11 +5888,18 @@ if run_clicked:
         cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
         cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
         
+        # Add forex and commodities to equity symbols (they use same timeframe)
+        forex_syms = [s.upper() for s in selected_forex] if scan_equities else []
+        commodity_syms = [s.upper() for s in selected_commodities] if scan_equities else []
+        
+        # Combine equities, forex, and commodities
+        eq_syms_combined = list(set(eq_syms + forex_syms + commodity_syms))
+        
         with st.spinner("Scanning markets..."):
-            # Scan equity markets (only if toggle is enabled)
-            if scan_equities and eq_syms:
+            # Scan equity markets (including forex and commodities with equities timeframe)
+            if scan_equities and eq_syms_combined:
                 st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
-                    eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                    eq_syms_combined, tf_eq, False, acct, risk, stop_mult, minvol
                 )
             else:
                 st.session_state.eq_results = pd.DataFrame()
