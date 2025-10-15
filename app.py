@@ -5393,11 +5393,49 @@ TOP_100_EQUITIES = [
     "GS", "SO", "BSX", "ETN", "FI", "MS", "ABNB", "DUK", "MU", "ANET"
 ]
 
-# Quick scan toggle for equities
-use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
+# Mid-Cap Stocks ($2B - $10B market cap)
+MID_CAP_STOCKS = [
+    "PLTR", "DDOG", "CRWD", "SNOW", "NET", "ZS", "DKNG", "RIVN", "LCID", "RBLX",
+    "DASH", "COIN", "MELI", "TEAM", "ZM", "OKTA", "DOCU", "TWLO", "SQ", "SHOP",
+    "ROKU", "LYFT", "UBER", "PINS", "SNAP", "SPOT", "MRNA", "BILL", "CPNG", "ABNB",
+    "FTNT", "WDAY", "VEEV", "SPLK", "MDB", "HUBS", "FSLY", "CFLT", "ESTC", "DELL",
+    "HPE", "WDC", "SMCI", "HPQ", "GLW", "ON", "KEYS", "ANSS", "SNPS", "CDNS",
+    "EXPE", "EBAY", "ETSY", "W", "BABA", "JD", "PDD", "BIDU", "NIO", "LI"
+]
 
-# Multiselect for picking specific equities
-if not use_top100_eq:
+# Small-Cap Stocks ($250M - $2B market cap)
+SMALL_CAP_STOCKS = [
+    "UPST", "OPEN", "SOFI", "HOOD", "AFRM", "BROS", "CAVA", "FVRR", "ASAN", "PATH",
+    "SOUN", "AI", "BBAI", "IONQ", "RGTI", "QUBT", "DNA", "PACB", "CRSP", "NTLA",
+    "BEAM", "EDIT", "VERV", "BLUE", "FATE", "RPTX", "CMPS", "MNDY", "S", "GTLB",
+    "PCOR", "NCNO", "JAMF", "FROG", "ALKT", "AUR", "FOUR", "BL", "YOU", "RPD",
+    "MTTR", "WK", "RAMP", "TOST", "CVNA", "VSCO", "FSLR", "ENPH", "SEDG", "RUN",
+    "NOVA", "CASY", "JAZZ", "INCY", "EXAS", "TECH", "NTRA", "RGEN", "SRPT", "VRTX"
+]
+
+# Quick scan options for equities
+scan_option = st.sidebar.radio(
+    "📊 Equity Scan Options:",
+    ["Custom Selection", "Top 100 Large-Cap", "Mid-Cap ($2B-$10B)", "Small-Cap ($250M-$2B)"],
+    key="equity_scan_option"
+)
+
+use_top100_eq = (scan_option == "Top 100 Large-Cap")
+use_midcap = (scan_option == "Mid-Cap ($2B-$10B)")
+use_smallcap = (scan_option == "Small-Cap ($250M-$2B)")
+
+# Handle different scan options
+if use_top100_eq:
+    selected_eq_from_list = TOP_100_EQUITIES
+    st.sidebar.success(f"✅ All 100 large-cap equities selected!")
+elif use_midcap:
+    selected_eq_from_list = MID_CAP_STOCKS
+    st.sidebar.success(f"✅ {len(MID_CAP_STOCKS)} mid-cap stocks selected!")
+elif use_smallcap:
+    selected_eq_from_list = SMALL_CAP_STOCKS
+    st.sidebar.success(f"✅ {len(SMALL_CAP_STOCKS)} small-cap stocks selected!")
+else:
+    # Custom selection
     selected_eq_from_list = st.sidebar.multiselect(
         "Or select from top 100:",
         options=TOP_100_EQUITIES,
@@ -5406,9 +5444,6 @@ if not use_top100_eq:
     )
     if selected_eq_from_list:
         st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
-else:
-    selected_eq_from_list = TOP_100_EQUITIES
-    st.sidebar.success(f"✅ All 100 equities selected!")
 
 eq_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(equity_symbols), height=140)
