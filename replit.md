@@ -11,6 +11,12 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
+- **Options/Margin Trading Support Added** - Trade Journal now fully supports margin and options trading
+  - Added Options, Futures, and Margin trade types (in addition to Spot)
+  - Options-specific fields: Option Type (CALL/PUT), Premium per Contract, Number of Contracts, Contract Multiplier, Strike Price
+  - Automatic P&L calculations with contract multipliers (e.g., 100 contracts × 100 shares = 10,000 share position)
+  - Dynamic UI shows appropriate fields based on trade type selection
+  - Trade history displays options details correctly with proper labeling
 - **FREE_FOR_ALL_MODE fully implemented** - Local check in auth_helper.py grants everyone Pro access (no API calls needed)
 - **Removed legacy tier system** - Simplified from Free/Pro/Pro Trader to just Free/Pro model
 - **Section reorganization** - Reordered app flow: Portfolio (free) → Price Alerts (Pro) → Trade Journal (Pro) → Backtesting (Pro)
