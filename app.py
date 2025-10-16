@@ -59,6 +59,20 @@ except ImportError as e:
     st.info("🔧 Please check the deployment environment and package installation.")
     st.stop()
 
+# ================= SUBSCRIPTION AUTHENTICATION =================
+# Import authentication helper for Pro tier management
+try:
+    from auth_helper import get_auth
+    auth = get_auth()
+except ImportError:
+    # Fallback if auth_helper not available - all features free
+    class FallbackAuth:
+        def is_pro(self): return True
+        def require_pro(self, message=""): return True
+        def show_subscription_status(self): pass
+        def check_subscription(self): return {'tier': 'pro', 'status': 'active'}
+    auth = FallbackAuth()
+
 # Error monitoring removed - all features are free and open
 
 # ================= RATE LIMITING =================
@@ -4515,6 +4529,10 @@ if refresh_clicked:
     st.rerun()
 
 # Sidebar
+# ================= SUBSCRIPTION STATUS =================
+# Show subscription status at top of sidebar
+auth.show_subscription_status()
+
 # ================= Watchlist Management =================
 # ================= ADMIN ACCESS (HIDDEN UNLESS REQUESTED) =================
 # Only show admin interface if ?admin=true in URL for security
@@ -6826,27 +6844,12 @@ else:
 st.markdown("---")
 st.subheader("📔 Trade Journal")
 
-# Check tier access for trade journal
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
-
-if not tier_info['has_trade_journal']:
-    with st.expander("🔒 **Trade Journal** - Pro Trader Exclusive Feature", expanded=False):
-        st.info("""
-        **Unlock Trade Journal with Pro Trader:**
-        - Log every trade with entry/exit prices and reasoning
-        - Track win rate, R-multiples, and profit factor
-        - Analyze what works and what doesn't
-        - Export trade history to CSV
-        - Improve your trading through data-driven insights
-        - Email alerts for backtesting buy/sell signals
-        - TradingView script integration
-        - Try free for 5-7 days!
-        """)
-        if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_journal_trader", use_container_width=True):
-            st.session_state.selected_plan = 'pro_trader'
-            st.rerun()
-else:
+# Check Pro subscription for trade journal access
+if not auth.require_pro("Trade journal requires a Pro subscription to track and analyze your trades"):
+    st.stop()  # Show upgrade message and stop
+    
+# User has Pro access - show trade journal
+if True:
     # Calculate stats for overview
     workspace_id = st.session_state.get('workspace_id', 'anonymous')
     journal_stats = calculate_journal_stats(workspace_id)
