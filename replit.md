@@ -11,10 +11,12 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
-- **Removed all Stripe payment integration** - App is now completely free
-- **Removed subscription tiers** - All features accessible to everyone
+- **Added RevenueCat authentication system** - Ready for subscription payments when enabled
+- **FREE_FOR_ALL_MODE implemented** - Everyone gets Pro tier free until payments enabled
+- **Authentication infrastructure complete** - JWT tokens, entitlements API, app token bridge
+- **Integrated auth into Streamlit** - Pro feature checks ready (trade journal, alerts, email)
+- **Marketing site ready** - Pricing displayed, launch flow configured
 - **Reduced dependencies** from 11 to 10 packages (removed stripe)
-- **Optimized for deployment** - Cleaner codebase, smaller package size
 
 ## System Architecture
 
@@ -58,6 +60,31 @@ Preferred communication style: Simple, everyday language.
 - **Health Endpoint**: Implements `/health` query parameter check returning JSON status without database dependencies
 - **Environment Configuration**: OS environment variables for sensitive configuration (database credentials, API keys)
 - **Stateless Design**: Application designed for horizontal scaling in autoscale environments
+
+### Authentication & Subscription Architecture
+- **RevenueCat Integration**: Subscription management via RevenueCat SDK
+  - Monthly subscription: $4.99/month
+  - Annual subscription: $39.99/year (33% savings)
+  - Entitlement: "pro" grants access to all premium features
+- **FREE_FOR_ALL_MODE**: Environment variable (default: true) grants everyone Pro access during development
+- **JWT Authentication**: Token-based authentication for secure API communication
+  - Marketing site generates JWT tokens via `/api/app-token`
+  - Tokens include user ID, email, and tier information
+  - 30-minute expiration for security
+- **Entitlements API**: `/api/entitlements` endpoint returns user subscription status
+  - Checks RevenueCat for active subscriptions
+  - Falls back to free tier on errors
+  - Returns: `{tier: "free"|"pro", status: "active"|"expired"}`
+- **Streamlit Integration**: `auth_helper.py` module handles subscription checks
+  - Reads token from URL query parameters
+  - Calls entitlements API to verify subscription
+  - Protects premium features (trade journal, alerts, email, Slack)
+  - Shows upgrade prompts for free tier users
+- **Launch Flow**: Marketing site → Streamlit app with token parameter
+  - User clicks "Get Started" or "Upgrade to Pro"
+  - Marketing site redirects to: `streamlit-app.replit.app?token=xyz`
+  - Streamlit reads token and checks subscription
+  - Shows/hides features based on tier
 
 ## External Dependencies
 
