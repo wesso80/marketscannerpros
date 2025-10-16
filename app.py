@@ -5891,6 +5891,10 @@ if run_clicked:
         forex_syms = [s.upper() for s in selected_forex] if scan_forex else []
         commodity_syms = [s.upper() for s in selected_commodities] if scan_commodities else []
         
+        # DEBUG: Show what we're getting
+        st.write(f"DEBUG: scan_forex={scan_forex}, selected_forex={selected_forex}, forex_syms={forex_syms}")
+        st.write(f"DEBUG: scan_commodities={scan_commodities}, selected_commodities count={len(selected_commodities)}, commodity_syms count={len(commodity_syms)}")
+        
         # Check if at least one market is selected
         total_symbols = len(eq_syms) + len(cx_syms) + len(forex_syms) + len(commodity_syms)
         
