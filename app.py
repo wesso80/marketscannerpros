@@ -4463,14 +4463,15 @@ if 'saved_watchlist' not in st.session_state:
     st.session_state.saved_watchlist = []
 
 # Market selection toggles
-col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 2])
+col_toggle1, col_toggle2, col_toggle3, col_toggle4 = st.columns([1, 1, 1, 1])
 with col_toggle1:
     scan_equities = st.checkbox("📈 Scan Equities", value=True, key="scan_equities_toggle")
 with col_toggle2:
     scan_crypto = st.checkbox("₿ Scan Crypto", value=True, key="scan_crypto_toggle")
 with col_toggle3:
-    if not scan_equities and not scan_crypto:
-        st.warning("⚠️ Please select at least one market to scan")
+    scan_forex = st.checkbox("💱 Scan Forex", value=False, key="scan_forex_toggle")
+with col_toggle4:
+    scan_commodities = st.checkbox("🛢️ Scan Commodities", value=False, key="scan_commodities_toggle")
 
 c1, c2, c3 = st.columns([1,1,1])
 run_clicked = c1.button("🔎 Run Scanner", width='stretch')
@@ -5569,13 +5570,9 @@ COMMODITIES = [
     "LBS=F",   # Lumber
 ]
 
-use_commodities = st.sidebar.checkbox("📊 Scan Commodities", value=False, key="commodities_scan")
-
-if use_commodities:
-    selected_commodities = COMMODITIES
-    st.sidebar.success(f"✅ {len(COMMODITIES)} commodities selected!")
-else:
-    selected_commodities = []
+# Commodities are always selected (controlled by top checkbox)
+selected_commodities = COMMODITIES
+st.sidebar.info(f"📊 {len(COMMODITIES)} commodities available")
 
 # Show current symbol count for all users
 eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
@@ -5884,9 +5881,9 @@ if run_clicked:
     cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
     cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
     
-    # Forex and commodities work independently
-    forex_syms = [s.upper() for s in selected_forex]
-    commodity_syms = [s.upper() for s in selected_commodities]
+    # Forex and commodities controlled by their checkboxes
+    forex_syms = [s.upper() for s in selected_forex] if scan_forex else []
+    commodity_syms = [s.upper() for s in selected_commodities] if scan_commodities else []
     
     # Check if at least one market is selected
     total_symbols = len(eq_syms) + len(cx_syms) + len(forex_syms) + len(commodity_syms)
@@ -5904,8 +5901,8 @@ if run_clicked:
                 st.session_state.eq_results = pd.DataFrame()
                 st.session_state.eq_errors = pd.DataFrame()
             
-            # Scan forex markets (independent of equity toggle)
-            if forex_syms:
+            # Scan forex markets (controlled by scan_forex checkbox)
+            if scan_forex and forex_syms:
                 st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
                     forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
                 )
@@ -5913,8 +5910,8 @@ if run_clicked:
                 st.session_state.forex_results = pd.DataFrame()
                 st.session_state.forex_errors = pd.DataFrame()
             
-            # Scan commodities markets (independent of equity toggle)
-            if commodity_syms:
+            # Scan commodities markets (controlled by scan_commodities checkbox)
+            if scan_commodities and commodity_syms:
                 st.session_state.commodity_results, st.session_state.commodity_errors = scan_universe(
                     commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol
                 )
@@ -6176,7 +6173,7 @@ if not ios_issue_detected and not st.session_state.forex_results.empty:
         mime="text/csv"
     )
 elif not ios_issue_detected:
-    st.info("No forex results to display. Select forex pairs from the sidebar and click 'Run Scanner'.")
+    st.info("No forex results to display. Enable '💱 Scan Forex' checkbox above, select pairs from the sidebar, and click 'Run Scanner'.")
 
 # Close forex card
 st.markdown("</div>", unsafe_allow_html=True)
@@ -6226,7 +6223,7 @@ if not ios_issue_detected and not st.session_state.commodity_results.empty:
         mime="text/csv"
     )
 elif not ios_issue_detected:
-    st.info("No commodities results to display. Enable 'Scan Commodities' from the sidebar and click 'Run Scanner'.")
+    st.info("No commodities results to display. Enable '🛢️ Scan Commodities' checkbox above and click 'Run Scanner'.")
 
 # Close commodities card
 st.markdown("</div>", unsafe_allow_html=True)
