@@ -1,0 +1,83 @@
+:root { color-scheme: dark; }
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+a { color: #34d399; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 1rem; width: 100%; box-sizing: border-box; }
+@media (min-width: 768px) {
+  .container { padding: 1.25rem; }
+}
+
+/* Desktop nav styling - only applies at md breakpoint and above */
+@media (min-width: 768px) {
+  .nav { display: flex; gap: 1rem; opacity: .9; font-size: .95rem; }
+  nav a { margin-right: 1.5rem; }
+  nav a:last-child { margin-right: 0; }
+}
+.header { border-bottom: 1px solid #27272a; overflow: hidden; width: 100%; }
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: .7rem .95rem;
+  border-radius: .8rem;
+  background: #22c55e;         /* emerald */
+  color: #0a0a0a;               /* near black */
+  font-weight: 700;
+  text-decoration: none;
+}
+.btn:hover { filter: brightness(1.05); }
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, .35); /* focus ring */
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #3f3f46;
+  color: #e5e5e5;
+  padding: .5rem .8rem;
+  border-radius: .5rem;
+}
+.btn-outline:hover { filter: brightness(1.05); }
+.btn-outline:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(63, 63, 70, .35);
+}
+
+/* Cookie banner */
+.cookie {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 50;
+  background: rgba(24,24,27,.98);
+  color: #e5e5e5;
+  border-top: 1px solid #27272a;
+}
+.cookie-row { display: flex; gap: 1rem; align-items: flex-start; padding-block: 1rem; }
+.cookie-text { flex: 1; line-height: 1.55; }
+
+/* Smooth anchor scroll for ToC links */
+html { scroll-behavior: smooth; }
+
+/* --- Dark baseline override (appended by script) --- */
+:root { color-scheme: dark; }
+html, body { background-color: #0a0a0a; color: #e5e5e5; }
+.header, .nav, .container { color: inherit; background: transparent; }
+a { color: #a7f3d0; }                  /* emerald-200ish for links */
+a:hover { color: #6ee7b7; }            /* emerald-300ish */
