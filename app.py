@@ -5872,61 +5872,62 @@ if run_clicked:
     if not allowed:
         st.error(f"🚫 {message}")
         st.info("Please wait a moment before scanning again. Upgrade to Pro for higher limits!")
-    # Get symbols from inputs (merge text area + selected from dropdown)
-    eq_syms_from_text = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
-    eq_syms_from_list = [s.strip().upper() for s in selected_eq_from_list] if scan_equities else []
-    eq_syms = list(set(eq_syms_from_text + eq_syms_from_list))  # Combine and remove duplicates
-    
-    cx_syms_from_text = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
-    cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
-    cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
-    
-    # Forex and commodities controlled by their checkboxes
-    forex_syms = [s.upper() for s in selected_forex] if scan_forex else []
-    commodity_syms = [s.upper() for s in selected_commodities] if scan_commodities else []
-    
-    # Check if at least one market is selected
-    total_symbols = len(eq_syms) + len(cx_syms) + len(forex_syms) + len(commodity_syms)
-    
-    if total_symbols == 0:
-        st.error("⚠️ Please select at least one symbol to scan (Equities, Crypto, Forex, or Commodities)")
     else:
-        with st.spinner("Scanning markets..."):
-            # Scan equity markets only
-            if scan_equities and eq_syms:
-                st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
-                    eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
-                )
-            else:
-                st.session_state.eq_results = pd.DataFrame()
-                st.session_state.eq_errors = pd.DataFrame()
-            
-            # Scan forex markets (controlled by scan_forex checkbox)
-            if scan_forex and forex_syms:
-                st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
-                    forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
-                )
-            else:
-                st.session_state.forex_results = pd.DataFrame()
-                st.session_state.forex_errors = pd.DataFrame()
-            
-            # Scan commodities markets (controlled by scan_commodities checkbox)
-            if scan_commodities and commodity_syms:
-                st.session_state.commodity_results, st.session_state.commodity_errors = scan_universe(
-                    commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol
-                )
-            else:
-                st.session_state.commodity_results = pd.DataFrame()
-                st.session_state.commodity_errors = pd.DataFrame()
-            
-            # Scan crypto markets (only if toggle is enabled)
-            if scan_crypto and cx_syms:
-                st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
-                    cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
-                )
-            else:
-                st.session_state.cx_results = pd.DataFrame()
-                st.session_state.cx_errors = pd.DataFrame()
+        # Get symbols from inputs (merge text area + selected from dropdown)
+        eq_syms_from_text = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
+        eq_syms_from_list = [s.strip().upper() for s in selected_eq_from_list] if scan_equities else []
+        eq_syms = list(set(eq_syms_from_text + eq_syms_from_list))  # Combine and remove duplicates
+        
+        cx_syms_from_text = [s.strip().upper() for s in cx_input.splitlines() if s.strip()] if scan_crypto else []
+        cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
+        cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
+        
+        # Forex and commodities controlled by their checkboxes
+        forex_syms = [s.upper() for s in selected_forex] if scan_forex else []
+        commodity_syms = [s.upper() for s in selected_commodities] if scan_commodities else []
+        
+        # Check if at least one market is selected
+        total_symbols = len(eq_syms) + len(cx_syms) + len(forex_syms) + len(commodity_syms)
+        
+        if total_symbols == 0:
+            st.error("⚠️ Please select at least one symbol to scan (Equities, Crypto, Forex, or Commodities)")
+        else:
+            with st.spinner("Scanning markets..."):
+                # Scan equity markets only
+                if scan_equities and eq_syms:
+                    st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
+                        eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                    )
+                else:
+                    st.session_state.eq_results = pd.DataFrame()
+                    st.session_state.eq_errors = pd.DataFrame()
+                
+                # Scan forex markets (controlled by scan_forex checkbox)
+                if scan_forex and forex_syms:
+                    st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
+                        forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                    )
+                else:
+                    st.session_state.forex_results = pd.DataFrame()
+                    st.session_state.forex_errors = pd.DataFrame()
+                
+                # Scan commodities markets (controlled by scan_commodities checkbox)
+                if scan_commodities and commodity_syms:
+                    st.session_state.commodity_results, st.session_state.commodity_errors = scan_universe(
+                        commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                    )
+                else:
+                    st.session_state.commodity_results = pd.DataFrame()
+                    st.session_state.commodity_errors = pd.DataFrame()
+                
+                # Scan crypto markets (only if toggle is enabled)
+                if scan_crypto and cx_syms:
+                    st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
+                        cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
+                    )
+                else:
+                    st.session_state.cx_results = pd.DataFrame()
+                    st.session_state.cx_errors = pd.DataFrame()
     
     # Send email notifications if enabled
     if send_email_summary_toggle or send_email_toggle:
