@@ -2537,28 +2537,36 @@ def mark_notification_read(notification_id: int, workspace_id: str, user_email: 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
     """Send email via Resend connector - direct integration"""
     try:
-        # Use Replit's Resend connector to get credentials
-        hostname = os.getenv('REPLIT_CONNECTORS_HOSTNAME')
-        x_replit_token = os.getenv('REPL_IDENTITY')
+        api_key = None
+        from_email = 'onboarding@resend.dev'
         
-        if hostname and x_replit_token:
-            # Fetch Resend credentials from connector
-            connector_response = requests.get(
-                f'https://{hostname}/api/v2/connection?include_secrets=true&connector_names=resend',
-                headers={
-                    'Accept': 'application/json',
-                    'X_REPLIT_TOKEN': f'repl {x_replit_token}'
-                },
-                timeout=10
-            )
+        # First, try to get API key from Secrets (user-added)
+        api_key = os.getenv('RESEND_API_KEY')
+        
+        # If not in secrets, try Resend connector
+        if not api_key:
+            hostname = os.getenv('REPLIT_CONNECTORS_HOSTNAME')
+            x_replit_token = os.getenv('REPL_IDENTITY')
             
-            if connector_response.status_code == 200:
-                connector_data = connector_response.json()
-                resend_settings = connector_data.get('items', [{}])[0].get('settings', {})
-                api_key = resend_settings.get('api_key')
-                from_email = resend_settings.get('from_email', 'onboarding@resend.dev')
+            if hostname and x_replit_token:
+                # Fetch Resend credentials from connector
+                connector_response = requests.get(
+                    f'https://{hostname}/api/v2/connection?include_secrets=true&connector_names=resend',
+                    headers={
+                        'Accept': 'application/json',
+                        'X_REPLIT_TOKEN': f'repl {x_replit_token}'
+                    },
+                    timeout=10
+                )
                 
-                if api_key:
+                if connector_response.status_code == 200:
+                    connector_data = connector_response.json()
+                    resend_settings = connector_data.get('items', [{}])[0].get('settings', {})
+                    api_key = resend_settings.get('api_key')
+                    from_email = resend_settings.get('from_email', 'onboarding@resend.dev')
+        
+        # If we have an API key from either source, send the email
+        if api_key:
                     # Send email directly using Resend API
                     html_body = f"""
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
