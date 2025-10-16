@@ -4468,14 +4468,12 @@ if 'saved_watchlist' not in st.session_state:
     st.session_state.saved_watchlist = []
 
 # Market selection toggles
-col_toggle1, col_toggle2, col_toggle3, col_toggle4 = st.columns([1, 1, 1, 1])
+col_toggle1, col_toggle2, col_toggle3 = st.columns([1, 1, 1])
 with col_toggle1:
     scan_equities = st.checkbox("📈 Scan Equities", value=True, key="scan_equities_toggle")
 with col_toggle2:
     scan_crypto = st.checkbox("₿ Scan Crypto", value=True, key="scan_crypto_toggle")
 with col_toggle3:
-    scan_forex = st.checkbox("💱 Scan Forex", value=False, key="scan_forex_toggle")
-with col_toggle4:
     scan_commodities = st.checkbox("🛢️ Scan Commodities", value=False, key="scan_commodities_toggle")
 
 c1, c2, c3 = st.columns([1,1,1])
@@ -5522,35 +5520,6 @@ else:
 cx_input = st.sidebar.text_area("Enter symbols (one per line):",
     "\n".join(crypto_symbols), height=140)
 
-st.sidebar.header("💱 Forex Pairs")
-
-# Major Forex Pairs
-MAJOR_FOREX = [
-    "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "AUDUSD=X", "USDCAD=X", "NZDUSD=X"
-]
-
-# Minor & Exotic Forex Pairs
-MINOR_FOREX = [
-    "EURGBP=X", "EURJPY=X", "EURCHF=X", "GBPJPY=X", "GBPCHF=X", "AUDJPY=X", "NZDJPY=X",
-    "EURAUD=X", "EURNZD=X", "EURCAD=X", "GBPAUD=X", "GBPNZD=X", "GBPCAD=X", "AUDNZD=X",
-    "AUDCAD=X", "AUDCHF=X", "NZDCAD=X", "NZDCHF=X", "CADCHF=X", "CADJPY=X"
-]
-
-forex_option = st.sidebar.radio(
-    "Forex Scan Options:",
-    ["None", "Major Pairs (7)", "All Pairs (27)"],
-    key="forex_scan_option"
-)
-
-if forex_option == "Major Pairs (7)":
-    selected_forex = MAJOR_FOREX
-    st.sidebar.success(f"✅ {len(MAJOR_FOREX)} major forex pairs selected!")
-elif forex_option == "All Pairs (27)":
-    selected_forex = MAJOR_FOREX + MINOR_FOREX
-    st.sidebar.success(f"✅ {len(MAJOR_FOREX + MINOR_FOREX)} forex pairs selected!")
-else:
-    selected_forex = []
-
 st.sidebar.header("🛢️ Commodities")
 
 # Commodities list
@@ -5584,15 +5553,13 @@ eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
 cx_text_count = len([s.strip() for s in cx_input.splitlines() if s.strip()])
 eq_dropdown_count = len(selected_eq_from_list)
 cx_dropdown_count = len(selected_cx_from_list)
-forex_count = len(selected_forex)
 commodities_count = len(selected_commodities)
 
 # Total unique symbols (account for potential duplicates)
 all_eq = set([s.strip().upper() for s in eq_input.splitlines() if s.strip()] + [s.upper() for s in selected_eq_from_list])
 all_cx = set([s.strip().upper() for s in cx_input.splitlines() if s.strip()] + [s.upper() for s in selected_cx_from_list])
-all_forex = set([s.upper() for s in selected_forex])
 all_commodities = set([s.upper() for s in selected_commodities])
-total_count = len(all_eq) + len(all_cx) + len(all_forex) + len(all_commodities)
+total_count = len(all_eq) + len(all_cx) + len(all_commodities)
 
 if total_count > 0:
     st.sidebar.info(f"📊 {total_count} symbols ready to scan")
@@ -5887,19 +5854,14 @@ if run_clicked:
         cx_syms_from_list = [s.strip().upper() for s in selected_cx_from_list] if scan_crypto else []
         cx_syms = list(set(cx_syms_from_text + cx_syms_from_list))  # Combine and remove duplicates
         
-        # Forex and commodities controlled by their checkboxes
-        forex_syms = [s.upper() for s in selected_forex] if scan_forex else []
+        # Commodities controlled by checkbox
         commodity_syms = [s.upper() for s in selected_commodities] if scan_commodities else []
         
-        # DEBUG: Show what we're getting
-        st.write(f"DEBUG: scan_forex={scan_forex}, selected_forex={selected_forex}, forex_syms={forex_syms}")
-        st.write(f"DEBUG: scan_commodities={scan_commodities}, selected_commodities count={len(selected_commodities)}, commodity_syms count={len(commodity_syms)}")
-        
         # Check if at least one market is selected
-        total_symbols = len(eq_syms) + len(cx_syms) + len(forex_syms) + len(commodity_syms)
+        total_symbols = len(eq_syms) + len(cx_syms) + len(commodity_syms)
         
         if total_symbols == 0:
-            st.error("⚠️ Please select at least one symbol to scan (Equities, Crypto, Forex, or Commodities)")
+            st.error("⚠️ Please select at least one symbol to scan (Equities, Crypto, or Commodities)")
         else:
             with st.spinner("Scanning markets..."):
                 # Scan equity markets only
@@ -5910,18 +5872,6 @@ if run_clicked:
                 else:
                     st.session_state.eq_results = pd.DataFrame()
                     st.session_state.eq_errors = pd.DataFrame()
-                
-                # Scan forex markets (controlled by scan_forex checkbox)
-                if scan_forex and forex_syms:
-                    st.info(f"🔍 Scanning {len(forex_syms)} forex pairs: {', '.join(forex_syms[:3])}...")
-                    st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
-                        forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
-                    )
-                else:
-                    if scan_forex and not forex_syms:
-                        st.warning(f"⚠️ Forex checkbox enabled but no pairs selected")
-                    st.session_state.forex_results = pd.DataFrame()
-                    st.session_state.forex_errors = pd.DataFrame()
                 
                 # Scan commodities markets (controlled by scan_commodities checkbox)
                 if scan_commodities and commodity_syms:
@@ -5945,7 +5895,6 @@ if run_clicked:
     if send_email_summary_toggle or send_email_toggle:
         combined_results = pd.concat([
             st.session_state.eq_results, 
-            st.session_state.forex_results,
             st.session_state.commodity_results,
             st.session_state.cx_results
         ], ignore_index=True)
@@ -6038,10 +5987,7 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('cx_errors', pd.DataFrame())
 )
 
-# Initialize forex and commodity results if not present
-if 'forex_results' not in st.session_state:
-    st.session_state.forex_results = pd.DataFrame()
-    st.session_state.forex_errors = pd.DataFrame()
+# Initialize commodity results if not present
 if 'commodity_results' not in st.session_state:
     st.session_state.commodity_results = pd.DataFrame()
     st.session_state.commodity_errors = pd.DataFrame()
@@ -6147,56 +6093,6 @@ if not ios_issue_detected and not st.session_state.cx_errors.empty:
         st.dataframe(st.session_state.cx_errors, width='stretch')
         st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
 
-# Forex Markets Section with Professional Cards
-st.markdown("""
-<div class="pro-card">
-    <h3>💱 Forex Markets</h3>
-""", unsafe_allow_html=True)
-
-if not ios_issue_detected and not st.session_state.forex_results.empty:
-    # Show info about display limit
-    total_forex_scanned = len(st.session_state.forex_results)
-    if total_forex_scanned > st.session_state.topk:
-        st.info(f"📊 Showing top {st.session_state.topk} of {total_forex_scanned} scanned forex pairs. Download CSV for all results. Adjust 'Results to Display' above to show more.")
-    
-    # Limit display to top K
-    display_forex = st.session_state.forex_results.head(st.session_state.topk)
-    
-    # Enhanced styling for direction column
-    def highlight_direction(val):
-        if val == 'Bullish':
-            return 'background-color: #10b981; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        elif val == 'Bearish':
-            return 'background-color: #ef4444; color: white; font-weight: bold; border-radius: 6px; padding: 0.25rem 0.5rem;'
-        return ''
-    
-    # Apply professional styling to direction column
-    if 'direction' in display_forex.columns:
-        styled_forex = display_forex.style.applymap(highlight_direction, subset=['direction'])
-        st.dataframe(styled_forex, width='stretch', use_container_width=True)
-    else:
-        st.dataframe(display_forex, width='stretch', use_container_width=True)
-    
-    # CSV download for forex results
-    csv_forex = to_csv_download(st.session_state.forex_results, "forex_scan.csv")
-    st.download_button(
-        label="📥 Download Forex Results (CSV)",
-        data=csv_forex,
-        file_name=f"forex_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
-elif not ios_issue_detected:
-    st.info("No forex results to display. Enable '💱 Scan Forex' checkbox above, select pairs from the sidebar, and click 'Run Scanner'.")
-
-# Close forex card
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Forex errors (only show if not iOS WebView issue)
-if not ios_issue_detected and not st.session_state.forex_errors.empty:
-    with st.expander("⚠️ Forex Scan Errors", expanded=False):
-        st.dataframe(st.session_state.forex_errors, width='stretch')
-        st.caption("💡 **Tip**: Individual symbol errors are normal. If ALL symbols fail, this may be a network connectivity issue.")
-
 # Commodities Markets Section with Professional Cards
 st.markdown("""
 <div class="pro-card">
@@ -6249,10 +6145,9 @@ if not ios_issue_detected and not st.session_state.commodity_errors.empty:
 
 # Combined CSV download
 if (not st.session_state.eq_results.empty or not st.session_state.cx_results.empty or 
-    not st.session_state.forex_results.empty or not st.session_state.commodity_results.empty):
+    not st.session_state.commodity_results.empty):
     combined_results = pd.concat([
         st.session_state.eq_results, 
-        st.session_state.forex_results,
         st.session_state.commodity_results,
         st.session_state.cx_results
     ], ignore_index=True)
