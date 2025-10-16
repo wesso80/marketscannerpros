@@ -4,7 +4,7 @@
 
 ### 1. Marketing Site Cleanup
 - ✅ Fixed confusing Hero messaging (removed "7-day trial" language)
-- ✅ Updated homepage pricing to clear Free/Pro structure  
+- ✅ Updated homepage pricing to clear Free/Pro structure ($4.99/month or $39.99/year)
 - ✅ Created new standalone pricing page with FAQ
 - ✅ Removed all old Stripe trial language
 
@@ -14,10 +14,23 @@
 - ✅ **App Token Bridge** (`app/api/app-token/route.ts`) - Generates tokens for Streamlit
 - ✅ **RevenueCat Integration** - API ready to check subscription status
 - ✅ **Pro Override System** - Env var for testing: `PRO_OVERRIDE_EMAILS`
+- ✅ **FREE MODE** - Everyone gets Pro by default (controlled by `FREE_FOR_ALL_MODE` env var)
 
 ### 3. Package Dependencies
 - ✅ Added `jose@5.2.0` for JWT handling
 - ✅ Added `nodemailer@6.9.8` for magic link emails
+
+## 🆓 IMPORTANT: Everything is FREE Until You Enable Payments
+
+**Current State:**
+- Everyone automatically gets Pro tier (free)
+- No payment processing is active
+- Marketing site shows pricing but doesn't charge
+
+**When Ready to Go Live:**
+1. Set `FREE_FOR_ALL_MODE=false` in Vercel environment variables
+2. Complete authentication setup below
+3. Enable payment processing
 
 ## 🚧 Still Needed
 

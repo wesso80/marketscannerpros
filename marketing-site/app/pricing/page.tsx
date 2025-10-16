@@ -23,6 +23,13 @@ export default function PricingPage() {
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
       <div className="mx-auto max-w-6xl px-4 py-16">
+        {/* Temporary Free Banner */}
+        <div className="mb-8 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-center">
+          <p className="text-emerald-400 font-medium">
+            🎉 Currently FREE for everyone while we finalize our platform. Enjoy Pro features at no cost!
+          </p>
+        </div>
+
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Simple, Transparent Pricing

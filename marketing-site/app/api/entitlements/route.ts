@@ -42,10 +42,24 @@ async function rcEntitlements(appUserId: string): Promise<Ent | null> {
 
 export async function GET(req: NextRequest) {
   try {
+    // ===== TEMPORARY: EVERYONE GETS PRO FOR FREE =====
+    // This keeps everything free until you're ready to enable payments
+    // Set FREE_FOR_ALL_MODE=false in env to disable
+    const freeForAll = process.env.FREE_FOR_ALL_MODE !== "false"; // defaults to true
+    if (freeForAll) {
+      return NextResponse.json({ 
+        tier: "pro", 
+        status: "active", 
+        source: "free_mode",
+        expiresAt: null 
+      });
+    }
+    // ===== END TEMPORARY FREE MODE =====
+
     const auth = req.headers.get("authorization") ?? "";
     const claims = await verifyBearer(auth);
 
-    // ===== TEMP PRO OVERRIDE (safe to remove later) =====
+    // ===== TEMP PRO OVERRIDE (for specific emails) =====
     const raw = process.env.PRO_OVERRIDE_EMAILS || "";
     const overrides = raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
     const claimEmail = String((claims?.email ?? claims?.userId) || "").toLowerCase();
