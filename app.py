@@ -2406,7 +2406,12 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
             df = get_ohlcv(sym, timeframe)
             if len(df) < min_bars_required(timeframe):
                 raise ValueError(f"Not enough history ({len(df)}) for {timeframe}")
-            if not is_crypto and dollar_volume(df) < min_vol:
+            
+            # Skip dollar volume check for forex (=X) and commodities (=F)
+            is_forex = sym.endswith("=X")
+            is_commodity = sym.endswith("=F")
+            
+            if not is_crypto and not is_forex and not is_commodity and dollar_volume(df) < min_vol:
                 raise ValueError(f"Below min dollar vol ({min_vol:,.0f})")
 
             f = compute_features(df).dropna()
