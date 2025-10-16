@@ -6004,31 +6004,15 @@ with st.expander("Show details", expanded=False):
     """)
 
 # ================= Price Alerts Management =================
+st.markdown("---")
 st.subheader("🚨 Price Alerts")
 
-# Check tier access for alerts
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
+# Check Pro subscription for alerts access
+if not auth.require_pro("Price alerts require a Pro subscription"):
+    st.stop()
 
-if tier_info['alert_limit'] == 0:
-    with st.expander("🔒 **Price Alerts** - Pro & Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Price Alerts with Pro or Pro Trader:**
-        - Get notified when stocks hit your target prices
-        - Unlimited alerts with both Pro and Pro Trader
-        - Never miss an entry or exit opportunity
-        - Try free for 5-7 days!
-        """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_alerts_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_alerts_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
-else:
+# User has Pro access - show alerts
+if True:
     # Auto-refresh toggle and controls
     col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
     with col1:
@@ -6379,32 +6363,8 @@ else:
 st.markdown("---")
 st.subheader("💼 Portfolio Tracking")
 
-# Check tier access for portfolio
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
-
-if tier_info['portfolio_limit'] == 3:
-    with st.expander("🔒 **Portfolio Tracking** - Pro & Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Enhanced Portfolio Tracking with Pro or Pro Trader:**
-        - Unlimited portfolio positions with both Pro and Pro Trader
-        - Real-time P&L tracking and performance analytics
-        - Visual allocation charts and historical performance
-        - Never lose track of your positions
-        - Try free for 5-7 days!
-        
-        (Free tier is limited to 3 positions)
-        """)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_portfolio_pro", use_container_width=True):
-                st.session_state.selected_plan = 'pro'
-                st.rerun()
-        with col2:
-            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_portfolio_trader", use_container_width=True):
-                st.session_state.selected_plan = 'pro_trader'
-                st.rerun()
-else:
+# Portfolio is FREE for everyone - no Pro check needed
+if True:
     # Portfolio overview
     col1, col2 = st.columns([2, 1])
 
@@ -6999,27 +6959,15 @@ if True:
         """)
 
 # ================= Backtesting Section =================
+st.markdown("---")
 st.subheader("🔬 Strategy Backtesting")
 
-# Check tier access for backtesting
-current_tier = st.session_state.user_tier
-tier_info = TIER_CONFIG[current_tier]
+# Check Pro subscription for backtesting access
+if not auth.require_pro("Strategy backtesting requires a Pro subscription"):
+    st.stop()
 
-if not tier_info['has_backtesting']:
-    with st.expander("🔒 **Strategy Backtesting** - Pro Trader Feature", expanded=False):
-        st.info("""
-        **Unlock Advanced Backtesting with Pro Trader:**
-        - Test trading strategies on historical data
-        - Get email alerts for every buy/sell signal
-        - Analyze performance metrics and win rates
-        - TradingView script integration
-        - Optimize your trading approach
-        - Get 5-7 day free trial!
-        """)
-        if st.button("✨ Upgrade to Pro Trader", key="upgrade_backtest"):
-            st.session_state.selected_plan = 'pro_trader'
-            st.rerun()
-else:
+# User has Pro access - show backtesting
+if True:
 
     # Backtest controls
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
