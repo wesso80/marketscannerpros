@@ -3047,10 +3047,22 @@ def init_trade_journal_table():
     execute_db_write(create_table_query)
     
     try:
-        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage'))")
+        # Drop old constraint and add new one with more trade types
+        execute_db_write("ALTER TABLE trade_journal DROP CONSTRAINT IF EXISTS trade_journal_trade_type_check")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot'")
+        execute_db_write("ALTER TABLE trade_journal DROP CONSTRAINT IF EXISTS trade_journal_trade_type_check")
+        execute_db_write("ALTER TABLE trade_journal ADD CONSTRAINT trade_journal_trade_type_check CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin'))")
+        
+        # Options-specific columns
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS option_type TEXT CHECK (option_type IN ('CALL', 'PUT', NULL))")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS premium_per_contract DECIMAL(12,4)")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS num_contracts INTEGER")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS contract_multiplier INTEGER DEFAULT 100")
+        
+        # Legacy fields
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS strike_price DECIMAL(12,4)")
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS expiration_date DATE")
-    except:
+    except Exception as e:
         pass
 
 def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price: float, 
