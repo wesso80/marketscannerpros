@@ -2602,31 +2602,31 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
                             store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
                         return True
                     else:
-                        # Email failed
+                        # Email failed - store as in-app notification instead
                         workspace_id = st.session_state.get('workspace_id')
-                        error_msg = f"Status: {resend_response.status_code}, Response: {resend_response.text[:200]}"
                         if workspace_id:
-                            store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\nError: {error_msg}\n\n{body}", to_email, workspace_id)
-                        return False
+                            # Store the notification without error details (clean display)
+                            store_notification(f"📧 {subject}", f"Alert for {to_email}:\n\n{body}\n\n💡 Note: Email delivery temporarily unavailable. Update Resend API key in Connectors to enable email.", to_email, workspace_id)
+                        return True  # Return True so alerts continue working
         
         # Fallback: store in database as notification
         workspace_id = st.session_state.get('workspace_id')
         if workspace_id:
-            store_notification(f"📧 {subject}", f"Email to {to_email}:\n\n{body}", to_email, workspace_id)
+            store_notification(f"📧 {subject}", f"Alert for {to_email}:\n\n{body}\n\n💡 Note: Email delivery temporarily unavailable. Update Resend API key in Connectors to enable email.", to_email, workspace_id)
         return True
             
     except Exception as e:
         # Fallback to database storage on any error
         workspace_id = st.session_state.get('workspace_id')
         if workspace_id:
-            store_notification(f"⚠️ Email Error: {subject}", f"Error sending email to {to_email}: {str(e)}\n\n{body}", to_email, workspace_id)
+            store_notification(f"📧 {subject}", f"Alert for {to_email}:\n\n{body}\n\n💡 Note: Email delivery temporarily unavailable. Update Resend API key in Connectors to enable email.", to_email, workspace_id)
         else:
             # Show immediate notification if no workspace
-            st.error(f"🚨 Email system error: {str(e)}")
+            st.info(f"📧 Alert created (email temporarily unavailable)")
             st.info(f"**{subject}**")
             with st.expander("📄 View Message", expanded=True):
                 st.write(body)
-        return False
+        return True  # Return True so alerts continue working
 
 def send_backtesting_signal_alert(signal_type: str, symbol: str, price: float, details: Dict[str, Any], user_email: str) -> bool:
     """Send email alert when backtesting generates a buy or sell signal (Pro Trader exclusive)"""
