@@ -3070,18 +3070,22 @@ def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price
                          strike_price: Optional[float] = None, expiration_date = None,
                          stop_loss: Optional[float] = None, 
                          take_profit: Optional[float] = None, setup_type: Optional[str] = None, 
-                         entry_reason: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
+                         entry_reason: Optional[str] = None, tags: Optional[List[str]] = None,
+                         option_type: Optional[str] = None, premium_per_contract: Optional[float] = None,
+                         num_contracts: Optional[int] = None, contract_multiplier: int = 100) -> bool:
     """Add new trade to journal"""
     try:
         query = """
         INSERT INTO trade_journal 
         (workspace_id, symbol, entry_date, entry_price, quantity, direction, trade_type,
-         strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+         strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags,
+         option_type, premium_per_contract, num_contracts, contract_multiplier, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
         RETURNING id
         """
         params = (workspace_id, symbol.upper(), entry_date, entry_price, quantity, 
-                 direction, trade_type, strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags)
+                 direction, trade_type, strike_price, expiration_date, stop_loss, take_profit, 
+                 setup_type, entry_reason, tags, option_type, premium_per_contract, num_contracts, contract_multiplier)
         result = execute_db_write_returning(query, params)
         return result is not None
     except Exception as e:
