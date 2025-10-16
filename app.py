@@ -3109,11 +3109,14 @@ def calculate_journal_stats(workspace_id: str) -> Dict[str, Any]:
         trades = get_trade_journal(workspace_id, active_only=False)
         if not trades:
             trades = []
+        
+        active_trades = [t for t in trades if t['is_active']]
         closed_trades = [t for t in trades if not t['is_active']]
+        total_trades = len(trades)
         
         if not closed_trades:
             return {
-                'total_trades': 0,
+                'total_trades': total_trades,
                 'winning_trades': 0,
                 'losing_trades': 0,
                 'win_rate': 0,
@@ -3124,16 +3127,15 @@ def calculate_journal_stats(workspace_id: str) -> Dict[str, Any]:
                 'profit_factor': 0,
                 'largest_win': 0,
                 'largest_loss': 0,
-                'active_trades': len([t for t in trades if t['is_active']])
+                'active_trades': len(active_trades)
             }
-        
-        total_trades = len(closed_trades)
         winning_trades = [t for t in closed_trades if float(t['pnl']) > 0]
         losing_trades = [t for t in closed_trades if float(t['pnl']) < 0]
         
         win_count = len(winning_trades)
         loss_count = len(losing_trades)
-        win_rate = (win_count / total_trades * 100) if total_trades > 0 else 0
+        closed_trades_count = len(closed_trades)
+        win_rate = (win_count / closed_trades_count * 100) if closed_trades_count > 0 else 0
         
         total_pnl = sum(float(t['pnl']) for t in closed_trades)
         avg_win = sum(float(t['pnl']) for t in winning_trades) / win_count if win_count > 0 else 0
@@ -3161,7 +3163,7 @@ def calculate_journal_stats(workspace_id: str) -> Dict[str, Any]:
             'profit_factor': profit_factor,
             'largest_win': largest_win,
             'largest_loss': largest_loss,
-            'active_trades': len([t for t in trades if t['is_active']])
+            'active_trades': len(active_trades)
         }
     except Exception as e:
         st.error(f"Failed to calculate stats: {e}")
