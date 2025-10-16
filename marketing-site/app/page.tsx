@@ -9,9 +9,10 @@ import ReferralBanner from "../components/ReferralBanner";
 import "./pricing/styles.css";
 
 export default function Home() {
-  // Get Streamlit URL - use production deployment
+  // Get Streamlit URL - use Replit deployment
   const getStreamlitUrl = () => {
-    return "https://app.marketscannerpros.app";
+    // When payments are enabled, this will add ?token=... parameter
+    return "https://market-scanner-pro.replit.app";
   };
 
   return (
