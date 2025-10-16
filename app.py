@@ -6699,27 +6699,60 @@ if True:
         with col1:
             journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
             direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
-            trade_type = st.selectbox("Trade Type:", ["Spot", "Leverage"], key="journal_trade_type")
+            trade_type = st.selectbox("Trade Type:", ["Spot", "Options", "Futures", "Margin"], key="journal_trade_type")
             entry_date = st.date_input("Entry Date:", key="journal_entry_date")
-            entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
-            quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
+            
+            # Show different fields based on trade type
+            if trade_type == "Options":
+                option_type = st.selectbox("Option Type:", ["CALL", "PUT"], key="journal_option_type")
+                entry_price = st.number_input("Premium per Contract:", min_value=0.01, step=0.01, key="journal_entry_price", 
+                                            help="Premium you paid per contract (e.g., $0.13)")
+                num_contracts = st.number_input("Number of Contracts:", min_value=1, step=1, key="journal_num_contracts",
+                                              help="How many option contracts (e.g., 100)")
+                contract_multiplier = st.number_input("Contract Multiplier:", min_value=1, value=100, step=1, key="journal_multiplier",
+                                                    help="Usually 100 for equity options")
+                quantity = num_contracts  # For compatibility
+            else:
+                entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
+                quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
+                option_type = None
+                num_contracts = None
+                contract_multiplier = 100
     
         with col2:
-            strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", help="For options trades only")
-            expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", help="For options trades only")
-            stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
+            if trade_type == "Options":
+                strike_price = st.number_input("Strike Price:", min_value=0.0, step=0.5, key="journal_strike", 
+                                              help="Strike price of the option")
+                expiration_date = st.date_input("Expiration Date:", value=None, key="journal_expiration", 
+                                               help="Option expiration date")
+            else:
+                strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", 
+                                              help="For options trades only")
+                expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", 
+                                               help="For options trades only")
+            
+            stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", 
+                                       help="Premium level for stop (options) or price for stock")
             take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
-            setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Other"], key="journal_setup")
+            setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Earnings", "Other"], key="journal_setup")
             tags_input = st.text_input("Tags (comma-separated):", placeholder="swing, earnings, technical", key="journal_tags")
     
         entry_reason = st.text_area("Entry Reason / Trade Plan:", placeholder="Why did you enter this trade? What's your thesis?", key="journal_entry_reason", height=100)
     
+        # Calculate position info
         if journal_symbol and entry_price > 0 and quantity > 0:
-            total_value = entry_price * quantity
-            risk_amount = None
-            if stop_loss and stop_loss > 0:
-                risk_per_share = abs(entry_price - stop_loss)
-                risk_amount = risk_per_share * quantity
+            if trade_type == "Options" and num_contracts:
+                total_value = entry_price * num_contracts * contract_multiplier
+                risk_amount = None
+                if stop_loss and stop_loss > 0:
+                    risk_per_contract = abs(entry_price - stop_loss)
+                    risk_amount = risk_per_contract * num_contracts * contract_multiplier
+            else:
+                total_value = entry_price * quantity
+                risk_amount = None
+                if stop_loss and stop_loss > 0:
+                    risk_per_share = abs(entry_price - stop_loss)
+                    risk_amount = risk_per_share * quantity
         
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -6728,7 +6761,7 @@ if True:
                 with col2:
                     st.info(f"Risk Amount: ${risk_amount:,.2f}")
                 with col3:
-                    risk_pct = (risk_amount / total_value) * 100
+                    risk_pct = (risk_amount / total_value) * 100 if total_value > 0 else 0
                     st.info(f"Risk %: {risk_pct:.2f}%")
         
             col1, col2, col3 = st.columns([1, 1, 1])
@@ -6745,17 +6778,24 @@ if True:
                         quantity=quantity,
                         direction=direction,
                         trade_type=trade_type,
-                        strike_price=strike_price if strike_price > 0 else None,
+                        strike_price=strike_price if strike_price and strike_price > 0 else None,
                         expiration_date=expiration_date if expiration_date else None,
-                        stop_loss=stop_loss if stop_loss > 0 else None,
-                        take_profit=take_profit if take_profit > 0 else None,
+                        stop_loss=stop_loss if stop_loss and stop_loss > 0 else None,
+                        take_profit=take_profit if take_profit and take_profit > 0 else None,
                         setup_type=setup,
                         entry_reason=entry_reason if entry_reason else None,
-                        tags=tags_list
+                        tags=tags_list,
+                        option_type=option_type,
+                        premium_per_contract=entry_price if trade_type == "Options" else None,
+                        num_contracts=num_contracts if trade_type == "Options" else None,
+                        contract_multiplier=contract_multiplier if trade_type == "Options" else 100
                     )
                 
                     if success:
-                        st.success(f"✅ Trade logged: {direction} {quantity} shares of {journal_symbol}")
+                        if trade_type == "Options":
+                            st.success(f"✅ Trade logged: {direction} {num_contracts} {option_type} contracts of {journal_symbol}")
+                        else:
+                            st.success(f"✅ Trade logged: {direction} {quantity} shares of {journal_symbol}")
                         st.rerun()
 
     with tab2:
