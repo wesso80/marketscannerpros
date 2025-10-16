@@ -2535,69 +2535,85 @@ def mark_notification_read(notification_id: int, workspace_id: str, user_email: 
         return False
 
 def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
-    """Send email via Resend API endpoint - works for ANY email address"""
+    """Send email via Resend connector - direct integration"""
     try:
-        # Resend email endpoint (verified domain: alerts@marketscannerpros.app)
-        email_endpoint = "https://marketscannerpros.app/api/alerts/send"
+        # Use Replit's Resend connector to get credentials
+        hostname = os.getenv('REPLIT_CONNECTORS_HOSTNAME')
+        x_replit_token = os.getenv('REPL_IDENTITY')
         
-        # Prepare email data
-        email_data = {
-            "to": to_email,
-            "subject": subject,
-            "html": f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 20px; color: white; border-radius: 8px 8px 0 0;">
-                    <h2 style="margin: 0; color: #10B981;">📈 Market Scanner Alert</h2>
-                </div>
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
-                    <h3 style="color: #0F172A; margin-top: 0;">{subject}</h3>
-                    <div style="white-space: pre-line; color: #374151; line-height: 1.6;">
-{body}
-                    </div>
-                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                        This alert was sent by MarketScanner Pro<br>
-                        <a href="https://marketscannerpros.app" style="color: #10B981;">Visit Dashboard</a> | 
-                        <a href="https://app.marketscannerpros.app" style="color: #10B981;">Open Scanner</a>
-                    </p>
-                </div>
-            </div>
-            """,
-            "text": f"{subject}\n\n{body}\n\n--\nMarketScanner Pro\nVisit: https://marketscannerpros.app"
-        }
-        
-        # Send email via Resend API endpoint with authentication
-        alerts_key = os.getenv("ALERTS_TEST_KEY")
-        headers = {"Content-Type": "application/json"}
-        if alerts_key:
-            headers["x-alerts-key"] = alerts_key
+        if hostname and x_replit_token:
+            # Fetch Resend credentials from connector
+            connector_response = requests.get(
+                f'https://{hostname}/api/v2/connection?include_secrets=true&connector_names=resend',
+                headers={
+                    'Accept': 'application/json',
+                    'X_REPLIT_TOKEN': f'repl {x_replit_token}'
+                },
+                timeout=10
+            )
             
-        response = requests.post(
-            email_endpoint,
-            json=email_data,
-            headers=headers,
-            timeout=10
-        )
+            if connector_response.status_code == 200:
+                connector_data = connector_response.json()
+                resend_settings = connector_data.get('items', [{}])[0].get('settings', {})
+                api_key = resend_settings.get('api_key')
+                from_email = resend_settings.get('from_email', 'onboarding@resend.dev')
+                
+                if api_key:
+                    # Send email directly using Resend API
+                    html_body = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 20px; color: white; border-radius: 8px 8px 0 0;">
+                            <h2 style="margin: 0; color: #10B981;">📈 Market Scanner Alert</h2>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;">
+                            <h3 style="color: #0F172A; margin-top: 0;">{subject}</h3>
+                            <div style="white-space: pre-line; color: #374151; line-height: 1.6;">
+{body}
+                            </div>
+                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                                This alert was sent by MarketScanner Pro<br>
+                                <a href="https://marketscannerpros.app" style="color: #10B981;">Visit Dashboard</a> | 
+                                <a href="https://app.marketscannerpros.app" style="color: #10B981;">Open Scanner</a>
+                            </p>
+                        </div>
+                    </div>
+                    """
+                    
+                    resend_response = requests.post(
+                        'https://api.resend.com/emails',
+                        headers={
+                            'Authorization': f'Bearer {api_key}',
+                            'Content-Type': 'application/json'
+                        },
+                        json={
+                            'from': from_email,
+                            'to': [to_email],
+                            'subject': subject,
+                            'html': html_body
+                        },
+                        timeout=10
+                    )
+                    
+                    if resend_response.status_code == 200:
+                        # Email sent successfully
+                        workspace_id = st.session_state.get('workspace_id')
+                        if workspace_id:
+                            store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
+                        return True
+                    else:
+                        # Email failed
+                        workspace_id = st.session_state.get('workspace_id')
+                        error_msg = f"Status: {resend_response.status_code}, Response: {resend_response.text[:200]}"
+                        if workspace_id:
+                            store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\nError: {error_msg}\n\n{body}", to_email, workspace_id)
+                        return False
         
-        if response.status_code == 200:
-            # Email sent successfully, also store in database for record keeping
-            workspace_id = st.session_state.get('workspace_id')
-            if workspace_id:
-                store_notification(subject, f"✅ Email sent to {to_email}\n\n{body}", to_email, workspace_id)
-            return True
-        else:
-            # Email failed, store in database as fallback with error details
-            workspace_id = st.session_state.get('workspace_id')
-            error_msg = f"Status: {response.status_code}, Response: {response.text[:200]}"
-            if workspace_id:
-                store_notification(f"⚠️ Email Failed: {subject}", f"Failed to send email to {to_email}\nError: {error_msg}\n\n{body}", to_email, workspace_id)
-            else:
-                # Show immediate notification if no workspace
-                st.error(f"🚨 Email delivery failed for {to_email}")
-                st.info(f"**{subject}**")
-                with st.expander("📄 View Message", expanded=True):
-                    st.write(body)
-            return False
+        # Fallback: store in database as notification
+        workspace_id = st.session_state.get('workspace_id')
+        if workspace_id:
+            store_notification(f"📧 {subject}", f"Email to {to_email}:\n\n{body}", to_email, workspace_id)
+        return True
             
     except Exception as e:
         # Fallback to database storage on any error
