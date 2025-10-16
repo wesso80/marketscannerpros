@@ -6817,16 +6817,35 @@ if True:
     
         if trades:
             for i, trade in enumerate(trades):
-                with st.expander(f"{'🟢' if trade['is_active'] else '⚫'} {trade['symbol']} - {trade['direction']} ({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})", expanded=False):
+                # Build title with options info if available
+                title_parts = [trade['symbol'], '-', trade['direction']]
+                if trade.get('trade_type') == 'Options' and trade.get('option_type'):
+                    title_parts.extend([f"{trade.get('option_type')}", f"@${float(trade.get('strike_price', 0)):.0f}"])
+                title_parts.append(f"({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})")
+                title = f"{'🟢' if trade['is_active'] else '⚫'} {' '.join(str(p) for p in title_parts)}"
+                
+                with st.expander(title, expanded=False):
                     col1, col2, col3 = st.columns(3)
                 
                     with col1:
-                        st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
-                        st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
-                        if trade.get('strike_price'):
-                            st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
-                        if trade.get('expiration_date'):
-                            st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
+                        # Show appropriate fields based on trade type
+                        if trade.get('trade_type') == 'Options':
+                            st.write(f"**Option Type:** {trade.get('option_type', 'N/A')}")
+                            st.write(f"**Premium/Contract:** ${float(trade['entry_price']):.2f}")
+                            st.write(f"**Contracts:** {trade.get('num_contracts', 'N/A')}")
+                            st.write(f"**Multiplier:** {trade.get('contract_multiplier', 100)}")
+                            if trade.get('strike_price'):
+                                st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
+                            if trade.get('expiration_date'):
+                                st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
+                        else:
+                            st.write(f"**Entry Price:** ${float(trade['entry_price']):.2f}")
+                            st.write(f"**Quantity:** {float(trade['quantity']):.4f}")
+                            if trade.get('strike_price'):
+                                st.write(f"**Strike Price:** ${float(trade['strike_price']):.2f}")
+                            if trade.get('expiration_date'):
+                                st.write(f"**Expiration:** {pd.to_datetime(trade['expiration_date']).strftime('%Y-%m-%d')}")
+                        
                         if trade['stop_loss']:
                             st.write(f"**Stop Loss:** ${float(trade['stop_loss']):.2f}")
                         if trade['take_profit']:
@@ -6834,7 +6853,10 @@ if True:
                 
                     with col2:
                         if not trade['is_active']:
-                            st.write(f"**Exit Price:** ${float(trade['exit_price']):.2f}")
+                            if trade.get('trade_type') == 'Options':
+                                st.write(f"**Exit Premium:** ${float(trade['exit_price']):.2f}")
+                            else:
+                                st.write(f"**Exit Price:** ${float(trade['exit_price']):.2f}")
                             pnl = float(trade['pnl'])
                             pnl_pct = float(trade['pnl_pct'])
                             pnl_emoji = "🟢" if pnl >= 0 else "🔴"
@@ -6875,7 +6897,10 @@ if True:
                         if st.session_state.get(f'closing_trade_{i}', False):
                             st.write("**Close Trade:**")
                             exit_date = st.date_input("Exit Date:", key=f"exit_date_{i}")
-                            exit_price = st.number_input("Exit Price:", min_value=0.01, step=0.01, key=f"exit_price_{i}")
+                            
+                            # Label changes based on trade type
+                            price_label = "Exit Premium:" if trade.get('trade_type') == 'Options' else "Exit Price:"
+                            exit_price = st.number_input(price_label, min_value=0.01, step=0.01, key=f"exit_price_{i}")
                             exit_reason = st.text_input("Exit Reason:", key=f"exit_reason_{i}")
                             mistakes = st.text_area("Mistakes / Lessons Learned:", key=f"mistakes_{i}")
                         
