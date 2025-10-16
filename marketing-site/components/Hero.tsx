@@ -16,9 +16,9 @@ export default function Hero() {
         {/* Text second on mobile, left on desktop */}
         <div className="w-full md:order-1">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
-            <span>Try Pro free for 7 days</span>
+            <span>Free to Use</span>
             <span className="text-neutral-500">•</span>
-            <span>Cancel anytime</span>
+            <span>Upgrade for Pro Features</span>
           </div>
 
           <h1 className="mt-2 text-2xl font-bold leading-tight md:text-4xl lg:text-5xl">
@@ -35,18 +35,18 @@ export default function Hero() {
               href="/launch"
               className="rounded-xl bg-emerald-500 px-4 py-2.5 text-sm md:px-5 md:py-3 md:text-base font-medium text-neutral-900 hover:bg-emerald-400"
             >
-              Start Free Now
+              Get Started Free
             </Link>
             <Link
-              href="/guide"
+              href="/pricing"
               className="rounded-xl border border-neutral-700 px-4 py-2.5 text-sm md:px-5 md:py-3 md:text-base font-medium hover:bg-neutral-900/50"
             >
-              See How It Works
+              View Pricing
             </Link>
           </div>
 
           <p className="mt-3 text-xs text-neutral-400">
-            No ads • Cancel anytime • Educational only — not financial advice
+            No credit card required • Educational only — not financial advice
           </p>
         </div>
 

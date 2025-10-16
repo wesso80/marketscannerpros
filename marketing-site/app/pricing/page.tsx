@@ -1,77 +1,162 @@
 'use client';
+import { useState } from "react";
 import "./styles.css";
 
 export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
   
   const getStreamlitUrl = () => {
-    if (process.env.NEXT_PUBLIC_STREAMLIT_URL) {
-      return process.env.NEXT_PUBLIC_STREAMLIT_URL;
-    }
-    if (typeof window !== 'undefined') {
-      const currentUrl = window.location.href;
-      if (currentUrl.includes('localhost') || currentUrl.includes('127.0.0.1')) {
-        return 'http://localhost:5000';
-      }
-    }
-    return 'https://app.marketscannerpros.app';
+    return process.env.NEXT_PUBLIC_STREAMLIT_URL || 'https://app.marketscannerpros.app';
+  };
+
+  const handleFreeLaunch = () => {
+    window.open(getStreamlitUrl(), '_blank');
+  };
+
+  const handleProCheckout = async () => {
+    setLoading('pro');
+    // TODO: This will call the checkout API endpoint once authentication is set up
+    // For now, redirect to login/signup
+    window.location.href = '/auth/login?plan=pro';
   };
 
   return (
-    <main>
-      <h1>🎉 Free for Everyone!</h1>
-      <p style={{ fontSize: '1.2rem', marginTop: '1rem', marginBottom: '2rem' }}>
-        All Pro Trader features are now <strong>completely free</strong> while we improve our platform.
-      </p>
-
-      <div className="plans">
-        {/* Single Free Plan with All Features */}
-        <div className="plan" style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h2>Pro Trader - FREE</h2>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>$0</p>
-          <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1.5rem' }}>All features unlocked. No credit card required.</p>
-          <ul>
-            <li>✅ Unlimited Market Scanner</li>
-            <li>✅ Unlimited Price Alerts</li>
-            <li>✅ Advanced Technical Charts</li>
-            <li>✅ Unlimited Portfolio Tracking</li>
-            <li>✅ Trade Journal</li>
-            <li>✅ Strategy Backtesting</li>
-            <li>✅ Backtesting Signal Alerts</li>
-            <li>✅ Email Buy/Sell Notifications</li>
-            <li>✅ TradingView Integration</li>
-            <li>✅ Full Site Access</li>
-          </ul>
-          <button 
-            className="btn" 
-            style={{ 
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              fontSize: '1.1rem',
-              padding: '1rem 2rem'
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              window.open(getStreamlitUrl(), '_blank');
-            }}
-          >
-            🚀 Launch Free App
-          </button>
+    <main className="min-h-screen bg-neutral-950 text-white">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Simple, Transparent Pricing
+          </h1>
+          <p className="text-xl text-neutral-400">
+            Start free. Upgrade when you're ready for advanced features.
+          </p>
         </div>
-      </div>
 
-      <div style={{ 
-        marginTop: '3rem', 
-        textAlign: 'center',
-        padding: '2rem',
-        background: 'rgba(16, 185, 129, 0.1)',
-        borderRadius: '12px',
-        maxWidth: '800px',
-        margin: '3rem auto'
-      }}>
-        <h3 style={{ marginBottom: '1rem' }}>Why Free?</h3>
-        <p style={{ opacity: 0.9 }}>
-          We're improving our subscription system to provide a better experience. 
-          During this time, all premium features are free for everyone. Enjoy unlimited access!
-        </p>
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Free Tier */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-8">
+            <h2 className="text-2xl font-bold mb-2">Free</h2>
+            <div className="text-4xl font-bold mb-6">
+              $0 <span className="text-lg font-normal text-neutral-400">forever</span>
+            </div>
+            
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Core market scanner</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Basic technical indicators</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Limited symbols (top 100)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Trade journal</span>
+              </li>
+            </ul>
+
+            <button
+              onClick={handleFreeLaunch}
+              className="w-full rounded-lg bg-neutral-700 px-6 py-3 font-medium text-lg hover:bg-neutral-600 transition"
+            >
+              Get Started Free
+            </button>
+            
+            <p className="text-center text-neutral-500 text-sm mt-4">
+              No credit card required
+            </p>
+          </div>
+
+          {/* Pro Tier */}
+          <div className="rounded-2xl border-2 border-emerald-500/40 bg-neutral-900/60 p-8 relative">
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <span className="bg-emerald-500 text-neutral-900 px-4 py-1 rounded-full text-sm font-bold">
+                MOST POPULAR
+              </span>
+            </div>
+            
+            <h2 className="text-2xl font-bold mb-2">Pro</h2>
+            <div className="text-4xl font-bold mb-6">
+              $9.99 <span className="text-lg font-normal text-neutral-400">/ month</span>
+            </div>
+            
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span className="font-medium">Everything in Free</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Unlimited symbols</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Advanced technical charts</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Price alerts & notifications</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>Strategy backtesting</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>TradingView integration</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-emerald-400 text-xl">✓</span>
+                <span>CSV exports & data analysis</span>
+              </li>
+            </ul>
+
+            <button
+              onClick={handleProCheckout}
+              disabled={loading === 'pro'}
+              className="w-full rounded-lg bg-emerald-500 px-6 py-3 font-medium text-lg text-neutral-900 hover:bg-emerald-400 transition disabled:opacity-60"
+            >
+              {loading === 'pro' ? 'Processing...' : 'Upgrade to Pro'}
+            </button>
+            
+            <p className="text-center text-neutral-500 text-sm mt-4">
+              Secure payment • Cancel anytime
+            </p>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-16 max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 text-center">Frequently Asked Questions</h2>
+          
+          <div className="space-y-6">
+            <div className="border border-neutral-800 rounded-lg p-6 bg-neutral-900/40">
+              <h3 className="font-bold mb-2">How do I upgrade to Pro?</h3>
+              <p className="text-neutral-400">
+                Click "Upgrade to Pro" above. You'll create an account with your email, then complete secure payment.
+                Access is instant across web and mobile apps.
+              </p>
+            </div>
+            
+            <div className="border border-neutral-800 rounded-lg p-6 bg-neutral-900/40">
+              <h3 className="font-bold mb-2">Can I cancel anytime?</h3>
+              <p className="text-neutral-400">
+                Yes! Cancel anytime from your account settings. You'll keep Pro access until the end of your billing period.
+              </p>
+            </div>
+            
+            <div className="border border-neutral-800 rounded-lg p-6 bg-neutral-900/40">
+              <h3 className="font-bold mb-2">Do you offer refunds?</h3>
+              <p className="text-neutral-400">
+                We offer a 7-day money-back guarantee. If you're not satisfied, contact support for a full refund.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
