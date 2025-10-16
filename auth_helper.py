@@ -1,22 +1,38 @@
 import streamlit as st
 import requests
+import os
 from typing import Dict, Optional
 
 class SubscriptionAuth:
     """
     Handles subscription authentication for Market Scanner Pro
     Checks user's subscription tier via the entitlements API
+    
+    FREE_FOR_ALL_MODE: When true, everyone gets Pro access automatically
     """
     
     def __init__(self, api_base_url: str = "https://marketscannerpros.vercel.app"):
         self.api_base_url = api_base_url
         self.entitlements_url = f"{api_base_url}/api/entitlements"
+        # FREE_FOR_ALL_MODE defaults to true (everyone gets Pro free)
+        self.free_for_all = os.getenv('FREE_FOR_ALL_MODE', 'true').lower() != 'false'
     
     def check_subscription(self) -> Dict[str, any]:
         """
         Check user's subscription status
         Returns: {'tier': 'free'|'pro', 'status': 'active'|'expired', ...}
         """
+        # ===== TEMPORARY: EVERYONE GETS PRO FOR FREE =====
+        # Set FREE_FOR_ALL_MODE=false to disable
+        if self.free_for_all:
+            return {
+                'tier': 'pro',
+                'status': 'active',
+                'source': 'free_mode',
+                'expiresAt': None
+            }
+        # ===== END TEMPORARY FREE MODE =====
+        
         # Get token from URL query params (first time)
         query_params = st.query_params
         if 'token' in query_params:
