@@ -5909,10 +5909,13 @@ if run_clicked:
                 
                 # Scan forex markets (controlled by scan_forex checkbox)
                 if scan_forex and forex_syms:
+                    st.info(f"🔍 Scanning {len(forex_syms)} forex pairs: {', '.join(forex_syms[:3])}...")
                     st.session_state.forex_results, st.session_state.forex_errors = scan_universe(
                         forex_syms, tf_eq, False, acct, risk, stop_mult, minvol
                     )
                 else:
+                    if scan_forex and not forex_syms:
+                        st.warning(f"⚠️ Forex checkbox enabled but no pairs selected")
                     st.session_state.forex_results = pd.DataFrame()
                     st.session_state.forex_errors = pd.DataFrame()
                 
