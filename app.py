@@ -3104,20 +3104,32 @@ def close_trade(trade_id: int, exit_date, exit_price: float,
         entry_price = float(trade['entry_price'])
         quantity = float(trade['quantity'])
         direction = trade['direction']
+        trade_type = trade.get('trade_type', 'Spot')
         stop_loss = float(trade['stop_loss']) if trade['stop_loss'] else None
         
-        if direction == 'LONG':
-            pnl = (exit_price - entry_price) * quantity
-            pnl_pct = ((exit_price - entry_price) / entry_price) * 100
-        else:
-            pnl = (entry_price - exit_price) * quantity
-            pnl_pct = ((entry_price - exit_price) / entry_price) * 100
+        # For options, use contract multiplier
+        multiplier = 1
+        if trade_type == 'Options':
+            num_contracts = trade.get('num_contracts') or 1
+            contract_multiplier = trade.get('contract_multiplier') or 100
+            multiplier = num_contracts * contract_multiplier
+            # For options, entry_price and exit_price are premiums per contract
         
+        # Calculate P&L
+        if direction == 'LONG':
+            pnl = (exit_price - entry_price) * (quantity if trade_type != 'Options' else multiplier)
+            pnl_pct = ((exit_price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
+        else:
+            pnl = (entry_price - exit_price) * (quantity if trade_type != 'Options' else multiplier)
+            pnl_pct = ((entry_price - exit_price) / entry_price) * 100 if entry_price > 0 else 0
+        
+        # Calculate R-multiple
         r_multiple = None
         if stop_loss:
-            risk_per_share = abs(entry_price - stop_loss)
-            if risk_per_share > 0:
-                r_multiple = pnl / (risk_per_share * quantity)
+            risk_per_unit = abs(entry_price - stop_loss)
+            if risk_per_unit > 0:
+                total_risk = risk_per_unit * (quantity if trade_type != 'Options' else multiplier)
+                r_multiple = pnl / total_risk if total_risk > 0 else 0
         
         query = """
         UPDATE trade_journal 
