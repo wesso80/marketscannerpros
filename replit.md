@@ -11,8 +11,10 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
+- **FREE_FOR_ALL_MODE fully implemented** - Local check in auth_helper.py grants everyone Pro access (no API calls needed)
+- **Removed legacy tier system** - Simplified from Free/Pro/Pro Trader to just Free/Pro model
+- **Section reorganization** - Reordered app flow: Portfolio (free) → Price Alerts (Pro) → Trade Journal (Pro) → Backtesting (Pro)
 - **Added RevenueCat authentication system** - Ready for subscription payments when enabled
-- **FREE_FOR_ALL_MODE implemented** - Everyone gets Pro tier free until payments enabled
 - **Authentication infrastructure complete** - JWT tokens, entitlements API, app token bridge
 - **Integrated auth into Streamlit** - Pro feature checks ready (trade journal, alerts, email)
 - **Marketing site ready** - Pricing displayed, launch flow configured
@@ -67,6 +69,8 @@ Preferred communication style: Simple, everyday language.
   - Annual subscription: $39.99/year (33% savings)
   - Entitlement: "pro" grants access to all premium features
 - **FREE_FOR_ALL_MODE**: Environment variable (default: true) grants everyone Pro access during development
+  - Implemented locally in `auth_helper.py` for instant Pro access without API calls
+  - Set `FREE_FOR_ALL_MODE=false` to enable subscription checking
 - **JWT Authentication**: Token-based authentication for secure API communication
   - Marketing site generates JWT tokens via `/api/app-token`
   - Tokens include user ID, email, and tier information
@@ -76,9 +80,11 @@ Preferred communication style: Simple, everyday language.
   - Falls back to free tier on errors
   - Returns: `{tier: "free"|"pro", status: "active"|"expired"}`
 - **Streamlit Integration**: `auth_helper.py` module handles subscription checks
-  - Reads token from URL query parameters
-  - Calls entitlements API to verify subscription
-  - Protects premium features (trade journal, alerts, email, Slack)
+  - FREE_FOR_ALL_MODE check happens first (local, instant)
+  - Reads token from URL query parameters if mode disabled
+  - Calls entitlements API to verify subscription if mode disabled
+  - Protects premium features: Price Alerts, Trade Journal, Backtesting
+  - Portfolio Tracking is FREE for everyone
   - Shows upgrade prompts for free tier users
 - **Launch Flow**: Marketing site → Streamlit app with token parameter
   - User clicks "Get Started" or "Upgrade to Pro"
