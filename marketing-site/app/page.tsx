@@ -59,7 +59,10 @@ export default function Home() {
                 <span className="bg-emerald-500 text-neutral-900 px-3 py-1 rounded-full text-xs font-bold">MOST POPULAR</span>
               </div>
               <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="text-3xl font-bold mb-4">$9.99 <span className="text-base font-normal text-neutral-400">/ month</span></div>
+              <div className="mb-4">
+                <div className="text-3xl font-bold">$4.99 <span className="text-base font-normal text-neutral-400">/ month</span></div>
+                <div className="text-sm text-neutral-400 mt-1">or $39.99/year (save 33%)</div>
+              </div>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2"><span className="text-emerald-400">✓</span> <span>Everything in Free</span></li>
                 <li className="flex items-start gap-2"><span className="text-emerald-400">✓</span> <span>Unlimited symbols</span></li>

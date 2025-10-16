@@ -80,8 +80,13 @@ export default function PricingPage() {
             </div>
             
             <h2 className="text-2xl font-bold mb-2">Pro</h2>
-            <div className="text-4xl font-bold mb-6">
-              $9.99 <span className="text-lg font-normal text-neutral-400">/ month</span>
+            <div className="mb-6">
+              <div className="text-4xl font-bold">
+                $4.99 <span className="text-lg font-normal text-neutral-400">/ month</span>
+              </div>
+              <div className="text-lg text-neutral-300 mt-2">
+                or $39.99/year <span className="text-emerald-400 font-medium">(save 33%)</span>
+              </div>
             </div>
             
             <ul className="space-y-4 mb-8">
