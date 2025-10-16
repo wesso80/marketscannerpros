@@ -6003,179 +6003,6 @@ with st.expander("Show details", expanded=False):
     - This ensures consistent dollar risk per trade regardless of instrument volatility
     """)
 
-# ================= Price Alerts Management =================
-st.markdown("---")
-st.subheader("🚨 Price Alerts")
-
-# Check Pro subscription for alerts access
-if not auth.require_pro("Price alerts require a Pro subscription"):
-    st.stop()
-
-# User has Pro access - show alerts
-if True:
-    # Auto-refresh toggle and controls
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-    with col1:
-        auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
-
-    with col2:
-        if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
-            with st.spinner("Checking price alerts..."):
-                triggered_count = check_price_alerts()
-                if triggered_count and triggered_count > 0:
-                    st.success(f"🚨 {triggered_count} alert(s) triggered!")
-                else:
-                    st.info("No alerts triggered")
-
-    with col3:
-        if st.button("➕ New Alert"):
-            st.session_state.show_new_alert = True
-
-    # Auto-refresh implementation  
-    if auto_check:
-        import time
-    
-        # Initialize auto-check state
-        if 'last_auto_check' not in st.session_state:
-            st.session_state.last_auto_check = time.time()
-        if 'auto_check_interval' not in st.session_state:
-            st.session_state.auto_check_interval = 300  # 5 minutes
-    
-        current_time = time.time()
-        time_since_last_check = current_time - st.session_state.last_auto_check
-    
-        # Show countdown
-        remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
-        with col4:
-            if remaining_time > 0:
-                st.info(f"Next check in: {int(remaining_time)}s")
-            else:
-                st.info("Checking alerts...")
-    
-        # Check alerts if interval has passed
-        if time_since_last_check >= st.session_state.auto_check_interval:
-            triggered_count = check_price_alerts()
-            st.session_state.last_auto_check = current_time
-        
-            if triggered_count and triggered_count > 0:
-                st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
-                st.balloons()  # Celebrate triggered alerts
-            else:
-                st.success("All alerts checked - no triggers")
-    
-        # Non-blocking auto-refresh using Streamlit's built-in mechanism
-        # This refreshes the page every 10 seconds without blocking the UI
-        st.markdown(
-            """
-            <script>
-            setTimeout(function() {
-                window.parent.location.reload();
-            }, 10000);
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        # Clear auto-check state when disabled
-        if 'last_auto_check' in st.session_state:
-            del st.session_state.last_auto_check
-
-    # New alert form
-    if st.session_state.get('show_new_alert', False):
-        with st.expander("Create New Price Alert", expanded=True):
-            col1, col2 = st.columns(2)
-        
-            with col1:
-                alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
-                alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
-            
-            with col2:
-                alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
-                alert_method = st.selectbox("Notification:", ["in_app", "email", "both"], key="alert_method_v2")
-        
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Create Alert", key="create_alert"):
-                    # Input validation
-                    if not alert_symbol or not alert_symbol.strip():
-                        st.error("Symbol is required")
-                    elif alert_price <= 0:
-                        st.error("Price must be positive")
-                    elif alert_type not in ['above', 'below']:
-                        st.error("Invalid alert type")
-                    else:
-                        # Check tier limitations
-                        current_tier = st.session_state.user_tier
-                        tier_info = TIER_CONFIG[current_tier]
-                        active_alerts = get_active_alerts()
-                        alert_count = len(active_alerts) if active_alerts else 0
-                    
-                        # Check if free tier trying to create alerts
-                        if current_tier == 'free':
-                            st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
-                            st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
-                        # Check if pro tier has reached alert limit
-                        elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
-                            st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
-                            st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
-                        else:
-                            # Create the alert
-                            symbol_clean = alert_symbol.strip().upper()
-                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
-                                st.success(f"Alert created for {symbol_clean}")
-                                st.session_state.show_new_alert = False
-                                st.rerun()
-                            else:
-                                st.error("Failed to create alert - please check database connection")
-        
-            with col3:
-                if st.button("Cancel", key="cancel_alert"):
-                    st.session_state.show_new_alert = False
-                    st.rerun()
-
-    # Display alerts in tabs
-    tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
-
-    with tab1:
-        active_alerts = get_active_alerts()
-        if active_alerts:
-            # Create DataFrame for better display
-            alerts_df = pd.DataFrame(active_alerts)
-            alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
-        
-            display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
-            st.dataframe(alerts_df[display_cols], width='stretch')
-        
-            # Delete alerts
-            st.write("**Manage Alerts:**")
-            for alert in active_alerts:
-                col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-                with col1:
-                    st.write(f"{alert['symbol']} - {alert['alert_type']} ${alert['target_price']:.2f}")
-                with col4:
-                    if st.button("Delete", key=f"del_alert_{alert['id']}"):
-                        if delete_alert(alert['id']):
-                            st.success("Alert deleted")
-                            st.rerun()
-                        else:
-                            st.error("Failed to delete alert")
-        else:
-            st.info("No active alerts. Create one above to get notified when price targets are hit.")
-
-    with tab2:
-        all_alerts = get_all_alerts()
-        triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
-    
-        if triggered_alerts:
-            triggered_df = pd.DataFrame(triggered_alerts)
-            triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
-        
-            display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
-            st.dataframe(triggered_df[display_cols], width='stretch')
-        else:
-            st.info("No triggered alerts yet.")
-
-
 # ================= Advanced Charting Section =================
 st.subheader("📈 Advanced Technical Analysis Charts")
 
@@ -6602,6 +6429,178 @@ if True:
                 st.metric("Total Invested", f"${total_invested:,.2f}")
         else:
             st.info("No transactions found. Add your first position to start tracking.")
+
+# ================= Price Alerts Management =================
+st.markdown("---")
+st.subheader("🚨 Price Alerts")
+
+# Check Pro subscription for alerts access
+if not auth.require_pro("Price alerts require a Pro subscription"):
+    st.stop()
+
+# User has Pro access - show alerts
+if True:
+    # Auto-refresh toggle and controls
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    with col1:
+        auto_check = st.checkbox("Auto Check", help="Automatically check alerts every 5 minutes")
+
+    with col2:
+        if st.button("🔍 Check Now", help="Manually check all active alerts against current prices"):
+            with st.spinner("Checking price alerts..."):
+                triggered_count = check_price_alerts()
+                if triggered_count and triggered_count > 0:
+                    st.success(f"🚨 {triggered_count} alert(s) triggered!")
+                else:
+                    st.info("No alerts triggered")
+
+    with col3:
+        if st.button("➕ New Alert"):
+            st.session_state.show_new_alert = True
+
+    # Auto-refresh implementation  
+    if auto_check:
+        import time
+    
+        # Initialize auto-check state
+        if 'last_auto_check' not in st.session_state:
+            st.session_state.last_auto_check = time.time()
+        if 'auto_check_interval' not in st.session_state:
+            st.session_state.auto_check_interval = 300  # 5 minutes
+    
+        current_time = time.time()
+        time_since_last_check = current_time - st.session_state.last_auto_check
+    
+        # Show countdown
+        remaining_time = max(0, st.session_state.auto_check_interval - time_since_last_check)
+        with col4:
+            if remaining_time > 0:
+                st.info(f"Next check in: {int(remaining_time)}s")
+            else:
+                st.info("Checking alerts...")
+    
+        # Check alerts if interval has passed
+        if time_since_last_check >= st.session_state.auto_check_interval:
+            triggered_count = check_price_alerts()
+            st.session_state.last_auto_check = current_time
+        
+            if triggered_count and triggered_count > 0:
+                st.warning(f"🚨 {triggered_count} new alert(s) triggered!")
+                st.balloons()  # Celebrate triggered alerts
+            else:
+                st.success("All alerts checked - no triggers")
+    
+        # Non-blocking auto-refresh using Streamlit's built-in mechanism
+        # This refreshes the page every 10 seconds without blocking the UI
+        st.markdown(
+            """
+            <script>
+            setTimeout(function() {
+                window.parent.location.reload();
+            }, 10000);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        # Clear auto-check state when disabled
+        if 'last_auto_check' in st.session_state:
+            del st.session_state.last_auto_check
+
+    # New alert form
+    if st.session_state.get('show_new_alert', False):
+        with st.expander("Create New Price Alert", expanded=True):
+            col1, col2 = st.columns(2)
+        
+            with col1:
+                alert_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC-USD", key="alert_symbol")
+                alert_type = st.selectbox("Alert Type:", ["above", "below"], key="alert_type")
+            
+            with col2:
+                alert_price = st.number_input("Target Price ($):", min_value=0.01, step=0.01, key="alert_price")
+                alert_method = st.selectbox("Notification:", ["in_app", "email", "both"], key="alert_method_v2")
+        
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Create Alert", key="create_alert"):
+                    # Input validation
+                    if not alert_symbol or not alert_symbol.strip():
+                        st.error("Symbol is required")
+                    elif alert_price <= 0:
+                        st.error("Price must be positive")
+                    elif alert_type not in ['above', 'below']:
+                        st.error("Invalid alert type")
+                    else:
+                        # Check tier limitations
+                        current_tier = st.session_state.user_tier
+                        tier_info = TIER_CONFIG[current_tier]
+                        active_alerts = get_active_alerts()
+                        alert_count = len(active_alerts) if active_alerts else 0
+                    
+                        # Check if free tier trying to create alerts
+                        if current_tier == 'free':
+                            st.error("🔒 Alerts are not available on Free tier. Upgrade to Pro to create alerts!")
+                            st.info("✨ Try Pro free for 5-7 days to test alerts and other premium features!")
+                        # Check if pro tier has reached alert limit
+                        elif tier_info['alert_limit'] and alert_count >= tier_info['alert_limit']:
+                            st.error(f"🔒 Alert limit reached! You have {alert_count}/{tier_info['alert_limit']} alerts.")
+                            st.info("✨ Upgrade to Pro Trader for unlimited alerts!")
+                        else:
+                            # Create the alert
+                            symbol_clean = alert_symbol.strip().upper()
+                            if create_price_alert(symbol_clean, alert_type, alert_price, alert_method):
+                                st.success(f"Alert created for {symbol_clean}")
+                                st.session_state.show_new_alert = False
+                                st.rerun()
+                            else:
+                                st.error("Failed to create alert - please check database connection")
+        
+            with col3:
+                if st.button("Cancel", key="cancel_alert"):
+                    st.session_state.show_new_alert = False
+                    st.rerun()
+
+    # Display alerts in tabs
+    tab1, tab2 = st.tabs(["🔔 Active Alerts", "✅ Triggered Alerts"])
+
+    with tab1:
+        active_alerts = get_active_alerts()
+        if active_alerts:
+            # Create DataFrame for better display
+            alerts_df = pd.DataFrame(active_alerts)
+            alerts_df['created_at'] = pd.to_datetime(alerts_df['created_at']).dt.strftime('%Y-%m-%d %H:%M')
+        
+            display_cols = ['symbol', 'alert_type', 'target_price', 'notification_method', 'created_at']
+            st.dataframe(alerts_df[display_cols], width='stretch')
+        
+            # Delete alerts
+            st.write("**Manage Alerts:**")
+            for alert in active_alerts:
+                col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+                with col1:
+                    st.write(f"{alert['symbol']} - {alert['alert_type']} ${alert['target_price']:.2f}")
+                with col4:
+                    if st.button("Delete", key=f"del_alert_{alert['id']}"):
+                        if delete_alert(alert['id']):
+                            st.success("Alert deleted")
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete alert")
+        else:
+            st.info("No active alerts. Create one above to get notified when price targets are hit.")
+
+    with tab2:
+        all_alerts = get_all_alerts()
+        triggered_alerts = [alert for alert in all_alerts if alert['is_triggered']]
+    
+        if triggered_alerts:
+            triggered_df = pd.DataFrame(triggered_alerts)
+            triggered_df['triggered_at'] = pd.to_datetime(triggered_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
+        
+            display_cols = ['symbol', 'alert_type', 'target_price', 'current_price', 'triggered_at']
+            st.dataframe(triggered_df[display_cols], width='stretch')
+        else:
+            st.info("No triggered alerts yet.")
 
 # ================= Trade Journal =================
 st.markdown("---")
