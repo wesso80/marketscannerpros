@@ -2541,7 +2541,7 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
         from_email = 'onboarding@resend.dev'
         
         # First, try to get API key from Secrets (user-added)
-        api_key = os.getenv('RESEND_API_KEY')
+        api_key = os.getenv('RESEND_API_KEY') or os.getenv('Resend')
         
         # If not in secrets, try Resend connector
         if not api_key:
