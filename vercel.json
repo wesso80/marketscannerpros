@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd marketing-site && npm run build",
-  "outputDirectory": "marketing-site/.next",
-  "installCommand": "cd marketing-site && npm install --legacy-peer-deps",
-  "devCommand": "cd marketing-site && npm run dev"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps"
 }
