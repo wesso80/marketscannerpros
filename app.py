@@ -1209,30 +1209,6 @@ textarea {
     color: #FFFFFF !important;
     background-color: #1E293B !important;
 }
-
-/* Toggle buttons - smaller size across entire app */
-.stCheckbox {
-    transform: scale(0.85);
-    transform-origin: left;
-}
-
-/* Toggle switch controls */
-[data-baseweb="checkbox"],
-[data-testid="stCheckbox"] {
-    transform: scale(0.85) !important;
-}
-
-/* Checkbox containers */
-div[data-testid="stCheckbox"] > label > div {
-    width: 24px !important;
-    height: 24px !important;
-}
-
-/* Toggle switch thumb */
-div[data-testid="stCheckbox"] > label > div > div {
-    width: 18px !important;
-    height: 18px !important;
-}
 </style>
 """, unsafe_allow_html=True)
     
