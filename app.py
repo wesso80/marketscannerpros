@@ -6456,16 +6456,8 @@ if True:
                 allocation_chart = create_portfolio_chart(positions)
                 if allocation_chart:
                     st.plotly_chart(allocation_chart, use_container_width=True, config={
-                        'displayModeBar': 'hover',
-                        'displaylogo': False,
-                        'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
-                        'toImageButtonOptions': {
-                            'format': 'png',
-                            'filename': 'portfolio_allocation',
-                            'height': 500,
-                            'width': 700,
-                            'scale': 2
-                        }
+                        'displayModeBar': False,
+                        'displaylogo': False
                     })
         
             with col2:
@@ -6473,16 +6465,8 @@ if True:
                 performance_chart = create_portfolio_performance_chart()
                 if performance_chart:
                     st.plotly_chart(performance_chart, use_container_width=True, config={
-                        'displayModeBar': 'hover',
-                        'displaylogo': False,
-                        'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
-                        'toImageButtonOptions': {
-                            'format': 'png',
-                            'filename': 'portfolio_performance',
-                            'height': 400,
-                            'width': 700,
-                            'scale': 2
-                        }
+                        'displayModeBar': False,
+                        'displaylogo': False
                     })
         
             # Key metrics table
