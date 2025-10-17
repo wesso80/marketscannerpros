@@ -4124,9 +4124,11 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figur
     fig.update_layout(
         title=dict(
             text="Portfolio Allocation by Market Value",
-            font=dict(size=18, color='#FFFFFF'),
+            font=dict(size=20, color='#FFFFFF', family='Arial Black'),
             x=0.5,
-            xanchor='center'
+            xanchor='center',
+            y=0.98,
+            yanchor='top'
         ),
         template="plotly_dark",
         height=500,
@@ -4137,10 +4139,15 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figur
             font=dict(size=12, color='#FFFFFF'),
             bgcolor='rgba(30, 41, 59, 0.8)',
             bordercolor='#475569',
-            borderwidth=1
+            borderwidth=1,
+            orientation='v',
+            yanchor='middle',
+            y=0.5,
+            xanchor='left',
+            x=1.05
         ),
         font=dict(color='#FFFFFF'),
-        margin=dict(l=40, r=40, t=100, b=40)
+        margin=dict(l=40, r=120, t=80, b=40)
     )
     
     return fig
@@ -4192,24 +4199,29 @@ def create_portfolio_performance_chart() -> Optional[go.Figure]:
         fig.update_layout(
             title={
                 "text": "Portfolio Performance Over Time",
-                "font": {"size": 18, "color": "#F8FAFC"},
+                "font": {"size": 20, "color": "#F8FAFC", "family": "Arial Black"},
                 "x": 0.5,
-                "xanchor": "center"
+                "xanchor": "center",
+                "y": 0.98,
+                "yanchor": "top"
             },
             xaxis_title="Date",
             yaxis_title="Value ($)",
             template="plotly_dark",
-            height=400,
+            height=450,
             paper_bgcolor='#1E293B',
             plot_bgcolor='#1E293B',
             font=dict(size=14, color="#F8FAFC"),
             legend=dict(
-                font=dict(size=16, color="#F8FAFC"),
+                font=dict(size=14, color="#F8FAFC"),
                 orientation="h",
-                yanchor="bottom",
-                y=1.15,
+                yanchor="top",
+                y=-0.15,
                 xanchor="center",
-                x=0.5
+                x=0.5,
+                bgcolor='rgba(30, 41, 59, 0.8)',
+                bordercolor='#475569',
+                borderwidth=1
             ),
             xaxis=dict(
                 title_font=dict(size=16, color="#F8FAFC"),
@@ -4219,7 +4231,7 @@ def create_portfolio_performance_chart() -> Optional[go.Figure]:
                 title_font=dict(size=16, color="#F8FAFC"),
                 tickfont=dict(size=14, color="#F8FAFC")
             ),
-            margin=dict(l=40, r=40, t=100, b=40)
+            margin=dict(l=50, r=50, t=80, b=80)
         )
         
         return fig
@@ -6456,8 +6468,9 @@ if True:
                 allocation_chart = create_portfolio_chart(positions)
                 if allocation_chart:
                     st.plotly_chart(allocation_chart, use_container_width=True, config={
-                        'displayModeBar': False,
-                        'displaylogo': False
+                        'displayModeBar': 'hover',
+                        'displaylogo': False,
+                        'modeBarButtonsToRemove': ['lasso2d', 'select2d']
                     })
         
             with col2:
@@ -6465,8 +6478,9 @@ if True:
                 performance_chart = create_portfolio_performance_chart()
                 if performance_chart:
                     st.plotly_chart(performance_chart, use_container_width=True, config={
-                        'displayModeBar': False,
-                        'displaylogo': False
+                        'displayModeBar': 'hover',
+                        'displaylogo': False,
+                        'modeBarButtonsToRemove': ['lasso2d', 'select2d']
                     })
         
             # Key metrics table
