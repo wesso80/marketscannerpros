@@ -4140,13 +4140,7 @@ def create_portfolio_chart(positions: List[Dict[str, Any]]) -> Optional[go.Figur
             borderwidth=1
         ),
         font=dict(color='#FFFFFF'),
-        margin=dict(l=40, r=40, t=80, b=40),
-        modebar=dict(
-            bgcolor='rgba(30, 41, 59, 0.9)',
-            color='#F8FAFC',
-            activecolor='#10B981',
-            orientation='h'
-        )
+        margin=dict(l=40, r=40, t=100, b=40)
     )
     
     return fig
@@ -4225,13 +4219,7 @@ def create_portfolio_performance_chart() -> Optional[go.Figure]:
                 title_font=dict(size=16, color="#F8FAFC"),
                 tickfont=dict(size=14, color="#F8FAFC")
             ),
-            margin=dict(l=40, r=40, t=80, b=40),
-            modebar=dict(
-                bgcolor='rgba(30, 41, 59, 0.9)',
-                color='#F8FAFC',
-                activecolor='#10B981',
-                orientation='h'
-            )
+            margin=dict(l=40, r=40, t=100, b=40)
         )
         
         return fig
@@ -6468,7 +6456,7 @@ if True:
                 allocation_chart = create_portfolio_chart(positions)
                 if allocation_chart:
                     st.plotly_chart(allocation_chart, use_container_width=True, config={
-                        'displayModeBar': True,
+                        'displayModeBar': 'hover',
                         'displaylogo': False,
                         'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
                         'toImageButtonOptions': {
@@ -6485,7 +6473,7 @@ if True:
                 performance_chart = create_portfolio_performance_chart()
                 if performance_chart:
                     st.plotly_chart(performance_chart, use_container_width=True, config={
-                        'displayModeBar': True,
+                        'displayModeBar': 'hover',
                         'displaylogo': False,
                         'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
                         'toImageButtonOptions': {
