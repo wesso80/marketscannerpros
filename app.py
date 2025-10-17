@@ -1209,6 +1209,30 @@ textarea {
     color: #FFFFFF !important;
     background-color: #1E293B !important;
 }
+
+/* Toggle buttons - smaller size across entire app */
+.stCheckbox {
+    transform: scale(0.85);
+    transform-origin: left;
+}
+
+/* Toggle switch controls */
+[data-baseweb="checkbox"],
+[data-testid="stCheckbox"] {
+    transform: scale(0.85) !important;
+}
+
+/* Checkbox containers */
+div[data-testid="stCheckbox"] > label > div {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+/* Toggle switch thumb */
+div[data-testid="stCheckbox"] > label > div > div {
+    width: 18px !important;
+    height: 18px !important;
+}
 </style>
 """, unsafe_allow_html=True)
     
@@ -5781,23 +5805,23 @@ with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
         
         col1, col2 = st.columns(2)
         with col1:
-            custom_regime_weight = st.number_input("Market Regime:", value=25, min_value=0, max_value=100, step=5, 
+            custom_regime_weight = st.slider("Market Regime:", 0, 100, 25, 5, 
                                                   help="Points for price above/below EMA200")
-            custom_structure_weight = st.number_input("Price Structure:", value=25, min_value=0, max_value=100, step=5,
+            custom_structure_weight = st.slider("Price Structure:", 0, 100, 25, 5,
                                                      help="Points for breakout/breakdown")
-            custom_rsi_weight = st.number_input("RSI Momentum:", value=10, min_value=0, max_value=50, step=5,
+            custom_rsi_weight = st.slider("RSI Momentum:", 0, 50, 10, 5,
                                                help="Points for RSI above threshold")
-            custom_macd_weight = st.number_input("MACD:", value=10, min_value=0, max_value=50, step=5,
+            custom_macd_weight = st.slider("MACD:", 0, 50, 10, 5,
                                                 help="Points for MACD histogram > 0")
         
         with col2:
-            custom_volume_weight = st.number_input("Volume Expansion:", value=8, min_value=0, max_value=50, step=2,
+            custom_volume_weight = st.slider("Volume Expansion:", 0, 50, 8, 2,
                                                   help="Points for unusual volume")
-            custom_volatility_weight = st.number_input("Volatility Expansion:", value=7, min_value=0, max_value=50, step=2,
+            custom_volatility_weight = st.slider("Volatility Expansion:", 0, 50, 7, 2,
                                                        help="Points for BB width expansion")
-            custom_tradability_weight = st.number_input("Tradability:", value=5, min_value=0, max_value=50, step=1,
+            custom_tradability_weight = st.slider("Tradability:", 0, 50, 5, 1,
                                                         help="Points for manageable volatility")
-            custom_overextension_penalty = st.number_input("Overextension Penalty:", value=10, min_value=0, max_value=50, step=5,
+            custom_overextension_penalty = st.slider("Overextension Penalty:", 0, 50, 10, 5,
                                                           help="Penalty for RSI > threshold")
         
         st.markdown("---")
@@ -5818,15 +5842,15 @@ with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
         
         col1, col2 = st.columns(2)
         with col1:
-            custom_breakout_period = st.number_input("Breakout Period:", value=20, min_value=5, max_value=100, step=5,
+            custom_breakout_period = st.slider("Breakout Period:", 5, 100, 20, 5,
                                                     help="Look for X-period highs/lows")
-            custom_rsi_period = st.number_input("RSI Period:", value=14, min_value=5, max_value=50, step=1,
+            custom_rsi_period = st.slider("RSI Period:", 5, 50, 14, 1,
                                                help="RSI calculation period")
         
         with col2:
-            custom_ema_long = st.number_input("Long EMA:", value=200, min_value=50, max_value=500, step=50,
+            custom_ema_long = st.slider("Long EMA:", 50, 500, 200, 50,
                                              help="Long-term trend EMA")
-            custom_bb_period = st.number_input("BB Period:", value=20, min_value=10, max_value=50, step=5,
+            custom_bb_period = st.slider("BB Period:", 10, 50, 20, 5,
                                               help="Bollinger Band period")
         
         # Save custom settings to session state
