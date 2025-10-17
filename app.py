@@ -5709,6 +5709,100 @@ with st.sidebar.expander("Scan Result Notifications", expanded=False):
     
     send_email_summary_toggle = st.checkbox("📧 Email scan summary", help="Send scan results summary to your email")
 
+# Custom Scanner Settings
+with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
+    st.markdown("**Customize Technical Analysis Scoring:**")
+    
+    use_custom = st.checkbox("Enable Custom Settings", help="Use custom scoring parameters instead of defaults")
+    
+    if use_custom:
+        st.markdown("---")
+        st.markdown("**Scoring Weights (Points):**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            custom_regime_weight = st.number_input("Market Regime:", value=25, min_value=0, max_value=100, step=5, 
+                                                  help="Points for price above/below EMA200")
+            custom_structure_weight = st.number_input("Price Structure:", value=25, min_value=0, max_value=100, step=5,
+                                                     help="Points for breakout/breakdown")
+            custom_rsi_weight = st.number_input("RSI Momentum:", value=10, min_value=0, max_value=50, step=5,
+                                               help="Points for RSI above threshold")
+            custom_macd_weight = st.number_input("MACD:", value=10, min_value=0, max_value=50, step=5,
+                                                help="Points for MACD histogram > 0")
+        
+        with col2:
+            custom_volume_weight = st.number_input("Volume Expansion:", value=8, min_value=0, max_value=50, step=2,
+                                                  help="Points for unusual volume")
+            custom_volatility_weight = st.number_input("Volatility Expansion:", value=7, min_value=0, max_value=50, step=2,
+                                                       help="Points for BB width expansion")
+            custom_tradability_weight = st.number_input("Tradability:", value=5, min_value=0, max_value=50, step=1,
+                                                        help="Points for manageable volatility")
+            custom_overextension_penalty = st.number_input("Overextension Penalty:", value=10, min_value=0, max_value=50, step=5,
+                                                          help="Penalty for RSI > threshold")
+        
+        st.markdown("---")
+        st.markdown("**Indicator Thresholds:**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            custom_rsi_bull = st.slider("RSI Bullish Level:", 30, 70, 50, 5, help="RSI above this = bullish momentum")
+            custom_rsi_overbought = st.slider("RSI Overbought:", 70, 90, 80, 5, help="RSI above this = overextended")
+            custom_rsi_oversold = st.slider("RSI Oversold:", 10, 30, 20, 5, help="RSI below this = oversold bounce potential")
+        
+        with col2:
+            custom_volume_z = st.slider("Volume Z-Score:", 0.0, 2.0, 0.5, 0.1, help="Z-score above this = unusual volume")
+            custom_atr_pct = st.slider("ATR % Max:", 1.0, 10.0, 4.0, 0.5, help="ATR % below this = tradable volatility")
+        
+        st.markdown("---")
+        st.markdown("**Technical Periods:**")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            custom_breakout_period = st.number_input("Breakout Period:", value=20, min_value=5, max_value=100, step=5,
+                                                    help="Look for X-period highs/lows")
+            custom_rsi_period = st.number_input("RSI Period:", value=14, min_value=5, max_value=50, step=1,
+                                               help="RSI calculation period")
+        
+        with col2:
+            custom_ema_long = st.number_input("Long EMA:", value=200, min_value=50, max_value=500, step=50,
+                                             help="Long-term trend EMA")
+            custom_bb_period = st.number_input("BB Period:", value=20, min_value=10, max_value=50, step=5,
+                                              help="Bollinger Band period")
+        
+        # Save custom settings to session state
+        st.session_state.custom_scanner_settings = {
+            'enabled': True,
+            'weights': {
+                'regime': custom_regime_weight,
+                'structure': custom_structure_weight,
+                'rsi': custom_rsi_weight,
+                'macd': custom_macd_weight,
+                'volume': custom_volume_weight,
+                'volatility': custom_volatility_weight,
+                'tradability': custom_tradability_weight,
+                'overextension_penalty': custom_overextension_penalty
+            },
+            'thresholds': {
+                'rsi_bull': custom_rsi_bull,
+                'rsi_overbought': custom_rsi_overbought,
+                'rsi_oversold': custom_rsi_oversold,
+                'volume_z': custom_volume_z,
+                'atr_pct': custom_atr_pct / 100  # Convert to decimal
+            },
+            'periods': {
+                'breakout': custom_breakout_period,
+                'rsi': custom_rsi_period,
+                'ema_long': custom_ema_long,
+                'bb': custom_bb_period
+            }
+        }
+        
+        st.info("💡 Custom settings active! Scanner will use your parameters.")
+    else:
+        # Default settings
+        st.session_state.custom_scanner_settings = {'enabled': False}
+        st.caption("Using default scoring system")
+
 # Main scanning logic
 if run_clicked:
     # Rate limiting check
