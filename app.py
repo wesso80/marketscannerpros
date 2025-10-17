@@ -7271,16 +7271,20 @@ if True:
     with col1:
         sub_col1, sub_col2 = st.columns(2)
         with sub_col1:
-            initial_equity = st.number_input("Initial Equity ($):", min_value=1000, max_value=1000000, value=10000, step=1000, key="initial_equity")
+            initial_equity_text = st.text_input("Initial Equity ($):", value="10000", key="initial_equity")
+            initial_equity = float(initial_equity_text) if initial_equity_text else 10000
         with sub_col2:
-            risk_per_trade = st.number_input("Risk per Trade (%):", min_value=0.1, max_value=10.0, value=1.0, step=0.1, key="risk_per_trade") / 100
+            risk_per_trade_text = st.text_input("Risk per Trade (%):", value="1.00", key="risk_per_trade")
+            risk_per_trade = (float(risk_per_trade_text) if risk_per_trade_text else 1.0) / 100
 
     with col2:
         sub_col3, sub_col4 = st.columns(2)
         with sub_col3:
-            stop_atr_mult = st.number_input("Stop Loss (ATR x):", min_value=0.5, max_value=5.0, value=1.5, step=0.1, key="stop_atr_mult")
+            stop_atr_mult_text = st.text_input("Stop Loss (ATR x):", value="1.50", key="stop_atr_mult")
+            stop_atr_mult = float(stop_atr_mult_text) if stop_atr_mult_text else 1.5
         with sub_col4:
-            min_score = st.number_input("Min Score Threshold:", min_value=0, max_value=50, value=10, step=1, key="min_score")
+            min_score_text = st.text_input("Min Score Threshold:", value="10", key="min_score")
+            min_score = int(float(min_score_text)) if min_score_text else 10
 
     # Signal Alerts (Pro Trader exclusive feature)
     st.write("**📧 Backtesting Signal Alerts** (Get notified of BUY/SELL signals)")
