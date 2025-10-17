@@ -5781,23 +5781,23 @@ with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
         
         col1, col2 = st.columns(2)
         with col1:
-            custom_regime_weight = st.slider("Market Regime:", 0, 100, 25, 5, 
+            custom_regime_weight = st.selectbox("Market Regime:", list(range(0, 105, 5)), index=5, 
                                                   help="Points for price above/below EMA200")
-            custom_structure_weight = st.slider("Price Structure:", 0, 100, 25, 5,
+            custom_structure_weight = st.selectbox("Price Structure:", list(range(0, 105, 5)), index=5,
                                                      help="Points for breakout/breakdown")
-            custom_rsi_weight = st.slider("RSI Momentum:", 0, 50, 10, 5,
+            custom_rsi_weight = st.selectbox("RSI Momentum:", list(range(0, 55, 5)), index=2,
                                                help="Points for RSI above threshold")
-            custom_macd_weight = st.slider("MACD:", 0, 50, 10, 5,
+            custom_macd_weight = st.selectbox("MACD:", list(range(0, 55, 5)), index=2,
                                                 help="Points for MACD histogram > 0")
         
         with col2:
-            custom_volume_weight = st.slider("Volume Expansion:", 0, 50, 8, 2,
+            custom_volume_weight = st.selectbox("Volume Expansion:", list(range(0, 52, 2)), index=4,
                                                   help="Points for unusual volume")
-            custom_volatility_weight = st.slider("Volatility Expansion:", 0, 50, 7, 2,
+            custom_volatility_weight = st.selectbox("Volatility Expansion:", list(range(0, 52, 2)), index=3,
                                                        help="Points for BB width expansion")
-            custom_tradability_weight = st.slider("Tradability:", 0, 50, 5, 1,
+            custom_tradability_weight = st.selectbox("Tradability:", list(range(0, 51, 1)), index=5,
                                                         help="Points for manageable volatility")
-            custom_overextension_penalty = st.slider("Overextension Penalty:", 0, 50, 10, 5,
+            custom_overextension_penalty = st.selectbox("Overextension Penalty:", list(range(0, 55, 5)), index=2,
                                                           help="Penalty for RSI > threshold")
         
         st.markdown("---")
@@ -5805,28 +5805,28 @@ with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
         
         col1, col2 = st.columns(2)
         with col1:
-            custom_rsi_bull = st.slider("RSI Bullish Level:", 30, 70, 50, 5, help="RSI above this = bullish momentum")
-            custom_rsi_overbought = st.slider("RSI Overbought:", 70, 90, 80, 5, help="RSI above this = overextended")
-            custom_rsi_oversold = st.slider("RSI Oversold:", 10, 30, 20, 5, help="RSI below this = oversold bounce potential")
+            custom_rsi_bull = st.selectbox("RSI Bullish Level:", list(range(30, 75, 5)), index=4, help="RSI above this = bullish momentum")
+            custom_rsi_overbought = st.selectbox("RSI Overbought:", list(range(70, 95, 5)), index=2, help="RSI above this = overextended")
+            custom_rsi_oversold = st.selectbox("RSI Oversold:", list(range(10, 35, 5)), index=2, help="RSI below this = oversold bounce potential")
         
         with col2:
-            custom_volume_z = st.slider("Volume Z-Score:", 0.0, 2.0, 0.5, 0.1, help="Z-score above this = unusual volume")
-            custom_atr_pct = st.slider("ATR % Max:", 1.0, 10.0, 4.0, 0.5, help="ATR % below this = tradable volatility")
+            custom_volume_z = st.selectbox("Volume Z-Score:", [round(x*0.1, 1) for x in range(0, 21)], index=5, help="Z-score above this = unusual volume")
+            custom_atr_pct = st.selectbox("ATR % Max:", [round(x*0.5, 1) for x in range(2, 21)], index=4, help="ATR % below this = tradable volatility")
         
         st.markdown("---")
         st.markdown("**Technical Periods:**")
         
         col1, col2 = st.columns(2)
         with col1:
-            custom_breakout_period = st.slider("Breakout Period:", 5, 100, 20, 5,
+            custom_breakout_period = st.selectbox("Breakout Period:", list(range(5, 105, 5)), index=3,
                                                     help="Look for X-period highs/lows")
-            custom_rsi_period = st.slider("RSI Period:", 5, 50, 14, 1,
+            custom_rsi_period = st.selectbox("RSI Period:", list(range(5, 51, 1)), index=9,
                                                help="RSI calculation period")
         
         with col2:
-            custom_ema_long = st.slider("Long EMA:", 50, 500, 200, 50,
+            custom_ema_long = st.selectbox("Long EMA:", list(range(50, 505, 50)), index=3,
                                              help="Long-term trend EMA")
-            custom_bb_period = st.slider("BB Period:", 10, 50, 20, 5,
+            custom_bb_period = st.selectbox("BB Period:", list(range(10, 55, 5)), index=2,
                                               help="Bollinger Band period")
         
         # Save custom settings to session state
