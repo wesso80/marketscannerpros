@@ -2360,13 +2360,27 @@ def _bb_width(c, n=20, k=2.0):
     upper, lower = ma + k*sd, ma - k*sd
     return (upper - lower) / c
 
-def compute_features(df: pd.DataFrame) -> pd.DataFrame:
+def compute_features(df: pd.DataFrame, custom_settings=None) -> pd.DataFrame:
     out = df.copy()
+    
+    # Get custom periods or use defaults
+    if custom_settings and custom_settings.get('enabled'):
+        periods = custom_settings.get('periods', {})
+        rsi_period = periods.get('rsi', 14)
+        ema_long = periods.get('ema_long', 200)
+        bb_period = periods.get('bb', 20)
+        breakout_period = periods.get('breakout', 20)
+    else:
+        rsi_period = 14
+        ema_long = 200
+        bb_period = 20
+        breakout_period = 20
+    
     out["ema8"]   = _ema(out["close"], 8)
     out["ema21"]  = _ema(out["close"], 21)
     out["ema50"]  = _ema(out["close"], 50)
-    out["ema200"] = _ema(out["close"], 200)
-    out["rsi"]    = _rsi(out["close"], 14)
+    out["ema200"] = _ema(out["close"], ema_long)
+    out["rsi"]    = _rsi(out["close"], rsi_period)
 
     macd_fast = _ema(out["close"], 12); macd_slow = _ema(out["close"], 26)
     macd_line = macd_fast - macd_slow
@@ -2374,28 +2388,73 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     out["macd_hist"] = macd_line - signal
 
     out["atr"]        = _atr(out["high"], out["low"], out["close"], 14)
-    out["bb_width"]   = _bb_width(out["close"], 20, 2.0)
-    out["vol_ma20"]   = out["volume"].rolling(20).mean()
+    out["bb_width"]   = _bb_width(out["close"], bb_period, 2.0)
+    out["vol_ma20"]   = out["volume"].rolling(bb_period).mean()
     out["vol_z"]      = (out["volume"] - out["vol_ma20"]) / out["vol_ma20"].replace(0, np.nan)
-    out["close_20_max"] = out["close"].rolling(20).max()
-    out["close_20_min"] = out["close"].rolling(20).min()
-    out["bb_width_ma"]  = out["bb_width"].rolling(20).mean()
+    out["close_20_max"] = out["close"].rolling(breakout_period).max()
+    out["close_20_min"] = out["close"].rolling(breakout_period).min()
+    out["bb_width_ma"]  = out["bb_width"].rolling(bb_period).mean()
     return out
 
 # ================= Scoring =================
-def score_row(r) -> float:
+def score_row(r, custom_settings=None) -> float:
+    # Get custom weights and thresholds or use defaults
+    if custom_settings and custom_settings.get('enabled'):
+        weights = custom_settings.get('weights', {})
+        thresholds = custom_settings.get('thresholds', {})
+        
+        regime_weight = weights.get('regime', 25)
+        structure_weight = weights.get('structure', 25)
+        rsi_weight = weights.get('rsi', 10)
+        macd_weight = weights.get('macd', 10)
+        volume_weight = weights.get('volume', 8)
+        volatility_weight = weights.get('volatility', 7)
+        tradability_weight = weights.get('tradability', 5)
+        overextension_penalty = weights.get('overextension_penalty', 10)
+        
+        rsi_bull = thresholds.get('rsi_bull', 50)
+        rsi_overbought = thresholds.get('rsi_overbought', 80)
+        rsi_oversold = thresholds.get('rsi_oversold', 20)
+        volume_z = thresholds.get('volume_z', 0.5)
+        atr_pct_max = thresholds.get('atr_pct', 0.04)
+    else:
+        # Default weights
+        regime_weight = 25
+        structure_weight = 25
+        rsi_weight = 10
+        macd_weight = 10
+        volume_weight = 8
+        volatility_weight = 7
+        tradability_weight = 5
+        overextension_penalty = 10
+        
+        # Default thresholds
+        rsi_bull = 50
+        rsi_overbought = 80
+        rsi_oversold = 20
+        volume_z = 0.5
+        atr_pct_max = 0.04
+    
     s = 0.0
-    s += 25 if r.close > r.ema200 else -25
-    s += 25 if r.close > r["close_20_max"] else 0
-    s -= 25 if r.close < r["close_20_min"] else 0
-    s += 10 if (pd.notna(r.rsi) and r.rsi > 50) else -10
-    s += 10 if (pd.notna(r.macd_hist) and r.macd_hist > 0) else -10
-    s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
-    s += 7  if (pd.notna(r.bb_width) and pd.notna(r.bb_width_ma) and r.bb_width > r.bb_width_ma) else 0
+    # Market Regime
+    s += regime_weight if r.close > r.ema200 else -regime_weight
+    # Price Structure
+    s += structure_weight if r.close > r["close_20_max"] else 0
+    s -= structure_weight if r.close < r["close_20_min"] else 0
+    # RSI Momentum
+    s += rsi_weight if (pd.notna(r.rsi) and r.rsi > rsi_bull) else -rsi_weight
+    # MACD
+    s += macd_weight if (pd.notna(r.macd_hist) and r.macd_hist > 0) else -macd_weight
+    # Volume Expansion
+    s += volume_weight if (pd.notna(r.vol_z) and r.vol_z > volume_z) else 0
+    # Volatility Expansion
+    s += volatility_weight if (pd.notna(r.bb_width) and pd.notna(r.bb_width_ma) and r.bb_width > r.bb_width_ma) else 0
+    # Tradability
     atr_pct = (r.atr / r.close) if (pd.notna(r.atr) and r.close) else np.nan
-    s += 5 if (pd.notna(atr_pct) and atr_pct < 0.04) else 0
-    s -= 10 if (pd.notna(r.rsi) and r.rsi > 80) else 0
-    s += 10 if (pd.notna(r.rsi) and r.rsi < 20) else 0
+    s += tradability_weight if (pd.notna(atr_pct) and atr_pct < atr_pct_max) else 0
+    # Overextension Penalties/Rewards
+    s -= overextension_penalty if (pd.notna(r.rsi) and r.rsi > rsi_overbought) else 0
+    s += overextension_penalty if (pd.notna(r.rsi) and r.rsi < rsi_oversold) else 0
     return float(s)
 
 # ================= Position sizing =================
