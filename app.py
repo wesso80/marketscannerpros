@@ -2472,7 +2472,8 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
 # ================= Scanner =================
 @st.cache_data(show_spinner=False, ttl=300)
 def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
-                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float, 
+                  custom_settings: dict = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows, errs = [], []
     for sym in symbols:
         try:
@@ -2487,11 +2488,11 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
             if not is_crypto and not is_forex and not is_commodity and dollar_volume(df) < min_vol:
                 raise ValueError(f"Below min dollar vol ({min_vol:,.0f})")
 
-            f = compute_features(df).dropna()
+            f = compute_features(df, custom_settings).dropna()
             if f.empty:
                 raise ValueError("Features empty after dropna()")
             last = f.iloc[-1]
-            sc = score_row(last)
+            sc = score_row(last, custom_settings)
             direction = "Bullish" if sc >= 0 else "Bearish"
 
             size, risk_usd, notional, stop = position_sizing(
@@ -5892,10 +5893,13 @@ if run_clicked:
             st.error("⚠️ Please select at least one symbol to scan (Equities, Crypto, or Commodities)")
         else:
             with st.spinner("Scanning markets..."):
+                # Get custom scanner settings if enabled
+                custom_settings = st.session_state.get('custom_scanner_settings', {'enabled': False})
+                
                 # Scan equity markets only
                 if scan_equities and eq_syms:
                     st.session_state.eq_results, st.session_state.eq_errors = scan_universe(
-                        eq_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                        eq_syms, tf_eq, False, acct, risk, stop_mult, minvol, custom_settings
                     )
                 else:
                     st.session_state.eq_results = pd.DataFrame()
@@ -5904,7 +5908,7 @@ if run_clicked:
                 # Scan commodities markets (controlled by scan_commodities checkbox)
                 if scan_commodities and commodity_syms:
                     st.session_state.commodity_results, st.session_state.commodity_errors = scan_universe(
-                        commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol
+                        commodity_syms, tf_eq, False, acct, risk, stop_mult, minvol, custom_settings
                     )
                 else:
                     st.session_state.commodity_results = pd.DataFrame()
@@ -5913,7 +5917,7 @@ if run_clicked:
                 # Scan crypto markets (only if toggle is enabled)
                 if scan_crypto and cx_syms:
                     st.session_state.cx_results, st.session_state.cx_errors = scan_universe(
-                        cx_syms, tf_cx, True, acct, risk, stop_mult, minvol
+                        cx_syms, tf_cx, True, acct, risk, stop_mult, minvol, custom_settings
                     )
                 else:
                     st.session_state.cx_results = pd.DataFrame()
