@@ -5776,6 +5776,14 @@ with st.sidebar.expander("⚙️ Custom Scanner Settings", expanded=False):
     use_custom = st.checkbox("Enable Custom Settings", help="Use custom scoring parameters instead of defaults")
     
     if use_custom:
+        st.info("""
+        **📊 How Scoring Works:**
+        - Scanner adds/subtracts points based on technical indicators
+        - **Score ≥ 0 = Bullish** (positive signals dominate)
+        - **Score < 0 = Bearish** (negative signals dominate)
+        - Higher absolute score = stronger signal
+        """)
+        
         st.markdown("---")
         st.markdown("**Scoring Weights (Points):**")
         
