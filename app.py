@@ -6861,35 +6861,44 @@ if True:
             # Show different fields based on trade type
             if trade_type == "Options":
                 option_type = st.selectbox("Option Type:", ["CALL", "PUT"], key="journal_option_type")
-                entry_price = st.number_input("Premium per Contract:", min_value=0.01, step=0.01, key="journal_entry_price", 
+                entry_price_text = st.text_input("Premium per Contract:", value="0.00", key="journal_entry_price", 
                                             help="Premium you paid per contract (e.g., $0.13)")
-                num_contracts = st.number_input("Number of Contracts:", min_value=1, step=1, key="journal_num_contracts",
+                entry_price = float(entry_price_text) if entry_price_text else 0.0
+                num_contracts_text = st.text_input("Number of Contracts:", value="0", key="journal_num_contracts",
                                               help="How many option contracts (e.g., 100)")
-                contract_multiplier = st.number_input("Contract Multiplier:", min_value=1, value=100, step=1, key="journal_multiplier",
+                num_contracts = int(float(num_contracts_text)) if num_contracts_text else 0
+                contract_multiplier_text = st.text_input("Contract Multiplier:", value="100", key="journal_multiplier",
                                                     help="Usually 100 for equity options")
+                contract_multiplier = int(float(contract_multiplier_text)) if contract_multiplier_text else 100
                 quantity = num_contracts  # For compatibility
             else:
-                entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
-                quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
+                entry_price_text = st.text_input("Entry Price:", value="0.00", key="journal_entry_price")
+                entry_price = float(entry_price_text) if entry_price_text else 0.0
+                quantity_text = st.text_input("Quantity:", value="0.00", key="journal_quantity")
+                quantity = float(quantity_text) if quantity_text else 0.0
                 option_type = None
                 num_contracts = None
                 contract_multiplier = 100
     
         with col2:
             if trade_type == "Options":
-                strike_price = st.number_input("Strike Price:", min_value=0.0, step=0.5, key="journal_strike", 
+                strike_price_text = st.text_input("Strike Price:", value="0.00", key="journal_strike", 
                                               help="Strike price of the option")
+                strike_price = float(strike_price_text) if strike_price_text else 0.0
                 expiration_date = st.date_input("Expiration Date:", value=None, key="journal_expiration", 
                                                help="Option expiration date")
             else:
-                strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", 
+                strike_price_text = st.text_input("Strike Price (Options):", value="0.00", key="journal_strike", 
                                               help="For options trades only")
+                strike_price = float(strike_price_text) if strike_price_text else 0.0
                 expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", 
                                                help="For options trades only")
             
-            stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", 
+            stop_loss_text = st.text_input("Stop Loss (Optional):", value="0.00", key="journal_stop", 
                                        help="Premium level for stop (options) or price for stock")
-            take_profit = st.number_input("Take Profit (Optional):", min_value=0.0, step=0.01, key="journal_tp")
+            stop_loss = float(stop_loss_text) if stop_loss_text else 0.0
+            take_profit_text = st.text_input("Take Profit (Optional):", value="0.00", key="journal_tp")
+            take_profit = float(take_profit_text) if take_profit_text else 0.0
             setup_type = st.selectbox("Setup Type:", ["", "Breakout", "Pullback", "Reversal", "Squeeze", "Momentum", "Earnings", "Other"], key="journal_setup")
             tags_input = st.text_input("Tags (comma-separated):", placeholder="swing, earnings, technical", key="journal_tags")
     
