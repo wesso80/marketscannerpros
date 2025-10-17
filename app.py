@@ -4611,26 +4611,17 @@ now_syd = datetime.now(timezone.utc).astimezone(SYD).strftime("%H:%M:%S %Z")
 c3.info(f"Last scan: {now_syd}")
 
 # Results display control
-col_results1, col_results2, col_results3 = st.columns([2, 1, 1])
+col_results1, col_results2 = st.columns([1, 2])
 with col_results1:
     st.markdown("**Results to Display:**")
 with col_results2:
     if 'topk' not in st.session_state:
         st.session_state.topk = CFG.top_k
-    topk = st.number_input("Number of results", min_value=5, max_value=100, value=st.session_state.topk, step=5, key="topk_display", label_visibility="collapsed")
+    # Create list of options from 5 to 100 in steps of 5
+    result_options = list(range(5, 105, 5))
+    current_index = result_options.index(st.session_state.topk) if st.session_state.topk in result_options else 2
+    topk = st.selectbox("Number of results", result_options, index=current_index, key="topk_display", label_visibility="collapsed")
     st.session_state.topk = topk
-with col_results3:
-    col_minus, col_plus = st.columns(2)
-    with col_minus:
-        if st.button("➖", key="topk_minus", help="Decrease results"):
-            if st.session_state.topk > 5:
-                st.session_state.topk -= 5
-                st.rerun()
-    with col_plus:
-        if st.button("➕", key="topk_plus", help="Increase results"):
-            if st.session_state.topk < 100:
-                st.session_state.topk += 5
-                st.rerun()
 
 # Removed outdated freemium banner - tier limits now properly enforced throughout app
 
