@@ -11,6 +11,25 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
+- **TradingView Scripts Page Added** - New marketing site page showcasing professional TradingView indicators
+  - Added `/tradingview-scripts` route to marketing site
+  - Featured "Time Confluence Windows — 50% Levels + Next-Close Scanner" indicator
+  - Comprehensive documentation with features, usage instructions, and FAQ
+  - Added "TradingView" link to header navigation
+  - Screenshot and visual examples included
+- **Portfolio Chart UI Improvements** - Enhanced Plotly chart readability and layout
+  - Toolbar now shows on hover to prevent overlap with titles
+  - Centered and bold chart titles with better positioning
+  - Legend repositioned to avoid title conflicts (below performance chart, right of pie chart)
+  - Increased margins for cleaner visual separation
+- **Custom Scanner Settings Reorganized** - Moved settings section in sidebar for better UX
+  - Relocated between Commodities and Timeframes sections
+  - All dropdown-based settings for clear value visibility
+  - Maintains scoring explanation (Score ≥ 0 = Bullish, < 0 = Bearish)
+- **Streamlit Config Updated** - Fixed WebSocket connection issues for deployed sites
+  - Removed hardcoded serverAddress causing deployment failures
+  - Disabled CORS and XSRF for better Replit compatibility
+  - Enabled WebSocket compression
 - **Options/Margin Trading Support Added** - Trade Journal now fully supports margin and options trading
   - Added Options, Futures, and Margin trade types (in addition to Spot)
   - Options-specific fields: Option Type (CALL/PUT), Premium per Contract, Number of Contracts, Contract Multiplier, Strike Price

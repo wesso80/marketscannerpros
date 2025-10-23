@@ -12,7 +12,8 @@ export default function Header() {
 
         <nav className="flex items-center gap-3 md:gap-6 text-sm md:text-base text-emerald-300/90">
           <Link href="/blog" className="hover:text-emerald-300">Blog</Link>
-          <Link href="/guide" className="hover:text-emerald-300">User Guide</Link>
+          <Link href="/tradingview-scripts" className="hover:text-emerald-300">TradingView</Link>
+          <Link href="/guide" className="hover:text-emerald-300">Guide</Link>
           <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
           <Link href="/contact" className="hidden md:block hover:text-emerald-300">Contact</Link>
           <Link href="/dashboard" className="hidden md:block hover:text-emerald-300">Dashboard</Link>
