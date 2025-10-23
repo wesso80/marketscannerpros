@@ -46,13 +46,13 @@ export default function TradingViewScripts() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-neutral-900 font-semibold px-6 py-3 rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <svg style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px', maxWidth: '20px', maxHeight: '20px' }} fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 2v16h12V4H6zm2 2h8v2H8V6zm0 4h8v2H8v-2zm0 4h5v2H8v-2z"/>
                   </svg>
                   View on TradingView
                 </a>
                 <button className="inline-flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-100 font-semibold px-6 py-3 rounded-lg transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px', maxWidth: '20px', maxHeight: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                   Source Code
@@ -79,8 +79,8 @@ export default function TradingViewScripts() {
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
@@ -92,8 +92,8 @@ export default function TradingViewScripts() {
             </div>
 
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -105,8 +105,8 @@ export default function TradingViewScripts() {
             </div>
 
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                 </svg>
               </div>
@@ -118,8 +118,8 @@ export default function TradingViewScripts() {
             </div>
 
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
@@ -131,8 +131,8 @@ export default function TradingViewScripts() {
             </div>
 
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
@@ -143,8 +143,8 @@ export default function TradingViewScripts() {
             </div>
 
             <div className="bg-neutral-900/40 border border-neutral-800 rounded-xl p-6">
-              <div style={{ width: '48px', height: '48px' }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
-                <svg style={{ width: '24px', height: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div style={{ width: '48px', height: '48px', flexShrink: 0 }} className="bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4">
+                <svg style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', maxWidth: '24px', maxHeight: '24px' }} className="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
@@ -281,7 +281,7 @@ export default function TradingViewScripts() {
               className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-neutral-900 font-semibold px-8 py-4 rounded-lg transition-colors text-lg"
             >
               View All Scripts
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg style={{ width: '20px', height: '20px', minWidth: '20px', minHeight: '20px', maxWidth: '20px', maxHeight: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </a>
