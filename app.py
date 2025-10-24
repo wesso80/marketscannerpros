@@ -6071,14 +6071,30 @@ if not ios_issue_detected and not st.session_state.eq_results.empty:
     else:
         st.dataframe(display_eq, width='stretch', use_container_width=True)
     
+    # Fullscreen view dialog
+    @st.dialog("🏛 Equity Markets - Full View", width="large")
+    def show_equity_fullscreen():
+        st.write(f"**Total Results:** {len(st.session_state.eq_results)}")
+        if 'direction' in st.session_state.eq_results.columns:
+            styled_full = st.session_state.eq_results.style.applymap(highlight_direction, subset=['direction'])
+            st.dataframe(styled_full, height=600, use_container_width=True)
+        else:
+            st.dataframe(st.session_state.eq_results, height=600, use_container_width=True)
+    
     # CSV download for equity results
     csv_eq = to_csv_download(st.session_state.eq_results, "equity_scan.csv")
-    st.download_button(
-        label="📥 Download Equity Results (CSV)",
-        data=csv_eq,
-        file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.download_button(
+            label="📥 Download Equity Results (CSV)",
+            data=csv_eq,
+            file_name=f"equity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    with col2:
+        if st.button("🖥️ Fullscreen View", key="equity_fullscreen", use_container_width=True):
+            show_equity_fullscreen()
 elif not ios_issue_detected:
     st.info("No equity results to display. Click 'Run Scanner' to analyze equity markets.")
 
@@ -6121,14 +6137,30 @@ if not ios_issue_detected and not st.session_state.cx_results.empty:
     else:
         st.dataframe(display_cx, width='stretch', use_container_width=True)
     
+    # Fullscreen view dialog
+    @st.dialog("₿ Crypto Markets - Full View", width="large")
+    def show_crypto_fullscreen():
+        st.write(f"**Total Results:** {len(st.session_state.cx_results)}")
+        if 'direction' in st.session_state.cx_results.columns:
+            styled_full = st.session_state.cx_results.style.applymap(highlight_direction, subset=['direction'])
+            st.dataframe(styled_full, height=600, use_container_width=True)
+        else:
+            st.dataframe(st.session_state.cx_results, height=600, use_container_width=True)
+    
     # CSV download for crypto results
     csv_cx = to_csv_download(st.session_state.cx_results, "crypto_scan.csv")
-    st.download_button(
-        label="📥 Download Crypto Results (CSV)",
-        data=csv_cx,
-        file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.download_button(
+            label="📥 Download Crypto Results (CSV)",
+            data=csv_cx,
+            file_name=f"crypto_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    with col2:
+        if st.button("🖥️ Fullscreen View", key="crypto_fullscreen", use_container_width=True):
+            show_crypto_fullscreen()
 elif not ios_issue_detected:
     st.info("No crypto results to display. Click 'Run Scanner' to analyze crypto markets.")
 
@@ -6171,14 +6203,30 @@ if not ios_issue_detected and not st.session_state.commodity_results.empty:
     else:
         st.dataframe(display_commodity, width='stretch', use_container_width=True)
     
+    # Fullscreen view dialog
+    @st.dialog("🛢️ Commodities - Full View", width="large")
+    def show_commodity_fullscreen():
+        st.write(f"**Total Results:** {len(st.session_state.commodity_results)}")
+        if 'direction' in st.session_state.commodity_results.columns:
+            styled_full = st.session_state.commodity_results.style.applymap(highlight_direction, subset=['direction'])
+            st.dataframe(styled_full, height=600, use_container_width=True)
+        else:
+            st.dataframe(st.session_state.commodity_results, height=600, use_container_width=True)
+    
     # CSV download for commodity results
     csv_commodity = to_csv_download(st.session_state.commodity_results, "commodity_scan.csv")
-    st.download_button(
-        label="📥 Download Commodities Results (CSV)",
-        data=csv_commodity,
-        file_name=f"commodity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.download_button(
+            label="📥 Download Commodities Results (CSV)",
+            data=csv_commodity,
+            file_name=f"commodity_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    with col2:
+        if st.button("🖥️ Fullscreen View", key="commodity_fullscreen", use_container_width=True):
+            show_commodity_fullscreen()
 elif not ios_issue_detected:
     st.info("No commodities results to display. Enable '🛢️ Scan Commodities' checkbox above and click 'Run Scanner'.")
 
