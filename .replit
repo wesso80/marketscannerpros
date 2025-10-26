@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "AI Webhook API"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "AI Dashboard"
+
 [[workflows.workflow]]
 name = "AI Webhook API"
 author = "agent"
@@ -29,6 +33,22 @@ waitForPort = 8000
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "AI Dashboard"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run ai_learning_dashboard.py --server.port 5000"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 5000
 
 [[ports]]
 localPort = 8000

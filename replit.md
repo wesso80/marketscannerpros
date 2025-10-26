@@ -11,14 +11,27 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
-- **AI Scanner Webhook API Added** - TradingView webhook endpoint for real-time trading signals
-  - Endpoint: `/api/ai-scanner/alert` receives POST webhooks from TradingView
+- **AI Learning Dashboard Added** - Real-time visualization dashboard for TradingView webhook performance
+  - New dedicated Streamlit dashboard (`ai_learning_dashboard.py`) on port 5000
+  - Live performance metrics: overall winrate, P&L tracking, open positions count
+  - Top-performing feature bucket analysis with color-coded winrate tables
+  - Cumulative P&L charts showing performance over time
+  - Recent closed positions table with entry/exit prices and results
+  - Open positions monitoring and recent alerts feed
+  - Filterable by symbol, timeframe with auto-refresh capability
+  - Interactive Plotly visualizations for bucket performance distribution
+- **AI Scanner Webhook API with Learning** - TradingView webhook endpoint with intelligent trade tracking
+  - Endpoint: `/ai-scanner/alert` receives POST webhooks and automatically tracks trades
+  - Position management: BUY opens LONG, SELL closes LONG and calculates P&L
+  - Feature bucket learning: discretizes RSI (bins 0-9), MACD histogram sign, Volume Z-score
+  - SQLite database storage (alerts.db) with 3 tables: alerts, positions, bucket_stats
+  - `/ai-scanner/positions` endpoint: view open/closed positions with filters
+  - `/ai-scanner/metrics` endpoint: overall winrate, last 50 trades, top-performing buckets
+  - `/ai-scanner/alerts` endpoint: query historical alerts by symbol/timeframe/side
+  - Optional smart filtering: ENABLE_LEARNING_FILTER=true skips low-probability setups
+  - LEARN_THRESHOLD environment variable (default 0.55 = 55% winrate minimum)
   - Secured with SECRET environment variable for authentication
-  - Status endpoint: `/api/ai-scanner/status` shows available features
-  - Test endpoint: `/api/ai-scanner/test` for webhook verification
   - Supports 10 technical indicators (EMAs, RSI, MACD, ATR, Volume Z-score)
-  - Full documentation in `marketing-site/AI_WEBHOOK_SETUP.md`
-  - Ready for database storage, email alerts, and trade automation
 - **Scanner Results Fullscreen View** - Added fullscreen dialog for better data visibility
   - New "🖥️ Fullscreen View" button next to download buttons
   - Shows all results in 600px scrollable table
