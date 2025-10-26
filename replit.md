@@ -11,6 +11,19 @@ A real-time market scanning application that analyzes equities and cryptocurrenc
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
+- **AI Scanner Webhook API Added** - TradingView webhook endpoint for real-time trading signals
+  - Endpoint: `/api/ai-scanner/alert` receives POST webhooks from TradingView
+  - Secured with SECRET environment variable for authentication
+  - Status endpoint: `/api/ai-scanner/status` shows available features
+  - Test endpoint: `/api/ai-scanner/test` for webhook verification
+  - Supports 10 technical indicators (EMAs, RSI, MACD, ATR, Volume Z-score)
+  - Full documentation in `marketing-site/AI_WEBHOOK_SETUP.md`
+  - Ready for database storage, email alerts, and trade automation
+- **Scanner Results Fullscreen View** - Added fullscreen dialog for better data visibility
+  - New "🖥️ Fullscreen View" button next to download buttons
+  - Shows all results in 600px scrollable table
+  - Available for Equity, Crypto, and Commodities scanner results
+  - Maintains color-coded Bullish/Bearish highlighting
 - **TradingView Scripts Page Added** - New marketing site page showcasing professional TradingView indicators
   - Added `/tradingview-scripts` route to marketing site
   - Featured "Time Confluence Windows — 50% Levels + Next-Close Scanner" indicator
