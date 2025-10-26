@@ -1,7 +1,9 @@
 language = "python"
-run = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+run = "python -m uvicorn main:app --host 0.0.0.0 --port 8080"
 modules = ["python-3.11", "postgresql-16"]
-
+[deployment]
+run = ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+deploymentTarget = "cloudrun"
 [nix]
 channel = "stable-25_05"
 packages = ["libxcrypt"]
@@ -47,13 +49,5 @@ waitForPort = 5000
 outputType = "webview"
 
 [[ports]]
-localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 8000
+localPort = 8080
 externalPort = 80
-
-[[ports]]
-localPort = 32999
-externalPort = 3000
