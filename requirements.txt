@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+httpx
+python-dotenv
+fastapi
+httpx
+pydantic
+python-dotenv
+requests
+streamlit
+uvicorn[standard]
