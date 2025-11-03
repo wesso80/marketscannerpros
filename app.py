@@ -7058,7 +7058,8 @@ if True:
                 # Build title with options info if available
                 title_parts = [trade['symbol'], '-', trade['direction']]
                 if trade.get('trade_type') == 'Options' and trade.get('option_type'):
-                    title_parts.extend([f"{trade.get('option_type')}", f"@${float(trade.get('strike_price', 0)):.0f}"])
+                    strike = trade.get('strike_price') or 0
+                    title_parts.extend([f"{trade.get('option_type')}", f"@${float(strike):.0f}"])
                 title_parts.append(f"({pd.to_datetime(trade['entry_date']).strftime('%Y-%m-%d')})")
                 title = f"{'🟢' if trade['is_active'] else '⚫'} {' '.join(str(p) for p in title_parts)}"
                 
