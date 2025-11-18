@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.marketscannerpro.app",
+      "bundleIdentifier": "app.marketscannerpros",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "This app does not use the camera.",
@@ -29,7 +29,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.marketscannerpro.app",
+      "package": "app.marketscannerpros",
       "versionCode": 1,
       "permissions": [
         "INTERNET"
