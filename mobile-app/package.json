@@ -10,7 +10,8 @@
     "build:ios": "eas build --platform ios",
     "build:android": "eas build --platform android",
     "submit:ios": "eas submit --platform ios",
-    "submit:android": "eas submit --platform android"
+    "submit:android": "eas submit --platform android",
+    "eas-build-post-install": "node scripts/eas-build-post-install.js"
   },
   "dependencies": {
     "expo": "~52.0.0",
