@@ -18,6 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.marketscannerpros",
       "buildNumber": "1",
+      "deploymentTarget": "13.4",
       "infoPlist": {
         "NSCameraUsageDescription": "This app does not use the camera.",
         "NSMicrophoneUsageDescription": "This app does not use the microphone.",

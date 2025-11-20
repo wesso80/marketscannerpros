@@ -16,14 +16,10 @@
     "production": {
       "autoIncrement": true,
       "ios": {
-        "resourceClass": "m-medium",
-        "image": "latest"
+        "resourceClass": "m-medium"
       },
       "android": {
         "buildType": "apk"
-      },
-      "cache": {
-        "key": "reactcommon-fix-v1"
       }
     }
   },
