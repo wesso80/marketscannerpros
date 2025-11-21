@@ -1,0 +1,58 @@
+FREELANCER EXPORT - Market Scanner Pro Mobile App
+===============================================
+
+✅ WHAT'S INCLUDED:
+
+mobile-app/
+├── App.js (622 bytes) - Main WebView component
+├── app.json (808 bytes) - Expo configuration
+├── package.json (495 bytes) - Dependencies list
+├── eas.json (308 bytes) - Build profiles
+├── README.md (1307 bytes) - Project documentation
+├── build-ios.sh (965 bytes) - Build helper script
+└── assets/
+    ├── icon.png - App icon
+    └── splash.png - Splash screen
+
+README-FOR-FREELANCER.md (4.5 KB) - Complete setup instructions
+
+
+🚫 WHAT'S NOT INCLUDED (SECURITY):
+
+✗ .env files
+✗ .env.local
+✗ .env.production
+✗ EXPO_TOKEN
+✗ API keys
+✗ Secrets
+✗ node_modules (freelancer will run npm install)
+✗ Lock files
+
+
+📋 CLIENT MUST PROVIDE SEPARATELY:
+
+1. EXPO_TOKEN (required for builds)
+2. Apple Developer account access (already configured)
+3. Google Play Console access
+
+
+🔧 NEXT STEPS FOR FREELANCER:
+
+1. Read README-FOR-FREELANCER.md
+2. Ask client for EXPO_TOKEN
+3. cd mobile-app && npm install
+4. npx eas-cli build --platform ios (or android)
+
+
+📱 APP DETAILS:
+
+Bundle ID: app.marketscannerpros
+Package: app.marketscannerpros
+Web URL: https://app.marketscannerpros.app
+Expo Project: @wesso80/market-scanner-pro
+Expo Project ID: 0ebc6f5e-648c-4a6b-ae94-4b334c9bfac2
+
+
+✅ SAFE TO SEND - No secrets included!
+
+Export created: November 21, 2025
