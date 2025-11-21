@@ -1,0 +1,26 @@
+[server]
+headless = true
+address = "0.0.0.0"
+port = 5000
+enableCORS = false
+enableXsrfProtection = false
+maxUploadSize = 200
+enableWebsocketCompression = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[runner]
+magicEnabled = true
+
+[theme]
+base = "dark"
+primaryColor = "#10B981"                 # emerald
+backgroundColor = "#0B0F14"              # page bg
+secondaryBackgroundColor = "#111827"     # card bg
+textColor = "#E5E7EB"
+font = "sans serif"
