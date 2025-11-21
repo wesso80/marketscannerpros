@@ -1209,6 +1209,36 @@ textarea {
     color: #FFFFFF !important;
     background-color: #1E293B !important;
 }
+
+/* MOBILE FIX: Move sidebar toggle button down to avoid status bar/notch */
+@media only screen and (max-width: 768px) {
+    /* Target the sidebar collapse button */
+    button[kind="header"],
+    [data-testid="baseButton-header"],
+    [data-testid="collapsedControl"],
+    .css-1dp5vir,
+    .st-emotion-cache-1dp5vir {
+        margin-top: 50px !important;
+        top: 50px !important;
+    }
+    
+    /* Also target the sidebar itself */
+    section[data-testid="stSidebar"] {
+        padding-top: 50px !important;
+    }
+}
+
+/* Additional mobile viewport fix for safe area */
+@supports (padding-top: env(safe-area-inset-top)) {
+    @media only screen and (max-width: 768px) {
+        button[kind="header"],
+        [data-testid="baseButton-header"],
+        [data-testid="collapsedControl"] {
+            margin-top: calc(env(safe-area-inset-top) + 10px) !important;
+            top: calc(env(safe-area-inset-top) + 10px) !important;
+        }
+    }
+}
 </style>
 """, unsafe_allow_html=True)
     
