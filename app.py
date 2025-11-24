@@ -4009,6 +4009,9 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
                 f"{base}-USD",  # Standard USD pair
                 f"{base}USD=X",  # Yahoo Finance crypto format
                 f"{base}-USDT",  # Tether pair
+                f"{base}USDT=X",  # Tether Yahoo format
+                f"{base}-BUSD",  # Binance USD
+                f"{base}BUSD=X",  # Binance USD Yahoo format
             ])
             
         for alt_symbol in alternatives:
@@ -4017,10 +4020,14 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
                     ticker = yf.Ticker(alt_symbol)
                     hist = ticker.history(period="2d")
                     if not hist.empty:
-                        return float(hist['Close'].iloc[-1])
+                        price = float(hist['Close'].iloc[-1])
+                        if price > 0:  # Make sure we got a valid price
+                            return price
                 except Exception:
                     continue
     
+    # Last resort: return None to indicate price unavailable
+    # The UI will show this clearly rather than $0.00
     return None
 
 def update_portfolio_prices() -> None:
@@ -6649,14 +6656,23 @@ if True:
             # Create positions dataframe
             positions_data = []
             for pos in positions:
+                current_price = float(pos['current_price']) if pos['current_price'] else 0
+                avg_cost = float(pos['average_cost'])
+                
+                # Show "Price Unavailable" for zero prices
+                price_display = f"${current_price:,.2f}" if current_price > 0 else "N/A - Refresh Prices"
+                market_value_display = f"${float(pos['market_value']):,.2f}" if current_price > 0 else "N/A"
+                unrealized_pnl_display = f"${float(pos['unrealized_pnl']):,.2f}" if current_price > 0 else "N/A"
+                return_pct = f"{((current_price - avg_cost) / avg_cost * 100):.2f}%" if current_price > 0 else "N/A"
+                
                 positions_data.append({
                     'Symbol': pos['symbol'],
                     'Quantity': f"{float(pos['quantity']):,.4f}",
-                    'Avg Cost': f"${float(pos['average_cost']):,.2f}",
-                    'Current Price': f"${float(pos['current_price']):,.2f}",
-                    'Market Value': f"${float(pos['market_value']):,.2f}",
-                    'Unrealized P&L': f"${float(pos['unrealized_pnl']):,.2f}",
-                    'Return %': f"{((float(pos['current_price']) - float(pos['average_cost'])) / float(pos['average_cost']) * 100):.2f}%",
+                    'Avg Cost': f"${avg_cost:,.2f}",
+                    'Current Price': price_display,
+                    'Market Value': market_value_display,
+                    'Unrealized P&L': unrealized_pnl_display,
+                    'Return %': return_pct,
                     'Last Updated': pd.to_datetime(pos['updated_at']).strftime('%Y-%m-%d %H:%M')
                 })
         
