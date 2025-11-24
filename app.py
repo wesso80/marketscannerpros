@@ -2492,7 +2492,10 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
     """
     Returns (size_units, risk_$, notional_$, stop_price)
     """
-    stop_price = last.close - stop_mult*last.atr if direction=="Bullish" else last.close + stop_mult*last.atr
+    # Handle NaN or zero ATR - use 1% of price as fallback
+    atr_value = last.atr if pd.notna(last.atr) and last.atr > 0 else (last.close * 0.01)
+    
+    stop_price = last.close - stop_mult*atr_value if direction=="Bullish" else last.close + stop_mult*atr_value
     per_unit_risk = abs(last.close - stop_price)
     risk_dollars  = account_equity * risk_pct
     size_units = 0 if per_unit_risk <= 0 else floor(risk_dollars / per_unit_risk)
