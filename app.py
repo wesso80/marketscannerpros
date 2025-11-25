@@ -4001,6 +4001,42 @@ COINGECKO_SYMBOL_MAP = {
     'FLOKI': 'floki',
 }
 
+# Cache for CoinGecko prices (batched fetch)
+_coingecko_price_cache = {}
+_coingecko_cache_time = 0
+
+def fetch_all_coingecko_prices() -> dict:
+    """Fetch ALL crypto prices in one API call to avoid rate limits"""
+    global _coingecko_price_cache, _coingecko_cache_time
+    import time
+    
+    # Use cache if less than 60 seconds old
+    if time.time() - _coingecko_cache_time < 60 and _coingecko_price_cache:
+        return _coingecko_price_cache
+    
+    try:
+        # Batch all coin IDs into one request
+        all_coin_ids = ','.join(COINGECKO_SYMBOL_MAP.values())
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={all_coin_ids}&vs_currencies=usd"
+        response = requests.get(url, timeout=15)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Build reverse lookup: symbol -> price
+            reverse_map = {v: k for k, v in COINGECKO_SYMBOL_MAP.items()}
+            price_cache = {}
+            for coin_id, prices in data.items():
+                if 'usd' in prices:
+                    symbol = reverse_map.get(coin_id, coin_id.upper())
+                    price_cache[symbol] = prices['usd']
+            _coingecko_price_cache = price_cache
+            _coingecko_cache_time = time.time()
+            return price_cache
+    except Exception as e:
+        print(f"CoinGecko batch fetch error: {e}")
+    
+    return _coingecko_price_cache  # Return old cache on error
+
 def get_price_from_coingecko(symbol: str) -> Optional[float]:
     """Get price from CoinGecko API for crypto tokens"""
     try:
@@ -4010,13 +4046,17 @@ def get_price_from_coingecko(symbol: str) -> Optional[float]:
         else:
             base = symbol.upper()
         
-        # Get CoinGecko ID from mapping
+        # Get all prices in one call (cached)
+        prices = fetch_all_coingecko_prices()
+        
+        if base in prices:
+            return float(prices[base])
+        
+        # Fallback: try direct API call for unknown tokens
         coin_id = COINGECKO_SYMBOL_MAP.get(base)
         if not coin_id:
-            # Try lowercase as fallback
             coin_id = base.lower()
         
-        # Call CoinGecko API (free, no key required)
         url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
         response = requests.get(url, timeout=10)
         
