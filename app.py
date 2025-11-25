@@ -3949,6 +3949,88 @@ def get_aud_to_usd_rate() -> float:
         pass
     return 0.65  # Fallback rate if API fails
 
+# CoinGecko symbol mapping for crypto tokens
+COINGECKO_SYMBOL_MAP = {
+    'BTC': 'bitcoin',
+    'ETH': 'ethereum',
+    'XRP': 'ripple',
+    'XXRP': 'ripple',
+    'SOL': 'solana',
+    'DOGE': 'dogecoin',
+    'ADA': 'cardano',
+    'AVAX': 'avalanche-2',
+    'DOT': 'polkadot',
+    'LINK': 'chainlink',
+    'MATIC': 'matic-network',
+    'UNI': 'uniswap',
+    'ATOM': 'cosmos',
+    'LTC': 'litecoin',
+    'FIL': 'filecoin',
+    'NEAR': 'near',
+    'APT': 'aptos',
+    'ARB': 'arbitrum',
+    'OP': 'optimism',
+    'SUI': 'sui',
+    'SEI': 'sei-network',
+    'INJ': 'injective-protocol',
+    'TIA': 'celestia',
+    'JUP': 'jupiter-exchange-solana',
+    'RENDER': 'render-token',
+    'REN': 'republic-protocol',
+    'FET': 'fetch-ai',
+    'HBAR': 'hedera-hashgraph',
+    'XLM': 'stellar',
+    'KAS': 'kaspa',
+    'ALGO': 'algorand',
+    'VET': 'vechain',
+    'SAND': 'the-sandbox',
+    'MANA': 'decentraland',
+    'AXS': 'axie-infinity',
+    'AAVE': 'aave',
+    'CRV': 'curve-dao-token',
+    'MKR': 'maker',
+    'SNX': 'havven',
+    'COMP': 'compound-governance-token',
+    'LDO': 'lido-dao',
+    'RPL': 'rocket-pool',
+    'GMX': 'gmx',
+    'PEPE': 'pepe',
+    'SHIB': 'shiba-inu',
+    'BONK': 'bonk',
+    'WIF': 'dogwifcoin',
+    'FLOKI': 'floki',
+}
+
+def get_price_from_coingecko(symbol: str) -> Optional[float]:
+    """Get price from CoinGecko API for crypto tokens"""
+    try:
+        # Extract base symbol from format like "JUP-USD" or "BTC-AUD"
+        if '-' in symbol:
+            base = symbol.split('-')[0].upper()
+        else:
+            base = symbol.upper()
+        
+        # Get CoinGecko ID from mapping
+        coin_id = COINGECKO_SYMBOL_MAP.get(base)
+        if not coin_id:
+            # Try lowercase as fallback
+            coin_id = base.lower()
+        
+        # Call CoinGecko API (free, no key required)
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if coin_id in data and 'usd' in data[coin_id]:
+                price = float(data[coin_id]['usd'])
+                if price > 0:
+                    return price
+    except Exception as e:
+        print(f"CoinGecko error for {symbol}: {e}")
+    
+    return None
+
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
     """Get current price for portfolio calculations with robust fallbacks - returns USD normalized price"""
     # First try the original symbol
@@ -4026,8 +4108,13 @@ def get_current_price_portfolio(symbol: str) -> Optional[float]:
                 except Exception:
                     continue
     
-    # Last resort: return None to indicate price unavailable
-    # The UI will show this clearly rather than $0.00
+    # Last resort: Try CoinGecko API for crypto tokens
+    if '-' in symbol:
+        coingecko_price = get_price_from_coingecko(symbol)
+        if coingecko_price and coingecko_price > 0:
+            return coingecko_price
+    
+    # All methods failed - return None
     return None
 
 def update_portfolio_prices() -> None:
