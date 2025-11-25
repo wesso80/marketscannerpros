@@ -4033,86 +4033,84 @@ def get_price_from_coingecko(symbol: str) -> Optional[float]:
 
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
     """Get current price for portfolio calculations with robust fallbacks - returns USD normalized price"""
-    # First try the original symbol
-    for attempt_symbol in [symbol]:
-        try:
-            ticker = yf.Ticker(attempt_symbol)
-            
-            # Try fast_info first (fastest)
-            try:
-                price = ticker.fast_info.get('lastPrice')
-                if price and price > 0:
-                    price = float(price)
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-            
-            # Fallback to recent minute data
-            try:
-                hist = ticker.history(period="1d", interval="1m")
-                if not hist.empty:
-                    price = float(hist['Close'].iloc[-1])
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-                
-            # Final fallback to daily data
-            try:
-                hist = ticker.history(period="2d")
-                if not hist.empty:
-                    price = float(hist['Close'].iloc[-1])
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-                
-        except Exception:
-            continue
     
-    # If crypto symbol fails, try alternative formats
-    if '-' in symbol:
-        base, quote = symbol.split('-', 1)
-        alternatives = []
+    # Determine if this is a crypto symbol (contains dash like BTC-USD, JUP-USD, etc.)
+    is_crypto = '-' in symbol and symbol.split('-')[1] in ['USD', 'AUD', 'USDT', 'BUSD']
+    
+    # For crypto tokens, try CoinGecko FIRST (more reliable for altcoins)
+    if is_crypto:
+        coingecko_price = get_price_from_coingecko(symbol)
+        if coingecko_price and coingecko_price > 0:
+            return coingecko_price
+    
+    # Try Yahoo Finance as fallback
+    try:
+        ticker = yf.Ticker(symbol)
         
-        # Try different exchange formats for crypto
-        if quote in ['USD', 'AUD']:
-            alternatives.extend([
-                f"{base}-USD",  # Standard USD pair
-                f"{base}USD=X",  # Yahoo Finance crypto format
-                f"{base}-USDT",  # Tether pair
-                f"{base}USDT=X",  # Tether Yahoo format
-                f"{base}-BUSD",  # Binance USD
-                f"{base}BUSD=X",  # Binance USD Yahoo format
-            ])
+        # Try fast_info first (fastest)
+        try:
+            price = ticker.fast_info.get('lastPrice')
+            if price and price > 0:
+                price = float(price)
+                # Convert AUD to USD if needed
+                if symbol.endswith('-AUD'):
+                    aud_usd_rate = get_aud_to_usd_rate()
+                    price = price * aud_usd_rate
+                return price
+        except Exception:
+            pass
+        
+        # Fallback to recent minute data
+        try:
+            hist = ticker.history(period="1d", interval="1m")
+            if not hist.empty:
+                price = float(hist['Close'].iloc[-1])
+                if price and price > 0:
+                    # Convert AUD to USD if needed
+                    if symbol.endswith('-AUD'):
+                        aud_usd_rate = get_aud_to_usd_rate()
+                        price = price * aud_usd_rate
+                    return price
+        except Exception:
+            pass
+            
+        # Final fallback to daily data
+        try:
+            hist = ticker.history(period="2d")
+            if not hist.empty:
+                price = float(hist['Close'].iloc[-1])
+                if price and price > 0:
+                    # Convert AUD to USD if needed
+                    if symbol.endswith('-AUD'):
+                        aud_usd_rate = get_aud_to_usd_rate()
+                        price = price * aud_usd_rate
+                    return price
+        except Exception:
+            pass
+            
+    except Exception:
+        pass
+    
+    # If crypto symbol failed Yahoo, try alternative Yahoo formats
+    if is_crypto:
+        base, quote = symbol.split('-', 1)
+        alternatives = [
+            f"{base}-USD",  # Standard USD pair
+            f"{base}USD=X",  # Yahoo Finance crypto format
+            f"{base}-USDT",  # Tether pair
+        ]
             
         for alt_symbol in alternatives:
-            if alt_symbol != symbol:  # Don't retry the same symbol
+            if alt_symbol != symbol:
                 try:
                     ticker = yf.Ticker(alt_symbol)
                     hist = ticker.history(period="2d")
                     if not hist.empty:
                         price = float(hist['Close'].iloc[-1])
-                        if price > 0:  # Make sure we got a valid price
+                        if price and price > 0:
                             return price
                 except Exception:
                     continue
-    
-    # Last resort: Try CoinGecko API for crypto tokens
-    if '-' in symbol:
-        coingecko_price = get_price_from_coingecko(symbol)
-        if coingecko_price and coingecko_price > 0:
-            return coingecko_price
     
     # All methods failed - return None
     return None
