@@ -1,11 +1,33 @@
-// components/ReferralBanner.tsx
+'use client';
+
 export default function ReferralBanner() {
   return (
-    <section className="w-full border-b border-neutral-800 bg-emerald-500/10">
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10 text-center">
-        <span className="inline-block rounded-lg border border-emerald-600/30 bg-emerald-600/20 px-5 py-3 text-base md:text-lg text-emerald-200 font-medium">
-          Invite a friend → both get 7 days Pro free
-        </span>
+    <section style={{
+      width: '100%',
+      background: 'linear-gradient(135deg, rgba(20,184,166,0.1), rgba(34,197,94,0.08))',
+      borderBottom: '1px solid #1f2933',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
+    }}>
+      <div style={{ maxWidth: 1120, padding: '36px 20px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '14px 24px',
+          borderRadius: 999,
+          background: 'rgba(15,23,42,0.8)',
+          border: '1px solid rgba(34,197,94,0.3)',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+        }}>
+          <span style={{ fontSize: 20 }}>🎁</span>
+          <span style={{
+            fontSize: 15,
+            fontWeight: 500,
+            color: '#bbf7d0'
+          }}>
+            Invite a friend → both get <strong style={{ color: '#22c55e' }}>7 days Pro free</strong>
+          </span>
+        </div>
       </div>
     </section>
   );
