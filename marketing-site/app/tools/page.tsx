@@ -397,6 +397,74 @@ export default function ToolsPage() {
                   </div>
                 </div>
               </article>
+
+              {/* Card 5 - Squeeze Strategy */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}>
+                <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047', zIndex: 2 }}>NEW</div>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/squeeze-strategy.png" alt="Squeeze Strategy Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>Short & Long Squeeze Backtest v6</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    A volatility-squeeze strategy that auto-backtests both breakout expansions and reversal snaps.
+                    Comes with built-in optimization logic that automatically selects the best TP/SL/RSI/Vol settings.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Backtesting</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Alerts</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Auto-Optimizer</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Volatility breakouts</span></span>
+                    <span>TV: Strategy</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 6 - Candlestick Pattern Strategy */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}>
+                <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047', zIndex: 2 }}>NEW</div>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/candle-pattern.png" alt="Candlestick Strategy Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>MSP Candlestick Pattern Strategy</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Scans for classic reversal patterns — engulfing, tweezer top/bottom, railroad tracks, pin bars,
+                    and compression coils — with auto SL/TP, alerts and position sizing protection.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Candle Patterns</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Risk System</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Alerts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Pattern recognition</span></span>
+                    <span>TV: Strategy</span>
+                  </div>
+                </div>
+              </article>
             </div>
           </section>
 
