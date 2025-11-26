@@ -1,0 +1,85 @@
+'use client';
+import "./styles.css";
+import { useState } from "react";
+
+export default function PricingPage() {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (plan: 'pro' | 'pro_trader') => {
+    setLoading(plan);
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan })
+      });
+      
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
+  return (
+    <main>
+      <h1>Pricing</h1>
+      <p>Start free. Upgrade any time. Cancel in your Stripe portal.</p>
+
+      <div className="plans">
+        {/* Free Plan */}
+        <div className="plan">
+          <h2>Free</h2>
+          <p>$0</p>
+          <ul>
+            <li>Limited symbols</li>
+            <li>Core scanner</li>
+          </ul>
+          <a href="https://app.marketscannerpros.app" target="_blank" className="btn">Launch App</a>
+        </div>
+
+        {/* Pro Plan */}
+        <div className="plan">
+          <h2>Pro <span className="badge">7-day free trial</span></h2>
+          <p>$4.99 / month</p>
+          <ul>
+            <li>Multi-TF confluence</li>
+            <li>Squeezes</li>
+            <li>Exports</li>
+          </ul>
+          <button 
+            className="btn" 
+            onClick={() => handleCheckout('pro')}
+            disabled={loading === 'pro'}
+          >
+            {loading === 'pro' ? 'Processing...' : 'Start Free Trial'}
+          </button>
+        </div>
+
+        {/* Full Pro Trader Plan */}
+        <div className="plan">
+          <h2>Full Pro Trader <span className="badge">5-day free trial</span></h2>
+          <p>$9.99 / month</p>
+          <ul>
+            <li>All Pro features</li>
+            <li>Advanced alerts</li>
+            <li>Priority support</li>
+          </ul>
+          <button 
+            className="btn" 
+            onClick={() => handleCheckout('pro_trader')}
+            disabled={loading === 'pro_trader'}
+          >
+            {loading === 'pro_trader' ? 'Processing...' : 'Start Free Trial'}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
