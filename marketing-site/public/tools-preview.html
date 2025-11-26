@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MarketScannerPros – TradingView Tools (Free Trial)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content="MarketScannerPros premium TradingView indicators – MSP Multi-TF Dashboard, Auto Fib Tool, Time Confluence Windows and more. Request your free trial access."
+  />
+  <style>
+    :root {
+      --bg: #05070b;
+      --bg-alt: #0c1018;
+      --card: #111624;
+      --accent: #14b8a6;
+      --accent-soft: rgba(20, 184, 166, 0.12);
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --border-subtle: #1f2933;
+      --danger: #f97373;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --shadow-soft: 0 18px 45px rgba(0,0,0,0.75);
+      --shadow-small: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+      "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%);
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      max-width: 1120px;
+      padding: 32px 20px 60px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #22c55e, #0f766e 40%, #020617 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: #f9fafb;
+      box-shadow: var(--shadow-small);
+    }
+
+    .brand-text-title {
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15,23,42,0.8);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34,197,94,0.9);
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 9px 18px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #22c55e);
+      color: #0b1120;
+      box-shadow: var(--shadow-small);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-primary span.icon {
+      font-size: 16px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.6fr);
+      gap: 26px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 880px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-right {
+        justify-content: flex-start;
+      }
+    }
+
+    .hero {
+      background: radial-gradient(circle at top, #111827, #020617 60%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 24px 22px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.25);
+      margin-bottom: 10px;
+    }
+
+    .hero-label-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.12);
+      color: #bbf7d0;
+      font-size: 11px;
+    }
+
+    .hero-title {
+      font-size: 26px;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      font-weight: 650;
+    }
+
+    .hero-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 460px;
+    }
+
+    .hero-bullets {
+      margin: 18px 0 20px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .hero-bullets span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-bullets span strong {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+      z-index: 2;
+      position: relative;
+    }
+
+    .hero-note {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .hero-note strong {
+      color: #e5e7eb;
+    }
+
+    .hero-glow {
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(45,212,191,0.22), transparent 60%);
+      filter: blur(1px);
+      opacity: 0.8;
+    }
+
+    .hero-badge-free {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: #a5f3fc;
+      border: 1px solid rgba(34,197,235,0.35);
+    }
+
+    .side-card {
+      background: linear-gradient(145deg, #020617, #020617 40%, #020617 60%, #0f172a 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .side-card h3 {
+      font-size: 15px;
+      margin: 0 0 4px;
+    }
+
+    .side-card p {
+      font-size: 13px;
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    .side-list {
+      font-size: 13px;
+      margin-top: 4px;
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .side-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(15,23,42,0.85);
+    }
+
+    .side-list li:last-child {
+      border-bottom: none;
+    }
+
+    .pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.96);
+      border: 1px solid rgba(55,65,81,0.8);
+      color: var(--text-muted);
+    }
+
+    .pill-live {
+      border-color: rgba(34,197,94,0.7);
+      color: #bbf7d0;
+      background: rgba(22,163,74,0.1);
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 17px;
+      font-weight: 560;
+    }
+
+    .section-sub {
+      margin: 0 0 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px;
+      margin-bottom: 26px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #111827, #020617 60%);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-small);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-thumb {
+      position: relative;
+      height: 150px;
+      background: #020617;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .card-thumb-placeholder {
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .card-thumb-label {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      font-size: 11px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(55,65,81,0.7);
+      color: var(--text-muted);
+    }
+
+    .card-body {
+      padding: 11px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 560;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      margin-top: 4px;
+      color: var(--text-muted);
+    }
+
+    .card-meta span.highlight {
+      color: var(--accent);
+    }
+
+    .how-to {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 800px) {
+      .how-to {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .how-steps {
+      background: rgba(15,23,42,0.95);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 14px 14px 12px;
+    }
+
+    .how-steps ol {
+      margin: 6px 0 6px 20px;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    .how-steps li {
+      margin-bottom: 6px;
+    }
+
+    .how-contact {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .how-contact strong {
+      color: var(--text-main);
+    }
+
+    .how-contact a.link {
+      color: #a5f3fc;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+    }
+
+    footer {
+      margin-top: 32px;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      padding-top: 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    footer a {
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-logo">M</div>
+        <div>
+          <div class="brand-text-title">MarketScannerPros</div>
+          <div class="tagline">Premium TradingView indicators & dashboards</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>Early-access beta · Free trials</span>
+        </div>
+        <a href="mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20MarketScannerPros&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20a%20free%20trial%20of%20your%20TradingView%20indicators.%0A%0ATradingView%20username%3A%20%0AScripts%20I%27m%20most%20interested%20in%3A%20%0A%0AThanks%2C%0A"
+           class="btn btn-primary">
+          <span class="icon">📩</span>
+          <span>Request Free Trial</span>
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-label">
+          <span class="hero-label-pill">Invite-only scripts</span>
+          <span>Hosted on TradingView · Manual access</span>
+        </div>
+        <h1 class="hero-title">TradingView tools built to read the whole market, not just one candle.</h1>
+        <p class="hero-sub">
+          MarketScannerPros indicators give you multi-timeframe trend, momentum and confluence in one view – designed
+          for traders who want structure and clarity instead of random signals.
+        </p>
+
+        <div class="hero-bullets">
+          <span>✅ <strong>Multi-TF dashboards</strong> for bias & alignment</span>
+          <span>✅ <strong>Auto-Fib tools</strong> with smart levels & alerts</span>
+          <span>✅ <strong>Time confluence windows</strong> for key zones</span>
+          <span>✅ <strong>Manual access control</strong> via TradingView invite-only</span>
+        </div>
+
+        <div class="hero-actions">
+          <a href="mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20MarketScannerPros&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20a%20free%20trial%20of%20your%20TradingView%20indicators.%0A%0ATradingView%20username%3A%20%0AScripts%20I%27m%20most%20interested%20in%3A%20%0A%0AThanks%2C%0A"
+             class="btn btn-primary">
+            <span class="icon">🚀</span>
+            <span>Get My Free Trial</span>
+          </a>
+          <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" class="btn btn-outline">
+            View scripts on TradingView
+          </a>
+        </div>
+        <p class="hero-note">
+          <strong>Currently 100% free</strong> · Access is invite-only while we build out the full product. Payments and
+          subscriptions will be added later – early users keep their free trial for the full beta phase.
+        </p>
+
+        <div class="hero-badge-free">Beta phase · All access is Free Trial only</div>
+      </section>
+
+      <aside class="side-card">
+        <div>
+          <h3>How the free trial works</h3>
+          <p>
+            While we're in beta, all scripts are available on a
+            <strong>manual free-trial basis</strong>. No card required, just your TradingView username.
+          </p>
+        </div>
+        <ul class="side-list">
+          <li>
+            <span>Duration</span>
+            <span class="pill">Currently open-ended beta</span>
+          </li>
+          <li>
+            <span>Access type</span>
+            <span class="pill">Invite-only on TradingView</span>
+          </li>
+          <li>
+            <span>Cost</span>
+            <span class="pill pill-live">0 · Free during beta</span>
+          </li>
+          <li>
+            <span>Requirements</span>
+            <span class="pill">Valid TradingView username</span>
+          </li>
+        </ul>
+        <p>
+          When we later add paid plans, beta users will be given the option to stay on preferred terms. For now, just
+          request access and start testing the tools in your own workflow.
+        </p>
+      </aside>
+    </main>
+
+    <section>
+      <h2 class="section-title">Included TradingView tools (beta)</h2>
+      <p class="section-sub">
+        These are live or in final testing on the <strong>@Marketscannerpros</strong> TradingView profile. All are
+        currently offered on a free-trial basis.
+      </p>
+
+      <div class="cards">
+        <article class="card">
+          <div class="card-thumb">
+            <span class="card-thumb-placeholder">📊 MSP Dashboard</span>
+            <div class="card-thumb-label">Live · Invite-only</div>
+          </div>
+          <div class="card-body">
+            <div class="card-title">MSP — Multi-TF Dashboard v3</div>
+            <p class="card-desc">
+              Reads 4 timeframes at once and scores trend, momentum and bias. Gives you instant clarity on whether the
+              market is aligned long, short or stuck in chop.
+            </p>
+            <div class="card-meta">
+              <span>Focus: <span class="highlight">Context & bias</span></span>
+              <span>TV: Indicator</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-thumb">
+            <span class="card-thumb-placeholder">📈 Auto Fib Tool</span>
+            <div class="card-thumb-label">Beta · Invite-only</div>
+          </div>
+          <div class="card-body">
+            <div class="card-title">MSP Auto Fib Tool – Locked & Alerts</div>
+            <p class="card-desc">
+              Automatically anchors swings, plots key retracement/extension levels and lets you lock zones for precise,
+              repeatable execution with alerts.
+            </p>
+            <div class="card-meta">
+              <span>Focus: <span class="highlight">Levels & structure</span></span>
+              <span>TV: Indicator</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-thumb">
+            <span class="card-thumb-placeholder">🎯 Confluence Strategy</span>
+            <div class="card-thumb-label">Private testing</div>
+          </div>
+          <div class="card-body">
+            <div class="card-title">MarketScannerPros — Confluence Strategy</div>
+            <p class="card-desc">
+              Multi-signal strategy that combines trend, momentum, structure and time-based filters. Used internally to
+              stress-test ideas before indicators ship.
+            </p>
+            <div class="card-meta">
+              <span>Focus: <span class="highlight">System testing</span></span>
+              <span>TV: Strategy</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-thumb">
+            <span class="card-thumb-placeholder">⏰ Time Confluence</span>
+            <div class="card-thumb-label">Live · Public</div>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Time Confluence Windows — 50% Levels</div>
+            <p class="card-desc">
+              Highlights stacked time windows and key 50% levels so you can see where multiple sessions and swings
+              overlap – ideal for planning zones in advance.
+            </p>
+            <div class="card-meta">
+              <span>Focus: <span class="highlight">Timing zones</span></span>
+              <span>TV: Indicator</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="how-to">
+      <div class="how-steps">
+        <h3>How to request your free trial</h3>
+        <ol>
+          <li>Make sure you have a TradingView account.</li>
+          <li>
+            Click any <strong>"Request Free Trial"</strong> button on this page – it opens a pre-filled email to us.
+          </li>
+          <li>
+            Add your <strong>TradingView username</strong> and which scripts you want to try (or just say "all of them").
+          </li>
+          <li>
+            We'll add you to the invite-only scripts and reply once access is active.
+          </li>
+        </ol>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+          Access is granted manually so allow some time depending on timezone. If you haven't heard back within 24 hours,
+          feel free to follow up.
+        </p>
+      </div>
+
+      <div class="how-contact">
+        <p>
+          📩 <strong>Email for access:</strong><br />
+          <a class="link" href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a>
+        </p>
+        <p>
+          🔗 <strong>TradingView profile:</strong><br />
+          <a class="link" href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer">
+            https://www.tradingview.com/u/Marketscannerpros/
+          </a>
+        </p>
+        <p>
+          When we later introduce paid plans, this page will be updated with pricing and checkout links. Until then,
+          everything here is free to test as part of the beta.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <span>© <span id="year"></span> MarketScannerPros. All rights reserved.</span>
+      <span>Nothing on this site is financial advice. For educational use only.</span>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
