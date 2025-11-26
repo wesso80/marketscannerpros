@@ -1,126 +1,236 @@
-export const metadata = {
-  title: "MarketScanner Pro — User Guide",
-  alternates: { canonical: "/guide" }
-};
+'use client';
+
+const sections = [
+  {
+    icon: "🧭",
+    title: "1. Navigation & Mode Controls",
+    subtitle: "Left Sidebar",
+    description: "Your app's control hub. Switch between modes and manage lists or subscriptions.",
+    items: [
+      { label: "Mode Selector", desc: "Web / Mobile - Indicates which version is active" },
+      { label: "Watchlists", desc: "Manual Entry / New / Manage - Enter ticker symbols or manage saved lists" },
+      { label: "Subscription", desc: "Manage or cancel your subscription" }
+    ]
+  },
+  {
+    icon: "⚡",
+    title: "2. Hero Section / Overview",
+    subtitle: "Quick Start",
+    description: "The landing view that sets the context and lets you jump into action.",
+    items: [
+      { label: "Start Scanning Now", desc: "Launch a scan using your chosen list and settings" },
+      { label: "View Results", desc: "Opens the latest completed scan report" }
+    ]
+  },
+  {
+    icon: "📊",
+    title: "3. Scanner Controls",
+    subtitle: "Core Functionality",
+    description: "Run scans, refresh data, and select your preferred timeframes.",
+    items: [
+      { label: "Run Scanner", desc: "Initiate real-time scan across selected markets" },
+      { label: "Refresh Data", desc: "Pull latest candle/indicator data" },
+      { label: "Time Selector", desc: "Choose timeframe (1h, 4h, 1d) for next scan" }
+    ]
+  },
+  {
+    icon: "🏦",
+    title: "4. Equity Markets Panel",
+    subtitle: "Stock Results",
+    description: "Displays results for traditional stock / equity scans with matching setups.",
+    items: []
+  },
+  {
+    icon: "💰",
+    title: "5. Crypto Markets Panel",
+    subtitle: "Crypto Results",
+    description: "Live or cached scanner hits with timeframe labels and strength scores.",
+    items: []
+  },
+  {
+    icon: "📈",
+    title: "6. Scoring Methodology",
+    subtitle: "Transparency",
+    description: "Understand how MarketScanner calculates signal scores.",
+    items: [
+      { label: "Show Details", desc: "Expand to see formula logic (EMA alignment + RSI + volume = score)" }
+    ]
+  },
+  {
+    icon: "🔔",
+    title: "7. Price Alerts",
+    subtitle: "Automation",
+    description: "Automate watchlist monitoring with custom alerts.",
+    items: [
+      { label: "Auto Check", desc: "Enable background alert scanning" },
+      { label: "Check Now", desc: "Manually run all alert conditions" },
+      { label: "New Alert", desc: "Create rule (symbol + condition + target)" }
+    ]
+  },
+  {
+    icon: "🧠",
+    title: "8. Technical Analysis Charts",
+    subtitle: "Advanced Charting",
+    description: "Multi-indicator chart views for selected assets.",
+    items: [
+      { label: "Instrument", desc: "Select the asset to analyze" },
+      { label: "Timeframe", desc: "Choose chart period" },
+      { label: "Indicators", desc: "MACD, RSI, Volume, and more" }
+    ]
+  },
+  {
+    icon: "💼",
+    title: "9. Portfolio Tracking",
+    subtitle: "Performance",
+    description: "Track total account performance and distribution.",
+    items: [
+      { label: "Portfolio Value", desc: "Live snapshot of holdings" },
+      { label: "Pie Chart", desc: "Shows diversification by market value" },
+      { label: "Performance Chart", desc: "Historical growth curve" }
+    ]
+  },
+  {
+    icon: "🧾",
+    title: "10. Trade Journal",
+    subtitle: "Record Keeping",
+    description: "A trading log for performance analysis.",
+    items: [
+      { label: "Log Trade", desc: "Record symbol, direction, entry, exit, quantity" },
+      { label: "Trade History", desc: "View all past trades" },
+      { label: "Performance Stats", desc: "Total P&L and win rate" }
+    ]
+  },
+  {
+    icon: "🧮",
+    title: "11. Strategy Backtesting",
+    subtitle: "Test Before Trading",
+    description: "Test strategy effectiveness before live trading.",
+    items: [
+      { label: "Date Range", desc: "Select backtest period" },
+      { label: "Strategy Preset", desc: "RSI/MA Cross or custom patterns" },
+      { label: "Run Backtest", desc: "Execute and see historical results" }
+    ]
+  },
+  {
+    icon: "📉",
+    title: "12. Scan Statistics",
+    subtitle: "Activity Summary",
+    description: "Summarizes app activity and data health.",
+    items: [
+      { label: "Stocks Scanned", desc: "Total equity symbols processed" },
+      { label: "Crypto Scanned", desc: "Total crypto assets processed" },
+      { label: "Alerts Triggered", desc: "Number of alerts fired" }
+    ]
+  }
+];
 
 export default function UserGuide() {
   return (
-    <main>
-      <h1>MarketScanner Pro — User Guide</h1>
-      <p>Everything you need to scan markets, track performance, and optimize your trading strategy.</p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+      color: '#f9fafb',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
+    }}>
+      <div style={{ maxWidth: 900, padding: '48px 20px 60px', margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 11,
+            color: '#9ca3af',
+            padding: '4px 10px',
+            borderRadius: 999,
+            background: 'rgba(15,23,42,0.9)',
+            border: '1px solid rgba(148,163,184,0.25)',
+            marginBottom: 16
+          }}>
+            <span style={{ color: '#bbf7d0' }}>Complete guide</span>
+            <span>Everything you need to know</span>
+          </div>
+          <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 12 }}>MarketScanner Pro — User Guide</h1>
+          <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 550, margin: '0 auto' }}>
+            Everything you need to scan markets, track performance, and optimize your trading strategy.
+          </p>
+        </div>
 
-      <h2>🧭 1. Navigation & Mode Controls (Left Sidebar)</h2>
-      <p><strong>What it does:</strong> This is your app's control hub. It lets users switch between modes and manage lists or subscriptions.</p>
-      <p><strong>How to use it:</strong></p>
-      <ul>
-        <li><strong>Mode Selector (Web / Mobile)</strong> → Indicates which version is active.</li>
-        <li><strong>Watchlists</strong> → Manual Entry / New / Manage → Users can manually enter ticker symbols or manage pre-saved lists for scanning.</li>
-        <li><strong>Subscription Buttons</strong> ("Manage Subscription", "Cancel Subscription") → Handles plan upgrades or cancellations.</li>
-      </ul>
-
-      <h2>⚡ 2. Hero Section / Overview Panel</h2>
-      <p><strong>Text:</strong> "Scan crypto & stocks across timeframes — fast."<br/>
-      This is the landing view that sets the context.</p>
-      <p><strong>How to use it:</strong></p>
-      <ul>
-        <li><strong>Start Scanning Now</strong> → Launches a scan using the user's chosen list and settings.</li>
-        <li><strong>View Results</strong> → Opens the latest completed scan report.</li>
-      </ul>
-      <p>This section essentially acts as the entry point to begin any analysis session.</p>
-
-      <h2>📊 3. Scanner Controls</h2>
-      <p><strong>Tabs:</strong> Scan Rate, Macro Crypto, etc.</p>
-      <p><strong>Buttons:</strong></p>
-      <ul>
-        <li><strong>Run Scanner</strong> → Initiates a real-time scan across the selected markets.</li>
-        <li><strong>Refresh Data</strong> → Pulls the latest candle/indicator data from your backend.</li>
-        <li><strong>Time Selector</strong> → Lets the user choose timeframe (e.g., 1 h, 4 h, 1 d) for the next scan.</li>
-      </ul>
-      <p><strong>Usage:</strong> Select your desired market scope and timeframe, then click Run Scanner to populate results in the next sections.</p>
-
-      <h2>🏦 4. Equity Markets Panel</h2>
-      <p><strong>Purpose:</strong> Displays results for traditional stock / equity scans.<br/>
-      If there are no stocks meeting the filter, it shows "No results — run the scanner first."</p>
-      <p><strong>Usage:</strong> After a scan, this area lists tickers with matching setups, sorted by score or confluence.</p>
-
-      <h2>💰 5. Crypto Markets Panel</h2>
-      <p><strong>Purpose:</strong> Same as the equity section but for crypto assets.<br/>
-      Displays live or cached scanner hits with timeframe labels, strength score, etc.</p>
-
-      <h2>📈 6. Scoring Methodology</h2>
-      <p><strong>Purpose:</strong> Explains how MarketScanner Pros calculates signal scores.</p>
-      <p><strong>Usage:</strong> Click Show Details → expands to show formula logic (e.g., EMA alignment + RSI levels + volume confirmation = score).<br/>
-      Useful for users who want transparency behind your algorithmic ratings.</p>
-
-      <h2>🔔 7. Price Alerts</h2>
-      <p><strong>Purpose:</strong> Automates watchlist monitoring.</p>
-      <p><strong>Controls:</strong></p>
-      <ul>
-        <li><strong>Auto Check toggle</strong> → Enables background alert scanning.</li>
-        <li><strong>Check Now</strong> → Manually runs all alert conditions.</li>
-        <li><strong>New Alert</strong> → Create a new rule (symbol + condition + target price).</li>
-        <li><strong>Active / Triggered tabs</strong> → Filter current vs fired alerts.</li>
-      </ul>
-
-      <h2>🧠 8. Advanced Technical Analysis Charts</h2>
-      <p><strong>Purpose:</strong> Displays multi-indicator chart views for a selected asset.</p>
-      <p><strong>Controls:</strong></p>
-      <ul>
-        <li>Dropdowns for Instrument, Timeframe, and Indicator sets (MACD, RSI, Volume, etc.).</li>
-        <li>Interactive chart area below once a symbol is chosen.</li>
-      </ul>
-      <p><strong>Usage:</strong> Pick a symbol + timeframe + indicators, then visualize the current confluence directly.</p>
-
-      <h2>💼 9. Portfolio Tracking</h2>
-      <p><strong>Purpose:</strong> Track total account performance and distribution.</p>
-      <p><strong>Widgets:</strong></p>
-      <ul>
-        <li><strong>Portfolio Value / P&L Summary</strong> → Live snapshot of holdings.</li>
-        <li><strong>Pie Chart (Allocation by Market Value)</strong> → Shows diversification.</li>
-        <li><strong>Performance Chart</strong> → Historical growth curve vs time.</li>
-      </ul>
-      <p><strong>Usage:</strong> Add trades to your portfolio; this updates performance metrics automatically.</p>
-
-      <h2>📊 10. Portfolio Metrics</h2>
-      <p><strong>Purpose:</strong> Tabular stats for deeper insight.</p>
-      <p><strong>Columns include:</strong></p>
-      <ul>
-        <li>Total Market Value</li>
-        <li>Total Cost Basis</li>
-        <li>Unrealized Gain / Loss</li>
-        <li>Win Rate, ROI, Average Return per Trade</li>
-      </ul>
-
-      <h2>🧾 11. Trade Journal</h2>
-      <p><strong>Purpose:</strong> A trading log for performance analysis.</p>
-      <p><strong>Controls:</strong></p>
-      <ul>
-        <li>Log Trade / Trade History / Performance Stats tabs</li>
-        <li>Inputs for symbol, direction, entry, exit, quantity, notes, etc.</li>
-      </ul>
-      <p><strong>Usage:</strong> Record every trade; system computes metrics like total P&L and win rate automatically.</p>
-
-      <h2>🧮 12. Strategy Backtesting</h2>
-      <p><strong>Purpose:</strong> Test a strategy's effectiveness before live trading.</p>
-      <p><strong>Controls:</strong></p>
-      <ul>
-        <li>Backtest Range (Start / End Date)</li>
-        <li>Timeframe Selector</li>
-        <li>Strategy Preset ("Backtest Signal Pattern or RSI/MA Cross")</li>
-        <li><strong>Run Backtest</strong> → Executes and shows historical results (win rate, drawdown).</li>
-        <li><strong>Log CSV</strong> → Exports results.</li>
-      </ul>
-      <p><strong>Usage:</strong> Select a strategy + symbols + period → Run Backtest to evaluate past performance.</p>
-
-      <h2>📉 13. Scan Statistics</h2>
-      <p><strong>Purpose:</strong> Summarizes app activity.</p>
-      <p><strong>Displays counters:</strong></p>
-      <ul>
-        <li>Stocks Scanned</li>
-        <li>Crypto Scanned</li>
-        <li>Errors / Alerts Triggered</li>
-      </ul>
-      <p>Helps users verify that scans are running and data feeds are healthy.</p>
-    </main>
+        {/* Sections */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {sections.map((section, i) => (
+            <article key={i} style={{
+              background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+              borderRadius: 16,
+              border: '1px solid #1f2933',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              padding: '24px 28px',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute',
+                right: -30,
+                top: -30,
+                width: 120,
+                height: 120,
+                background: 'radial-gradient(circle, rgba(20,184,166,0.1), transparent 60%)',
+                filter: 'blur(1px)'
+              }} aria-hidden="true"></div>
+              
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'rgba(34,197,94,0.1)',
+                  border: '1px solid rgba(34,197,94,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                  flexShrink: 0
+                }}>{section.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 650, margin: 0 }}>{section.title}</h2>
+                    <span style={{
+                      fontSize: 11,
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      background: 'rgba(15,23,42,0.96)',
+                      border: '1px solid rgba(55,65,81,0.8)',
+                      color: '#9ca3af'
+                    }}>{section.subtitle}</span>
+                  </div>
+                  <p style={{ fontSize: 14, color: '#9ca3af', margin: '8px 0 0', lineHeight: 1.5 }}>{section.description}</p>
+                  
+                  {section.items.length > 0 && (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0' }}>
+                      {section.items.map((item, j) => (
+                        <li key={j} style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 10,
+                          padding: '8px 0',
+                          borderBottom: j < section.items.length - 1 ? '1px solid rgba(15,23,42,0.85)' : 'none',
+                          fontSize: 13
+                        }}>
+                          <span style={{ color: '#22c55e', fontSize: 14, marginTop: 1 }}>→</span>
+                          <span>
+                            <strong style={{ color: '#e5e7eb' }}>{item.label}:</strong>{' '}
+                            <span style={{ color: '#9ca3af' }}>{item.desc}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
