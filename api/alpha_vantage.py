@@ -123,6 +123,138 @@ def get_daily_adjusted(symbol: str, outputsize: str = "full") -> pd.DataFrame:
     return df
 
 
+def get_weekly(symbol: str) -> pd.DataFrame:
+    """TIME_SERIES_WEEKLY - Weekly stock prices"""
+    params = {
+        "function": "TIME_SERIES_WEEKLY",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    if "Error Message" in data:
+        raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+    
+    time_series = data.get("Weekly Time Series", {})
+    
+    df_data = []
+    for timestamp, values in time_series.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'volume': int(values['5. volume'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_weekly_adjusted(symbol: str) -> pd.DataFrame:
+    """TIME_SERIES_WEEKLY_ADJUSTED - Weekly with dividends & splits"""
+    params = {
+        "function": "TIME_SERIES_WEEKLY_ADJUSTED",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    if "Error Message" in data:
+        raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+    
+    time_series = data.get("Weekly Adjusted Time Series", {})
+    
+    df_data = []
+    for timestamp, values in time_series.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'adjusted_close': float(values['5. adjusted close']),
+            'volume': int(values['6. volume']),
+            'dividend_amount': float(values['7. dividend amount'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_monthly(symbol: str) -> pd.DataFrame:
+    """TIME_SERIES_MONTHLY - Monthly stock prices"""
+    params = {
+        "function": "TIME_SERIES_MONTHLY",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    if "Error Message" in data:
+        raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+    
+    time_series = data.get("Monthly Time Series", {})
+    
+    df_data = []
+    for timestamp, values in time_series.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'volume': int(values['5. volume'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_monthly_adjusted(symbol: str) -> pd.DataFrame:
+    """TIME_SERIES_MONTHLY_ADJUSTED - Monthly with dividends & splits"""
+    params = {
+        "function": "TIME_SERIES_MONTHLY_ADJUSTED",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    if "Error Message" in data:
+        raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+    
+    time_series = data.get("Monthly Adjusted Time Series", {})
+    
+    df_data = []
+    for timestamp, values in time_series.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'open': float(values['1. open']),
+            'high': float(values['2. high']),
+            'low': float(values['3. low']),
+            'close': float(values['4. close']),
+            'adjusted_close': float(values['5. adjusted close']),
+            'volume': int(values['6. volume']),
+            'dividend_amount': float(values['7. dividend amount'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
 def get_quote_endpoint(symbol: str) -> Dict[str, Any]:
     """GLOBAL_QUOTE - Real-time quote for a single symbol"""
     params = {
@@ -692,3 +824,713 @@ def get_macd(symbol: str, interval: str = "daily", series_type: str = "close") -
     
     df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
     return df
+
+
+def get_stoch(symbol: str, interval: str = "daily") -> pd.DataFrame:
+    """STOCH - Stochastic Oscillator"""
+    params = {
+        "function": "STOCH",
+        "symbol": symbol,
+        "interval": interval,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    technical_analysis = data.get("Technical Analysis: STOCH", {})
+    
+    df_data = []
+    for timestamp, values in technical_analysis.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'slowk': float(values['SlowK']),
+            'slowd': float(values['SlowD'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_adx(symbol: str, interval: str = "daily", time_period: int = 14) -> pd.DataFrame:
+    """ADX - Average Directional Movement Index"""
+    params = {
+        "function": "ADX",
+        "symbol": symbol,
+        "interval": interval,
+        "time_period": time_period,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    technical_analysis = data.get("Technical Analysis: ADX", {})
+    
+    df_data = []
+    for timestamp, values in technical_analysis.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'adx': float(values['ADX'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_cci(symbol: str, interval: str = "daily", time_period: int = 20) -> pd.DataFrame:
+    """CCI - Commodity Channel Index"""
+    params = {
+        "function": "CCI",
+        "symbol": symbol,
+        "interval": interval,
+        "time_period": time_period,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    technical_analysis = data.get("Technical Analysis: CCI", {})
+    
+    df_data = []
+    for timestamp, values in technical_analysis.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'cci': float(values['CCI'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+def get_aroon(symbol: str, interval: str = "daily", time_period: int = 14) -> pd.DataFrame:
+    """AROON - Aroon Indicator"""
+    params = {
+        "function": "AROON",
+        "symbol": symbol,
+        "interval": interval,
+        "time_period": time_period,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    technical_analysis = data.get("Technical Analysis: AROON", {})
+    
+    df_data = []
+    for timestamp, values in technical_analysis.items():
+        df_data.append({
+            'timestamp': pd.to_datetime(timestamp),
+            'aroon_up': float(values['Aroon Up']),
+            'aroon_down': float(values['Aroon Down'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+    return df
+
+
+# ==================== COMMODITIES APIs ====================
+
+def get_wti_crude() -> pd.DataFrame:
+    """WTI - Crude Oil (WTI) prices"""
+    params = {
+        "function": "WTI",
+        "interval": "daily",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_brent_crude() -> pd.DataFrame:
+    """BRENT - Crude Oil (Brent) prices"""
+    params = {
+        "function": "BRENT",
+        "interval": "daily",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_natural_gas() -> pd.DataFrame:
+    """NATURAL_GAS - Natural Gas prices"""
+    params = {
+        "function": "NATURAL_GAS",
+        "interval": "daily",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_copper() -> pd.DataFrame:
+    """COPPER - Copper prices"""
+    params = {
+        "function": "COPPER",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_aluminum() -> pd.DataFrame:
+    """ALUMINUM - Aluminum prices"""
+    params = {
+        "function": "ALUMINUM",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_wheat() -> pd.DataFrame:
+    """WHEAT - Wheat prices"""
+    params = {
+        "function": "WHEAT",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_corn() -> pd.DataFrame:
+    """CORN - Corn prices"""
+    params = {
+        "function": "CORN",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_cotton() -> pd.DataFrame:
+    """COTTON - Cotton prices"""
+    params = {
+        "function": "COTTON",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_sugar() -> pd.DataFrame:
+    """SUGAR - Sugar prices"""
+    params = {
+        "function": "SUGAR",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_coffee() -> pd.DataFrame:
+    """COFFEE - Coffee prices"""
+    params = {
+        "function": "COFFEE",
+        "interval": "monthly",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    commodity_data = data.get("data", [])
+    
+    df_data = []
+    for item in commodity_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+# ==================== ECONOMIC INDICATORS ====================
+
+def get_real_gdp(interval: str = "annual") -> pd.DataFrame:
+    """REAL_GDP - Real GDP"""
+    params = {
+        "function": "REAL_GDP",
+        "interval": interval,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_real_gdp_per_capita() -> pd.DataFrame:
+    """REAL_GDP_PER_CAPITA - Real GDP per Capita"""
+    params = {
+        "function": "REAL_GDP_PER_CAPITA",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_treasury_yield(interval: str = "monthly", maturity: str = "10year") -> pd.DataFrame:
+    """TREASURY_YIELD - Treasury Yield"""
+    params = {
+        "function": "TREASURY_YIELD",
+        "interval": interval,
+        "maturity": maturity,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_federal_funds_rate(interval: str = "monthly") -> pd.DataFrame:
+    """FEDERAL_FUNDS_RATE - Federal Funds Rate"""
+    params = {
+        "function": "FEDERAL_FUNDS_RATE",
+        "interval": interval,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_cpi(interval: str = "monthly") -> pd.DataFrame:
+    """CPI - Consumer Price Index"""
+    params = {
+        "function": "CPI",
+        "interval": interval,
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_inflation() -> pd.DataFrame:
+    """INFLATION - Inflation Rate"""
+    params = {
+        "function": "INFLATION",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_retail_sales() -> pd.DataFrame:
+    """RETAIL_SALES - Retail Sales"""
+    params = {
+        "function": "RETAIL_SALES",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_durable_goods_orders() -> pd.DataFrame:
+    """DURABLES - Durable Goods Orders"""
+    params = {
+        "function": "DURABLES",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_unemployment_rate() -> pd.DataFrame:
+    """UNEMPLOYMENT - Unemployment Rate"""
+    params = {
+        "function": "UNEMPLOYMENT",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+def get_nonfarm_payroll() -> pd.DataFrame:
+    """NONFARM_PAYROLL - Nonfarm Payroll"""
+    params = {
+        "function": "NONFARM_PAYROLL",
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "datatype": "json"
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    economic_data = data.get("data", [])
+    
+    df_data = []
+    for item in economic_data:
+        df_data.append({
+            'date': pd.to_datetime(item['date']),
+            'value': float(item['value'])
+        })
+    
+    df = pd.DataFrame(df_data).sort_values('date').set_index('date')
+    return df
+
+
+# ==================== ADDITIONAL FUNDAMENTALS ====================
+
+def get_etf_profile(symbol: str) -> Dict[str, Any]:
+    """ETF_PROFILE - ETF profile and holdings"""
+    params = {
+        "function": "ETF_PROFILE",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
+
+
+def get_dividends(symbol: str) -> Dict[str, Any]:
+    """DIVIDENDS - Corporate dividend history"""
+    params = {
+        "function": "DIVIDENDS",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
+
+
+def get_splits(symbol: str) -> Dict[str, Any]:
+    """SPLITS - Stock split history"""
+    params = {
+        "function": "SPLITS",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
+
+
+def get_earnings_call_transcript(symbol: str, year: Optional[str] = None, quarter: Optional[str] = None) -> Dict[str, Any]:
+    """EARNINGS_CALL_TRANSCRIPT - Earnings call transcripts"""
+    params = {
+        "function": "EARNINGS_CALL_TRANSCRIPT",
+        "symbol": symbol,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    if year:
+        params["year"] = year
+    if quarter:
+        params["quarter"] = quarter
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
+
+
+def get_analytics_fixed_window(symbol: str, range_period: str = "1month", interval: str = "DAILY", 
+                               ohlc: str = "close", calculations: str = "MEAN") -> Dict[str, Any]:
+    """ANALYTICS_FIXED_WINDOW - Fixed window analytics"""
+    params = {
+        "function": "ANALYTICS_FIXED_WINDOW",
+        "symbol": symbol,
+        "RANGE": range_period,
+        "INTERVAL": interval,
+        "OHLC": ohlc,
+        "CALCULATIONS": calculations,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
+
+
+def get_analytics_sliding_window(symbol: str, range_period: str = "1month", interval: str = "DAILY",
+                                 window_size: int = 20, ohlc: str = "close", calculations: str = "MEAN") -> Dict[str, Any]:
+    """ANALYTICS_SLIDING_WINDOW - Sliding window analytics"""
+    params = {
+        "function": "ANALYTICS_SLIDING_WINDOW",
+        "symbol": symbol,
+        "RANGE": range_period,
+        "INTERVAL": interval,
+        "WINDOW_SIZE": window_size,
+        "OHLC": ohlc,
+        "CALCULATIONS": calculations,
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
+    
+    response = requests.get(BASE_URL, params=params, timeout=10)
+    data = response.json()
+    
+    return data
