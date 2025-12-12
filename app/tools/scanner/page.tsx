@@ -37,43 +37,13 @@ function ScannerContent() {
     }
   }, [searchParams]);
 
-  const runScan = async () => {
-    setLoading(true);
-    setError(null);
-    setResults([]);
-    
-    try {
-      // Call the scanner API with premium Alpha Vantage
-      const response = await fetch("https://marketscannerpros-scanner-api.onrender.com/scan", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: activeTab,
-          timeframe: timeframe,
-          minScore: minScore
-        }),
-        signal: AbortSignal.timeout(90000), // 90 second timeout for scanning
-      });
-
-      if (!response.ok) {
-        throw new Error(`Scanner failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.results && Array.isArray(data.results)) {
-        setResults(data.results);
-      } else {
-        setError("No results returned from scanner");
-      }
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Scanner unavailable - please try again");
-    } finally {
-      setLoading(false);
-    }
+  const runScan = () => {
+    // Redirect to Streamlit app with scanner params
+    const url = new URL("https://marketscannerpros-vwx5.onrender.com");
+    url.searchParams.set("tab", activeTab);
+    url.searchParams.set("tf", timeframe);
+    url.searchParams.set("minScore", minScore.toString());
+    window.location.href = url.toString();
   };
 
   const generateAILink = (result: ScanResult) => {
