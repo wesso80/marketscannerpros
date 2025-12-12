@@ -37,13 +37,43 @@ function ScannerContent() {
     }
   }, [searchParams]);
 
-  const runScan = () => {
-    // Redirect to Streamlit app with scanner params
-    const url = new URL("https://marketscannerpros-vwx5.onrender.com");
-    url.searchParams.set("tab", activeTab);
-    url.searchParams.set("tf", timeframe);
-    url.searchParams.set("minScore", minScore.toString());
-    window.location.href = url.toString();
+  const runScan = async () => {
+    setLoading(true);
+    setError(null);
+    setResults([]);
+
+    try {
+      const response = await fetch("https://marketscannerpros-vwx5.onrender.com/scan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: activeTab,
+          timeframe: timeframe,
+          minScore: minScore,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Scanner API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setResults(data.results || []);
+        if (data.results.length === 0) {
+          setError("No symbols found matching your criteria. Try lowering the minimum score.");
+        }
+      } else {
+        setError(data.error || "Scanner failed");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to connect to scanner");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const generateAILink = (result: ScanResult) => {
