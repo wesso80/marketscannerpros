@@ -1,19 +1,71 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+
+interface Position {
+  id: number;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  quantity: number;
+  entryPrice: number;
+  currentPrice: number;
+  pl: number;
+  plPercent: number;
+  entryDate: string;
+}
+
+interface ClosedPosition extends Position {
+  closeDate: string;
+  closePrice: number;
+  realizedPL: number;
+}
 
 function PortfolioContent() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [positions, setPositions] = useState<any[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPosition, setNewPosition] = useState({
     symbol: '',
-    side: 'LONG',
+    side: 'LONG' as 'LONG' | 'SHORT',
     quantity: '',
     entryPrice: '',
     currentPrice: ''
   });
+
+  // Load positions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('portfolio_positions');
+    const savedClosed = localStorage.getItem('portfolio_closed');
+    if (saved) {
+      try {
+        setPositions(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load positions');
+      }
+    }
+    if (savedClosed) {
+      try {
+        setClosedPositions(JSON.parse(savedClosed));
+      } catch (e) {
+        console.error('Failed to load closed positions');
+      }
+    }
+  }, []);
+
+  // Save positions to localStorage whenever they change
+  useEffect(() => {
+    if (positions.length > 0) {
+      localStorage.setItem('portfolio_positions', JSON.stringify(positions));
+    }
+  }, [positions]);
+
+  useEffect(() => {
+    if (closedPositions.length > 0) {
+      localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
+    }
+  }, [closedPositions]);
 
   const addPosition = () => {
     if (!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice) {
@@ -30,7 +82,7 @@ function PortfolioContent() {
       : (entry - current) * qty;
     const plPercent = ((pl / (entry * qty)) * 100);
 
-    const position = {
+    const position: Position = {
       id: Date.now(),
       symbol: newPosition.symbol.toUpperCase(),
       side: newPosition.side,
@@ -38,7 +90,8 @@ function PortfolioContent() {
       entryPrice: entry,
       currentPrice: current,
       pl: pl,
-      plPercent: plPercent
+      plPercent: plPercent,
+      entryDate: new Date().toISOString()
     };
 
     setPositions([...positions, position]);
@@ -47,13 +100,45 @@ function PortfolioContent() {
   };
 
   const closePosition = (id: number) => {
+    const position = positions.find(p => p.id === id);
+    if (!position) return;
+
+    const closedPos: ClosedPosition = {
+      ...position,
+      closeDate: new Date().toISOString(),
+      closePrice: position.currentPrice,
+      realizedPL: position.pl
+    };
+
+    setClosedPositions([...closedPositions, closedPos]);
     setPositions(positions.filter(p => p.id !== id));
+  };
+
+  const updatePrice = (id: number, newPrice: number) => {
+    setPositions(positions.map(p => {
+      if (p.id === id) {
+        const pl = p.side === 'LONG' 
+          ? (newPrice - p.entryPrice) * p.quantity 
+          : (p.entryPrice - newPrice) * p.quantity;
+        const plPercent = ((pl / (p.entryPrice * p.quantity)) * 100);
+        
+        return {
+          ...p,
+          currentPrice: newPrice,
+          pl,
+          plPercent
+        };
+      }
+      return p;
+    }));
   };
 
   // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
   const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+  const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
+  const totalPL = unrealizedPL + realizedPL;
   const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
   const numPositions = positions.length;
 
@@ -69,8 +154,8 @@ function PortfolioContent() {
     { label: 'Total Market Value', value: `$${totalValue.toFixed(2)}` },
     { label: 'Total Cost Basis', value: `$${totalCost.toFixed(2)}` },
     { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
-    { label: 'Realized P&L', value: '$0.00' },
-    { label: 'Total P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
+    { label: 'Realized P&L', value: `$${realizedPL >= 0 ? '' : '-'}${Math.abs(realizedPL).toFixed(2)}` },
+    { label: 'Total P&L', value: `$${totalPL >= 0 ? '' : '-'}${Math.abs(totalPL).toFixed(2)}` },
     { label: 'Total Return %', value: `${totalReturn.toFixed(2)}%` },
     { label: 'Number of Positions', value: numPositions.toString() }
   ];
@@ -490,21 +575,46 @@ function PortfolioContent() {
               <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                 💼 Holdings
               </h2>
-              <button
-                onClick={() => setActiveTab('add position')}
-                style={{
-                  padding: '8px 16px',
-                  background: '#10b981',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                ➕ UPDATE PRICES
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    // Bulk price update - prompt for each position
+                    positions.forEach(position => {
+                      const newPrice = prompt(`Update price for ${position.symbol}:`, position.currentPrice.toString());
+                      if (newPrice && !isNaN(parseFloat(newPrice))) {
+                        updatePrice(position.id, parseFloat(newPrice));
+                      }
+                    });
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#10b981',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 UPDATE ALL PRICES
+                </button>
+                <button
+                  onClick={() => setActiveTab('add position')}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#3b82f6',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ➕ ADD POSITION
+                </button>
+              </div>
             </div>
             {positions.length === 0 ? (
               <div style={{ 
@@ -579,8 +689,29 @@ function PortfolioContent() {
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
                           ${position.entryPrice.toFixed(2)}
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
-                          ${position.currentPrice.toFixed(2)}
+                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={position.currentPrice}
+                            onChange={(e) => {
+                              const newPrice = parseFloat(e.target.value);
+                              if (!isNaN(newPrice)) {
+                                updatePrice(position.id, newPrice);
+                              }
+                            }}
+                            style={{
+                              width: '100px',
+                              padding: '6px 10px',
+                              background: '#1e293b',
+                              border: '1px solid #334155',
+                              borderRadius: '4px',
+                              color: '#f1f5f9',
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              textAlign: 'right'
+                            }}
+                          />
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
                           ${(position.currentPrice * position.quantity).toFixed(2)}
@@ -630,6 +761,116 @@ function PortfolioContent() {
         )}
 
         {activeTab === 'history' && (
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              padding: '20px 24px',
+              borderBottom: '1px solid #334155'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                📜 Trade History
+              </h2>
+            </div>
+            {closedPositions.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '80px 20px',
+                color: '#64748b'
+              }}>
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>📜</div>
+                <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
+                  No closed positions yet
+                </div>
+                <div style={{ fontSize: '14px' }}>
+                  Your closed trades will appear here
+                </div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Date</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Date</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Realized P&L</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Return %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closedPositions.map((position) => (
+                      <tr 
+                        key={position.id}
+                        style={{ borderBottom: '1px solid #334155' }}
+                      >
+                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
+                          {position.symbol}
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: position.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: position.side === 'LONG' ? '#10b981' : '#ef4444',
+                            border: `1px solid ${position.side === 'LONG' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+                          }}>
+                            {position.side}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
+                          {position.quantity}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
+                          ${position.entryPrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
+                          ${position.closePrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                          {new Date(position.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                          {new Date(position.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.realizedPL >= 0 ? '+' : ''}${position.realizedPL.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.realizedPL >= 0 ? '+' : ''}{((position.realizedPL / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Performance Chart placeholder section */}
+        {activeTab === 'overview' && positions.length > 0 && (
           <div style={{
             background: '#0f172a',
             border: '1px solid #334155',
