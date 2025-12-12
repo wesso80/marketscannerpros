@@ -184,30 +184,17 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
-    Fetch OHLCV data using Alpha Vantage first, fallback to yfinance
+    Fetch OHLCV data - Use yfinance (free, reliable, no rate limits)
     """
-    # Try Alpha Vantage first (but only for daily crypto or stocks)
-    if is_crypto and timeframe == "1d":
-        try:
-            df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=True)
-            if len(df) >= 10:
-                return df
-        except Exception as e:
-            print(f"Alpha Vantage crypto failed for {symbol}: {e}")
-    elif not is_crypto:
-        try:
-            df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=False)
-            if len(df) >= 10:
-                return df
-        except Exception as e:
-            print(f"Alpha Vantage failed for {symbol}: {e}")
-    
-    # Fallback to yfinance (works for all timeframes for both stocks and crypto)
+    # Use yfinance directly - it's faster and more reliable
     try:
         df = get_ohlcv_yfinance(symbol, timeframe)
-        return df
+        if len(df) >= 10:
+            return df
+        raise ValueError(f"Insufficient data for {symbol}")
     except Exception as e:
-        raise ValueError(f"All data sources failed for {symbol}: {str(e)}")
+        print(f"yfinance failed for {symbol}: {e}")
+        raise ValueError(f"Failed to fetch data for {symbol}: {e}")
 
 # ================= Indicators =================
 def _ema(s, n):
