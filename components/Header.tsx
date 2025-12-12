@@ -10,7 +10,7 @@ export default function Header() {
           MarketScannerPros
         </Link>
 <nav className="flex items-center gap-3 md:gap-6 text-sm md:text-base text-emerald-300/90">
-  <Link href="/tools" className="hover:text-emerald-300">Tools</Link>
+  <Link href="/tools/scanner" className="hover:text-emerald-300">Scanner</Link>
 
   {/* NEW: AI Analyst */}
   <Link href="/tools/ai-analyst" className="hover:text-emerald-300">

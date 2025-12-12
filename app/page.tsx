@@ -95,7 +95,7 @@ export default function Home() {
               </ul>
               
               <button
-                onClick={() => window.open(getStreamlitUrl(), "_blank")}
+                onClick={() => window.location.href = '/tools/scanner'}
                 style={{
                   width: '100%',
                   borderRadius: 999,
