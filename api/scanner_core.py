@@ -540,8 +540,13 @@ EQUITY_SYMBOLS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "DIS"
 ]
 
-# FAST crypto scanning - Alpha Vantage verified symbols
-# BNB/SOL not supported, using BTC/ETH/LTC/XRP/DOGE (confirmed working)
+# ALL Alpha Vantage crypto - You're paying $50/month, scan EVERYTHING
 CRYPTO_SYMBOLS = [
-    "BTC-USD", "ETH-USD", "LTC-USD", "XRP-USD", "DOGE-USD"
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD", "ADA-USD", "DOGE-USD", "DOT-USD", "MATIC-USD", "LTC-USD",
+    "AVAX-USD", "LINK-USD", "UNI-USD", "ATOM-USD", "ETC-USD", "BCH-USD", "XLM-USD", "ALGO-USD", "VET-USD", "ICP-USD",
+    "FIL-USD", "APT-USD", "HBAR-USD", "NEAR-USD", "OP-USD", "ARB-USD", "IMX-USD", "STX-USD", "INJ-USD", "SUI-USD",
+    "TIA-USD", "SEI-USD", "GRT-USD", "AAVE-USD", "MKR-USD", "SNX-USD", "CRV-USD", "COMP-USD", "UMA-USD", "FLOW-USD",
+    "SUSHI-USD", "BAL-USD", "YFI-USD", "1INCH-USD", "ENJ-USD", "MANA-USD", "SAND-USD", "AXS-USD", "CHZ-USD", "GALA-USD",
+    "EOS-USD", "XTZ-USD", "ZEC-USD", "DASH-USD", "BAT-USD", "ENS-USD", "LDO-USD", "RENDER-USD", "FTM-USD", "KAVA-USD",
+    "ROSE-USD", "OSMO-USD", "MINA-USD", "KSM-USD", "SHIB-USD", "PEPE-USD", "WIF-USD", "BONK-USD", "FET-USD", "RNDR-USD"
 ]
