@@ -2,11 +2,13 @@ import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export const runtime = "nodejs";
+
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 type AnalystHistoryItem = {
   role: "user" | "assistant";
@@ -122,6 +124,7 @@ If information is missing, say so explicitly instead of guessing.
       content: query,
     });
 
+    const client = getOpenAIClient();
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages,
