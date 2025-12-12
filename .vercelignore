@@ -1,0 +1,27 @@
+# local build outputs
+.android/
+.ios/
+.expo/
+dist/
+coverage/
+
+# caches & virtual envs
+.cache/
+.next/
+__pycache__/
+.pythonlibs/
+.venv/
+.env.*
+!.env.example
+
+# python app not needed for Next.js deploy
+*.py
+.streamlit/
+static_site/
+
+# node modules (Vercel installs itself)
+node_modules/
+
+# misc
+*.log
+.DS_Store

@@ -1,0 +1,69 @@
+modules = ["python-3.11", "postgresql-16", "nodejs-20", "python3"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["cargo", "freetype", "glibcLocales", "imagemagick_light", "lcms2", "libffi", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "rustc", "tcl", "tk", "zlib", "openssh", "zip", "dig", "iproute2", "gh"]
+
+[deployment]
+deploymentTarget = "autoscale"
+run = [
+  "streamlit",
+  "run",
+  "app.py",
+  "--server.port",
+  "5000",
+  "--server.address",
+  "0.0.0.0",
+]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Market Scanner"
+
+[[workflows.workflow]]
+name = "Market Scanner"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.port 5000 --server.address 0.0.0.0"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+
+[agent]
+integrations = ["python_sendgrid:1.0.0"]
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3002
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 38309
+externalPort = 3001
+
+[[ports]]
+localPort = 38961
+externalPort = 3003
