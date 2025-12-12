@@ -87,7 +87,7 @@ function ScannerContent() {
       score: result.score.toString(),
       signal: result.signal,
     });
-    return /tools/ai-analyst?;
+    return `/tools/ai-analyst?${params.toString()}`;
   };
 
   return (
