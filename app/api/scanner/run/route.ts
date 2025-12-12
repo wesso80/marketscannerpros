@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const PYTHON_SCANNER_URL = process.env.PYTHON_SCANNER_URL || "http://localhost:8000";
+const PYTHON_SCANNER_URL = process.env.PYTHON_SCANNER_URL || "https://marketscannerpros-scanner-api.onrender.com";
 
 interface ScanRequest {
   type: "crypto" | "equity";

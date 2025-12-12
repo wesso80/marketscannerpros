@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 
 function PortfolioContent() {
+  const [activeTab, setActiveTab] = useState('overview');
   const [positions, setPositions] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPosition, setNewPosition] = useState({
@@ -49,277 +50,479 @@ function PortfolioContent() {
     setPositions(positions.filter(p => p.id !== id));
   };
 
+  // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
-  const totalPL = positions.reduce((sum, p) => sum + p.pl, 0);
-  const openPositions = positions.length;
-  const longPositions = positions.filter(p => p.side === 'LONG').length;
-  const shortPositions = positions.filter(p => p.side === 'SHORT').length;
-  const winningPositions = positions.filter(p => p.pl > 0).length;
-  const winRate = openPositions > 0 ? ((winningPositions / openPositions) * 100).toFixed(0) : '0';
+  const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+  const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+  const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
+  const numPositions = positions.length;
+
+  // Allocation data for visualization
+  const allocationData = positions.map(p => ({
+    symbol: p.symbol,
+    value: p.currentPrice * p.quantity,
+    percentage: totalValue > 0 ? ((p.currentPrice * p.quantity) / totalValue * 100) : 0
+  })).sort((a, b) => b.value - a.value);
+
+  // Portfolio metrics table data
+  const metricsData = [
+    { label: 'Total Market Value', value: `$${totalValue.toFixed(2)}` },
+    { label: 'Total Cost Basis', value: `$${totalCost.toFixed(2)}` },
+    { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
+    { label: 'Realized P&L', value: '$0.00' },
+    { label: 'Total P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
+    { label: 'Total Return %', value: `${totalReturn.toFixed(2)}%` },
+    { label: 'Number of Positions', value: numPositions.toString() }
+  ];
+
+  // Color palette for pie chart
+  const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(to bottom, #0f172a 0%, #020617 100%)',
-      padding: '20px'
+      background: '#1e293b',
+      padding: '0'
     }}>
       {/* Header */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', marginBottom: '30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb', marginBottom: '8px' }}>
-              Portfolio Tracker
-            </h1>
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>Track your positions and performance</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Link href="/tools/scanner" style={{
-              padding: '10px 18px',
-              background: 'rgba(31,41,55,0.8)',
-              border: '1px solid #374151',
-              borderRadius: '8px',
-              color: '#9ca3af',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              ← Back to Scanner
-            </Link>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px' }}>
-          <Link href="/tools/portfolio" style={{
-            padding: '10px 20px',
-            color: '#10b981',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500',
-            borderBottom: '2px solid #10b981'
+      <div style={{ 
+        background: '#0f172a', 
+        borderBottom: '1px solid #334155',
+        padding: '16px 24px'
+      }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+          <h1 style={{ 
+            fontSize: '24px', 
+            fontWeight: '700', 
+            color: '#f1f5f9',
+            margin: '0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
-            Portfolio
-          </Link>
-          <Link href="/tools/alerts" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Alerts
-          </Link>
-          <Link href="/tools/backtest" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Backtest
-          </Link>
-          <Link href="/tools/journal" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Trade Journal
-          </Link>
+            📊 Portfolio Tracking
+          </h1>
         </div>
       </div>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Summary Cards */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-          gap: '20px',
-          marginBottom: '30px'
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-            border: '1px solid #374151',
-            borderRadius: '12px',
-            padding: '20px'
-          }}>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Total Value</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb' }}>
-              ${totalValue.toFixed(2)}
-            </div>
-            <div style={{ color: totalPL >= 0 ? '#10b981' : '#ef4444', fontSize: '13px', marginTop: '4px' }}>
-              {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)} ({totalPL >= 0 ? '+' : ''}{totalValue > 0 ? ((totalPL / totalValue) * 100).toFixed(2) : '0.00'}%)
+      {/* Top Stats Bar */}
+      <div style={{ 
+        background: '#0f172a',
+        padding: '20px 24px',
+        borderBottom: '1px solid #334155'
+      }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Market Value</div>
+            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+              ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-            border: '1px solid #374151',
-            borderRadius: '12px',
-            padding: '20px'
-          }}>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Day P&L</div>
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total Return</div>
             <div style={{ 
-              fontSize: '28px', 
-              fontWeight: '700', 
-              color: totalPL >= 0 ? '#10b981' : '#ef4444'
+              fontSize: '24px', 
+              fontWeight: '700',
+              color: totalReturn >= 0 ? '#10b981' : '#ef4444'
             }}>
-              {totalPL >= 0 ? '+' : ''}${totalPL.toFixed(2)}
-            </div>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginTop: '4px' }}>
-              {totalPL >= 0 ? '+' : ''}{totalValue > 0 ? ((totalPL / totalValue) * 100).toFixed(2) : '0.00'}%
+              {totalReturn >= 0 ? '' : '-'}{Math.abs(totalReturn).toFixed(2)}%
             </div>
           </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-            border: '1px solid #374151',
-            borderRadius: '12px',
-            padding: '20px'
-          }}>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Open Positions</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb' }}>
-              {openPositions}
-            </div>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginTop: '4px' }}>
-              {longPositions} Long / {shortPositions} Short
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Unrealized P&L</div>
+            <div style={{ 
+              fontSize: '24px', 
+              fontWeight: '700',
+              color: unrealizedPL >= 0 ? '#10b981' : '#ef4444'
+            }}>
+              ${ unrealizedPL >= 0 ? '' : '-'}{Math.abs(unrealizedPL).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
-
-          <div style={{
-            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-            border: '1px solid #374151',
-            borderRadius: '12px',
-            padding: '20px'
-          }}>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Win Rate</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb' }}>
-              {winRate}%
-            </div>
-            <div style={{ color: '#9ca3af', fontSize: '13px', marginTop: '4px' }}>
-              {winningPositions}/{openPositions} trades
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Positions</div>
+            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+              {numPositions}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Positions Table */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
-          border: '1px solid #374151',
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f9fafb', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              📊 Open Positions
-            </h2>
+      {/* View Tabs */}
+      <div style={{ 
+        background: '#0f172a',
+        padding: '0 24px',
+        borderBottom: '1px solid #334155'
+      }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '0' }}>
+          {['overview', 'add position', 'holdings', 'history'].map((tab) => (
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
               style={{
-                padding: '10px 18px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                padding: '12px 24px',
+                background: activeTab === tab ? '#10b981' : 'transparent',
                 border: 'none',
-                borderRadius: '8px',
-                color: '#fff',
+                color: activeTab === tab ? '#fff' : '#94a3b8',
                 fontSize: '14px',
                 fontWeight: '500',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                transition: 'all 0.2s'
               }}
             >
-              + Add Position
+              {tab === 'add position' ? '➕ ' : tab === 'overview' ? '📊 ' : tab === 'holdings' ? '💼 ' : '📜 '}
+              {tab.toUpperCase()}
             </button>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Add Position Form */}
-          {showAddForm && (
-            <div style={{
-              background: 'rgba(15,23,42,0.8)',
-              border: '1px solid #374151',
+      {/* Main Content */}
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+        {activeTab === 'overview' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            {/* Portfolio Allocation Chart */}
+            <div style={{ 
+              background: '#0f172a',
+              border: '1px solid #334155',
               borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px'
+              padding: '24px'
             }}>
-              <h3 style={{ color: '#f9fafb', marginBottom: '16px', fontSize: '16px' }}>Add New Position</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '24px' }}>
+                Portfolio Allocation by Market Value
+              </h2>
+              {positions.length > 0 ? (
+                <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+                  {/* Pie Chart */}
+                  <svg width="280" height="280" viewBox="0 0 280 280">
+                    <g transform="translate(140, 140)">
+                      {allocationData.map((item, index) => {
+                        const startAngle = allocationData.slice(0, index).reduce((sum, d) => sum + (d.percentage * 3.6), 0);
+                        const angle = item.percentage * 3.6;
+                        const endAngle = startAngle + angle;
+                        
+                        const x1 = 100 * Math.cos((startAngle - 90) * Math.PI / 180);
+                        const y1 = 100 * Math.sin((startAngle - 90) * Math.PI / 180);
+                        const x2 = 100 * Math.cos((endAngle - 90) * Math.PI / 180);
+                        const y2 = 100 * Math.sin((endAngle - 90) * Math.PI / 180);
+                        
+                        const largeArc = angle > 180 ? 1 : 0;
+                        
+                        return (
+                          <path
+                            key={item.symbol}
+                            d={`M 0 0 L ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                            fill={colors[index % colors.length]}
+                            stroke="#0f172a"
+                            strokeWidth="2"
+                          />
+                        );
+                      })}
+                      {/* Inner circle to make donut */}
+                      <circle cx="0" cy="0" r="50" fill="#0f172a" />
+                    </g>
+                  </svg>
+                  
+                  {/* Legend */}
+                  <div style={{ flex: 1 }}>
+                    {allocationData.slice(0, 9).map((item, index) => (
+                      <div key={item.symbol} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '8px',
+                        padding: '8px',
+                        background: '#1e293b',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ 
+                            width: '12px', 
+                            height: '12px', 
+                            background: colors[index % colors.length],
+                            borderRadius: '2px'
+                          }} />
+                          <span style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: '500' }}>
+                            {item.symbol}
+                          </span>
+                        </div>
+                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>
+                          {item.percentage.toFixed(2)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  No positions to display
+                </div>
+              )}
+            </div>
+
+            {/* Performance Chart Placeholder */}
+            <div style={{ 
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              padding: '24px'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '24px' }}>
+                Portfolio Performance Over Time
+              </h2>
+              <div style={{ 
+                height: '250px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#1e293b',
+                borderRadius: '8px',
+                color: '#64748b'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
+                  <div>Performance chart coming soon</div>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Portfolio Metrics Table */}
+            <div style={{ 
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              padding: '24px',
+              gridColumn: '1 / -1'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📊 Portfolio Metrics
+              </h2>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #334155' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
+                      Metric
+                    </th>
+                    <th style={{ padding: '12px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metricsData.map((metric, index) => (
+                    <tr key={metric.label} style={{ borderBottom: index < metricsData.length - 1 ? '1px solid #334155' : 'none' }}>
+                      <td style={{ padding: '12px', color: '#f1f5f9', fontSize: '14px' }}>
+                        {metric.label}
+                      </td>
+                      <td style={{ 
+                        padding: '12px', 
+                        textAlign: 'right',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: metric.label.includes('P&L') || metric.label.includes('Return') 
+                          ? (metric.value.includes('-') ? '#ef4444' : '#10b981')
+                          : '#f1f5f9'
+                      }}>
+                        {metric.value}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'add position' && (
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            padding: '32px',
+            maxWidth: '600px',
+            margin: '0 auto'
+          }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '24px' }}>
+              Add New Position
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Symbol
+                </label>
                 <input
                   type="text"
-                  placeholder="Symbol (e.g., AAPL)"
+                  placeholder="e.g., AAPL, BTC-USD"
                   value={newPosition.symbol}
                   onChange={(e) => setNewPosition({...newPosition, symbol: e.target.value})}
                   style={{
-                    padding: '10px',
-                    background: '#0f172a',
-                    border: '1px solid #374151',
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
                     borderRadius: '6px',
-                    color: '#f9fafb',
+                    color: '#f1f5f9',
                     fontSize: '14px'
                   }}
                 />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Side
+                </label>
                 <select
                   value={newPosition.side}
                   onChange={(e) => setNewPosition({...newPosition, side: e.target.value})}
                   style={{
-                    padding: '10px',
-                    background: '#0f172a',
-                    border: '1px solid #374151',
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
                     borderRadius: '6px',
-                    color: '#f9fafb',
+                    color: '#f1f5f9',
                     fontSize: '14px'
                   }}
                 >
                   <option value="LONG">LONG</option>
                   <option value="SHORT">SHORT</option>
                 </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Quantity
+                </label>
                 <input
                   type="number"
-                  placeholder="Quantity"
+                  step="any"
+                  placeholder="0.00"
                   value={newPosition.quantity}
                   onChange={(e) => setNewPosition({...newPosition, quantity: e.target.value})}
                   style={{
-                    padding: '10px',
-                    background: '#0f172a',
-                    border: '1px solid #374151',
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
                     borderRadius: '6px',
-                    color: '#f9fafb',
-                    fontSize: '14px'
-                  }}
-                />
-                <input
-                  type="number"
-                  placeholder="Entry Price"
-                  value={newPosition.entryPrice}
-                  onChange={(e) => setNewPosition({...newPosition, entryPrice: e.target.value})}
-                  style={{
-                    padding: '10px',
-                    background: '#0f172a',
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#f9fafb',
-                    fontSize: '14px'
-                  }}
-                />
-                <input
-                  type="number"
-                  placeholder="Current Price"
-                  value={newPosition.currentPrice}
-                  onChange={(e) => setNewPosition({...newPosition, currentPrice: e.target.value})}
-                  style={{
-                    padding: '10px',
-                    background: '#0f172a',
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#f9fafb',
+                    color: '#f1f5f9',
                     fontSize: '14px'
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                <button
-                  onClick={addPosition}
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Entry Price
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={newPosition.entryPrice}
+                  onChange={(e) => setNewPosition({...newPosition, entryPrice: e.target.value})}
                   style={{
-                    padding: '10px 20px',
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Current Price
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  value={newPosition.currentPrice}
+                  onChange={(e) => setNewPosition({...newPosition, currentPrice: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <button
+                onClick={addPosition}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginTop: '8px'
+                }}
+              >
+                ➕ Add Position
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'holdings' && (
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              padding: '20px 24px',
+              borderBottom: '1px solid #334155',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                💼 Holdings
+              </h2>
+              <button
+                onClick={() => setActiveTab('add position')}
+                style={{
+                  padding: '8px 16px',
+                  background: '#10b981',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                ➕ UPDATE PRICES
+              </button>
+            </div>
+            {positions.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '80px 20px',
+                color: '#64748b'
+              }}>
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>📊</div>
+                <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
+                  No open positions
+                </div>
+                <div style={{ fontSize: '14px', marginBottom: '24px' }}>
+                  Click "Add Position" to start tracking your portfolio
+                </div>
+                <button
+                  onClick={() => setActiveTab('add position')}
+                  style={{
+                    padding: '12px 24px',
                     background: '#10b981',
                     border: 'none',
                     borderRadius: '6px',
@@ -329,133 +532,120 @@ function PortfolioContent() {
                     cursor: 'pointer'
                   }}
                 >
-                  Add Position
-                </button>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  style={{
-                    padding: '10px 20px',
-                    background: 'transparent',
-                    border: '1px solid #374151',
-                    borderRadius: '6px',
-                    color: '#9ca3af',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
+                  Add Your First Position
                 </button>
               </div>
-            </div>
-          )}
-
-          {positions.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '60px 20px',
-              color: '#6b7280'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-              <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#9ca3af' }}>
-                No open positions
-              </div>
-              <div style={{ fontSize: '14px' }}>
-                Click "Add Position" to start tracking your portfolio
-              </div>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #374151' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Symbol</th>
-                    <th style={{ padding: '12px', textAlign: 'left', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Side</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Qty</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Entry</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Current</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>P&L</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>P&L %</th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#9ca3af', fontSize: '12px', fontWeight: '500' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.map((position) => (
-                    <tr 
-                      key={position.id}
-                      style={{ 
-                        borderBottom: '1px solid #374151',
-                        transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(31,41,55,0.5)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <td style={{ padding: '16px', color: '#f9fafb', fontSize: '14px', fontWeight: '500' }}>
-                        {position.symbol}
-                      </td>
-                      <td style={{ padding: '16px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          background: position.side === 'LONG' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                          color: position.side === 'LONG' ? '#10b981' : '#ef4444'
-                        }}>
-                          {position.side}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right', color: '#f9fafb', fontSize: '14px' }}>
-                        {position.quantity}
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right', color: '#9ca3af', fontSize: '14px' }}>
-                        ${position.entryPrice.toFixed(2)}
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right', color: '#f9fafb', fontSize: '14px' }}>
-                        ${position.currentPrice.toFixed(2)}
-                      </td>
-                      <td style={{ 
-                        padding: '16px', 
-                        textAlign: 'right', 
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: position.pl >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        {position.pl >= 0 ? '+' : ''}${position.pl.toFixed(2)}
-                      </td>
-                      <td style={{ 
-                        padding: '16px', 
-                        textAlign: 'right', 
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: position.pl >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        {position.plPercent >= 0 ? '+' : ''}{position.plPercent.toFixed(2)}%
-                      </td>
-                      <td style={{ padding: '16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => closePosition(position.id)}
-                          style={{
-                            padding: '6px 12px',
-                            background: 'rgba(239,68,68,0.1)',
-                            border: '1px solid rgba(239,68,68,0.3)',
-                            borderRadius: '6px',
-                            color: '#ef4444',
-                            fontSize: '12px',
-                            fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Close
-                        </button>
-                      </td>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Current Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Market Value</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L %</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {positions.map((position) => (
+                      <tr 
+                        key={position.id}
+                        style={{ borderBottom: '1px solid #334155' }}
+                      >
+                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
+                          {position.symbol}
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: position.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: position.side === 'LONG' ? '#10b981' : '#ef4444',
+                            border: `1px solid ${position.side === 'LONG' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+                          }}>
+                            {position.side}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
+                          {position.quantity}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
+                          ${position.entryPrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
+                          ${position.currentPrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
+                          ${(position.currentPrice * position.quantity).toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.pl >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.pl >= 0 ? '+' : ''}${position.pl.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.pl >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.plPercent >= 0 ? '+' : ''}{position.plPercent.toFixed(2)}%
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => closePosition(position.id)}
+                            style={{
+                              padding: '6px 14px',
+                              background: 'rgba(239,68,68,0.1)',
+                              border: '1px solid rgba(239,68,68,0.3)',
+                              borderRadius: '4px',
+                              color: '#ef4444',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Close
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            padding: '80px 20px',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>📜</div>
+            <div style={{ color: '#94a3b8', fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>
+              Trade History Coming Soon
             </div>
-          )}
-        </div>
+            <div style={{ color: '#64748b', fontSize: '14px' }}>
+              View your closed positions and trading history
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -469,9 +659,10 @@ export default function PortfolioPage() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        background: '#0f172a'
+        background: '#1e293b',
+        color: '#f1f5f9'
       }}>
-        <div style={{ color: '#9ca3af' }}>Loading portfolio...</div>
+        Loading portfolio...
       </div>
     }>
       <PortfolioContent />

@@ -19,10 +19,13 @@
     plan: free
     region: oregon
     buildCommand: |
+      echo "=== Checking Python versions ==="
       python --version
+      python3.11 --version 2>/dev/null || echo "Python 3.11 not in path"
+      ls -la /opt/render/project/.pythonz/pythons/*/bin/python* 2>/dev/null || echo "No pythonz pythons found"
+      echo "=== Installing packages ==="
       pip install --upgrade pip
-      # Install from PyPI with binary wheels only - no source compilation
-      pip install --only-binary=:all: --prefer-binary pandas numpy
+      pip install --only-binary=:all: --prefer-binary pandas numpy || pip install pandas numpy
       pip install -r api/requirements.txt
     startCommand: uvicorn api.scanner_service:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
