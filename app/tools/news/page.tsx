@@ -141,14 +141,6 @@ export default function NewsSentimentPage() {
       setInsiderLoading(false);
     }
   };
-        setArticles(result.articles);
-      }
-    } catch (err) {
-      setError("Network error - please try again");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getSentimentColor = (label: string) => {
     const lower = label.toLowerCase();
