@@ -43,11 +43,17 @@ function ScannerContent() {
     setResults([]);
     
     try {
-      // Call Streamlit app API endpoint
-      const streamlitUrl = `https://marketscannerpros-vwx5.onrender.com/?api=scan&type=${activeTab}&timeframe=${timeframe}&minScore=${minScore}`;
-      
-      const response = await fetch(streamlitUrl, {
-        method: "GET",
+      // Call the scanner API with premium Alpha Vantage
+      const response = await fetch("https://marketscannerpros-scanner-api.onrender.com/scan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: activeTab,
+          timeframe: timeframe,
+          minScore: minScore
+        }),
         signal: AbortSignal.timeout(90000), // 90 second timeout for scanning
       });
 
@@ -55,10 +61,9 @@ function ScannerContent() {
         throw new Error(`Scanner failed: ${response.statusText}`);
       }
 
-      const text = await response.text();
-      const data = JSON.parse(text);
+      const data = await response.json();
       
-      if (data.results && Array.isArray(data.results)) {
+      if (data.success && data.results && Array.isArray(data.results)) {
         setResults(data.results);
       } else {
         setError("No results returned from scanner");
@@ -90,20 +95,75 @@ function ScannerContent() {
       minHeight: "100vh",
       background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)",
       padding: "2rem 1rem",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     }}>
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-          <h1 style={{
-            fontSize: "3rem",
-            fontWeight: "bold",
-            background: "linear-gradient(to right, #10B981, #3B82F6)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            marginBottom: "1rem"
-          }}>
-            Market Scanner Pro
-          </h1>
+      <div style={{ maxWidth: "800px", textAlign: "center", padding: "3rem" }}>
+        <h1 style={{
+          fontSize: "3rem",
+          fontWeight: "bold",
+          background: "linear-gradient(to right, #10B981, #3B82F6)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          marginBottom: "2rem"
+        }}>
+          Market Scanner Pro
+        </h1>
+        
+        <p style={{ fontSize: "1.25rem", color: "#94A3B8", marginBottom: "3rem" }}>
+          The scanner is available in the full app with live market data.
+        </p>
+        
+        <a 
+          href="https://marketscannerpros-vwx5.onrender.com"
+          style={{
+            display: "inline-block",
+            padding: "1rem 2rem",
+            fontSize: "1.125rem",
+            fontWeight: "600",
+            color: "#0F172A",
+            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+            borderRadius: "12px",
+            textDecoration: "none",
+            transition: "transform 0.2s",
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.05)"}
+          onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+        >
+          Open Scanner App →
+        </a>
+        
+        <div style={{ 
+          marginTop: "3rem", 
+          padding: "1.5rem",
+          background: "rgba(16, 185, 129, 0.1)",
+          borderRadius: "12px",
+          border: "1px solid rgba(16, 185, 129, 0.2)"
+        }}>
+          <p style={{ color: "#10B981", margin: 0 }}>
+            ✓ Live market data<br/>
+            ✓ Real-time scanning<br/>
+            ✓ Technical indicators<br/>
+            ✓ Portfolio tracking
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function ScannerPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0F172A" }} />}>
+      <ScannerContent />
+    </Suspense>
+  );
+}
+
+// OLD CODE BELOW - KEEPING FOR REFERENCE
+/*
+  const runScan = async () => {
           <p style={{ color: "#94A3B8", fontSize: "1.125rem" }}>
             Scan crypto & stocks across timeframes — fast.
           </p>
