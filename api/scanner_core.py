@@ -643,3 +643,14 @@ CRYPTO_SYMBOLS = [
     "EOS-USD", "XTZ-USD", "ZEC-USD", "DASH-USD", "BAT-USD", "ENS-USD", "LDO-USD", "RENDER-USD", "FTM-USD", "KAVA-USD",
     "ROSE-USD", "OSMO-USD", "MINA-USD", "KSM-USD", "SHIB-USD", "PEPE-USD", "WIF-USD", "BONK-USD", "FET-USD", "RNDR-USD"
 ]
+
+# FOREX pairs - Major, crosses, and emerging market pairs
+FOREX_SYMBOLS = [
+    # Majors (most liquid)
+    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+    # Popular crosses
+    "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "EURAUD", "EURCHF", "GBPAUD", "GBPCHF",
+    # Emerging markets & exotics
+    "USDCNY", "USDHKD", "USDSGD", "USDZAR", "USDMXN", "USDBRL", "USDINR", "USDTRY",
+    "USDKRW", "USDRUB", "USDTHB", "USDNOK", "USDSEK", "USDDKK", "USDPLN", "EURPLN"
+]

@@ -12,7 +12,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.scanner_core import scan_symbols, EQUITY_SYMBOLS, CRYPTO_SYMBOLS
+from api.scanner_core import scan_symbols, EQUITY_SYMBOLS, CRYPTO_SYMBOLS, FOREX_SYMBOLS
 
 app = FastAPI(title="Market Scanner API")
 
@@ -52,8 +52,8 @@ async def scan(request: ScanRequest):
     """
     try:
         # Validate inputs
-        if request.type not in ["equity", "crypto"]:
-            raise HTTPException(status_code=400, detail="Type must be 'equity' or 'crypto'")
+        if request.type not in ["equity", "crypto", "forex"]:
+            raise HTTPException(status_code=400, detail="Type must be 'equity', 'crypto', or 'forex'")
         
         if request.timeframe not in ["15m", "1h", "4h", "1d"]:
             raise HTTPException(status_code=400, detail="Invalid timeframe")
@@ -62,7 +62,12 @@ async def scan(request: ScanRequest):
         if request.symbols:
             symbols = request.symbols
         else:
-            symbols = EQUITY_SYMBOLS if request.type == "equity" else CRYPTO_SYMBOLS
+            if request.type == "equity":
+                symbols = EQUITY_SYMBOLS
+            elif request.type == "crypto":
+                symbols = CRYPTO_SYMBOLS
+            else:  # forex
+                symbols = FOREX_SYMBOLS
         
         # Run scanner
         results, errors = scan_symbols(
