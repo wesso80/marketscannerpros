@@ -26,7 +26,8 @@ function cors(origin: string | null) {
 
 export async function GET(req: Request) {
   const origin = req.headers.get("origin");
-  const token = cookies().get("ms_auth")?.value; // <-- no await
+  const cookieStore = await cookies();
+  const token = cookieStore.get("ms_auth")?.value;
 
   try {
     if (!token) {
