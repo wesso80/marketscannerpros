@@ -54,8 +54,15 @@ def get_ohlcv_finnhub(symbol: str, timeframe: str) -> pd.DataFrame:
         response = requests.get(url, params=params, timeout=10)
         data = response.json()
         
+        print(f"Finnhub response for {symbol}: status={data.get('s')}, data keys={list(data.keys())}")
+        
+        if data.get("s") == "no_data":
+            raise ValueError(f"Finnhub: No data available for {symbol}")
+        
         if data.get("s") != "ok":
-            raise ValueError(f"Finnhub error: {data.get('s', 'unknown')}")
+            error_msg = data.get("error", data.get("s", "unknown"))
+            print(f"Finnhub full error response: {data}")
+            raise ValueError(f"Finnhub error: {error_msg}")
         
         # Convert to DataFrame
         df = pd.DataFrame({
