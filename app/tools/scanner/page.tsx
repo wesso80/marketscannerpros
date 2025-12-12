@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type TimeframeOption = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
-type ScannerTab = "equity" | "crypto" | "forex";
+type ScannerTab = "equity" | "crypto" | "forex" | "commodities";
 
 interface ScanResult {
   symbol: string;
@@ -142,7 +142,8 @@ function ScannerContent() {
             >
               <option value="equity">📈 Equity Markets</option>
               <option value="crypto">₿ Crypto Markets</option>
-              <option value="forex">💱 Forex Markets</option>
+              <option value="forex">🌍 Forex Markets</option>
+              <option value="commodities">🛢️ Commodities</option>
             </select>
           </div>
 

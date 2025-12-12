@@ -650,3 +650,13 @@ FOREX_SYMBOLS = [
     "USDCNY", "USDHKD", "USDSGD", "USDZAR", "USDMXN", "USDBRL", "USDINR", "USDTRY",
     "USDKRW", "USDRUB", "USDTHB", "USDNOK", "USDSEK", "USDDKK", "USDPLN", "EURPLN"
 ]
+
+# COMMODITIES - Energy, Metals, Agriculture (Alpha Vantage Premium)
+COMMODITY_SYMBOLS = [
+    # Energy
+    "WTI", "BRENT", "NATURAL_GAS",
+    # Metals  
+    "COPPER", "ALUMINUM",
+    # Agriculture
+    "WHEAT", "CORN", "COTTON", "SUGAR", "COFFEE"
+]
