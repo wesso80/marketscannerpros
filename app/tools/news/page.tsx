@@ -5,21 +5,22 @@ import Link from "next/link";
 
 interface TickerSentiment {
   ticker: string;
-  relevance_score: string;
-  ticker_sentiment_score: string;
-  ticker_sentiment_label: string;
+  relevance: number;
+  sentimentScore: number;
+  sentimentLabel: string;
 }
 
 interface NewsArticle {
   title: string;
   url: string;
-  time_published: string;
-  authors: string[];
+  timePublished: string;
   summary: string;
   source: string;
-  overall_sentiment_score: number;
-  overall_sentiment_label: string;
-  ticker_sentiment: TickerSentiment[];
+  sentiment: {
+    label: string;
+    score: number;
+  };
+  tickerSentiments: TickerSentiment[];
 }
 
 export default function NewsSentimentPage() {
@@ -83,7 +84,7 @@ export default function NewsSentimentPage() {
 
   const filteredArticles = sentimentFilter === "all" 
     ? articles 
-    : articles.filter(a => a.overall_sentiment_label.toLowerCase().includes(sentimentFilter));
+    : articles.filter(a => a.sentiment.label.toLowerCase().includes(sentimentFilter));
 
   return (
     <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem" }}>
@@ -179,13 +180,12 @@ export default function NewsSentimentPage() {
                         {article.title}
                       </a>
                       <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "#94A3B8" }}>
-                        <span>📅 {formatDate(article.time_published)}</span>
+                        <span>📅 {formatDate(article.timePublished)}</span>
                         <span>📰 {article.source}</span>
-                        {article.authors.length > 0 && <span>✍️ {article.authors[0]}</span>}
                       </div>
                     </div>
-                    <div style={{ padding: "0.5rem 1rem", background: `${getSentimentColor(article.overall_sentiment_label)}20`, borderRadius: "8px", color: getSentimentColor(article.overall_sentiment_label), fontWeight: "600", whiteSpace: "nowrap", marginLeft: "1rem" }}>
-                      {getSentimentEmoji(article.overall_sentiment_label)} {article.overall_sentiment_label}
+                    <div style={{ padding: "0.5rem 1rem", background: `${getSentimentColor(article.sentiment.label)}20`, borderRadius: "8px", color: getSentimentColor(article.sentiment.label), fontWeight: "600", whiteSpace: "nowrap", marginLeft: "1rem" }}>
+                      {getSentimentEmoji(article.sentiment.label)} {article.sentiment.label}
                     </div>
                   </div>
 
@@ -195,22 +195,22 @@ export default function NewsSentimentPage() {
                   </p>
 
                   {/* Ticker-Specific Sentiment */}
-                  {article.ticker_sentiment && article.ticker_sentiment.length > 0 && (
+                  {article.tickerSentiments && article.tickerSentiments.length > 0 && (
                     <div>
                       <div style={{ fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
                         Per-Ticker Sentiment:
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                        {article.ticker_sentiment.map((ts, tsIndex) => (
-                          <div key={tsIndex} style={{ padding: "0.5rem 1rem", background: "rgba(30, 41, 59, 0.8)", borderRadius: "8px", border: `1px solid ${getSentimentColor(ts.ticker_sentiment_label)}`, fontSize: "0.875rem" }}>
+                        {article.tickerSentiments.map((ts, tsIndex) => (
+                          <div key={tsIndex} style={{ padding: "0.5rem 1rem", background: "rgba(30, 41, 59, 0.8)", borderRadius: "8px", border: `1px solid ${getSentimentColor(ts.sentimentLabel)}`, fontSize: "0.875rem" }}>
                             <span style={{ color: "#fff", fontWeight: "600" }}>{ts.ticker}</span>
                             {" "}
-                            <span style={{ color: getSentimentColor(ts.ticker_sentiment_label) }}>
-                              {getSentimentEmoji(ts.ticker_sentiment_label)} {ts.ticker_sentiment_label}
+                            <span style={{ color: getSentimentColor(ts.sentimentLabel) }}>
+                              {getSentimentEmoji(ts.sentimentLabel)} {ts.sentimentLabel}
                             </span>
                             {" "}
                             <span style={{ color: "#94A3B8" }}>
-                              (score: {parseFloat(ts.ticker_sentiment_score).toFixed(2)}, rel: {(parseFloat(ts.relevance_score) * 100).toFixed(0)}%)
+                              (score: {ts.sentimentScore.toFixed(2)}, rel: {(ts.relevance * 100).toFixed(0)}%)
                             </span>
                           </div>
                         ))}
