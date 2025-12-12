@@ -459,7 +459,7 @@ function PortfolioContent() {
                 </label>
                 <select
                   value={newPosition.side}
-                  onChange={(e) => setNewPosition({...newPosition, side: e.target.value})}
+                  onChange={(e) => setNewPosition({...newPosition, side: e.target.value as 'LONG' | 'SHORT'})}
                   style={{
                     width: '100%',
                     padding: '12px',
