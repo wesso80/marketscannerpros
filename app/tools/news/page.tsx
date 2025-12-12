@@ -32,17 +32,7 @@ interface EarningsEvent {
   currency: string;
 }
 
-interface InsiderTransaction {
-  symbol: string;
-  transactionType: string;
-  executiveTitle: string;
-  transactionDate: string;
-  sharesTraded: number;
-  pricePerShare: number;
-  totalValue: number;
-}
-
-type TabType = "news" | "earnings" | "insider";
+type TabType = "news" | "earnings";
 
 export default function NewsSentimentPage() {
   const [activeTab, setActiveTab] = useState<TabType>("news");
@@ -61,12 +51,6 @@ export default function NewsSentimentPage() {
   const [earningsLoading, setEarningsLoading] = useState(false);
   const [earnings, setEarnings] = useState<EarningsEvent[]>([]);
   const [earningsError, setEarningsError] = useState("");
-
-  // Insider state
-  const [insiderSymbol, setInsiderSymbol] = useState("");
-  const [insiderLoading, setInsiderLoading] = useState(false);
-  const [insiderTrades, setInsiderTrades] = useState<InsiderTransaction[]>([]);
-  const [insiderError, setInsiderError] = useState("");
 
   const handleSearch = async () => {
     if (!tickers.trim()) {
@@ -113,41 +97,6 @@ export default function NewsSentimentPage() {
       setEarningsError("Network error - please try again");
     } finally {
       setEarningsLoading(false);
-    }
-  };
-
-  const handleInsiderSearch = async () => {
-    if (!insiderSymbol.trim()) {
-      setInsiderError("Please enter a ticker symbol");
-      return;
-    }
-
-    setInsiderLoading(true);
-    setInsiderError("");
-    setInsiderTrades([]);
-
-    try {
-      const response = await fetch(`/api/insider-transactions?symbol=${insiderSymbol.toUpperCase()}`);
-      
-      const result = await response.json();
-
-      if (!result.success) {
-        setInsiderError(result.error || "Failed to fetch insider data");
-      } else {
-        setInsiderTrades(result.transactions || []);
-        if (!result.transactions || result.transactions.length === 0) {
-          setInsiderError(
-            `No insider transaction data available for "${insiderSymbol.toUpperCase()}". ` +
-            "This symbol may not have recent insider activity or may not be a publicly traded company. " +
-            "Try large-cap stocks: AAPL, MSFT, TSLA, NVDA, GOOGL, META"
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setInsiderError("Network error - please try again");
-    } finally {
-      setInsiderLoading(false);
     }
   };
 
@@ -226,21 +175,6 @@ export default function NewsSentimentPage() {
             }}
           >
             📅 Earnings Calendar
-          </button>
-          <button
-            onClick={() => setActiveTab("insider")}
-            style={{
-              padding: "1rem 2rem",
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === "insider" ? "3px solid #10B981" : "3px solid transparent",
-              color: activeTab === "insider" ? "#10B981" : "#94A3B8",
-              fontWeight: "600",
-              cursor: "pointer",
-              marginBottom: "-2px"
-            }}
-          >
-            💼 Insider Trades
           </button>
         </div>
 
@@ -446,86 +380,6 @@ export default function NewsSentimentPage() {
                           <td style={{ padding: "1rem", color: "#94A3B8" }}>{event.fiscalDateEnding}</td>
                           <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
                             {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Insider Tab */}
-        {activeTab === "insider" && (
-          <>
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
-                    Symbol
-                  </label>
-                  <input
-                    type="text"
-                    value={insiderSymbol}
-                    onChange={(e) => setInsiderSymbol(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleInsiderSearch()}
-                    placeholder="AAPL"
-                    style={{ width: "100%", padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff" }}
-                  />
-                </div>
-                <div style={{ display: "flex", alignItems: "flex-end" }}>
-                  <button
-                    onClick={handleInsiderSearch}
-                    disabled={insiderLoading}
-                    style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: insiderLoading ? "not-allowed" : "pointer", opacity: insiderLoading ? 0.6 : 1 }}
-                  >
-                    {insiderLoading ? "Loading..." : "Search"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {insiderError && (
-              <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
-                {insiderError}
-              </div>
-            )}
-
-            {insiderTrades.length > 0 && (
-              <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-                <h2 style={{ color: "#10B981", marginBottom: "1.5rem" }}>
-                  {insiderTrades.length} Recent Insider Transactions
-                </h2>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "2px solid rgba(16, 185, 129, 0.3)" }}>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Date</th>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Type</th>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Executive</th>
-                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Shares</th>
-                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Price</th>
-                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Total Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {insiderTrades.map((trade, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.1)" }}>
-                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{trade.transactionDate}</td>
-                          <td style={{ padding: "1rem", color: trade.transactionType === "S-Sale" ? "#EF4444" : "#10B981", fontWeight: "bold" }}>
-                            {trade.transactionType === "S-Sale" ? "🔴 Sale" : "🟢 Buy"}
-                          </td>
-                          <td style={{ padding: "1rem", color: "#fff" }}>{trade.executiveTitle}</td>
-                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                            {trade.sharesTraded.toLocaleString()}
-                          </td>
-                          <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                            ${trade.pricePerShare.toFixed(2)}
-                          </td>
-                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff", fontWeight: "bold" }}>
-                            ${trade.totalValue.toLocaleString()}
                           </td>
                         </tr>
                       ))}
