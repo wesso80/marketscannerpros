@@ -335,26 +335,38 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
-    Fetch OHLCV data - Use PREMIUM Alpha Vantage (75 calls/min, works from cloud)
+    SMART data fetching:
+    - CRYPTO: Alpha Vantage FIRST (reliable, you're paying $50/mo), yfinance backup
+    - STOCKS: yfinance FIRST (free + fast), Alpha Vantage backup
     """
-    # ALWAYS try Alpha Vantage first - you're paying $50/month for it!
-    try:
-        df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto)
-        if len(df) >= 10:
-            print(f"✓ Alpha Vantage (premium) for {symbol}: {len(df)} rows")
-            return df
-    except Exception as av_error:
-        print(f"✗ Alpha Vantage failed for {symbol}: {av_error}")
-        
-        # Fallback to yfinance only for stocks (crypto yfinance is unreliable)
-        if not is_crypto:
+    if is_crypto:
+        # Crypto: Alpha Vantage Premium is reliable, yfinance fails from cloud
+        try:
+            df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=True)
+            if len(df) >= 10:
+                return df
+        except Exception as av_error:
+            # Fallback to yfinance for crypto (usually fails but worth trying)
             try:
                 df = get_ohlcv_yfinance(symbol, timeframe)
                 if len(df) >= 10:
-                    print(f"✓ yfinance fallback for {symbol}: {len(df)} rows")
                     return df
-            except Exception as yf_error:
-                print(f"✗ yfinance also failed: {yf_error}")
+            except:
+                pass
+    else:
+        # Stocks: yfinance is fast and free
+        try:
+            df = get_ohlcv_yfinance(symbol, timeframe)
+            if len(df) >= 10:
+                return df
+        except Exception as yf_error:
+            # Fallback to Alpha Vantage for stocks
+            try:
+                df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=False)
+                if len(df) >= 10:
+                    return df
+            except:
+                pass
     
     raise ValueError(f"All data sources failed for {symbol}")
 
