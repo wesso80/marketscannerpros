@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type TimeframeOption = "15m" | "1h" | "4h" | "1d" | "1w" | "1mo";
+type TimeframeOption = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 type ScannerTab = "equity" | "crypto" | "forex";
 
 interface ScanResult {
@@ -162,12 +162,12 @@ function ScannerContent() {
                 color: "#fff",
               }}
             >
+              <option value="1m">⚡ 1 Minute</option>
+              <option value="5m">⚡ 5 Minutes</option>
               <option value="15m">⚡ 15 Minutes</option>
+              <option value="30m">🕐 30 Minutes</option>
               <option value="1h">🕐 1 Hour</option>
-              {activeTab !== "crypto" && <option value="4h">🕓 4 Hours</option>}
               <option value="1d">📅 1 Day</option>
-              {activeTab !== "crypto" && <option value="1w">📆 1 Week</option>}
-              {activeTab !== "crypto" && <option value="1mo">📊 1 Month</option>}
             </select>
           </div>
 

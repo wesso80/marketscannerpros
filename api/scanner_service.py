@@ -55,15 +55,9 @@ async def scan(request: ScanRequest):
         if request.type not in ["equity", "crypto", "forex"]:
             raise HTTPException(status_code=400, detail="Type must be 'equity', 'crypto', or 'forex'")
         
-        # Validate timeframe based on market type
-        if request.type == "crypto":
-            # Crypto: Alpha Vantage only has 15m, 1h, 1d (no 4h!)
-            if request.timeframe not in ["15m", "1h", "1d"]:
-                raise HTTPException(status_code=400, detail="Crypto only supports 15m, 1h, 1d timeframes")
-        else:
-            # Stocks/Forex: All timeframes work
-            if request.timeframe not in ["15m", "1h", "4h", "1d"]:
-                raise HTTPException(status_code=400, detail="Invalid timeframe")
+        # Validate timeframe - same for all markets
+        if request.timeframe not in ["1m", "5m", "15m", "30m", "1h", "1d"]:
+            raise HTTPException(status_code=400, detail="Timeframe must be 1m, 5m, 15m, 30m, 1h, or 1d")
         
         # Select symbols
         if request.symbols:

@@ -132,11 +132,14 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
             df = df.sort_values('timestamp').set_index('timestamp')
             return df
         
-        # Use CRYPTO_INTRADAY for 15m and 1h ONLY (what Alpha Vantage supports)
+        # Use CRYPTO_INTRADAY for all intraday timeframes
         if timeframe != "1d":
             # Map timeframe to Alpha Vantage interval
             interval_map = {
+                "1m": "1min",
+                "5m": "5min",
                 "15m": "15min",
+                "30m": "30min",
                 "1h": "60min",
             }
             interval = interval_map.get(timeframe)
@@ -191,9 +194,11 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
     else:
         function = "TIME_SERIES_INTRADAY"
         interval_map = {
+            "1m": "1min",
+            "5m": "5min",
             "15m": "15min",
+            "30m": "30min",
             "1h": "60min",
-            "4h": "60min",
         }
         interval = interval_map.get(timeframe, "60min")
     
