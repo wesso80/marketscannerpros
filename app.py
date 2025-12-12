@@ -2491,6 +2491,71 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
     df_errs = pd.DataFrame(errs)
     return df_rows, df_errs
 
+# ================= SCANNER API ENDPOINT IMPLEMENTATION =================
+# Check if this is an API call from the marketing site
+try:
+    qp = st.query_params if hasattr(st, 'query_params') else {}
+    if isinstance(qp, dict):
+        api_param = qp.get('api', '')
+    else:
+        try:
+            api_param = qp.get('api', [''])[0]
+        except:
+            api_param = ''
+    
+    if str(api_param).lower() == 'scan':
+        # Get parameters
+        if isinstance(qp, dict):
+            scan_type = qp.get('type', 'equity')
+            scan_timeframe = qp.get('timeframe', '1h')
+            scan_min_score = float(qp.get('minScore', 60))
+        else:
+            scan_type = qp.get('type', ['equity'])[0]
+            scan_timeframe = qp.get('timeframe', ['1h'])[0]
+            scan_min_score = float(qp.get('minScore', ['60'])[0])
+        
+        # Select symbols
+        if scan_type == 'crypto':
+            symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "ADA-USD", 
+                      "DOGE-USD", "SOL-USD", "DOT-USD", "MATIC-USD", "AVAX-USD"]
+        else:
+            symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD", 
+                      "NFLX", "DIS", "V", "MA", "JPM", "BAC", "WMT", "HD", 
+                      "PG", "KO", "PEP", "CSCO", "INTC", "ORCL", "CRM", "ADBE", "PYPL"]
+        
+        is_crypto = scan_type == 'crypto'
+        
+        # Run scan (using default position sizing params)
+        df_results, df_errors = scan_universe(
+            symbols=symbols,
+            timeframe=scan_timeframe,
+            is_crypto=is_crypto,
+            account_equity=10000.0,
+            risk_pct=1.0,
+            stop_mult=1.5,
+            min_vol=1_000_000.0
+        )
+        
+        # Filter by min score
+        if not df_results.empty:
+            df_results = df_results[df_results['score'] >= scan_min_score]
+        
+        # Convert to JSON
+        results = df_results.to_dict('records') if not df_results.empty else []
+        errors = df_errors.to_dict('records') if not df_errors.empty else []
+        
+        response = {
+            "results": results,
+            "errors": errors,
+            "count": len(results),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        st.write(json.dumps(response))
+        st.stop()
+except:
+    pass  # Continue to normal app
+
 # ================= Notifications =================
 def push_slack(text: str):
     if not CFG.slack_webhook: return

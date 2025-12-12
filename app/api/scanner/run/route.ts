@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const PYTHON_SCANNER_URL = process.env.PYTHON_SCANNER_URL || "https://marketscannerpros-scanner-api.onrender.com";
+// Call the Streamlit app which has working yfinance
+const STREAMLIT_URL = process.env.STREAMLIT_URL || "https://marketscannerpros-vwx5.onrender.com";
 
 interface ScanRequest {
   type: "crypto" | "equity";
@@ -23,46 +24,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call Python scanner service
-    const scannerResponse = await fetch(`${PYTHON_SCANNER_URL}/scan`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type,
-        timeframe,
-        minScore: minScore || 0,
-      }),
+    // Call Streamlit app scanner API endpoint via query params
+    const scanUrl = `${STREAMLIT_URL}/?api=scan&type=${type}&timeframe=${timeframe}&minScore=${minScore}`;
+    
+    console.log(`Calling Streamlit scanner: ${scanUrl}`);
+    
+    const scannerResponse = await fetch(scanUrl, {
+      method: "GET",
+      signal: AbortSignal.timeout(60000), // 60 second timeout for scanning
     });
 
     if (!scannerResponse.ok) {
-      const errorData = await scannerResponse.json();
-      throw new Error(errorData.detail || "Scanner service failed");
+      throw new Error(`Streamlit scanner returned ${scannerResponse.status}`);
     }
 
-    const data = await scannerResponse.json();
+    const responseText = await scannerResponse.text();
+    const data = JSON.parse(responseText);
 
     return NextResponse.json({
       success: true,
       results: data.results || [],
       errors: data.errors || [],
       metadata: {
-        ...data.metadata,
-        timestamp: new Date().toISOString(),
+        timestamp: data.timestamp || new Date().toISOString(),
+        count: data.count || 0,
       },
     });
   } catch (error) {
     console.error("Scanner error:", error);
     
-    // Return friendly error
+    // Return helpful error with status
     return NextResponse.json(
       {
-        error: "Scanner failed",
+        error: "Scanner service unavailable",
         details: error instanceof Error ? error.message : "Unknown error",
-        hint: "Make sure the Python scanner service is running on port 8000"
+        hint: "The Streamlit app scanner endpoint is being called",
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }
