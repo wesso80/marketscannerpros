@@ -156,13 +156,14 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
     
     try:
         # Match app.py: use .upper() and auto_adjust=False
-        # Add session with headers to avoid being blocked
         import yfinance as yf
-        ticker = yf.Ticker(symbol.upper())
+        from requests import Session
         
-        # Try with proper headers to avoid blocking
-        ticker.session.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        # Create session with headers to avoid being blocked
+        session = Session()
+        session.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         
+        ticker = yf.Ticker(symbol.upper(), session=session)
         raw_df = ticker.history(period=period_val, interval=interval, auto_adjust=False)
         
         print(f"yfinance returned {len(raw_df)} rows for {symbol} (period={period_val}, interval={interval})")
