@@ -139,40 +139,37 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
         raise ValueError(f"Alpha Vantage fetch failed: {str(e)}")
 
 def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
-    """Fetch OHLCV data from yfinance (fallback)"""
-    interval_map = {
-        "15m": "15m",
-        "1h": "1h",
-        "4h": "1h",
-        "1d": "1d"
-    }
-    
-    period_map = {
-        "15m": "7d",
-        "1h": "30d",
-        "4h": "60d",
-        "1d": "1y"
-    }
-    
-    interval = interval_map.get(timeframe, "1h")
-    period_val = period_map.get(timeframe, "30d")
+    """Fetch OHLCV data from yfinance - matches app.py working implementation"""
+    # Match the working timeframe mapping from app.py
+    tf = timeframe.lower().strip()
+    if tf in ("1d", "1day", "d"):
+        interval, period_val = "1d", "2y"
+    elif tf in ("1h", "60m"):
+        interval, period_val = "60m", "730d"
+    elif tf in ("4h", "4hour"):
+        # 4h needs to be resampled from 1h data
+        interval, period_val = "60m", "730d"
+    elif tf in ("30m", "15m", "5m", "1m"):
+        interval, period_val = tf, "60d"
+    else:
+        interval, period_val = "1d", "2y"
     
     try:
-        ticker = yf.Ticker(symbol)
-        # Enable errors to see what's actually failing
-        df = ticker.history(period=period_val, interval=interval, raise_errors=True)
+        # Match app.py: use .upper() and auto_adjust=False
+        ticker = yf.Ticker(symbol.upper())
+        raw_df = ticker.history(period=period_val, interval=interval, auto_adjust=False)
         
-        print(f"yfinance returned {len(df)} rows for {symbol} (period={period_val}, interval={interval})")
+        print(f"yfinance returned {len(raw_df)} rows for {symbol} (period={period_val}, interval={interval})")
         
-        if df is None or df.empty:
+        if raw_df is None or raw_df.empty:
             raise ValueError(f"yfinance returned empty DataFrame for {symbol}")
         
-        if len(df) < 10:
-            raise ValueError(f"yfinance returned only {len(df)} rows for {symbol}, need at least 10")
+        if len(raw_df) < 10:
+            raise ValueError(f"yfinance returned only {len(raw_df)} rows for {symbol}, need at least 10")
         
-        # Resample 4h if needed
-        if timeframe == "4h" and len(df) > 0:
-            df = df.resample('4H').agg({
+        # Resample 4h if needed (match app.py logic)
+        if tf in ("4h", "4hour") and len(raw_df) > 0:
+            raw_df = raw_df.resample('4H').agg({
                 'Open': 'first',
                 'High': 'max',
                 'Low': 'min',
@@ -180,8 +177,15 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
                 'Volume': 'sum'
             }).dropna()
         
-        # Standardize column names
-        df.columns = [c.lower() for c in df.columns]
+        # Standardize to lowercase column names and create clean DataFrame
+        raw_df.index = pd.to_datetime(raw_df.index, utc=True)
+        df = pd.DataFrame({
+            "open": raw_df["Open"].astype(float),
+            "high": raw_df["High"].astype(float),
+            "low": raw_df["Low"].astype(float),
+            "close": raw_df["Close"].astype(float),
+            "volume": raw_df["Volume"].astype(float).fillna(0.0),
+        }, index=raw_df.index).dropna()
         
         return df
     except Exception as e:
