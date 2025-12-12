@@ -58,7 +58,7 @@ function ScannerContent() {
       });
 
       if (!response.ok) {
-        throw new Error(Scanner failed: );
+        throw new Error(`Scanner failed: ${response.statusText}`);
       }
 
       const data = await response.json();
