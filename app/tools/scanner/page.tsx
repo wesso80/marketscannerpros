@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 type TimeframeOption = "15m" | "1h" | "4h" | "1d";
@@ -20,7 +20,7 @@ interface ScanResult {
   macd_histogram: number;
 }
 
-export default function ScannerPage() {
+function ScannerContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<ScannerTab>("equity");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
@@ -397,5 +397,13 @@ export default function ScannerPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function ScannerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading scanner...</div>}>
+      <ScannerContent />
+    </Suspense>
   );
 }
