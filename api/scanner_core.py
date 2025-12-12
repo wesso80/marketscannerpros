@@ -11,8 +11,8 @@ from math import floor
 import os
 from datetime import datetime, timedelta
 
-# Alpha Vantage API key (free: 25 requests/day - too limited)
-ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "yMPBWWLZNSPOK7P81")
+# Alpha Vantage API key (PREMIUM: 75 calls/minute - works from cloud!)
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
 
 # Finnhub API key (free: 60 calls/minute - MUCH better)
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "d4tt6ohr01qk9ur8pcegd4tt6ohr01qk9ur8pcf0")
@@ -208,7 +208,7 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
         raise ValueError(f"Alpha Vantage fetch failed: {str(e)}")
 
 def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
-    """Fetch OHLCV data from yfinance - matches app.py working implementation"""
+    """Fetch OHLCV data from yfinance - use download() method which works better from servers"""
     # Match the working timeframe mapping from app.py
     tf = timeframe.lower().strip()
     if tf in ("1d", "1day", "d"):
@@ -224,16 +224,17 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
         interval, period_val = "1d", "2y"
     
     try:
-        # Match app.py: use .upper() and auto_adjust=False
+        # Use yfinance.download() instead of Ticker().history() - different endpoint that might work
         import yfinance as yf
-        from requests import Session
         
-        # Create session with headers to avoid being blocked
-        session = Session()
-        session.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        
-        ticker = yf.Ticker(symbol.upper(), session=session)
-        raw_df = ticker.history(period=period_val, interval=interval, auto_adjust=False)
+        raw_df = yf.download(
+            tickers=symbol.upper(),
+            period=period_val,
+            interval=interval,
+            auto_adjust=False,
+            progress=False,
+            show_errors=False
+        )
         
         print(f"yfinance returned {len(raw_df)} rows for {symbol} (period={period_val}, interval={interval})")
         
@@ -273,28 +274,26 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
-    Fetch OHLCV data - Use Finnhub (60 calls/min FREE, works from servers)
+    Fetch OHLCV data - Use PREMIUM Alpha Vantage (75 calls/min, works from cloud)
     """
-    # Finnhub doesn't support crypto well, skip crypto for now
-    if is_crypto:
-        raise ValueError("Crypto scanning temporarily disabled (yfinance blocked from cloud)")
-    
-    # Try Finnhub - free, fast, reliable from servers
+    # Try Alpha Vantage first with premium key
     try:
-        df = get_ohlcv_finnhub(symbol, timeframe)
+        df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto)
         if len(df) >= 10:
+            print(f"✓ Alpha Vantage (premium) success for {symbol}: {len(df)} rows")
             return df
-    except Exception as finn_error:
-        print(f"✗ Finnhub failed for {symbol}: {finn_error}")
+    except Exception as av_error:
+        print(f"✗ Alpha Vantage failed for {symbol}: {av_error}")
         
-        # Fallback to yfinance (might work locally but blocked on Render)
-        try:
-            df = get_ohlcv_yfinance(symbol, timeframe)
-            if len(df) >= 10:
-                print(f"✓ yfinance fallback for {symbol}: {len(df)} rows")
-                return df
-        except Exception as yf_error:
-            print(f"✗ yfinance also failed: {yf_error}")
+        # Fallback to yfinance (might work for some requests)
+        if not is_crypto:
+            try:
+                df = get_ohlcv_yfinance(symbol, timeframe)
+                if len(df) >= 10:
+                    print(f"✓ yfinance fallback for {symbol}: {len(df)} rows")
+                    return df
+            except Exception as yf_error:
+                print(f"✗ yfinance also failed: {yf_error}")
     
     raise ValueError(f"All data sources failed for {symbol}")
 

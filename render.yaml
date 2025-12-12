@@ -22,7 +22,7 @@
     dockerContext: .
     autoDeploy: true
     envVars:
+      - key: ALPHA_VANTAGE_API_KEY
+        value: UI755FUUAM6FRRI9
       - key: FINNHUB_API_KEY
         value: d4tt6ohr01qk9ur8pcegd4tt6ohr01qk9ur8pcf0
-      - key: ALPHA_VANTAGE_API_KEY
-        sync: false
