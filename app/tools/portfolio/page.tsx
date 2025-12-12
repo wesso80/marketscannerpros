@@ -21,10 +21,17 @@ interface ClosedPosition extends Position {
   realizedPL: number;
 }
 
+interface PerformanceSnapshot {
+  timestamp: string;
+  totalValue: number;
+  totalPL: number;
+}
+
 function PortfolioContent() {
   const [activeTab, setActiveTab] = useState('overview');
   const [positions, setPositions] = useState<Position[]>([]);
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
+  const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPosition, setNewPosition] = useState({
     symbol: '',
@@ -38,6 +45,7 @@ function PortfolioContent() {
   useEffect(() => {
     const saved = localStorage.getItem('portfolio_positions');
     const savedClosed = localStorage.getItem('portfolio_closed');
+    const savedPerformance = localStorage.getItem('portfolio_performance');
     if (saved) {
       try {
         setPositions(JSON.parse(saved));
@@ -50,6 +58,13 @@ function PortfolioContent() {
         setClosedPositions(JSON.parse(savedClosed));
       } catch (e) {
         console.error('Failed to load closed positions');
+      }
+    }
+    if (savedPerformance) {
+      try {
+        setPerformanceHistory(JSON.parse(savedPerformance));
+      } catch (e) {
+        console.error('Failed to load performance history');
       }
     }
   }, []);
@@ -66,6 +81,33 @@ function PortfolioContent() {
       localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
     }
   }, [closedPositions]);
+
+  // Track performance snapshots when portfolio changes
+  useEffect(() => {
+    if (positions.length > 0 || closedPositions.length > 0) {
+      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+      const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
+      const totalPL = unrealizedPL + realizedPL;
+
+      // Add snapshot once per day max
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const lastSnapshot = performanceHistory[performanceHistory.length - 1];
+      const lastDate = lastSnapshot ? new Date(lastSnapshot.timestamp).toISOString().split('T')[0] : null;
+
+      if (lastDate !== today) {
+        const newSnapshot: PerformanceSnapshot = {
+          timestamp: now.toISOString(),
+          totalValue,
+          totalPL
+        };
+        const updated = [...performanceHistory, newSnapshot];
+        setPerformanceHistory(updated);
+        localStorage.setItem('portfolio_performance', JSON.stringify(updated));
+      }
+    }
+  }, [positions, closedPositions]);
 
   const addPosition = () => {
     if (!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice) {
@@ -346,7 +388,7 @@ function PortfolioContent() {
               )}
             </div>
 
-            {/* Performance Chart Placeholder */}
+            {/* Performance Chart */}
             <div style={{ 
               background: '#0f172a',
               border: '1px solid #334155',
@@ -358,18 +400,142 @@ function PortfolioContent() {
               </h2>
               <div style={{ 
                 height: '250px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                position: 'relative',
                 background: '#1e293b',
                 borderRadius: '8px',
-                color: '#64748b'
+                padding: '20px'
               }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
-                  <div>Performance chart coming soon</div>
-                  <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance</div>
-                </div>
+                {performanceHistory.length > 0 ? (
+                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                    {(() => {
+                      const width = 800;
+                      const height = 210;
+                      const padding = { top: 20, right: 20, bottom: 30, left: 60 };
+                      const chartWidth = width - padding.left - padding.right;
+                      const chartHeight = height - padding.top - padding.bottom;
+
+                      // Get min/max values for scaling
+                      const values = performanceHistory.map(s => s.totalValue);
+                      const minValue = Math.min(...values, 0);
+                      const maxValue = Math.max(...values);
+                      const valueRange = maxValue - minValue || 1;
+
+                      // Scale functions
+                      const scaleX = (index: number) => padding.left + (index / Math.max(performanceHistory.length - 1, 1)) * chartWidth;
+                      const scaleY = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+
+                      // Generate path
+                      const pathData = performanceHistory.map((snapshot, i) => {
+                        const x = scaleX(i);
+                        const y = scaleY(snapshot.totalValue);
+                        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                      }).join(' ');
+
+                      // Generate gradient path (area under curve)
+                      const gradientPath = pathData + ` L ${scaleX(performanceHistory.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
+
+                      return (
+                        <g>
+                          {/* Gradient definition */}
+                          <defs>
+                            <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Grid lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const y = padding.top + chartHeight * ratio;
+                            const value = maxValue - (valueRange * ratio);
+                            return (
+                              <g key={i}>
+                                <line
+                                  x1={padding.left}
+                                  y1={y}
+                                  x2={padding.left + chartWidth}
+                                  y2={y}
+                                  stroke="#334155"
+                                  strokeWidth="1"
+                                  strokeDasharray="4,4"
+                                />
+                                <text
+                                  x={padding.left - 10}
+                                  y={y + 4}
+                                  fill="#64748b"
+                                  fontSize="11"
+                                  textAnchor="end"
+                                >
+                                  ${value.toFixed(0)}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Area under curve */}
+                          <path
+                            d={gradientPath}
+                            fill="url(#performanceGradient)"
+                          />
+
+                          {/* Main line */}
+                          <path
+                            d={pathData}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="2.5"
+                          />
+
+                          {/* Data points */}
+                          {performanceHistory.map((snapshot, i) => (
+                            <circle
+                              key={i}
+                              cx={scaleX(i)}
+                              cy={scaleY(snapshot.totalValue)}
+                              r="4"
+                              fill="#10b981"
+                              stroke="#0f172a"
+                              strokeWidth="2"
+                            />
+                          ))}
+
+                          {/* X-axis labels */}
+                          {performanceHistory.map((snapshot, i) => {
+                            if (performanceHistory.length > 10 && i % Math.ceil(performanceHistory.length / 6) !== 0) return null;
+                            const date = new Date(snapshot.timestamp);
+                            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            return (
+                              <text
+                                key={`label-${i}`}
+                                x={scaleX(i)}
+                                y={padding.top + chartHeight + 20}
+                                fill="#64748b"
+                                fontSize="10"
+                                textAnchor="middle"
+                              >
+                                {label}
+                              </text>
+                            );
+                          })}
+                        </g>
+                      );
+                    })()}
+                  </svg>
+                ) : (
+                  <div style={{ 
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#64748b'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
+                      <div>Performance chart coming soon</div>
+                      <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance over time</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
