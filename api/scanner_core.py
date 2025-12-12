@@ -544,34 +544,11 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
 
 # ================= Symbol Lists =================
 EQUITY_SYMBOLS = [
-    # Tech Giants
-    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA",
-    # Tech & Software
-    "AMD", "INTC", "ORCL", "CRM", "ADBE", "NFLX", "PYPL", "SQ", "SHOP",
-    # Finance
-    "JPM", "BAC", "GS", "MS", "WFC", "C", "V", "MA",
-    # Consumer
-    "WMT", "HD", "NKE", "SBUX", "MCD", "DIS", "COST",
-    # Healthcare & Pharma
-    "JNJ", "PFE", "UNH", "ABBV", "TMO", "ABT",
-    # Energy & Industrial
-    "XOM", "CVX", "BA", "CAT", "GE",
-    # Consumer Goods
-    "PG", "KO", "PEP", "PM", "MO",
-    # Telecom & Media
-    "T", "VZ", "CMCSA", "CSCO"
+    # FAST SCAN - Top 10 most liquid stocks (5-10 second scans)
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "DIS"
 ]
 
-# Crypto symbols - Alpha Vantage supports these via CRYPTO_INTRADAY
+# FAST crypto scanning - Top 5 coins only (5-7 second scans)
 CRYPTO_SYMBOLS = [
-    # Top Market Cap
-    "BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "ADA-USD",
-    # DeFi & Smart Contracts  
-    "SOL-USD", "DOT-USD", "AVAX-USD", "MATIC-USD", "LINK-USD",
-    # Layer 1s & Alts
-    "ATOM-USD", "ALGO-USD", "XLM-USD", "VET-USD",
-    # Meme & Popular
-    "DOGE-USD", "SHIB-USD",
-    # Stablecoins & Others
-    "LTC-USD", "BCH-USD", "ETC-USD", "XMR-USD"
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "DOGE-USD"
 ]
