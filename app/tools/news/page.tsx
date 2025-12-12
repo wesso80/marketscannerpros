@@ -23,13 +23,50 @@ interface NewsArticle {
   tickerSentiments: TickerSentiment[];
 }
 
+interface EarningsEvent {
+  symbol: string;
+  name: string;
+  reportDate: string;
+  fiscalDateEnding: string;
+  estimate: number | null;
+  currency: string;
+}
+
+interface InsiderTransaction {
+  symbol: string;
+  transactionType: string;
+  executiveTitle: string;
+  transactionDate: string;
+  sharesTraded: number;
+  pricePerShare: number;
+  totalValue: number;
+}
+
+type TabType = "news" | "earnings" | "insider";
+
 export default function NewsSentimentPage() {
+  const [activeTab, setActiveTab] = useState<TabType>("news");
+  
+  // News state
   const [tickers, setTickers] = useState("AAPL,MSFT,GOOGL");
   const [limit, setLimit] = useState(50);
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [error, setError] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
+
+  // Earnings state
+  const [earningsSymbol, setEarningsSymbol] = useState("");
+  const [earningsHorizon, setEarningsHorizon] = useState("3month");
+  const [earningsLoading, setEarningsLoading] = useState(false);
+  const [earnings, setEarnings] = useState<EarningsEvent[]>([]);
+  const [earningsError, setEarningsError] = useState("");
+
+  // Insider state
+  const [insiderSymbol, setInsiderSymbol] = useState("");
+  const [insiderLoading, setInsiderLoading] = useState(false);
+  const [insiderTrades, setInsiderTrades] = useState<InsiderTransaction[]>([]);
+  const [insiderError, setInsiderError] = useState("");
 
   const handleSearch = async () => {
     if (!tickers.trim()) {
@@ -48,6 +85,62 @@ export default function NewsSentimentPage() {
       if (!result.success) {
         setError(result.error || "Failed to fetch news data");
       } else {
+        setArticles(result.articles);
+      }
+    } catch (err) {
+      setError("Network error - please try again");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEarningsSearch = async () => {
+    setEarningsLoading(true);
+    setEarningsError("");
+    setEarnings([]);
+
+    try {
+      const symbol = earningsSymbol.trim() || undefined;
+      const response = await fetch(`/api/earnings-calendar?symbol=${symbol || ""}&horizon=${earningsHorizon}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        setEarningsError(result.error || "Failed to fetch earnings data");
+      } else {
+        setEarnings(result.earnings);
+      }
+    } catch (err) {
+      setEarningsError("Network error - please try again");
+    } finally {
+      setEarningsLoading(false);
+    }
+  };
+
+  const handleInsiderSearch = async () => {
+    if (!insiderSymbol.trim()) {
+      setInsiderError("Please enter a ticker symbol");
+      return;
+    }
+
+    setInsiderLoading(true);
+    setInsiderError("");
+    setInsiderTrades([]);
+
+    try {
+      const response = await fetch(`/api/insider-transactions?symbol=${insiderSymbol.toUpperCase()}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        setInsiderError(result.error || "Failed to fetch insider data");
+      } else {
+        setInsiderTrades(result.transactions);
+      }
+    } catch (err) {
+      setInsiderError("Network error - please try again");
+    } finally {
+      setInsiderLoading(false);
+    }
+  };
         setArticles(result.articles);
       }
     } catch (err) {
@@ -94,14 +187,66 @@ export default function NewsSentimentPage() {
         </Link>
 
         <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", background: "linear-gradient(to right, #10B981, #3B82F6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "1rem" }}>
-          📰 News & Sentiments
+          📰 Market Intelligence
         </h1>
         
         <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem" }}>
-          AI-powered sentiment analysis powered by Alpha Vantage Premium
+          News sentiment, earnings calendar, and insider trading intelligence
         </p>
 
-        {/* Search Controls */}
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "2px solid rgba(16, 185, 129, 0.2)" }}>
+          <button
+            onClick={() => setActiveTab("news")}
+            style={{
+              padding: "1rem 2rem",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === "news" ? "3px solid #10B981" : "3px solid transparent",
+              color: activeTab === "news" ? "#10B981" : "#94A3B8",
+              fontWeight: "600",
+              cursor: "pointer",
+              marginBottom: "-2px"
+            }}
+          >
+            📰 News & Sentiment
+          </button>
+          <button
+            onClick={() => setActiveTab("earnings")}
+            style={{
+              padding: "1rem 2rem",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === "earnings" ? "3px solid #10B981" : "3px solid transparent",
+              color: activeTab === "earnings" ? "#10B981" : "#94A3B8",
+              fontWeight: "600",
+              cursor: "pointer",
+              marginBottom: "-2px"
+            }}
+          >
+            📅 Earnings Calendar
+          </button>
+          <button
+            onClick={() => setActiveTab("insider")}
+            style={{
+              padding: "1rem 2rem",
+              background: "none",
+              border: "none",
+              borderBottom: activeTab === "insider" ? "3px solid #10B981" : "3px solid transparent",
+              color: activeTab === "insider" ? "#10B981" : "#94A3B8",
+              fontWeight: "600",
+              cursor: "pointer",
+              marginBottom: "-2px"
+            }}
+          >
+            💼 Insider Trades
+          </button>
+        </div>
+
+        {/* News Tab */}
+        {activeTab === "news" && (
+          <>
+            {/* Search Controls */}
         <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1rem", marginBottom: "1rem" }}>
             <div>
@@ -221,6 +366,174 @@ export default function NewsSentimentPage() {
               ))}
             </div>
           </div>
+        )}
+          </>
+        )}
+
+        {/* Earnings Tab */}
+        {activeTab === "earnings" && (
+          <>
+            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
+                    Symbol (optional - leave blank for all)
+                  </label>
+                  <input
+                    type="text"
+                    value={earningsSymbol}
+                    onChange={(e) => setEarningsSymbol(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleEarningsSearch()}
+                    placeholder="AAPL"
+                    style={{ width: "100%", padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
+                    Time Horizon
+                  </label>
+                  <select 
+                    value={earningsHorizon} 
+                    onChange={(e) => setEarningsHorizon(e.target.value)}
+                    style={{ padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff", minWidth: "120px" }}
+                  >
+                    <option value="3month">3 Months</option>
+                    <option value="6month">6 Months</option>
+                    <option value="12month">12 Months</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <button
+                    onClick={handleEarningsSearch}
+                    disabled={earningsLoading}
+                    style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: earningsLoading ? "not-allowed" : "pointer", opacity: earningsLoading ? 0.6 : 1 }}
+                  >
+                    {earningsLoading ? "Loading..." : "Search"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {earningsError && (
+              <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
+                {earningsError}
+              </div>
+            )}
+
+            {earnings.length > 0 && (
+              <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
+                <h2 style={{ color: "#10B981", marginBottom: "1.5rem" }}>
+                  {earnings.length} Upcoming Earnings
+                </h2>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid rgba(16, 185, 129, 0.3)" }}>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Symbol</th>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Company</th>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Report Date</th>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Fiscal Period</th>
+                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>EPS Estimate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {earnings.map((event, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.1)" }}>
+                          <td style={{ padding: "1rem", color: "#10B981", fontWeight: "bold" }}>{event.symbol}</td>
+                          <td style={{ padding: "1rem", color: "#fff" }}>{event.name}</td>
+                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{event.reportDate}</td>
+                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{event.fiscalDateEnding}</td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
+                            {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Insider Tab */}
+        {activeTab === "insider" && (
+          <>
+            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
+                    Symbol
+                  </label>
+                  <input
+                    type="text"
+                    value={insiderSymbol}
+                    onChange={(e) => setInsiderSymbol(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleInsiderSearch()}
+                    placeholder="AAPL"
+                    style={{ width: "100%", padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff" }}
+                  />
+                </div>
+                <div style={{ display: "flex", alignItems: "flex-end" }}>
+                  <button
+                    onClick={handleInsiderSearch}
+                    disabled={insiderLoading}
+                    style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: insiderLoading ? "not-allowed" : "pointer", opacity: insiderLoading ? 0.6 : 1 }}
+                  >
+                    {insiderLoading ? "Loading..." : "Search"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {insiderError && (
+              <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
+                {insiderError}
+              </div>
+            )}
+
+            {insiderTrades.length > 0 && (
+              <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
+                <h2 style={{ color: "#10B981", marginBottom: "1.5rem" }}>
+                  {insiderTrades.length} Recent Insider Transactions
+                </h2>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid rgba(16, 185, 129, 0.3)" }}>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Date</th>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Type</th>
+                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Executive</th>
+                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Shares</th>
+                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Price</th>
+                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>Total Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {insiderTrades.map((trade, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.1)" }}>
+                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{trade.transactionDate}</td>
+                          <td style={{ padding: "1rem", color: trade.transactionType === "S-Sale" ? "#EF4444" : "#10B981", fontWeight: "bold" }}>
+                            {trade.transactionType === "S-Sale" ? "🔴 Sale" : "🟢 Buy"}
+                          </td>
+                          <td style={{ padding: "1rem", color: "#fff" }}>{trade.executiveTitle}</td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
+                            {trade.sharesTraded.toLocaleString()}
+                          </td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
+                            ${trade.pricePerShare.toFixed(2)}
+                          </td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff", fontWeight: "bold" }}>
+                            ${trade.totalValue.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
