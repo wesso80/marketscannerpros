@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -20,7 +20,7 @@ const MODES: ModeOption[] = [
   { value: "pine", label: "Pine Script / Code", description: "Indicators, strategies, coding help." },
 ];
 
-export default function AiAnalystPage() {
+function AiAnalystContent() {
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState(
@@ -685,5 +685,24 @@ export default function AiAnalystPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function AiAnalystPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: "100vh",
+        background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#fff"
+      }}>
+        Loading AI Analyst...
+      </div>
+    }>
+      <AiAnalystContent />
+    </Suspense>
   );
 }
