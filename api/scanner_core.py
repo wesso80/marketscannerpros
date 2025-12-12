@@ -469,7 +469,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 # ================= Scoring =================
-def score_row(r) -> float:
+def score_row(r, is_forex: bool = False) -> float:
     """Proprietary scoring algorithm"""
     s = 0.0
     s += 25 if r.close > r.ema200 else -25
@@ -477,7 +477,11 @@ def score_row(r) -> float:
     s -= 25 if r.close < r["close_20_min"] else 0
     s += 10 if (pd.notna(r.rsi) and r.rsi > 50) else -10
     s += 10 if (pd.notna(r.macd_hist) and r.macd_hist > 0) else -10
-    s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
+    
+    # Volume scoring - skip for forex (no volume data)
+    if not is_forex:
+        s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
+    
     s += 7  if (pd.notna(r.bb_width) and pd.notna(r.bb_width_ma) and r.bb_width > r.bb_width_ma) else 0
     atr_pct = (r.atr / r.close) if (pd.notna(r.atr) and r.close) else np.nan
     s += 5 if (pd.notna(atr_pct) and atr_pct < 0.04) else 0
@@ -537,11 +541,11 @@ def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto
             return None, {"symbol": symbol, "error": "No valid data after feature computation"}
         
         last = features.iloc[-1]
-        score = score_row(last)
+        score = score_row(last, is_forex=is_forex)
         
-        # Debug: Always log score for crypto
-        if is_crypto:
-            print(f"  {symbol}: score={score:.1f}, min_score={min_score}")
+        # Debug: Always log score for crypto/forex
+        if is_crypto or is_forex:
+            print(f"  {symbol}: score={score:.1f}, min_score={min_score}, close={last.close:.4f}, ema200={last.ema200:.4f}")
         
         # Filter by min score
         if score < min_score:
