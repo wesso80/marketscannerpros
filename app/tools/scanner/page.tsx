@@ -40,11 +40,35 @@ function ScannerContent() {
   const runScan = async () => {
     setLoading(true);
     setError(null);
+    setResults([]);
     
-    // Redirect to main app for scanning
-    window.open('https://marketscannerpros-vwx5.onrender.com', '_blank');
-    setLoading(false);
-    setError("Scanner opened in new tab. The full scanner is available in the main app.");
+    try {
+      // Call Streamlit app API endpoint
+      const streamlitUrl = `https://marketscannerpros-vwx5.onrender.com/?api=scan&type=${activeTab}&timeframe=${timeframe}&minScore=${minScore}`;
+      
+      const response = await fetch(streamlitUrl, {
+        method: "GET",
+        signal: AbortSignal.timeout(90000), // 90 second timeout for scanning
+      });
+
+      if (!response.ok) {
+        throw new Error(`Scanner failed: ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      const data = JSON.parse(text);
+      
+      if (data.results && Array.isArray(data.results)) {
+        setResults(data.results);
+      } else {
+        setError("No results returned from scanner");
+      }
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Scanner unavailable - please try again");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const generateAILink = (result: ScanResult) => {
