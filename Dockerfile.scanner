@@ -17,5 +17,5 @@ COPY api/ ./api/
 # Expose port
 EXPOSE 8000
 
-# Run the scanner service
-CMD ["uvicorn", "api.scanner_service:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the ENHANCED scanner service with all Alpha Vantage Premium APIs
+CMD ["uvicorn", "api.scanner_enhanced:app", "--host", "0.0.0.0", "--port", "8000"]
