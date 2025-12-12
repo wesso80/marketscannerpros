@@ -536,7 +536,8 @@ EQUITY_SYMBOLS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "DIS"
 ]
 
-# FAST crypto scanning - Top 5 coins only (5-7 second scans)
+# FAST crypto scanning - Alpha Vantage verified symbols
+# BNB/SOL not supported, using BTC/ETH/LTC/XRP/DOGE (confirmed working)
 CRYPTO_SYMBOLS = [
-    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "DOGE-USD"
+    "BTC-USD", "ETH-USD", "LTC-USD", "XRP-USD", "DOGE-USD"
 ]
