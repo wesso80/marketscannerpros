@@ -94,13 +94,52 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
     if is_crypto:
         clean_symbol = symbol.replace("-USD", "").replace("-", "")
         
-        # Use CRYPTO_INTRADAY for intraday data
+        # For 1d, use DIGITAL_CURRENCY_DAILY (more reliable, more history)
+        if timeframe == "1d":
+            params = {
+                "function": "DIGITAL_CURRENCY_DAILY",
+                "symbol": clean_symbol,
+                "market": "USD",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series = data.get("Time Series (Digital Currency Daily)", {})
+            if not time_series:
+                raise ValueError(f"No crypto daily data. Response keys: {list(data.keys())}")
+            
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1a. open (USD)']),
+                    'high': float(values['2a. high (USD)']),
+                    'low': float(values['3a. low (USD)']),
+                    'close': float(values['4a. close (USD)']),
+                    'volume': float(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df = df.sort_values('timestamp').set_index('timestamp')
+            return df
+        
+        # Use CRYPTO_INTRADAY for 15m, 1h, and 4h
+        # For 4h, fetch 1h data and resample since Alpha Vantage doesn't have native 4h
         if timeframe != "1d":
             # Map timeframe to Alpha Vantage interval
             interval_map = {
                 "15m": "15min",
                 "1h": "60min",
-                "4h": "60min",  # Will resample
+                "4h": "60min",  # Fetch 1h, will resample to 4h
             }
             interval = interval_map.get(timeframe, "60min")
             
@@ -143,7 +182,7 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
             df = pd.DataFrame(df_data)
             df = df.sort_values('timestamp').set_index('timestamp')
             
-            # Resample for 4h if needed
+            # Resample 1h to 4h if needed
             if timeframe == "4h":
                 df = df.resample('4H').agg({
                     'open': 'first',
@@ -153,44 +192,6 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
                     'volume': 'sum'
                 }).dropna()
             
-            return df
-        else:
-            # Use DIGITAL_CURRENCY_DAILY for daily data
-            params = {
-                "function": "DIGITAL_CURRENCY_DAILY",
-                "symbol": clean_symbol,
-                "market": "USD",
-                "apikey": ALPHA_VANTAGE_API_KEY,
-                "datatype": "json"
-            }
-            
-            response = requests.get(base_url, params=params, timeout=10)
-            data = response.json()
-            
-            if "Error Message" in data:
-                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
-            
-            if "Note" in data:
-                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
-            
-            time_series = data.get("Time Series (Digital Currency Daily)", {})
-            if not time_series:
-                raise ValueError(f"No crypto daily data. Response keys: {list(data.keys())}")
-            
-            # Parse daily crypto data
-            df_data = []
-            for timestamp, values in time_series.items():
-                df_data.append({
-                    'timestamp': pd.to_datetime(timestamp),
-                    'open': float(values['1. open']),
-                    'high': float(values['2. high']),
-                    'low': float(values['3. low']),
-                    'close': float(values['4. close']),
-                    'volume': float(values['5. volume'])
-                })
-            
-            df = pd.DataFrame(df_data)
-            df = df.sort_values('timestamp').set_index('timestamp')
             return df
     
     # For stocks, use regular TIME_SERIES endpoint
