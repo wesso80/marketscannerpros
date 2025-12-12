@@ -8,6 +8,8 @@ import yfinance as yf
 import requests
 from typing import List, Dict, Tuple, Optional
 from math import floor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 import os
 from datetime import datetime, timedelta
 
@@ -455,9 +457,64 @@ def determine_phase(last) -> str:
     return "UNKNOWN"
 
 # ================= Scanner =================
+def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto: bool, min_bars: int) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """Scan a single symbol - used for parallel processing"""
+    try:
+        # Fetch data with timeout protection
+        df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto)
+        
+        if len(df) < min_bars:
+            return None, {"symbol": symbol, "error": f"Insufficient data: only {len(df)} bars (need {min_bars}+)"}
+        
+        # Compute features
+        features = compute_features(df).dropna()
+        
+        if features.empty:
+            return None, {"symbol": symbol, "error": "No valid data after feature computation"}
+        
+        last = features.iloc[-1]
+        score = score_row(last)
+        
+        # Debug: Always log score for crypto
+        if is_crypto:
+            print(f"  {symbol}: score={score:.1f}, min_score={min_score}")
+        
+        # Filter by min score
+        if score < min_score:
+            return None, None
+        
+        direction = "LONG" if score >= 0 else "SHORT"
+        signal = determine_signal(last)
+        phase = determine_phase(last)
+        
+        # Calculate change percentage (from 20 bars ago)
+        if len(features) >= 20:
+            change_pct = ((last.close - features.iloc[-20].close) / features.iloc[-20].close) * 100
+        else:
+            change_pct = 0.0
+        
+        result = {
+            "symbol": symbol,
+            "name": symbol,
+            "price": round(float(last.close), 2),
+            "change_pct": round(float(change_pct), 2),
+            "volume": int(last.volume) if pd.notna(last.volume) else 0,
+            "score": round(float(score), 0),
+            "signal": signal,
+            "direction": direction,
+            "ema200_phase": phase,
+            "rsi": round(float(last.rsi), 1) if pd.notna(last.rsi) else None,
+            "macd_histogram": round(float(last.macd_hist), 3) if pd.notna(last.macd_hist) else None,
+        }
+        return result, None
+        
+    except Exception as e:
+        return None, {"symbol": symbol, "error": str(e)}
+
 def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_crypto: bool = False) -> Tuple[List[Dict], List[Dict]]:
     """
-    Scan a list of symbols and return results + errors
+    PARALLEL scanner - scans all symbols simultaneously for SPEED
+    You're paying $50/month for 75 calls/min - USE IT!
     Returns: (results, errors)
     """
     results = []
@@ -466,7 +523,31 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     # Lower requirement for crypto (has less history)
     min_bars = 100 if is_crypto else 200
     
-    for symbol in symbols:
+    start_time = time.time()
+    print(f"🚀 Starting PARALLEL scan of {len(symbols)} symbols...")
+    
+    # Use ThreadPoolExecutor for parallel API calls
+    # Alpha Vantage Premium = 75 calls/min, so use 20 workers for speed
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        # Submit all symbols for parallel processing
+        future_to_symbol = {
+            executor.submit(_scan_single_symbol, symbol, timeframe, min_score, is_crypto, min_bars): symbol
+            for symbol in symbols
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_symbol):
+            result, error = future.result()
+            if result:
+                results.append(result)
+            if error:
+                errors.append(error)
+    
+    elapsed = time.time() - start_time
+    print(f"✅ Scan completed in {elapsed:.1f}s - {len(results)} results, {len(errors)} errors")
+    
+    # Original sequential code removed - keeping for reference
+    for symbol in symbols[:0]:  # Never executes - just to avoid breaking anything
         try:
             # Fetch data with timeout protection
             df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto)
