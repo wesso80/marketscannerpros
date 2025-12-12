@@ -18,8 +18,9 @@ function verify(token: string) {
   return payload as { cid: string; tier: string; workspaceId: string; exp: number };
 }
 
-export function getSessionFromCookie() {
-  const c = cookies().get("ms_auth")?.value;
+export async function getSessionFromCookie() {
+  const cookieStore = await cookies();
+  const c = cookieStore.get("ms_auth")?.value;
   if (!c) return null;
   return verify(c);
 }
