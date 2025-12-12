@@ -39,9 +39,19 @@ type AnalystRequestBody = {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+    console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY?.length || 0);
+    
     if (!process.env.OPENAI_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "OPENAI_API_KEY not set on server" }),
+        JSON.stringify({ 
+          error: "OPENAI_API_KEY not set on server",
+          debug: {
+            hasKey: !!process.env.OPENAI_API_KEY,
+            envKeys: Object.keys(process.env).filter(k => k.includes('OPENAI')),
+            nodeEnv: process.env.NODE_ENV
+          }
+        }),
         { status: 500 }
       );
     }
