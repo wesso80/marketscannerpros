@@ -160,19 +160,6 @@ export default function ScannerPage() {
     </Suspense>
   );
 }
-
-// OLD CODE BELOW - KEEPING FOR REFERENCE
-/*
-  const runScan = async () => {
-          <p style={{ color: "#94A3B8", fontSize: "1.125rem" }}>
-            Scan crypto & stocks across timeframes — fast.
-          </p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div style={{
-          display: "flex",
-          gap: "0.5rem",
           marginBottom: "2rem",
           overflowX: "auto",
           padding: "0.5rem",
