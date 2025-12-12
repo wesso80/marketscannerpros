@@ -35,6 +35,12 @@ function ScannerContent() {
     if (tab && ["equity", "crypto"].includes(tab)) {
       setActiveTab(tab);
     }
+    
+    // TEMPORARY: Redirect to Streamlit app which has working scanner
+    // Marketing site scanner will be enabled once data source issue is resolved
+    if (typeof window !== 'undefined') {
+      window.location.href = 'https://marketscannerpros-vwx5.onrender.com';
+    }
   }, [searchParams]);
 
   const runScan = async () => {
