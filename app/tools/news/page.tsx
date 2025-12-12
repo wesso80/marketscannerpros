@@ -127,21 +127,20 @@ export default function NewsSentimentPage() {
     setInsiderTrades([]);
 
     try {
-      console.log("Fetching insider trades for:", insiderSymbol.toUpperCase());
       const response = await fetch(`/api/insider-transactions?symbol=${insiderSymbol.toUpperCase()}`);
-      console.log("Response status:", response.status);
       
       const result = await response.json();
-      console.log("API Result:", result);
 
       if (!result.success) {
-        console.error("API Error:", result.error);
         setInsiderError(result.error || "Failed to fetch insider data");
       } else {
-        console.log("Found", result.transactions?.length || 0, "transactions");
         setInsiderTrades(result.transactions || []);
         if (!result.transactions || result.transactions.length === 0) {
-          setInsiderError("No insider transactions found for this symbol. Try another symbol like AAPL, MSFT, or TSLA.");
+          setInsiderError(
+            `No insider transaction data available for "${insiderSymbol.toUpperCase()}". ` +
+            "This symbol may not have recent insider activity or may not be a publicly traded company. " +
+            "Try large-cap stocks: AAPL, MSFT, TSLA, NVDA, GOOGL, META"
+          );
         }
       }
     } catch (err) {
