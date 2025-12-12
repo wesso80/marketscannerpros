@@ -31,6 +31,7 @@ function ScannerContent() {
   const [error, setError] = useState<string | null>(null);
   const [customSymbols, setCustomSymbols] = useState<string>("");
   const [useCustom, setUseCustom] = useState<boolean>(false);
+  const [symbolPreset, setSymbolPreset] = useState<string>("default");
 
   useEffect(() => {
     const tab = searchParams?.get("tab") as ScannerTab;
@@ -149,6 +150,56 @@ function ScannerContent() {
               <option value="crypto">₿ Crypto Markets</option>
               <option value="forex">🌍 Forex Markets</option>
               <option value="commodities">🛢️ Commodities</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", color: "#94A3B8", marginBottom: "0.5rem" }}>
+              Symbol Preset
+            </label>
+            <select
+              value={symbolPreset}
+              onChange={(e) => setSymbolPreset(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "8px",
+                color: "#fff",
+              }}
+            >
+              {activeTab === "equity" && (
+                <>
+                  <option value="default">Top 10 (Default)</option>
+                  <option value="large-cap">Top 100 Large-Cap</option>
+                  <option value="mid-cap">Mid-Cap (2B-10B)</option>
+                  <option value="small-cap">Small-Cap (250M-2B)</option>
+                </>
+              )}
+              {activeTab === "crypto" && (
+                <>
+                  <option value="default">Top 70 (Default)</option>
+                  <option value="top-100">Top 100 by Market Cap</option>
+                  <option value="alt-coins">Rank 100-300 (Alt Coins)</option>
+                </>
+              )}
+              {activeTab === "forex" && (
+                <>
+                  <option value="default">32 Major Pairs (Default)</option>
+                  <option value="majors">7 Major Pairs Only</option>
+                  <option value="crosses">Cross Pairs</option>
+                  <option value="exotics">Exotic Pairs</option>
+                </>
+              )}
+              {activeTab === "commodities" && (
+                <>
+                  <option value="default">All 10 (Default)</option>
+                  <option value="energy">Energy (Oil, Gas)</option>
+                  <option value="metals">Metals (Copper, Aluminum)</option>
+                  <option value="agriculture">Agriculture (Wheat, Corn, etc)</option>
+                </>
+              )}
             </select>
           </div>
 
