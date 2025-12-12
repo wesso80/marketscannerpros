@@ -11,8 +11,70 @@ from math import floor
 import os
 from datetime import datetime, timedelta
 
-# Alpha Vantage API key
+# Alpha Vantage API key (free: 25 requests/day - too limited)
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "yMPBWWLZNSPOK7P81")
+
+# Finnhub API key (free: 60 calls/minute - MUCH better)
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "d4tt6ohr01qk9ur8pcegd4tt6ohr01qk9ur8pcf0")
+
+# ================= Data Fetching (Finnhub - Free & Reliable) =================
+def get_ohlcv_finnhub(symbol: str, timeframe: str) -> pd.DataFrame:
+    """Fetch OHLCV data from Finnhub (60 calls/min free tier)"""
+    import time
+    
+    # Map timeframe to resolution
+    resolution_map = {
+        "1d": "D",
+        "1h": "60",
+        "15m": "15",
+        "5m": "5"
+    }
+    
+    resolution = resolution_map.get(timeframe.lower(), "D")
+    
+    # Calculate time range
+    now = int(time.time())
+    if timeframe == "1d":
+        start = now - (365 * 2 * 24 * 3600)  # 2 years
+    elif timeframe == "1h":
+        start = now - (730 * 24 * 3600)  # 730 days
+    else:
+        start = now - (60 * 24 * 3600)  # 60 days
+    
+    url = f"https://finnhub.io/api/v1/stock/candle"
+    params = {
+        "symbol": symbol.upper(),
+        "resolution": resolution,
+        "from": start,
+        "to": now,
+        "token": FINNHUB_API_KEY
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+        
+        if data.get("s") != "ok":
+            raise ValueError(f"Finnhub error: {data.get('s', 'unknown')}")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame({
+            "open": data["o"],
+            "high": data["h"],
+            "low": data["l"],
+            "close": data["c"],
+            "volume": data["v"]
+        }, index=pd.to_datetime(data["t"], unit='s', utc=True))
+        
+        if df.empty or len(df) < 10:
+            raise ValueError(f"Insufficient Finnhub data: {len(df)} rows")
+        
+        print(f"✓ Finnhub success for {symbol}: {len(df)} rows")
+        return df
+        
+    except Exception as e:
+        print(f"✗ Finnhub failed for {symbol}: {e}")
+        raise ValueError(f"Finnhub fetch failed: {str(e)}")
 
 # ================= Data Fetching =================
 def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
@@ -204,17 +266,30 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
-    Fetch OHLCV data - Use yfinance (free, reliable, no rate limits)
+    Fetch OHLCV data - Use Finnhub (60 calls/min FREE, works from servers)
     """
-    # Use yfinance directly - it's faster and more reliable
+    # Finnhub doesn't support crypto well, skip crypto for now
+    if is_crypto:
+        raise ValueError("Crypto scanning temporarily disabled (yfinance blocked from cloud)")
+    
+    # Try Finnhub - free, fast, reliable from servers
     try:
-        df = get_ohlcv_yfinance(symbol, timeframe)
+        df = get_ohlcv_finnhub(symbol, timeframe)
         if len(df) >= 10:
             return df
-        raise ValueError(f"Insufficient data for {symbol}")
-    except Exception as e:
-        print(f"yfinance failed for {symbol}: {e}")
-        raise ValueError(f"Failed to fetch data for {symbol}: {e}")
+    except Exception as finn_error:
+        print(f"✗ Finnhub failed for {symbol}: {finn_error}")
+        
+        # Fallback to yfinance (might work locally but blocked on Render)
+        try:
+            df = get_ohlcv_yfinance(symbol, timeframe)
+            if len(df) >= 10:
+                print(f"✓ yfinance fallback for {symbol}: {len(df)} rows")
+                return df
+        except Exception as yf_error:
+            print(f"✗ yfinance also failed: {yf_error}")
+    
+    raise ValueError(f"All data sources failed for {symbol}")
 
 # ================= Indicators =================
 def _ema(s, n):
