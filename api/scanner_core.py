@@ -334,29 +334,17 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
     Fetch OHLCV data - Use PREMIUM Alpha Vantage (75 calls/min, works from cloud)
-    For crypto intraday, use yfinance (Alpha Vantage only supports daily crypto)
     """
-    # For crypto intraday, go straight to yfinance (Alpha Vantage only does daily)
-    if is_crypto and timeframe != "1d":
-        try:
-            df = get_ohlcv_yfinance(symbol, timeframe)
-            if len(df) >= 10:
-                print(f"✓ yfinance crypto intraday for {symbol}: {len(df)} rows")
-                return df
-        except Exception as yf_error:
-            print(f"✗ yfinance crypto failed: {yf_error}")
-            raise ValueError(f"Crypto intraday data unavailable for {symbol}")
-    
-    # Try Alpha Vantage first with premium key (stocks or crypto daily)
+    # ALWAYS try Alpha Vantage first - you're paying $50/month for it!
     try:
         df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto)
         if len(df) >= 10:
-            print(f"✓ Alpha Vantage (premium) success for {symbol}: {len(df)} rows")
+            print(f"✓ Alpha Vantage (premium) for {symbol}: {len(df)} rows")
             return df
     except Exception as av_error:
         print(f"✗ Alpha Vantage failed for {symbol}: {av_error}")
         
-        # Fallback to yfinance for stocks
+        # Fallback to yfinance only for stocks (crypto yfinance is unreliable)
         if not is_crypto:
             try:
                 df = get_ohlcv_yfinance(symbol, timeframe)
