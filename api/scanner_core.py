@@ -680,10 +680,89 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     return results, errors
 
 # ================= Symbol Lists =================
-EQUITY_SYMBOLS = [
-    # FAST SCAN - Top 10 most liquid stocks (5-10 second scans)
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "AMD", "NFLX", "DIS"
+
+# EQUITY - Comprehensive lists for finding diamonds in the rough
+EQUITY_LARGE_CAP = [
+    # Tech Giants
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "ADBE", "CRM", "CSCO", "ACN", "AMD", "IBM", "INTC", "TXN", "QCOM", "INTU", "AMAT", "LRCX", "KLAC", "SNPS", "CDNS", "ADSK", "FTNT", "PANW", "CRWD", "ZS", "DDOG", "NET", "SNOW", "MDB", "PLTR", "U", "DOCU",
+    # Finance
+    "JPM", "BAC", "WFC", "C", "GS", "MS", "BLK", "SCHW", "AXP", "USB", "PNC", "TFC", "BK", "STT", "NTRS", "CFG", "KEY", "RF", "HBAN", "FITB", "MTB", "ZION", "CMA", "ALLY", "SOFI", "AFRM", "UPST", "LC",
+    # Healthcare
+    "UNH", "JNJ", "LLY", "ABBV", "MRK", "TMO", "ABT", "DHR", "PFE", "BMY", "AMGN", "GILD", "REGN", "VRTX", "CI", "CVS", "HUM", "ELV", "CNC", "MOH", "BIIB", "MRNA", "BNTX", "ISRG", "SYK", "BSX", "MDT", "EW", "HOLX", "BAX", "BDX", "ZBH", "ALGN", "DXCM", "PODD", "TDOC", "VEEV",
+    # Consumer
+    "WMT", "HD", "MCD", "NKE", "SBUX", "TGT", "LOW", "COST", "DG", "DLTR", "ROST", "TJX", "BBY", "ULTA", "M", "KSS", "JWN", "DKS", "FL", "FIVE", "OLLI", "BIG",
+    # Entertainment/Media
+    "DIS", "NFLX", "CMCSA", "WBD", "PARA", "FOX", "FOXA", "OMC", "IPG", "SPOT", "RBLX", "EA", "TTWO", "ATVI", "U", "DKNG", "PENN", "LVS", "MGM", "WYNN", "CZR",
+    # Industrial
+    "CAT", "BA", "HON", "UPS", "RTX", "LMT", "GE", "MMM", "DE", "EMR", "ETN", "ITW", "PH", "CMI", "FDX", "PCAR", "ROK", "AME", "DOV", "XYL", "IEX",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "VLO", "OXY", "HES", "DVN", "FANG", "HAL", "BKR", "APA", "MRO", "OVV",
+    # Retail/E-commerce
+    "AMZN", "BABA", "JD", "PDD", "MELI", "SHOP", "ETSY", "W", "CHWY", "PINS", "SNAP", "DASH", "UBER", "LYFT", "ABNB",
+    # Semiconductors
+    "NVDA", "AMD", "INTC", "QCOM", "AVGO", "TXN", "AMAT", "LRCX", "KLAC", "MRVL", "MU", "NXPI", "ADI", "MCHP", "SWKS", "QRVO", "ON", "MPWR",
+    # Auto
+    "TSLA", "F", "GM", "RIVN", "LCID", "NIO", "XPEV", "LI",
+    # Real Estate/Construction  
+    "AMT", "PLD", "EQIX", "CCI", "PSA", "DLR", "O", "WELL", "AVB", "EQR", "SPG", "VTR", "ARE", "DHI", "LEN", "PHM", "NVR", "TOL",
+    # Telecom
+    "T", "VZ", "TMUS", "VOD",
+    # Materials
+    "LIN", "APD", "ECL", "SHW", "NEM", "FCX", "NUE", "STLD", "CLF", "AA", "ALB", "MP",
+    # Aerospace
+    "BA", "LMT", "RTX", "NOC", "GD", "LHX", "HWM", "TDG", "TXT"
 ]
+
+EQUITY_MID_CAP = [
+    # Tech/Software
+    "TEAM", "ZM", "OKTA", "BILL", "PATH", "PCTY", "FOUR", "FROG", "NCNO", "ESTC", "DT", "IOT", "S", "ZI", "HUBS", "RNG", "CFLT", "GTLB", "MNDY", "WK",
+    # FinTech
+    "SQ", "PYPL", "COIN", "HOOD", "NU", "MARA", "RIOT", "HUT", "BITF", "CLSK", "CIFR",
+    # Healthcare/Biotech
+    "EXAS", "ILMN", "TWST", "PACB", "IONS", "CRSP", "EDIT", "NTLA", "BEAM", "VERV", "SGMO", "FATE", "BLUE", "SRPT", "BMRN", "ALNY", "RARE", "FOLD", "ARWR", "RGNX", "HALO", "ALLO", "CRBU",
+    # EVs/Clean Energy
+    "RIVN", "LCID", "CHPT", "BLNK", "EVGO", "QS", "GOEV", "FSR", "NKLA", "RIDE", "LEV", "ENVX", "PLUG", "BE", "FCEL", "BLDP", "WKHS",
+    # Cybersecurity
+    "CRWD", "ZS", "PANW", "OKTA", "FTNT", "NET", "S", "RPD", "TENB", "VRNS", "CYBR", "QLYS",
+    # E-commerce/Digital
+    "ETSY", "W", "CHWY", "CVNA", "REAL", "OZON", "VIPS", "SE", "CPNG", "GRAB",
+    # Gaming
+    "RBLX", "U", "TTWO", "EA", "ZNGA", "PLTK", "DKNG", "PENN",
+    # Food/Restaurants
+    "CMG", "WING", "TXRH", "CHUY", "BLMN", "DIN", "EAT", "CAKE", "CBRL", "DRI", "QSR", "YUM", "SBUX", "MCD",
+    # Industrial/Manufacturing
+    "RH", "POOL", "AZEK", "TREX", "FOXF", "CVCO", "UFPI", "BECN", "BOOT", "SKY",
+    # Transport/Logistics
+    "JBHT", "ODFL", "SAIA", "XPO", "CHRW", "KNX", "LSTR", "ARCB", "WERN", "HTLD"
+]
+
+EQUITY_SMALL_CAP = [
+    # Micro-cap Tech
+    "BBAI", "AI", "SOUN", "GFAI", "EZFL", "AIXI", "CXAI", "BKSY", "RKLB", "ASTR", "SPCE", "PL", "ACHR", "JOBY", "EVTL", "LILM", "ASTS", "VORB",
+    # Biotech/Pharma
+    "SAVA", "AVXL", "ANVS", "CTMX", "AIMD", "PTGX", "ADMA", "CLDX", "SYRS", "KPTI", "IMMP", "OTIC", "KRYS", "MNOV", "TBPH", "AKRO", "AUTL", "SNDL", "TLRY", "CGC", "ACB", "HEXO", "CRON", "OGI", "APHA",
+    # EV/Battery/Clean Energy
+    "MULN", "SOLO", "AYRO", "WKHS", "FFIE", "PSNY", "NUVVE", "LTHM", "LAC", "PALT", "SES", "AMPX", "FREYR", "MVST", "DCFC", "VLTA",
+    # Crypto/Blockchain
+    "MARA", "RIOT", "CLSK", "HUT", "BITF", "BTBT", "CAN", "ARBK", "HIVE", "DMGI", "MGTI", "EBON", "SOS", "MOGO",
+    # Penny Tech
+    "GNUS", "NKLA", "RIDE", "WKHS", "WISH", "SLDP", "INDI", "GOEV", "MULN", "AYRO", "SOLO",
+    # Retail/Consumer
+    "BBBY", "GME", "AMC", "MMAT", "TRKA", "APPH", "WW", "FIZZ", "MGNI", "FUBO", "BMBL", "MTCH",
+    # Shipping/Transport
+    "ZIM", "MATX", "SBLK", "NMM", "NAT", "INSW", "IMPP", "TOPS", "SHIP", "EURN",
+    # Oil/Gas/Resources
+    "VTNR", "IMPP", "CEI", "INDO", "ENSV", "BORR", "VAL", "RIG", "SDRL", "NRGU",
+    # Real Estate/Construction
+    "APRN", "OPEN", "RDFN", "COMP", "EXP", "HOUS", "LGIH", "BZH", "MHO", "MTH", "CCS", "GRBK",
+    # Entertainment/Media  
+    "SONO", "SSPK", "SRAD", "GSMG", "FUBOTV", "TDUP", "VZIO", "SVMH",
+    # Misc Spec Plays
+    "BBIG", "ATER", "PROG", "SPRT", "IRNT", "OPAD", "AGRI", "GREE", "SDC", "CLOV", "SKLZ", "BARK", "BROS", "MNDY", "HOOD"
+]
+
+# Combine all equity for "default" scan (Top 500)
+EQUITY_SYMBOLS = EQUITY_LARGE_CAP + EQUITY_MID_CAP[:50] + EQUITY_SMALL_CAP[:50]  # ~300 symbols for fast comprehensive scan
 
 # ALL Alpha Vantage crypto - You're paying $50/month, scan EVERYTHING (All USD pairs from Coinbase)
 CRYPTO_SYMBOLS = [
@@ -727,23 +806,47 @@ CRYPTO_SYMBOLS = [
     "ZK-USD", "ZORA-USD", "ZRO-USD", "ZRX-USD"
 ]
 
-# FOREX pairs - Major, crosses, and emerging market pairs
-FOREX_SYMBOLS = [
-    # Majors (most liquid)
-    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
-    # Popular crosses
+# FOREX pairs - Comprehensive coverage for global opportunities
+FOREX_MAJORS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD"]
+
+FOREX_CROSSES = [
     "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "EURAUD", "EURCHF", "GBPAUD", "GBPCHF",
-    # Emerging markets & exotics
-    "USDCNY", "USDHKD", "USDSGD", "USDZAR", "USDMXN", "USDBRL", "USDINR", "USDTRY",
-    "USDKRW", "USDRUB", "USDTHB", "USDNOK", "USDSEK", "USDDKK", "USDPLN", "EURPLN"
+    "AUDNZD", "AUDCAD", "AUDCHF", "CADJPY", "CHFJPY", "NZDJPY", "GBPNZD", "GBPCAD",
+    "EURCAD", "EURNZD", "NZDCAD", "NZDCHF", "CADCHF"
 ]
 
-# COMMODITIES - Energy, Metals, Agriculture (Alpha Vantage Premium)
-COMMODITY_SYMBOLS = [
-    # Energy
-    "WTI", "BRENT", "NATURAL_GAS",
-    # Metals  
-    "COPPER", "ALUMINUM",
-    # Agriculture
-    "WHEAT", "CORN", "COTTON", "SUGAR", "COFFEE"
+FOREX_EXOTICS = [
+    # Asian
+    "USDCNY", "USDHKD", "USDSGD", "USDKRW", "USDTHB", "USDINR", "USDPHP", "USDIDR", "USDMYR", "USDTWD",
+    # European
+    "USDNOK", "USDSEK", "USDDKK", "USDPLN", "USDCZK", "USDHUF", "USDRON", "USDRUB", "USDTRY", "EURPLN", "EURTRY", "EURNOK", "EURSEK",
+    # Americas
+    "USDMXN", "USDBRL", "USDARS", "USDCLP", "USDCOP", "USDPEN",
+    # Middle East/Africa
+    "USDZAR", "USDILS", "USDSAR", "USDAED", "USDKWD", "USDEGP", "USDNGN"
 ]
+
+# Combine all forex for "default" scan
+FOREX_SYMBOLS = FOREX_MAJORS + FOREX_CROSSES + FOREX_EXOTICS
+
+# COMMODITIES - Comprehensive coverage across all sectors
+COMMODITY_ENERGY = ["WTI", "BRENT", "NATURAL_GAS", "HEATING_OIL", "GASOLINE"]
+
+COMMODITY_METALS = [
+    # Precious
+    "GOLD", "SILVER", "PLATINUM", "PALLADIUM",
+    # Industrial
+    "COPPER", "ALUMINUM", "ZINC", "NICKEL", "LEAD", "TIN"
+]
+
+COMMODITY_AGRICULTURE = [
+    # Grains
+    "WHEAT", "CORN", "SOYBEANS", "SOYBEAN_OIL", "SOYBEAN_MEAL", "OATS", "RICE",
+    # Softs
+    "COTTON", "SUGAR", "COFFEE", "COCOA", "ORANGE_JUICE",
+    # Livestock
+    "LIVE_CATTLE", "FEEDER_CATTLE", "LEAN_HOGS"
+]
+
+# Combine all commodities for "default" scan
+COMMODITY_SYMBOLS = COMMODITY_ENERGY + COMMODITY_METALS + COMMODITY_AGRICULTURE

@@ -55,6 +55,7 @@ function ScannerContent() {
           type: activeTab,
           timeframe: timeframe,
           minScore: minScore,
+          preset: symbolPreset,
           symbols: useCustom && customSymbols.trim() 
             ? customSymbols.trim().split('\n').map(s => s.trim()).filter(Boolean)
             : undefined,
@@ -171,33 +172,31 @@ function ScannerContent() {
             >
               {activeTab === "equity" && (
                 <>
-                  <option value="default">Top 10 (Default)</option>
-                  <option value="large-cap">Top 100 Large-Cap</option>
-                  <option value="mid-cap">Mid-Cap (2B-10B)</option>
-                  <option value="small-cap">Small-Cap (250M-2B)</option>
+                  <option value="default">🎯 Top 300+ All Caps (Default)</option>
+                  <option value="large-cap">📊 Large-Cap (200+ Stocks)</option>
+                  <option value="mid-cap">💎 Mid-Cap (100+ Stocks)</option>
+                  <option value="small-cap">🔍 Small-Cap (150+ Stocks)</option>
                 </>
               )}
               {activeTab === "crypto" && (
                 <>
-                  <option value="default">Top 70 (Default)</option>
-                  <option value="top-100">Top 100 by Market Cap</option>
-                  <option value="alt-coins">Rank 100-300 (Alt Coins)</option>
+                  <option value="default">🚀 All 350+ Coinbase Pairs</option>
                 </>
               )}
               {activeTab === "forex" && (
                 <>
-                  <option value="default">32 Major Pairs (Default)</option>
-                  <option value="majors">7 Major Pairs Only</option>
-                  <option value="crosses">Cross Pairs</option>
-                  <option value="exotics">Exotic Pairs</option>
+                  <option value="default">🌍 All 60+ Pairs (Default)</option>
+                  <option value="majors">💰 7 Major Pairs Only</option>
+                  <option value="crosses">🔄 21 Cross Pairs</option>
+                  <option value="exotics">🌏 30+ Exotic Pairs</option>
                 </>
               )}
               {activeTab === "commodities" && (
                 <>
-                  <option value="default">All 10 (Default)</option>
-                  <option value="energy">Energy (Oil, Gas)</option>
-                  <option value="metals">Metals (Copper, Aluminum)</option>
-                  <option value="agriculture">Agriculture (Wheat, Corn, etc)</option>
+                  <option value="default">📦 All 30+ Commodities (Default)</option>
+                  <option value="energy">⚡ Energy (5 Products)</option>
+                  <option value="metals">⛏️ Metals (10 Products)</option>
+                  <option value="agriculture">🌾 Agriculture (15+ Products)</option>
                 </>
               )}
             </select>
