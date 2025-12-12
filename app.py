@@ -2503,7 +2503,10 @@ try:
         except:
             api_param = ''
     
+    print(f"API check: api_param = '{api_param}'")  # Debug log
+    
     if str(api_param).lower() == 'scan':
+        print("API scan endpoint triggered")  # Debug log
         # Get parameters
         if isinstance(qp, dict):
             scan_type = qp.get('type', 'equity')
@@ -2513,6 +2516,8 @@ try:
             scan_type = qp.get('type', ['equity'])[0]
             scan_timeframe = qp.get('timeframe', ['1h'])[0]
             scan_min_score = float(qp.get('minScore', ['60'])[0])
+        
+        print(f"Scan params: type={scan_type}, tf={scan_timeframe}, minScore={scan_min_score}")  # Debug
         
         # Select symbols
         if scan_type == 'crypto':
@@ -2525,6 +2530,8 @@ try:
         
         is_crypto = scan_type == 'crypto'
         
+        print(f"Starting scan for {len(symbols)} symbols...")  # Debug
+        
         # Run scan (using default position sizing params)
         df_results, df_errors = scan_universe(
             symbols=symbols,
@@ -2535,6 +2542,8 @@ try:
             stop_mult=1.5,
             min_vol=1_000_000.0
         )
+        
+        print(f"Scan complete: {len(df_results)} results, {len(df_errors)} errors")  # Debug
         
         # Filter by min score
         if not df_results.empty:
@@ -2551,9 +2560,11 @@ try:
             "timestamp": datetime.now().isoformat()
         }
         
+        print(f"Returning JSON response with {len(results)} results")  # Debug
         st.write(json.dumps(response))
         st.stop()
-except:
+except Exception as e:
+    print(f"API endpoint error: {e}")  # Debug log
     pass  # Continue to normal app
 
 # ================= Notifications =================
