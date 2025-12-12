@@ -164,10 +164,10 @@ function ScannerContent() {
             >
               <option value="15m">⚡ 15 Minutes</option>
               <option value="1h">🕐 1 Hour</option>
-              <option value="4h">🕓 4 Hours</option>
+              {marketType !== "crypto" && <option value="4h">🕓 4 Hours</option>}
               <option value="1d">📅 1 Day</option>
-              <option value="1w">📆 1 Week</option>
-              <option value="1mo">📊 1 Month</option>
+              {marketType !== "crypto" && <option value="1w">📆 1 Week</option>}
+              {marketType !== "crypto" && <option value="1mo">📊 1 Month</option>}
             </select>
           </div>
 

@@ -132,16 +132,17 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
             df = df.sort_values('timestamp').set_index('timestamp')
             return df
         
-        # Use CRYPTO_INTRADAY for 15m, 1h, and 4h
-        # For 4h, fetch 1h data and resample since Alpha Vantage doesn't have native 4h
+        # Use CRYPTO_INTRADAY for 15m and 1h ONLY (what Alpha Vantage supports)
         if timeframe != "1d":
             # Map timeframe to Alpha Vantage interval
             interval_map = {
                 "15m": "15min",
                 "1h": "60min",
-                "4h": "60min",  # Fetch 1h, will resample to 4h
             }
-            interval = interval_map.get(timeframe, "60min")
+            interval = interval_map.get(timeframe)
+            
+            if not interval:
+                raise ValueError(f"Crypto timeframe {timeframe} not supported by Alpha Vantage")
             
             params = {
                 "function": "CRYPTO_INTRADAY",
@@ -181,17 +182,6 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
             
             df = pd.DataFrame(df_data)
             df = df.sort_values('timestamp').set_index('timestamp')
-            
-            # Resample 1h to 4h if needed
-            if timeframe == "4h":
-                df = df.resample('4H').agg({
-                    'open': 'first',
-                    'high': 'max',
-                    'low': 'min',
-                    'close': 'last',
-                    'volume': 'sum'
-                }).dropna()
-            
             return df
     
     # For stocks, use regular TIME_SERIES endpoint

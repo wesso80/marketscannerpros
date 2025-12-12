@@ -2350,7 +2350,62 @@ def delete_watchlist(watchlist_id: int) -> bool:
     
     return result is not None
 
-# ================= Data Source (yfinance) =================
+# ================= Data Source (Alpha Vantage Premium + yfinance fallback) =================
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
+
+def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
+    """Fetch from Alpha Vantage Premium (75 calls/minute)"""
+    # Map timeframes
+    function_map = {
+        "1d": "TIME_SERIES_DAILY",
+        "1h": "TIME_SERIES_INTRADAY",
+        "4h": "TIME_SERIES_INTRADAY",
+        "15m": "TIME_SERIES_INTRADAY",
+        "5m": "TIME_SERIES_INTRADAY"
+    }
+    interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min"}
+    
+    function = function_map.get(timeframe, "TIME_SERIES_DAILY")
+    params = {
+        "function": function,
+        "symbol": symbol.replace("-USD", "").upper(),  # BTC-USD → BTC for crypto
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "outputsize": "full",
+        "datatype": "json"
+    }
+    
+    if function == "TIME_SERIES_INTRADAY":
+        params["interval"] = interval_map.get(timeframe, "60min")
+    
+    response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+    
+    # Find the time series key
+    ts_key = None
+    for key in data.keys():
+        if "Time Series" in key:
+            ts_key = key
+            break
+    
+    if not ts_key or ts_key not in data:
+        raise ValueError(f"No Alpha Vantage data for {symbol}")
+    
+    ts = data[ts_key]
+    rows = []
+    for timestamp, values in ts.items():
+        rows.append({
+            "timestamp": pd.to_datetime(timestamp, utc=True),
+            "open": float(values.get("1. open", 0)),
+            "high": float(values.get("2. high", 0)),
+            "low": float(values.get("3. low", 0)),
+            "close": float(values.get("4. close", 0)),
+            "volume": float(values.get("5. volume", 0)),
+        })
+    
+    df = pd.DataFrame(rows).set_index("timestamp").sort_index()
+    return df
+
 def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
     interval, default_period = _yf_interval_period(timeframe)
     
@@ -2375,6 +2430,16 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, star
     return out
 
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
+    # Try Alpha Vantage Premium first (works from cloud)
+    try:
+        df = get_ohlcv_alpha_vantage(symbol, timeframe)
+        if len(df) >= 10:
+            print(f"✓ Alpha Vantage Premium: {symbol} ({len(df)} bars)")
+            return df
+    except Exception as e:
+        print(f"Alpha Vantage failed for {symbol}: {e}")
+    
+    # Fallback to yfinance
     return get_ohlcv_yf(symbol, timeframe, period, start, end)
 
 # ================= Indicators (pure pandas) =================

@@ -16,7 +16,7 @@
   - type: web
     name: marketscannerpros-scanner-api
     runtime: docker
-    plan: starter
+    plan: pro
     region: oregon
     dockerfilePath: ./Dockerfile.scanner
     dockerContext: .
