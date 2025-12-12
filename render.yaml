@@ -1,7 +1,7 @@
 ﻿services:
   - type: web
     name: marketscannerpros-streamlit
-    env: python
+    runtime: python
     plan: free
     buildCommand: |
       pip install --upgrade pip
@@ -12,3 +12,18 @@
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+
+  - type: web
+    name: marketscannerpros-scanner-api
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r api/requirements.txt
+    startCommand: uvicorn api.scanner_service:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
