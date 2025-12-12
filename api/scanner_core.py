@@ -491,6 +491,10 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
             last = features.iloc[-1]
             score = score_row(last)
             
+            # Debug: Always log score for crypto
+            if is_crypto:
+                print(f"  {symbol}: score={score:.1f}, min_score={min_score}")
+            
             # Filter by min score
             if score < min_score:
                 continue
