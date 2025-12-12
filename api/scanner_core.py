@@ -86,9 +86,59 @@ def get_ohlcv_finnhub(symbol: str, timeframe: str) -> pd.DataFrame:
         raise ValueError(f"Finnhub fetch failed: {str(e)}")
 
 # ================= Data Fetching =================
-def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
+def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False, is_forex: bool = False) -> pd.DataFrame:
     """Fetch OHLCV data from Alpha Vantage"""
     base_url = "https://www.alphavantage.co/query"
+    
+    # For Forex (e.g., EURUSD -> EUR/USD)
+    if is_forex:
+        # Convert EURUSD format to EUR and USD
+        if len(symbol) == 6:
+            from_symbol = symbol[:3]
+            to_symbol = symbol[3:]
+        else:
+            raise ValueError(f"Invalid forex symbol format: {symbol} (should be like EURUSD)")
+        
+        # Only daily supported for now
+        if timeframe == "1d":
+            params = {
+                "function": "FX_DAILY",
+                "from_symbol": from_symbol,
+                "to_symbol": to_symbol,
+                "outputsize": "full",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series = data.get("Time Series FX (Daily)", {})
+            if not time_series:
+                raise ValueError(f"No forex data. Response keys: {list(data.keys())}")
+            
+            # Parse forex data
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1. open']),
+                    'high': float(values['2. high']),
+                    'low': float(values['3. low']),
+                    'close': float(values['4. close']),
+                    'volume': 0  # Forex doesn't have volume
+                })
+            
+            df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+            return df
+        else:
+            raise ValueError(f"Forex only supports daily data currently, got: {timeframe}")
     
     # For crypto
     if is_crypto:
@@ -329,13 +379,19 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
     except Exception as e:
         raise ValueError(f"yfinance fetch failed: {str(e)}")
 
-def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
+def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False, is_forex: bool = False) -> pd.DataFrame:
     """
     SMART data fetching:
+    - FOREX: Alpha Vantage ONLY (FX_DAILY)
     - CRYPTO: Alpha Vantage FIRST (reliable, you're paying $50/mo), yfinance backup
     - STOCKS: yfinance FIRST (free + fast), Alpha Vantage backup
     """
-    if is_crypto:
+    if is_forex:
+        # Forex: Alpha Vantage only (FX_DAILY)
+        df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=False, is_forex=True)
+        return df
+    
+    elif is_crypto:
         # Crypto: Alpha Vantage Premium is reliable, yfinance fails from cloud
         try:
             df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=True)
@@ -465,11 +521,11 @@ def determine_phase(last) -> str:
     return "UNKNOWN"
 
 # ================= Scanner =================
-def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto: bool, min_bars: int) -> Tuple[Optional[Dict], Optional[Dict]]:
+def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto: bool, is_forex: bool, min_bars: int) -> Tuple[Optional[Dict], Optional[Dict]]:
     """Scan a single symbol - used for parallel processing"""
     try:
         # Fetch data with timeout protection
-        df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto)
+        df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto, is_forex=is_forex)
         
         if len(df) < min_bars:
             return None, {"symbol": symbol, "error": f"Insufficient data: only {len(df)} bars (need {min_bars}+)"}
@@ -519,7 +575,7 @@ def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto
     except Exception as e:
         return None, {"symbol": symbol, "error": str(e)}
 
-def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_crypto: bool = False) -> Tuple[List[Dict], List[Dict]]:
+def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_crypto: bool = False, is_forex: bool = False) -> Tuple[List[Dict], List[Dict]]:
     """
     PARALLEL scanner - scans all symbols simultaneously for SPEED
     You're paying $50/month for 75 calls/min - USE IT!
@@ -528,8 +584,8 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     results = []
     errors = []
     
-    # Lower requirement for crypto (has less history)
-    min_bars = 100 if is_crypto else 200
+    # Lower requirement for crypto/forex (has less history)
+    min_bars = 100 if (is_crypto or is_forex) else 200
     
     start_time = time.time()
     print(f"🚀 Starting PARALLEL scan of {len(symbols)} symbols...")
@@ -539,7 +595,7 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     with ThreadPoolExecutor(max_workers=20) as executor:
         # Submit all symbols for parallel processing
         future_to_symbol = {
-            executor.submit(_scan_single_symbol, symbol, timeframe, min_score, is_crypto, min_bars): symbol
+            executor.submit(_scan_single_symbol, symbol, timeframe, min_score, is_crypto, is_forex, min_bars): symbol
             for symbol in symbols
         }
         

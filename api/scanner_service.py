@@ -77,7 +77,8 @@ async def scan(request: ScanRequest):
             symbols=symbols,
             timeframe=request.timeframe,
             min_score=request.minScore or 0,
-            is_crypto=(request.type == "crypto")
+            is_crypto=(request.type == "crypto"),
+            is_forex=(request.type == "forex")
         )
         
         return ScanResponse(
