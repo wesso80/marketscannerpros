@@ -18,4 +18,5 @@ COPY api/ ./api/
 EXPOSE 8000
 
 # Run the ENHANCED scanner service with all Alpha Vantage Premium APIs
+# Supports: Daily/Weekly/Monthly, Adjusted Prices, Forex, Bulk Quotes
 CMD ["uvicorn", "api.scanner_enhanced:app", "--host", "0.0.0.0", "--port", "8000"]
