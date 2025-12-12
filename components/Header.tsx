@@ -11,18 +11,14 @@ export default function Header() {
         </Link>
 <nav className="flex items-center gap-3 md:gap-6 text-sm md:text-base text-emerald-300/90">
   <Link href="/tools/scanner" className="hover:text-emerald-300">Scanner</Link>
-
-  {/* NEW: AI Analyst */}
-  <Link href="/tools/ai-analyst" className="hover:text-emerald-300">
-    AI Analyst
-  </Link>
-
-  <Link href="/blog" className="hover:text-emerald-300">Blog</Link>
-  <Link href="/tradingview-scripts" className="hover:text-emerald-300">TradingView</Link>
-  <Link href="/guide" className="hover:text-emerald-300">Guide</Link>
+  <Link href="/tools/portfolio" className="hover:text-emerald-300">Portfolio</Link>
+  <Link href="/tools/alerts" className="hover:text-emerald-300">Alerts</Link>
+  <Link href="/tools/backtest" className="hover:text-emerald-300">Backtest</Link>
+  <Link href="/tools/journal" className="hover:text-emerald-300">Journal</Link>
+  <Link href="/tools/ai-analyst" className="hover:text-emerald-300">AI Analyst</Link>
+  <Link href="/blog" className="hidden md:block hover:text-emerald-300">Blog</Link>
+  <Link href="/tradingview-scripts" className="hidden md:block hover:text-emerald-300">TradingView</Link>
   <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
-  <Link href="/contact" className="hidden md:block hover:text-emerald-300">Contact</Link>
-  <Link href="/dashboard" className="hidden md:block hover:text-emerald-300">Dashboard</Link>
 </nav>
 
       </div>
