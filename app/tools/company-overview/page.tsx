@@ -4,32 +4,31 @@ import { useState } from "react";
 import Link from "next/link";
 
 interface CompanyData {
-  Symbol: string;
-  Name: string;
-  Description: string;
-  Sector: string;
-  Industry: string;
-  MarketCapitalization: string;
-  PERatio: string;
-  PEGRatio: string;
-  BookValue: string;
-  DividendPerShare: string;
-  DividendYield: string;
-  EPS: string;
-  ProfitMargin: string;
-  OperatingMarginTTM: string;
-  ReturnOnAssetsTTM: string;
-  ReturnOnEquityTTM: string;
-  RevenueTTM: string;
-  GrossProfitTTM: string;
-  QuarterlyEarningsGrowthYOY: string;
-  QuarterlyRevenueGrowthYOY: string;
-  AnalystTargetPrice: string;
-  "52WeekHigh": string;
-  "52WeekLow": string;
-  "50DayMovingAverage": string;
-  "200DayMovingAverage": string;
-  Beta: string;
+  symbol: string;
+  name: string;
+  description: string;
+  sector: string;
+  industry: string;
+  marketCap: string;
+  pe: string;
+  peg: string;
+  bookValue: string;
+  dividendYield: string;
+  eps: string;
+  profitMargin: string;
+  operatingMargin: string;
+  returnOnAssets: string;
+  returnOnEquity: string;
+  revenue: string;
+  grossProfit: string;
+  quarterlyEarningsGrowth: string;
+  quarterlyRevenueGrowth: string;
+  analystTargetPrice: string;
+  week52High: string;
+  week52Low: string;
+  day50MA: string;
+  day200MA: string;
+  beta: string;
 }
 
 export default function CompanyOverviewPage() {
@@ -123,29 +122,29 @@ export default function CompanyOverviewPage() {
             {/* Company Header */}
             <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
               <h2 style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff", marginBottom: "0.5rem" }}>
-                {data.Name} ({data.Symbol})
+                {data.name} ({data.symbol})
               </h2>
               <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
                 <span style={{ padding: "0.5rem 1rem", background: "rgba(16, 185, 129, 0.2)", borderRadius: "8px", color: "#10B981", fontSize: "0.875rem" }}>
-                  {data.Sector}
+                  {data.sector}
                 </span>
                 <span style={{ padding: "0.5rem 1rem", background: "rgba(59, 130, 246, 0.2)", borderRadius: "8px", color: "#3B82F6", fontSize: "0.875rem" }}>
-                  {data.Industry}
+                  {data.industry}
                 </span>
               </div>
-              <p style={{ color: "#94A3B8", lineHeight: "1.6" }}>{data.Description}</p>
+              <p style={{ color: "#94A3B8", lineHeight: "1.6" }}>{data.description}</p>
             </div>
 
             {/* Valuation Metrics */}
             <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📊 Valuation</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                <MetricCard label="Market Cap" value={formatMarketCap(data.MarketCapitalization)} />
-                <MetricCard label="P/E Ratio" value={formatValue(data.PERatio)} />
-                <MetricCard label="PEG Ratio" value={formatValue(data.PEGRatio)} />
-                <MetricCard label="Book Value" value={`$${formatValue(data.BookValue)}`} />
-                <MetricCard label="Analyst Target" value={`$${formatValue(data.AnalystTargetPrice)}`} />
-                <MetricCard label="Beta" value={formatValue(data.Beta)} />
+                <MetricCard label="Market Cap" value={formatMarketCap(data.marketCap)} />
+                <MetricCard label="P/E Ratio" value={formatValue(data.pe)} />
+                <MetricCard label="PEG Ratio" value={formatValue(data.peg)} />
+                <MetricCard label="Book Value" value={`$${formatValue(data.bookValue)}`} />
+                <MetricCard label="Analyst Target" value={`$${formatValue(data.analystTargetPrice)}`} />
+                <MetricCard label="Beta" value={formatValue(data.beta)} />
               </div>
             </div>
 
@@ -153,11 +152,11 @@ export default function CompanyOverviewPage() {
             <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>💰 Profitability</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                <MetricCard label="Profit Margin" value={formatValue(data.ProfitMargin)} />
-                <MetricCard label="Operating Margin" value={formatValue(data.OperatingMarginTTM)} />
-                <MetricCard label="ROE" value={formatValue(data.ReturnOnEquityTTM)} />
-                <MetricCard label="ROA" value={formatValue(data.ReturnOnAssetsTTM)} />
-                <MetricCard label="EPS" value={`$${formatValue(data.EPS)}`} />
+                <MetricCard label="Profit Margin" value={formatValue(data.profitMargin)} />
+                <MetricCard label="Operating Margin" value={formatValue(data.operatingMargin)} />
+                <MetricCard label="ROE" value={formatValue(data.returnOnEquity)} />
+                <MetricCard label="ROA" value={formatValue(data.returnOnAssets)} />
+                <MetricCard label="EPS" value={`$${formatValue(data.eps)}`} />
               </div>
             </div>
 
@@ -165,10 +164,10 @@ export default function CompanyOverviewPage() {
             <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📈 Growth & Revenue</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                <MetricCard label="Revenue TTM" value={formatMarketCap(data.RevenueTTM)} />
-                <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.GrossProfitTTM)} />
-                <MetricCard label="Earnings Growth YOY" value={formatValue(data.QuarterlyEarningsGrowthYOY)} />
-                <MetricCard label="Revenue Growth YOY" value={formatValue(data.QuarterlyRevenueGrowthYOY)} />
+                <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
+                <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
+                <MetricCard label="Earnings Growth YOY" value={formatValue(data.quarterlyEarningsGrowth)} />
+                <MetricCard label="Revenue Growth YOY" value={formatValue(data.quarterlyRevenueGrowth)} />
               </div>
             </div>
 
@@ -176,20 +175,19 @@ export default function CompanyOverviewPage() {
             <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
               <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📉 Technical</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                <MetricCard label="50-Day MA" value={`$${formatValue(data["50DayMovingAverage"])}`} />
-                <MetricCard label="200-Day MA" value={`$${formatValue(data["200DayMovingAverage"])}`} />
-                <MetricCard label="52-Week High" value={`$${formatValue(data["52WeekHigh"])}`} />
-                <MetricCard label="52-Week Low" value={`$${formatValue(data["52WeekLow"])}`} />
+                <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
+                <MetricCard label="200-Day MA" value={`$${formatValue(data.day200MA)}`} />
+                <MetricCard label="52-Week High" value={`$${formatValue(data.week52High)}`} />
+                <MetricCard label="52-Week Low" value={`$${formatValue(data.week52Low)}`} />
               </div>
             </div>
 
             {/* Dividends */}
-            {parseFloat(data.DividendYield) > 0 && (
+            {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
               <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
                 <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>💵 Dividends</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                  <MetricCard label="Dividend Per Share" value={`$${formatValue(data.DividendPerShare)}`} />
-                  <MetricCard label="Dividend Yield" value={formatValue(data.DividendYield)} />
+                  <MetricCard label="Dividend Yield" value={formatValue(data.dividendYield)} />
                 </div>
               </div>
             )}
