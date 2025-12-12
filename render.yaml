@@ -17,9 +17,11 @@
     name: marketscannerpros-scanner-api
     runtime: python
     plan: free
+    region: oregon
     buildCommand: |
-      pip install --upgrade pip
-      pip install pandas==2.2.1 numpy==1.26.4 --only-binary=:all:
+      python --version
+      pip install --upgrade pip setuptools wheel
+      pip install --prefer-binary --no-build-isolation pandas==2.2.1 numpy==1.26.4
       pip install -r api/requirements.txt
     startCommand: uvicorn api.scanner_service:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
