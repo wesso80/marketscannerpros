@@ -21,7 +21,8 @@
     buildCommand: |
       python --version
       pip install --upgrade pip
-      pip install --only-binary=:all: pandas==2.2.1 numpy==1.26.4
+      # Install from PyPI with binary wheels only - no source compilation
+      pip install --only-binary=:all: --prefer-binary pandas numpy
       pip install -r api/requirements.txt
     startCommand: uvicorn api.scanner_service:app --host 0.0.0.0 --port $PORT
     autoDeploy: true
