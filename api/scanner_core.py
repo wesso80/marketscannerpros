@@ -88,49 +88,108 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
     """Fetch OHLCV data from Alpha Vantage"""
     base_url = "https://www.alphavantage.co/query"
     
-    # For crypto, use DIGITAL_CURRENCY endpoint
+    # For crypto
     if is_crypto:
-        # DIGITAL_CURRENCY_DAILY only (no intraday)
+        clean_symbol = symbol.replace("-USD", "").replace("-", "")
+        
+        # Use CRYPTO_INTRADAY for intraday data
         if timeframe != "1d":
-            raise ValueError("Alpha Vantage crypto only supports daily data")
-        
-        params = {
-            "function": "DIGITAL_CURRENCY_DAILY",
-            "symbol": symbol.replace("-USD", "").replace("-", ""),  # Clean symbol
-            "market": "USD",
-            "apikey": ALPHA_VANTAGE_API_KEY,
-            "datatype": "json"
-        }
-        
-        print(f"Fetching crypto {symbol} with params: {params}")
-        response = requests.get(base_url, params=params, timeout=10)
-        data = response.json()
-        
-        if "Error Message" in data:
-            raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
-        
-        if "Note" in data:
-            raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
-        
-        time_series = data.get("Time Series (Digital Currency Daily)", {})
-        if not time_series:
-            raise ValueError(f"No crypto time series data. Response keys: {list(data.keys())}")
-        
-        # Parse crypto data
-        df_data = []
-        for timestamp, values in time_series.items():
-            df_data.append({
-                'timestamp': pd.to_datetime(timestamp),
-                'open': float(values['1. open']),
-                'high': float(values['2. high']),
-                'low': float(values['3. low']),
-                'close': float(values['4. close']),
-                'volume': float(values['5. volume'])
-            })
-        
-        df = pd.DataFrame(df_data)
-        df = df.sort_values('timestamp').set_index('timestamp')
-        return df
+            # Map timeframe to Alpha Vantage interval
+            interval_map = {
+                "15m": "15min",
+                "1h": "60min",
+                "4h": "60min",  # Will resample
+            }
+            interval = interval_map.get(timeframe, "60min")
+            
+            params = {
+                "function": "CRYPTO_INTRADAY",
+                "symbol": clean_symbol,
+                "market": "USD",
+                "interval": interval,
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "outputsize": "full",
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series_key = f"Time Series Crypto ({interval})"
+            time_series = data.get(time_series_key, {})
+            if not time_series:
+                raise ValueError(f"No crypto intraday data. Response keys: {list(data.keys())}")
+            
+            # Parse intraday crypto data
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1. open']),
+                    'high': float(values['2. high']),
+                    'low': float(values['3. low']),
+                    'close': float(values['4. close']),
+                    'volume': float(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df = df.sort_values('timestamp').set_index('timestamp')
+            
+            # Resample for 4h if needed
+            if timeframe == "4h":
+                df = df.resample('4H').agg({
+                    'open': 'first',
+                    'high': 'max',
+                    'low': 'min',
+                    'close': 'last',
+                    'volume': 'sum'
+                }).dropna()
+            
+            return df
+        else:
+            # Use DIGITAL_CURRENCY_DAILY for daily data
+            params = {
+                "function": "DIGITAL_CURRENCY_DAILY",
+                "symbol": clean_symbol,
+                "market": "USD",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series = data.get("Time Series (Digital Currency Daily)", {})
+            if not time_series:
+                raise ValueError(f"No crypto daily data. Response keys: {list(data.keys())}")
+            
+            # Parse daily crypto data
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1. open']),
+                    'high': float(values['2. high']),
+                    'low': float(values['3. low']),
+                    'close': float(values['4. close']),
+                    'volume': float(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df = df.sort_values('timestamp').set_index('timestamp')
+            return df
     
     # For stocks, use regular TIME_SERIES endpoint
     if timeframe == "1d":
@@ -275,8 +334,20 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
 def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
     """
     Fetch OHLCV data - Use PREMIUM Alpha Vantage (75 calls/min, works from cloud)
+    For crypto intraday, use yfinance (Alpha Vantage only supports daily crypto)
     """
-    # Try Alpha Vantage first with premium key
+    # For crypto intraday, go straight to yfinance (Alpha Vantage only does daily)
+    if is_crypto and timeframe != "1d":
+        try:
+            df = get_ohlcv_yfinance(symbol, timeframe)
+            if len(df) >= 10:
+                print(f"✓ yfinance crypto intraday for {symbol}: {len(df)} rows")
+                return df
+        except Exception as yf_error:
+            print(f"✗ yfinance crypto failed: {yf_error}")
+            raise ValueError(f"Crypto intraday data unavailable for {symbol}")
+    
+    # Try Alpha Vantage first with premium key (stocks or crypto daily)
     try:
         df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto)
         if len(df) >= 10:
@@ -285,7 +356,7 @@ def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFr
     except Exception as av_error:
         print(f"✗ Alpha Vantage failed for {symbol}: {av_error}")
         
-        # Fallback to yfinance (might work for some requests)
+        # Fallback to yfinance for stocks
         if not is_crypto:
             try:
                 df = get_ohlcv_yfinance(symbol, timeframe)
@@ -404,15 +475,18 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     results = []
     errors = []
     
+    # Lower requirement for crypto (has less history)
+    min_bars = 100 if is_crypto else 200
+    
     for symbol in symbols:
         try:
             # Fetch data with timeout protection
             df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto)
             
-            if len(df) < 200:
+            if len(df) < min_bars:
                 errors.append({
                     "symbol": symbol,
-                    "error": f"Insufficient data: only {len(df)} bars (need 200+)"
+                    "error": f"Insufficient data: only {len(df)} bars (need {min_bars}+)"
                 })
                 continue
             
@@ -470,14 +544,34 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
 
 # ================= Symbol Lists =================
 EQUITY_SYMBOLS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD", 
-    "NFLX", "DIS", "V", "MA", "JPM", "BAC", "WMT", "HD", 
-    "PG", "KO", "PEP", "CSCO", "INTC", "ORCL", "CRM", "ADBE", "PYPL"
+    # Tech Giants
+    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA",
+    # Tech & Software
+    "AMD", "INTC", "ORCL", "CRM", "ADBE", "NFLX", "PYPL", "SQ", "SHOP",
+    # Finance
+    "JPM", "BAC", "GS", "MS", "WFC", "C", "V", "MA",
+    # Consumer
+    "WMT", "HD", "NKE", "SBUX", "MCD", "DIS", "COST",
+    # Healthcare & Pharma
+    "JNJ", "PFE", "UNH", "ABBV", "TMO", "ABT",
+    # Energy & Industrial
+    "XOM", "CVX", "BA", "CAT", "GE",
+    # Consumer Goods
+    "PG", "KO", "PEP", "PM", "MO",
+    # Telecom & Media
+    "T", "VZ", "CMCSA", "CSCO"
 ]
 
-# Note: Crypto symbols via yfinance can be unreliable due to API issues
-# Using traditional format but may have connectivity issues
+# Crypto symbols - Alpha Vantage supports these via CRYPTO_INTRADAY
 CRYPTO_SYMBOLS = [
-    "BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "ADA-USD", 
-    "DOGE-USD", "SOL-USD", "DOT-USD", "MATIC-USD", "AVAX-USD"
+    # Top Market Cap
+    "BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "ADA-USD",
+    # DeFi & Smart Contracts  
+    "SOL-USD", "DOT-USD", "AVAX-USD", "MATIC-USD", "LINK-USD",
+    # Layer 1s & Alts
+    "ATOM-USD", "ALGO-USD", "XLM-USD", "VET-USD",
+    # Meme & Popular
+    "DOGE-USD", "SHIB-USD",
+    # Stablecoins & Others
+    "LTC-USD", "BCH-USD", "ETC-USD", "XMR-USD"
 ]
