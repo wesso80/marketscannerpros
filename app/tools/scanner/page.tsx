@@ -4,8 +4,8 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type TimeframeOption = "15m" | "1h" | "4h" | "1d";
-type ScannerTab = "equity" | "crypto";
+type TimeframeOption = "15m" | "1h" | "4h" | "1d" | "1w" | "1mo";
+type ScannerTab = "equity" | "crypto" | "forex";
 
 interface ScanResult {
   symbol: string;
@@ -142,6 +142,7 @@ function ScannerContent() {
             >
               <option value="equity">📈 Equity Markets</option>
               <option value="crypto">₿ Crypto Markets</option>
+              <option value="forex">💱 Forex Markets</option>
             </select>
           </div>
 
@@ -161,10 +162,12 @@ function ScannerContent() {
                 color: "#fff",
               }}
             >
-              <option value="15m">15 Minutes</option>
-              <option value="1h">1 Hour</option>
-              <option value="4h">4 Hours</option>
-              <option value="1d">1 Day</option>
+              <option value="15m">⚡ 15 Minutes</option>
+              <option value="1h">🕐 1 Hour</option>
+              <option value="4h">🕓 4 Hours</option>
+              <option value="1d">📅 1 Day</option>
+              <option value="1w">📆 1 Week</option>
+              <option value="1mo">📊 1 Month</option>
             </select>
           </div>
 
