@@ -45,30 +45,6 @@ function ScannerContent() {
     window.open('https://marketscannerpros-vwx5.onrender.com', '_blank');
     setLoading(false);
     setError("Scanner opened in new tab. The full scanner is available in the main app.");
-    return;
-    
-    try {
-      const response = await fetch("/api/scanner/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: activeTab === "crypto" ? "crypto" : "equity",
-          timeframe,
-          minScore,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Scanner failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setResults(data.results || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const generateAILink = (result: ScanResult) => {
