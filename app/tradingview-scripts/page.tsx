@@ -2,400 +2,624 @@
 
 import Link from 'next/link';
 
-const features = [
-  {
-    icon: "📊",
-    title: "Confluence Shading",
-    desc: "Counts active windows from selected TFs (30m→8h) plus optional pre-close anticipation. Tiers at 5/6/7/8/≥9 stacks with configurable colors."
-  },
-  {
-    icon: "📋",
-    title: "Panel with Details",
-    desc: "TF list (tinted to match line colors), Next Close countdown for each TF, and Prev 50% = exact midpoint of the previous bar."
-  },
-  {
-    icon: "📈",
-    title: "50% Lines on Chart",
-    desc: "Optional lines for intraday TFs plus optional D/W/M. Labels can show price. Close markers (triangles) show when a TF just closed."
-  },
-  {
-    icon: "🔍",
-    title: "Smart Scan Header",
-    desc: "Auto-adds higher TFs only if their next close is within X hours (default 22h), keeping the panel focused on relevant windows."
-  },
-  {
-    icon: "🔔",
-    title: "Alerts",
-    desc: "One alert condition when the stack reaches your threshold - never miss a confluence opportunity."
-  },
-  {
-    icon: "⚡",
-    title: "Exact & Efficient",
-    desc: "50% computed with one request per TF using hl2[1]. Keeps table and lines in perfect sync and reduces request usage."
-  }
-];
-
 const steps = [
-  "Add the indicator and pick your tracked TFs",
-  "Choose your basis (Regular vs Extended / Heikin-Ashi)",
-  "Set scan hours (e.g., 22h) to show higher-TF rows/lines only when relevant",
-  "Optionally enable lines & labels for the TFs you actively trade",
-  "(Optional) Create an alert: Time Confluence Stack ≥ Threshold"
+  "Make sure you have a TradingView account",
+  "Click any \"Request Free Trial\" button on this page – it opens a pre-filled email to us",
+  "Add your TradingView username and which scripts you want to try (or just say \"all of them\")",
+  "We'll add you to the invite-only scripts and reply once access is active"
 ];
 
 const faqs = [
   {
-    q: "Lines don't match the table?",
-    a: "Make sure Auto Fit to screen is on (or zoom so lines are within view), and confirm you're using the same basis (RTH/Extended, Heikin-Ashi) as the panel."
+    q: "How long does the free trial last?",
+    a: "Currently open-ended beta. While we're building out the full product, all scripts are available on a manual free-trial basis. When we later add paid plans, beta users will be given the option to stay on preferred terms."
   },
   {
-    q: "Hitting request limits?",
-    a: "Disable unused TFs, turn off D/W/M lines, or increase \"Scan ≤ hours\" selectivity. This build already halves midpoint requests via hl2[1]."
+    q: "What do I need to get started?",
+    a: "Just a valid TradingView username. No card required, no automated billing – access is granted manually via TradingView's invite-only system."
   },
   {
-    q: "No-repaint note",
-    a: "50% levels use previous bar data on each TF with lookahead_off, so the plotted midpoints do not repaint. Shading/countdowns update in real time."
+    q: "How do I request access?",
+    a: "Click any 'Request Free Trial' button which opens a pre-filled email. Just add your TradingView username and send. We'll manually add you to the invite-only scripts and reply when access is active."
+  },
+  {
+    q: "Can I test all the scripts?",
+    a: "Yes! Request access to whichever scripts interest you, or just say 'all of them' in your email. There's no limit during the beta phase."
   }
 ];
 
-export default function TradingViewScripts() {
-  const emailLink = "mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20TradingView%20Scripts&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20access%20to%20your%20TradingView%20scripts.%0A%0ATradingView%20username%3A%20%0A%0AThanks%2C%0A";
+export default function TradingViewScriptsPage() {
+  const currentYear = new Date().getFullYear();
+  const emailLink = "mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20MarketScannerPros&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20a%20free%20trial%20of%20your%20TradingView%20indicators.%0A%0ATradingView%20username%3A%20%0AScripts%20I%27m%20most%20interested%20in%3A%20%0A%0AThanks%2C%0A";
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-      color: '#f9fafb',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
-    }}>
-      {/* Hero Section */}
-      <section style={{ borderBottom: '1px solid #1f2933' }}>
-        <div style={{ maxWidth: 1120, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 11,
-              color: '#9ca3af',
-              padding: '4px 10px',
-              borderRadius: 999,
-              background: 'rgba(15,23,42,0.9)',
-              border: '1px solid rgba(148,163,184,0.25)',
-              marginBottom: 20
-            }}>
-              <span style={{ color: '#bbf7d0' }}>TradingView Scripts</span>
-              <span>Professional indicators</span>
-            </div>
-            <h1 style={{ fontSize: 42, fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>
-              Professional TradingView Scripts
-            </h1>
-            <p style={{ fontSize: 18, color: '#9ca3af', marginBottom: 28 }}>
-              Advanced indicators and tools to enhance your trading analysis
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+    <>
+      <style jsx global>{`
+        :root {
+          --bg: #05070b;
+          --bg-alt: #0c1018;
+          --card: #111624;
+          --accent: #14b8a6;
+          --accent-soft: rgba(20, 184, 166, 0.12);
+          --text-main: #f9fafb;
+          --text-muted: #9ca3af;
+          --border-subtle: #1f2933;
+          --danger: #f97373;
+          --radius-lg: 18px;
+          --radius-md: 12px;
+          --shadow-soft: 0 18px 45px rgba(0,0,0,0.75);
+          --shadow-small: 0 10px 25px rgba(0,0,0,0.5);
+        }
+      `}</style>
+
+      <div style={{
+        minHeight: '100vh',
+        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+        color: 'var(--text-main)',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+        lineHeight: 1.5
+      }}>
+        <div style={{ maxWidth: 1120, padding: '32px 20px 60px', margin: '0 auto' }}>
+          {/* Header */}
+          <header style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            marginBottom: 32,
+            flexWrap: 'wrap'
+          }}>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'inherit' }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background: 'radial-gradient(circle at 30% 20%, #22c55e, #0f766e 40%, #020617 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800,
+                fontSize: 20,
+                color: '#f9fafb',
+                boxShadow: 'var(--shadow-small)'
+              }}>M</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 18 }}>MarketScannerPros</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Premium TradingView indicators & dashboards</div>
+              </div>
+            </Link>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+              <div style={{
+                fontSize: 11,
+                padding: '4px 9px',
+                borderRadius: 999,
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(15,23,42,0.8)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                <span style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: '#22c55e',
+                  boxShadow: '0 0 8px rgba(34,197,94,0.9)'
+                }}></span>
+                <span>Early-access beta · Free trials</span>
+              </div>
               <a href={emailLink} style={{
                 borderRadius: 999,
                 border: 'none',
-                fontSize: 15,
-                padding: '14px 28px',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
-                color: '#0b1120',
-                boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
-                textDecoration: 'none'
-              }}>
-                Request Free Trial
-              </a>
-              <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{
-                borderRadius: 999,
-                fontSize: 15,
-                padding: '14px 28px',
+                cursor: 'pointer',
+                fontSize: 14,
+                padding: '9px 18px',
                 fontWeight: 500,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 8,
-                background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #1f2933',
+                gap: 6,
+                whiteSpace: 'nowrap',
+                background: 'linear-gradient(135deg, var(--accent), #22c55e)',
+                color: '#0b1120',
+                boxShadow: 'var(--shadow-small)',
                 textDecoration: 'none'
               }}>
-                View on TradingView
+                <span>📩</span>
+                <span>Request Free Trial</span>
               </a>
             </div>
-          </div>
-        </div>
-      </section>
+          </header>
 
-      {/* Featured Script */}
-      <section style={{ borderBottom: '1px solid #1f2933' }}>
-        <div style={{ maxWidth: 1120, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{
+          {/* Main content */}
+          <main style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-            gap: 32,
-            alignItems: 'start'
+            gridTemplateColumns: 'minmax(0, 2.1fr) minmax(0, 1.6fr)',
+            gap: 26,
+            marginBottom: 40
           }}>
-            <div>
+            {/* Hero section */}
+            <section style={{
+              background: 'radial-gradient(circle at top, #111827, #020617 60%)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-soft)',
+              padding: '24px 22px 22px',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute',
+                right: -40,
+                top: -40,
+                width: 260,
+                height: 260,
+                background: 'radial-gradient(circle, rgba(45,212,191,0.22), transparent 60%)',
+                filter: 'blur(1px)',
+                opacity: 0.8
+              }} aria-hidden="true"></div>
+              
               <div style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
                 fontSize: 11,
-                padding: '4px 10px',
+                color: 'var(--text-muted)',
+                padding: '3px 9px',
                 borderRadius: 999,
-                background: 'rgba(34,197,94,0.12)',
-                color: '#bbf7d0',
-                border: '1px solid rgba(34,197,94,0.3)',
-                marginBottom: 16
-              }}>Most Popular</div>
-              <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 14 }}>
-                Time Confluence Windows — 50% Levels + Next-Close Scanner
-              </h2>
-              <p style={{ fontSize: 16, color: '#e5e7eb', marginBottom: 16, lineHeight: 1.6 }}>
-                Find stacked time windows and the exact prior-bar 50% levels across multiple timeframes — in one panel and on your chart.
-              </p>
-              <p style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24, lineHeight: 1.6 }}>
-                This tool highlights when several timeframes are simultaneously "in play" (post-close & pre-close windows), 
-                and plots the previous bar midpoint (50%) for each TF so you can judge mean-revert vs. continuation risk at a glance.
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                <a href="https://www.tradingview.com/script/XXXXXXXX/" target="_blank" rel="noreferrer" style={{
+                background: 'rgba(15,23,42,0.9)',
+                border: '1px solid rgba(148,163,184,0.25)',
+                marginBottom: 10
+              }}>
+                <span style={{
+                  padding: '3px 8px',
                   borderRadius: 999,
+                  background: 'rgba(34,197,94,0.12)',
+                  color: '#bbf7d0',
+                  fontSize: 11
+                }}>Invite-only scripts</span>
+                <span>Hosted on TradingView · Manual access</span>
+              </div>
+
+              <h1 style={{ fontSize: 26, lineHeight: 1.25, marginBottom: 8, fontWeight: 650 }}>
+                TradingView tools built to read the whole market, not just one candle.
+              </h1>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 460 }}>
+                MarketScannerPros indicators give you multi-timeframe trend, momentum and confluence in one view – designed
+                for traders who want structure and clarity instead of random signals.
+              </p>
+
+              <div style={{
+                margin: '18px 0 20px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: '8px 18px',
+                fontSize: 13,
+                color: 'var(--text-muted)'
+              }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>✅ <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Multi-TF dashboards</strong> for bias & alignment</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>✅ <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Auto-Fib tools</strong> with smart levels & alerts</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>✅ <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Time confluence windows</strong> for key zones</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>✅ <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Manual access control</strong> via TradingView invite-only</span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 10, zIndex: 2, position: 'relative' }}>
+                <a href={emailLink} style={{
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: 'pointer',
                   fontSize: 14,
-                  padding: '12px 20px',
+                  padding: '9px 18px',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap',
+                  background: 'linear-gradient(135deg, var(--accent), #22c55e)',
+                  color: '#0b1120',
+                  boxShadow: 'var(--shadow-small)',
+                  textDecoration: 'none'
+                }}>
+                  <span>🚀</span>
+                  <span>Get My Free Trial</span>
+                </a>
+                <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  padding: '9px 18px',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-subtle)',
+                  textDecoration: 'none'
+                }}>
+                  View scripts on TradingView
+                </a>
+              </div>
+
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <strong style={{ color: '#e5e7eb' }}>Currently 100% free</strong> · Access is invite-only while we build out the full product. Payments and
+                subscriptions will be added later – early users keep their free trial for the full beta phase.
+              </p>
+
+              <div style={{
+                position: 'absolute',
+                right: 18,
+                bottom: 18,
+                fontSize: 11,
+                padding: '5px 10px',
+                borderRadius: 999,
+                background: 'var(--accent-soft)',
+                color: '#a5f3fc',
+                border: '1px solid rgba(34,197,235,0.35)'
+              }}>Beta phase · All access is Free Trial only</div>
+            </section>
+
+            {/* Side card */}
+            <aside style={{
+              background: 'linear-gradient(145deg, #020617, #020617 40%, #020617 60%, #0f172a 100%)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: 'var(--shadow-soft)',
+              padding: '18px 18px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14
+            }}>
+              <div>
+                <h3 style={{ fontSize: 15, margin: '0 0 4px' }}>How the free trial works</h3>
+                <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
+                  While we're in beta, all scripts are available on a
+                  <strong> manual free-trial basis</strong>. No card required, just your TradingView username.
+                </p>
+              </div>
+              <ul style={{ fontSize: 13, marginTop: 4, listStyle: 'none', paddingLeft: 0 }}>
+                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
+                  <span>Duration</span>
+                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Currently open-ended beta</span>
+                </li>
+                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
+                  <span>Access type</span>
+                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Invite-only on TradingView</span>
+                </li>
+                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
+                  <span>Cost</span>
+                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>0 · Free during beta</span>
+                </li>
+                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
+                  <span>Requirements</span>
+                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Valid TradingView username</span>
+                </li>
+              </ul>
+              <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
+                When we later add paid plans, beta users will be given the option to stay on preferred terms. For now, just
+                request access and start testing the tools in your own workflow.
+              </p>
+            </aside>
+          </main>
+
+          {/* Tools section */}
+          <section>
+            <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 560 }}>Included TradingView tools (beta)</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--text-muted)' }}>
+              These are live or in final testing on the <strong>@Marketscannerpros</strong> TradingView profile. All are
+              currently offered on a free-trial basis.
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+              gap: 18,
+              marginBottom: 26
+            }}>
+              {/* Card 1 */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/msp-dashboard.png" alt="MSP Multi-TF Dashboard screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>MSP — Multi-TF Dashboard v3</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Reads 4 timeframes at once and scores trend, momentum and bias. Gives you instant clarity on whether the
+                    market is aligned long, short or stuck in chop.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Context & bias</span></span>
+                    <span>TV: Indicator</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 2 */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/auto-fib.png" alt="MarketScannerPros Auto Fib Tool screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Beta · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>MSP Auto Fib Tool – Locked & Alerts</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Automatically anchors swings, plots key retracement/extension levels and lets you lock zones for precise,
+                    repeatable execution with alerts.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Levels & structure</span></span>
+                    <span>TV: Indicator</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 3 */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/confluence-strategy.png" alt="Confluence Strategy screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Private testing</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>MarketScannerPros — Confluence Strategy</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Multi-signal strategy that combines trend, momentum, structure and time-based filters. Used internally to
+                    stress-test ideas before indicators ship.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>System testing</span></span>
+                    <span>TV: Strategy</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 4 */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/time-confluence.png" alt="Time Confluence Windows screenshot" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Public</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>Time Confluence Windows — 50% Levels</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Highlights stacked time windows and key 50% levels so you can see where multiple sessions and swings
+                    overlap – ideal for planning zones in advance.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Timing zones</span></span>
+                    <span>TV: Indicator</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 5 - Squeeze Strategy */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}>
+                <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047', zIndex: 2 }}>NEW</div>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/squeeze-strategy.png" alt="Squeeze Strategy Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>Short & Long Squeeze Backtest v6</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    A volatility-squeeze strategy that auto-backtests both breakout expansions and reversal snaps.
+                    Comes with built-in optimization logic that automatically selects the best TP/SL/RSI/Vol settings.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Backtesting</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Alerts</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Auto-Optimizer</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Volatility breakouts</span></span>
+                    <span>TV: Strategy</span>
+                  </div>
+                </div>
+              </article>
+
+              {/* Card 6 - Candlestick Pattern Strategy */}
+              <article style={{
+                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-small)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}>
+                <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047', zIndex: 2 }}>NEW</div>
+                <div style={{ position: 'relative', height: 150, background: '#020617', overflow: 'hidden' }}>
+                  <img src="/images/candle-pattern.png" alt="Candlestick Strategy Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.9 }} />
+                  <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(55,65,81,0.7)', color: 'var(--text-muted)' }}>Live · Invite-only</div>
+                </div>
+                <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ fontSize: 14, fontWeight: 560 }}>MSP Candlestick Pattern Strategy</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                    Scans for classic reversal patterns — engulfing, tweezer top/bottom, railroad tracks, pin bars,
+                    and compression coils — with auto SL/TP, alerts and position sizing protection.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Candle Patterns</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Risk System</span>
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(15,23,42,0.96)', border: '1px solid rgba(55,65,81,0.8)', color: 'var(--text-muted)' }}>Alerts</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                    <span>Focus: <span style={{ color: 'var(--accent)' }}>Pattern recognition</span></span>
+                    <span>TV: Strategy</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          {/* How to section */}
+          <section style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
+            gap: 18
+          }}>
+            <div style={{
+              background: 'rgba(15,23,42,0.95)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-subtle)',
+              padding: '14px 14px 12px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: 15 }}>How to request your free trial</h3>
+              <ol style={{ margin: '6px 0 6px 20px', padding: 0, fontSize: 13 }}>
+                {steps.map((step, i) => (
+                  <li key={i} style={{ marginBottom: 6 }}>{step}</li>
+                ))}
+              </ol>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                Access is granted manually so allow some time depending on timezone. If you haven't heard back within 24 hours,
+                feel free to follow up.
+              </p>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              <p>
+                📩 <strong style={{ color: 'var(--text-main)' }}>Email for access:</strong><br />
+                <a href="mailto:support@marketscannerpros.app" style={{ color: '#a5f3fc', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>support@marketscannerpros.app</a>
+              </p>
+              <p>
+                🔗 <strong style={{ color: 'var(--text-main)' }}>TradingView profile:</strong><br />
+                <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{ color: '#a5f3fc', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                  https://www.tradingview.com/u/Marketscannerpros/
+                </a>
+              </p>
+              <p>
+                When we later introduce paid plans, this page will be updated with pricing and checkout links. Until then,
+                everything here is free to test as part of the beta.
+              </p>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section style={{ marginTop: 40 }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Frequently Asked Questions</h2>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Common questions about the free trial</p>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 800, margin: '0 auto' }}>
+              {faqs.map((faq, i) => (
+                <div key={i} style={{
+                  background: 'linear-gradient(145deg, #020617, #0f172a)',
+                  borderRadius: 12,
+                  border: '1px solid var(--border-subtle)',
+                  padding: '20px 24px'
+                }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: 'var(--accent)' }}>{faq.q}</h3>
+                  <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* CTA Section */}
+          <section style={{ marginTop: 40 }}>
+            <div style={{ maxWidth: 700, padding: '40px 20px', margin: '0 auto', textAlign: 'center' }}>
+              <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 12 }}>Ready to enhance your trading?</h2>
+              <p style={{ fontSize: 16, color: 'var(--text-muted)', marginBottom: 28 }}>
+                Get instant access to all our professional TradingView scripts
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+                <a href={emailLink} style={{
+                  borderRadius: 999,
+                  fontSize: 15,
+                  padding: '14px 28px',
                   fontWeight: 600,
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                  background: 'linear-gradient(135deg, var(--accent), #22c55e)',
                   color: '#0b1120',
                   boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
                   textDecoration: 'none'
                 }}>
-                  View on TradingView
+                  Request Free Trial →
+                </a>
+                <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{
+                  borderRadius: 999,
+                  fontSize: 15,
+                  padding: '14px 28px',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'rgba(15,23,42,0.8)',
+                  color: '#e5e7eb',
+                  border: '1px solid var(--border-subtle)',
+                  textDecoration: 'none'
+                }}>
+                  View All Scripts
                 </a>
               </div>
+              <p style={{ fontSize: 13, color: '#6b7280', marginTop: 28 }}>
+                <strong>Disclaimer:</strong> This is an educational tool, not financial advice. Always confirm signals within your own plan and manage risk.
+              </p>
             </div>
-            <div style={{
-              background: 'linear-gradient(145deg, #020617, #0f172a)',
-              borderRadius: 16,
-              border: '1px solid #1f2933',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
-              overflow: 'hidden',
-              aspectRatio: '16/10'
-            }}>
-              <img 
-                src="/marketing/tradingview-confluence.png" 
-                alt="Time Confluence Windows TradingView Script"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Features Section */}
-      <section style={{ borderBottom: '1px solid #1f2933' }}>
-        <div style={{ maxWidth: 1120, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>What it shows</h2>
-            <p style={{ fontSize: 15, color: '#9ca3af' }}>Comprehensive confluence analysis at a glance</p>
-          </div>
-          
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: 20
+          {/* Footer */}
+          <footer style={{
+            marginTop: 32,
+            borderTop: '1px solid rgba(15,23,42,0.9)',
+            paddingTop: 14,
+            fontSize: 11,
+            color: 'var(--text-muted)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            justifyContent: 'space-between'
           }}>
-            {features.map((f, i) => (
-              <article key={i} style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
-                borderRadius: 12,
-                border: '1px solid #1f2933',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                padding: '24px 22px'
-              }}>
-                <div style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  background: 'rgba(34,197,94,0.1)',
-                  border: '1px solid rgba(34,197,94,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  marginBottom: 14
-                }}>{f.icon}</div>
-                <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>{f.title}</h3>
-                <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>{f.desc}</p>
-              </article>
-            ))}
-          </div>
+            <span>© {currentYear} MarketScannerPros. All rights reserved.</span>
+            <span>Nothing on this site is financial advice. For educational use only.</span>
+          </footer>
         </div>
-      </section>
-
-      {/* Key Inputs */}
-      <section style={{ borderBottom: '1px solid #1f2933' }}>
-        <div style={{ maxWidth: 900, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Key Inputs</h2>
-          </div>
-          
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-            gap: 20
-          }}>
-            <div style={{
-              background: 'linear-gradient(145deg, #020617, #0f172a)',
-              borderRadius: 12,
-              border: '1px solid #1f2933',
-              padding: '24px'
-            }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: '#14b8a6' }}>Timeframe Settings</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14 }}>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>Tracked TFs: 30m, 1h, 2h, 3h, 4h, 6h, 8h (toggle each)</span>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>Basis: Heikin-Ashi on/off, RTH vs. Extended sessions</span>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>Post-close & Pre-close window lengths per TF</span>
-                </li>
-              </ul>
-            </div>
-            <div style={{
-              background: 'linear-gradient(145deg, #020617, #0f172a)',
-              borderRadius: 12,
-              border: '1px solid #1f2933',
-              padding: '24px'
-            }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 14, color: '#14b8a6' }}>Display Options</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 14 }}>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>Line options: width, style, span, label side, show price</span>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>TF-follow: hide intraday lines when chart TF is higher</span>
-                </li>
-                <li style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', color: '#e5e7eb' }}>
-                  <span style={{ color: '#22c55e' }}>•</span>
-                  <span>Alert: threshold for confluence stack</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How to Use */}
-      <section style={{ borderBottom: '1px solid #1f2933', background: 'rgba(15,23,42,0.3)' }}>
-        <div style={{ maxWidth: 700, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>How to Use</h2>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {steps.map((step, i) => (
-              <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 999,
-                  background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: '#0b1120',
-                  flexShrink: 0
-                }}>{i + 1}</div>
-                <p style={{ fontSize: 15, color: '#e5e7eb', margin: 0, paddingTop: 6 }}>{step}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{ borderBottom: '1px solid #1f2933' }}>
-        <div style={{ maxWidth: 700, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Tips & FAQ</h2>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {faqs.map((faq, i) => (
-              <div key={i} style={{
-                background: 'linear-gradient(145deg, #020617, #0f172a)',
-                borderRadius: 12,
-                border: '1px solid #1f2933',
-                padding: '20px 24px'
-              }}>
-                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: '#14b8a6' }}>{faq.q}</h3>
-                <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>{faq.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section>
-        <div style={{ maxWidth: 700, padding: '60px 20px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 12 }}>Ready to enhance your trading?</h2>
-          <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 28 }}>
-            Get instant access to all our professional TradingView scripts
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-            <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{
-              borderRadius: 999,
-              fontSize: 15,
-              padding: '14px 28px',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
-              color: '#0b1120',
-              boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
-              textDecoration: 'none'
-            }}>
-              View All Scripts →
-            </a>
-            <Link href="/pricing" style={{
-              borderRadius: 999,
-              fontSize: 15,
-              padding: '14px 28px',
-              fontWeight: 500,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'rgba(15,23,42,0.8)',
-              color: '#e5e7eb',
-              border: '1px solid #1f2933',
-              textDecoration: 'none'
-            }}>
-              View Pricing
-            </Link>
-          </div>
-          <p style={{ fontSize: 13, color: '#6b7280', marginTop: 28 }}>
-            <strong>Disclaimer:</strong> This is an educational tool, not financial advice. Always confirm signals within your own plan and manage risk.
-          </p>
-        </div>
-      </section>
-    </div>
+      </div>
+    </>
   );
 }
