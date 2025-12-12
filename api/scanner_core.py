@@ -159,10 +159,16 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
     
     try:
         ticker = yf.Ticker(symbol)
-        df = ticker.history(period=period_val, interval=interval, raise_errors=False)
+        # Enable errors to see what's actually failing
+        df = ticker.history(period=period_val, interval=interval, raise_errors=True)
         
-        if df is None or df.empty or len(df) < 10:
-            raise ValueError(f"No data returned for {symbol}")
+        print(f"yfinance returned {len(df)} rows for {symbol} (period={period_val}, interval={interval})")
+        
+        if df is None or df.empty:
+            raise ValueError(f"yfinance returned empty DataFrame for {symbol}")
+        
+        if len(df) < 10:
+            raise ValueError(f"yfinance returned only {len(df)} rows for {symbol}, need at least 10")
         
         # Resample 4h if needed
         if timeframe == "4h" and len(df) > 0:
@@ -178,6 +184,9 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
         df.columns = [c.lower() for c in df.columns]
         
         return df
+    except Exception as e:
+        print(f"yfinance error for {symbol}: {type(e).__name__}: {str(e)}")
+        raise ValueError(f"yfinance fetch failed: {str(e)}")
         
     except Exception as e:
         raise ValueError(f"yfinance fetch failed: {str(e)}")
