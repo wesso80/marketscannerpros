@@ -89,7 +89,7 @@ export default function Hero() {
                 marginBottom: 16 
               }}>
                 <img 
-                  src="/logos/msp-logo.png" 
+                  src="/logos/msp.logo.png" 
                   alt="MarketScanner Pro Logo" 
                   style={{ 
                     width: 80, 
