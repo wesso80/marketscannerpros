@@ -1,26 +1,7 @@
-
-"use client";
-import React, { useEffect, useState } from "react";
-
-interface EconData {
-  name: string;
-  value: number | null;
-  date: string | null;
+// This page has been removed.
+export default function RemovedPage() {
+  return null;
 }
-
-const econList = [
-  { key: "REAL_GDP", label: "Real GDP" },
-  { key: "CPI", label: "Consumer Price Index (CPI)" },
-  { key: "UNEMPLOYMENT", label: "Unemployment Rate" },
-  { key: "INFLATION", label: "Inflation Rate" },
-  { key: "RETAIL_SALES", label: "Retail Sales" },
-  { key: "TREASURY_YIELD", label: "Treasury Yield" },
-  // Add more indicators as needed
-];
-
-export default function EconomicsDashboard() {
-  const [data, setData] = useState<EconData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

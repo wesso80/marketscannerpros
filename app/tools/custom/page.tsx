@@ -1,23 +1,7 @@
-
-"use client";
-import React, { useState } from "react";
-
-interface SavedItem {
-  id: string;
-  type: 'scan' | 'alert' | 'watchlist';
-  name: string;
-  data: any;
+// This page has been removed.
+export default function RemovedPage() {
+  return null;
 }
-
-export default function CustomizationPage() {
-  const [items, setItems] = useState<SavedItem[]>([]);
-  const [name, setName] = useState("");
-  const [type, setType] = useState<'scan' | 'alert' | 'watchlist'>('scan');
-  const [saving, setSaving] = useState(false);
-
-  // Placeholder save handler
-  const handleSave = () => {
-    setSaving(true);
     setTimeout(() => {
       setItems([
         ...items,

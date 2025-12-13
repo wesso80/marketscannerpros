@@ -26,9 +26,7 @@ export default function Header() {
   <Link href="/tradingview-scripts" className="hover:text-emerald-300">Scripts</Link>
   <Link href="/partners" className="hover:text-emerald-300">Partners</Link>
   <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
-</nav>
-
-      </div>
-    </header>
+        <nav>
+          {/* Removed Economics, ETF Explorer, and Custom from navigation */}
   );
 }
