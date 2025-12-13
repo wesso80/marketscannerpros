@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Map commodity keys to Alpha Vantage function names
 const commodityFunctions: Record<string, string> = {
-  WTI: 'WTI',
-  BRENT: 'BRENT',
-  NATGAS: 'NATURAL_GAS',
+  WTI: 'WTI', // Crude Oil (WTI)
+  BRENT: 'BRENT', // Crude Oil (Brent)
+  NATGAS: 'NATURAL_GAS', // Natural Gas
   COPPER: 'COPPER',
   ALUMINUM: 'ALUMINUM',
   WHEAT: 'WHEAT',
@@ -12,7 +12,7 @@ const commodityFunctions: Record<string, string> = {
   COTTON: 'COTTON',
   SUGAR: 'SUGAR',
   COFFEE: 'COFFEE',
-  GCI: 'ALL_COMMODITIES', // Placeholder, update with real function if available
+  // GCI: not supported by Alpha Vantage, will show as unavailable
 };
 
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;

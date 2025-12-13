@@ -19,7 +19,6 @@ const commoditiesList = [
   { key: "COTTON", label: "Cotton" },
   { key: "SUGAR", label: "Sugar" },
   { key: "COFFEE", label: "Coffee" },
-  { key: "GCI", label: "Global Commodities Index" },
 ];
 
 export default function CommoditiesDashboard() {
