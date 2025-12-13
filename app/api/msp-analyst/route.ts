@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
+import { getSessionFromCookie } from "@/lib/auth";
+import { query as dbQuery } from "@vercel/postgres";
 
 export const runtime = "nodejs";
 
@@ -54,6 +56,56 @@ export async function POST(req: NextRequest) {
         }),
         { status: 500 }
       );
+    }
+
+    // Get user session for tier checking
+    const session = getSessionFromCookie();
+    if (!session) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Please log in" }),
+        { status: 401 }
+      );
+    }
+
+    const { workspaceId, tier } = session;
+
+    // Define tier limits
+    const tierLimits: Record<string, number | null> = {
+      'free': 5,
+      'pro': 50,
+      'pro_trader': null, // Unlimited
+    };
+
+    const dailyLimit = tierLimits[tier] || 5; // Default to free tier
+
+    // Check usage if not unlimited
+    if (dailyLimit !== null) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const usageResult = await dbQuery(
+          `SELECT COUNT(*) as count FROM ai_usage 
+           WHERE workspace_id = $1 AND DATE(created_at) = $2`,
+          [workspaceId, today]
+        );
+        
+        const usageCount = parseInt(usageResult.rows[0]?.count || '0');
+        
+        if (usageCount >= dailyLimit) {
+          return new Response(
+            JSON.stringify({ 
+              error: `Daily AI question limit reached (${dailyLimit} questions/day). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for unlimited.' : 'Limit resets at midnight UTC.'}`,
+              limitReached: true,
+              tier,
+              dailyLimit,
+              usageCount
+            }),
+            { status: 429 }
+          );
+        }
+      } catch (dbErr) {
+        console.error('Error checking AI usage:', dbErr);
+        // Continue anyway - don't block on DB errors
+      }
     }
 
     const body = (await req.json()) as AnalystRequestBody;
@@ -141,6 +193,18 @@ If information is missing, say so explicitly instead of guessing.
     });
 
     const text = response.choices[0]?.message?.content ?? "";
+
+    // Track usage in database
+    try {
+      await dbQuery(
+        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [workspaceId, query.substring(0, 500), text.length, tier]
+      );
+    } catch (dbErr) {
+      console.error('Error tracking AI usage:', dbErr);
+      // Don't fail the request if tracking fails
+    }
 
     return new Response(
       JSON.stringify({
