@@ -239,9 +239,22 @@ export default function PartnersPage() {
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
             The MSP Partner Solution
           </h2>
-          <p style={{ fontSize: 20, color: '#14b8a6', marginBottom: 40, textAlign: 'center' }}>
+          <p style={{ fontSize: 20, color: '#14b8a6', marginBottom: 24, textAlign: 'center' }}>
             Your System. Our Intelligence Engine.
           </p>
+          
+          <div style={{
+            maxWidth: 800,
+            margin: '0 auto 40px',
+            padding: '20px',
+            background: 'rgba(20,184,166,0.05)',
+            border: '1px solid rgba(20,184,166,0.2)',
+            borderRadius: 8
+          }}>
+            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, lineHeight: 1.7 }}>
+              <strong style={{ color: '#14b8a6' }}>Example:</strong> An educator teaching market structure can use MSP scanners to surface live consolidation → expansion phases, while the AI Analyst explains context to members in real time.
+            </p>
+          </div>
 
           <div style={{
             display: 'grid',
@@ -709,10 +722,6 @@ export default function PartnersPage() {
               <li>✔ Community focus</li>
             </ul>
           </div>
-
-          <p style={{ fontSize: 18, color: '#ef4444', fontWeight: 700 }}>
-            We partner selectively.
-          </p>
         </div>
       </section>
 
@@ -725,6 +734,19 @@ export default function PartnersPage() {
         borderBottom: '1px solid #1f2933'
       }}>
         <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ 
+            fontSize: 18, 
+            color: '#ef4444', 
+            fontWeight: 700,
+            marginBottom: 32,
+            padding: '12px 24px',
+            background: 'rgba(239,68,68,0.1)',
+            borderRadius: 8,
+            display: 'inline-block'
+          }}>
+            We partner selectively.
+          </p>
+          
           <h2 style={{ fontSize: 36, fontWeight: 700, marginBottom: 20, lineHeight: 1.2 }}>
             Build Better Traders —<br/>
             <span style={{ color: '#14b8a6' }}>Not Louder Signals</span>
@@ -733,7 +755,7 @@ export default function PartnersPage() {
             If you're serious about education, structure, and clarity, let's talk.
           </p>
 
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 }}>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
             <Link href="/contact" style={{
               display: 'inline-block',
               borderRadius: 999,
@@ -747,7 +769,7 @@ export default function PartnersPage() {
               textDecoration: 'none',
               boxShadow: '0 4px 15px rgba(20,184,166,0.4)'
             }}>
-              Apply for Partnership
+              Partner With MarketScanner Pros
             </Link>
             <Link href="/contact" style={{
               display: 'inline-block',
@@ -765,8 +787,11 @@ export default function PartnersPage() {
             </Link>
           </div>
 
+          <p style={{ fontSize: 14, color: '#14b8a6', marginBottom: 12 }}>
+            No upfront cost. No obligation. Partnerships reviewed individually.
+          </p>
           <p style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>
-            Partnerships are reviewed individually.
+            Education-focused partnerships only.
           </p>
         </div>
       </section>
