@@ -32,47 +32,75 @@ export default function OptionsScanner() {
   const [useCustom, setUseCustom] = useState<boolean>(false);
 
   const runScan = async () => {
+    if (!customSymbols.trim()) {
+      setError("Please enter a stock symbol");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResults([]);
 
+    const symbol = customSymbols.trim().split(',')[0].trim().toUpperCase();
+
     try {
-      // For now, show a message that this feature is coming soon
-      setError("Options scanning feature is coming soon. Backend API integration in progress.");
+      // Call Alpha Vantage REALTIME_OPTIONS API directly
+      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY || 'demo';
+      const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${apiKey}`;
       
-      // TODO: Implement actual API call when backend is ready
-      // const response = await fetch("https://marketscannerpros-vwx5.onrender.com/options/scan", {
-      // TODO: Implement actual API call when backend is ready
-      // const response = await fetch("https://marketscannerpros-vwx5.onrender.com/options/scan", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     minScore: minScore,
-      //     contractType: contractType === "both" ? null : contractType,
-      //     symbols: useCustom && customSymbols.trim() 
-      //       ? customSymbols.trim().split(',').map(s => s.trim()).filter(Boolean)
-      //       : undefined,
-      //   }),
-      // });
-      //
-      // if (!response.ok) {
-      //   throw new Error(`Options API returned ${response.status}`);
-      // }
-      //
-      // const data = await response.json();
-      // 
-      // if (data.success) {
-      //   setResults(data.results || []);
-      //   if (data.results.length === 0) {
-      //     setError("No options found matching your criteria. Try lowering the minimum score.");
-      //   }
-      // } else {
-      //   setError(data.error || "Scanner failed");
-      // }
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data["Error Message"]) {
+        throw new Error(data["Error Message"]);
+      }
+      
+      if (data["Note"]) {
+        setError(data["Note"]);
+        return;
+      }
+      
+      if (data.data && Array.isArray(data.data)) {
+        const parsedOptions: OptionResult[] = data.data
+          .map((opt: any) => ({
+            symbol: opt.underlying_symbol || symbol,
+            contract_id: opt.contractID || '',
+            type: (opt.type || '').toUpperCase() as "CALL" | "PUT",
+            strike: parseFloat(opt.strike) || 0,
+            expiration: opt.expiration || '',
+            dte: opt.days_until_expiration ? parseInt(opt.days_until_expiration) : 0,
+            last_price: parseFloat(opt.last) || 0,
+            bid: parseFloat(opt.bid) || 0,
+            ask: parseFloat(opt.ask) || 0,
+            volume: parseInt(opt.volume) || 0,
+            open_interest: parseInt(opt.open_interest) || 0,
+            implied_volatility: parseFloat(opt.implied_volatility) * 100 || 0,
+            delta: parseFloat(opt.delta) || 0,
+            gamma: parseFloat(opt.gamma) || 0,
+            theta: parseFloat(opt.theta) || 0,
+            vega: parseFloat(opt.vega) || 0,
+            score: 0,
+          }))
+          .filter((opt: OptionResult) => {
+            if (contractType !== "both" && opt.type !== contractType.toUpperCase()) return false;
+            return true;
+          });
+
+        setResults(parsedOptions);
+        
+        if (parsedOptions.length === 0) {
+          setError("No options found for this symbol.");
+        }
+      } else {
+        setError("No options data available.");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to connect to options scanner");
+      setError(err instanceof Error ? err.message : "Failed to fetch options");
     } finally {
       setLoading(false);
     }
