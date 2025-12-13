@@ -12,13 +12,6 @@ const commoditiesList = [
   { key: "WTI", label: "Crude Oil (WTI)" },
   { key: "BRENT", label: "Crude Oil (Brent)" },
   { key: "NATGAS", label: "Natural Gas" },
-  { key: "COPPER", label: "Copper" },
-  { key: "ALUMINUM", label: "Aluminum" },
-  { key: "WHEAT", label: "Wheat" },
-  { key: "CORN", label: "Corn" },
-  { key: "COTTON", label: "Cotton" },
-  { key: "SUGAR", label: "Sugar" },
-  { key: "COFFEE", label: "Coffee" },
 ];
 
 export default function CommoditiesDashboard() {

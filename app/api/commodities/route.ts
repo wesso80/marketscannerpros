@@ -25,9 +25,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid commodity type' }, { status: 400 });
   }
 
+
+  // Commodities that support daily interval per Alpha Vantage docs
+  const dailyCapable = [
+    'WTI', 'BRENT', 'NATGAS', 'NATURAL_GAS',
+    'COPPER', 'ALUMINUM', 'WHEAT', 'CORN', 'COTTON', 'SUGAR', 'COFFEE'
+  ];
+  const interval = dailyCapable.includes(type) ? 'daily' : 'monthly';
+
   const params = new URLSearchParams({
     function: commodityFunctions[type],
-    interval: 'monthly',
+    interval,
     apikey: API_KEY || '',
     datatype: 'json',
   });
