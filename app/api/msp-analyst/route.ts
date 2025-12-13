@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user session for tier checking
-    const session = getSessionFromCookie();
+    const session = await getSessionFromCookie();
     if (!session) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - Please log in" }),
