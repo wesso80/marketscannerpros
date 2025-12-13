@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type TimeframeOption = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
-type ScannerTab = "equity" | "crypto" | "forex" | "commodities";
+type ScannerTab = "equity" | "crypto" | "forex" | "commodities" | "options";
 
 interface ScanResult {
   symbol: string;
