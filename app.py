@@ -5712,6 +5712,14 @@ TOP_100_CRYPTO = [
     "AMP-USD", "POLY-USD", "MLN-USD", "BNT-USD", "FORTH-USD", "CTSI-USD", "API3-USD"
 ]
 
+# Top 25 by volume
+TOP_25_CRYPTO = [
+    "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD", "USDC-USD", "XRP-USD", 
+    "DOGE-USD", "ADA-USD", "TRX-USD", "AVAX-USD", "SHIB-USD", "DOT-USD", "LINK-USD",
+    "BCH-USD", "NEAR-USD", "MATIC-USD", "LTC-USD", "UNI-USD", "PEPE-USD",
+    "ICP-USD", "APT-USD", "FET-USD", "STX-USD", "ARB-USD"
+]
+
 if is_free_tier:
     # Free tier can only use top 10 crypto
     use_top100_cx = False
@@ -5722,26 +5730,36 @@ if is_free_tier:
     cx_input = "\n".join(TOP_10_CRYPTO_FREE)
     
 else:
-    # Pro/Pro Trader: Full access
-    # Quick scan toggle for crypto
-    use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
-
-    # Multiselect for picking specific crypto
-    if not use_top100_cx:
-        selected_cx_from_list = st.sidebar.multiselect(
-            "Or select from top 100:",
-            options=TOP_100_CRYPTO,
-            default=[],
-            key="cx_multiselect"
-        )
-        if selected_cx_from_list:
-            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
-    else:
+    # Pro/Pro Trader: Apply symbol preset
+    if symbol_preset == "Top 100 by Volume":
         selected_cx_from_list = TOP_100_CRYPTO
-        st.sidebar.success(f"✅ All 100 crypto selected!")
+        st.sidebar.success(f"✅ Top 100 crypto selected!")
+        cx_input = "\n".join(TOP_100_CRYPTO)
+    elif symbol_preset == "Top 25 by Volume":
+        selected_cx_from_list = TOP_25_CRYPTO
+        st.sidebar.success(f"✅ Top 25 crypto selected!")
+        cx_input = "\n".join(TOP_25_CRYPTO)
+    else:
+        # All 350+ Coinbase Pairs - use existing logic
+        # Quick scan toggle for crypto
+        use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
 
-    cx_input = st.sidebar.text_area("Enter symbols (one per line):",
-        "\n".join(crypto_symbols), height=140)
+        # Multiselect for picking specific crypto
+        if not use_top100_cx:
+            selected_cx_from_list = st.sidebar.multiselect(
+                "Or select from top 100:",
+                options=TOP_100_CRYPTO,
+                default=[],
+                key="cx_multiselect"
+            )
+            if selected_cx_from_list:
+                st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+        else:
+            selected_cx_from_list = TOP_100_CRYPTO
+            st.sidebar.success(f"✅ All 100 crypto selected!")
+
+        cx_input = st.sidebar.text_area("Enter symbols (one per line):",
+            "\n".join(crypto_symbols), height=140)
 
 # Show current symbol count for all users
 eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
