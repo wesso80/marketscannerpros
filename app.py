@@ -7077,6 +7077,251 @@ else:
         else:
             st.info("No transactions found. Add your first position to start tracking.")
 
+# ================= Options Scanner =================
+st.markdown("---")
+st.subheader("📊 Options Scanner")
+
+# Check tier access for options scanner
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+if current_tier == 'free':
+    with st.expander("🔒 **Options Scanner** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Options Scanner with Pro or Pro Trader:**
+        - Real-time options chain data with Greeks (Delta, Gamma, Theta, Vega)
+        - Scan for high implied volatility (IV) opportunities
+        - Filter by volume, open interest, and expiration
+        - Identify unusual options activity
+        - Track put/call ratios for sentiment analysis
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_options_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_options_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Options scanner controls
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        options_symbol = st.text_input("Enter Stock Symbol:", placeholder="e.g., AAPL, TSLA, MSFT", key="options_symbol_input")
+    
+    with col2:
+        options_type = st.selectbox("Option Type:", ["Calls", "Puts", "Both"], key="options_type")
+    
+    with col3:
+        if st.button("🔍 Get Options Chain", key="fetch_options", use_container_width=True):
+            st.session_state.fetch_options_clicked = True
+    
+    # Filters
+    with st.expander("⚙️ Filters", expanded=True):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            min_volume = st.number_input("Min Volume:", min_value=0, value=100, step=50, key="options_min_volume")
+        
+        with col2:
+            min_oi = st.number_input("Min Open Interest:", min_value=0, value=100, step=50, key="options_min_oi")
+        
+        with col3:
+            min_iv = st.number_input("Min IV %:", min_value=0.0, value=30.0, step=5.0, key="options_min_iv")
+        
+        with col4:
+            max_dte = st.number_input("Max Days to Expiry:", min_value=1, value=60, step=5, key="options_max_dte")
+    
+    # Fetch and display options data
+    if st.session_state.get('fetch_options_clicked', False) and options_symbol:
+        options_symbol_clean = options_symbol.strip().upper()
+        
+        with st.spinner(f"Fetching options chain for {options_symbol_clean}..."):
+            try:
+                # Alpha Vantage Options API call
+                av_key = st.secrets.get("ALPHA_VANTAGE_KEY", os.getenv("ALPHA_VANTAGE_KEY", ""))
+                
+                if not av_key:
+                    st.error("⚠️ Alpha Vantage API key not configured. Please contact support.")
+                else:
+                    # API call to Alpha Vantage REALTIME_OPTIONS
+                    url = f"https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol={options_symbol_clean}&apikey={av_key}"
+                    response = requests.get(url, timeout=30)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        # Check for API errors
+                        if "Error Message" in data:
+                            st.error(f"❌ {data['Error Message']}")
+                        elif "Note" in data:
+                            st.warning(f"⚠️ {data['Note']}")
+                        elif "data" in data:
+                            options_data = data['data']
+                            
+                            if options_data:
+                                # Convert to DataFrame
+                                df_options = pd.DataFrame(options_data)
+                                
+                                # Parse numeric fields
+                                numeric_cols = ['strike', 'bid', 'ask', 'volume', 'open_interest', 'implied_volatility', 
+                                               'delta', 'gamma', 'theta', 'vega', 'rho']
+                                for col in numeric_cols:
+                                    if col in df_options.columns:
+                                        df_options[col] = pd.to_numeric(df_options[col], errors='coerce')
+                                
+                                # Calculate days to expiration
+                                if 'expiration' in df_options.columns:
+                                    df_options['expiration'] = pd.to_datetime(df_options['expiration'])
+                                    df_options['dte'] = (df_options['expiration'] - pd.Timestamp.now()).dt.days
+                                
+                                # Convert IV to percentage
+                                if 'implied_volatility' in df_options.columns:
+                                    df_options['iv_pct'] = df_options['implied_volatility'] * 100
+                                
+                                # Apply filters
+                                filtered_df = df_options.copy()
+                                
+                                # Filter by option type
+                                if 'type' in filtered_df.columns:
+                                    if options_type == "Calls":
+                                        filtered_df = filtered_df[filtered_df['type'].str.lower() == 'call']
+                                    elif options_type == "Puts":
+                                        filtered_df = filtered_df[filtered_df['type'].str.lower() == 'put']
+                                
+                                # Apply numeric filters
+                                if 'volume' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['volume'] >= min_volume]
+                                
+                                if 'open_interest' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['open_interest'] >= min_oi]
+                                
+                                if 'iv_pct' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['iv_pct'] >= min_iv]
+                                
+                                if 'dte' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['dte'] <= max_dte]
+                                
+                                # Display results
+                                if not filtered_df.empty:
+                                    st.success(f"✅ Found {len(filtered_df)} options contracts matching your criteria")
+                                    
+                                    # Summary metrics
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    
+                                    with col1:
+                                        total_volume = filtered_df['volume'].sum() if 'volume' in filtered_df.columns else 0
+                                        st.metric("Total Volume", f"{total_volume:,.0f}")
+                                    
+                                    with col2:
+                                        total_oi = filtered_df['open_interest'].sum() if 'open_interest' in filtered_df.columns else 0
+                                        st.metric("Total OI", f"{total_oi:,.0f}")
+                                    
+                                    with col3:
+                                        avg_iv = filtered_df['iv_pct'].mean() if 'iv_pct' in filtered_df.columns else 0
+                                        st.metric("Avg IV", f"{avg_iv:.1f}%")
+                                    
+                                    with col4:
+                                        num_contracts = len(filtered_df)
+                                        st.metric("Contracts", num_contracts)
+                                    
+                                    # Display options chain
+                                    st.markdown("### Options Chain")
+                                    
+                                    # Select columns to display
+                                    display_cols = []
+                                    if 'type' in filtered_df.columns:
+                                        display_cols.append('type')
+                                    if 'expiration' in filtered_df.columns:
+                                        display_cols.append('expiration')
+                                    if 'strike' in filtered_df.columns:
+                                        display_cols.append('strike')
+                                    if 'bid' in filtered_df.columns:
+                                        display_cols.append('bid')
+                                    if 'ask' in filtered_df.columns:
+                                        display_cols.append('ask')
+                                    if 'volume' in filtered_df.columns:
+                                        display_cols.append('volume')
+                                    if 'open_interest' in filtered_df.columns:
+                                        display_cols.append('open_interest')
+                                    if 'iv_pct' in filtered_df.columns:
+                                        display_cols.append('iv_pct')
+                                    if 'delta' in filtered_df.columns:
+                                        display_cols.append('delta')
+                                    if 'gamma' in filtered_df.columns:
+                                        display_cols.append('gamma')
+                                    if 'theta' in filtered_df.columns:
+                                        display_cols.append('theta')
+                                    if 'vega' in filtered_df.columns:
+                                        display_cols.append('vega')
+                                    if 'dte' in filtered_df.columns:
+                                        display_cols.append('dte')
+                                    
+                                    # Sort by volume descending
+                                    if 'volume' in filtered_df.columns:
+                                        filtered_df = filtered_df.sort_values('volume', ascending=False)
+                                    
+                                    st.dataframe(filtered_df[display_cols], use_container_width=True)
+                                    
+                                    # Download CSV
+                                    csv = filtered_df[display_cols].to_csv(index=False)
+                                    st.download_button(
+                                        label="📥 Download Options Data (CSV)",
+                                        data=csv,
+                                        file_name=f"{options_symbol_clean}_options_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                        mime="text/csv"
+                                    )
+                                    
+                                    # Greeks explanation
+                                    with st.expander("📖 Understanding Options Greeks", expanded=False):
+                                        st.markdown("""
+                                        **Delta (Δ):** Rate of change in option price per $1 move in underlying stock
+                                        - Calls: 0 to 1.0 (at-the-money ~0.5)
+                                        - Puts: -1.0 to 0 (at-the-money ~-0.5)
+                                        
+                                        **Gamma (Γ):** Rate of change in Delta per $1 move in stock
+                                        - Higher for at-the-money options
+                                        - Indicates how fast Delta changes
+                                        
+                                        **Theta (Θ):** Option price decay per day (time decay)
+                                        - Always negative for long options
+                                        - Higher near expiration
+                                        
+                                        **Vega (ν):** Change in option price per 1% change in IV
+                                        - Higher Vega = more sensitive to volatility
+                                        - Important for volatility trading
+                                        
+                                        **Implied Volatility (IV):** Market's expectation of future volatility
+                                        - Higher IV = more expensive options
+                                        - High IV can signal major moves ahead
+                                        """)
+                                
+                                else:
+                                    st.warning("No options contracts found matching your filters. Try adjusting the criteria.")
+                            
+                            else:
+                                st.info(f"No options data available for {options_symbol_clean}")
+                        
+                        else:
+                            st.error("Unexpected API response format")
+                    
+                    else:
+                        st.error(f"API request failed with status code: {response.status_code}")
+            
+            except requests.exceptions.Timeout:
+                st.error("⏱️ Request timed out. Please try again.")
+            except Exception as e:
+                st.error(f"❌ Error fetching options data: {str(e)}")
+        
+        # Reset button state
+        st.session_state.fetch_options_clicked = False
+    
+    elif not options_symbol:
+        st.info("👆 Enter a stock symbol above to scan options chains with real-time Greeks and IV data")
+
 # ================= Trade Journal =================
 st.markdown("---")
 st.subheader("📔 Trade Journal")
