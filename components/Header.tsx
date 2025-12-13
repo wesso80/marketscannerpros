@@ -15,6 +15,11 @@ export default function Header() {
   <Link href="/tools/options" className="hover:text-emerald-300">Options</Link>
   <Link href="/tools/backtest" className="hover:text-emerald-300">Backtest</Link>
   <Link href="/tools/journal" className="hover:text-emerald-300">Journal</Link>
+  <Link href="/tools/commodities" className="hover:text-emerald-300">Commodities</Link>
+  <Link href="/tools/economics" className="hover:text-emerald-300">Economics</Link>
+  <Link href="/tools/etf" className="hover:text-emerald-300">ETF Explorer</Link>
+  <Link href="/tools/custom" className="hover:text-emerald-300">Custom</Link>
+  <Link href="/tools/ai-tools" className="hover:text-emerald-300">AI Tools</Link>
   <Link href="/tools/ai-analyst" className="hover:text-emerald-300">AI Analyst</Link>
   <Link href="/tools/gainers-losers" className="hover:text-emerald-300">Gainers</Link>
   <Link href="/tools/company-overview" className="hover:text-emerald-300">Overview</Link>
