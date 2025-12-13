@@ -39,7 +39,7 @@ export default function Home() {
             marginBottom: 20
           }}>
             <span>🤖</span>
-            <span style={{ fontWeight: 600 }}>POWERED BY GPT-4</span>
+            <span style={{ fontWeight: 600 }}>AI-POWERED</span>
           </div>
           
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>
@@ -60,7 +60,7 @@ export default function Home() {
               { icon: '💬', title: 'Ask Anything', desc: 'Natural language questions about any symbol, signal, or strategy' },
               { icon: '📊', title: 'Instant Analysis', desc: 'Get technical breakdowns, support/resistance levels, and trade ideas' },
               { icon: '🎯', title: 'Context-Aware', desc: 'AI knows your scan results and provides personalized recommendations' },
-              { icon: '⚡', title: 'Real-Time Insights', desc: 'Powered by GPT-4 with market data integration for accurate answers' }
+              { icon: '⚡', title: 'Real-Time Insights', desc: 'AI-powered with market data integration for accurate answers' }
             ].map((feature, i) => (
               <div key={i} style={{
                 background: 'linear-gradient(145deg, #0f172a, #020617)',
