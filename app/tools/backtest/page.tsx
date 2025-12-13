@@ -282,6 +282,208 @@ function BacktestContent() {
         {/* Results */}
         {results && (
           <>
+            {/* Equity Curve Chart */}
+            <div style={{
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+                📈 Backtest Performance Analysis
+              </h2>
+              
+              <div style={{ 
+                height: '400px',
+                position: 'relative',
+                background: '#1e293b',
+                borderRadius: '8px',
+                padding: '20px'
+              }}>
+                <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                  {(() => {
+                    const width = 1000;
+                    const height = 360;
+                    const padding = { top: 20, right: 40, bottom: 80, left: 60 };
+                    const equityCurveHeight = 200;
+                    const tradeBarHeight = 80;
+                    const gap = 20;
+
+                    // Calculate equity curve data
+                    const capital = parseFloat(initialCapital);
+                    let runningEquity = capital;
+                    const equityPoints = [{ date: results.trades[0]?.date || startDate, value: capital }];
+                    
+                    results.trades.forEach(trade => {
+                      runningEquity += trade.return;
+                      equityPoints.push({ date: trade.date, value: runningEquity });
+                    });
+
+                    const minEquity = Math.min(...equityPoints.map(p => p.value), capital);
+                    const maxEquity = Math.max(...equityPoints.map(p => p.value), capital);
+                    const equityRange = maxEquity - minEquity || 1;
+
+                    // Scale functions for equity curve
+                    const chartWidth = width - padding.left - padding.right;
+                    const scaleX = (index: number) => padding.left + (index / Math.max(equityPoints.length - 1, 1)) * chartWidth;
+                    const scaleYEquity = (value: number) => padding.top + equityCurveHeight - ((value - minEquity) / equityRange) * equityCurveHeight;
+
+                    // Generate equity curve path
+                    const equityPath = equityPoints.map((point, i) => {
+                      const x = scaleX(i);
+                      const y = scaleYEquity(point.value);
+                      return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                    }).join(' ');
+
+                    // Generate gradient path
+                    const gradientPath = equityPath + ` L ${scaleX(equityPoints.length - 1)} ${padding.top + equityCurveHeight} L ${padding.left} ${padding.top + equityCurveHeight} Z`;
+
+                    // Scale functions for trade bars
+                    const tradeBarY = padding.top + equityCurveHeight + gap;
+                    const maxTradeReturn = Math.max(...results.trades.map(t => Math.abs(t.return)));
+                    const scaleTradeBar = (value: number) => (value / maxTradeReturn) * (tradeBarHeight / 2);
+
+                    return (
+                      <g>
+                        {/* Gradient definition */}
+                        <defs>
+                          <linearGradient id="equityGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Equity Curve Section */}
+                        <text x={padding.left} y={padding.top - 5} fill="#94a3b8" fontSize="12" fontWeight="600">
+                          Equity Curve
+                        </text>
+
+                        {/* Equity grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                          const y = padding.top + equityCurveHeight * ratio;
+                          const value = maxEquity - (equityRange * ratio);
+                          return (
+                            <g key={`grid-${i}`}>
+                              <line
+                                x1={padding.left}
+                                y1={y}
+                                x2={padding.left + chartWidth}
+                                y2={y}
+                                stroke="#334155"
+                                strokeWidth="1"
+                                strokeDasharray="4,4"
+                              />
+                              <text
+                                x={padding.left - 10}
+                                y={y + 4}
+                                fill="#64748b"
+                                fontSize="11"
+                                textAnchor="end"
+                              >
+                                ${(value / 1000).toFixed(1)}k
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Area under curve */}
+                        <path d={gradientPath} fill="url(#equityGradient)" />
+
+                        {/* Main equity line */}
+                        <path
+                          d={equityPath}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="2.5"
+                        />
+
+                        {/* Equity data points */}
+                        {equityPoints.map((point, i) => (
+                          <circle
+                            key={`point-${i}`}
+                            cx={scaleX(i)}
+                            cy={scaleYEquity(point.value)}
+                            r="3"
+                            fill="#10b981"
+                            stroke="#0f172a"
+                            strokeWidth="2"
+                          />
+                        ))}
+
+                        {/* Trade P&L Section */}
+                        <text x={padding.left} y={tradeBarY - 10} fill="#94a3b8" fontSize="12" fontWeight="600">
+                          Trade P&L
+                        </text>
+
+                        {/* Zero line for trades */}
+                        <line
+                          x1={padding.left}
+                          y1={tradeBarY + tradeBarHeight / 2}
+                          x2={padding.left + chartWidth}
+                          y2={tradeBarY + tradeBarHeight / 2}
+                          stroke="#475569"
+                          strokeWidth="1"
+                        />
+
+                        {/* Trade bars */}
+                        {results.trades.map((trade, i) => {
+                          const x = scaleX(i + 1);
+                          const barHeight = scaleTradeBar(trade.return);
+                          const barY = trade.return >= 0 
+                            ? tradeBarY + tradeBarHeight / 2 - barHeight
+                            : tradeBarY + tradeBarHeight / 2;
+                          const color = trade.return >= 0 ? '#10b981' : '#ef4444';
+
+                          return (
+                            <rect
+                              key={`bar-${i}`}
+                              x={x - 3}
+                              y={barY}
+                              width="6"
+                              height={Math.abs(barHeight)}
+                              fill={color}
+                              opacity="0.8"
+                            />
+                          );
+                        })}
+
+                        {/* X-axis labels (dates) */}
+                        {equityPoints.map((point, i) => {
+                          if (equityPoints.length > 15 && i % Math.ceil(equityPoints.length / 8) !== 0) return null;
+                          const date = new Date(point.date);
+                          const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                          return (
+                            <text
+                              key={`label-${i}`}
+                              x={scaleX(i)}
+                              y={tradeBarY + tradeBarHeight + 25}
+                              fill="#64748b"
+                              fontSize="10"
+                              textAnchor="middle"
+                            >
+                              {label}
+                            </text>
+                          );
+                        })}
+
+                        {/* Date axis label */}
+                        <text
+                          x={padding.left + chartWidth / 2}
+                          y={tradeBarY + tradeBarHeight + 45}
+                          fill="#94a3b8"
+                          fontSize="11"
+                          textAnchor="middle"
+                        >
+                          Date
+                        </text>
+                      </g>
+                    );
+                  })()}
+                </svg>
+              </div>
+            </div>
+
             {/* Performance Metrics */}
             <div style={{
               background: '#0f172a',
