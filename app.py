@@ -5208,6 +5208,13 @@ if show_admin:
 
 st.sidebar.header("📋 Watchlists")
 
+# Symbol Preset dropdown
+symbol_preset = st.sidebar.selectbox(
+    "Symbol Preset:",
+    ["All 350+ Coinbase Pairs", "Top 100 by Volume", "Top 25 by Volume"],
+    key="symbol_preset"
+)
+
 # Get all watchlists
 watchlists = get_watchlists()
 watchlist_names = ["Manual Entry"] + [f"{wl['name']} ({len(wl['symbols'])} symbols)" for wl in watchlists]
