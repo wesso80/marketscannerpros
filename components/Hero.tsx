@@ -102,7 +102,7 @@ export default function Hero() {
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#60a5fa', fontSize: 16 }}>🤖</span>
-                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>MSP Analyst AI</strong> (GPT-4)
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>MSP Analyst AI</strong>
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
