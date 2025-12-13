@@ -5614,6 +5614,10 @@ elif current_tier == 'pro_trader':
             
             st.caption("Questions? Contact support@marketscannerpros.app")
 
+# Top 10 for Free Tier
+TOP_10_EQUITIES_FREE = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "JPM", "V", "WMT"]
+TOP_10_CRYPTO_FREE = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "ADA-USD", "DOGE-USD", "AVAX-USD", "DOT-USD", "MATIC-USD"]
+
 # Top 100 Equities by market cap
 TOP_100_EQUITIES = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "LLY", "V",
@@ -5628,25 +5632,42 @@ TOP_100_EQUITIES = [
     "GS", "SO", "BSX", "ETN", "FI", "MS", "ABNB", "DUK", "MU", "ANET"
 ]
 
-# Quick scan toggle for equities
-use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
+# FREE TIER RESTRICTION: Check if user should be limited to top 10
+is_free_tier = current_tier == 'free'
 
-# Multiselect for picking specific equities
-if not use_top100_eq:
-    selected_eq_from_list = st.sidebar.multiselect(
-        "Or select from top 100:",
-        options=TOP_100_EQUITIES,
-        default=[],
-        key="eq_multiselect"
-    )
-    if selected_eq_from_list:
-        st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+if is_free_tier:
+    st.sidebar.warning("🔒 **Free Tier**: Limited to Top 10 Equities & Top 10 Crypto")
+    st.sidebar.caption("Upgrade to Pro for unlimited scanning!")
+    
+    # Free tier can only use top 10
+    use_top100_eq = False
+    selected_eq_from_list = TOP_10_EQUITIES_FREE
+    st.sidebar.info(f"📊 Free Tier: {len(TOP_10_EQUITIES_FREE)} equities (AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, JPM, V, WMT)")
+    
+    # Override text input for free tier
+    eq_input = "\n".join(TOP_10_EQUITIES_FREE)
+    
 else:
-    selected_eq_from_list = TOP_100_EQUITIES
-    st.sidebar.success(f"✅ All 100 equities selected!")
+    # Pro/Pro Trader: Full access
+    # Quick scan toggle for equities
+    use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
 
-eq_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(equity_symbols), height=140)
+    # Multiselect for picking specific equities
+    if not use_top100_eq:
+        selected_eq_from_list = st.sidebar.multiselect(
+            "Or select from top 100:",
+            options=TOP_100_EQUITIES,
+            default=[],
+            key="eq_multiselect"
+        )
+        if selected_eq_from_list:
+            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+    else:
+        selected_eq_from_list = TOP_100_EQUITIES
+        st.sidebar.success(f"✅ All 100 equities selected!")
+
+    eq_input = st.sidebar.text_area("Enter symbols (one per line):",
+        "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
 
@@ -5668,25 +5689,36 @@ TOP_100_CRYPTO = [
     "AMP-USD", "POLY-USD", "MLN-USD", "BNT-USD", "FORTH-USD", "CTSI-USD", "API3-USD"
 ]
 
-# Quick scan toggle for crypto
-use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
-
-# Multiselect for picking specific crypto
-if not use_top100_cx:
-    selected_cx_from_list = st.sidebar.multiselect(
-        "Or select from top 100:",
-        options=TOP_100_CRYPTO,
-        default=[],
-        key="cx_multiselect"
-    )
-    if selected_cx_from_list:
-        st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+if is_free_tier:
+    # Free tier can only use top 10 crypto
+    use_top100_cx = False
+    selected_cx_from_list = TOP_10_CRYPTO_FREE
+    st.sidebar.info(f"₿ Free Tier: {len(TOP_10_CRYPTO_FREE)} crypto (BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, MATIC)")
+    
+    # Override text input for free tier
+    cx_input = "\n".join(TOP_10_CRYPTO_FREE)
+    
 else:
-    selected_cx_from_list = TOP_100_CRYPTO
-    st.sidebar.success(f"✅ All 100 crypto selected!")
+    # Pro/Pro Trader: Full access
+    # Quick scan toggle for crypto
+    use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
 
-cx_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(crypto_symbols), height=140)
+    # Multiselect for picking specific crypto
+    if not use_top100_cx:
+        selected_cx_from_list = st.sidebar.multiselect(
+            "Or select from top 100:",
+            options=TOP_100_CRYPTO,
+            default=[],
+            key="cx_multiselect"
+        )
+        if selected_cx_from_list:
+            st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+    else:
+        selected_cx_from_list = TOP_100_CRYPTO
+        st.sidebar.success(f"✅ All 100 crypto selected!")
+
+    cx_input = st.sidebar.text_area("Enter symbols (one per line):",
+        "\n".join(crypto_symbols), height=140)
 
 # Show current symbol count for all users
 eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
