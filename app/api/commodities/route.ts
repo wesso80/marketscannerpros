@@ -35,11 +35,16 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(`${BASE_URL}?${params.toString()}`);
     const data = await res.json();
-    const commodityData = data.data || [];
+    const commodityData = Array.isArray(data.data) ? data.data : [];
     if (commodityData.length === 0) {
       return NextResponse.json({ value: null, date: null });
     }
-    // Get the latest value
+    // Sort by date descending (ISO format)
+    commodityData.sort((a, b) => {
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return b.date.localeCompare(a.date);
+    });
     const latest = commodityData[0];
     return NextResponse.json({
       value: latest.value ? parseFloat(latest.value) : null,
