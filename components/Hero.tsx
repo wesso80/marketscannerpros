@@ -81,41 +81,6 @@ export default function Hero() {
                 <span>No credit card required</span>
               </div>
 
-              {/* Logo */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 16, 
-                marginBottom: 16 
-              }}>
-                <img 
-                  src="/logos/msp-logo.png" 
-                  alt="MarketScanner Pro Logo" 
-                  style={{ 
-                    width: 80, 
-                    height: 80, 
-                    objectFit: 'contain' 
-                  }} 
-                />
-                <div>
-                  <div style={{ 
-                    fontSize: 24, 
-                    fontWeight: 700, 
-                    color: '#f9fafb',
-                    marginBottom: 4
-                  }}>
-                    MarketScanner Pro
-                  </div>
-                  <div style={{ 
-                    fontSize: 13, 
-                    color: '#14b8a6',
-                    fontWeight: 500
-                  }}>
-                    Phase-Based Market Intelligence
-                  </div>
-                </div>
-              </div>
-
               <h1 style={{ fontSize: 32, lineHeight: 1.2, marginBottom: 12, fontWeight: 700 }}>
                 Stop Guessing the Market.
                 <br />
