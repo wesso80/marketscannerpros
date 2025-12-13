@@ -130,9 +130,9 @@ export default function Home() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: 24,
-            maxWidth: 800,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 20,
+            maxWidth: 1000,
             margin: '0 auto'
           }}>
             {/* Free Tier */}
@@ -236,8 +236,8 @@ export default function Home() {
                   "Everything in Free",
                   "Unlimited symbol scanning",
                   "MSP Analyst AI (50 questions/day)",
+                  "Advanced technical charts",
                   "CSV exports (all tools)",
-                  "Price alerts & notifications",
                   "Priority support"
                 ].map((item, i) => (
                   <li key={i} style={{
@@ -272,6 +272,68 @@ export default function Home() {
                 }}
               >
                 Upgrade to Pro
+              </Link>
+            </div>
+
+            {/* Pro Trader Tier */}
+            <div style={{
+              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              borderRadius: 18,
+              border: '1px solid rgba(59,130,246,0.3)',
+              boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+              padding: '28px 26px',
+              position: 'relative'
+            }}>
+              <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontSize: 36, fontWeight: 700 }}>$19.99</span>
+                <span style={{ fontSize: 15, color: '#9ca3af', marginLeft: 6 }}>/ month</span>
+              </div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
+                or $199.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+              </div>
+              
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
+                {[
+                  "Everything in Pro",
+                  "MSP Analyst AI (Unlimited)",
+                  "Real Alpha Vantage backtesting",
+                  "TradingView script access",
+                  "Advanced indicators",
+                  "Premium support"
+                ].map((item, i) => (
+                  <li key={i} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 0',
+                    borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none'
+                  }}>
+                    <span style={{ color: '#60a5fa', fontSize: 16 }}>✓</span>
+                    <span style={{ color: '#e5e7eb' }}>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <Link
+                href="/pricing"
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  borderRadius: 999,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: '#fff',
+                  padding: '14px 20px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 15px rgba(59,130,246,0.3)'
+                }}
+              >
+                Upgrade to Pro Trader
               </Link>
             </div>
           </div>
