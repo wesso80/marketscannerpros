@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ value: null, date: null });
     }
     // Sort by date descending (ISO format)
-    commodityData.sort((a, b) => {
+    commodityData.sort((a: { date?: string }, b: { date?: string }) => {
       if (!a.date) return 1;
       if (!b.date) return -1;
       return b.date.localeCompare(a.date);
