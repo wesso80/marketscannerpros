@@ -38,45 +38,34 @@ function BacktestContent() {
 
   const runBacktest = async () => {
     setIsLoading(true);
+    setResults(null);
     
-    // Simulate backtest with mock data
-    setTimeout(() => {
-      const mockTrades: Trade[] = [
-        { date: '2024-01-15', symbol, side: 'LONG', entry: 450.20, exit: 458.50, return: 83.00, returnPercent: 1.84 },
-        { date: '2024-02-03', symbol, side: 'LONG', entry: 460.10, exit: 454.30, return: -58.00, returnPercent: -1.26 },
-        { date: '2024-03-12', symbol, side: 'LONG', entry: 455.80, exit: 472.90, return: 171.00, returnPercent: 3.75 },
-        { date: '2024-04-08', symbol, side: 'LONG', entry: 475.30, exit: 468.20, return: -71.00, returnPercent: -1.49 },
-        { date: '2024-05-20', symbol, side: 'LONG', entry: 470.50, exit: 489.60, return: 191.00, returnPercent: 4.06 },
-        { date: '2024-06-14', symbol, side: 'LONG', entry: 492.10, exit: 501.30, return: 92.00, returnPercent: 1.87 },
-        { date: '2024-07-22', symbol, side: 'LONG', entry: 503.40, exit: 495.80, return: -76.00, returnPercent: -1.51 },
-        { date: '2024-08-05', symbol, side: 'LONG', entry: 498.20, exit: 512.70, return: 145.00, returnPercent: 2.91 },
-        { date: '2024-09-18', symbol, side: 'LONG', entry: 515.60, exit: 528.40, return: 128.00, returnPercent: 2.48 },
-        { date: '2024-10-11', symbol, side: 'LONG', entry: 530.20, exit: 541.80, return: 116.00, returnPercent: 2.19 },
-      ];
+    try {
+      // Fetch price data and technical indicators from Alpha Vantage
+      const response = await fetch(`/api/backtest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          strategy,
+          startDate,
+          endDate,
+          initialCapital: parseFloat(initialCapital)
+        })
+      });
 
-      const winningTrades = mockTrades.filter(t => t.return > 0);
-      const losingTrades = mockTrades.filter(t => t.return < 0);
-      const totalReturn = mockTrades.reduce((sum, t) => sum + t.return, 0);
-      const totalWins = winningTrades.reduce((sum, t) => sum + t.return, 0);
-      const totalLosses = Math.abs(losingTrades.reduce((sum, t) => sum + t.return, 0));
+      if (!response.ok) {
+        throw new Error('Backtest failed');
+      }
 
-      const mockResult: BacktestResult = {
-        totalTrades: mockTrades.length,
-        winningTrades: winningTrades.length,
-        losingTrades: losingTrades.length,
-        winRate: (winningTrades.length / mockTrades.length) * 100,
-        totalReturn: (totalReturn / parseFloat(initialCapital)) * 100,
-        maxDrawdown: -8.5,
-        sharpeRatio: 1.85,
-        profitFactor: totalWins / totalLosses,
-        avgWin: totalWins / winningTrades.length,
-        avgLoss: totalLosses / losingTrades.length,
-        trades: mockTrades
-      };
-
-      setResults(mockResult);
+      const result = await response.json();
+      setResults(result);
+    } catch (error) {
+      console.error('Backtest error:', error);
+      alert('Failed to run backtest. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
   return (
     <div style={{ 
@@ -191,9 +180,20 @@ function BacktestContent() {
                 }}
               >
                 <option value="ema_crossover">EMA Crossover (9/21)</option>
-                <option value="rsi_reversal">RSI Reversal</option>
+                <option value="sma_crossover">SMA Crossover (50/200)</option>
+                <option value="rsi_reversal">RSI Mean Reversion</option>
+                <option value="rsi_trend">RSI Trend Following</option>
                 <option value="macd_momentum">MACD Momentum</option>
-                <option value="breakout">Breakout Strategy</option>
+                <option value="macd_crossover">MACD Signal Crossover</option>
+                <option value="bbands_squeeze">Bollinger Bands Squeeze</option>
+                <option value="bbands_breakout">Bollinger Bands Breakout</option>
+                <option value="stoch_oversold">Stochastic Oversold</option>
+                <option value="adx_trend">ADX Trend Filter</option>
+                <option value="cci_reversal">CCI Reversal</option>
+                <option value="obv_volume">OBV Volume Confirmation</option>
+                <option value="multi_ema_rsi">Multi: EMA + RSI</option>
+                <option value="multi_macd_adx">Multi: MACD + ADX</option>
+                <option value="multi_bb_stoch">Multi: BB + Stochastic</option>
               </select>
             </div>
 
