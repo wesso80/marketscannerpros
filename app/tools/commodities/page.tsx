@@ -57,33 +57,35 @@ export default function CommoditiesDashboard() {
         Commodities Dashboard
       </h1>
       <p style={{ color: "#94A3B8", marginBottom: "2rem" }}>
-        Live prices for major commodities powered by Alpha Vantage Premium API.
+        Live prices for major commodities.
       </p>
       {loading ? (
         <div>Loading...</div>
       ) : error ? (
         <div style={{ color: "#EF4444" }}>{error}</div>
       ) : (
-        <table style={{ width: "100%", background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
-          <thead>
-            <tr style={{ background: "#10B98122" }}>
-              <th style={{ padding: 12, textAlign: "left" }}>Commodity</th>
-              <th style={{ padding: 12, textAlign: "right" }}>Latest Value</th>
-              <th style={{ padding: 12, textAlign: "right" }}>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr key={row.name}>
-                <td style={{ padding: 12 }}>{row.name}</td>
-                <td style={{ padding: 12, textAlign: "right" }}>
-                  {row.value !== null ? row.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "-"}
-                </td>
-                <td style={{ padding: 12, textAlign: "right" }}>{row.date || "-"}</td>
+        <div style={{ overflowX: "auto", marginTop: 12 }}>
+          <table style={{ minWidth: 400, width: "100%", background: "#1e293b", borderRadius: 12, overflow: "hidden" }}>
+            <thead>
+              <tr style={{ background: "#10B98122" }}>
+                <th style={{ padding: 12, textAlign: "left" }}>Commodity</th>
+                <th style={{ padding: 12, textAlign: "right" }}>Latest Value</th>
+                <th style={{ padding: 12, textAlign: "right" }}>Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((row) => (
+                <tr key={row.name}>
+                  <td style={{ padding: 12 }}>{row.name}</td>
+                  <td style={{ padding: 12, textAlign: "right" }}>
+                    {row.value !== null ? row.value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "-"}
+                  </td>
+                  <td style={{ padding: 12, textAlign: "right" }}>{row.date || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
