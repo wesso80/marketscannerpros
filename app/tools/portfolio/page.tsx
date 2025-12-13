@@ -175,6 +175,17 @@ function PortfolioContent() {
     }));
   };
 
+  const clearAllData = () => {
+    if (confirm('Are you sure you want to clear all portfolio data? This cannot be undone.')) {
+      setPositions([]);
+      setClosedPositions([]);
+      setPerformanceHistory([]);
+      localStorage.removeItem('portfolio_positions');
+      localStorage.removeItem('portfolio_closed');
+      localStorage.removeItem('portfolio_performance');
+    }
+  };
+
   // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
@@ -217,7 +228,7 @@ function PortfolioContent() {
         borderBottom: '1px solid #334155',
         padding: '16px 24px'
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ 
             fontSize: '24px', 
             fontWeight: '700', 
@@ -229,6 +240,30 @@ function PortfolioContent() {
           }}>
             📊 Portfolio Tracking
           </h1>
+          <button
+            onClick={clearAllData}
+            style={{
+              padding: '8px 16px',
+              background: 'transparent',
+              border: '1px solid #ef4444',
+              borderRadius: '6px',
+              color: '#ef4444',
+              fontSize: '13px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#ef4444';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#ef4444';
+            }}
+          >
+            🗑️ Clear All Data
+          </button>
         </div>
       </div>
 
