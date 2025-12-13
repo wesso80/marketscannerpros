@@ -134,6 +134,50 @@ function JournalContent() {
     }
   };
 
+  const exportToCSV = () => {
+    if (filteredEntries.length === 0) {
+      alert('No entries to export');
+      return;
+    }
+
+    // CSV headers
+    const headers = ['Date', 'Symbol', 'Side', 'Quantity', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Strategy', 'Setup', 'Notes', 'Emotions', 'Tags', 'Outcome'];
+    
+    // CSV rows
+    const rows = filteredEntries.map(entry => [
+      entry.date,
+      entry.symbol,
+      entry.side,
+      entry.quantity,
+      entry.entryPrice,
+      entry.exitPrice,
+      entry.pl.toFixed(2),
+      entry.plPercent.toFixed(2),
+      entry.strategy || '',
+      entry.setup ? `"${entry.setup.replace(/"/g, '""')}"` : '',
+      entry.notes ? `"${entry.notes.replace(/"/g, '""')}"` : '',
+      entry.emotions ? `"${entry.emotions.replace(/"/g, '""')}"` : '',
+      entry.tags.join('; '),
+      entry.outcome
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.join(','))
+      .join('\n');
+
+    // Create download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `trade-journal-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filter entries
   const filteredEntries = entries.filter(entry => {
     if (filterTag !== 'all' && !entry.tags.includes(filterTag)) return false;
@@ -207,21 +251,38 @@ function JournalContent() {
               ➕ New Entry
             </button>
             {entries.length > 0 && (
-              <button
-                onClick={clearAllEntries}
-                style={{
-                  padding: '10px 16px',
-                  background: 'transparent',
-                  border: '1px solid #ef4444',
-                  borderRadius: '6px',
-                  color: '#ef4444',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                🗑️ Clear All
-              </button>
+              <>
+                <button
+                  onClick={exportToCSV}
+                  style={{
+                    padding: '10px 16px',
+                    background: 'transparent',
+                    border: '1px solid #10b981',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📥 Export CSV
+                </button>
+                <button
+                  onClick={clearAllEntries}
+                  style={{
+                    padding: '10px 16px',
+                    background: 'transparent',
+                    border: '1px solid #ef4444',
+                    borderRadius: '6px',
+                    color: '#ef4444',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🗑️ Clear All
+                </button>
+              </>
             )}
           </div>
         </div>

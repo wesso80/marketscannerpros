@@ -186,6 +186,66 @@ function PortfolioContent() {
     }
   };
 
+  const exportPositionsToCSV = () => {
+    if (positions.length === 0) {
+      alert('No open positions to export');
+      return;
+    }
+
+    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Current Price', 'P&L', 'P&L %', 'Entry Date'];
+    const rows = positions.map(p => [
+      p.symbol,
+      p.side,
+      p.quantity,
+      p.entryPrice.toFixed(2),
+      p.currentPrice.toFixed(2),
+      p.pl.toFixed(2),
+      p.plPercent.toFixed(2),
+      new Date(p.entryDate).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `portfolio-positions-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportHistoryToCSV = () => {
+    if (closedPositions.length === 0) {
+      alert('No trade history to export');
+      return;
+    }
+
+    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Close Price', 'Realized P&L', 'Entry Date', 'Close Date'];
+    const rows = closedPositions.map(p => [
+      p.symbol,
+      p.side,
+      p.quantity,
+      p.entryPrice.toFixed(2),
+      p.closePrice.toFixed(2),
+      p.realizedPL.toFixed(2),
+      new Date(p.entryDate).toLocaleDateString(),
+      new Date(p.closeDate).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `portfolio-history-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
@@ -240,30 +300,70 @@ function PortfolioContent() {
           }}>
             📊 Portfolio Tracking
           </h1>
-          <button
-            onClick={clearAllData}
-            style={{
-              padding: '8px 16px',
-              background: 'transparent',
-              border: '1px solid #ef4444',
-              borderRadius: '6px',
-              color: '#ef4444',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#ef4444';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#ef4444';
-            }}
-          >
-            🗑️ Clear All Data
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {positions.length > 0 && (
+              <button
+                onClick={exportPositionsToCSV}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #10b981',
+                  borderRadius: '6px',
+                  color: '#10b981',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📥 Export Positions
+              </button>
+            )}
+            {closedPositions.length > 0 && (
+              <button
+                onClick={exportHistoryToCSV}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  color: '#3b82f6',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📥 Export History
+              </button>
+            )}
+            {(positions.length > 0 || closedPositions.length > 0) && (
+              <button
+                onClick={clearAllData}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #ef4444',
+                  borderRadius: '6px',
+                  color: '#ef4444',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ef4444';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#ef4444';
+                }}
+              >
+                🗑️ Clear All Data
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
