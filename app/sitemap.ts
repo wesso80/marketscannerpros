@@ -1,4 +1,24 @@
-export default function sitemap() {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "https://marketscannerpros.app";
-  return [{ url: base + "/", priority: 1 }];
+import { MetadataRoute } from 'next';
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = 'https://marketscannerpros.app';
+
+  return [
+    {
+      url: `${baseUrl}/`,
+      lastModified: new Date(),
+    },
+    {
+      url: `${baseUrl}/ai-analyst`,
+      lastModified: new Date(),
+    },
+    {
+      url: `${baseUrl}/partners`,
+      lastModified: new Date(),
+    },
+    {
+      url: `${baseUrl}/pricing`,
+      lastModified: new Date(),
+    },
+  ];
 }
