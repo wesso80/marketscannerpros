@@ -37,34 +37,40 @@ export default function OptionsScanner() {
     setResults([]);
 
     try {
-      const response = await fetch("https://marketscannerpros-vwx5.onrender.com/options/scan", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          minScore: minScore,
-          contractType: contractType === "both" ? null : contractType,
-          symbols: useCustom && customSymbols.trim() 
-            ? customSymbols.trim().split(',').map(s => s.trim()).filter(Boolean)
-            : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Options API returned ${response.status}`);
-      }
-
-      const data = await response.json();
+      // For now, show a message that this feature is coming soon
+      setError("Options scanning feature is coming soon. Backend API integration in progress.");
       
-      if (data.success) {
-        setResults(data.results || []);
-        if (data.results.length === 0) {
-          setError("No options found matching your criteria. Try lowering the minimum score.");
-        }
-      } else {
-        setError(data.error || "Scanner failed");
-      }
+      // TODO: Implement actual API call when backend is ready
+      // const response = await fetch("https://marketscannerpros-vwx5.onrender.com/options/scan", {
+      // TODO: Implement actual API call when backend is ready
+      // const response = await fetch("https://marketscannerpros-vwx5.onrender.com/options/scan", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     minScore: minScore,
+      //     contractType: contractType === "both" ? null : contractType,
+      //     symbols: useCustom && customSymbols.trim() 
+      //       ? customSymbols.trim().split(',').map(s => s.trim()).filter(Boolean)
+      //       : undefined,
+      //   }),
+      // });
+      //
+      // if (!response.ok) {
+      //   throw new Error(`Options API returned ${response.status}`);
+      // }
+      //
+      // const data = await response.json();
+      // 
+      // if (data.success) {
+      //   setResults(data.results || []);
+      //   if (data.results.length === 0) {
+      //     setError("No options found matching your criteria. Try lowering the minimum score.");
+      //   }
+      // } else {
+      //   setError(data.error || "Scanner failed");
+      // }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect to options scanner");
     } finally {
