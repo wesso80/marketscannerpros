@@ -4,5 +4,5 @@
       "path": "/api/jobs/generate-market-focus",
       "schedule": "0 21 * * *"
     }
-  ],
-  }
+  ]
+}
