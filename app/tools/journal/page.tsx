@@ -914,7 +914,7 @@ export default function JournalPage() {
       }}>
         <div style={{ color: '#9ca3af' }}>Loading journal...</div>
       </div>
-    }}>
+    }>
       <JournalContent />
     </Suspense>
   );
