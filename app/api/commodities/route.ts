@@ -4,9 +4,15 @@ import { NextRequest, NextResponse } from 'next/server';
 const commodityFunctions: Record<string, string> = {
   WTI: 'WTI',
   BRENT: 'BRENT',
+  NATGAS: 'NATURAL_GAS',
   COPPER: 'COPPER',
-  WHEAT: 'WHEAT',
   ALUMINUM: 'ALUMINUM',
+  WHEAT: 'WHEAT',
+  CORN: 'CORN',
+  COTTON: 'COTTON',
+  SUGAR: 'SUGAR',
+  COFFEE: 'COFFEE',
+  GCI: 'ALL_COMMODITIES', // Placeholder, update with real function if available
 };
 
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;

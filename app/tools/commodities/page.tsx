@@ -11,10 +11,15 @@ interface CommodityData {
 const commoditiesList = [
   { key: "WTI", label: "Crude Oil (WTI)" },
   { key: "BRENT", label: "Crude Oil (Brent)" },
+  { key: "NATGAS", label: "Natural Gas" },
   { key: "COPPER", label: "Copper" },
-  { key: "WHEAT", label: "Wheat" },
   { key: "ALUMINUM", label: "Aluminum" },
-  // Add more commodities as needed
+  { key: "WHEAT", label: "Wheat" },
+  { key: "CORN", label: "Corn" },
+  { key: "COTTON", label: "Cotton" },
+  { key: "SUGAR", label: "Sugar" },
+  { key: "COFFEE", label: "Coffee" },
+  { key: "GCI", label: "Global Commodities Index" },
 ];
 
 export default function CommoditiesDashboard() {
