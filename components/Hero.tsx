@@ -83,10 +83,13 @@ export default function Hero() {
 
               <h1 style={{ fontSize: 32, lineHeight: 1.2, marginBottom: 12, fontWeight: 700 }}>
                 Find <span style={{ color: '#22c55e' }}>Breakouts</span> Before They Happen
+                <br />
+                <span style={{ fontSize: 26, color: '#60a5fa', fontWeight: 600 }}>With AI-Powered Analysis</span>
               </h1>
-              <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 480, lineHeight: 1.6 }}>
-                Scan crypto & stocks across timeframes in seconds. Get squeeze detection, confluence scoring,
-                and alert hooks—so you act, not react. Built for traders who want speed, clarity, and confluence.
+              <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 520, lineHeight: 1.6 }}>
+                Scan crypto & stocks across timeframes in seconds. <strong style={{ color: '#e5e7eb' }}>MSP Analyst AI</strong> explains every signal,
+                <strong style={{ color: '#e5e7eb' }}> real Alpha Vantage backtesting</strong> validates strategies, and
+                <strong style={{ color: '#e5e7eb' }}> multi-timeframe confluence</strong> finds high-probability setups. Built for serious traders.
               </p>
 
               <div style={{
@@ -98,20 +101,20 @@ export default function Hero() {
                 color: 'var(--text-muted)'
               }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Multi-TF scanning</strong> in seconds
+                  <span style={{ color: '#60a5fa', fontSize: 16 }}>🤖</span>
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>MSP Analyst AI</strong> (GPT-4)
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Squeeze detection</strong> & alerts
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Real backtesting</strong> (Alpha Vantage)
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Trade journal</strong> & tracking
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Trade journal</strong> w/ psychology
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>TradingView</strong> integration
+                  <strong style={{ color: 'var(--text-main)', fontWeight: 500 }}>Portfolio P&L</strong> + CSV exports
                 </span>
               </div>
 

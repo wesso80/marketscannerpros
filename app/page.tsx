@@ -15,6 +15,83 @@ export default function Home() {
   return (
     <>
       <Hero />
+      
+      {/* AI Features Spotlight */}
+      <section style={{
+        width: '100%',
+        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        color: '#f9fafb',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+        borderBottom: '1px solid #1f2933',
+        padding: '60px 20px'
+      }}>
+        <div style={{ maxWidth: 1120, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 12,
+            color: '#60a5fa',
+            padding: '6px 14px',
+            borderRadius: 999,
+            background: 'rgba(59,130,246,0.1)',
+            border: '1px solid rgba(59,130,246,0.3)',
+            marginBottom: 20
+          }}>
+            <span>🤖</span>
+            <span style={{ fontWeight: 600 }}>POWERED BY GPT-4</span>
+          </div>
+          
+          <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>
+            Meet <span style={{ color: '#60a5fa' }}>MSP Analyst</span> - Your AI Trading Assistant
+          </h2>
+          <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 700, margin: '0 auto 40px', lineHeight: 1.6 }}>
+            Ask questions about any signal, get instant technical analysis explanations, request trade ideas, 
+            and receive personalized insights. MSP Analyst understands your scans and helps you make better decisions.
+          </p>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 24,
+            marginTop: 40
+          }}>
+            {[
+              { icon: '💬', title: 'Ask Anything', desc: 'Natural language questions about any symbol, signal, or strategy' },
+              { icon: '📊', title: 'Instant Analysis', desc: 'Get technical breakdowns, support/resistance levels, and trade ideas' },
+              { icon: '🎯', title: 'Context-Aware', desc: 'AI knows your scan results and provides personalized recommendations' },
+              { icon: '⚡', title: 'Real-Time Insights', desc: 'Powered by GPT-4 with market data integration for accurate answers' }
+            ].map((feature, i) => (
+              <div key={i} style={{
+                background: 'linear-gradient(145deg, #0f172a, #020617)',
+                borderRadius: 16,
+                border: '1px solid rgba(59,130,246,0.2)',
+                padding: '24px',
+                textAlign: 'left'
+              }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>{feature.icon}</div>
+                <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: '#f9fafb' }}>{feature.title}</h3>
+                <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.5 }}>{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+          
+          <div style={{
+            marginTop: 40,
+            padding: '24px',
+            borderRadius: 16,
+            background: 'rgba(59,130,246,0.05)',
+            border: '1px solid rgba(59,130,246,0.2)'
+          }}>
+            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0 }}>
+              <strong style={{ color: '#60a5fa' }}>Free tier:</strong> 5 questions/day  •  
+              <strong style={{ color: '#22c55e', marginLeft: 8 }}>Pro:</strong> 50/day  •  
+              <strong style={{ color: '#f59e0b', marginLeft: 8 }}>Pro Trader:</strong> Unlimited
+            </p>
+          </div>
+        </div>
+      </section>
+      
       <SocialProof />
       <Why />
       <HowItWorks />
@@ -45,9 +122,9 @@ export default function Home() {
               <span style={{ color: '#22c55e' }}>Simple pricing</span>
               <span>Start free, upgrade anytime</span>
             </div>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Simple, Transparent Pricing</h2>
-            <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 450, margin: '0 auto' }}>
-              Everything you need is free. Upgrade when you're ready for advanced features.
+            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Professional Tools, Accessible Pricing</h2>
+            <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 520, margin: '0 auto' }}>
+              Start free with AI assistance. Upgrade for unlimited scanning, real backtesting, and professional features.
             </p>
           </div>
 
@@ -75,11 +152,11 @@ export default function Home() {
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
-                  "Core market scanner",
-                  "Multi-timeframe analysis",
-                  "Portfolio tracker",
-                  "Trade journal",
-                  "CSV exports"
+                  "Top 10 equities + Top 10 crypto",
+                  "MSP Analyst AI (5 questions/day)",
+                  "Multi-timeframe scanning",
+                  "Trade journal + Portfolio",
+                  "Real-time market data"
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
@@ -147,21 +224,21 @@ export default function Home() {
               
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
               <div style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 36, fontWeight: 700 }}>$4.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700 }}>$9.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af', marginLeft: 6 }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or $39.99/year <span style={{ color: '#22c55e' }}>(save 33%)</span>
+                or $99.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
                   "Everything in Free",
-                  "Unlimited symbols",
-                  "Advanced technical charts",
+                  "Unlimited symbol scanning",
+                  "MSP Analyst AI (50 questions/day)",
+                  "CSV exports (all tools)",
                   "Price alerts & notifications",
-                  "Strategy backtesting",
-                  "TradingView integration"
+                  "Priority support"
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
