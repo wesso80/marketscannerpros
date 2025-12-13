@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
 import { getSessionFromCookie } from "@/lib/auth";
-import { query as dbQuery } from "@vercel/postgres";
+import { sql } from "@vercel/postgres";
 
 export const runtime = "nodejs";
 
@@ -82,11 +82,10 @@ export async function POST(req: NextRequest) {
     if (dailyLimit !== null) {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const usageResult = await dbQuery(
-          `SELECT COUNT(*) as count FROM ai_usage 
-           WHERE workspace_id = $1 AND DATE(created_at) = $2`,
-          [workspaceId, today]
-        );
+        const usageResult = await sql`
+          SELECT COUNT(*) as count FROM ai_usage 
+          WHERE workspace_id = ${workspaceId} AND DATE(created_at) = ${today}
+        `;
         
         const usageCount = parseInt(usageResult.rows[0]?.count || '0');
         
@@ -196,11 +195,10 @@ If information is missing, say so explicitly instead of guessing.
 
     // Track usage in database
     try {
-      await dbQuery(
-        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        [workspaceId, query.substring(0, 500), text.length, tier]
-      );
+      await sql`
+        INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
+        VALUES (${workspaceId}, ${query.substring(0, 500)}, ${text.length}, ${tier}, NOW())
+      `;
     } catch (dbErr) {
       console.error('Error tracking AI usage:', dbErr);
       // Don't fail the request if tracking fails
