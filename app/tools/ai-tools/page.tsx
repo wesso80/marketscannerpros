@@ -1,4 +1,5 @@
 import React from "react";
+import DailyAIMarketFocus from "@/components/DailyAIMarketFocus";
 
 export default function AIToolsPage() {
   return (
@@ -21,6 +22,10 @@ export default function AIToolsPage() {
         <p style={{ color: "#94A3B8", marginTop: 18 }}>
           Have a feature request? Contact support@marketscannerpros.app
         </p>
+      </div>
+      {/* Daily AI Market Focus Panel */}
+      <div style={{ marginTop: 40 }}>
+        <DailyAIMarketFocus />
       </div>
     </main>
   );

@@ -43,8 +43,8 @@ export default function GainersLosersPage() {
   const currentData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
+    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem", width: '100%' }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem", width: '100%' }}>
         <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
           ← Back to Tools
         </Link>
@@ -58,7 +58,16 @@ export default function GainersLosersPage() {
         </p>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            marginBottom: '2rem',
+            borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
+            flexDirection: typeof window !== 'undefined' && window.innerWidth < 600 ? 'column' : 'row',
+            alignItems: typeof window !== 'undefined' && window.innerWidth < 600 ? 'stretch' : 'center',
+          }}
+        >
           <button onClick={() => setActiveTab("gainers")} style={{ padding: "1rem 2rem", background: activeTab === "gainers" ? "rgba(16, 185, 129, 0.2)" : "transparent", border: "none", borderBottom: activeTab === "gainers" ? "2px solid #10B981" : "none", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer" }}>
             🚀 Top Gainers
           </button>
@@ -75,35 +84,37 @@ export default function GainersLosersPage() {
             Loading market data...
           </div>
         ) : (
-          <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                  <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600" }}>Symbol</th>
-                  <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Price</th>
-                  <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Change</th>
-                  <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Change %</th>
-                  <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Volume</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentData.map((item, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
-                    <td style={{ padding: "1rem", color: "#fff", fontWeight: "600" }}>{item.ticker}</td>
-                    <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>${parseFloat(item.price).toFixed(2)}</td>
-                    <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444" }}>
-                      {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
-                    </td>
-                    <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: "600" }}>
-                      {item.change_percentage}
-                    </td>
-                    <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                      {parseInt(item.volume).toLocaleString()}
-                    </td>
+          <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", overflow: "auto", width: '100%' }}>
+            <div style={{ minWidth: 400, width: '100%' }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                    <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600" }}>Symbol</th>
+                    <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Price</th>
+                    <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Change</th>
+                    <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Change %</th>
+                    <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600" }}>Volume</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {currentData.map((item, index) => (
+                    <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
+                      <td style={{ padding: "1rem", color: "#fff", fontWeight: "600" }}>{item.ticker}</td>
+                      <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>${parseFloat(item.price).toFixed(2)}</td>
+                      <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444" }}>
+                        {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
+                      </td>
+                      <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                        {item.change_percentage}
+                      </td>
+                      <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
+                        {parseInt(item.volume).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

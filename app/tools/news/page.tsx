@@ -130,8 +130,8 @@ export default function NewsSentimentPage() {
     : articles.filter(a => a.sentiment.label.toLowerCase().includes(sentimentFilter));
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
+    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem", width: '100%' }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem", width: '100%' }}>
         <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
           ← Back to Tools
         </Link>
@@ -145,7 +145,16 @@ export default function NewsSentimentPage() {
         </p>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem", borderBottom: "2px solid rgba(16, 185, 129, 0.2)" }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            marginBottom: '2rem',
+            borderBottom: '2px solid rgba(16, 185, 129, 0.2)',
+            flexDirection: typeof window !== 'undefined' && window.innerWidth < 600 ? 'column' : 'row',
+            alignItems: typeof window !== 'undefined' && window.innerWidth < 600 ? 'stretch' : 'center',
+          }}
+        >
           <button
             onClick={() => setActiveTab("news")}
             style={{
@@ -183,7 +192,14 @@ export default function NewsSentimentPage() {
           <>
             {/* Search Controls */}
         <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1rem", marginBottom: "1rem" }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 800 ? '1fr' : '1fr auto auto',
+              gap: '1rem',
+              marginBottom: '1rem',
+            }}
+          >
             <div>
               <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
                 Ticker Symbols (comma-separated)

@@ -280,15 +280,27 @@ function PortfolioContent() {
     <div style={{ 
       minHeight: '100vh', 
       background: '#1e293b',
-      padding: '0'
+      padding: '0',
+      width: '100%',
     }}>
       {/* Header */}
       <div style={{ 
         background: '#0f172a', 
         borderBottom: '1px solid #334155',
-        padding: '16px 24px'
+        padding: '16px 24px',
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            maxWidth: '1600px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            rowGap: 16,
+            flexDirection: 'row',
+          }}
+        >
           <h1 style={{ 
             fontSize: '24px', 
             fontWeight: '700', 
@@ -296,11 +308,23 @@ function PortfolioContent() {
             margin: '0',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            flex: '1 1 100%',
+            minWidth: 220,
           }}>
             📊 Portfolio Tracking
           </h1>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              flex: '1 1 100%',
+              minWidth: 220,
+              marginTop: 12,
+            }}
+          >
             {positions.length > 0 && (
               <button
                 onClick={exportPositionsToCSV}
@@ -371,9 +395,19 @@ function PortfolioContent() {
       <div style={{ 
         background: '#0f172a',
         padding: '20px 24px',
-        borderBottom: '1px solid #334155'
+        borderBottom: '1px solid #334155',
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            maxWidth: '1600px',
+            margin: '0 auto',
+            display: 'flex',
+            gap: '40px',
+            flexWrap: 'wrap',
+            flexDirection: 'row',
+            rowGap: 24,
+          }}
+        >
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Market Value</div>
             <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>

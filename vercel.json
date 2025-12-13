@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/jobs/generate-market-focus",
+      "schedule": "0 21 * * *"
+    }
+  ],
+  "overrides": {
+    "app/api/ai-market-focus/route.ts": {
+      "public": true
+    }
+  }
+}

@@ -15,9 +15,7 @@ export default function Header() {
   <Link href="/tools/options" className="hover:text-emerald-300">Options</Link>
   <Link href="/tools/backtest" className="hover:text-emerald-300">Backtest</Link>
   <Link href="/tools/journal" className="hover:text-emerald-300">Journal</Link>
-  <Link href="/tools/economics" className="hover:text-emerald-300">Economics</Link>
-  <Link href="/tools/etf" className="hover:text-emerald-300">ETF Explorer</Link>
-  <Link href="/tools/custom" className="hover:text-emerald-300">Custom</Link>
+  {/* Economics, ETF Explorer, and Custom links removed */}
   <Link href="/tools/ai-tools" className="hover:text-emerald-300">AI Tools</Link>
   <Link href="/tools/ai-analyst" className="hover:text-emerald-300">AI Analyst</Link>
   <Link href="/tools/gainers-losers" className="hover:text-emerald-300">Gainers</Link>
@@ -26,7 +24,8 @@ export default function Header() {
   <Link href="/tradingview-scripts" className="hover:text-emerald-300">Scripts</Link>
   <Link href="/partners" className="hover:text-emerald-300">Partners</Link>
   <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
-        <nav>
-          {/* Removed Economics, ETF Explorer, and Custom from navigation */}
+      </nav>
+    </div>
+  </header>
   );
 }
