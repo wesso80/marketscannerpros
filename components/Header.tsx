@@ -19,6 +19,7 @@ export default function Header() {
   <Link href="/tools/company-overview" className="hover:text-emerald-300">Overview</Link>
   <Link href="/tools/news" className="hover:text-emerald-300">News</Link>
   <Link href="/tradingview-scripts" className="hover:text-emerald-300">Scripts</Link>
+  <Link href="/partners" className="hover:text-emerald-300">Partners</Link>
   <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
 </nav>
 
