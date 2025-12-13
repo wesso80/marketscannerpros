@@ -181,6 +181,8 @@ function ScannerContent() {
               {activeTab === "crypto" && (
                 <>
                   <option value="default">🚀 All 350+ Coinbase Pairs</option>
+                  <option value="top100">📊 Top 100 by Volume</option>
+                  <option value="top25">💎 Top 25 by Volume</option>
                 </>
               )}
               {activeTab === "forex" && (
