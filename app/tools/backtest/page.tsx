@@ -43,15 +43,7 @@ function BacktestContent() {
           }}>
             Portfolio
           </Link>
-          <Link href="/tools/alerts" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Alerts
-          </Link>
+
           <Link href="/tools/backtest" style={{
             padding: '10px 20px',
             color: '#10b981',
