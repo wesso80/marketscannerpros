@@ -1,6 +1,6 @@
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
-# - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
+# - Equities & Crypto via Alpha Vantage Premium (100% legal, no scraping)
 # - ATR-based position sizing
 # - Optional Email + Slack summaries
 # - CSV download
@@ -32,7 +32,7 @@ except:
 # ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
 # Import heavy dependencies only after health check
 try:
-    import pandas as pd, numpy as np, yfinance as yf, requests
+    import pandas as pd, numpy as np, requests
     import psycopg2
     from psycopg2.extras import RealDictCursor
     import psycopg2.extensions
@@ -2178,26 +2178,39 @@ def delete_alert(alert_id: int, workspace_id: Optional[str] = None) -> bool:
     return result is not None and result > 0
 
 def get_current_price(symbol: str) -> Optional[float]:
-    """Get current price for a symbol with fallback methods"""
+    """Get current price for a symbol using Alpha Vantage (no yfinance)"""
     try:
-        # Try fast_info first
-        ticker = yf.Ticker(symbol)
-        if hasattr(ticker, 'fast_info'):
-            fast_info = ticker.fast_info
-            price = fast_info.get('last_price') or fast_info.get('regularMarketPrice')
+        # Use Alpha Vantage GLOBAL_QUOTE for current price
+        params = {
+            "function": "GLOBAL_QUOTE",
+            "symbol": symbol.replace("-USD", "").upper(),
+            "apikey": ALPHA_VANTAGE_API_KEY
+        }
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if "Global Quote" in data and data["Global Quote"]:
+            price = data["Global Quote"].get("05. price")
             if price:
                 return float(price)
         
-        # Fallback to recent history
-        hist = ticker.history(period="1d", interval="1m")
-        if not hist.empty:
-            return float(hist['Close'].iloc[-1])
+        # Fallback: get latest close from TIME_SERIES_INTRADAY
+        params = {
+            "function": "TIME_SERIES_INTRADAY",
+            "symbol": symbol.replace("-USD", "").upper(),
+            "interval": "5min",
+            "apikey": ALPHA_VANTAGE_API_KEY
+        }
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+        data = response.json()
         
-        # Last resort: use info (slow but comprehensive)
-        info = ticker.info
-        price = info.get('currentPrice') or info.get('regularMarketPrice')
-        if price:
-            return float(price)
+        for key in data.keys():
+            if "Time Series" in key:
+                ts = data[key]
+                if ts:
+                    latest = next(iter(ts.values()))
+                    return float(latest.get("4. close", 0))
             
     except Exception as e:
         print(f"Error getting price for {symbol}: {e}")
@@ -2350,7 +2363,7 @@ def delete_watchlist(watchlist_id: int) -> bool:
     
     return result is not None
 
-# ================= Data Source (Alpha Vantage Premium + yfinance fallback) =================
+# ================= Data Source (Alpha Vantage Premium - 100% Legal) =================
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
 
 def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
@@ -2430,17 +2443,17 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, star
     return out
 
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-    # Try Alpha Vantage Premium first (works from cloud)
+    """Fetch OHLCV data using Alpha Vantage Premium exclusively (no yfinance)"""
     try:
         df = get_ohlcv_alpha_vantage(symbol, timeframe)
         if len(df) >= 10:
             print(f"✓ Alpha Vantage Premium: {symbol} ({len(df)} bars)")
             return df
+        else:
+            raise ValueError(f"Insufficient data: only {len(df)} bars")
     except Exception as e:
         print(f"Alpha Vantage failed for {symbol}: {e}")
-    
-    # Fallback to yfinance
-    return get_ohlcv_yf(symbol, timeframe, period, start, end)
+        raise ValueError(f"Failed to fetch data for {symbol}: {str(e)}")
 
 # ================= Indicators (pure pandas) =================
 def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
