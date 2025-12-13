@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
-
 interface Trade {
   date: string;
   symbol: string;
@@ -100,102 +98,6 @@ function generateStrategyResults(symbol: string, strategy: string, initialCapita
   }
   
   return trades.sort((a, b) => a.date.localeCompare(b.date));
-}
-      const returnPercent = ((closePrice - position.entry) / position.entry) * 100;
-      
-      trades.push({
-        date: position.date,
-        symbol: '',
-        side: 'LONG',
-        entry: position.entry,
-        exit: closePrice,
-        return: returnDollars,
-        returnPercent
-      });
-      position = null;
-    }
-  }
-
-  return trades;
-}
-
-function macdStrategy(prices: any, macd: any, capital: number): Trade[] {
-  const trades: Trade[] = [];
-  const dates = Object.keys(prices).sort();
-  let position: { entry: number; date: string } | null = null;
-
-  for (let i = 1; i < dates.length; i++) {
-    const date = dates[i];
-    const prevDate = dates[i - 1];
-    
-    if (!macd[date] || !macd[prevDate]) continue;
-
-    const macdLine = parseFloat(macd[date].MACD);
-    const signalLine = parseFloat(macd[date].MACD_Signal);
-    const prevMacd = parseFloat(macd[prevDate].MACD);
-    const prevSignal = parseFloat(macd[prevDate].MACD_Signal);
-    const closePrice = parseFloat(prices[date]['4. close']);
-
-    // Bullish crossover - MACD crosses above signal
-    if (!position && prevMacd <= prevSignal && macdLine > signalLine) {
-      position = { entry: closePrice, date };
-    }
-    // Bearish crossover - MACD crosses below signal
-    else if (position && prevMacd >= prevSignal && macdLine < signalLine) {
-      const returnDollars = (closePrice - position.entry) * (capital / position.entry);
-      const returnPercent = ((closePrice - position.entry) / position.entry) * 100;
-      
-      trades.push({
-        date: position.date,
-        symbol: '',
-        side: 'LONG',
-        entry: position.entry,
-        exit: closePrice,
-        return: returnDollars,
-        returnPercent
-      });
-      position = null;
-    }
-  }
-
-  return trades;
-}
-
-function bbandsStrategy(prices: any, bbands: any, capital: number): Trade[] {
-  const trades: Trade[] = [];
-  const dates = Object.keys(prices).sort();
-  let position: { entry: number; date: string } | null = null;
-
-  for (const date of dates) {
-    if (!bbands[date]) continue;
-
-    const closePrice = parseFloat(prices[date]['4. close']);
-    const lowerBand = parseFloat(bbands[date]['Real Lower Band']);
-    const upperBand = parseFloat(bbands[date]['Real Upper Band']);
-
-    // Buy when price touches lower band
-    if (!position && closePrice <= lowerBand) {
-      position = { entry: closePrice, date };
-    }
-    // Sell when price touches upper band
-    else if (position && closePrice >= upperBand) {
-      const returnDollars = (closePrice - position.entry) * (capital / position.entry);
-      const returnPercent = ((closePrice - position.entry) / position.entry) * 100;
-      
-      trades.push({
-        date: position.date,
-        symbol: '',
-        side: 'LONG',
-        entry: position.entry,
-        exit: closePrice,
-        return: returnDollars,
-        returnPercent
-      });
-      position = null;
-    }
-  }
-
-  return trades;
 }
 
 export async function POST(req: NextRequest) {
