@@ -28,6 +28,7 @@ export default function OptionsScanner() {
   const [loading, setLoading] = useState<boolean>(false);
   const [results, setResults] = useState<OptionResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [rawApiResponse, setRawApiResponse] = useState<any>(null);
   const [customSymbols, setCustomSymbols] = useState<string>("");
   const [useCustom, setUseCustom] = useState<boolean>(false);
 
@@ -41,63 +42,74 @@ export default function OptionsScanner() {
     setError(null);
     setResults([]);
 
+
     const symbol = customSymbols.trim().split(',')[0].trim().toUpperCase();
 
     try {
       // Call Alpha Vantage REALTIME_OPTIONS API directly
-      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY || 'demo';
+      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY || '';
+      if (!apiKey || apiKey === 'demo') {
+        setError("Alpha Vantage API key is missing or set to 'demo'. Please set NEXT_PUBLIC_ALPHA_VANTAGE_KEY in your environment.");
+        setLoading(false);
+        return;
+      }
       const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${apiKey}`;
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`);
       }
 
       const data = await response.json();
-      
+      setRawApiResponse(data);
+
       if (data["Error Message"]) {
         throw new Error(data["Error Message"]);
       }
-      
+
       if (data["Note"]) {
         setError(data["Note"]);
         return;
       }
-      
+
       if (data.data && Array.isArray(data.data)) {
+        // Filter out obviously invalid rows
         const parsedOptions: OptionResult[] = data.data
           .map((opt: any) => ({
             symbol: opt.underlying_symbol || symbol,
             contract_id: opt.contractID || '',
             type: (opt.type || '').toUpperCase() as "CALL" | "PUT",
-            strike: parseFloat(opt.strike) || 0,
+            strike: parseFloat(opt.strike),
             expiration: opt.expiration || '',
             dte: opt.days_until_expiration ? parseInt(opt.days_until_expiration) : 0,
-            last_price: parseFloat(opt.last) || 0,
-            bid: parseFloat(opt.bid) || 0,
-            ask: parseFloat(opt.ask) || 0,
-            volume: parseInt(opt.volume) || 0,
-            open_interest: parseInt(opt.open_interest) || 0,
-            implied_volatility: parseFloat(opt.implied_volatility) * 100 || 0,
-            delta: parseFloat(opt.delta) || 0,
-            gamma: parseFloat(opt.gamma) || 0,
-            theta: parseFloat(opt.theta) || 0,
-            vega: parseFloat(opt.vega) || 0,
+            last_price: parseFloat(opt.last),
+            bid: parseFloat(opt.bid),
+            ask: parseFloat(opt.ask),
+            volume: parseInt(opt.volume),
+            open_interest: parseInt(opt.open_interest),
+            implied_volatility: opt.implied_volatility ? parseFloat(opt.implied_volatility) * 100 : undefined,
+            delta: opt.delta ? parseFloat(opt.delta) : undefined,
+            gamma: opt.gamma ? parseFloat(opt.gamma) : undefined,
+            theta: opt.theta ? parseFloat(opt.theta) : undefined,
+            vega: opt.vega ? parseFloat(opt.vega) : undefined,
             score: 0,
           }))
           .filter((opt: OptionResult) => {
+            // Only show plausible options
+            if (!opt.strike || opt.strike <= 0) return false;
+            if (!opt.expiration || !/^\d{4}-\d{2}-\d{2}$/.test(opt.expiration)) return false;
             if (contractType !== "both" && opt.type !== contractType.toUpperCase()) return false;
             return true;
           });
 
         setResults(parsedOptions);
-        
+
         if (parsedOptions.length === 0) {
-          setError("No options found for this symbol.");
+          setError("No valid options found for this symbol. (See raw API response below)");
         }
       } else {
-        setError("No options data available.");
+        setError("No options data available. (See raw API response below)");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch options");
@@ -292,30 +304,47 @@ export default function OptionsScanner() {
                         {result.type}
                       </td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                        ${result.strike.toFixed(2)}
+                        ${result.strike?.toFixed(2) ?? "-"}
                       </td>
                       <td style={{ padding: "1rem", color: "#94A3B8" }}>{result.expiration}</td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>{result.dte}d</td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                        ${result.bid.toFixed(2)} / ${result.ask.toFixed(2)}
+                        ${result.bid?.toFixed(2) ?? "-"} / ${result.ask?.toFixed(2) ?? "-"}
                       </td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                        {result.volume.toLocaleString()}
+                        {result.volume?.toLocaleString() ?? "-"}
                       </td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                        {result.open_interest.toLocaleString()}
+                        {result.open_interest?.toLocaleString() ?? "-"}
                       </td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                        {result.implied_volatility}%
+                        {result.implied_volatility !== undefined ? `${result.implied_volatility.toFixed(2)}%` : "-"}
                       </td>
                       <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                        {result.delta.toFixed(3)}
+                        {result.delta !== undefined ? result.delta.toFixed(3) : "-"}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Raw API response for debugging */}
+        {error && rawApiResponse && (
+          <div style={{
+            marginTop: "2rem",
+            background: "#1e293b",
+            color: "#f87171",
+            padding: "1rem",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
+            overflowX: "auto",
+            maxHeight: "300px"
+          }}>
+            <strong>Raw Alpha Vantage API response:</strong>
+            <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>{JSON.stringify(rawApiResponse, null, 2)}</pre>
           </div>
         )}
       </div>
