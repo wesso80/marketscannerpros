@@ -19,36 +19,73 @@ export default function PricingPage() {
     window.location.href = '/auth/login?plan=pro';
   };
 
+  const handleProTraderCheckout = async () => {
+    setLoading('pro_trader');
+    window.location.href = '/auth/login?plan=pro_trader';
+  };
+
   const freeFeatures = [
-    "Core market scanner",
-    "Multi-timeframe analysis",
-    "Portfolio tracker",
+    "Top 10 equities + Top 10 crypto",
+    "Multi-timeframe scanning",
+    "MSP Analyst AI (5 questions/day)",
+    "AI market insights & explanations",
+    "Basic portfolio tracker",
     "Trade journal",
-    "CSV exports"
+    "Community support"
   ];
 
   const proFeatures = [
     "Everything in Free",
-    "Unlimited symbols",
+    "Unlimited symbols scanning",
+    "MSP Analyst AI (50 questions/day)",
+    "AI-powered trade recommendations",
+    "AI technical analysis explanations",
+    "Multi-timeframe confluence",
     "Advanced technical charts",
+    "Portfolio tracker with P&L",
+    "CSV exports (all tools)",
     "Price alerts & notifications",
-    "Strategy backtesting",
-    "TradingView integration",
     "Priority support"
+  ];
+
+  const proTraderFeatures = [
+    "Everything in Pro",
+    "MSP Analyst AI (Unlimited questions)",
+    "AI-powered backtest analysis",
+    "AI strategy optimization suggestions",
+    "Real Alpha Vantage backtesting",
+    "Advanced strategy testing",
+    "TradingView script access",
+    "Priority email alerts",
+    "Advanced chart indicators",
+    "Psychology tracking in journal",
+    "Premium support"
   ];
 
   const faqs = [
     {
-      q: "How do I upgrade to Pro?",
-      a: "Click \"Upgrade to Pro\" above. You'll create an account with your email, then complete secure payment. Access is instant across web and mobile apps."
+      q: "What is MSP Analyst AI?",
+      a: "MSP Analyst is your personal AI trading assistant powered by OpenAI GPT-4. Ask questions about market conditions, get technical analysis explanations, request trade ideas, and receive personalized insights based on your scans. Free tier gets 5 questions/day, Pro gets 50/day, Pro Trader gets unlimited."
+    },
+    {
+      q: "What's the difference between Pro and Pro Trader?",
+      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds unlimited AI questions, real Alpha Vantage backtesting with actual market data, TradingView script access, and advanced indicators - essential tools for serious technical traders."
+    },
+    {
+      q: "How do I upgrade?",
+      a: "Click \"Upgrade to Pro\" or \"Upgrade to Pro Trader\" above. You'll create an account with your email, then complete secure payment through Stripe. Access is instant across all devices."
     },
     {
       q: "Can I cancel anytime?",
-      a: "Yes! Cancel anytime from your account settings. You'll keep Pro access until the end of your billing period."
+      a: "Yes! Cancel anytime from your account settings. You'll keep access until the end of your billing period. No questions asked."
+    },
+    {
+      q: "Why did pricing increase?",
+      a: "We now use real Alpha Vantage premium data for backtesting (not simulated), professional hosting infrastructure, and added features like the trade journal with psychology tracking. The new pricing reflects these real costs while keeping it affordable."
     },
     {
       q: "Do you offer refunds?",
-      a: "We offer a 7-day money-back guarantee. If you're not satisfied, contact support for a full refund."
+      a: "We offer a 7-day money-back guarantee. If you're not satisfied with Pro or Pro Trader, contact support for a full refund - no questions asked."
     }
   ];
 
@@ -100,9 +137,9 @@ export default function PricingPage() {
         {/* Pricing Cards */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 24,
-          maxWidth: 800,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 20,
+          maxWidth: 1000,
           margin: '0 auto 60px'
         }}>
           {/* Free Tier */}
@@ -191,11 +228,11 @@ export default function PricingPage() {
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
             <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 42, fontWeight: 700 }}>$4.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700 }}>$9.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af', marginLeft: 8 }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or $39.99/year <span style={{ color: '#22c55e' }}>(save 33%)</span>
+              or $99.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -235,6 +272,63 @@ export default function PricingPage() {
             </button>
             <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, marginTop: 12 }}>
               Secure payment • Cancel anytime
+            </p>
+          </div>
+
+          {/* Pro Trader Tier */}
+          <div style={{
+            background: 'linear-gradient(145deg, #0f172a, #020617)',
+            borderRadius: 18,
+            border: '1px solid rgba(59,130,246,0.3)',
+            boxShadow: '0 18px 45px rgba(0,0,0,0.75), 0 0 30px rgba(59,130,246,0.08)',
+            padding: '32px 28px'
+          }}>
+            <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontSize: 42, fontWeight: 700 }}>$19.99</span>
+              <span style={{ fontSize: 16, color: '#9ca3af', marginLeft: 8 }}>/ month</span>
+            </div>
+            <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
+              or $199.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+            </div>
+            
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
+              {proTraderFeatures.map((item, i) => (
+                <li key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 0',
+                  borderBottom: i < proTraderFeatures.length - 1 ? '1px solid rgba(15,23,42,0.85)' : 'none',
+                  fontSize: 15
+                }}>
+                  <span style={{ color: '#60a5fa', fontSize: 18 }}>✓</span>
+                  <span style={{ color: '#e5e7eb' }}>{item}</span>
+                </li>
+              ))}
+            </ul>
+            
+            <button
+              onClick={handleProTraderCheckout}
+              disabled={loading === 'pro_trader'}
+              style={{
+                width: '100%',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                color: '#fff',
+                padding: '16px 24px',
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(59,130,246,0.3)',
+                opacity: loading === 'pro_trader' ? 0.6 : 1
+              }}
+            >
+              {loading === 'pro_trader' ? 'Processing...' : 'Upgrade to Pro Trader'}
+            </button>
+            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, marginTop: 12 }}>
+              For serious traders • Cancel anytime
             </p>
           </div>
         </div>
