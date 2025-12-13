@@ -1,6 +1,9 @@
-"use client";
 
+"use client";
 import React, { useState } from "react";
+
+// Read the API key at build time so it is always available in the client bundle
+const ALPHA_VANTAGE_KEY = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY || '';
 
 interface OptionResult {
   symbol: string;
@@ -47,13 +50,12 @@ export default function OptionsScanner() {
 
     try {
       // Call Alpha Vantage REALTIME_OPTIONS API directly
-      const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_KEY || '';
-      if (!apiKey || apiKey === 'demo') {
+      if (!ALPHA_VANTAGE_KEY || ALPHA_VANTAGE_KEY === 'demo') {
         setError("Alpha Vantage API key is missing or set to 'demo'. Please set NEXT_PUBLIC_ALPHA_VANTAGE_KEY in your environment.");
         setLoading(false);
         return;
       }
-      const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${apiKey}`;
+      const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
 
       const response = await fetch(url);
 
