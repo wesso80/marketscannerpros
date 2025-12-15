@@ -4,7 +4,10 @@ import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Helper function to create OpenAI client at runtime
+function getOpenAIClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 type Candidate = {
   assetClass: "equity" | "crypto" | "commodity";
@@ -80,6 +83,9 @@ Next Steps (How to use on MSP):
 
 async function generateExplanation(c: Candidate): Promise<string> {
   const input = buildMSPPrompt(c);
+  
+  // Initialize client at runtime
+  const client = getOpenAIClient();
 
   const resp = await client.responses.create({
     // Use whatever model you have provisioned; Responses API is the recommended API.
