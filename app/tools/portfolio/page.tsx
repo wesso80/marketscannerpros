@@ -1,19 +1,113 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+
+interface Position {
+  id: number;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  quantity: number;
+  entryPrice: number;
+  currentPrice: number;
+  pl: number;
+  plPercent: number;
+  entryDate: string;
+}
+
+interface ClosedPosition extends Position {
+  closeDate: string;
+  closePrice: number;
+  realizedPL: number;
+}
+
+interface PerformanceSnapshot {
+  timestamp: string;
+  totalValue: number;
+  totalPL: number;
+}
 
 function PortfolioContent() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [positions, setPositions] = useState<any[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
+  const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPosition, setNewPosition] = useState({
     symbol: '',
-    side: 'LONG',
+    side: 'LONG' as 'LONG' | 'SHORT',
     quantity: '',
     entryPrice: '',
     currentPrice: ''
   });
+
+  // Load positions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('portfolio_positions');
+    const savedClosed = localStorage.getItem('portfolio_closed');
+    const savedPerformance = localStorage.getItem('portfolio_performance');
+    if (saved) {
+      try {
+        setPositions(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load positions');
+      }
+    }
+    if (savedClosed) {
+      try {
+        setClosedPositions(JSON.parse(savedClosed));
+      } catch (e) {
+        console.error('Failed to load closed positions');
+      }
+    }
+    if (savedPerformance) {
+      try {
+        setPerformanceHistory(JSON.parse(savedPerformance));
+      } catch (e) {
+        console.error('Failed to load performance history');
+      }
+    }
+  }, []);
+
+  // Save positions to localStorage whenever they change
+  useEffect(() => {
+    if (positions.length > 0) {
+      localStorage.setItem('portfolio_positions', JSON.stringify(positions));
+    }
+  }, [positions]);
+
+  useEffect(() => {
+    if (closedPositions.length > 0) {
+      localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
+    }
+  }, [closedPositions]);
+
+  // Track performance snapshots when portfolio changes
+  useEffect(() => {
+    if (positions.length > 0 || closedPositions.length > 0) {
+      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+      const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
+      const totalPL = unrealizedPL + realizedPL;
+
+      // Add snapshot once per day max
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const lastSnapshot = performanceHistory[performanceHistory.length - 1];
+      const lastDate = lastSnapshot ? new Date(lastSnapshot.timestamp).toISOString().split('T')[0] : null;
+
+      if (lastDate !== today) {
+        const newSnapshot: PerformanceSnapshot = {
+          timestamp: now.toISOString(),
+          totalValue,
+          totalPL
+        };
+        const updated = [...performanceHistory, newSnapshot];
+        setPerformanceHistory(updated);
+        localStorage.setItem('portfolio_performance', JSON.stringify(updated));
+      }
+    }
+  }, [positions, closedPositions]);
 
   const addPosition = () => {
     if (!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice) {
@@ -30,7 +124,7 @@ function PortfolioContent() {
       : (entry - current) * qty;
     const plPercent = ((pl / (entry * qty)) * 100);
 
-    const position = {
+    const position: Position = {
       id: Date.now(),
       symbol: newPosition.symbol.toUpperCase(),
       side: newPosition.side,
@@ -38,7 +132,8 @@ function PortfolioContent() {
       entryPrice: entry,
       currentPrice: current,
       pl: pl,
-      plPercent: plPercent
+      plPercent: plPercent,
+      entryDate: new Date().toISOString()
     };
 
     setPositions([...positions, position]);
@@ -47,13 +142,116 @@ function PortfolioContent() {
   };
 
   const closePosition = (id: number) => {
+    const position = positions.find(p => p.id === id);
+    if (!position) return;
+
+    const closedPos: ClosedPosition = {
+      ...position,
+      closeDate: new Date().toISOString(),
+      closePrice: position.currentPrice,
+      realizedPL: position.pl
+    };
+
+    setClosedPositions([...closedPositions, closedPos]);
     setPositions(positions.filter(p => p.id !== id));
+  };
+
+  const updatePrice = (id: number, newPrice: number) => {
+    setPositions(positions.map(p => {
+      if (p.id === id) {
+        const pl = p.side === 'LONG' 
+          ? (newPrice - p.entryPrice) * p.quantity 
+          : (p.entryPrice - newPrice) * p.quantity;
+        const plPercent = ((pl / (p.entryPrice * p.quantity)) * 100);
+        
+        return {
+          ...p,
+          currentPrice: newPrice,
+          pl,
+          plPercent
+        };
+      }
+      return p;
+    }));
+  };
+
+  const clearAllData = () => {
+    if (confirm('Are you sure you want to clear all portfolio data? This cannot be undone.')) {
+      setPositions([]);
+      setClosedPositions([]);
+      setPerformanceHistory([]);
+      localStorage.removeItem('portfolio_positions');
+      localStorage.removeItem('portfolio_closed');
+      localStorage.removeItem('portfolio_performance');
+    }
+  };
+
+  const exportPositionsToCSV = () => {
+    if (positions.length === 0) {
+      alert('No open positions to export');
+      return;
+    }
+
+    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Current Price', 'P&L', 'P&L %', 'Entry Date'];
+    const rows = positions.map(p => [
+      p.symbol,
+      p.side,
+      p.quantity,
+      p.entryPrice.toFixed(2),
+      p.currentPrice.toFixed(2),
+      p.pl.toFixed(2),
+      p.plPercent.toFixed(2),
+      new Date(p.entryDate).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `portfolio-positions-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportHistoryToCSV = () => {
+    if (closedPositions.length === 0) {
+      alert('No trade history to export');
+      return;
+    }
+
+    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Close Price', 'Realized P&L', 'Entry Date', 'Close Date'];
+    const rows = closedPositions.map(p => [
+      p.symbol,
+      p.side,
+      p.quantity,
+      p.entryPrice.toFixed(2),
+      p.closePrice.toFixed(2),
+      p.realizedPL.toFixed(2),
+      new Date(p.entryDate).toLocaleDateString(),
+      new Date(p.closeDate).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `portfolio-history-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Calculate metrics
   const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const totalCost = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
   const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
+  const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
+  const totalPL = unrealizedPL + realizedPL;
   const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
   const numPositions = positions.length;
 
@@ -69,8 +267,8 @@ function PortfolioContent() {
     { label: 'Total Market Value', value: `$${totalValue.toFixed(2)}` },
     { label: 'Total Cost Basis', value: `$${totalCost.toFixed(2)}` },
     { label: 'Unrealized P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
-    { label: 'Realized P&L', value: '$0.00' },
-    { label: 'Total P&L', value: `$${unrealizedPL >= 0 ? '' : '-'}${Math.abs(unrealizedPL).toFixed(2)}` },
+    { label: 'Realized P&L', value: `$${realizedPL >= 0 ? '' : '-'}${Math.abs(realizedPL).toFixed(2)}` },
+    { label: 'Total P&L', value: `$${totalPL >= 0 ? '' : '-'}${Math.abs(totalPL).toFixed(2)}` },
     { label: 'Total Return %', value: `${totalReturn.toFixed(2)}%` },
     { label: 'Number of Positions', value: numPositions.toString() }
   ];
@@ -82,15 +280,27 @@ function PortfolioContent() {
     <div style={{ 
       minHeight: '100vh', 
       background: '#1e293b',
-      padding: '0'
+      padding: '0',
+      width: '100%',
     }}>
       {/* Header */}
       <div style={{ 
         background: '#0f172a', 
         borderBottom: '1px solid #334155',
-        padding: '16px 24px'
+        padding: '16px 24px',
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        <div
+          style={{
+            maxWidth: '1600px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            rowGap: 16,
+            flexDirection: 'row',
+          }}
+        >
           <h1 style={{ 
             fontSize: '24px', 
             fontWeight: '700', 
@@ -98,10 +308,86 @@ function PortfolioContent() {
             margin: '0',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            flex: '1 1 100%',
+            minWidth: 220,
           }}>
             📊 Portfolio Tracking
           </h1>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              flex: '1 1 100%',
+              minWidth: 220,
+              marginTop: 12,
+            }}
+          >
+            {positions.length > 0 && (
+              <button
+                onClick={exportPositionsToCSV}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #10b981',
+                  borderRadius: '6px',
+                  color: '#10b981',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📥 Export Positions
+              </button>
+            )}
+            {closedPositions.length > 0 && (
+              <button
+                onClick={exportHistoryToCSV}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  color: '#3b82f6',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                📥 Export History
+              </button>
+            )}
+            {(positions.length > 0 || closedPositions.length > 0) && (
+              <button
+                onClick={clearAllData}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid #ef4444',
+                  borderRadius: '6px',
+                  color: '#ef4444',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#ef4444';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#ef4444';
+                }}
+              >
+                🗑️ Clear All Data
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -109,9 +395,19 @@ function PortfolioContent() {
       <div style={{ 
         background: '#0f172a',
         padding: '20px 24px',
-        borderBottom: '1px solid #334155'
+        borderBottom: '1px solid #334155',
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            maxWidth: '1600px',
+            margin: '0 auto',
+            display: 'flex',
+            gap: '40px',
+            flexWrap: 'wrap',
+            flexDirection: 'row',
+            rowGap: 24,
+          }}
+        >
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Market Value</div>
             <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
@@ -261,7 +557,7 @@ function PortfolioContent() {
               )}
             </div>
 
-            {/* Performance Chart Placeholder */}
+            {/* Performance Chart */}
             <div style={{ 
               background: '#0f172a',
               border: '1px solid #334155',
@@ -273,18 +569,142 @@ function PortfolioContent() {
               </h2>
               <div style={{ 
                 height: '250px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                position: 'relative',
                 background: '#1e293b',
                 borderRadius: '8px',
-                color: '#64748b'
+                padding: '20px'
               }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
-                  <div>Performance chart coming soon</div>
-                  <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance</div>
-                </div>
+                {performanceHistory.length > 0 ? (
+                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                    {(() => {
+                      const width = 800;
+                      const height = 210;
+                      const padding = { top: 20, right: 20, bottom: 30, left: 60 };
+                      const chartWidth = width - padding.left - padding.right;
+                      const chartHeight = height - padding.top - padding.bottom;
+
+                      // Get min/max values for scaling
+                      const values = performanceHistory.map(s => s.totalValue);
+                      const minValue = Math.min(...values, 0);
+                      const maxValue = Math.max(...values);
+                      const valueRange = maxValue - minValue || 1;
+
+                      // Scale functions
+                      const scaleX = (index: number) => padding.left + (index / Math.max(performanceHistory.length - 1, 1)) * chartWidth;
+                      const scaleY = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+
+                      // Generate path
+                      const pathData = performanceHistory.map((snapshot, i) => {
+                        const x = scaleX(i);
+                        const y = scaleY(snapshot.totalValue);
+                        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                      }).join(' ');
+
+                      // Generate gradient path (area under curve)
+                      const gradientPath = pathData + ` L ${scaleX(performanceHistory.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
+
+                      return (
+                        <g>
+                          {/* Gradient definition */}
+                          <defs>
+                            <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Grid lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const y = padding.top + chartHeight * ratio;
+                            const value = maxValue - (valueRange * ratio);
+                            return (
+                              <g key={i}>
+                                <line
+                                  x1={padding.left}
+                                  y1={y}
+                                  x2={padding.left + chartWidth}
+                                  y2={y}
+                                  stroke="#334155"
+                                  strokeWidth="1"
+                                  strokeDasharray="4,4"
+                                />
+                                <text
+                                  x={padding.left - 10}
+                                  y={y + 4}
+                                  fill="#64748b"
+                                  fontSize="11"
+                                  textAnchor="end"
+                                >
+                                  ${value.toFixed(0)}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Area under curve */}
+                          <path
+                            d={gradientPath}
+                            fill="url(#performanceGradient)"
+                          />
+
+                          {/* Main line */}
+                          <path
+                            d={pathData}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="2.5"
+                          />
+
+                          {/* Data points */}
+                          {performanceHistory.map((snapshot, i) => (
+                            <circle
+                              key={i}
+                              cx={scaleX(i)}
+                              cy={scaleY(snapshot.totalValue)}
+                              r="4"
+                              fill="#10b981"
+                              stroke="#0f172a"
+                              strokeWidth="2"
+                            />
+                          ))}
+
+                          {/* X-axis labels */}
+                          {performanceHistory.map((snapshot, i) => {
+                            if (performanceHistory.length > 10 && i % Math.ceil(performanceHistory.length / 6) !== 0) return null;
+                            const date = new Date(snapshot.timestamp);
+                            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            return (
+                              <text
+                                key={`label-${i}`}
+                                x={scaleX(i)}
+                                y={padding.top + chartHeight + 20}
+                                fill="#64748b"
+                                fontSize="10"
+                                textAnchor="middle"
+                              >
+                                {label}
+                              </text>
+                            );
+                          })}
+                        </g>
+                      );
+                    })()}
+                  </svg>
+                ) : (
+                  <div style={{ 
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#64748b'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
+                      <div>Performance chart coming soon</div>
+                      <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance over time</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -374,7 +794,7 @@ function PortfolioContent() {
                 </label>
                 <select
                   value={newPosition.side}
-                  onChange={(e) => setNewPosition({...newPosition, side: e.target.value})}
+                  onChange={(e) => setNewPosition({...newPosition, side: e.target.value as 'LONG' | 'SHORT'})}
                   style={{
                     width: '100%',
                     padding: '12px',
@@ -490,21 +910,46 @@ function PortfolioContent() {
               <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
                 💼 Holdings
               </h2>
-              <button
-                onClick={() => setActiveTab('add position')}
-                style={{
-                  padding: '8px 16px',
-                  background: '#10b981',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                ➕ UPDATE PRICES
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    // Bulk price update - prompt for each position
+                    positions.forEach(position => {
+                      const newPrice = prompt(`Update price for ${position.symbol}:`, position.currentPrice.toString());
+                      if (newPrice && !isNaN(parseFloat(newPrice))) {
+                        updatePrice(position.id, parseFloat(newPrice));
+                      }
+                    });
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#10b981',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 UPDATE ALL PRICES
+                </button>
+                <button
+                  onClick={() => setActiveTab('add position')}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#3b82f6',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ➕ ADD POSITION
+                </button>
+              </div>
             </div>
             {positions.length === 0 ? (
               <div style={{ 
@@ -579,8 +1024,29 @@ function PortfolioContent() {
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
                           ${position.entryPrice.toFixed(2)}
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
-                          ${position.currentPrice.toFixed(2)}
+                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={position.currentPrice}
+                            onChange={(e) => {
+                              const newPrice = parseFloat(e.target.value);
+                              if (!isNaN(newPrice)) {
+                                updatePrice(position.id, newPrice);
+                              }
+                            }}
+                            style={{
+                              width: '100px',
+                              padding: '6px 10px',
+                              background: '#1e293b',
+                              border: '1px solid #334155',
+                              borderRadius: '4px',
+                              color: '#f1f5f9',
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              textAlign: 'right'
+                            }}
+                          />
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
                           ${(position.currentPrice * position.quantity).toFixed(2)}
@@ -630,6 +1096,116 @@ function PortfolioContent() {
         )}
 
         {activeTab === 'history' && (
+          <div style={{
+            background: '#0f172a',
+            border: '1px solid #334155',
+            borderRadius: '8px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              padding: '20px 24px',
+              borderBottom: '1px solid #334155'
+            }}>
+              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
+                📜 Trade History
+              </h2>
+            </div>
+            {closedPositions.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '80px 20px',
+                color: '#64748b'
+              }}>
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>📜</div>
+                <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
+                  No closed positions yet
+                </div>
+                <div style={{ fontSize: '14px' }}>
+                  Your closed trades will appear here
+                </div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Price</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Date</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Date</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Realized P&L</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Return %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closedPositions.map((position) => (
+                      <tr 
+                        key={position.id}
+                        style={{ borderBottom: '1px solid #334155' }}
+                      >
+                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
+                          {position.symbol}
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: position.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: position.side === 'LONG' ? '#10b981' : '#ef4444',
+                            border: `1px solid ${position.side === 'LONG' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+                          }}>
+                            {position.side}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
+                          {position.quantity}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
+                          ${position.entryPrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
+                          ${position.closePrice.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                          {new Date(position.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
+                          {new Date(position.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.realizedPL >= 0 ? '+' : ''}${position.realizedPL.toFixed(2)}
+                        </td>
+                        <td style={{ 
+                          padding: '16px 20px', 
+                          textAlign: 'right', 
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {position.realizedPL >= 0 ? '+' : ''}{((position.realizedPL / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Performance Chart placeholder section */}
+        {activeTab === 'overview' && positions.length > 0 && (
           <div style={{
             background: '#0f172a',
             border: '1px solid #334155',

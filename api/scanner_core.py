@@ -8,6 +8,8 @@ import yfinance as yf
 import requests
 from typing import List, Dict, Tuple, Optional
 from math import floor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 import os
 from datetime import datetime, timedelta
 
@@ -84,53 +86,156 @@ def get_ohlcv_finnhub(symbol: str, timeframe: str) -> pd.DataFrame:
         raise ValueError(f"Finnhub fetch failed: {str(e)}")
 
 # ================= Data Fetching =================
-def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
+def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False, is_forex: bool = False) -> pd.DataFrame:
     """Fetch OHLCV data from Alpha Vantage"""
     base_url = "https://www.alphavantage.co/query"
     
-    # For crypto, use DIGITAL_CURRENCY endpoint
+    # For Forex (e.g., EURUSD -> EUR/USD)
+    if is_forex:
+        # Convert EURUSD format to EUR and USD
+        if len(symbol) == 6:
+            from_symbol = symbol[:3]
+            to_symbol = symbol[3:]
+        else:
+            raise ValueError(f"Invalid forex symbol format: {symbol} (should be like EURUSD)")
+        
+        # Only daily supported for now
+        if timeframe == "1d":
+            params = {
+                "function": "FX_DAILY",
+                "from_symbol": from_symbol,
+                "to_symbol": to_symbol,
+                "outputsize": "full",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series = data.get("Time Series FX (Daily)", {})
+            if not time_series:
+                raise ValueError(f"No forex data. Response keys: {list(data.keys())}")
+            
+            # Parse forex data
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1. open']),
+                    'high': float(values['2. high']),
+                    'low': float(values['3. low']),
+                    'close': float(values['4. close']),
+                    'volume': 0  # Forex doesn't have volume
+                })
+            
+            df = pd.DataFrame(df_data).sort_values('timestamp').set_index('timestamp')
+            return df
+        else:
+            raise ValueError(f"Forex only supports daily data currently, got: {timeframe}")
+    
+    # For crypto
     if is_crypto:
-        # DIGITAL_CURRENCY_DAILY only (no intraday)
+        clean_symbol = symbol.replace("-USD", "").replace("-", "")
+        
+        # For 1d, use DIGITAL_CURRENCY_DAILY (more reliable, more history)
+        if timeframe == "1d":
+            params = {
+                "function": "DIGITAL_CURRENCY_DAILY",
+                "symbol": clean_symbol,
+                "market": "USD",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series = data.get("Time Series (Digital Currency Daily)", {})
+            if not time_series:
+                raise ValueError(f"No crypto daily data. Response keys: {list(data.keys())}")
+            
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1a. open (USD)']),
+                    'high': float(values['2a. high (USD)']),
+                    'low': float(values['3a. low (USD)']),
+                    'close': float(values['4a. close (USD)']),
+                    'volume': float(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df = df.sort_values('timestamp').set_index('timestamp')
+            return df
+        
+        # Use CRYPTO_INTRADAY for all intraday timeframes
         if timeframe != "1d":
-            raise ValueError("Alpha Vantage crypto only supports daily data")
-        
-        params = {
-            "function": "DIGITAL_CURRENCY_DAILY",
-            "symbol": symbol.replace("-USD", "").replace("-", ""),  # Clean symbol
-            "market": "USD",
-            "apikey": ALPHA_VANTAGE_API_KEY,
-            "datatype": "json"
-        }
-        
-        print(f"Fetching crypto {symbol} with params: {params}")
-        response = requests.get(base_url, params=params, timeout=10)
-        data = response.json()
-        
-        if "Error Message" in data:
-            raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
-        
-        if "Note" in data:
-            raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
-        
-        time_series = data.get("Time Series (Digital Currency Daily)", {})
-        if not time_series:
-            raise ValueError(f"No crypto time series data. Response keys: {list(data.keys())}")
-        
-        # Parse crypto data
-        df_data = []
-        for timestamp, values in time_series.items():
-            df_data.append({
-                'timestamp': pd.to_datetime(timestamp),
-                'open': float(values['1. open']),
-                'high': float(values['2. high']),
-                'low': float(values['3. low']),
-                'close': float(values['4. close']),
-                'volume': float(values['5. volume'])
-            })
-        
-        df = pd.DataFrame(df_data)
-        df = df.sort_values('timestamp').set_index('timestamp')
-        return df
+            # Map timeframe to Alpha Vantage interval
+            interval_map = {
+                "1m": "1min",
+                "5m": "5min",
+                "15m": "15min",
+                "30m": "30min",
+                "1h": "60min",
+            }
+            interval = interval_map.get(timeframe)
+            
+            if not interval:
+                raise ValueError(f"Crypto timeframe {timeframe} not supported by Alpha Vantage")
+            
+            params = {
+                "function": "CRYPTO_INTRADAY",
+                "symbol": clean_symbol,
+                "market": "USD",
+                "interval": interval,
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "outputsize": "full",
+                "datatype": "json"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            data = response.json()
+            
+            if "Error Message" in data:
+                raise ValueError(f"Alpha Vantage error: {data['Error Message']}")
+            
+            if "Note" in data:
+                raise ValueError(f"Alpha Vantage rate limit: {data['Note']}")
+            
+            time_series_key = f"Time Series Crypto ({interval})"
+            time_series = data.get(time_series_key, {})
+            if not time_series:
+                raise ValueError(f"No crypto intraday data. Response keys: {list(data.keys())}")
+            
+            # Parse intraday crypto data
+            df_data = []
+            for timestamp, values in time_series.items():
+                df_data.append({
+                    'timestamp': pd.to_datetime(timestamp),
+                    'open': float(values['1. open']),
+                    'high': float(values['2. high']),
+                    'low': float(values['3. low']),
+                    'close': float(values['4. close']),
+                    'volume': float(values['5. volume'])
+                })
+            
+            df = pd.DataFrame(df_data)
+            df = df.sort_values('timestamp').set_index('timestamp')
+            return df
     
     # For stocks, use regular TIME_SERIES endpoint
     if timeframe == "1d":
@@ -139,9 +244,11 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: bool = False
     else:
         function = "TIME_SERIES_INTRADAY"
         interval_map = {
+            "1m": "1min",
+            "5m": "5min",
             "15m": "15min",
+            "30m": "30min",
             "1h": "60min",
-            "4h": "60min",
         }
         interval = interval_map.get(timeframe, "60min")
     
@@ -272,28 +379,46 @@ def get_ohlcv_yfinance(symbol: str, timeframe: str) -> pd.DataFrame:
     except Exception as e:
         raise ValueError(f"yfinance fetch failed: {str(e)}")
 
-def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False) -> pd.DataFrame:
+def get_ohlcv(symbol: str, timeframe: str, is_crypto: bool = False, is_forex: bool = False) -> pd.DataFrame:
     """
-    Fetch OHLCV data - Use PREMIUM Alpha Vantage (75 calls/min, works from cloud)
+    SMART data fetching:
+    - FOREX: Alpha Vantage ONLY (FX_DAILY)
+    - CRYPTO: Alpha Vantage FIRST (reliable, you're paying $50/mo), yfinance backup
+    - STOCKS: yfinance FIRST (free + fast), Alpha Vantage backup
     """
-    # Try Alpha Vantage first with premium key
-    try:
-        df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto)
-        if len(df) >= 10:
-            print(f"✓ Alpha Vantage (premium) success for {symbol}: {len(df)} rows")
-            return df
-    except Exception as av_error:
-        print(f"✗ Alpha Vantage failed for {symbol}: {av_error}")
-        
-        # Fallback to yfinance (might work for some requests)
-        if not is_crypto:
+    if is_forex:
+        # Forex: Alpha Vantage only (FX_DAILY)
+        df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=False, is_forex=True)
+        return df
+    
+    elif is_crypto:
+        # Crypto: Alpha Vantage Premium is reliable, yfinance fails from cloud
+        try:
+            df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=True)
+            if len(df) >= 10:
+                return df
+        except Exception as av_error:
+            # Fallback to yfinance for crypto (usually fails but worth trying)
             try:
                 df = get_ohlcv_yfinance(symbol, timeframe)
                 if len(df) >= 10:
-                    print(f"✓ yfinance fallback for {symbol}: {len(df)} rows")
                     return df
-            except Exception as yf_error:
-                print(f"✗ yfinance also failed: {yf_error}")
+            except:
+                pass
+    else:
+        # Stocks: yfinance is fast and free
+        try:
+            df = get_ohlcv_yfinance(symbol, timeframe)
+            if len(df) >= 10:
+                return df
+        except Exception as yf_error:
+            # Fallback to Alpha Vantage for stocks
+            try:
+                df = get_ohlcv_alpha_vantage(symbol, timeframe, is_crypto=False)
+                if len(df) >= 10:
+                    return df
+            except:
+                pass
     
     raise ValueError(f"All data sources failed for {symbol}")
 
@@ -344,7 +469,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 # ================= Scoring =================
-def score_row(r) -> float:
+def score_row(r, is_forex: bool = False) -> float:
     """Proprietary scoring algorithm"""
     s = 0.0
     s += 25 if r.close > r.ema200 else -25
@@ -352,7 +477,11 @@ def score_row(r) -> float:
     s -= 25 if r.close < r["close_20_min"] else 0
     s += 10 if (pd.notna(r.rsi) and r.rsi > 50) else -10
     s += 10 if (pd.notna(r.macd_hist) and r.macd_hist > 0) else -10
-    s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
+    
+    # Volume scoring - skip for forex (no volume data)
+    if not is_forex:
+        s += 8  if (pd.notna(r.vol_z) and r.vol_z > 0.5) else 0
+    
     s += 7  if (pd.notna(r.bb_width) and pd.notna(r.bb_width_ma) and r.bb_width > r.bb_width_ma) else 0
     atr_pct = (r.atr / r.close) if (pd.notna(r.atr) and r.close) else np.nan
     s += 5 if (pd.notna(atr_pct) and atr_pct < 0.04) else 0
@@ -396,23 +525,105 @@ def determine_phase(last) -> str:
     return "UNKNOWN"
 
 # ================= Scanner =================
-def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_crypto: bool = False) -> Tuple[List[Dict], List[Dict]]:
+def _scan_single_symbol(symbol: str, timeframe: str, min_score: float, is_crypto: bool, is_forex: bool, min_bars: int) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """Scan a single symbol - used for parallel processing"""
+    try:
+        # Fetch data with timeout protection
+        df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto, is_forex=is_forex)
+        
+        if len(df) < min_bars:
+            return None, {"symbol": symbol, "error": f"Insufficient data: only {len(df)} bars (need {min_bars}+)"}
+        
+        # Compute features
+        features = compute_features(df).dropna()
+        
+        if features.empty:
+            return None, {"symbol": symbol, "error": "No valid data after feature computation"}
+        
+        last = features.iloc[-1]
+        score = score_row(last, is_forex=is_forex)
+        
+        # Debug: Always log score for crypto/forex
+        if is_crypto or is_forex:
+            print(f"  {symbol}: score={score:.1f}, min_score={min_score}, close={last.close:.4f}, ema200={last.ema200:.4f}")
+        
+        # Filter by min score
+        if score < min_score:
+            return None, None
+        
+        direction = "LONG" if score >= 0 else "SHORT"
+        signal = determine_signal(last)
+        phase = determine_phase(last)
+        
+        # Calculate change percentage (from 20 bars ago)
+        if len(features) >= 20:
+            change_pct = ((last.close - features.iloc[-20].close) / features.iloc[-20].close) * 100
+        else:
+            change_pct = 0.0
+        
+        result = {
+            "symbol": symbol,
+            "name": symbol,
+            "price": round(float(last.close), 2),
+            "change_pct": round(float(change_pct), 2),
+            "volume": int(last.volume) if pd.notna(last.volume) else 0,
+            "score": round(float(score), 0),
+            "signal": signal,
+            "direction": direction,
+            "ema200_phase": phase,
+            "rsi": round(float(last.rsi), 1) if pd.notna(last.rsi) else None,
+            "macd_histogram": round(float(last.macd_hist), 3) if pd.notna(last.macd_hist) else None,
+        }
+        return result, None
+        
+    except Exception as e:
+        return None, {"symbol": symbol, "error": str(e)}
+
+def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_crypto: bool = False, is_forex: bool = False) -> Tuple[List[Dict], List[Dict]]:
     """
-    Scan a list of symbols and return results + errors
+    PARALLEL scanner - scans all symbols simultaneously for SPEED
+    You're paying $50/month for 75 calls/min - USE IT!
     Returns: (results, errors)
     """
     results = []
     errors = []
     
-    for symbol in symbols:
+    # Lower requirement for crypto/forex (has less history)
+    min_bars = 100 if (is_crypto or is_forex) else 200
+    
+    start_time = time.time()
+    print(f"🚀 Starting PARALLEL scan of {len(symbols)} symbols...")
+    
+    # Use ThreadPoolExecutor for parallel API calls
+    # Alpha Vantage Premium = 75 calls/min, so use 20 workers for speed
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        # Submit all symbols for parallel processing
+        future_to_symbol = {
+            executor.submit(_scan_single_symbol, symbol, timeframe, min_score, is_crypto, is_forex, min_bars): symbol
+            for symbol in symbols
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_symbol):
+            result, error = future.result()
+            if result:
+                results.append(result)
+            if error:
+                errors.append(error)
+    
+    elapsed = time.time() - start_time
+    print(f"✅ Scan completed in {elapsed:.1f}s - {len(results)} results, {len(errors)} errors")
+    
+    # Original sequential code removed - keeping for reference
+    for symbol in symbols[:0]:  # Never executes - just to avoid breaking anything
         try:
             # Fetch data with timeout protection
             df = get_ohlcv(symbol, timeframe, is_crypto=is_crypto)
             
-            if len(df) < 200:
+            if len(df) < min_bars:
                 errors.append({
                     "symbol": symbol,
-                    "error": f"Insufficient data: only {len(df)} bars (need 200+)"
+                    "error": f"Insufficient data: only {len(df)} bars (need {min_bars}+)"
                 })
                 continue
             
@@ -428,6 +639,10 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
             
             last = features.iloc[-1]
             score = score_row(last)
+            
+            # Debug: Always log score for crypto
+            if is_crypto:
+                print(f"  {symbol}: score={score:.1f}, min_score={min_score}")
             
             # Filter by min score
             if score < min_score:
@@ -469,15 +684,173 @@ def scan_symbols(symbols: List[str], timeframe: str, min_score: float = 0, is_cr
     return results, errors
 
 # ================= Symbol Lists =================
-EQUITY_SYMBOLS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "AMD", 
-    "NFLX", "DIS", "V", "MA", "JPM", "BAC", "WMT", "HD", 
-    "PG", "KO", "PEP", "CSCO", "INTC", "ORCL", "CRM", "ADBE", "PYPL"
+
+# EQUITY - Comprehensive lists for finding diamonds in the rough
+EQUITY_LARGE_CAP = [
+    # Tech Giants
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "ADBE", "CRM", "CSCO", "ACN", "AMD", "IBM", "INTC", "TXN", "QCOM", "INTU", "AMAT", "LRCX", "KLAC", "SNPS", "CDNS", "ADSK", "FTNT", "PANW", "CRWD", "ZS", "DDOG", "NET", "SNOW", "MDB", "PLTR", "U", "DOCU",
+    # Finance
+    "JPM", "BAC", "WFC", "C", "GS", "MS", "BLK", "SCHW", "AXP", "USB", "PNC", "TFC", "BK", "STT", "NTRS", "CFG", "KEY", "RF", "HBAN", "FITB", "MTB", "ZION", "CMA", "ALLY", "SOFI", "AFRM", "UPST", "LC",
+    # Healthcare
+    "UNH", "JNJ", "LLY", "ABBV", "MRK", "TMO", "ABT", "DHR", "PFE", "BMY", "AMGN", "GILD", "REGN", "VRTX", "CI", "CVS", "HUM", "ELV", "CNC", "MOH", "BIIB", "MRNA", "BNTX", "ISRG", "SYK", "BSX", "MDT", "EW", "HOLX", "BAX", "BDX", "ZBH", "ALGN", "DXCM", "PODD", "TDOC", "VEEV",
+    # Consumer
+    "WMT", "HD", "MCD", "NKE", "SBUX", "TGT", "LOW", "COST", "DG", "DLTR", "ROST", "TJX", "BBY", "ULTA", "M", "KSS", "JWN", "DKS", "FL", "FIVE", "OLLI", "BIG",
+    # Entertainment/Media
+    "DIS", "NFLX", "CMCSA", "WBD", "PARA", "FOX", "FOXA", "OMC", "IPG", "SPOT", "RBLX", "EA", "TTWO", "ATVI", "U", "DKNG", "PENN", "LVS", "MGM", "WYNN", "CZR",
+    # Industrial
+    "CAT", "BA", "HON", "UPS", "RTX", "LMT", "GE", "MMM", "DE", "EMR", "ETN", "ITW", "PH", "CMI", "FDX", "PCAR", "ROK", "AME", "DOV", "XYL", "IEX",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "MPC", "PSX", "VLO", "OXY", "HES", "DVN", "FANG", "HAL", "BKR", "APA", "MRO", "OVV",
+    # Retail/E-commerce
+    "AMZN", "BABA", "JD", "PDD", "MELI", "SHOP", "ETSY", "W", "CHWY", "PINS", "SNAP", "DASH", "UBER", "LYFT", "ABNB",
+    # Semiconductors
+    "NVDA", "AMD", "INTC", "QCOM", "AVGO", "TXN", "AMAT", "LRCX", "KLAC", "MRVL", "MU", "NXPI", "ADI", "MCHP", "SWKS", "QRVO", "ON", "MPWR",
+    # Auto
+    "TSLA", "F", "GM", "RIVN", "LCID", "NIO", "XPEV", "LI",
+    # Real Estate/Construction  
+    "AMT", "PLD", "EQIX", "CCI", "PSA", "DLR", "O", "WELL", "AVB", "EQR", "SPG", "VTR", "ARE", "DHI", "LEN", "PHM", "NVR", "TOL",
+    # Telecom
+    "T", "VZ", "TMUS", "VOD",
+    # Materials
+    "LIN", "APD", "ECL", "SHW", "NEM", "FCX", "NUE", "STLD", "CLF", "AA", "ALB", "MP",
+    # Aerospace
+    "BA", "LMT", "RTX", "NOC", "GD", "LHX", "HWM", "TDG", "TXT"
 ]
 
-# Note: Crypto symbols via yfinance can be unreliable due to API issues
-# Using traditional format but may have connectivity issues
-CRYPTO_SYMBOLS = [
-    "BTC-USD", "ETH-USD", "BNB-USD", "XRP-USD", "ADA-USD", 
-    "DOGE-USD", "SOL-USD", "DOT-USD", "MATIC-USD", "AVAX-USD"
+EQUITY_MID_CAP = [
+    # Tech/Software
+    "TEAM", "ZM", "OKTA", "BILL", "PATH", "PCTY", "FOUR", "FROG", "NCNO", "ESTC", "DT", "IOT", "S", "ZI", "HUBS", "RNG", "CFLT", "GTLB", "MNDY", "WK",
+    # FinTech
+    "SQ", "PYPL", "COIN", "HOOD", "NU", "MARA", "RIOT", "HUT", "BITF", "CLSK", "CIFR",
+    # Healthcare/Biotech
+    "EXAS", "ILMN", "TWST", "PACB", "IONS", "CRSP", "EDIT", "NTLA", "BEAM", "VERV", "SGMO", "FATE", "BLUE", "SRPT", "BMRN", "ALNY", "RARE", "FOLD", "ARWR", "RGNX", "HALO", "ALLO", "CRBU",
+    # EVs/Clean Energy
+    "RIVN", "LCID", "CHPT", "BLNK", "EVGO", "QS", "GOEV", "FSR", "NKLA", "RIDE", "LEV", "ENVX", "PLUG", "BE", "FCEL", "BLDP", "WKHS",
+    # Cybersecurity
+    "CRWD", "ZS", "PANW", "OKTA", "FTNT", "NET", "S", "RPD", "TENB", "VRNS", "CYBR", "QLYS",
+    # E-commerce/Digital
+    "ETSY", "W", "CHWY", "CVNA", "REAL", "OZON", "VIPS", "SE", "CPNG", "GRAB",
+    # Gaming
+    "RBLX", "U", "TTWO", "EA", "ZNGA", "PLTK", "DKNG", "PENN",
+    # Food/Restaurants
+    "CMG", "WING", "TXRH", "CHUY", "BLMN", "DIN", "EAT", "CAKE", "CBRL", "DRI", "QSR", "YUM", "SBUX", "MCD",
+    # Industrial/Manufacturing
+    "RH", "POOL", "AZEK", "TREX", "FOXF", "CVCO", "UFPI", "BECN", "BOOT", "SKY",
+    # Transport/Logistics
+    "JBHT", "ODFL", "SAIA", "XPO", "CHRW", "KNX", "LSTR", "ARCB", "WERN", "HTLD"
 ]
+
+EQUITY_SMALL_CAP = [
+    # Micro-cap Tech
+    "BBAI", "AI", "SOUN", "GFAI", "EZFL", "AIXI", "CXAI", "BKSY", "RKLB", "ASTR", "SPCE", "PL", "ACHR", "JOBY", "EVTL", "LILM", "ASTS", "VORB",
+    # Biotech/Pharma
+    "SAVA", "AVXL", "ANVS", "CTMX", "AIMD", "PTGX", "ADMA", "CLDX", "SYRS", "KPTI", "IMMP", "OTIC", "KRYS", "MNOV", "TBPH", "AKRO", "AUTL", "SNDL", "TLRY", "CGC", "ACB", "HEXO", "CRON", "OGI", "APHA",
+    # EV/Battery/Clean Energy
+    "MULN", "SOLO", "AYRO", "WKHS", "FFIE", "PSNY", "NUVVE", "LTHM", "LAC", "PALT", "SES", "AMPX", "FREYR", "MVST", "DCFC", "VLTA",
+    # Crypto/Blockchain
+    "MARA", "RIOT", "CLSK", "HUT", "BITF", "BTBT", "CAN", "ARBK", "HIVE", "DMGI", "MGTI", "EBON", "SOS", "MOGO",
+    # Penny Tech
+    "GNUS", "NKLA", "RIDE", "WKHS", "WISH", "SLDP", "INDI", "GOEV", "MULN", "AYRO", "SOLO",
+    # Retail/Consumer
+    "BBBY", "GME", "AMC", "MMAT", "TRKA", "APPH", "WW", "FIZZ", "MGNI", "FUBO", "BMBL", "MTCH",
+    # Shipping/Transport
+    "ZIM", "MATX", "SBLK", "NMM", "NAT", "INSW", "IMPP", "TOPS", "SHIP", "EURN",
+    # Oil/Gas/Resources
+    "VTNR", "IMPP", "CEI", "INDO", "ENSV", "BORR", "VAL", "RIG", "SDRL", "NRGU",
+    # Real Estate/Construction
+    "APRN", "OPEN", "RDFN", "COMP", "EXP", "HOUS", "LGIH", "BZH", "MHO", "MTH", "CCS", "GRBK",
+    # Entertainment/Media  
+    "SONO", "SSPK", "SRAD", "GSMG", "FUBOTV", "TDUP", "VZIO", "SVMH",
+    # Misc Spec Plays
+    "BBIG", "ATER", "PROG", "SPRT", "IRNT", "OPAD", "AGRI", "GREE", "SDC", "CLOV", "SKLZ", "BARK", "BROS", "MNDY", "HOOD"
+]
+
+# Combine all equity for "default" scan (Top 500)
+EQUITY_SYMBOLS = EQUITY_LARGE_CAP + EQUITY_MID_CAP[:50] + EQUITY_SMALL_CAP[:50]  # ~300 symbols for fast comprehensive scan
+
+# ALL Alpha Vantage crypto - You're paying $50/month, scan EVERYTHING (All USD pairs from Coinbase)
+CRYPTO_SYMBOLS = [
+    "1INCH-USD", "AAVE-USD", "ADA-USD", "AERGO-USD", "AERO-USD", "AGLD-USD", "AIOZ-USD", "AKT-USD", "ALCX-USD", 
+    "ALEO-USD", "ALEPH-USD", "ALGO-USD", "ALICE-USD", "ALT-USD", "AMP-USD", "ANKR-USD", "ANT-USD", "APE-USD", 
+    "API3-USD", "APT-USD", "ARB-USD", "ARKM-USD", "ARPA-USD", "ASM-USD", "AST-USD", "ATA-USD", "ATH-USD", 
+    "ATOM-USD", "AUCTION-USD", "AUDIO-USD", "AURORA-USD", "AVAX-USD", "AVT-USD", "AXL-USD", "AXS-USD", "B3-USD", 
+    "BADGER-USD", "BAL-USD", "BAND-USD", "BAT-USD", "BCH-USD", "BERA-USD", "BICO-USD", "BIGTIME-USD", "BIT-USD", 
+    "BLAST-USD", "BLUR-USD", "BLZ-USD", "BNT-USD", "BOBA-USD", "BOND-USD", "BONK-USD", "BTC-USD", "BTRST-USD", 
+    "BUSD-USD", "C98-USD", "CBETH-USD", "CELR-USD", "CGLD-USD", "CHZ-USD", "CLANKER-USD", "CLV-USD", "COMP-USD", 
+    "COOKIE-USD", "CORECHAIN-USD", "COTI-USD", "COVAL-USD", "COW-USD", "CRO-USD", "CRPT-USD", "CRV-USD", "CTSI-USD", 
+    "CTX-USD", "CVC-USD", "CVX-USD", "DAI-USD", "DAR-USD", "DASH-USD", "DDX-USD", "DEGEN-USD", "DESO-USD", "DEXT-USD", 
+    "DIA-USD", "DIMO-USD", "DNT-USD", "DOGE-USD", "DOGINME-USD", "DOT-USD", "DREP-USD", "DRIFT-USD", "DYP-USD", 
+    "EDGE-USD", "EGLD-USD", "EIGEN-USD", "ELA-USD", "ENJ-USD", "ENS-USD", "EOS-USD", "ERN-USD", "ETC-USD", "ETH-USD", 
+    "ETHFI-USD", "EURC-USD", "FAI-USD", "FARM-USD", "FET-USD", "FIDA-USD", "FIL-USD", "FIS-USD", "FLOKI-USD", 
+    "FLOW-USD", "FLR-USD", "FORT-USD", "FORTH-USD", "FOX-USD", "FX-USD", "G-USD", "GAL-USD", "GALA-USD", "GFI-USD", 
+    "GHST-USD", "GIGA-USD", "GLM-USD", "GMT-USD", "GNO-USD", "GODS-USD", "GRT-USD", "GST-USD", "GTC-USD", "GUSD-USD", 
+    "GYEN-USD", "HBAR-USD", "HFT-USD", "HIGH-USD", "HNT-USD", "HONEY-USD", "HOPR-USD", "ICP-USD", "IDEX-USD", 
+    "ILV-USD", "IMX-USD", "INDEX-USD", "INJ-USD", "INV-USD", "IO-USD", "IOTX-USD", "IP-USD", "JASMY-USD", "JTO-USD", 
+    "JUP-USD", "KAITO-USD", "KARRAT-USD", "KAVA-USD", "KEEP-USD", "KERNEL-USD", "KEYCAT-USD", "KNC-USD", "KRL-USD", 
+    "KSM-USD", "L3-USD", "LCX-USD", "LDO-USD", "LINK-USD", "LIT-USD", "LOKA-USD", "LOOM-USD", "LPT-USD", "LQTY-USD", 
+    "LRC-USD", "LRDS-USD", "LSETH-USD", "LTC-USD", "MAGIC-USD", "MANA-USD", "MANTLE-USD", "MASK-USD", "MATH-USD", 
+    "MATIC-USD", "MCO2-USD", "MDT-USD", "ME-USD", "MEDIA-USD", "METIS-USD", "MINA-USD", "MIR-USD", "MKR-USD", 
+    "MLN-USD", "MNDE-USD", "MOBILE-USD", "MOG-USD", "MONA-USD", "MOODENG-USD", "MORPHO-USD", "MOVE-USD", "MPL-USD", 
+    "MSOL-USD", "MTL-USD", "MULTI-USD", "MUSD-USD", "MUSE-USD", "MXC-USD", "NCT-USD", "NEAR-USD", "NEON-USD", 
+    "NEST-USD", "NKN-USD", "NMR-USD", "NU-USD", "OCEAN-USD", "OGN-USD", "OMG-USD", "OMNI-USD", "ONDO-USD", "OOKI-USD", 
+    "OP-USD", "ORCA-USD", "ORN-USD", "OSMO-USD", "OXT-USD", "PAX-USD", "PAXG-USD", "PENDLE-USD", "PENGU-USD", 
+    "PEPE-USD", "PERP-USD", "PIRATE-USD", "PLA-USD", "PLU-USD", "PNG-USD", "PNUT-USD", "POL-USD", "POLS-USD", 
+    "POLY-USD", "POND-USD", "POPCAT-USD", "POWR-USD", "PRCL-USD", "PRIME-USD", "PRO-USD", "PROMPT-USD", "PRQ-USD", 
+    "PUNDIX-USD", "PYR-USD", "PYTH-USD", "PYUSD-USD", "QI-USD", "QNT-USD", "QSP-USD", "QUICK-USD", "RAD-USD", 
+    "RAI-USD", "RARE-USD", "RARI-USD", "RBN-USD", "RED-USD", "REN-USD", "RENDER-USD", "REP-USD", "REQ-USD", 
+    "REZ-USD", "RGT-USD", "RLC-USD", "RLY-USD", "RNDR-USD", "RONIN-USD", "ROSE-USD", "RPL-USD", "RSR-USD", "SAFE-USD", 
+    "SAND-USD", "SD-USD", "SEAM-USD", "SEI-USD", "SHDW-USD", "SHIB-USD", "SHPING-USD", "SKL-USD", "SNT-USD", 
+    "SNX-USD", "SOL-USD", "SPA-USD", "SPELL-USD", "STG-USD", "STORJ-USD", "STRK-USD", "STX-USD", "SUI-USD", 
+    "SUKU-USD", "SUPER-USD", "SUSHI-USD", "SWELL-USD", "SWFTC-USD", "SXT-USD", "SYLO-USD", "SYN-USD", "SYRUP-USD", 
+    "T-USD", "TAO-USD", "TIA-USD", "TIME-USD", "TNSR-USD", "TONE-USD", "TOSHI-USD", "TRAC-USD", "TRB-USD", 
+    "TRIBE-USD", "TRU-USD", "TRUMP-USD", "TURBO-USD", "TVK-USD", "UMA-USD", "UNFI-USD", "UNI-USD", "UPI-USD", 
+    "UST-USD", "VARA-USD", "VELO-USD", "VET-USD", "VGX-USD", "VOXEL-USD", "VTHO-USD", "VVV-USD", "WAMPL-USD", 
+    "WAXL-USD", "WBTC-USD", "WCFG-USD", "WELL-USD", "WIF-USD", "WLD-USD", "WLUNA-USD", "XCN-USD", "XLM-USD", 
+    "XRP-USD", "XTZ-USD", "XYO-USD", "YFI-USD", "YFII-USD", "ZEC-USD", "ZEN-USD", "ZETA-USD", "ZETACHAIN-USD", 
+    "ZK-USD", "ZORA-USD", "ZRO-USD", "ZRX-USD"
+]
+
+# FOREX pairs - Comprehensive coverage for global opportunities
+FOREX_MAJORS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD"]
+
+FOREX_CROSSES = [
+    "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "EURAUD", "EURCHF", "GBPAUD", "GBPCHF",
+    "AUDNZD", "AUDCAD", "AUDCHF", "CADJPY", "CHFJPY", "NZDJPY", "GBPNZD", "GBPCAD",
+    "EURCAD", "EURNZD", "NZDCAD", "NZDCHF", "CADCHF"
+]
+
+FOREX_EXOTICS = [
+    # Asian
+    "USDCNY", "USDHKD", "USDSGD", "USDKRW", "USDTHB", "USDINR", "USDPHP", "USDIDR", "USDMYR", "USDTWD",
+    # European
+    "USDNOK", "USDSEK", "USDDKK", "USDPLN", "USDCZK", "USDHUF", "USDRON", "USDRUB", "USDTRY", "EURPLN", "EURTRY", "EURNOK", "EURSEK",
+    # Americas
+    "USDMXN", "USDBRL", "USDARS", "USDCLP", "USDCOP", "USDPEN",
+    # Middle East/Africa
+    "USDZAR", "USDILS", "USDSAR", "USDAED", "USDKWD", "USDEGP", "USDNGN"
+]
+
+# Combine all forex for "default" scan
+FOREX_SYMBOLS = FOREX_MAJORS + FOREX_CROSSES + FOREX_EXOTICS
+
+# COMMODITIES - Comprehensive coverage across all sectors
+COMMODITY_ENERGY = ["WTI", "BRENT", "NATURAL_GAS", "HEATING_OIL", "GASOLINE"]
+
+COMMODITY_METALS = [
+    # Precious
+    "GOLD", "SILVER", "PLATINUM", "PALLADIUM",
+    # Industrial
+    "COPPER", "ALUMINUM", "ZINC", "NICKEL", "LEAD", "TIN"
+]
+
+COMMODITY_AGRICULTURE = [
+    # Grains
+    "WHEAT", "CORN", "SOYBEANS", "SOYBEAN_OIL", "SOYBEAN_MEAL", "OATS", "RICE",
+    # Softs
+    "COTTON", "SUGAR", "COFFEE", "COCOA", "ORANGE_JUICE",
+    # Livestock
+    "LIVE_CATTLE", "FEEDER_CATTLE", "LEAN_HOGS"
+]
+
+# Combine all commodities for "default" scan
+COMMODITY_SYMBOLS = COMMODITY_ENERGY + COMMODITY_METALS + COMMODITY_AGRICULTURE

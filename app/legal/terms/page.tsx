@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true }
 };
 
-const effective = "7 October 2025";
+const effective = "13 December 2025";
 
 export default function TermsPage() {
   return (
@@ -65,20 +65,25 @@ export default function TermsPage() {
             <ul style={ulStyle}>
               <li style={liStyle}>The App is provided for educational purposes only.</li>
               <li style={liStyle}><strong style={{ color: '#F59E0B' }}>We do not provide financial, investment, or trading advice.</strong></li>
+              <li style={liStyle}>MSP Analyst AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.</li>
+              <li style={liStyle}>AI responses may contain errors or inaccuracies. Always verify information independently.</li>
+              <li style={liStyle}>AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).</li>
               <li style={liStyle}>You are solely responsible for your trading and investment decisions.</li>
             </ul>
           </Section>
 
           <Section id="billing" title="3. Subscriptions & Billing">
             <ul style={ulStyle}>
-              <li style={liStyle}>The App offers Free, Pro ($4.99/mo), and Pro Trader ($9.99/mo) plans.</li>
+              <li style={liStyle}>The App offers Free, Pro ($9.99/mo), and Pro Trader ($19.99/mo) plans.</li>
               <li style={liStyle}>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Free Trials:</strong> Pro includes a 7-day free trial; Pro Trader includes a 5-day free trial.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with MSP Analyst.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Plan ($9.99/mo):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Trader Plan ($19.99/mo):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
               <li style={liStyle}>After your trial period ends, you will be automatically charged the monthly subscription fee unless you cancel before the trial expires.</li>
               <li style={liStyle}>Subscriptions renew automatically until cancelled through your account, Stripe Customer Portal, or app store settings.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Refunds:</strong> We do not provide pro-rated refunds for unused time after cancellation. See our <a href="/refund-policy" style={linkStyle}>Refund Policy</a> for details.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Refunds:</strong> We offer a 7-day money-back guarantee. See our <a href="/refund-policy" style={linkStyle}>Refund Policy</a> for details.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Trial Abuse Prevention:</strong> We track trial usage by email address and device to prevent abuse. Attempting to circumvent trial limitations may result in immediate subscription termination without refund.</li>
             </ul>
           </Section>

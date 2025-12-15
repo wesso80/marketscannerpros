@@ -4,8 +4,8 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type TimeframeOption = "15m" | "1h" | "4h" | "1d" | "1w" | "1mo";
-type ScannerTab = "equity" | "crypto" | "forex";
+type TimeframeOption = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
+type ScannerTab = "equity" | "crypto" | "forex" | "commodities" | "options";
 
 interface ScanResult {
   symbol: string;
@@ -29,6 +29,9 @@ function ScannerContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [customSymbols, setCustomSymbols] = useState<string>("");
+  const [useCustom, setUseCustom] = useState<boolean>(false);
+  const [symbolPreset, setSymbolPreset] = useState<string>("default");
 
   useEffect(() => {
     const tab = searchParams?.get("tab") as ScannerTab;
@@ -52,6 +55,10 @@ function ScannerContent() {
           type: activeTab,
           timeframe: timeframe,
           minScore: minScore,
+          preset: symbolPreset,
+          symbols: useCustom && customSymbols.trim() 
+            ? customSymbols.trim().split('\n').map(s => s.trim()).filter(Boolean)
+            : undefined,
         }),
       });
 
@@ -142,7 +149,58 @@ function ScannerContent() {
             >
               <option value="equity">📈 Equity Markets</option>
               <option value="crypto">₿ Crypto Markets</option>
-              <option value="forex">💱 Forex Markets</option>
+              <option value="forex">🌍 Forex Markets</option>
+              <option value="commodities">🛢️ Commodities</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", color: "#94A3B8", marginBottom: "0.5rem" }}>
+              Symbol Preset
+            </label>
+            <select
+              value={symbolPreset}
+              onChange={(e) => setSymbolPreset(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                background: "rgba(30, 41, 59, 0.5)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                borderRadius: "8px",
+                color: "#fff",
+              }}
+            >
+              {activeTab === "equity" && (
+                <>
+                  <option value="default">🎯 Top 300+ All Caps (Default)</option>
+                  <option value="large-cap">📊 Large-Cap (200+ Stocks)</option>
+                  <option value="mid-cap">💎 Mid-Cap (100+ Stocks)</option>
+                  <option value="small-cap">🔍 Small-Cap (150+ Stocks)</option>
+                </>
+              )}
+              {activeTab === "crypto" && (
+                <>
+                  <option value="default">🚀 All 350+ Coinbase Pairs</option>
+                  <option value="top100">📊 Top 100 by Volume</option>
+                  <option value="top25">💎 Top 25 by Volume</option>
+                </>
+              )}
+              {activeTab === "forex" && (
+                <>
+                  <option value="default">🌍 All 60+ Pairs (Default)</option>
+                  <option value="majors">💰 7 Major Pairs Only</option>
+                  <option value="crosses">🔄 21 Cross Pairs</option>
+                  <option value="exotics">🌏 30+ Exotic Pairs</option>
+                </>
+              )}
+              {activeTab === "commodities" && (
+                <>
+                  <option value="default">📦 All 30+ Commodities (Default)</option>
+                  <option value="energy">⚡ Energy (5 Products)</option>
+                  <option value="metals">⛏️ Metals (10 Products)</option>
+                  <option value="agriculture">🌾 Agriculture (15+ Products)</option>
+                </>
+              )}
             </select>
           </div>
 
@@ -162,12 +220,12 @@ function ScannerContent() {
                 color: "#fff",
               }}
             >
+              <option value="1m">⚡ 1 Minute</option>
+              <option value="5m">⚡ 5 Minutes</option>
               <option value="15m">⚡ 15 Minutes</option>
+              <option value="30m">🕐 30 Minutes</option>
               <option value="1h">🕐 1 Hour</option>
-              <option value="4h">🕓 4 Hours</option>
               <option value="1d">📅 1 Day</option>
-              <option value="1w">📆 1 Week</option>
-              <option value="1mo">📊 1 Month</option>
             </select>
           </div>
 
@@ -207,6 +265,61 @@ function ScannerContent() {
           >
             {loading ? "⏳ Scanning..." : "🔎 Run Scanner"}
           </button>
+        </div>
+
+        {/* Custom Symbols Input */}
+        <div style={{
+          marginBottom: "2rem",
+          background: "rgba(15, 23, 42, 0.8)",
+          borderRadius: "16px",
+          border: "1px solid rgba(16, 185, 129, 0.2)",
+          padding: "1.5rem",
+        }}>
+          <label style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "0.5rem",
+            color: "#10B981",
+            fontWeight: "600",
+            marginBottom: "1rem",
+            cursor: "pointer"
+          }}>
+            <input
+              type="checkbox"
+              checked={useCustom}
+              onChange={(e) => setUseCustom(e.target.checked)}
+              style={{ width: "18px", height: "18px", accentColor: "#10B981" }}
+            />
+            Use Custom Symbols
+          </label>
+          
+          {useCustom && (
+            <div>
+              <p style={{ color: "#94A3B8", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                Enter symbols (one per line). Example: {activeTab === "crypto" ? "BTC-USD, ETH-USD" : activeTab === "forex" ? "EURUSD, GBPUSD" : "AAPL, MSFT"}
+              </p>
+              <textarea
+                value={customSymbols}
+                onChange={(e) => setCustomSymbols(e.target.value)}
+                placeholder={activeTab === "crypto" ? "BTC-USD\nETH-USD\nSOL-USD" : activeTab === "forex" ? "EURUSD\nGBPUSD\nUSDJPY" : "AAPL\nMSFT\nGOOGL"}
+                rows={6}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  background: "rgba(30, 41, 59, 0.5)",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontFamily: "monospace",
+                  fontSize: "0.875rem",
+                  resize: "vertical"
+                }}
+              />
+              <p style={{ color: "#64748B", fontSize: "0.75rem", marginTop: "0.5rem" }}>
+                {customSymbols.trim().split('\n').filter(Boolean).length} symbols entered
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Error */}

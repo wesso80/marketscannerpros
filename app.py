@@ -1,6 +1,6 @@
 # market_scanner_app.py
 # One-file Market Scanner (pure pandas) + Streamlit Dashboard
-# - Equities & Crypto via yfinance (AAPL, MSFT, BTC-USD, ETH-USD…)
+# - Equities & Crypto via Alpha Vantage Premium (100% legal, no scraping)
 # - ATR-based position sizing
 # - Optional Email + Slack summaries
 # - CSV download
@@ -32,7 +32,7 @@ except:
 # ================= LAZY IMPORTS FOR HEAVY DEPENDENCIES =================
 # Import heavy dependencies only after health check
 try:
-    import pandas as pd, numpy as np, yfinance as yf, requests
+    import pandas as pd, numpy as np, requests
     import psycopg2
     from psycopg2.extras import RealDictCursor
     import psycopg2.extensions
@@ -2178,26 +2178,39 @@ def delete_alert(alert_id: int, workspace_id: Optional[str] = None) -> bool:
     return result is not None and result > 0
 
 def get_current_price(symbol: str) -> Optional[float]:
-    """Get current price for a symbol with fallback methods"""
+    """Get current price for a symbol using Alpha Vantage (no yfinance)"""
     try:
-        # Try fast_info first
-        ticker = yf.Ticker(symbol)
-        if hasattr(ticker, 'fast_info'):
-            fast_info = ticker.fast_info
-            price = fast_info.get('last_price') or fast_info.get('regularMarketPrice')
+        # Use Alpha Vantage GLOBAL_QUOTE for current price
+        params = {
+            "function": "GLOBAL_QUOTE",
+            "symbol": symbol.replace("-USD", "").upper(),
+            "apikey": ALPHA_VANTAGE_API_KEY
+        }
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        if "Global Quote" in data and data["Global Quote"]:
+            price = data["Global Quote"].get("05. price")
             if price:
                 return float(price)
         
-        # Fallback to recent history
-        hist = ticker.history(period="1d", interval="1m")
-        if not hist.empty:
-            return float(hist['Close'].iloc[-1])
+        # Fallback: get latest close from TIME_SERIES_INTRADAY
+        params = {
+            "function": "TIME_SERIES_INTRADAY",
+            "symbol": symbol.replace("-USD", "").upper(),
+            "interval": "5min",
+            "apikey": ALPHA_VANTAGE_API_KEY
+        }
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+        data = response.json()
         
-        # Last resort: use info (slow but comprehensive)
-        info = ticker.info
-        price = info.get('currentPrice') or info.get('regularMarketPrice')
-        if price:
-            return float(price)
+        for key in data.keys():
+            if "Time Series" in key:
+                ts = data[key]
+                if ts:
+                    latest = next(iter(ts.values()))
+                    return float(latest.get("4. close", 0))
             
     except Exception as e:
         print(f"Error getting price for {symbol}: {e}")
@@ -2350,7 +2363,62 @@ def delete_watchlist(watchlist_id: int) -> bool:
     
     return result is not None
 
-# ================= Data Source (yfinance) =================
+# ================= Data Source (Alpha Vantage Premium - 100% Legal) =================
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
+
+def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
+    """Fetch from Alpha Vantage Premium (75 calls/minute)"""
+    # Map timeframes
+    function_map = {
+        "1d": "TIME_SERIES_DAILY",
+        "1h": "TIME_SERIES_INTRADAY",
+        "4h": "TIME_SERIES_INTRADAY",
+        "15m": "TIME_SERIES_INTRADAY",
+        "5m": "TIME_SERIES_INTRADAY"
+    }
+    interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min"}
+    
+    function = function_map.get(timeframe, "TIME_SERIES_DAILY")
+    params = {
+        "function": function,
+        "symbol": symbol.replace("-USD", "").upper(),  # BTC-USD → BTC for crypto
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "outputsize": "full",
+        "datatype": "json"
+    }
+    
+    if function == "TIME_SERIES_INTRADAY":
+        params["interval"] = interval_map.get(timeframe, "60min")
+    
+    response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+    
+    # Find the time series key
+    ts_key = None
+    for key in data.keys():
+        if "Time Series" in key:
+            ts_key = key
+            break
+    
+    if not ts_key or ts_key not in data:
+        raise ValueError(f"No Alpha Vantage data for {symbol}")
+    
+    ts = data[ts_key]
+    rows = []
+    for timestamp, values in ts.items():
+        rows.append({
+            "timestamp": pd.to_datetime(timestamp, utc=True),
+            "open": float(values.get("1. open", 0)),
+            "high": float(values.get("2. high", 0)),
+            "low": float(values.get("3. low", 0)),
+            "close": float(values.get("4. close", 0)),
+            "volume": float(values.get("5. volume", 0)),
+        })
+    
+    df = pd.DataFrame(rows).set_index("timestamp").sort_index()
+    return df
+
 def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
     interval, default_period = _yf_interval_period(timeframe)
     
@@ -2375,7 +2443,17 @@ def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, star
     return out
 
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-    return get_ohlcv_yf(symbol, timeframe, period, start, end)
+    """Fetch OHLCV data using Alpha Vantage Premium exclusively (no yfinance)"""
+    try:
+        df = get_ohlcv_alpha_vantage(symbol, timeframe)
+        if len(df) >= 10:
+            print(f"✓ Alpha Vantage Premium: {symbol} ({len(df)} bars)")
+            return df
+        else:
+            raise ValueError(f"Insufficient data: only {len(df)} bars")
+    except Exception as e:
+        print(f"Alpha Vantage failed for {symbol}: {e}")
+        raise ValueError(f"Failed to fetch data for {symbol}: {str(e)}")
 
 # ================= Indicators (pure pandas) =================
 def _ema(s, n):    return s.ewm(span=n, adjust=False).mean()
@@ -5130,6 +5208,13 @@ if show_admin:
 
 st.sidebar.header("📋 Watchlists")
 
+# Symbol Preset dropdown
+symbol_preset = st.sidebar.selectbox(
+    "Symbol Preset:",
+    ["All 350+ Coinbase Pairs", "Top 100 by Volume", "Top 25 by Volume"],
+    key="symbol_preset"
+)
+
 # Get all watchlists
 watchlists = get_watchlists()
 watchlist_names = ["Manual Entry"] + [f"{wl['name']} ({len(wl['symbols'])} symbols)" for wl in watchlists]
@@ -5355,34 +5440,37 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Unlimited market scanning', 'Portfolio tracking (3 symbols)', 'Real-time data', 'Try Pro with 5-7 day trial'],
+        'features': ['Top 10 equities + Top 10 crypto', 'MSP Analyst AI (5 questions/day)', 'Portfolio tracking (3 symbols)', 'Trade journal', 'Real-time data'],
         'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,
+        'ai_questions_per_day': 5,
         'has_advanced_charts': False,
         'has_backtesting': False,
-        'has_trade_journal': False,
+        'has_trade_journal': True,
         'color': '#666666'
     },
     'pro': {
         'name': '🚀 Pro Tier',
-        'price': '$4.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio symbols', 'Advanced Technical Analysis Chart', '5-7 day free trial'],
+        'price': '$9.99/month',
+        'features': ['Unlimited symbols', 'MSP Analyst AI (50 questions/day)', 'Unlimited alerts & portfolio', 'CSV exports', 'Advanced charts', 'Priority support'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
+        'ai_questions_per_day': 50,
         'has_advanced_charts': True,
         'has_backtesting': False,
-        'has_trade_journal': False,
+        'has_trade_journal': True,
         'color': '#4CAF50'
     },
     'pro_trader': {
         'name': '💎 Pro Trader',
-        'price': '$9.99/month',
-        'features': ['Unlimited symbol scanner', 'Unlimited alerts & notifications', 'Unlimited portfolio', 'Advanced backtesting with signal alerts', 'Trade Journal', 'TradingView script integration', 'Full site access', '5-7 day free trial'],
+        'price': '$19.99/month',
+        'features': ['Everything in Pro', 'MSP Analyst AI (Unlimited)', 'Real Alpha Vantage backtesting', 'TradingView script access', 'Advanced indicators', 'Premium support'],
         'scan_limit': None,
         'alert_limit': None,
         'portfolio_limit': None,
+        'ai_questions_per_day': None,  # Unlimited
         'has_advanced_charts': True,
         'has_backtesting': True,
         'has_trade_journal': True,
@@ -5549,6 +5637,10 @@ elif current_tier == 'pro_trader':
             
             st.caption("Questions? Contact support@marketscannerpros.app")
 
+# Top 10 for Free Tier
+TOP_10_EQUITIES_FREE = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "JPM", "V", "WMT"]
+TOP_10_CRYPTO_FREE = ["BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "ADA-USD", "DOGE-USD", "AVAX-USD", "DOT-USD", "MATIC-USD"]
+
 # Top 100 Equities by market cap
 TOP_100_EQUITIES = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B", "LLY", "V",
@@ -5563,25 +5655,42 @@ TOP_100_EQUITIES = [
     "GS", "SO", "BSX", "ETN", "FI", "MS", "ABNB", "DUK", "MU", "ANET"
 ]
 
-# Quick scan toggle for equities
-use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
+# FREE TIER RESTRICTION: Check if user should be limited to top 10
+is_free_tier = current_tier == 'free'
 
-# Multiselect for picking specific equities
-if not use_top100_eq:
-    selected_eq_from_list = st.sidebar.multiselect(
-        "Or select from top 100:",
-        options=TOP_100_EQUITIES,
-        default=[],
-        key="eq_multiselect"
-    )
-    if selected_eq_from_list:
-        st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+if is_free_tier:
+    st.sidebar.warning("🔒 **Free Tier**: Limited to Top 10 Equities & Top 10 Crypto")
+    st.sidebar.caption("Upgrade to Pro for unlimited scanning!")
+    
+    # Free tier can only use top 10
+    use_top100_eq = False
+    selected_eq_from_list = TOP_10_EQUITIES_FREE
+    st.sidebar.info(f"📊 Free Tier: {len(TOP_10_EQUITIES_FREE)} equities (AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, JPM, V, WMT)")
+    
+    # Override text input for free tier
+    eq_input = "\n".join(TOP_10_EQUITIES_FREE)
+    
 else:
-    selected_eq_from_list = TOP_100_EQUITIES
-    st.sidebar.success(f"✅ All 100 equities selected!")
+    # Pro/Pro Trader: Full access
+    # Quick scan toggle for equities
+    use_top100_eq = st.sidebar.checkbox("📊 Quick Scan: Top 100 Equities", value=False, key="quick_scan_eq")
 
-eq_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(equity_symbols), height=140)
+    # Multiselect for picking specific equities
+    if not use_top100_eq:
+        selected_eq_from_list = st.sidebar.multiselect(
+            "Or select from top 100:",
+            options=TOP_100_EQUITIES,
+            default=[],
+            key="eq_multiselect"
+        )
+        if selected_eq_from_list:
+            st.sidebar.caption(f"✅ {len(selected_eq_from_list)} equities selected from list")
+    else:
+        selected_eq_from_list = TOP_100_EQUITIES
+        st.sidebar.success(f"✅ All 100 equities selected!")
+
+    eq_input = st.sidebar.text_area("Enter symbols (one per line):",
+        "\n".join(equity_symbols), height=140)
 
 st.sidebar.header("Crypto Symbols (BTC-USD style)")
 
@@ -5603,25 +5712,54 @@ TOP_100_CRYPTO = [
     "AMP-USD", "POLY-USD", "MLN-USD", "BNT-USD", "FORTH-USD", "CTSI-USD", "API3-USD"
 ]
 
-# Quick scan toggle for crypto
-use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
+# Top 25 by volume
+TOP_25_CRYPTO = [
+    "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD", "USDC-USD", "XRP-USD", 
+    "DOGE-USD", "ADA-USD", "TRX-USD", "AVAX-USD", "SHIB-USD", "DOT-USD", "LINK-USD",
+    "BCH-USD", "NEAR-USD", "MATIC-USD", "LTC-USD", "UNI-USD", "PEPE-USD",
+    "ICP-USD", "APT-USD", "FET-USD", "STX-USD", "ARB-USD"
+]
 
-# Multiselect for picking specific crypto
-if not use_top100_cx:
-    selected_cx_from_list = st.sidebar.multiselect(
-        "Or select from top 100:",
-        options=TOP_100_CRYPTO,
-        default=[],
-        key="cx_multiselect"
-    )
-    if selected_cx_from_list:
-        st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+if is_free_tier:
+    # Free tier can only use top 10 crypto
+    use_top100_cx = False
+    selected_cx_from_list = TOP_10_CRYPTO_FREE
+    st.sidebar.info(f"₿ Free Tier: {len(TOP_10_CRYPTO_FREE)} crypto (BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, MATIC)")
+    
+    # Override text input for free tier
+    cx_input = "\n".join(TOP_10_CRYPTO_FREE)
+    
 else:
-    selected_cx_from_list = TOP_100_CRYPTO
-    st.sidebar.success(f"✅ All 100 crypto selected!")
+    # Pro/Pro Trader: Apply symbol preset
+    if symbol_preset == "Top 100 by Volume":
+        selected_cx_from_list = TOP_100_CRYPTO
+        st.sidebar.success(f"✅ Top 100 crypto selected!")
+        cx_input = "\n".join(TOP_100_CRYPTO)
+    elif symbol_preset == "Top 25 by Volume":
+        selected_cx_from_list = TOP_25_CRYPTO
+        st.sidebar.success(f"✅ Top 25 crypto selected!")
+        cx_input = "\n".join(TOP_25_CRYPTO)
+    else:
+        # All 350+ Coinbase Pairs - use existing logic
+        # Quick scan toggle for crypto
+        use_top100_cx = st.sidebar.checkbox("📊 Quick Scan: Top 100 Crypto", value=False, key="quick_scan_cx")
 
-cx_input = st.sidebar.text_area("Enter symbols (one per line):",
-    "\n".join(crypto_symbols), height=140)
+        # Multiselect for picking specific crypto
+        if not use_top100_cx:
+            selected_cx_from_list = st.sidebar.multiselect(
+                "Or select from top 100:",
+                options=TOP_100_CRYPTO,
+                default=[],
+                key="cx_multiselect"
+            )
+            if selected_cx_from_list:
+                st.sidebar.caption(f"✅ {len(selected_cx_from_list)} crypto selected from list")
+        else:
+            selected_cx_from_list = TOP_100_CRYPTO
+            st.sidebar.success(f"✅ All 100 crypto selected!")
+
+        cx_input = st.sidebar.text_area("Enter symbols (one per line):",
+            "\n".join(crypto_symbols), height=140)
 
 # Show current symbol count for all users
 eq_text_count = len([s.strip() for s in eq_input.splitlines() if s.strip()])
@@ -6956,6 +7094,251 @@ else:
                 st.metric("Total Invested", f"${total_invested:,.2f}")
         else:
             st.info("No transactions found. Add your first position to start tracking.")
+
+# ================= Options Scanner =================
+st.markdown("---")
+st.subheader("📊 Options Scanner")
+
+# Check tier access for options scanner
+current_tier = st.session_state.user_tier
+tier_info = TIER_CONFIG[current_tier]
+
+if current_tier == 'free':
+    with st.expander("🔒 **Options Scanner** - Pro & Pro Trader Feature", expanded=False):
+        st.info("""
+        **Unlock Options Scanner with Pro or Pro Trader:**
+        - Real-time options chain data with Greeks (Delta, Gamma, Theta, Vega)
+        - Scan for high implied volatility (IV) opportunities
+        - Filter by volume, open interest, and expiration
+        - Identify unusual options activity
+        - Track put/call ratios for sentiment analysis
+        - Try free for 5-7 days!
+        """)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✨ Upgrade to Pro ($4.99/mo)", key="upgrade_options_pro", use_container_width=True):
+                st.session_state.selected_plan = 'pro'
+                st.rerun()
+        with col2:
+            if st.button("💎 Upgrade to Pro Trader ($9.99/mo)", key="upgrade_options_trader", use_container_width=True):
+                st.session_state.selected_plan = 'pro_trader'
+                st.rerun()
+else:
+    # Options scanner controls
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        options_symbol = st.text_input("Enter Stock Symbol:", placeholder="e.g., AAPL, TSLA, MSFT", key="options_symbol_input")
+    
+    with col2:
+        options_type = st.selectbox("Option Type:", ["Calls", "Puts", "Both"], key="options_type")
+    
+    with col3:
+        if st.button("🔍 Get Options Chain", key="fetch_options", use_container_width=True):
+            st.session_state.fetch_options_clicked = True
+    
+    # Filters
+    with st.expander("⚙️ Filters", expanded=True):
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            min_volume = st.number_input("Min Volume:", min_value=0, value=100, step=50, key="options_min_volume")
+        
+        with col2:
+            min_oi = st.number_input("Min Open Interest:", min_value=0, value=100, step=50, key="options_min_oi")
+        
+        with col3:
+            min_iv = st.number_input("Min IV %:", min_value=0.0, value=30.0, step=5.0, key="options_min_iv")
+        
+        with col4:
+            max_dte = st.number_input("Max Days to Expiry:", min_value=1, value=60, step=5, key="options_max_dte")
+    
+    # Fetch and display options data
+    if st.session_state.get('fetch_options_clicked', False) and options_symbol:
+        options_symbol_clean = options_symbol.strip().upper()
+        
+        with st.spinner(f"Fetching options chain for {options_symbol_clean}..."):
+            try:
+                # Alpha Vantage Options API call
+                av_key = st.secrets.get("ALPHA_VANTAGE_KEY", os.getenv("ALPHA_VANTAGE_KEY", ""))
+                
+                if not av_key:
+                    st.error("⚠️ Alpha Vantage API key not configured. Please contact support.")
+                else:
+                    # API call to Alpha Vantage REALTIME_OPTIONS
+                    url = f"https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol={options_symbol_clean}&apikey={av_key}"
+                    response = requests.get(url, timeout=30)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        # Check for API errors
+                        if "Error Message" in data:
+                            st.error(f"❌ {data['Error Message']}")
+                        elif "Note" in data:
+                            st.warning(f"⚠️ {data['Note']}")
+                        elif "data" in data:
+                            options_data = data['data']
+                            
+                            if options_data:
+                                # Convert to DataFrame
+                                df_options = pd.DataFrame(options_data)
+                                
+                                # Parse numeric fields
+                                numeric_cols = ['strike', 'bid', 'ask', 'volume', 'open_interest', 'implied_volatility', 
+                                               'delta', 'gamma', 'theta', 'vega', 'rho']
+                                for col in numeric_cols:
+                                    if col in df_options.columns:
+                                        df_options[col] = pd.to_numeric(df_options[col], errors='coerce')
+                                
+                                # Calculate days to expiration
+                                if 'expiration' in df_options.columns:
+                                    df_options['expiration'] = pd.to_datetime(df_options['expiration'])
+                                    df_options['dte'] = (df_options['expiration'] - pd.Timestamp.now()).dt.days
+                                
+                                # Convert IV to percentage
+                                if 'implied_volatility' in df_options.columns:
+                                    df_options['iv_pct'] = df_options['implied_volatility'] * 100
+                                
+                                # Apply filters
+                                filtered_df = df_options.copy()
+                                
+                                # Filter by option type
+                                if 'type' in filtered_df.columns:
+                                    if options_type == "Calls":
+                                        filtered_df = filtered_df[filtered_df['type'].str.lower() == 'call']
+                                    elif options_type == "Puts":
+                                        filtered_df = filtered_df[filtered_df['type'].str.lower() == 'put']
+                                
+                                # Apply numeric filters
+                                if 'volume' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['volume'] >= min_volume]
+                                
+                                if 'open_interest' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['open_interest'] >= min_oi]
+                                
+                                if 'iv_pct' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['iv_pct'] >= min_iv]
+                                
+                                if 'dte' in filtered_df.columns:
+                                    filtered_df = filtered_df[filtered_df['dte'] <= max_dte]
+                                
+                                # Display results
+                                if not filtered_df.empty:
+                                    st.success(f"✅ Found {len(filtered_df)} options contracts matching your criteria")
+                                    
+                                    # Summary metrics
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    
+                                    with col1:
+                                        total_volume = filtered_df['volume'].sum() if 'volume' in filtered_df.columns else 0
+                                        st.metric("Total Volume", f"{total_volume:,.0f}")
+                                    
+                                    with col2:
+                                        total_oi = filtered_df['open_interest'].sum() if 'open_interest' in filtered_df.columns else 0
+                                        st.metric("Total OI", f"{total_oi:,.0f}")
+                                    
+                                    with col3:
+                                        avg_iv = filtered_df['iv_pct'].mean() if 'iv_pct' in filtered_df.columns else 0
+                                        st.metric("Avg IV", f"{avg_iv:.1f}%")
+                                    
+                                    with col4:
+                                        num_contracts = len(filtered_df)
+                                        st.metric("Contracts", num_contracts)
+                                    
+                                    # Display options chain
+                                    st.markdown("### Options Chain")
+                                    
+                                    # Select columns to display
+                                    display_cols = []
+                                    if 'type' in filtered_df.columns:
+                                        display_cols.append('type')
+                                    if 'expiration' in filtered_df.columns:
+                                        display_cols.append('expiration')
+                                    if 'strike' in filtered_df.columns:
+                                        display_cols.append('strike')
+                                    if 'bid' in filtered_df.columns:
+                                        display_cols.append('bid')
+                                    if 'ask' in filtered_df.columns:
+                                        display_cols.append('ask')
+                                    if 'volume' in filtered_df.columns:
+                                        display_cols.append('volume')
+                                    if 'open_interest' in filtered_df.columns:
+                                        display_cols.append('open_interest')
+                                    if 'iv_pct' in filtered_df.columns:
+                                        display_cols.append('iv_pct')
+                                    if 'delta' in filtered_df.columns:
+                                        display_cols.append('delta')
+                                    if 'gamma' in filtered_df.columns:
+                                        display_cols.append('gamma')
+                                    if 'theta' in filtered_df.columns:
+                                        display_cols.append('theta')
+                                    if 'vega' in filtered_df.columns:
+                                        display_cols.append('vega')
+                                    if 'dte' in filtered_df.columns:
+                                        display_cols.append('dte')
+                                    
+                                    # Sort by volume descending
+                                    if 'volume' in filtered_df.columns:
+                                        filtered_df = filtered_df.sort_values('volume', ascending=False)
+                                    
+                                    st.dataframe(filtered_df[display_cols], use_container_width=True)
+                                    
+                                    # Download CSV
+                                    csv = filtered_df[display_cols].to_csv(index=False)
+                                    st.download_button(
+                                        label="📥 Download Options Data (CSV)",
+                                        data=csv,
+                                        file_name=f"{options_symbol_clean}_options_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                        mime="text/csv"
+                                    )
+                                    
+                                    # Greeks explanation
+                                    with st.expander("📖 Understanding Options Greeks", expanded=False):
+                                        st.markdown("""
+                                        **Delta (Δ):** Rate of change in option price per $1 move in underlying stock
+                                        - Calls: 0 to 1.0 (at-the-money ~0.5)
+                                        - Puts: -1.0 to 0 (at-the-money ~-0.5)
+                                        
+                                        **Gamma (Γ):** Rate of change in Delta per $1 move in stock
+                                        - Higher for at-the-money options
+                                        - Indicates how fast Delta changes
+                                        
+                                        **Theta (Θ):** Option price decay per day (time decay)
+                                        - Always negative for long options
+                                        - Higher near expiration
+                                        
+                                        **Vega (ν):** Change in option price per 1% change in IV
+                                        - Higher Vega = more sensitive to volatility
+                                        - Important for volatility trading
+                                        
+                                        **Implied Volatility (IV):** Market's expectation of future volatility
+                                        - Higher IV = more expensive options
+                                        - High IV can signal major moves ahead
+                                        """)
+                                
+                                else:
+                                    st.warning("No options contracts found matching your filters. Try adjusting the criteria.")
+                            
+                            else:
+                                st.info(f"No options data available for {options_symbol_clean}")
+                        
+                        else:
+                            st.error("Unexpected API response format")
+                    
+                    else:
+                        st.error(f"API request failed with status code: {response.status_code}")
+            
+            except requests.exceptions.Timeout:
+                st.error("⏱️ Request timed out. Please try again.")
+            except Exception as e:
+                st.error(f"❌ Error fetching options data: {str(e)}")
+        
+        # Reset button state
+        st.session_state.fetch_options_clicked = False
+    
+    elif not options_symbol:
+        st.info("👆 Enter a stock symbol above to scan options chains with real-time Greeks and IV data")
 
 # ================= Trade Journal =================
 st.markdown("---")

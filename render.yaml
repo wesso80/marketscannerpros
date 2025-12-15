@@ -16,7 +16,7 @@
   - type: web
     name: marketscannerpros-scanner-api
     runtime: docker
-    plan: starter
+    plan: pro
     region: oregon
     dockerfilePath: ./Dockerfile.scanner
     dockerContext: .
@@ -26,3 +26,15 @@
         value: UI755FUUAM6FRRI9
       - key: FINNHUB_API_KEY
         value: d4tt6ohr01qk9ur8pcegd4tt6ohr01qk9ur8pcf0
+
+  - type: web
+    name: marketscannerpros-options-api
+    runtime: docker
+    plan: pro
+    region: oregon
+    dockerfilePath: ./Dockerfile.options
+    dockerContext: .
+    autoDeploy: true
+    envVars:
+      - key: ALPHA_VANTAGE_API_KEY
+        value: UI755FUUAM6FRRI9

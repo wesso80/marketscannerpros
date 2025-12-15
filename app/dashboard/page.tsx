@@ -5,6 +5,7 @@ import ProCta from '@/components/ProCta';
 import SessionBadge from '@/components/SessionBadge';
 import PortalButton from '@/components/PortalButton';
 import DashboardInner from './DashboardInner';
+import DailyAIMarketFocus from '@/components/DailyAIMarketFocus';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,12 @@ export default function DashboardPage(){
         <SessionBadge/>
       </div>
       <Suspense fallback={null}><DashboardInner/></Suspense>
+      <Suspense fallback={null}>
+        {/* Daily AI Market Focus Panel */}
+        <div className="my-8">
+          <DailyAIMarketFocus />
+        </div>
+      </Suspense>
       <PortalButton/>
     </main>
   );

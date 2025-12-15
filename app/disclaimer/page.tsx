@@ -3,7 +3,7 @@ export const metadata = {
   alternates: { canonical: "/disclaimer" }
 };
 
-const effective = "26 September 2025";
+const effective = "13 December 2025";
 
 export default function DisclaimerPage() {
   return (
@@ -27,16 +27,19 @@ export default function DisclaimerPage() {
         You are solely responsible for your decisions.
       </p>
 
-      <h2 id="accuracy">Data, Signals & Accuracy</h2>
+      <h2 id="accuracy">Data, Signals, AI & Accuracy</h2>
       <p>
-        Scores, indicators, and signals may be incomplete, delayed, or inaccurate. Availability
-        can be affected by third-party providers. No accuracy or uptime guarantees are made.
+        Scores, indicators, signals, and AI-generated insights (MSP Analyst powered by GPT-4) may be incomplete, 
+        delayed, or inaccurate. Market data is sourced from Alpha Vantage Premium API. Availability can be 
+        affected by third-party providers. AI responses are for educational purposes only and should not be 
+        construed as financial advice. No accuracy or uptime guarantees are made.
       </p>
 
-      <h2 id="backtests">Backtests & Illustrations</h2>
+      <h2 id="backtests">Backtests & Historical Data</h2>
       <p>
-        Any backtested or hypothetical results are for illustration only and do not guarantee
-        future performance.
+        Backtesting features use real historical data from Alpha Vantage Premium. However, backtested results 
+        are for illustration only and do not guarantee future performance. Past results do not predict future 
+        outcomes. Market conditions change and historical patterns may not repeat.
       </p>
       <h2 id="jurisdiction">Jurisdiction & Compliance</h2>
       <p>

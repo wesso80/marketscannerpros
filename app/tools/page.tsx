@@ -468,6 +468,176 @@ export default function ToolsPage() {
             </div>
           </section>
 
+          {/* Alpha Vantage Premium Tools */}
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 560 }}>Alpha Vantage Premium Tools</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--text-muted)' }}>
+              Live market data, analysis, and screening powered by Alpha Vantage Premium API. These tools are included with all paid subscriptions.
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+              gap: 18,
+              marginBottom: 26
+            }}>
+              {/* Scanner Tool */}
+              <Link href="/tools/scanner" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>📊</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Multi-Market Scanner</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Scan 500+ stocks, 350+ crypto, 60+ forex pairs across timeframes. Custom presets and filtering.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Market screening</span></span>
+                      <span>Type: Scanner</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Options Scanner - NEW */}
+              <Link href="/tools/options" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>💎</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(139, 92, 246, 0.7)', color: '#8B5CF6' }}>Premium</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Options Chain Scanner</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Find high-probability options plays with Greeks analysis, IV screening, and liquidity filters. Real-time data.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: '#8B5CF6' }}>Options trading</span></span>
+                      <span>Type: Scanner</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Top Gainers & Losers */}
+              <Link href="/tools/gainers-losers" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>🚀</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Top Gainers & Losers</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Real-time market movers showing top gainers, biggest losers, and most actively traded stocks in the US markets.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Market movers</span></span>
+                      <span>Type: Data Feed</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Company Overview */}
+              <Link href="/tools/company-overview" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>🏢</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Company Overview</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Comprehensive fundamental analysis with 40+ metrics including PE ratios, profit margins, growth rates, analyst targets, and technical indicators.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Fundamentals</span></span>
+                      <span>Type: Research</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* News & Sentiments */}
+              <Link href="/tools/news" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>📰</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>News & Sentiments</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      AI-powered sentiment analysis of financial news with per-ticker sentiment scores, relevance ratings, and bullish/bearish classifications.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Sentiment</span></span>
+                      <span>Type: Analysis</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            </div>
+          </section>
+
           {/* How to section */}
           <section style={{
             display: 'grid',

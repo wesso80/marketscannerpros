@@ -246,7 +246,14 @@ function AiAnalystContent() {
       color: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
     }}>
-      <div style={{ maxWidth: 1120, padding: '40px 20px', margin: '0 auto' }}>
+      <div
+        style={{
+          maxWidth: 1120,
+          padding: '40px 20px',
+          margin: '0 auto',
+          width: '100%',
+        }}
+      >
         <header style={{
           marginBottom: 32,
           paddingBottom: 24,
@@ -306,11 +313,18 @@ function AiAnalystContent() {
           )}
         </header>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1.4fr 1fr',
-          gap: 24
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.4fr 1fr',
+            gap: 24,
+            width: '100%',
+            boxSizing: 'border-box',
+            ...(typeof window !== 'undefined' && window.innerWidth < 800
+              ? { gridTemplateColumns: '1fr', gap: 16 }
+              : {}),
+          }}
+        >
           {/* LEFT SIDE: inputs */}
           <section style={{
             background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
