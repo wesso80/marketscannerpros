@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+import PageHero from '@/components/PageHero';
 
 interface JournalEntry {
   id: number;
@@ -208,6 +209,21 @@ function JournalContent() {
       background: '#1e293b',
       padding: '0'
     }}>
+      {/* Hero Section */}
+      <div style={{ 
+        background: 'radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)', 
+        padding: '2rem 1rem',
+      }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+          <PageHero
+            badge="TRADE JOURNAL"
+            icon="📔"
+            title="Trade Journal"
+            subtitle="Track and analyze your trading performance with detailed entries and metrics."
+          />
+        </div>
+      </div>
+
       {/* Header */}
       <div style={{ 
         background: '#0f172a', 
@@ -215,22 +231,6 @@ function JournalContent() {
         padding: '16px 24px'
       }}>
         <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ 
-              fontSize: '24px', 
-              fontWeight: '700', 
-              color: '#f1f5f9',
-              margin: '0 0 4px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              📔 Trade Journal
-            </h1>
-            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-              Track and analyze your trading performance
-            </p>
-          </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => setShowAddForm(!showAddForm)}

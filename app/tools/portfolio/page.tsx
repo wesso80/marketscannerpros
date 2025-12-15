@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+import PageHero from '@/components/PageHero';
 
 interface Position {
   id: number;
@@ -283,6 +284,21 @@ function PortfolioContent() {
       padding: '0',
       width: '100%',
     }}>
+      {/* Hero Section */}
+      <div style={{ 
+        background: 'radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)', 
+        padding: '2rem 1rem',
+      }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+          <PageHero
+            badge="PORTFOLIO TRACKER"
+            icon="📊"
+            title="Portfolio Tracking"
+            subtitle="Track your positions, performance, and profit & loss in real-time."
+          />
+        </div>
+      </div>
+
       {/* Header */}
       <div style={{ 
         background: '#0f172a', 
@@ -301,19 +317,6 @@ function PortfolioContent() {
             flexDirection: 'row',
           }}
         >
-          <h1 style={{ 
-            fontSize: '24px', 
-            fontWeight: '700', 
-            color: '#f1f5f9',
-            margin: '0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flex: '1 1 100%',
-            minWidth: 220,
-          }}>
-            📊 Portfolio Tracking
-          </h1>
           <div
             style={{
               display: 'flex',
@@ -322,7 +325,6 @@ function PortfolioContent() {
               justifyContent: 'flex-end',
               flex: '1 1 100%',
               minWidth: 220,
-              marginTop: 12,
             }}
           >
             {positions.length > 0 && (

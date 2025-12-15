@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import PageHero from "@/components/PageHero";
 
 type AssetType = "crypto" | "stock" | "fx";
 
@@ -254,31 +255,21 @@ function AiAnalystContent() {
           width: '100%',
         }}
       >
+        <PageHero
+          badge="AI-POWERED ANALYSIS"
+          icon="🤖"
+          title="MSP AI Analyst"
+          subtitle="Your in-house quant & Pine Script engineer powered by OpenAI GPT-4."
+        />
+
         <header style={{
           marginBottom: 32,
           paddingBottom: 24,
           borderBottom: '1px solid #1f2933'
         }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            color: '#9ca3af',
-            padding: '4px 10px',
-            borderRadius: 999,
-            background: 'rgba(15,23,42,0.9)',
-            border: '1px solid rgba(148,163,184,0.25)',
-            marginBottom: 14
-          }}>
-            <span style={{ color: '#22c55e' }}>AI-Powered</span>
-            <span>Market Intelligence</span>
-          </div>
-          <h1 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>MSP AI Analyst</h1>
-          <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 600, lineHeight: 1.6 }}>
-            Ask your in-house quant &amp; Pine Script engineer anything about any ticker:
-            crypto, stocks, FX, indices, or commodities. The analyst uses the market
-            context you provide below and never guesses prices.
+          <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 600, lineHeight: 1.6, margin: '0 auto', textAlign: 'center' }}>
+            Ask anything about any ticker: crypto, stocks, FX, indices, or commodities. 
+            The analyst uses the market context you provide below and never guesses prices.
           </p>
           
           {/* Scanner Origin Banner */}
