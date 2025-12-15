@@ -16,13 +16,13 @@ export default function Header() {
         <nav className="flex items-center gap-2 md:gap-4 text-xs md:text-sm text-emerald-300/90">
           {/* Products Dropdown */}
           <div 
-            className="relative"
+            className="relative inline-block"
             onMouseEnter={() => setOpenDropdown('products')}
             onMouseLeave={() => setOpenDropdown(null)}
           >
-            <button className="hover:text-emerald-300">Products ▾</button>
+            <button type="button" className="inline-block hover:text-emerald-300 whitespace-nowrap">Products ▾</button>
             {openDropdown === 'products' && (
-              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg">
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg z-50">
                 <Link href="/tools/scanner" className="block px-4 py-2 text-sm hover:bg-white/5">Market Scanner</Link>
                 <Link href="/tools/backtest" className="block px-4 py-2 text-sm hover:bg-white/5">Backtesting</Link>
                 <Link href="/tools/gainers-losers" className="block px-4 py-2 text-sm hover:bg-white/5">Options Flow</Link>
@@ -34,13 +34,13 @@ export default function Header() {
 
           {/* Tools Dropdown */}
           <div 
-            className="relative"
+            className="relative inline-block"
             onMouseEnter={() => setOpenDropdown('tools')}
             onMouseLeave={() => setOpenDropdown(null)}
           >
-            <button className="hover:text-emerald-300">Tools ▾</button>
+            <button type="button" className="inline-block hover:text-emerald-300 whitespace-nowrap">Tools ▾</button>
             {openDropdown === 'tools' && (
-              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg">
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg z-50">
                 <Link href="/tools/ai-analyst" className="block px-4 py-2 text-sm hover:bg-white/5">AI Analyst</Link>
                 <Link href="/tools/ai-tools" className="block px-4 py-2 text-sm hover:bg-white/5">Signal Explainer</Link>
                 <Link href="/tools/commodities" className="block px-4 py-2 text-sm hover:bg-white/5">XRP Dashboard</Link>
@@ -51,19 +51,19 @@ export default function Header() {
 
           {/* Solutions Dropdown */}
           <div 
-            className="relative"
+            className="relative inline-block"
             onMouseEnter={() => setOpenDropdown('solutions')}
             onMouseLeave={() => setOpenDropdown(null)}
           >
-            <button className="hover:text-emerald-300">Solutions ▾</button>
+            <button type="button" className="inline-block hover:text-emerald-300 whitespace-nowrap">Solutions ▾</button>
             {openDropdown === 'solutions' && (
-              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg">
+              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-white/10 bg-black/90 backdrop-blur shadow-lg z-50">
                 <Link href="/tradingview-scripts" className="block px-4 py-2 text-sm hover:bg-white/5">TradingView Scripts</Link>
               </div>
             )}
           </div>
 
-          <Link href="/pricing" className="hover:text-emerald-300">Pricing</Link>
+          <Link href="/pricing" className="inline-block hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
         </nav>
       </div>
     </header>
