@@ -35,7 +35,7 @@ async function fetchCandidates(assetClass:  Candidate["assetClass"]): Promise<Ca
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      .. .(process.env.SCANNER_API_KEY ?  { "x-api-key": process.env.SCANNER_API_KEY } : {}),
+  ...(process.env.SCANNER_API_KEY ? { "x-api-key": process.env. SCANNER_API_KEY } :  {}),
     },
     cache: "no-store",
   });
