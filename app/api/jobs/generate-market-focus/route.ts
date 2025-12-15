@@ -4,16 +4,19 @@ import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// FIX: Move OpenAI client initialization to a function (runtime, not build time)
+function getOpenAIClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 type Candidate = {
-  assetClass: "equity" | "crypto" | "commodity";
+  assetClass:  "equity" | "crypto" | "commodity";
   symbol: string;
-  name?: string;
+  name?:  string;
   venue?: string;
-  score: number;
-  scannerPayload: any;
-  keyLevels?: any;
+  score:  number;
+  scannerPayload:  any;
+  keyLevels?:  any;
   risks?: any;
 };
 
@@ -25,54 +28,52 @@ function todayKeyUTC(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-async function fetchCandidates(assetClass: Candidate["assetClass"]): Promise<Candidate[]> {
-  const base = process.env.SCANNER_BASE_URL!;
+async function fetchCandidates(assetClass:  Candidate["assetClass"]): Promise<Candidate[]> {
+  const base = process.env.SCANNER_BASE_URL! ;
   const url = `${base}/api/market-focus/candidates?assetClass=${assetClass}`;
 
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      ...(process.env.SCANNER_API_KEY ? { "x-api-key": process.env.SCANNER_API_KEY } : {}),
+      .. .(process.env.SCANNER_API_KEY ?  { "x-api-key": process.env.SCANNER_API_KEY } : {}),
     },
     cache: "no-store",
   });
 
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`Scanner service error (${assetClass}) ${res.status}: ${txt}`);
+    throw new Error(`Scanner service error (${assetClass}) ${res.status}:  ${txt}`);
   }
 
   const data = await res.json();
-  // Expect data.candidates: Candidate[]
-  return (data.candidates ?? []) as Candidate[];
+  return (data. candidates ??  []) as Candidate[];
 }
 
 function buildMSPPrompt(c: Candidate): string {
-  // No financial advice; provide context + scenarios only.
   return `
-You are MSP AI Analyst v1.1 for MarketScanner Pros.
+You are MSP AI Analyst v1.1 for MarketScanner Pros. 
 
-Task:
-Generate a concise institutional-style explanation for today's DAILY AI MARKET FOCUS pick.
+Task: 
+Generate a concise institutional-style explanation for today's DAILY AI MARKET FOCUS pick. 
 
-Asset:
+Asset: 
 - Asset class: ${c.assetClass}
 - Symbol: ${c.symbol}
-- Name: ${c.name ?? "N/A"}
-- Venue: ${c.venue ?? "N/A"}
+- Name: ${c. name ??  "N/A"}
+- Venue:  ${c.venue ?? "N/A"}
 - Score: ${c.score}
 
 Scanner outputs (raw):
 ${JSON.stringify(c.scannerPayload, null, 2)}
 
 Rules:
-- Do NOT give buy/sell instructions.
+- Do NOT give buy/sell instructions. 
 - Do NOT predict exact prices.
-- Use MSP language: Bullish Phase / Bearish Phase / Consolidation Phase (Orange), Multi-TF Alignment, Liquidity Zone, Breakout Confirmation, Trend Continuation vs Exhaustion.
+- Use MSP language:  Bullish Phase / Bearish Phase / Consolidation Phase (Orange), Multi-TF Alignment, Liquidity Zone, Breakout Confirmation, Trend Continuation vs Exhaustion.
 - Output format (exact headings):
-Executive Summary:
+Executive Summary: 
 Core Analysis:
-Key Levels / Liquidity:
+Key Levels / Liquidity: 
 Risks / Invalidation:
 Next Steps (How to use on MSP):
 `.trim();
@@ -80,28 +81,26 @@ Next Steps (How to use on MSP):
 
 async function generateExplanation(c: Candidate): Promise<string> {
   const input = buildMSPPrompt(c);
+  
+  // FIX: Initialize client at runtime, not build time
+  const client = getOpenAIClient();
 
   const resp = await client.responses.create({
-    // Use whatever model you have provisioned; Responses API is the recommended API.
-    // See OpenAI docs for Responses API. :contentReference[oaicite:1]{index=1}
     model: "gpt-5",
     input,
   });
 
-  // output_text is provided by the SDK for plain-text responses.
-  return resp.output_text ?? "";
+  return resp.output_text ??  "";
 }
 
 export async function POST(req: Request) {
-  // Secure this endpoint (cron/admin only)
   const secret = req.headers.get("x-cron-secret");
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!process.env.CRON_SECRET || secret !== process.env. CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status:  401 });
   }
 
   const dateKey = todayKeyUTC();
 
-  // Upsert focus header
   const existing = await q<{ id: string; status: string }>(
     `select id, status from daily_market_focus where date_key = $1 limit 1`,
     [dateKey]
@@ -116,16 +115,13 @@ export async function POST(req: Request) {
     );
     focusId = created[0].id;
   } else {
-    // If already ready, you can either skip or regenerate (your choice).
     if (existing[0].status === "ready") {
-      return NextResponse.json({ status: "already_ready", date: dateKey });
+      return NextResponse. json({ status: "already_ready", date: dateKey });
     }
-    // Clear any previous items if re-running
     await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
   }
 
   try {
-    // 1) Pull candidates per asset class from Python service
     const [eq, cr, co] = await Promise.all([
       fetchCandidates("equity"),
       fetchCandidates("crypto"),
@@ -133,49 +129,45 @@ export async function POST(req: Request) {
     ]);
 
     const pickTop = (arr: Candidate[]) => arr.sort((a, b) => b.score - a.score)[0];
-
     const picks = [pickTop(eq), pickTop(cr), pickTop(co)].filter(Boolean) as Candidate[];
 
     if (picks.length !== 3) {
-      throw new Error(`Not enough candidates. equity=${eq.length} crypto=${cr.length} commodity=${co.length}`);
+      throw new Error(`Not enough candidates.  equity=${eq. length} crypto=${cr.length} commodity=${co.length}`);
     }
 
-    // 2) Generate explanations via OpenAI (server-side)
     const explained = await Promise.all(
-      picks.map(async (c) => ({ ...c, explanation: await generateExplanation(c) }))
+      picks.map(async (c) => ({ ... c, explanation: await generateExplanation(c) }))
     );
 
-    // 3) Store items
     for (const c of explained) {
       await q(
         `insert into daily_market_focus_items
           (focus_id, asset_class, symbol, name, venue, score, scanner_payload, explanation, key_levels, risks)
          values
-          ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10::jsonb)`,
+          ($1, $2, $3, $4, $5, $6, $7:: jsonb, $8, $9:: jsonb, $10:: jsonb)`,
         [
           focusId,
           c.assetClass,
           c.symbol,
-          c.name ?? null,
+          c.name ??  null,
           c.venue ?? null,
-          c.score ?? null,
-          JSON.stringify(c.scannerPayload ?? {}),
-          c.explanation ?? "",
+          c.score ??  null,
+          JSON.stringify(c.scannerPayload ??  {}),
+          c.explanation ??  "",
           JSON.stringify(c.keyLevels ?? {}),
-          JSON.stringify(c.risks ?? {}),
+          JSON.stringify(c. risks ?? {}),
         ]
       );
     }
 
-    // 4) Mark ready
     await q(`update daily_market_focus set status='ready', updated_at=now() where id=$1`, [focusId]);
 
-    return NextResponse.json({ status: "ready", date: dateKey, picks: explained.map(p => ({ assetClass: p.assetClass, symbol: p.symbol, score: p.score })) });
-  } catch (err: any) {
+    return NextResponse.json({ status: "ready", date: dateKey, picks:  explained. map(p => ({ assetClass: p.assetClass, symbol: p.symbol, score: p.score })) });
+  } catch (err:  any) {
     await q(
       `update daily_market_focus set status='failed', notes=$2, updated_at=now() where id=$1`,
-      [focusId, String(err?.message ?? err)]
+      [focusId, String(err?. message ??  err)]
     );
-    return NextResponse.json({ status: "failed", error: String(err?.message ?? err) }, { status: 500 });
+    return NextResponse.json({ status: "failed", error: String(err?. message ?? err) }, { status: 500 });
   }
 }
