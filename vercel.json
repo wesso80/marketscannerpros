@@ -1,0 +1,13 @@
+{
+  "buildCommand": "next build",
+  "devCommand": "next dev -p 5000",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "env": {
+    "APP_SIGNING_SECRET": "@app_signing_secret",
+    "STRIPE_SECRET_KEY": "@stripe_secret_key",
+    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret",
+    "DATABASE_URL": "@database_url",
+    "OPENAI_API_KEY": "@openai_api_key"
+  }
+}
