@@ -53,14 +53,20 @@ function PortfolioContent() {
   // Fetch price from backend quote API; try crypto first, then stock, finally fx.
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = symbol.toUpperCase().trim();
+    
+    // Ensure we use the correct base URL (same origin for API routes)
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    
     const tryFetch = async (url: string) => {
       try {
-        const r = await fetch(url, { cache: 'no-store' });
+        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+        const r = await fetch(fullUrl, { cache: 'no-store' });
         if (!r.ok) return null;
         const j = await r.json();
         if (j?.ok && typeof j.price === 'number') return j.price as number;
         return null;
-      } catch {
+      } catch (e) {
+        console.warn('Fetch failed:', e);
         return null;
       }
     };
