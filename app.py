@@ -6699,11 +6699,12 @@ else:
                 else:
                     st.metric("Trend", "N/A")
     
+        # Show notification if symbol changed
+        if symbol_changed:
+            st.info(f"📊 Symbol or timeframe changed. Click 'Generate Chart' to view {chart_symbol_clean}.")
+    
         # Generate chart
         col1, col2 = st.columns([3, 1])
-        with col1:
-            if symbol_changed:
-                st.info(f"📊 Symbol or timeframe changed. Click 'Generate Chart' to view {chart_symbol_clean}.")
         with col2:
             generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
     
@@ -6731,8 +6732,6 @@ else:
                 
                     if chart_fig:
                         st.plotly_chart(chart_fig, width='stretch')
-                        # Set session state to keep chart visible
-                        st.session_state.chart_generated = True
                     
                         # Technical analysis summary
                         with st.expander("📊 Technical Analysis Summary", expanded=False):
