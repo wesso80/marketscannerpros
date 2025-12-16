@@ -14,7 +14,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation - Hidden on mobile */}
-        <nav className="hidden lg:flex items-center gap-2 xl:gap-4 text-xs xl:text-sm text-emerald-300/90">
+        <nav className="hidden md:flex items-center gap-2 xl:gap-4 text-xs xl:text-sm text-emerald-300/90">
           <Link href="/tools/scanner" className="hover:text-emerald-300">Scanner</Link>
           <Link href="/tools/portfolio" className="hover:text-emerald-300">Portfolio</Link>
           <Link href="/tools/backtest" className="hover:text-emerald-300">Backtest</Link>
@@ -32,7 +32,7 @@ export default function Header() {
         {/* Mobile Hamburger Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden flex flex-col gap-1 p-2"
+          className="md:hidden flex flex-col gap-1 p-2"
           aria-label="Toggle menu"
         >
           <span className={`block h-0.5 w-5 bg-emerald-300 transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
@@ -44,7 +44,7 @@ export default function Header() {
       {/* Mobile Menu Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -53,7 +53,7 @@ export default function Header() {
       <div className={`
         fixed top-0 right-0 h-full w-64 bg-neutral-900 z-50 
         transform transition-transform duration-300 ease-in-out
-        lg:hidden border-l border-neutral-800
+        md:hidden border-l border-neutral-800
         ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         <div className="flex flex-col p-6 gap-3">
