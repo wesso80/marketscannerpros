@@ -1,10 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/70 backdrop-blur">
@@ -51,12 +63,12 @@ export default function Header() {
 
       {/* Mobile Menu Drawer */}
       <div className={`
-        fixed top-0 right-0 h-full w-72 bg-[#0F172A] z-50 
+        fixed top-0 right-0 h-[100dvh] w-72 bg-[#0F172A] z-50 
         transform transition-transform duration-300 ease-in-out
         md:hidden border-l border-emerald-300/20 shadow-2xl
         ${isOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full min-h-0 overscroll-contain">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-emerald-300/20 flex-shrink-0">
             <span className="text-lg font-semibold text-emerald-300">Menu</span>
@@ -69,7 +81,7 @@ export default function Header() {
           </div>
           
           {/* Links - Scrollable area */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="flex flex-col gap-1">
               <Link href="/tools/scanner" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Scanner</Link>
               <Link href="/tools/portfolio" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Portfolio</Link>
