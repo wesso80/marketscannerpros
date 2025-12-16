@@ -2499,7 +2499,7 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
     return size_units, risk_dollars, notional, stop_price
 
 # ================= Scanner =================
-@st.cache_data(show_spinner=False, ttl=300, hash_funcs={list: lambda x: tuple(sorted(x))})
+@st.cache_data(show_spinner=False, ttl=300, hash_funcs={list: lambda x: tuple(str(item) for item in sorted(x))})
 def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
                   account_equity: float, risk_pct: float, stop_mult: float, min_vol: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows, errs = [], []
@@ -6709,11 +6709,7 @@ else:
             generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
     
         # Display chart if requested
-        if generate_chart_clicked:
-            # Force fresh chart generation
-            st.session_state.chart_generated = True
-        
-        if st.session_state.get('chart_generated', False):
+        if generate_chart_clicked or st.session_state.get('chart_generated', False):
             with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
                 try:
                     # Build indicator list
@@ -6732,6 +6728,8 @@ else:
                 
                     if chart_fig:
                         st.plotly_chart(chart_fig, width='stretch')
+                        # Set state only after successful chart generation
+                        st.session_state.chart_generated = True
                     
                         # Technical analysis summary
                         with st.expander("📊 Technical Analysis Summary", expanded=False):
