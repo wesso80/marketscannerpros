@@ -2499,9 +2499,9 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
     return size_units, risk_dollars, notional, stop_price
 
 # ================= Scanner =================
-@st.cache_data(show_spinner=False, ttl=300)
+@st.cache_data(show_spinner=False, ttl=300, hash_funcs={list: lambda x: tuple(sorted(x))})
 def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
-                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float, _force_refresh: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows, errs = [], []
     for sym in symbols:
         try:
@@ -6642,9 +6642,21 @@ else:
     # Chart generation
     if chart_symbol and chart_symbol.strip():
         chart_symbol_clean = chart_symbol.strip().upper()
+        
+        # Detect if symbol or timeframe changed - reset chart state to force fresh data
+        last_chart_key = st.session_state.get('last_chart_key', '')
+        current_chart_key = f"{chart_symbol_clean}_{chart_timeframe}"
+        
+        symbol_changed = False
+        if last_chart_key != current_chart_key:
+            # Symbol or timeframe changed - reset chart state
+            st.session_state.chart_generated = False
+            st.session_state.last_chart_key = current_chart_key
+            symbol_changed = True
     
         # Display current price summary
         summary_data = get_chart_data_summary(chart_symbol_clean, chart_timeframe)
+        if summary_data:
         if summary_data:
             col1, col2, col3, col4, col5 = st.columns(5)
         
@@ -6690,11 +6702,18 @@ else:
     
         # Generate chart
         col1, col2 = st.columns([3, 1])
+        with col1:
+            if symbol_changed and last_chart_key:
+                st.info(f"📊 Symbol or timeframe changed. Click 'Generate Chart' to view {chart_symbol_clean}.")
         with col2:
             generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
     
         # Display chart if requested
-        if generate_chart_clicked or st.session_state.get('chart_generated', False):
+        if generate_chart_clicked:
+            # Force fresh chart generation
+            st.session_state.chart_generated = True
+        
+        if st.session_state.get('chart_generated', False):
             with st.spinner(f"Generating chart for {chart_symbol_clean}..."):
                 try:
                     # Build indicator list
@@ -6708,7 +6727,7 @@ else:
                     if show_volume:
                         selected_indicators.append("Volume")
                 
-                    # Create chart
+                    # Create chart with fresh data
                     chart_fig = create_advanced_chart(chart_symbol_clean, chart_timeframe, selected_indicators)
                 
                     if chart_fig:
