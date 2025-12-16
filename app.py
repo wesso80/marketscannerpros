@@ -2501,7 +2501,7 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
 # ================= Scanner =================
 @st.cache_data(show_spinner=False, ttl=300, hash_funcs={list: lambda x: tuple(sorted(x))})
 def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
-                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float, _force_refresh: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                  account_equity: float, risk_pct: float, stop_mult: float, min_vol: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows, errs = [], []
     for sym in symbols:
         try:
@@ -6702,7 +6702,7 @@ else:
         # Generate chart
         col1, col2 = st.columns([3, 1])
         with col1:
-            if symbol_changed and last_chart_key:
+            if symbol_changed:
                 st.info(f"📊 Symbol or timeframe changed. Click 'Generate Chart' to view {chart_symbol_clean}.")
         with col2:
             generate_chart_clicked = st.button("📊 Generate Chart", key="generate_chart", width='stretch')
