@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import ToolsPageHeader from "@/components/ToolsPageHeader";
 
 interface MarketMover {
   ticker: string;
@@ -43,19 +43,16 @@ export default function GainersLosersPage() {
   const currentData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem", width: '100%' }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem", width: '100%' }}>
-        <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
-          ← Back to Tools
-        </Link>
-
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", background: "linear-gradient(to right, #10B981, #3B82F6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "1rem" }}>
-          📊 Top Gainers & Losers
-        </h1>
-        
-        <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem" }}>
-          Live market movers powered by Alpha Vantage Premium
-        </p>
+    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+      <ToolsPageHeader
+        badge="MARKET MOVERS"
+        title="Top Gainers & Losers"
+        subtitle="Live gainers, losers, and most active tickers."
+        icon="📊"
+        backHref="/tools"
+      />
+      <main style={{ padding: "24px 16px", width: '100%' }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>
 
         {/* Tabs */}
         <div
@@ -119,5 +116,6 @@ export default function GainersLosersPage() {
         )}
       </div>
     </main>
+    </div>
   );
 }

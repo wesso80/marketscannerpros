@@ -2419,29 +2419,6 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
     df = pd.DataFrame(rows).set_index("timestamp").sort_index()
     return df
 
-def get_ohlcv_yf(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-    interval, default_period = _yf_interval_period(timeframe)
-    
-    # Use custom period or date range if provided
-    if start and end:
-        data = yf.Ticker(symbol.upper()).history(start=start, end=end, interval=interval, auto_adjust=False)
-    elif period:
-        data = yf.Ticker(symbol.upper()).history(period=period, interval=interval, auto_adjust=False)
-    else:
-        data = yf.Ticker(symbol.upper()).history(period=default_period, interval=interval, auto_adjust=False)
-    
-    if data is None or data.empty:
-        raise ValueError(f"No yfinance data for {symbol} @ {interval}/{period or 'date range'}")
-    data.index = pd.to_datetime(data.index, utc=True)
-    out = pd.DataFrame({
-        "open":   data["Open"].astype(float),
-        "high":   data["High"].astype(float),
-        "low":    data["Low"].astype(float),
-        "close":  data["Close"].astype(float),
-        "volume": data["Volume"].astype(float).fillna(0.0),
-    }, index=data.index).dropna()
-    return out
-
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
     """Fetch OHLCV data using Alpha Vantage Premium exclusively (no yfinance)"""
     try:
@@ -3978,87 +3955,40 @@ def remove_portfolio_position(symbol: str) -> bool:
         return False
 
 def get_aud_to_usd_rate() -> float:
-    """Get current AUD to USD exchange rate"""
+    """Get current AUD to USD exchange rate using Alpha Vantage."""
     try:
-        ticker = yf.Ticker("AUDUSD=X")
-        hist = ticker.history(period="1d")
-        if not hist.empty:
-            return float(hist['Close'].iloc[-1])
-    except:
-        pass
-    return 0.65  # Fallback rate if API fails
+        params = {
+            "function": "CURRENCY_EXCHANGE_RATE",
+            "from_currency": "AUD",
+            "to_currency": "USD",
+            "apikey": ALPHA_VANTAGE_API_KEY,
+        }
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        rate = data.get("Realtime Currency Exchange Rate", {}).get("5. Exchange Rate")
+        if rate:
+            return float(rate)
+    except Exception as e:
+        print(f"Alpha Vantage FX fallback (AUDUSD): {e}")
+    return 0.65  # Safe fallback if API fails
 
 def get_current_price_portfolio(symbol: str) -> Optional[float]:
-    """Get current price for portfolio calculations with robust fallbacks - returns USD normalized price"""
-    # First try the original symbol
-    for attempt_symbol in [symbol]:
-        try:
-            ticker = yf.Ticker(attempt_symbol)
-            
-            # Try fast_info first (fastest)
-            try:
-                price = ticker.fast_info.get('lastPrice')
-                if price and price > 0:
-                    price = float(price)
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-            
-            # Fallback to recent minute data
-            try:
-                hist = ticker.history(period="1d", interval="1m")
-                if not hist.empty:
-                    price = float(hist['Close'].iloc[-1])
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-                
-            # Final fallback to daily data
-            try:
-                hist = ticker.history(period="2d")
-                if not hist.empty:
-                    price = float(hist['Close'].iloc[-1])
-                    # Convert AUD to USD if needed
-                    if symbol.endswith('-AUD'):
-                        aud_usd_rate = get_aud_to_usd_rate()
-                        price = price * aud_usd_rate
-                    return price
-            except Exception:
-                pass
-                
-        except Exception:
-            continue
+    """Get current price for portfolio calculations using Alpha Vantage only."""
+    symbols_to_try = [symbol]
     
-    # If crypto symbol fails, try alternative formats
+    # If AUD-quoted, also try USD variant for better coverage
     if '-' in symbol:
         base, quote = symbol.split('-', 1)
-        alternatives = []
-        
-        # Try different exchange formats for crypto
-        if quote in ['USD', 'AUD']:
-            alternatives.extend([
-                f"{base}-USD",  # Standard USD pair
-                f"{base}USD=X",  # Yahoo Finance crypto format
-                f"{base}-USDT",  # Tether pair
-            ])
-            
-        for alt_symbol in alternatives:
-            if alt_symbol != symbol:  # Don't retry the same symbol
-                try:
-                    ticker = yf.Ticker(alt_symbol)
-                    hist = ticker.history(period="2d")
-                    if not hist.empty:
-                        return float(hist['Close'].iloc[-1])
-                except Exception:
-                    continue
+        if quote.upper() == 'AUD':
+            symbols_to_try.append(f"{base}-USD")
+    
+    for sym in symbols_to_try:
+        price = get_current_price(sym)
+        if price is not None:
+            if symbol.endswith('-AUD'):
+                price = price * get_aud_to_usd_rate()
+            return price
     
     return None
 

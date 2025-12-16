@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import ToolsPageHeader from "@/components/ToolsPageHeader";
 
 interface CompanyData {
   symbol: string;
@@ -78,19 +78,16 @@ export default function CompanyOverviewPage() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
-        <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
-          ← Back to Tools
-        </Link>
-
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", background: "linear-gradient(to right, #10B981, #3B82F6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "1rem" }}>
-          🏢 Company Overview
-        </h1>
-        
-        <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem" }}>
-          Comprehensive fundamental analysis powered by Alpha Vantage Premium
-        </p>
+    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+      <ToolsPageHeader
+        badge="FUNDAMENTALS"
+        title="Company Overview"
+        subtitle="Key fundamentals, technicals, and valuation metrics."
+        icon="🏢"
+        backHref="/tools"
+      />
+      <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0 }}>
 
         {/* Search Bar */}
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
@@ -195,6 +192,7 @@ export default function CompanyOverviewPage() {
         )}
       </div>
     </main>
+    </div>
   );
 }
 

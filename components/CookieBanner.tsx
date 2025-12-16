@@ -5,7 +5,13 @@ const KEY = "msp-consent"; // "accepted" | "declined"
 export default function CookieBanner() {
   const [show, setShow] = useState(false);
   useEffect(() => { try { if (!localStorage.getItem(KEY)) setShow(true); } catch {} }, []);
-  const accept = () => { try { localStorage.setItem(KEY, "accepted"); } catch {}; setShow(false); };
+  const accept = () => {
+    try {
+      localStorage.setItem(KEY, "accepted");
+      window.dispatchEvent(new Event("msp-consent-accepted"));
+    } catch {}
+    setShow(false);
+  };
   const decline = () => { try { localStorage.setItem(KEY, "declined"); } catch {}; setShow(false); };
   if (!show) return null;
   return (

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+import ToolsPageHeader from '@/components/ToolsPageHeader';
 
 interface JournalEntry {
   id: number;
@@ -202,91 +203,78 @@ function JournalContent() {
   // Get all unique tags
   const allTags = Array.from(new Set(entries.flatMap(e => e.tags)));
 
+  const headerActions = (
+    <>
+      <button
+        onClick={() => setShowAddForm(!showAddForm)}
+        style={{
+          padding: '10px 16px',
+          background: '#10b981',
+          border: 'none',
+          borderRadius: '10px',
+          color: '#0b1625',
+          fontSize: '13px',
+          fontWeight: 700,
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          boxShadow: '0 10px 30px rgba(16,185,129,0.35)'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
+        onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
+      >
+        ➕ New Entry
+      </button>
+      {entries.length > 0 && (
+        <>
+          <button
+            onClick={exportToCSV}
+            style={{
+              padding: '10px 16px',
+              background: 'transparent',
+              border: '1px solid rgba(16,185,129,0.45)',
+              borderRadius: '10px',
+              color: '#34d399',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            📥 Export CSV
+          </button>
+          <button
+            onClick={clearAllEntries}
+            style={{
+              padding: '10px 16px',
+              background: 'transparent',
+              border: '1px solid rgba(239,68,68,0.6)',
+              borderRadius: '10px',
+              color: '#f87171',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            🗑️ Clear All
+          </button>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#1e293b',
-      padding: '0'
+      background: '#0f172a',
+      padding: 0
     }}>
-      {/* Header */}
-      <div style={{ 
-        background: '#0f172a', 
-        borderBottom: '1px solid #334155',
-        padding: '16px 24px'
-      }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ 
-              fontSize: '24px', 
-              fontWeight: '700', 
-              color: '#f1f5f9',
-              margin: '0 0 4px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              📔 Trade Journal
-            </h1>
-            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-              Track and analyze your trading performance
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              style={{
-                padding: '10px 20px',
-                background: '#10b981',
-                border: 'none',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#10b981'}
-            >
-              ➕ New Entry
-            </button>
-            {entries.length > 0 && (
-              <>
-                <button
-                  onClick={exportToCSV}
-                  style={{
-                    padding: '10px 16px',
-                    background: 'transparent',
-                    border: '1px solid #10b981',
-                    borderRadius: '6px',
-                    color: '#10b981',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  📥 Export CSV
-                </button>
-                <button
-                  onClick={clearAllEntries}
-                  style={{
-                    padding: '10px 16px',
-                    background: 'transparent',
-                    border: '1px solid #ef4444',
-                    borderRadius: '6px',
-                    color: '#ef4444',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🗑️ Clear All
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      <ToolsPageHeader
+        badge="TRADE JOURNAL"
+        title="Trade Journal"
+        subtitle="Track and analyze your trading performance."
+        icon="📔"
+        backHref="/tools"
+        actions={headerActions}
+      />
 
       {/* Navigation Tabs */}
       <div style={{ 

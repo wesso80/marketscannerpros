@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+import ToolsPageHeader from '@/components/ToolsPageHeader';
 
 interface Position {
   id: number;
@@ -28,6 +29,7 @@ interface PerformanceSnapshot {
 }
 
 function PortfolioContent() {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [positions, setPositions] = useState<Position[]>([]);
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
@@ -43,6 +45,7 @@ function PortfolioContent() {
 
   // Load positions from localStorage on mount
   useEffect(() => {
+    setMounted(true);
     const saved = localStorage.getItem('portfolio_positions');
     const savedClosed = localStorage.getItem('portfolio_closed');
     const savedPerformance = localStorage.getItem('portfolio_performance');
@@ -276,55 +279,24 @@ function PortfolioContent() {
   // Color palette for pie chart
   const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
+  if (!mounted) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#94a3b8', fontSize: '16px' }}>Loading portfolio...</div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: '#1e293b',
-      padding: '0',
-      width: '100%',
-    }}>
-      {/* Header */}
-      <div style={{ 
-        background: '#0f172a', 
-        borderBottom: '1px solid #334155',
-        padding: '16px 24px',
-      }}>
-        <div
-          style={{
-            maxWidth: '1600px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            rowGap: 16,
-            flexDirection: 'row',
-          }}
-        >
-          <h1 style={{ 
-            fontSize: '24px', 
-            fontWeight: '700', 
-            color: '#f1f5f9',
-            margin: '0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            flex: '1 1 100%',
-            minWidth: 220,
-          }}>
-            📊 Portfolio Tracking
-          </h1>
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-              flex: '1 1 100%',
-              minWidth: 220,
-              marginTop: 12,
-            }}
-          >
+    <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+      <ToolsPageHeader
+        badge="PORTFOLIO TRACKER"
+        title="Portfolio Tracking"
+        subtitle="Track live prices, allocation, and performance in real-time."
+        icon="📊"
+        backHref="/tools"
+        actions={
+          <>
             {positions.length > 0 && (
               <button
                 onClick={exportPositionsToCSV}
@@ -365,52 +337,53 @@ function PortfolioContent() {
               <button
                 onClick={clearAllData}
                 style={{
-                  padding: '8px 16px',
+                  padding: '10px 16px',
                   background: 'transparent',
-                  border: '1px solid #ef4444',
-                  borderRadius: '6px',
+                  border: '1px solid rgba(148,163,184,0.25)',
+                  borderRadius: '10px',
                   color: '#ef4444',
                   fontSize: '13px',
-                  fontWeight: '500',
+                  fontWeight: 600,
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#ef4444';
-                  e.currentTarget.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#ef4444';
                 }}
               >
                 🗑️ Clear All Data
               </button>
             )}
-          </div>
-        </div>
-      </div>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{
+                padding: '10px 16px',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                border: 'none',
+                borderRadius: '10px',
+                color: '#fff',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(16,185,129,0.25)'
+              }}
+            >
+              {showAddForm ? '✕ Cancel' : '+ Add Position'}
+            </button>
+          </>
+        }
+      />
 
       {/* Top Stats Bar */}
       <div style={{ 
         background: '#0f172a',
         padding: '20px 24px',
-        borderBottom: '1px solid #334155',
+        borderBottom: '1px solid #334155'
       }}>
-        <div
-          style={{
-            maxWidth: '1600px',
-            margin: '0 auto',
-            display: 'flex',
-            gap: '40px',
-            flexWrap: 'wrap',
-            flexDirection: 'row',
-            rowGap: 24,
-          }}
-        >
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Market Value</div>
-            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+            <div style={{ 
+              fontSize: '24px', 
+              fontWeight: '700',
+              color: '#e2e8f0'
+            }}>
               ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
@@ -421,7 +394,7 @@ function PortfolioContent() {
               fontWeight: '700',
               color: totalReturn >= 0 ? '#10b981' : '#ef4444'
             }}>
-              {totalReturn >= 0 ? '' : '-'}{Math.abs(totalReturn).toFixed(2)}%
+              {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
             </div>
           </div>
           <div>
@@ -431,12 +404,12 @@ function PortfolioContent() {
               fontWeight: '700',
               color: unrealizedPL >= 0 ? '#10b981' : '#ef4444'
             }}>
-              ${ unrealizedPL >= 0 ? '' : '-'}{Math.abs(unrealizedPL).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              ${unrealizedPL >= 0 ? '+' : ''}{unrealizedPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Positions</div>
-            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#e2e8f0' }}>
               {numPositions}
             </div>
           </div>
@@ -444,33 +417,68 @@ function PortfolioContent() {
       </div>
 
       {/* View Tabs */}
-      <div style={{ 
-        background: '#0f172a',
-        padding: '0 24px',
-        borderBottom: '1px solid #334155'
-      }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '0' }}>
-          {['overview', 'add position', 'holdings', 'history'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '12px 24px',
-                background: activeTab === tab ? '#10b981' : 'transparent',
-                border: 'none',
-                color: activeTab === tab ? '#fff' : '#94a3b8',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                transition: 'all 0.2s'
-              }}
-            >
-              {tab === 'add position' ? '➕ ' : tab === 'overview' ? '📊 ' : tab === 'holdings' ? '💼 ' : '📜 '}
-              {tab.toUpperCase()}
-            </button>
-          ))}
+      <div style={{ padding: '0 24px' }}>
+        <div style={{
+          maxWidth: '1600px',
+          margin: '0 auto',
+          display: 'flex',
+          gap: '12px',
+          flexWrap: 'wrap',
+          padding: '12px 0',
+          borderBottom: '1px solid rgba(148,163,184,0.1)'
+        }}>
+          {[
+            { key: 'overview', label: 'Overview', icon: '📊' },
+            { key: 'add position', label: 'Add Position', icon: '➕' },
+            { key: 'holdings', label: 'Holdings', icon: '💼' },
+            { key: 'history', label: 'History', icon: '📜' },
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  position: 'relative',
+                  padding: '12px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: isActive
+                    ? 'linear-gradient(145deg, rgba(34,211,238,0.08), rgba(16,185,129,0.14))'
+                    : 'linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.04))',
+                  border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.2)',
+                  boxShadow: isActive ? '0 10px 30px rgba(16,185,129,0.25)' : 'none',
+                  color: isActive ? '#e2e8f0' : '#94a3b8',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  minWidth: '150px',
+                  justifyContent: 'center'
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+                <span>{tab.label}</span>
+                {isActive && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '4px',
+                      left: '12px',
+                      right: '12px',
+                      height: '3px',
+                      borderRadius: '999px',
+                      background: 'linear-gradient(90deg, #22d3ee, #10b981)'
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

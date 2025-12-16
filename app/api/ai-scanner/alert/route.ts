@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
+import { logger } from "@/lib/logger";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     const result = await pool.query(query, values);
     const alertId = result.rows[0]?.id;
 
-    console.log("[AI-SCANNER ALERT STORED]", {
+    logger.info('AI scanner alert stored', {
       id: alertId,
       symbol: payload.symbol,
       timeframe: payload.tf,
@@ -64,8 +65,10 @@ export async function POST(req: Request) {
       price: payload.price
     });
 
-    // TODO: Send push notification to user
-    // TODO: Trigger email alert if user has alerts enabled
+    // Alert notifications are handled by the Streamlit app
+    // - Email alerts: See app.py notification system
+    // - Push notifications: Not yet implemented (Future feature)
+    // - In-app alerts: See app.py alerts dashboard
 
     return NextResponse.json({ 
       ok: true, 

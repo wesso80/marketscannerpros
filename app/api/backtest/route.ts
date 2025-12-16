@@ -1,15 +1,58 @@
+/**
+ * Backtest API
+ * 
+ * @route POST /api/backtest
+ * @description Run historical backtests on trading strategies with real market data
+ * @authentication Optional (enhanced features for authenticated users)
+ * 
+ * @body {object} request
+ * @body {string} request.symbol - Stock symbol (e.g., "AAPL", "TSLA")
+ * @body {string} request.strategy - Strategy name ("ema_crossover", "rsi_mean_reversion", "macd_momentum", "bollinger_bands")
+ * @body {string} request.startDate - Backtest start date (YYYY-MM-DD)
+ * @body {string} request.endDate - Backtest end date (YYYY-MM-DD)
+ * @body {number} request.initialCapital - Starting capital amount
+ * 
+ * @returns {object} Backtest results
+ * @returns {number} totalTrades - Number of trades executed
+ * @returns {number} winRate - Percentage of winning trades
+ * @returns {number} totalReturn - Total profit/loss
+ * @returns {number} maxDrawdown - Maximum drawdown percentage
+ * @returns {number} sharpeRatio - Risk-adjusted returns metric
+ * @returns {Array} trades - Individual trade details
+ * 
+ * @example
+ * POST /api/backtest
+ * Body: { symbol: "AAPL", strategy: "ema_crossover", startDate: "2023-01-01", endDate: "2023-12-31", initialCapital: 10000 }
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
+import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
 interface Trade {
-  date: string;
+  entryDate: string;
+  exitDate: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
   entry: number;
   exit: number;
   return: number;
   returnPercent: number;
+  holdingPeriodDays: number;
+}
+
+interface StrategyResult {
+  trades: Trade[];
+  dates: string[];
+  closes: number[];
+}
+
+interface EquityPoint {
+  date: string;
+  equity: number;
+  drawdown: number;
 }
 
 interface PriceData {
@@ -171,7 +214,7 @@ function runStrategy(
   startDate: string,
   endDate: string,
   symbol: string
-): Trade[] {
+): StrategyResult {
   const dates = Object.keys(priceData)
     .filter(d => d >= startDate && d <= endDate)
     .sort();
@@ -230,13 +273,15 @@ function runStrategy(
         const returnPercent = ((close - position.entry) / position.entry) * 100;
         
         trades.push({
-          date: position.entryDate,
+          entryDate: position.entryDate,
+          exitDate: date,
           symbol,
           side: 'LONG',
           entry: position.entry,
           exit: close,
           return: returnDollars,
-          returnPercent
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
         });
         position = null;
       }
@@ -252,13 +297,15 @@ function runStrategy(
         const returnPercent = ((close - position.entry) / position.entry) * 100;
         
         trades.push({
-          date: position.entryDate,
+          entryDate: position.entryDate,
+          exitDate: date,
           symbol,
           side: 'LONG',
           entry: position.entry,
           exit: close,
           return: returnDollars,
-          returnPercent
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
         });
         position = null;
       }
@@ -274,13 +321,15 @@ function runStrategy(
         const returnPercent = ((close - position.entry) / position.entry) * 100;
         
         trades.push({
-          date: position.entryDate,
+          entryDate: position.entryDate,
+          exitDate: date,
           symbol,
           side: 'LONG',
           entry: position.entry,
           exit: close,
           return: returnDollars,
-          returnPercent
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
         });
         position = null;
       }
@@ -296,13 +345,15 @@ function runStrategy(
         const returnPercent = ((close - position.entry) / position.entry) * 100;
         
         trades.push({
-          date: position.entryDate,
+          entryDate: position.entryDate,
+          exitDate: date,
           symbol,
           side: 'LONG',
           entry: position.entry,
           exit: close,
           return: returnDollars,
-          returnPercent
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
         });
         position = null;
       }
@@ -320,13 +371,15 @@ function runStrategy(
           const returnPercent = ((close - position.entry) / position.entry) * 100;
           
           trades.push({
-            date: position.entryDate,
+            entryDate: position.entryDate,
+            exitDate: date,
             symbol,
             side: 'LONG',
             entry: position.entry,
             exit: close,
             return: returnDollars,
-            returnPercent
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
           });
           position = null;
         }
@@ -344,13 +397,15 @@ function runStrategy(
           const returnPercent = ((close - position.entry) / position.entry) * 100;
           
           trades.push({
-            date: position.entryDate,
+            entryDate: position.entryDate,
+            exitDate: date,
             symbol,
             side: 'LONG',
             entry: position.entry,
             exit: close,
             return: returnDollars,
-            returnPercent
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
           });
           position = null;
         }
@@ -367,13 +422,15 @@ function runStrategy(
         const returnPercent = ((close - position.entry) / position.entry) * 100;
         
         trades.push({
-          date: position.entryDate,
+          entryDate: position.entryDate,
+          exitDate: date,
           symbol,
           side: 'LONG',
           entry: position.entry,
           exit: close,
           return: returnDollars,
-          returnPercent
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
         });
         position = null;
       }
@@ -391,13 +448,15 @@ function runStrategy(
           const returnPercent = ((close - position.entry) / position.entry) * 100;
           
           trades.push({
-            date: position.entryDate,
+            entryDate: position.entryDate,
+            exitDate: date,
             symbol,
             side: 'LONG',
             entry: position.entry,
             exit: close,
             return: returnDollars,
-            returnPercent
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
           });
           position = null;
         }
@@ -405,31 +464,27 @@ function runStrategy(
     }
   }
   
-  return trades;
+  return { trades, dates, closes };
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Validate request body with Zod
+    const json = await req.json();
+    const body: BacktestRequest = backtestRequestSchema.parse(json);
+    
     const { symbol, strategy, startDate, endDate, initialCapital } = body;
 
-    console.log('Real backtest request:', { symbol, strategy, startDate, endDate });
-
-    if (!symbol || !strategy || !startDate || !endDate || !initialCapital) {
-      return NextResponse.json(
-        { error: 'Missing required parameters' },
-        { status: 400 }
-      );
-    }
+    logger.info('Backtest request started', { symbol, strategy, startDate, endDate, initialCapital });
 
     // Fetch real historical price data from Alpha Vantage
-    console.log(`Fetching price data for ${symbol}...`);
+    logger.debug(`Fetching price data for ${symbol}...`);
     const priceData = await fetchPriceData(symbol);
-    console.log(`Fetched ${Object.keys(priceData).length} days of price data`);
+    logger.debug(`Fetched ${Object.keys(priceData).length} days of price data`);
 
     // Run backtest with real indicators
-    const trades = runStrategy(strategy, priceData, initialCapital, startDate, endDate, symbol);
-    console.log(`Backtest complete: ${trades.length} trades executed`);
+    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, symbol);
+    logger.debug(`Backtest complete: ${trades.length} trades executed`);
 
     if (trades.length === 0) {
       return NextResponse.json({
@@ -443,6 +498,14 @@ export async function POST(req: NextRequest) {
         profitFactor: 0,
         avgWin: 0,
         avgLoss: 0,
+        cagr: 0,
+        volatility: 0,
+        sortinoRatio: 0,
+        calmarRatio: 0,
+        timeInMarket: 0,
+        bestTrade: null,
+        worstTrade: null,
+        equityCurve: [],
         trades: []
       });
     }
@@ -456,29 +519,57 @@ export async function POST(req: NextRequest) {
     const totalReturn = trades.reduce((sum, t) => sum + t.return, 0);
     const totalReturnPercent = (totalReturn / initialCapital) * 100;
 
-    // Calculate max drawdown
+    // Build equity curve using exit dates
+    let equity = initialCapital;
     let peak = initialCapital;
     let maxDrawdown = 0;
-    let equity = initialCapital;
+    const equityCurve: EquityPoint[] = [];
 
-    trades.forEach(trade => {
-      equity += trade.return;
+    const exitReturnsByDate = trades.reduce<Record<string, number>>((acc, trade) => {
+      acc[trade.exitDate] = (acc[trade.exitDate] || 0) + trade.return;
+      return acc;
+    }, {});
+
+    dates.forEach(date => {
+      if (exitReturnsByDate[date] !== undefined) {
+        equity += exitReturnsByDate[date];
+      }
+
       if (equity > peak) {
         peak = equity;
       }
+
       const drawdown = ((peak - equity) / peak) * 100;
       if (drawdown > maxDrawdown) {
         maxDrawdown = drawdown;
       }
+
+      equityCurve.push({ date, equity, drawdown });
     });
 
-    // Calculate Sharpe ratio
-    const returns = trades.map(t => t.returnPercent);
-    const avgReturn = returns.reduce((a, b) => a + b, 0) / (returns.length || 1);
+    const endingEquity = equityCurve[equityCurve.length - 1]?.equity || initialCapital;
+    const tradingDays = equityCurve.length;
+
+    // Calculate daily equity returns for risk metrics
+    const equityReturns = equityCurve.slice(1).map((point, idx) => {
+      const prev = equityCurve[idx].equity;
+      return ((point.equity - prev) / prev) * 100;
+    });
+
+    const avgReturn = equityReturns.reduce((a, b) => a + b, 0) / (equityReturns.length || 1);
     const stdDev = Math.sqrt(
-      returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (returns.length || 1)
+      equityReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (equityReturns.length || 1)
     );
     const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0;
+
+    const downsideReturns = equityReturns.filter(r => r < 0);
+    const downsideStd = Math.sqrt(
+      downsideReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / (downsideReturns.length || 1)
+    );
+    const sortinoRatio = downsideStd > 0 ? (avgReturn / downsideStd) * Math.sqrt(252) : 0;
+
+    const cagr = tradingDays > 0 ? Math.pow(endingEquity / initialCapital, 252 / tradingDays) - 1 : 0;
+    const volatility = stdDev * Math.sqrt(252);
 
     // Calculate profit factor
     const grossProfit = trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0);
@@ -493,6 +584,13 @@ export async function POST(req: NextRequest) {
       ? trades.filter(t => t.return <= 0).reduce((sum, t) => sum + t.return, 0) / losingTrades
       : 0;
 
+    const totalHoldingDays = trades.reduce((sum, t) => sum + t.holdingPeriodDays, 0);
+    const timeInMarket = tradingDays > 0 ? (totalHoldingDays / tradingDays) * 100 : 0;
+    const calmarRatio = maxDrawdown > 0 ? (cagr * 100) / maxDrawdown : 0;
+
+    const bestTrade = trades.reduce((best, t) => t.returnPercent > (best?.returnPercent ?? -Infinity) ? t : best, trades[0]);
+    const worstTrade = trades.reduce((worst, t) => t.returnPercent < (worst?.returnPercent ?? Infinity) ? t : worst, trades[0]);
+
     const result = {
       totalTrades,
       winningTrades,
@@ -504,6 +602,30 @@ export async function POST(req: NextRequest) {
       profitFactor: parseFloat(profitFactor.toFixed(2)),
       avgWin: parseFloat(avgWin.toFixed(2)),
       avgLoss: parseFloat(avgLoss.toFixed(2)),
+      cagr: parseFloat((cagr * 100).toFixed(2)),
+      volatility: parseFloat(volatility.toFixed(2)),
+      sortinoRatio: parseFloat(sortinoRatio.toFixed(2)),
+      calmarRatio: parseFloat(calmarRatio.toFixed(2)),
+      timeInMarket: parseFloat(timeInMarket.toFixed(2)),
+      bestTrade: bestTrade ? {
+        ...bestTrade,
+        entry: parseFloat(bestTrade.entry.toFixed(2)),
+        exit: parseFloat(bestTrade.exit.toFixed(2)),
+        return: parseFloat(bestTrade.return.toFixed(2)),
+        returnPercent: parseFloat(bestTrade.returnPercent.toFixed(2))
+      } : null,
+      worstTrade: worstTrade ? {
+        ...worstTrade,
+        entry: parseFloat(worstTrade.entry.toFixed(2)),
+        exit: parseFloat(worstTrade.exit.toFixed(2)),
+        return: parseFloat(worstTrade.return.toFixed(2)),
+        returnPercent: parseFloat(worstTrade.returnPercent.toFixed(2))
+      } : null,
+      equityCurve: equityCurve.map(point => ({
+        date: point.date,
+        equity: parseFloat(point.equity.toFixed(2)),
+        drawdown: parseFloat(point.drawdown.toFixed(2))
+      })),
       trades: trades.map(t => ({
         ...t,
         entry: parseFloat(t.entry.toFixed(2)),
@@ -513,11 +635,20 @@ export async function POST(req: NextRequest) {
       }))
     };
 
-    console.log('Real backtest result:', { totalTrades, winRate, totalReturn: totalReturnPercent.toFixed(2) });
+    logger.info('Backtest completed successfully', { 
+      symbol, 
+      totalTrades, 
+      winRate, 
+      totalReturn: totalReturnPercent.toFixed(2) 
+    });
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Backtest error:', error);
+    logger.error('Backtest error', { 
+      error: error?.message || 'Failed to run backtest',
+      stack: error?.stack
+    });
+    
     return NextResponse.json(
       { error: error.message || 'Failed to run backtest' },
       { status: 500 }

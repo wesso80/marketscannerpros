@@ -10,20 +10,9 @@
 				"build"
 			],
 			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "npm build",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"run",
-				"build"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

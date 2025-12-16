@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import ToolsPageHeader from '@/components/ToolsPageHeader';
 
 interface BacktestResult {
   totalTrades: number;
@@ -14,17 +15,33 @@ interface BacktestResult {
   profitFactor: number;
   avgWin: number;
   avgLoss: number;
+  cagr: number;
+  volatility: number;
+  sortinoRatio: number;
+  calmarRatio: number;
+  timeInMarket: number;
+  bestTrade: Trade | null;
+  worstTrade: Trade | null;
+  equityCurve: EquityPoint[];
   trades: Trade[];
 }
 
 interface Trade {
-  date: string;
+  entryDate: string;
+  exitDate: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
   entry: number;
   exit: number;
   return: number;
   returnPercent: number;
+  holdingPeriodDays: number;
+}
+
+interface EquityPoint {
+  date: string;
+  equity: number;
+  drawdown: number;
 }
 
 function BacktestContent() {
@@ -35,10 +52,15 @@ function BacktestContent() {
   const [strategy, setStrategy] = useState('ema_crossover');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const runBacktest = async () => {
     setIsLoading(true);
     setResults(null);
+    setAiText(null);
+    setAiError(null);
     
     try {
       // Fetch price data and technical indicators from Alpha Vantage
@@ -67,33 +89,51 @@ function BacktestContent() {
       setIsLoading(false);
     }
   };
+
+  const summarizeBacktest = async () => {
+    if (!results) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch('/api/msp-analyst', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `Summarize backtest results in 4 bullets and a one-line risk note. Symbol ${symbol}, strategy ${strategy}, total trades ${results.totalTrades}, win rate ${results.winRate}%, total return ${results.totalReturn}%, max drawdown ${results.maxDrawdown}%, sharpe ${results.sharpeRatio}, profit factor ${results.profitFactor}, avg win ${results.avgWin}, avg loss ${results.avgLoss}, cagr ${results.cagr}, volatility ${results.volatility}, sortino ${results.sortinoRatio}, calmar ${results.calmarRatio}, time in market ${results.timeInMarket}%. Best trade ${results.bestTrade ? results.bestTrade.returnPercent : 'n/a'}%, worst trade ${results.worstTrade ? results.worstTrade.returnPercent : 'n/a'}%. Keep it concise.`,
+          context: {
+            symbol,
+            timeframe: `${startDate} to ${endDate}`,
+          },
+        })
+      });
+      if (response.status === 401) {
+        setAiError('Please sign in to use AI.');
+        return;
+      }
+      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
+      const data = await response.json();
+      const text = data?.text || data?.message || data?.response || JSON.stringify(data);
+      setAiText(text);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to get AI summary');
+    } finally {
+      setAiLoading(false);
+    }
+  };
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(to bottom, #0f172a 0%, #020617 100%)',
-      padding: '20px'
+      background: '#0f172a',
+      padding: 0
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb', marginBottom: '8px' }}>
-              Strategy Backtester
-            </h1>
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>Test your trading strategies with historical data</p>
-          </div>
-          <Link href="/tools/scanner" style={{
-            padding: '10px 18px',
-            background: 'rgba(31,41,55,0.8)',
-            border: '1px solid #374151',
-            borderRadius: '8px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            ← Back to Scanner
-          </Link>
-        </div>
+      <ToolsPageHeader
+        badge="STRATEGY LAB"
+        title="Strategy Backtester"
+        subtitle="Test and iterate trading ideas with historical data."
+        icon="🧪"
+        backHref="/tools"
+      />
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
 
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
@@ -282,6 +322,42 @@ function BacktestContent() {
         {/* Results */}
         {results && (
           <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <button
+                onClick={summarizeBacktest}
+                disabled={aiLoading}
+                style={{
+                  padding: '10px 14px',
+                  background: aiLoading ? '#1f2937' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: aiLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                {aiLoading ? 'Asking AI...' : 'AI summary'}
+              </button>
+              {aiError && <span style={{ color: '#fca5a5', fontSize: '13px' }}>{aiError}</span>}
+            </div>
+
+            {aiText && (
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.08)',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px',
+                color: '#d1fae5',
+                lineHeight: 1.55,
+                fontSize: '14px'
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px', color: '#34d399' }}>AI Insight</div>
+                <div style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
+              </div>
+            )}
+
             {/* Equity Curve Chart */}
             <div style={{
               background: '#0f172a',
@@ -310,18 +386,17 @@ function BacktestContent() {
                     const tradeBarHeight = 80;
                     const gap = 20;
 
-                    // Calculate equity curve data
-                    const capital = parseFloat(initialCapital);
-                    let runningEquity = capital;
-                    const equityPoints = [{ date: results.trades[0]?.date || startDate, value: capital }];
-                    
-                    results.trades.forEach(trade => {
-                      runningEquity += trade.return;
-                      equityPoints.push({ date: trade.date, value: runningEquity });
-                    });
+                    const equityPoints = results.equityCurve || [];
+                    if (equityPoints.length === 0) {
+                      return (
+                        <text x={padding.left} y={padding.top + 40} fill="#94a3b8" fontSize="14">
+                          No equity data returned for this test.
+                        </text>
+                      );
+                    }
 
-                    const minEquity = Math.min(...equityPoints.map(p => p.value), capital);
-                    const maxEquity = Math.max(...equityPoints.map(p => p.value), capital);
+                    const minEquity = Math.min(...equityPoints.map(p => p.equity));
+                    const maxEquity = Math.max(...equityPoints.map(p => p.equity));
                     const equityRange = maxEquity - minEquity || 1;
 
                     // Scale functions for equity curve
@@ -332,7 +407,7 @@ function BacktestContent() {
                     // Generate equity curve path
                     const equityPath = equityPoints.map((point, i) => {
                       const x = scaleX(i);
-                      const y = scaleYEquity(point.value);
+                      const y = scaleYEquity(point.equity);
                       return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
                     }).join(' ');
 
@@ -341,7 +416,7 @@ function BacktestContent() {
 
                     // Scale functions for trade bars
                     const tradeBarY = padding.top + equityCurveHeight + gap;
-                    const maxTradeReturn = Math.max(...results.trades.map(t => Math.abs(t.return)));
+                    const maxTradeReturn = Math.max(...results.trades.map(t => Math.abs(t.return)), 1);
                     const scaleTradeBar = (value: number) => (value / maxTradeReturn) * (tradeBarHeight / 2);
 
                     return (
@@ -403,7 +478,7 @@ function BacktestContent() {
                           <circle
                             key={`point-${i}`}
                             cx={scaleX(i)}
-                            cy={scaleYEquity(point.value)}
+                            cy={scaleYEquity(point.equity)}
                             r="3"
                             fill="#10b981"
                             stroke="#0f172a"
@@ -556,6 +631,67 @@ function BacktestContent() {
                     ${results.avgLoss.toFixed(2)}
                   </div>
                 </div>
+
+                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>CAGR</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                    {results.cagr >= 0 ? '+' : ''}{results.cagr.toFixed(2)}%
+                  </div>
+                </div>
+
+                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Volatility (Ann.)</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                    {results.volatility.toFixed(2)}%
+                  </div>
+                </div>
+
+                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Sortino Ratio</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                    {results.sortinoRatio.toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Calmar Ratio</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                    {results.calmarRatio.toFixed(2)}
+                  </div>
+                </div>
+
+                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Time in Market</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                    {results.timeInMarket.toFixed(1)}%
+                  </div>
+                </div>
+
+                {results.bestTrade && (
+                  <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Best Trade</div>
+                    <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '700' }}>
+                      +{results.bestTrade.returnPercent.toFixed(2)}% ({results.bestTrade.symbol})
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      {new Date(results.bestTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {` x${results.bestTrade.holdingPeriodDays}d`}
+                    </div>
+                  </div>
+                )}
+
+                {results.worstTrade && (
+                  <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Worst Trade</div>
+                    <div style={{ color: '#ef4444', fontSize: '18px', fontWeight: '700' }}>
+                      {results.worstTrade.returnPercent.toFixed(2)}% ({results.worstTrade.symbol})
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      {new Date(results.worstTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {` x${results.worstTrade.holdingPeriodDays}d`}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -576,11 +712,13 @@ function BacktestContent() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Date</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Exit</th>
                       <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
                       <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Exit</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Hold (d)</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Return %</th>
                     </tr>
@@ -589,7 +727,10 @@ function BacktestContent() {
                     {results.trades.map((trade, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
                         <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '14px' }}>
-                          {new Date(trade.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '14px' }}>
+                          {new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
                         <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
                           {trade.symbol}
@@ -612,6 +753,9 @@ function BacktestContent() {
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
                           ${trade.exit.toFixed(2)}
+                        </td>
+                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
+                          {trade.holdingPeriodDays}
                         </td>
                         <td style={{ 
                           padding: '16px 20px', 

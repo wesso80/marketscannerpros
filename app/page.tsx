@@ -7,404 +7,268 @@ import SocialProof from "../components/SocialProof";
 import ReferralBanner from "../components/ReferralBanner";
 import Link from "next/link";
 
-export default function Home() {
-  const getStreamlitUrl = () => {
-    return "https://market-scanner-pro.replit.app";
-  };
+import { useState } from "react";
+import { FaRobot, FaChartLine, FaSearch, FaBrain, FaBolt, FaCogs, FaComments } from "react-icons/fa";
 
+const features = [
+  {
+    icon: <FaRobot size={32} color="#60a5fa" />, title: "MSP AI Analyst", desc: "Understand the Signal — Not Just the Alert. The MSP AI Analyst is an AI-powered market interpretation engine built into MarketScanner Pros."
+  },
+  {
+    icon: <FaChartLine size={32} color="#22c55e" />, title: "Multi-Timeframe Scanning", desc: "Scan across multiple timeframes and get context, not just signals."
+  },
+  {
+    icon: <FaSearch size={32} color="#f59e0b" />, title: "Market Structure Logic", desc: "Explains why a signal appeared, what conditions align, and what risks exist — using professional market structure logic."
+  },
+  {
+    icon: <FaBrain size={32} color="#8b5cf6" />, title: "AI-Powered Insights", desc: "Think of it as a market analyst, not a signal bot."
+  },
+  {
+    icon: <FaBolt size={32} color="#ef4444" />, title: "Risk Awareness", desc: "Highlights potential fakeouts, late-stage moves, and volatility changes."
+  },
+  {
+    icon: <FaCogs size={32} color="#3b82f6" />, title: "Structure & Liquidity Context", desc: "Shows key support/resistance, liquidity, and invalidation zones."
+  },
+  {
+    icon: <FaComments size={32} color="#22c55e" />, title: "Decision Support", desc: "Clear, structured, actionable explanations for decision-making." 
+  }
+];
+
+export default function Home() {
+  const [activeFeature, setActiveFeature] = useState(0);
   return (
     <>
-      <Hero />
-      
-      {/* AI Features Spotlight */}
+
+      {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        background: 'linear-gradient(180deg, #0a0e1a 0%, #111827 100%)',
         color: '#f9fafb',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         borderBottom: '1px solid #1f2933',
-        padding: '60px 20px'
+        padding: '64px 0 0 0',
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: 520,
+        display: 'flex',
+        alignItems: 'center',
       }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 12,
-              color: '#60a5fa',
-              padding: '6px 14px',
-              borderRadius: 999,
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.3)',
-              marginBottom: 20
-            }}>
-              <span>🤖</span>
-              <span style={{ fontWeight: 600 }}>AI-POWERED</span>
-            </div>
-            
-            <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, lineHeight: 1.2 }}>
-              <span style={{ color: '#60a5fa' }}>MSP AI Analyst</span>
-            </h2>
-            <p style={{ fontSize: 20, fontWeight: 600, color: '#e5e7eb', marginBottom: 24 }}>
-              Understand the Signal — Not Just the Alert
-            </p>
-            <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 700, margin: '0 auto', lineHeight: 1.6 }}>
-              The MSP AI Analyst is an AI-powered market interpretation engine built into MarketScanner Pros.
-            </p>
-          </div>
-
-          {/* Key Points */}
-          <div style={{ 
-            maxWidth: 800, 
-            margin: '0 auto 48px',
-            padding: '32px',
-            background: 'rgba(59,130,246,0.05)',
-            border: '1px solid rgba(59,130,246,0.15)',
-            borderRadius: 16
-          }}>
-            <p style={{ fontSize: 15, color: '#e5e7eb', lineHeight: 1.8, marginBottom: 16 }}>
-              It does <strong style={{ color: '#60a5fa' }}>not</strong> tell you what to trade.<br/>
-              It explains <strong style={{ color: '#22c55e' }}>why</strong> a signal appeared, what conditions align, and what risks exist — using professional market structure logic.
-            </p>
-            <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, fontStyle: 'italic' }}>
-              Think of it as a market analyst, not a signal bot.
-            </p>
-          </div>
-
-          {/* The Problem */}
-          <div style={{ marginBottom: 56 }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#f59e0b', marginBottom: 16 }}>
-              Why Most Signals Fail
-            </h3>
-            <p style={{ fontSize: 16, color: '#9ca3af', lineHeight: 1.7, marginBottom: 20, maxWidth: 800 }}>
-              Most trading tools do one thing: They highlight <em>what happened</em>.
-            </p>
-            <p style={{ fontSize: 15, color: '#9ca3af', marginBottom: 16 }}>
-              They do <strong>not</strong> explain:
-            </p>
-            <ul style={{ 
-              fontSize: 15, 
-              color: '#e5e7eb', 
-              lineHeight: 1.8,
-              maxWidth: 700,
-              listStyle: 'none',
-              padding: 0
-            }}>
-              <li style={{ marginBottom: 8, paddingLeft: 24, position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 0, color: '#ef4444' }}>✗</span>
-                Which timeframe is in control
-              </li>
-              <li style={{ marginBottom: 8, paddingLeft: 24, position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 0, color: '#ef4444' }}>✗</span>
-                Whether conditions are trending or consolidating
-              </li>
-              <li style={{ marginBottom: 8, paddingLeft: 24, position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 0, color: '#ef4444' }}>✗</span>
-                If the move is early, late, or vulnerable
-              </li>
-              <li style={{ paddingLeft: 24, position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 0, color: '#ef4444' }}>✗</span>
-                Where liquidity and invalidation zones sit
-              </li>
-            </ul>
-            <p style={{ fontSize: 16, color: '#f59e0b', marginTop: 24, fontWeight: 600 }}>
-              Without context, even good signals fail.
-            </p>
-          </div>
-
-          {/* What It Does */}
-          <div style={{ marginBottom: 56 }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#22c55e', marginBottom: 24 }}>
-              What the AI Analyst Actually Does
-            </h3>
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 32, maxWidth: 800 }}>
-              When a scanner triggers, the MSP AI Analyst evaluates:
-            </p>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 20,
-              marginBottom: 32
-            }}>
-              {[
-                {
-                  title: 'Market Phase',
-                  items: ['Bullish Phase', 'Bearish Phase', 'Consolidation (Neutral)']
-                },
-                {
-                  title: 'Multi-Timeframe Alignment',
-                  items: ['Which timeframes support the move', 'Which timeframes conflict']
-                },
-                {
-                  title: 'Structure & Liquidity Context',
-                  items: ['Key support and resistance zones', 'Areas where price may stall, reverse, or accelerate']
-                },
-                {
-                  title: 'Risk Awareness',
-                  items: ['Potential fakeouts', 'Late-stage moves', 'Volatility compression or expansion']
-                }
-              ].map((section, i) => (
-                <div key={i} style={{
-                  background: 'linear-gradient(145deg, #0f172a, #020617)',
-                  borderRadius: 12,
-                  border: '1px solid rgba(34,197,94,0.2)',
-                  padding: '20px'
-                }}>
-                  <h4 style={{ fontSize: 16, fontWeight: 600, color: '#22c55e', marginBottom: 12 }}>
-                    {section.title}
-                  </h4>
-                  <ul style={{ 
-                    fontSize: 14, 
-                    color: '#9ca3af', 
-                    lineHeight: 1.6,
-                    listStyle: 'none',
-                    padding: 0,
-                    margin: 0
-                  }}>
-                    {section.items.map((item, j) => (
-                      <li key={j} style={{ marginBottom: j < section.items.length - 1 ? 8 : 0 }}>
-                        • {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            <p style={{ 
-              fontSize: 16, 
-              color: '#e5e7eb', 
-              fontWeight: 600, 
-              textAlign: 'center',
-              padding: '16px',
-              background: 'rgba(34,197,94,0.1)',
-              borderRadius: 8,
-              border: '1px solid rgba(34,197,94,0.2)'
-            }}>
-              The output is explanation, not instruction.
-            </p>
-          </div>
-
-          {/* How It Thinks */}
-          <div style={{ 
-            marginBottom: 56,
-            maxWidth: 900,
-            margin: '0 auto 56px'
-          }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#60a5fa', marginBottom: 24 }}>
-              How It Thinks
-            </h3>
-            <div style={{ 
-              background: 'rgba(59,130,246,0.05)',
-              border: '1px solid rgba(59,130,246,0.2)',
-              borderRadius: 12,
-              padding: '28px'
-            }}>
-              {[
-                { num: '1', title: 'Identify the Phase', desc: 'Is the market trending or consolidating?' },
-                { num: '2', title: 'Check Timeframe Alignment', desc: 'Are higher and lower timeframes aligned or fighting each other?' },
-                { num: '3', title: 'Assess Structure & Liquidity', desc: 'Where is price likely to react?' },
-                { num: '4', title: 'Highlight Risks & Invalidation', desc: 'What would invalidate the current scenario?' }
-              ].map((step, i) => (
-                <div key={i} style={{ 
-                  marginBottom: i < 3 ? 20 : 0,
-                  display: 'flex',
-                  gap: 16,
-                  alignItems: 'flex-start'
-                }}>
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: '#fff',
-                    flexShrink: 0
-                  }}>
-                    {step.num}
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: 16, fontWeight: 600, color: '#e5e7eb', marginBottom: 6 }}>
-                      {step.title}
-                    </h4>
-                    <p style={{ fontSize: 14, color: '#9ca3af', margin: 0 }}>
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 14, color: '#9ca3af', marginTop: 16, textAlign: 'center', fontStyle: 'italic' }}>
-              This mirrors how professional analysts reason — step by step.
-            </p>
-          </div>
-
-          {/* Example Output */}
-          <div style={{ marginBottom: 56 }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#f9fafb', marginBottom: 24 }}>
-              What You See as a User
-            </h3>
-            <div style={{
-              background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-              border: '2px solid rgba(34,197,94,0.3)',
-              borderRadius: 12,
-              padding: '28px',
-              maxWidth: 800,
-              margin: '0 auto'
-            }}>
-              <p style={{ 
-                fontSize: 15, 
-                color: '#e5e7eb', 
-                lineHeight: 1.8,
-                margin: 0,
-                fontFamily: 'ui-monospace, monospace'
-              }}>
-                "This signal triggered after consolidation resolved bullishly on the 1H, with higher-timeframe structure still supportive. Lower timeframes are aligned, but price is approaching a prior liquidity zone."
-              </p>
-            </div>
-            <p style={{ fontSize: 14, color: '#22c55e', marginTop: 20, textAlign: 'center', fontWeight: 600 }}>
-              Clear. Structured. Actionable for decision-making.
-            </p>
-          </div>
-
-          {/* What It's NOT */}
-          <div style={{ 
-            marginBottom: 56,
-            padding: '32px',
-            background: 'rgba(239,68,68,0.05)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: 12,
-            maxWidth: 800,
-            margin: '0 auto 56px'
-          }}>
-            <h3 style={{ fontSize: 20, fontWeight: 700, color: '#ef4444', marginBottom: 20 }}>
-              What the AI Analyst Is NOT
-            </h3>
-            <ul style={{ 
-              fontSize: 15, 
-              color: '#e5e7eb', 
-              lineHeight: 1.8,
-              listStyle: 'none',
-              padding: 0,
-              margin: 0
-            }}>
-              <li style={{ marginBottom: 10 }}>❌ Not a buy/sell signal generator</li>
-              <li style={{ marginBottom: 10 }}>❌ Not a prediction engine</li>
-              <li style={{ marginBottom: 10 }}>❌ Not a guarantee of outcomes</li>
-              <li>❌ Not financial advice</li>
-            </ul>
-            <p style={{ fontSize: 16, color: '#9ca3af', marginTop: 20, fontWeight: 600 }}>
-              It is a decision-support and education tool.
-            </p>
-          </div>
-
-          {/* Who It's For */}
-          <div style={{ marginBottom: 56, maxWidth: 800, margin: '0 auto 56px' }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#f9fafb', marginBottom: 24, textAlign: 'center' }}>
-              Who It's Designed For
-            </h3>
-            <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 20
-            }}>
-              <div>
-                <ul style={{ 
-                  fontSize: 15, 
-                  color: '#22c55e', 
-                  lineHeight: 1.8,
-                  listStyle: 'none',
-                  padding: 0
-                }}>
-                  <li style={{ marginBottom: 10 }}>✔ Traders who want to understand why setups work</li>
-                  <li style={{ marginBottom: 10 }}>✔ Users tired of black-box signals</li>
-                  <li style={{ marginBottom: 10 }}>✔ Traders learning multi-timeframe structure</li>
-                  <li style={{ marginBottom: 10 }}>✔ Crypto and stock traders using TradingView</li>
-                  <li>✔ Educators and communities who value explanation</li>
-                </ul>
-              </div>
-              <div style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: 8,
-                padding: '20px'
-              }}>
-                <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.7, margin: 0 }}>
-                  <strong style={{ color: '#ef4444' }}>Not for:</strong><br/>
-                  ❌ Copy trading<br/>
-                  ❌ Pump signals<br/>
-                  ❌ "Guaranteed profits"
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 20px', width: '100%' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 32 }}>
+            {/* Left: Hero Text */}
+            <div style={{ flex: 1, minWidth: 320, textAlign: 'left', maxWidth: 600 }}>
+              <div style={{ marginBottom: 24 }}>
+                <img src="/logos/msp.logo.png" alt="MarketScanner Pro" style={{ width: 48, height: 48, marginBottom: 12 }} />
+                <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 8, lineHeight: 1.2, color: '#f9fafb' }}>
+                  MarketScanner Pro
+                </h1>
+                <p style={{ fontSize: 16, color: '#22c55e', fontWeight: 500, marginBottom: 0 }}>
+                  Phase-Based Market Intelligence
                 </p>
               </div>
+              <h2 style={{ fontSize: 38, fontWeight: 800, marginBottom: 18, lineHeight: 1.2, color: '#f9fafb' }}>
+                Stop Guessing the Market.<br />
+                <span style={{ color: '#22c55e' }}>Start Understanding It.</span>
+              </h2>
+              <p style={{ fontSize: 16, color: '#cbd5e1', lineHeight: 1.6, marginBottom: 16 }}>
+                MarketScanner Pros is a phase-based market intelligence platform that scans markets, explains signals with AI, and teaches traders how to interpret structure using institutional logic.
+              </p>
+              <p style={{ fontSize: 16, color: '#f9fafb', fontWeight: 600, marginBottom: 16 }}>
+                Reduce noise, understand market context, and make decisions with structure — not emotion.
+              </p>
+              <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>
+                No hype. No black boxes. Just clarity across multiple timeframes.
+              </p>
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>USED DAILY BY ACTIVE TRADERS ANALYSING:</p>
+                <p style={{ fontSize: 14, color: '#e5e7eb', marginBottom: 16 }}>Crypto • Stocks • Indices • FX</p>
+                <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>POWERED BY:</p>
+                <p style={{ fontSize: 14, color: '#e5e7eb' }}>Multi-Timeframe Analysis • Phase Logic • AI Signal Interpretation</p>
+              </div>
+              <div style={{ marginTop: 32 }}>
+                <Link
+                  href="/tools/scanner"
+                  style={{
+                    display: 'inline-block',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                    color: '#0b1120',
+                    padding: '16px 32px',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
+                    marginRight: 12,
+                    marginBottom: 12
+                  }}
+                >
+                  Start Free Scanner (No Card)
+                </Link>
+                <Link
+                  href="/guide"
+                  style={{
+                    display: 'inline-block',
+                    borderRadius: 999,
+                    border: '1px solid #334155',
+                    background: 'transparent',
+                    color: '#e5e7eb',
+                    padding: '16px 32px',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    marginLeft: 8,
+                    marginBottom: 12
+                  }}
+                >
+                  See How the AI Analyst Works
+                </Link>
+              </div>
+              <p style={{ fontSize: 12, color: '#64748b', marginTop: 16 }}>Trusted by 1,000+ traders · Educational use only</p>
             </div>
-            <p style={{ fontSize: 16, color: '#60a5fa', marginTop: 24, textAlign: 'center', fontWeight: 600 }}>
-              If you want blind alerts — this is not for you.<br/>
-              If you want clarity — this is.
+            {/* Right: Feature Tabs (TrendSpider-style) */}
+            <div style={{ flex: 1, minWidth: 320, maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 12,
+                marginBottom: 24,
+                flexWrap: 'wrap',
+                marginTop: 12
+              }}>
+                {features.map((f, i) => (
+                  <button
+                    key={f.title}
+                    onClick={() => setActiveFeature(i)}
+                    style={{
+                      background: activeFeature === i ? 'linear-gradient(135deg, #14b8a6 0%, #22c55e 100%)' : 'rgba(30,41,59,0.7)',
+                      color: activeFeature === i ? '#0b1120' : '#e5e7eb',
+                      border: activeFeature === i ? '2px solid #22c55e' : '1px solid #334155',
+                      borderRadius: 999,
+                      padding: '10px 22px',
+                      fontWeight: 700,
+                      fontSize: 15,
+                      cursor: 'pointer',
+                      transition: 'all 0.18s',
+                      outline: 'none',
+                      marginBottom: 8
+                    }}
+                  >
+                    <span style={{ marginRight: 8, verticalAlign: 'middle' }}>{f.icon}</span>
+                    {f.title}
+                  </button>
+                ))}
+              </div>
+              <div style={{
+                maxWidth: 420,
+                margin: '0 auto',
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                border: '1.5px solid #334155',
+                borderRadius: 18,
+                boxShadow: '0 8px 32px rgba(16,185,129,0.08)',
+                padding: '28px 24px',
+                minHeight: 120,
+                color: '#e5e7eb',
+                fontSize: 17,
+                fontWeight: 500,
+                textAlign: 'center',
+                marginBottom: 0
+              }}>
+                {features[activeFeature].desc}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      {/* Scan the Market Section (TrendSpider-style, user text) */}
+      <section style={{
+        width: '100%',
+        background: 'linear-gradient(180deg, #111827 0%, #0f172a 100%)',
+        color: '#f9fafb',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+        borderBottom: '1px solid #1f2933',
+        padding: '48px 0 32px 0',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 10, color: '#f9fafb' }}>Scan the Market Instantly</h2>
+            <p style={{ fontSize: 17, color: '#9ca3af', maxWidth: 600, margin: '0 auto', lineHeight: 1.5 }}>
+              Enter a symbol or keyword to scan stocks, crypto, or ETFs. Or, jump to a quick scan below.
             </p>
           </div>
-
-          {/* Why Different */}
-          <div style={{ 
-            marginBottom: 48,
-            textAlign: 'center',
-            padding: '40px',
-            background: 'rgba(34,197,94,0.05)',
-            borderRadius: 16,
-            border: '1px solid rgba(34,197,94,0.2)'
-          }}>
-            <h3 style={{ fontSize: 24, fontWeight: 700, color: '#22c55e', marginBottom: 16 }}>
-              Why This Is Different
-            </h3>
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 24, maxWidth: 600, margin: '0 auto 24px' }}>
-              Most platforms stop at detection.
-            </p>
-            <p style={{ fontSize: 18, color: '#e5e7eb', fontWeight: 600, marginBottom: 16 }}>
-              MarketScanner Pros goes further:
-            </p>
-            <p style={{ fontSize: 20, color: '#22c55e', fontWeight: 700 }}>
-              Scan → Explain → Learn → Decide
-            </p>
-            <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 16, fontStyle: 'italic' }}>
-              The AI Analyst is the bridge between data and understanding.
-            </p>
-          </div>
-
-          {/* CTA */}
-          <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: 28, fontWeight: 700, color: '#f9fafb', marginBottom: 16 }}>
-              See the Market With Context
-            </h3>
-            <p style={{ fontSize: 16, color: '#9ca3af', marginBottom: 32, maxWidth: 600, margin: '0 auto 32px' }}>
-              Use MarketScanner Pros for free and experience AI-assisted market interpretation — without hype or pressure.
-            </p>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="e.g. TSLA, BTC, S&P 500, AI stocks..."
+              style={{
+                width: 320,
+                maxWidth: '90vw',
+                padding: '16px 20px',
+                borderRadius: 999,
+                border: '1.5px solid #334155',
+                background: '#0f172a',
+                color: '#f9fafb',
+                fontSize: 17,
+                fontWeight: 500,
+                outline: 'none',
+                marginRight: 8,
+                marginBottom: 8
+              }}
+            />
             <Link
-              href="/launch"
+              href="/tools/scanner"
               style={{
                 display: 'inline-block',
                 borderRadius: 999,
                 border: 'none',
                 background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
                 color: '#0b1120',
-                padding: '16px 40px',
+                padding: '16px 36px',
                 fontSize: 17,
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: 'pointer',
-                textDecoration: 'none',
-                boxShadow: '0 4px 15px rgba(20,184,166,0.4)'
+                boxShadow: '0 4px 15px rgba(20,184,166,0.2)',
+                marginBottom: 8,
+                textDecoration: 'none'
               }}
             >
-              Get Started Free
+              Scan Now
             </Link>
-            <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 20 }}>
-              Educational use only. Not financial advice.
-            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+            {[
+              { label: 'Top Gainers', href: '/tools/scanner?scan=gainers' },
+              { label: 'Crypto', href: '/tools/scanner?scan=crypto' },
+              { label: 'AI Stocks', href: '/tools/scanner?scan=ai' },
+              { label: 'ETFs', href: '/tools/scanner?scan=etf' },
+            ].map((q) => (
+              <Link
+                key={q.label}
+                href={q.href}
+                style={{
+                  display: 'inline-block',
+                  borderRadius: 999,
+                  border: '1px solid #334155',
+                  background: 'rgba(30,41,59,0.7)',
+                  color: '#e5e7eb',
+                  padding: '10px 22px',
+                  fontWeight: 600,
+                  fontSize: 15,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  marginBottom: 8,
+                  marginRight: 4
+                }}
+              >
+                {q.label}
+              </Link>
+            ))}
           </div>
         </div>
       </section>

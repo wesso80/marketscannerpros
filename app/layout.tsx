@@ -4,10 +4,29 @@ import Footer from "../components/Footer";
 import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 import Header from "../components/Header";
+import { validateEnv } from "@/lib/env";
+import { Analytics } from "@vercel/analytics/react";
+import { Suspense } from "react";
+
+// Validate environment variables on the server. In Vercel/production we require
+// all mandatory envs; locally we allow missing to avoid blocking builds.
+if (typeof window === 'undefined') {
+  const isVercel = process.env.VERCEL === '1';
+  try {
+    validateEnv({ allowMissing: !isVercel });
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 export const metadata = { 
-  title: "MarketScanner Pros",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=5"
+  title: "MarketScanner Pros"
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 import { APP_URL } from 'lib/appUrl';
 import AppUrlFixer from "@/components/AppUrlFixer";
@@ -25,7 +44,10 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
         <CookieBanner />
-        <AnalyticsLoader />
+        <Suspense>
+          <AnalyticsLoader />
+        </Suspense>
+        <Analytics />
         <BackToTop />
       </body>
     </html>

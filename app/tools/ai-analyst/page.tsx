@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ToolsPageHeader from "@/components/ToolsPageHeader";
 
 type AssetType = "crypto" | "stock" | "fx";
 
@@ -240,51 +241,52 @@ function AiAnalystContent() {
   // UI
   // ─────────────────────────────────────────────
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-      color: '#f9fafb',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
-    }}>
-      <div
-        style={{
-          maxWidth: 1120,
-          padding: '40px 20px',
-          margin: '0 auto',
-          width: '100%',
-        }}
-      >
-        <header style={{
-          marginBottom: 32,
-          paddingBottom: 24,
-          borderBottom: '1px solid #1f2933'
-        }}>
+    <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+      <ToolsPageHeader
+        badge="ANALYST"
+        title="MSP AI Analyst"
+        subtitle="Ask the in-house quant & Pine engineer for structured market breakdowns."
+        icon="🧠"
+        backHref="/tools"
+      />
+      <main style={{
+        minHeight: '100vh',
+        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+        color: '#f9fafb',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
+        padding: '24px 16px'
+      }}>
+        <div
+          style={{
+            maxWidth: 1120,
+            margin: '0 auto',
+            width: '100%',
+          }}
+        >
           <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            color: '#9ca3af',
-            padding: '4px 10px',
-            borderRadius: 999,
-            background: 'rgba(15,23,42,0.9)',
-            border: '1px solid rgba(148,163,184,0.25)',
-            marginBottom: 14
+            marginBottom: 16,
+            color: '#e2e8f0',
+            fontSize: 14,
+            lineHeight: 1.6,
+            background: 'rgba(15,23,42,0.8)',
+            border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 12,
+            padding: '14px 16px'
           }}>
-            <span style={{ color: '#22c55e' }}>AI-Powered</span>
-            <span>Market Intelligence</span>
+            <div style={{ fontWeight: 600, color: '#10b981', marginBottom: 6 }}>Why you’re here</div>
+            The AI Analyst is decision support, not prediction. Use it to explain a scanner signal, summarize multi-TF bias, and call out invalidation and risk before you take a trade.
+            <div style={{ marginTop: 10, fontSize: 13, color: '#cbd5e1' }}>
+              Ask things like:
+              <ul style={{ margin: '6px 0 0 18px', padding: 0, listStyle: 'disc' }}>
+                <li>Why did this signal trigger and what phase are we in?</li>
+                <li>What would invalidate this setup? Where is the risk line?</li>
+                <li>How do the intraday and higher timeframes line up?</li>
+              </ul>
+            </div>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>MSP AI Analyst</h1>
-          <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 600, lineHeight: 1.6 }}>
-            Ask your in-house quant &amp; Pine Script engineer anything about any ticker:
-            crypto, stocks, FX, indices, or commodities. The analyst uses the market
-            context you provide below and never guesses prices.
-          </p>
-          
-          {/* Scanner Origin Banner */}
           {loadedFromScanner && (
             <div style={{
-              marginTop: 16,
+              marginBottom: 20,
               padding: '12px 16px',
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1))',
               border: '1px solid rgba(16, 185, 129, 0.3)',
@@ -311,7 +313,6 @@ function AiAnalystContent() {
               </div>
             </div>
           )}
-        </header>
 
         <div
           style={{
@@ -699,6 +700,7 @@ function AiAnalystContent() {
         </div>
       </div>
     </main>
+    </div>
   );
 }
 

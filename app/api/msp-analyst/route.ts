@@ -1,8 +1,38 @@
+/**
+ * MSP Analyst AI Chat API
+ * 
+ * @route POST /api/msp-analyst
+ * @description OpenAI-powered market analysis chatbot with tier-based rate limits
+ * @authentication Required (ms_auth cookie)
+ * 
+ * @body {object} request
+ * @body {string} request.query - User's question or command
+ * @body {string} [request.mode] - Chat mode (default: 'chat')
+ * @body {Array<{role: 'user'|'assistant', content: string}>} [request.history] - Conversation history
+ * @body {object} [request.context] - Market context (symbol, timeframe, price, levels)
+ * @body {object} [request.scanner] - Scanner signal data
+ * 
+ * @returns {object} AI response with usage stats
+ * @returns {string} response.content - AI's answer
+ * @returns {object} response.usage - Token usage and costs
+ * 
+ * @rateLimit
+ * - Free: 5 requests/day
+ * - Pro: 50 requests/day
+ * - Pro Trader: Unlimited
+ * 
+ * @example
+ * POST /api/msp-analyst
+ * Body: { query: "Analyze BTC-USD", context: { symbol: "BTC-USD", currentPrice: 45000 } }
+ */
+
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
 import { getSessionFromCookie } from "@/lib/auth";
 import { sql } from "@vercel/postgres";
+import { logger } from "@/lib/logger";
+import { analystRequestSchema } from "../../../lib/validation";
 
 export const runtime = "nodejs";
 
@@ -12,37 +42,13 @@ function getOpenAIClient() {
   });
 }
 
-type AnalystHistoryItem = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type AnalystContext = {
-  symbol?: string;
-  timeframe?: string;
-  currentPrice?: number;
-  keyLevels?: number[];
-};
-
-type ScannerPayload = {
-  source?: string;
-  signal?: string;
-  direction?: string;
-  score?: number;
-};
-
-type AnalystRequestBody = {
-  query: string;
-  mode?: string;
-  history?: AnalystHistoryItem[];
-  context?: AnalystContext;
-  scanner?: ScannerPayload;
-};
-
 export async function POST(req: NextRequest) {
   try {
-    console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
-    console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY?.length || 0);
+    // Validate request body with Zod
+    const json = await req.json();
+    const body = analystRequestSchema.parse(json);
+    
+    const { query, mode, history, context, scanner } = body;
     
     if (!process.env.OPENAI_API_KEY) {
       return new Response(
@@ -58,8 +64,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get user session for tier checking
-    const session = await getSessionFromCookie();
+    // Get user session for tier checking; allow free-for-all mode to bypass auth
+    const freeForAll = process.env.FREE_FOR_ALL_MODE === "true";
+    let session = await getSessionFromCookie();
+    if (!session && freeForAll) {
+      // Temporary open-access session for free mode
+      session = {
+        workspaceId: "free-mode",
+        tier: "pro_trader",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      } as any;
+    }
+
     if (!session) {
       return new Response(
         JSON.stringify({ error: "Unauthorized - Please log in" }),
@@ -90,6 +106,13 @@ export async function POST(req: NextRequest) {
         const usageCount = parseInt(usageResult.rows[0]?.count || '0');
         
         if (usageCount >= dailyLimit) {
+          logger.warn('AI usage limit exceeded', {
+            workspaceId,
+            tier,
+            dailyLimit,
+            usageCount
+          });
+          
           return new Response(
             JSON.stringify({ 
               error: `Daily AI question limit reached (${dailyLimit} questions/day). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for unlimited.' : 'Limit resets at midnight UTC.'}`,
@@ -102,21 +125,17 @@ export async function POST(req: NextRequest) {
           );
         }
       } catch (dbErr) {
-        console.error('Error checking AI usage:', dbErr);
+        logger.error('Error checking AI usage', { error: dbErr, workspaceId });
         // Continue anyway - don't block on DB errors
       }
     }
 
-    const body = (await req.json()) as AnalystRequestBody;
-
-    if (!body?.query) {
+    if (!query) {
       return new Response(
         JSON.stringify({ error: "Missing 'query' in request body" }),
         { status: 400 }
       );
     }
-
-    const { query, mode, history, context, scanner } = body;
 
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
@@ -200,9 +219,16 @@ If information is missing, say so explicitly instead of guessing.
         VALUES (${workspaceId}, ${query.substring(0, 500)}, ${text.length}, ${tier}, NOW())
       `;
     } catch (dbErr) {
-      console.error('Error tracking AI usage:', dbErr);
+      logger.error('Error tracking AI usage', { error: dbErr, workspaceId });
       // Don't fail the request if tracking fails
     }
+
+    logger.info('AI analyst request completed', {
+      workspaceId,
+      tier,
+      queryLength: query.length,
+      responseLength: text.length
+    });
 
     return new Response(
       JSON.stringify({
@@ -212,7 +238,10 @@ If information is missing, say so explicitly instead of guessing.
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    console.error("MSP Analyst API error:", err);
+    logger.error('MSP Analyst API error', {
+      error: err?.message || 'Unknown error',
+      stack: err?.stack
+    });
 
     return new Response(
       JSON.stringify({

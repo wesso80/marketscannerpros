@@ -22,16 +22,34 @@ export default function DailyAIMarketFocus() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/ai-market-focus')
-      .then((res) => res.json())
-      .then((json) => {
+    const fallback: MarketFocusData = {
+      date: new Date().toISOString().slice(0, 10),
+      picks: [
+        { assetClass: 'Equity', asset: '—', phase: '—', structure: '—', risk: '—', explanation: null },
+        { assetClass: 'Crypto', asset: '—', phase: '—', structure: '—', risk: '—', explanation: null },
+        { assetClass: 'Commodity', asset: '—', phase: '—', structure: '—', risk: '—', explanation: null },
+      ],
+    };
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/ai-market-focus', { credentials: 'include' });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`AI Market Focus API ${res.status}: ${text || 'unknown error'}`);
+        }
+        const json = await res.json();
         setData(json);
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
+        console.warn('AI Market Focus fetch error:', err);
         setError('Failed to load AI Market Focus.');
+        setData(fallback);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    load();
   }, []);
 
   if (loading) return <div>Loading Daily AI Market Focus...</div>;

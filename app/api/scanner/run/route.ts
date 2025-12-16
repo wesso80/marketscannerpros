@@ -2,50 +2,517 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// Use Streamlit app in background to fetch data (yfinance works there)
-const STREAMLIT_URL = process.env.STREAMLIT_URL || "https://marketscannerpros-vwx5.onrender.com";
+// Alpha Vantage API for technical indicators (web-only)
+const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+
+// Friendly handler for Alpha Vantage throttling/premium notices
+async function fetchAlphaJson(url: string, tag: string) {
+  const res = await fetch(url, { next: { revalidate: 0 }, cache: "no-store" });
+  const json = await res.json();
+
+  const note = (json && (json.Note || json.Information)) as string | undefined;
+  const errMsg = (json && json["Error Message"]) as string | undefined;
+
+  if (note) {
+    throw new Error(`Alpha Vantage limit or premium notice during ${tag}: ${note}`);
+  }
+  if (errMsg) {
+    throw new Error(`Alpha Vantage error during ${tag}: ${errMsg}`);
+  }
+
+  return json;
+}
 
 interface ScanRequest {
-  type: "crypto" | "equity";
+  type: "crypto" | "equity" | "forex";
   timeframe: string;
   minScore: number;
+  symbols?: string[];
+}
+
+interface ScanResult {
+  symbol: string;
+  score: number;
+  timeframe: string;
+  type: string;
+  price?: number;
+  rsi?: number;
+  macd_hist?: number;
+  ema200?: number;
+  atr?: number;
+  adx?: number;
+  stoch_k?: number;
+  stoch_d?: number;
+  cci?: number;
+  aroon_up?: number;
+  aroon_down?: number;
+  obv?: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ScanRequest;
-    const { type, timeframe, minScore } = body;
+    const { type, timeframe, minScore, symbols } = body;
+    console.info("[scanner] request", { type, timeframe, minScore, symbolsCount: Array.isArray(symbols) ? symbols.length : 0 });
 
     // Validate inputs
-    if (!type || !["crypto", "equity"].includes(type)) {
+    if (!type || !["crypto", "equity", "forex"].includes(type)) {
       return NextResponse.json(
-        { error: "Invalid type. Must be 'crypto' or 'equity'" },
+        { error: "Invalid type. Must be 'crypto', 'equity', or 'forex'" },
         { status: 400 }
       );
     }
 
-    // For now, return a message that scanning will be available soon
-    // The Streamlit app needs an API endpoint added (working on it)
+    const inputSymbols = Array.isArray(symbols)
+      ? symbols.map(s => String(s).trim().toUpperCase()).filter(Boolean)
+      : [];
+
+    // If client didn't provide symbols, use a small preset to ensure the page works
+    // Top 10 by market cap (approx; stable choices for Alpha Vantage)
+    const DEFAULT_EQUITIES = [
+      "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN",
+      "META", "AVGO", "LLY", "TSLA", "JPM"
+    ];
+    const DEFAULT_CRYPTO = [
+      "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
+      "ADA-USD", "DOGE-USD", "TRX-USD", "AVAX-USD", "DOT-USD"
+    ];
+    let symbolsToScan = inputSymbols.length
+      ? inputSymbols
+      : (type === "crypto" ? DEFAULT_CRYPTO : DEFAULT_EQUITIES);
+
+    // Alpha Vantage crypto symbols use format like BTC (just the base coin, remove -USD or USD suffix)
+    if (type === "crypto") {
+      symbolsToScan = symbolsToScan.map(s => {
+        // Remove -USD, USD, -USDT, USDT suffixes; keep just the base symbol
+        return s.replace(/[-]?(USD|USDT)$/i, "");
+      });
+    }
+    // Commodity symbols unsupported in this endpoint (no intraday); ignore mapping
+
+    if (!ALPHA_KEY) {
+      return NextResponse.json({
+        success: false,
+        message: "Alpha Vantage API key not configured",
+        results: [],
+        errors: ["Missing ALPHA_VANTAGE_API_KEY"],
+        metadata: { timestamp: new Date().toISOString(), count: 0 }
+      }, { status: 500 });
+    }
+
+    const intervalMap: Record<string, string> = {
+      "1h": "60min",
+      "4h": "60min",
+      "1d": "daily",
+      "daily": "daily"
+    };
+    const avInterval = intervalMap[timeframe] || "daily";
+
+
+    async function fetchRSI(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `RSI ${sym}`);
+      const ta = j["Technical Analysis: RSI"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] RSI", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.RSI) : NaN;
+    }
+
+    async function fetchMACD(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&series_type=close&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `MACD ${sym}`);
+      const ta = j["Technical Analysis: MACD"] || {};
+      const first = Object.values(ta)[0] as any;
+      if (!first) return { macd: NaN, sig: NaN, hist: NaN };
+      console.debug("[scanner] MACD", { sym, avInterval, hasTA: !!first });
+      return {
+        macd: Number(first?.MACD),
+        sig: Number(first?.MACD_Signal),
+        hist: Number(first?.MACD_Hist)
+      };
+    }
+
+    async function fetchEMA200(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=EMA&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=200&series_type=close&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `EMA200 ${sym}`);
+      const ta = j["Technical Analysis: EMA"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] EMA200", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.EMA) : NaN;
+    }
+
+    async function fetchATR(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `ATR ${sym}`);
+      const ta = j["Technical Analysis: ATR"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] ATR", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.ATR) : NaN;
+    }
+
+    // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
+    type Candle = { t: string; open: number; high: number; low: number; close: number; };
+
+    async function fetchCryptoDaily(symbol: string, market = "USD"): Promise<Candle[]> {
+      const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(symbol)}&market=${market}&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `CRYPTO_DAILY ${symbol}`);
+      const ts = j["Time Series (Digital Currency Daily)"] || {};
+      const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
+        t: date as string,
+        open: Number(v["1a. open (USD)"] ?? v["1. open"] ?? NaN),
+        high: Number(v["2a. high (USD)"] ?? v["2. high"] ?? NaN),
+        low: Number(v["3a. low (USD)"] ?? v["3. low"] ?? NaN),
+        close: Number(v["4a. close (USD)"] ?? v["4. close"] ?? NaN),
+      })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
+      console.debug("[scanner] crypto daily candles", { symbol, count: candles.length });
+      return candles;
+    }
+
+    async function fetchCryptoIntraday(symbol: string, market = "USD", interval = "60min"): Promise<Candle[]> {
+      // Use DIGITAL_CURRENCY_DAILY for free/basic tier compatibility (CRYPTO_INTRADAY requires premium)
+      console.info(`[scanner] Using DIGITAL_CURRENCY_DAILY for ${symbol} (intraday requires premium Alpha Vantage plan)`);
+      return await fetchCryptoDaily(symbol, market);
+    }
+
+    function ema(values: number[], period: number): number[] {
+      const k = 2 / (period + 1);
+      const out: number[] = [];
+      let prev: number | undefined;
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        if (i === 0) prev = v;
+        const cur = (v * k) + (prev! * (1 - k));
+        out.push(cur);
+        prev = cur;
+      }
+      return out;
+    }
+
+    function rsi(values: number[], period = 14): number[] {
+      const out: number[] = new Array(values.length).fill(NaN);
+      if (values.length <= period) return out;
+      let gains = 0, losses = 0;
+      for (let i = 1; i <= period; i++) {
+        const ch = values[i] - values[i-1];
+        if (ch >= 0) gains += ch; else losses -= ch;
+      }
+      let avgGain = gains / period;
+      let avgLoss = losses / period;
+      out[period] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+      for (let i = period + 1; i < values.length; i++) {
+        const ch = values[i] - values[i-1];
+        const gain = Math.max(0, ch);
+        const loss = Math.max(0, -ch);
+        avgGain = ((avgGain * (period - 1)) + gain) / period;
+        avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+        out[i] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+      }
+      return out;
+    }
+
+    function macd(values: number[], fast=12, slow=26, signal=9) {
+      const emaFast = ema(values, fast);
+      const emaSlow = ema(values, slow);
+      const macdLine = emaFast.map((v, i) => v - (emaSlow[i] ?? v));
+      const signalLine = ema(macdLine, signal);
+      const hist = macdLine.map((v, i) => v - (signalLine[i] ?? v));
+      return { macdLine, signalLine, hist };
+    }
+
+    function atr(highs: number[], lows: number[], closes: number[], period=14): number[] {
+      const trs: number[] = [];
+      for (let i = 1; i < highs.length; i++) {
+        const h = highs[i], l = lows[i], pc = closes[i-1];
+        const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+        trs.push(tr);
+      }
+      const out: number[] = new Array(trs.length).fill(NaN);
+      let sum = 0;
+      for (let i = 0; i < trs.length; i++) {
+        sum += trs[i];
+        if (i >= period) sum -= trs[i - period];
+        out[i] = (i + 1 >= period) ? (sum / period) : NaN;
+      }
+      return out;
+    }
+
+    function adx(highs: number[], lows: number[], closes: number[], period=14) {
+      const plus_dm: number[] = [], minus_dm: number[] = [];
+      for (let i = 1; i < highs.length; i++) {
+        const upMove = highs[i] - highs[i-1];
+        const downMove = lows[i-1] - lows[i];
+        plus_dm.push(upMove > downMove && upMove > 0 ? upMove : 0);
+        minus_dm.push(downMove > upMove && downMove > 0 ? downMove : 0);
+      }
+      const trs: number[] = [];
+      for (let i = 1; i < highs.length; i++) {
+        const h = highs[i], l = lows[i], pc = closes[i-1];
+        const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+        trs.push(tr);
+      }
+      const atr_vals: number[] = [], plus_di: number[] = [], minus_di: number[] = [];
+      let tr_sum = 0, pdm_sum = 0, mdm_sum = 0;
+      for (let i = 0; i < trs.length; i++) {
+        tr_sum += trs[i]; pdm_sum += plus_dm[i]; mdm_sum += minus_dm[i];
+        if (i >= period - 1) {
+          atr_vals.push(tr_sum / period);
+          const atr_val = atr_vals[atr_vals.length-1];
+          plus_di.push((pdm_sum / atr_val) * 100);
+          minus_di.push((mdm_sum / atr_val) * 100);
+          if (i > period - 1) { tr_sum -= trs[i-period]; pdm_sum -= plus_dm[i-period]; mdm_sum -= minus_dm[i-period]; }
+        }
+      }
+      const di_diff = plus_di.map((p, i) => Math.abs(p - minus_di[i])), di_sum = plus_di.map((p, i) => p + minus_di[i]);
+      const dx = di_diff.map((d, i) => (d / di_sum[i]) * 100);
+      const adx_out: number[] = [];
+      let adx_sum = 0;
+      for (let i = 0; i < dx.length; i++) {
+        adx_sum += dx[i];
+        adx_out.push(i >= period - 1 ? adx_sum / period : NaN);
+      }
+      return { adx: adx_out[adx_out.length - 1] ?? NaN, plus_di: plus_di[plus_di.length - 1] ?? NaN, minus_di: minus_di[minus_di.length - 1] ?? NaN };
+    }
+
+    function stochastic(highs: number[], lows: number[], closes: number[], period=14, smooth=3) {
+      const k_vals: number[] = [];
+      for (let i = period - 1; i < closes.length; i++) {
+        const h_max = Math.max(...highs.slice(i - period + 1, i + 1));
+        const l_min = Math.min(...lows.slice(i - period + 1, i + 1));
+        const k = ((closes[i] - l_min) / (h_max - l_min)) * 100;
+        k_vals.push(Number.isNaN(k) ? 50 : k);
+      }
+      const k_smooth = ema(k_vals, smooth);
+      const d_smooth = ema(k_smooth, smooth);
+      return { k: k_smooth[k_smooth.length - 1] ?? NaN, d: d_smooth[d_smooth.length - 1] ?? NaN };
+    }
+
+    function cci(highs: number[], lows: number[], closes: number[], period=20) {
+      const tp: number[] = [];
+      for (let i = 0; i < closes.length; i++) {
+        tp.push((highs[i] + lows[i] + closes[i]) / 3);
+      }
+      const sma_tp: number[] = [];
+      for (let i = period - 1; i < tp.length; i++) {
+        const avg = tp.slice(i - period + 1, i + 1).reduce((a,b) => a+b, 0) / period;
+        sma_tp.push(avg);
+      }
+      const cci_vals: number[] = [];
+      for (let i = period - 1; i < tp.length; i++) {
+        const dev = tp.slice(i - period + 1, i + 1).map(t => Math.abs(t - sma_tp[i - period + 1])).reduce((a,b) => a+b, 0) / period;
+        const cci = dev === 0 ? 0 : (tp[i] - sma_tp[i - period + 1]) / (0.015 * dev);
+        cci_vals.push(cci);
+      }
+      return cci_vals[cci_vals.length - 1] ?? NaN;
+    }
+
+    function aroon(highs: number[], lows: number[], period=25) {
+      const aroon_up: number[] = [], aroon_down: number[] = [];
+      for (let i = period; i < highs.length; i++) {
+        const h_idx = highs.slice(i - period, i).lastIndexOf(Math.max(...highs.slice(i - period, i)));
+        const l_idx = lows.slice(i - period, i).lastIndexOf(Math.min(...lows.slice(i - period, i)));
+        aroon_up.push(((period - (period - 1 - h_idx)) / period) * 100);
+        aroon_down.push(((period - (period - 1 - l_idx)) / period) * 100);
+      }
+      return { up: aroon_up[aroon_up.length - 1] ?? NaN, down: aroon_down[aroon_down.length - 1] ?? NaN };
+    }
+
+    function obv(closes: number[], volumes: number[]): number[] {
+      const obv_vals = [volumes[0]];
+      for (let i = 1; i < closes.length; i++) {
+        if (closes[i] > closes[i-1]) obv_vals.push(obv_vals[i-1] + volumes[i]);
+        else if (closes[i] < closes[i-1]) obv_vals.push(obv_vals[i-1] - volumes[i]);
+        else obv_vals.push(obv_vals[i-1]);
+      }
+      return obv_vals;
+    }
+
+    function computeScore(close: number | undefined, ema200: number, rsi: number, macd: number, sig: number, hist: number, atr: number) {
+      let score = 0;
+      // Trend vs EMA200
+      if (Number.isFinite(ema200) && Number.isFinite(close)) {
+        score += (close! > ema200) ? 20 : -10;
+      }
+      // RSI confluence
+      if (Number.isFinite(rsi)) {
+        if (rsi > 60) score += 15; else if (rsi >= 45 && rsi <= 55) score += 8; else if (rsi < 40) score -= 8;
+      }
+      // MACD momentum
+      if (Number.isFinite(hist)) score += hist > 0 ? 12 : -8;
+      if (Number.isFinite(macd) && Number.isFinite(sig)) score += macd > sig ? 8 : -5;
+      // Volatility guard (extreme ATR reduces score slightly)
+      if (Number.isFinite(atr)) {
+        // simple normalization guard: high ATR relative to price reduces score
+        const rel = (Number.isFinite(close) && close! > 0) ? atr / close! : 0;
+        if (rel > 0.05) score -= 5;
+      }
+      // Floor at 1, round
+      return Math.max(1, Math.round(score));
+    }
+
+    // Keep equities lower due to Alpha Vantage rate limits on TA endpoints
+    const MAX_PER_SCAN = type === "equity" ? 5 : 10;
+    const limited = symbolsToScan.slice(0, MAX_PER_SCAN);
+    const results: ScanResult[] = [];
+    const errors: string[] = [];
+
+    for (const sym of limited) {
+      try {
+        if (type === "crypto") {
+          const market = "USD";
+          const baseSym = sym;
+          const candles = avInterval === "daily" ? await fetchCryptoDaily(baseSym, market) : await fetchCryptoIntraday(baseSym, market, avInterval);
+          if (!candles.length) throw new Error("No crypto candles returned");
+          const closes = candles.map(c => c.close);
+          const highs = candles.map(c => c.high);
+          const lows = candles.map(c => c.low);
+          const volumes = candles.map(c => 0); // placeholder
+          
+          const rsiArr = rsi(closes, 14);
+          const macObj = macd(closes, 12, 26, 9);
+          const emaArr = ema(closes, 200);
+          const atrArr = atr(highs, lows, closes, 14);
+          const adxObj = adx(highs, lows, closes, 14);
+          const stochObj = stochastic(highs, lows, closes, 14, 3);
+          const cciVal = cci(highs, lows, closes, 20);
+          const aroonObj = aroon(highs, lows, 25);
+          const obvArr = obv(closes, volumes);
+          
+          const last = closes.length - 1;
+          const rsiVal = rsiArr[last];
+          const macHist = macObj.hist[last];
+          const macLine = macObj.macdLine[last];
+          const sigLine = macObj.signalLine[last];
+          const ema200Val = emaArr[last];
+          const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
+          const close = closes[last];
+          const price = close;
+          
+          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
+          const item: ScanResult = {
+            symbol: `${baseSym}-${market}`,
+            score: s,
+            timeframe,
+            type,
+            price,
+            rsi: rsiVal,
+            macd_hist: macHist,
+            ema200: ema200Val,
+            atr: atrVal,
+            adx: adxObj.adx,
+            stoch_k: stochObj.k,
+            stoch_d: stochObj.d,
+            cci: cciVal,
+            aroon_up: aroonObj.up,
+            aroon_down: aroonObj.down,
+            obv: obvArr[last] ?? NaN,
+          };
+          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+        } else {
+          // Fetch OHLCV data for equity/forex (best-effort) to compute all indicators locally
+          const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&apikey=${ALPHA_KEY}`;
+          const r = await fetch(url, { next: { revalidate: 0 }, cache: "no-store" });
+          const j = await r.json();
+          
+          // Log response for debugging
+          if (!j["Time Series (60min)"] && !j["Time Series (daily)"]) {
+            console.warn("[scanner] No time series data", { sym, keys: Object.keys(j).slice(0, 3) });
+          }
+          
+          const key = avInterval === "60min" ? "Time Series (60min)" : `Time Series (${avInterval})`;
+          const ts = j[key] || {};
+          const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
+            t: date as string,
+            open: Number(v["1. open"] ?? NaN),
+            high: Number(v["2. high"] ?? NaN),
+            low: Number(v["3. low"] ?? NaN),
+            close: Number(v["4. close"] ?? NaN),
+          })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
+          
+          if (!candles.length) throw new Error("No equity candles returned");
+          
+          const closes = candles.map(c => c.close);
+          const highs = candles.map(c => c.high);
+          const lows = candles.map(c => c.low);
+          const volumes = new Array(closes.length).fill(1000); // placeholder volume
+          
+          const rsiArr = rsi(closes, 14);
+          const macObj = macd(closes, 12, 26, 9);
+          const emaArr = ema(closes, 200);
+          const atrArr = atr(highs, lows, closes, 14);
+          const adxObj = adx(highs, lows, closes, 14);
+          const stochObj = stochastic(highs, lows, closes, 14, 3);
+          const cciVal = cci(highs, lows, closes, 20);
+          const aroonObj = aroon(highs, lows, 25);
+          const obvArr = obv(closes, volumes);
+          
+          const last = closes.length - 1;
+          const rsiVal = rsiArr[last];
+          const macHist = macObj.hist[last];
+          const macLine = macObj.macdLine[last];
+          const sigLine = macObj.signalLine[last];
+          const ema200Val = emaArr[last];
+          const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
+          const close = closes[last];
+          const price = close;
+          
+          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
+          const item: ScanResult = {
+            symbol: sym,
+            score: s,
+            timeframe,
+            type,
+            price,
+            rsi: rsiVal,
+            macd_hist: macHist,
+            ema200: ema200Val,
+            atr: atrVal,
+            adx: adxObj.adx,
+            stoch_k: stochObj.k,
+            stoch_d: stochObj.d,
+            cci: cciVal,
+            aroon_up: aroonObj.up,
+            aroon_down: aroonObj.down,
+            obv: obvArr[last] ?? NaN,
+          };
+          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+        }
+      } catch (err: any) {
+        console.error("[scanner] error for", sym, err);
+        const msg = err?.message || "Unknown error";
+        const friendly = msg.includes("limit") || msg.includes("premium")
+          ? `${sym}: Alpha Vantage rate limit or premium requirement. Please retry shortly.`
+          : `${sym}: ${msg}`;
+        errors.push(friendly);
+      }
+    }
+
     return NextResponse.json({
-      success: false,
-      message: "Scanner is being migrated to use the working Streamlit data source. Check the main app for scanning functionality.",
-      redirect: `${STREAMLIT_URL}`,
-      results: [],
-      errors: [],
+      success: true,
+      message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
+      redirect: null,
+      results,
+      errors,
       metadata: {
         timestamp: new Date().toISOString(),
-        count: 0,
+        count: results.length,
+        minScore,
+        timeframe,
+        type
       },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Scanner error:", error);
-    
+    const msg = error?.message || "Unknown error";
+    const friendly = msg.includes("limit") || msg.includes("premium")
+      ? "Alpha Vantage rate limit hit or premium access required. Please retry in a minute."
+      : msg;
+
     return NextResponse.json(
       {
-        error: "Scanner temporarily unavailable",
-        details: error instanceof Error ? error.message : "Unknown error",
-        hint: "Please use the main Streamlit app for scanning until migration is complete",
+        error: friendly,
+        details: msg,
+        hint: "If this persists, reduce frequency or try again shortly.",
       },
       { status: 503 }
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import ToolsPageHeader from "@/components/ToolsPageHeader";
 
 interface TickerSentiment {
   ticker: string;
@@ -109,11 +109,11 @@ export default function NewsSentimentPage() {
 
   const getSentimentEmoji = (label: string) => {
     const lower = label.toLowerCase();
-    if (lower === "bullish") return "🚀";
-    if (lower === "somewhat-bullish") return "📈";
-    if (lower === "bearish") return "📉";
-    if (lower === "somewhat-bearish") return "⚠️";
-    return "➖";
+    if (lower === "bullish") return "";
+    if (lower === "somewhat-bullish") return "";
+    if (lower === "bearish") return "";
+    if (lower === "somewhat-bearish") return "";
+    return "";
   };
 
   const formatDate = (dateString: string) => {
@@ -130,19 +130,16 @@ export default function NewsSentimentPage() {
     : articles.filter(a => a.sentiment.label.toLowerCase().includes(sentimentFilter));
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem", width: '100%' }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem", width: '100%' }}>
-        <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
-          ← Back to Tools
-        </Link>
-
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", background: "linear-gradient(to right, #10B981, #3B82F6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "1rem" }}>
-          📰 Market Intelligence
-        </h1>
-        
-        <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem" }}>
-          News sentiment, earnings calendar, and insider trading intelligence
-        </p>
+    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+      <ToolsPageHeader
+        badge="INTELLIGENCE"
+        title="Market Intelligence"
+        subtitle="News sentiment, earnings calendar, and insider activity."
+        icon=""
+        backHref="/tools"
+      />
+      <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>
 
         {/* Tabs */}
         <div
@@ -168,7 +165,7 @@ export default function NewsSentimentPage() {
               marginBottom: "-2px"
             }}
           >
-            📰 News & Sentiment
+             News & Sentiment
           </button>
           <button
             onClick={() => setActiveTab("earnings")}
@@ -183,7 +180,7 @@ export default function NewsSentimentPage() {
               marginBottom: "-2px"
             }}
           >
-            📅 Earnings Calendar
+             Earnings Calendar
           </button>
         </div>
 
@@ -246,9 +243,9 @@ export default function NewsSentimentPage() {
               </label>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <FilterButton label="All" value="all" active={sentimentFilter === "all"} onClick={() => setSentimentFilter("all")} />
-                <FilterButton label="🚀 Bullish" value="bullish" active={sentimentFilter === "bullish"} onClick={() => setSentimentFilter("bullish")} />
-                <FilterButton label="📉 Bearish" value="bearish" active={sentimentFilter === "bearish"} onClick={() => setSentimentFilter("bearish")} />
-                <FilterButton label="➖ Neutral" value="neutral" active={sentimentFilter === "neutral"} onClick={() => setSentimentFilter("neutral")} />
+                <FilterButton label=" Bullish" value="bullish" active={sentimentFilter === "bullish"} onClick={() => setSentimentFilter("bullish")} />
+                <FilterButton label=" Bearish" value="bearish" active={sentimentFilter === "bearish"} onClick={() => setSentimentFilter("bearish")} />
+                <FilterButton label=" Neutral" value="neutral" active={sentimentFilter === "neutral"} onClick={() => setSentimentFilter("neutral")} />
               </div>
             </div>
           )}
@@ -276,8 +273,8 @@ export default function NewsSentimentPage() {
                         {article.title}
                       </a>
                       <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "#94A3B8" }}>
-                        <span>📅 {formatDate(article.timePublished)}</span>
-                        <span>📰 {article.source}</span>
+                        <span> {formatDate(article.timePublished)}</span>
+                        <span> {article.source}</span>
                       </div>
                     </div>
                     <div style={{ padding: "0.5rem 1rem", background: `${getSentimentColor(article.sentiment.label)}20`, borderRadius: "8px", color: getSentimentColor(article.sentiment.label), fontWeight: "600", whiteSpace: "nowrap", marginLeft: "1rem" }}>
@@ -408,6 +405,7 @@ export default function NewsSentimentPage() {
         )}
       </div>
     </main>
+    </div>
   );
 }
 
