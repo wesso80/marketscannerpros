@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import PageHero from "@/components/PageHero";
 
 interface CompanyData {
   symbol: string;
@@ -80,17 +81,12 @@ export default function CompanyOverviewPage() {
   return (
     <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 1) 50%)", padding: "2rem 1rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
-        <Link href="/tools" style={{ color: "#10B981", textDecoration: "none", marginBottom: "1rem", display: "inline-block" }}>
-          ← Back to Tools
-        </Link>
-
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "bold", background: "linear-gradient(to right, #10B981, #3B82F6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: "1rem" }}>
-          🏢 Company Overview
-        </h1>
-        
-        <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem" }}>
-          Comprehensive fundamental analysis powered by Alpha Vantage Premium
-        </p>
+        <PageHero
+          badge="FUNDAMENTAL ANALYSIS"
+          icon="🏢"
+          title="Company Overview"
+          subtitle="Comprehensive fundamental analysis powered by Alpha Vantage Premium API."
+        />
 
         {/* Search Bar */}
         <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>

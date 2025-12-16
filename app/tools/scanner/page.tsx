@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import PageHero from "@/components/PageHero";
 
 type TimeframeOption = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
 type ScannerTab = "equity" | "crypto" | "forex" | "commodities" | "options";
@@ -104,21 +105,12 @@ function ScannerContent() {
       padding: "2rem 1rem",
     }}>
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "2rem" }}>
-        <h1 style={{
-          fontSize: "2.5rem",
-          fontWeight: "bold",
-          background: "linear-gradient(to right, #10B981, #3B82F6)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          marginBottom: "1rem",
-          textAlign: "center"
-        }}>
-          Market Scanner Pro
-        </h1>
-        
-        <p style={{ fontSize: "1.125rem", color: "#94A3B8", marginBottom: "2rem", textAlign: "center" }}>
-          Scan crypto & stocks across timeframes — fast.
-        </p>
+        <PageHero
+          badge="MARKET SCANNER"
+          icon="🔍"
+          title="Market Scanner Pro"
+          subtitle="Scan any crypto, stock, or forex pair for confluence signals."
+        />
 
         {/* Controls */}
         <div style={{
@@ -352,6 +344,7 @@ function ScannerContent() {
                   <th style={{ textAlign: "right", padding: "0.75rem" }}>Score</th>
                   <th style={{ textAlign: "left", padding: "0.75rem" }}>Signal</th>
                   <th style={{ textAlign: "center", padding: "0.75rem" }}>Direction</th>
+                  <th style={{ textAlign: "center", padding: "0.75rem" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,6 +389,28 @@ function ScannerContent() {
                       }}>
                         {result.direction}
                       </span>
+                    </td>
+                    <td style={{ padding: "1rem", textAlign: "center" }}>
+                      <Link
+                        href={generateAILink(result)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          padding: "0.5rem 1rem",
+                          background: "linear-gradient(135deg, #10B981, #059669)",
+                          border: "none",
+                          borderRadius: "6px",
+                          color: "#fff",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          textDecoration: "none",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        <span>💡</span>
+                        Explain this scan
+                      </Link>
                     </td>
                   </tr>
                 ))}

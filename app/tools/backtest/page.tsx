@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import PageHero from '@/components/PageHero';
 
 interface BacktestResult {
   totalTrades: number;
@@ -74,59 +75,12 @@ function BacktestContent() {
       padding: '20px'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#f9fafb', marginBottom: '8px' }}>
-              Strategy Backtester
-            </h1>
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>Test your trading strategies with historical data</p>
-          </div>
-          <Link href="/tools/scanner" style={{
-            padding: '10px 18px',
-            background: 'rgba(31,41,55,0.8)',
-            border: '1px solid #374151',
-            borderRadius: '8px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            ← Back to Scanner
-          </Link>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
-          <Link href="/tools/portfolio" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Portfolio
-          </Link>
-
-          <Link href="/tools/backtest" style={{
-            padding: '10px 20px',
-            color: '#10b981',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500',
-            borderBottom: '2px solid #10b981'
-          }}>
-            Backtest
-          </Link>
-          <Link href="/tools/journal" style={{
-            padding: '10px 20px',
-            color: '#9ca3af',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            Trade Journal
-          </Link>
-        </div>
+        <PageHero
+          badge="STRATEGY LAB"
+          icon="🧪"
+          title="Strategy Backtester"
+          subtitle="Test and iterate trading ideas with historical data."
+        />
 
         {/* Backtest Configuration */}
         <div style={{
