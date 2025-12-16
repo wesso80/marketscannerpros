@@ -6657,7 +6657,6 @@ else:
         # Display current price summary
         summary_data = get_chart_data_summary(chart_symbol_clean, chart_timeframe)
         if summary_data:
-        if summary_data:
             col1, col2, col3, col4, col5 = st.columns(5)
         
             with col1:
