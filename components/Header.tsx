@@ -58,7 +58,7 @@ export default function Header() {
       `}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-emerald-300/20">
+          <div className="flex items-center justify-between p-6 border-b border-emerald-300/20 flex-shrink-0">
             <span className="text-lg font-semibold text-emerald-300">Menu</span>
             <button 
               onClick={() => setIsOpen(false)}
@@ -68,20 +68,22 @@ export default function Header() {
             </button>
           </div>
           
-          {/* Links */}
-          <div className="flex flex-col p-4 gap-1 overflow-y-auto">
-            <Link href="/tools/scanner" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Scanner</Link>
-            <Link href="/tools/portfolio" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Portfolio</Link>
-            <Link href="/tools/backtest" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Backtest</Link>
-            <Link href="/tools/journal" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Trade Journal</Link>
-            <Link href="/tools/ai-tools" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>AI Tools</Link>
-            <Link href="/tools/ai-analyst" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>AI Analyst</Link>
-            <Link href="/tools/gainers-losers" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Gainers & Losers</Link>
-            <Link href="/tools/company-overview" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Company Overview</Link>
-            <Link href="/tools/news" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Market News</Link>
-            <Link href="/tradingview-scripts" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>TradingView Scripts</Link>
-            <Link href="/partners" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Partners</Link>
-            <Link href="/pricing" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Pricing</Link>
+          {/* Links - Scrollable area */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col gap-1">
+              <Link href="/tools/scanner" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Scanner</Link>
+              <Link href="/tools/portfolio" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Portfolio</Link>
+              <Link href="/tools/backtest" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Backtest</Link>
+              <Link href="/tools/journal" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Trade Journal</Link>
+              <Link href="/tools/ai-tools" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>AI Tools</Link>
+              <Link href="/tools/ai-analyst" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>AI Analyst</Link>
+              <Link href="/tools/gainers-losers" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Gainers & Losers</Link>
+              <Link href="/tools/company-overview" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Company Overview</Link>
+              <Link href="/tools/news" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Market News</Link>
+              <Link href="/tradingview-scripts" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>TradingView Scripts</Link>
+              <Link href="/partners" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Partners</Link>
+              <Link href="/pricing" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Pricing</Link>
+            </div>
           </div>
         </div>
       </div>
