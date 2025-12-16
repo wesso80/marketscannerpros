@@ -43,6 +43,13 @@ function PortfolioContent() {
     currentPrice: ''
   });
 
+  // Bulk update helpers
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [manualQueue, setManualQueue] = useState<Position[]>([]);
+  const [manualIndex, setManualIndex] = useState(0);
+  const [manualValue, setManualValue] = useState('');
+  const [manualOpen, setManualOpen] = useState(false);
+
   // Fetch price from backend quote API; try crypto first, then stock, finally fx.
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = symbol.toUpperCase().trim();
@@ -192,7 +199,7 @@ function PortfolioContent() {
   };
 
   const updatePrice = (id: number, newPrice: number) => {
-    setPositions(positions.map(p => {
+    setPositions(prev => prev.map(p => {
       if (p.id === id) {
         const pl = p.side === 'LONG' 
           ? (newPrice - p.entryPrice) * p.quantity 
@@ -208,6 +215,59 @@ function PortfolioContent() {
       }
       return p;
     }));
+  };
+
+  // Start bulk update: auto-fetch, then fall back to manual entries via modal
+  const startBulkUpdate = async () => {
+    if (positions.length === 0) return;
+    setIsBulkUpdating(true);
+    const fails: Position[] = [];
+    for (const position of positions) {
+      const fetched = await fetchAutoPrice(position.symbol);
+      if (fetched !== null && !isNaN(fetched)) {
+        updatePrice(position.id, fetched);
+      } else {
+        fails.push(position);
+      }
+    }
+    setIsBulkUpdating(false);
+    if (fails.length > 0) {
+      setManualQueue(fails);
+      setManualIndex(0);
+      setManualValue(fails[0].currentPrice.toString());
+      setManualOpen(true);
+    }
+  };
+
+  const closeManual = () => {
+    setManualOpen(false);
+    setManualQueue([]);
+    setManualIndex(0);
+    setManualValue('');
+  };
+
+  const submitManual = () => {
+    const p = manualQueue[manualIndex];
+    if (!p) return closeManual();
+    const val = parseFloat(manualValue);
+    if (!isNaN(val)) updatePrice(p.id, val);
+    const next = manualIndex + 1;
+    if (next < manualQueue.length) {
+      setManualIndex(next);
+      setManualValue(manualQueue[next].currentPrice.toString());
+    } else {
+      closeManual();
+    }
+  };
+
+  const skipManual = () => {
+    const next = manualIndex + 1;
+    if (next < manualQueue.length) {
+      setManualIndex(next);
+      setManualValue(manualQueue[next].currentPrice.toString());
+    } else {
+      closeManual();
+    }
   };
 
   const clearAllData = () => {
@@ -401,6 +461,52 @@ function PortfolioContent() {
           </>
         }
       />
+
+      {/* Manual entry modal (fallback when API has no price) */}
+      {manualOpen && manualQueue[manualIndex] && (
+        <div
+          className="fixed inset-0 z-50"
+          style={{ background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={closeManual}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(92vw, 520px)',
+              background: '#0b1220',
+              border: '1px solid #334155',
+              borderRadius: 12,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              padding: 20,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ color: '#e2e8f0', fontWeight: 700 }}>Update price for {manualQueue[manualIndex].symbol}</div>
+              <button onClick={closeManual} style={{ color: '#94a3b8', background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 10 }}>Enter a price. This showed because the API didn’t return a value for this symbol.</div>
+            <input
+              autoFocus
+              value={manualValue}
+              onChange={(e) => setManualValue(e.target.value)}
+              inputMode="decimal"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid #334155',
+                background: '#0f172a',
+                color: '#e2e8f0',
+                outline: 'none'
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+              <button onClick={skipManual} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>Skip</button>
+              <button onClick={submitManual} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', cursor: 'pointer' }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Stats Bar */}
       <div style={{ 
@@ -952,20 +1058,7 @@ function PortfolioContent() {
               </h2>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={async () => {
-                    // Try to fetch each price from API; fallback to manual prompt
-                    for (const position of positions) {
-                      const fetched = await fetchAutoPrice(position.symbol);
-                      if (fetched !== null && !isNaN(fetched)) {
-                        updatePrice(position.id, fetched);
-                      } else {
-                        const manual = prompt(`Price not found for ${position.symbol}. Enter price:`, position.currentPrice.toString());
-                        if (manual && !isNaN(parseFloat(manual))) {
-                          updatePrice(position.id, parseFloat(manual));
-                        }
-                      }
-                    }
-                  }}
+                  onClick={startBulkUpdate}
                   style={{
                     padding: '8px 16px',
                     background: '#10b981',
@@ -974,10 +1067,11 @@ function PortfolioContent() {
                     color: '#fff',
                     fontSize: '13px',
                     fontWeight: '500',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    opacity: isBulkUpdating ? 0.7 : 1
                   }}
                 >
-                  🔄 UPDATE ALL PRICES
+                  {isBulkUpdating ? 'Updating…' : '🔄 UPDATE ALL PRICES'}
                 </button>
                 <button
                   onClick={() => setActiveTab('add position')}
