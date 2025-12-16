@@ -43,16 +43,27 @@ function PortfolioContent() {
     currentPrice: ''
   });
 
-  // Bulk update helpers
-  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
-  const [manualQueue, setManualQueue] = useState<Position[]>([]);
-  const [manualIndex, setManualIndex] = useState(0);
+  // Price update helpers
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [manualPosition, setManualPosition] = useState<Position | null>(null);
   const [manualValue, setManualValue] = useState('');
   const [manualOpen, setManualOpen] = useState(false);
 
+  // Normalize ticker symbols to clean format
+  function normalizeSymbol(raw: string): string {
+    let s = raw.toUpperCase().trim();
+    
+    // Remove common suffixes that APIs don't need (but preserve the base ticker)
+    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT → BTC, XRP-USD → XRP
+    s = s.replace(/[-_\/]?EUR$/i, '');
+    s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
+    
+    return s;
+  }
+
   // Fetch price from backend quote API; try crypto first, then stock, finally fx.
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
-    const s = symbol.toUpperCase().trim();
+    const s = normalizeSymbol(symbol);
     
     const tryFetch = async (url: string) => {
       try {
@@ -222,57 +233,33 @@ function PortfolioContent() {
     }));
   };
 
-  // Start bulk update: auto-fetch, then fall back to manual entries via modal
-  const startBulkUpdate = async () => {
-    if (positions.length === 0) return;
-    setIsBulkUpdating(true);
-    const fails: Position[] = [];
-    for (const position of positions) {
-      const fetched = await fetchAutoPrice(position.symbol);
-      if (fetched !== null && !isNaN(fetched)) {
-        updatePrice(position.id, fetched);
-      } else {
-        fails.push(position);
-      }
-    }
-    setIsBulkUpdating(false);
-    if (fails.length > 0) {
-      setManualQueue(fails);
-      setManualIndex(0);
-      setManualValue(fails[0].currentPrice.toString());
+  // Update single position: auto-fetch, then fall back to manual entry via modal
+  const updateSinglePrice = async (position: Position) => {
+    setUpdatingId(position.id);
+    const fetched = await fetchAutoPrice(position.symbol);
+    setUpdatingId(null);
+    
+    if (fetched !== null && !isNaN(fetched)) {
+      updatePrice(position.id, fetched);
+    } else {
+      // Open modal for manual entry
+      setManualPosition(position);
+      setManualValue(position.currentPrice.toString());
       setManualOpen(true);
     }
   };
 
   const closeManual = () => {
     setManualOpen(false);
-    setManualQueue([]);
-    setManualIndex(0);
+    setManualPosition(null);
     setManualValue('');
   };
 
   const submitManual = () => {
-    const p = manualQueue[manualIndex];
-    if (!p) return closeManual();
+    if (!manualPosition) return closeManual();
     const val = parseFloat(manualValue);
-    if (!isNaN(val)) updatePrice(p.id, val);
-    const next = manualIndex + 1;
-    if (next < manualQueue.length) {
-      setManualIndex(next);
-      setManualValue(manualQueue[next].currentPrice.toString());
-    } else {
-      closeManual();
-    }
-  };
-
-  const skipManual = () => {
-    const next = manualIndex + 1;
-    if (next < manualQueue.length) {
-      setManualIndex(next);
-      setManualValue(manualQueue[next].currentPrice.toString());
-    } else {
-      closeManual();
-    }
+    if (!isNaN(val)) updatePrice(manualPosition.id, val);
+    closeManual();
   };
 
   const clearAllData = () => {
@@ -468,7 +455,7 @@ function PortfolioContent() {
       />
 
       {/* Manual entry modal (fallback when API has no price) */}
-      {manualOpen && manualQueue[manualIndex] && (
+      {manualOpen && manualPosition && (
         <div
           className="fixed inset-0 z-50"
           style={{ background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -486,7 +473,7 @@ function PortfolioContent() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ color: '#e2e8f0', fontWeight: 700 }}>Update price for {manualQueue[manualIndex].symbol}</div>
+              <div style={{ color: '#e2e8f0', fontWeight: 700 }}>Update price for {manualPosition.symbol}</div>
               <button onClick={closeManual} style={{ color: '#94a3b8', background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
             </div>
             <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 10 }}>Enter a price. This showed because the API didn’t return a value for this symbol.</div>
@@ -506,7 +493,7 @@ function PortfolioContent() {
               }}
             />
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
-              <button onClick={skipManual} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>Skip</button>
+              <button onClick={closeManual} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
               <button onClick={submitManual} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', cursor: 'pointer' }}>OK</button>
             </div>
           </div>
@@ -915,17 +902,33 @@ function PortfolioContent() {
             maxWidth: '600px',
             margin: '0 auto'
           }}>
-            <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '24px' }}>
+            <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
               Add New Position
             </h2>
+            <div style={{ 
+              background: 'rgba(16,185,129,0.1)', 
+              border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: '6px',
+              padding: '12px 16px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ color: '#10b981', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>
+                💡 How to enter symbols:
+              </div>
+              <div style={{ color: '#94a3b8', fontSize: '12px', lineHeight: '1.6' }}>
+                <strong>Crypto:</strong> BTC, ETH, XRP, SOL, DOGE (without -USD suffix)<br/>
+                <strong>Stocks:</strong> AAPL, TSLA, NVDA, XXRP (exact ticker)<br/>
+                <strong>Note:</strong> Use the 🔄 refresh button to auto-fetch live prices
+              </div>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Symbol
+                  Symbol <span style={{ color: '#64748b', fontSize: '11px' }}>(e.g., BTC, AAPL, TSLA)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., AAPL, BTC-USD"
+                  placeholder="BTC, AAPL, XRP, etc."
                   value={newPosition.symbol}
                   onChange={(e) => setNewPosition({...newPosition, symbol: e.target.value})}
                   style={{
@@ -1063,22 +1066,6 @@ function PortfolioContent() {
               </h2>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={startBulkUpdate}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#10b981',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    opacity: isBulkUpdating ? 0.7 : 1
-                  }}
-                >
-                  {isBulkUpdating ? 'Updating…' : '🔄 UPDATE ALL PRICES'}
-                </button>
-                <button
                   onClick={() => setActiveTab('add position')}
                   style={{
                     padding: '8px 16px',
@@ -1169,28 +1156,47 @@ function PortfolioContent() {
                           ${position.entryPrice.toFixed(2)}
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={position.currentPrice}
-                            onChange={(e) => {
-                              const newPrice = parseFloat(e.target.value);
-                              if (!isNaN(newPrice)) {
-                                updatePrice(position.id, newPrice);
-                              }
-                            }}
-                            style={{
-                              width: '100px',
-                              padding: '6px 10px',
-                              background: '#1e293b',
-                              border: '1px solid #334155',
-                              borderRadius: '4px',
-                              color: '#f1f5f9',
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              textAlign: 'right'
-                            }}
-                          />
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={position.currentPrice}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value);
+                                if (!isNaN(newPrice)) {
+                                  updatePrice(position.id, newPrice);
+                                }
+                              }}
+                              style={{
+                                width: '100px',
+                                padding: '6px 10px',
+                                background: '#1e293b',
+                                border: '1px solid #334155',
+                                borderRadius: '4px',
+                                color: '#f1f5f9',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                textAlign: 'right'
+                              }}
+                            />
+                            <button
+                              onClick={() => updateSinglePrice(position)}
+                              disabled={updatingId === position.id}
+                              style={{
+                                padding: '6px 8px',
+                                background: updatingId === position.id ? '#334155' : '#10b981',
+                                border: 'none',
+                                borderRadius: '4px',
+                                color: '#fff',
+                                fontSize: '12px',
+                                cursor: updatingId === position.id ? 'wait' : 'pointer',
+                                opacity: updatingId === position.id ? 0.6 : 1,
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              {updatingId === position.id ? '...' : '🔄'}
+                            </button>
+                          </div>
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
                           ${(position.currentPrice * position.quantity).toFixed(2)}
