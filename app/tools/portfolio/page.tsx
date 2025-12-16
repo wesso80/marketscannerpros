@@ -54,19 +54,18 @@ function PortfolioContent() {
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = symbol.toUpperCase().trim();
     
-    // Ensure we use the correct base URL (same origin for API routes)
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    
     const tryFetch = async (url: string) => {
       try {
-        const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
-        const r = await fetch(fullUrl, { cache: 'no-store' });
-        if (!r.ok) return null;
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) {
+          console.warn(`API returned ${r.status} for ${url}`);
+          return null;
+        }
         const j = await r.json();
         if (j?.ok && typeof j.price === 'number') return j.price as number;
         return null;
       } catch (e) {
-        console.warn('Fetch failed:', e);
+        console.error('Fetch error:', url, e);
         return null;
       }
     };
