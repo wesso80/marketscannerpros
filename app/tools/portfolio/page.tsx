@@ -43,6 +43,38 @@ function PortfolioContent() {
     currentPrice: ''
   });
 
+  // Fetch price from backend quote API; try crypto first, then stock, finally fx.
+  async function fetchAutoPrice(symbol: string): Promise<number | null> {
+    const s = symbol.toUpperCase().trim();
+    const tryFetch = async (url: string) => {
+      try {
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (j?.ok && typeof j.price === 'number') return j.price as number;
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Prefer crypto in this app; many users track coins.
+    const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
+    if (crypto !== null) return crypto;
+
+    // Try stock
+    const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
+    if (stock !== null) return stock;
+
+    // Try FX if symbol looks like a currency code (3 letters)
+    if (s.length === 3) {
+      const fx = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=fx&market=USD`);
+      if (fx !== null) return fx;
+    }
+
+    return null;
+  }
+
   // Load positions from localStorage on mount
   useEffect(() => {
     setMounted(true);
@@ -920,14 +952,19 @@ function PortfolioContent() {
               </h2>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  onClick={() => {
-                    // Bulk price update - prompt for each position
-                    positions.forEach(position => {
-                      const newPrice = prompt(`Update price for ${position.symbol}:`, position.currentPrice.toString());
-                      if (newPrice && !isNaN(parseFloat(newPrice))) {
-                        updatePrice(position.id, parseFloat(newPrice));
+                  onClick={async () => {
+                    // Try to fetch each price from API; fallback to manual prompt
+                    for (const position of positions) {
+                      const fetched = await fetchAutoPrice(position.symbol);
+                      if (fetched !== null && !isNaN(fetched)) {
+                        updatePrice(position.id, fetched);
+                      } else {
+                        const manual = prompt(`Price not found for ${position.symbol}. Enter price:`, position.currentPrice.toString());
+                        if (manual && !isNaN(parseFloat(manual))) {
+                          updatePrice(position.id, parseFloat(manual));
+                        }
                       }
-                    });
+                    }
                   }}
                   style={{
                     padding: '8px 16px',
