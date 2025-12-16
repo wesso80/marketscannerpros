@@ -18,3 +18,7 @@ marketscannerpros.zip
 
 .vercel
 .env*.local
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
