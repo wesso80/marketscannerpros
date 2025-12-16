@@ -14,7 +14,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation - Always visible on desktop */}
-        <nav className="hidden md:flex items-center gap-3 lg:gap-4 text-sm text-emerald-300/90 overflow-x-auto">
+        <nav className="flex items-center gap-3 lg:gap-4 text-sm text-emerald-300/90 max-md:hidden">
           <Link href="/tools/scanner" className="hover:text-emerald-300 whitespace-nowrap">Scanner</Link>
           <Link href="/tools/portfolio" className="hover:text-emerald-300 whitespace-nowrap">Portfolio</Link>
           <Link href="/tools/backtest" className="hover:text-emerald-300 whitespace-nowrap">Backtest</Link>
@@ -32,7 +32,7 @@ export default function Header() {
         {/* Mobile Hamburger Button - Only on mobile */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden flex flex-col gap-1.5 p-2 flex-shrink-0"
+          className="flex flex-col gap-1.5 p-2 flex-shrink-0 md:hidden"
           aria-label="Toggle menu"
         >
           <span className={`block h-0.5 w-6 bg-emerald-300 transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-2' : ''}`} />
