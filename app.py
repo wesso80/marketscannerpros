@@ -2398,6 +2398,7 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
     
     if function == "TIME_SERIES_INTRADAY":
         params["interval"] = interval_map.get(timeframe, "60min")
+        params["extended_hours"] = "true"  # Premium: include pre-market (4am) and post-market (8pm ET)
     
     response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
     response.raise_for_status()
@@ -7162,7 +7163,7 @@ else:
                     st.error("⚠️ Alpha Vantage API key not configured. Please contact support.")
                 else:
                     # API call to Alpha Vantage REALTIME_OPTIONS
-                    url = f"https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol={options_symbol_clean}&apikey={av_key}"
+                    url = f"https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol={options_symbol_clean}&require_greeks=true&apikey={av_key}"
                     response = requests.get(url, timeout=30)
                     
                     if response.status_code == 200:
