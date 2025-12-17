@@ -337,16 +337,25 @@ function ScannerContent() {
 
         {/* Orientation */}
         <div style={{
-          background: "rgba(15, 23, 42, 0.75)",
-          border: "1px solid rgba(16, 185, 129, 0.35)",
-          borderRadius: 14,
-          padding: "16px 18px",
-          marginBottom: "1.25rem",
+          background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+          border: "1px solid rgba(51,65,85,0.8)",
+          borderRadius: "16px",
+          padding: "20px 24px",
+          marginBottom: "1.5rem",
           color: "#e2e8f0",
           fontSize: 14,
-          lineHeight: 1.5
+          lineHeight: 1.5,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
         }}>
-          <div style={{ fontWeight: 600, color: "#10b981", marginBottom: 6 }}>Why you're here</div>
+          <div style={{ fontWeight: 600, color: "#10b981", marginBottom: 8, display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ 
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              borderRadius: "8px",
+              padding: "4px 6px",
+              fontSize: "12px"
+            }}>🎯</span>
+            Why you're here
+          </div>
           <div style={{ marginBottom: 10 }}>
             Find high-probability phases with multi-timeframe alignment. Start with the phase, confirm alignment, then look for a clean entry trigger.
           </div>
@@ -363,11 +372,12 @@ function ScannerContent() {
 
         {/* Scanner Panel */}
         <div style={{
-          background: "rgba(15, 23, 42, 0.9)",
+          background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
           borderRadius: "16px",
-          border: "1px solid rgba(16, 185, 129, 0.3)",
+          border: "1px solid rgba(51,65,85,0.8)",
           padding: "2rem",
           marginBottom: "2rem",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
         }}>
           {/* Asset Type Selector */}
           <div style={{ marginBottom: "1.5rem" }}>
@@ -563,10 +573,11 @@ function ScannerContent() {
         {/* Results Card */}
         {result && (
           <div key={scanKey} style={{
-            background: "rgba(15, 23, 42, 0.9)",
+            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
             borderRadius: "16px",
-            border: "1px solid rgba(16, 185, 129, 0.3)",
+            border: "1px solid rgba(51,65,85,0.8)",
             padding: "2rem",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
           }}>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
               {result.symbol} — {timeframe.toUpperCase()}

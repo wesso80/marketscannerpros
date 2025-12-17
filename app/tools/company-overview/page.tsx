@@ -90,51 +90,51 @@ export default function CompanyOverviewPage() {
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0 }}>
 
         {/* Search Bar */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
+        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
           <input
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter ticker symbol (e.g., AAPL)"
-            style={{ flex: 1, padding: "1rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff", fontSize: "1rem" }}
+            style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: "#fff", fontSize: "15px" }}
           />
           <button
             onClick={handleSearch}
             disabled={loading}
-            style={{ padding: "1rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}
+            style={{ padding: "14px 28px", background: "linear-gradient(135deg, #10B981, #059669)", border: "none", borderRadius: "12px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "0 4px 15px rgba(16,185,129,0.3)" }}
           >
             {loading ? "Loading..." : "Search"}
           </button>
         </div>
 
         {error && (
-          <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
+          <div style={{ padding: "14px 16px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", borderRadius: "12px", color: "#FCA5A5", marginBottom: "24px" }}>
             {error}
           </div>
         )}
 
         {data && (
-          <div style={{ display: "grid", gap: "1.5rem" }}>
+          <div style={{ display: "grid", gap: "20px" }}>
             {/* Company Header */}
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-              <h2 style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff", marginBottom: "0.5rem" }}>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#fff", marginBottom: "12px" }}>
                 {data.name} ({data.symbol})
               </h2>
-              <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-                <span style={{ padding: "0.5rem 1rem", background: "rgba(16, 185, 129, 0.2)", borderRadius: "8px", color: "#10B981", fontSize: "0.875rem" }}>
+              <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+                <span style={{ padding: "8px 14px", background: "rgba(16, 185, 129, 0.15)", borderRadius: "8px", color: "#10B981", fontSize: "13px", border: "1px solid rgba(16,185,129,0.3)" }}>
                   {data.sector}
                 </span>
-                <span style={{ padding: "0.5rem 1rem", background: "rgba(59, 130, 246, 0.2)", borderRadius: "8px", color: "#3B82F6", fontSize: "0.875rem" }}>
+                <span style={{ padding: "8px 14px", background: "rgba(59, 130, 246, 0.15)", borderRadius: "8px", color: "#3B82F6", fontSize: "13px", border: "1px solid rgba(59,130,246,0.3)" }}>
                   {data.industry}
                 </span>
               </div>
-              <p style={{ color: "#94A3B8", lineHeight: "1.6" }}>{data.description}</p>
+              <p style={{ color: "#94A3B8", lineHeight: "1.7", fontSize: "14px" }}>{data.description}</p>
             </div>
 
             {/* Valuation Metrics */}
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📊 Valuation</h3>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📊 Valuation</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Market Cap" value={formatMarketCap(data.marketCap)} />
                 <MetricCard label="P/E Ratio" value={formatValue(data.pe)} />
@@ -146,8 +146,8 @@ export default function CompanyOverviewPage() {
             </div>
 
             {/* Profitability */}
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>💰 Profitability</h3>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💰 Profitability</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Profit Margin" value={formatValue(data.profitMargin)} />
                 <MetricCard label="Operating Margin" value={formatValue(data.operatingMargin)} />
@@ -158,8 +158,8 @@ export default function CompanyOverviewPage() {
             </div>
 
             {/* Growth & Revenue */}
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📈 Growth & Revenue</h3>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
                 <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
@@ -169,8 +169,8 @@ export default function CompanyOverviewPage() {
             </div>
 
             {/* Technical Indicators */}
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-              <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>📉 Technical</h3>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📉 Technical</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
                 <MetricCard label="200-Day MA" value={`$${formatValue(data.day200MA)}`} />
@@ -181,8 +181,8 @@ export default function CompanyOverviewPage() {
 
             {/* Dividends */}
             {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
-              <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981", marginBottom: "1.5rem" }}>💵 Dividends</h3>
+              <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💵 Dividends</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                   <MetricCard label="Dividend Yield" value={formatValue(data.dividendYield)} />
                 </div>
@@ -198,9 +198,9 @@ export default function CompanyOverviewPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ padding: "1rem", background: "rgba(30, 41, 59, 0.5)", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.1)" }}>
-      <div style={{ fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>{label}</div>
-      <div style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#fff" }}>{value}</div>
+    <div style={{ padding: "16px", background: "rgba(15,23,42,0.6)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)" }}>
+      <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px" }}>{label}</div>
+      <div style={{ fontSize: "1.15rem", fontWeight: "bold", color: "#fff" }}>{value}</div>
     </div>
   );
 }

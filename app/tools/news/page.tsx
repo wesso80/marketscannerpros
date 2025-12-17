@@ -144,43 +144,46 @@ export default function NewsSentimentPage() {
         {/* Tabs */}
         <div
           style={{
-            display: 'flex',
-            gap: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '0.75rem',
             marginBottom: '2rem',
-            borderBottom: '2px solid rgba(16, 185, 129, 0.2)',
-            flexDirection: typeof window !== 'undefined' && window.innerWidth < 600 ? 'column' : 'row',
-            alignItems: typeof window !== 'undefined' && window.innerWidth < 600 ? 'stretch' : 'center',
+            padding: '0.5rem',
+            background: 'rgba(30,41,59,0.3)',
+            borderRadius: '12px',
           }}
         >
           <button
             onClick={() => setActiveTab("news")}
             style={{
-              padding: "1rem 2rem",
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === "news" ? "3px solid #10B981" : "3px solid transparent",
+              padding: "1rem 1.5rem",
+              background: activeTab === "news" ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))" : "transparent",
+              border: activeTab === "news" ? "1px solid rgba(16,185,129,0.5)" : "1px solid transparent",
+              borderRadius: "10px",
               color: activeTab === "news" ? "#10B981" : "#94A3B8",
               fontWeight: "600",
               cursor: "pointer",
-              marginBottom: "-2px"
+              fontSize: "14px",
+              transition: "all 0.2s"
             }}
           >
-             News & Sentiment
+            📰 News & Sentiment
           </button>
           <button
             onClick={() => setActiveTab("earnings")}
             style={{
-              padding: "1rem 2rem",
-              background: "none",
-              border: "none",
-              borderBottom: activeTab === "earnings" ? "3px solid #10B981" : "3px solid transparent",
+              padding: "1rem 1.5rem",
+              background: activeTab === "earnings" ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))" : "transparent",
+              border: activeTab === "earnings" ? "1px solid rgba(16,185,129,0.5)" : "1px solid transparent",
+              borderRadius: "10px",
               color: activeTab === "earnings" ? "#10B981" : "#94A3B8",
               fontWeight: "600",
               cursor: "pointer",
-              marginBottom: "-2px"
+              fontSize: "14px",
+              transition: "all 0.2s"
             }}
           >
-             Earnings Calendar
+            📅 Earnings Calendar
           </button>
         </div>
 
@@ -188,11 +191,11 @@ export default function NewsSentimentPage() {
         {activeTab === "news" && (
           <>
             {/* Search Controls */}
-        <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
+        <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 800 ? '1fr' : '1fr auto auto',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '1rem',
               marginBottom: '1rem',
             }}
@@ -265,7 +268,7 @@ export default function NewsSentimentPage() {
             </div>
             <div style={{ display: "grid", gap: "1.5rem" }}>
               {filteredArticles.map((article, index) => (
-                <div key={index} style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
+                <div key={index} style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
                   {/* Article Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1rem" }}>
                     <div style={{ flex: 1 }}>
@@ -321,8 +324,8 @@ export default function NewsSentimentPage() {
         {/* Earnings Tab */}
         {activeTab === "earnings" && (
           <>
-            <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem", marginBottom: "2rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1rem" }}>
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
                     Symbol (optional - leave blank for all)
@@ -369,8 +372,9 @@ export default function NewsSentimentPage() {
             )}
 
             {earnings.length > 0 && (
-              <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", padding: "2rem" }}>
-                <h2 style={{ color: "#10B981", marginBottom: "1.5rem" }}>
+              <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <h2 style={{ color: "#10B981", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "10px", fontSize: "15px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
                   {earnings.length} Upcoming Earnings
                 </h2>
                 <div style={{ overflowX: "auto" }}>

@@ -326,56 +326,92 @@ function JournalContent() {
 
       {/* Stats Bar */}
       <div style={{ 
-        background: '#0f172a',
-        padding: '20px 24px',
-        borderBottom: '1px solid #334155'
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 100%)',
+        padding: '24px 16px',
+        borderBottom: '1px solid rgba(51,65,85,0.6)'
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total P&L</div>
+        <div style={{ 
+          maxWidth: '1600px', 
+          margin: '0 auto', 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '16px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: `1px solid ${totalPL >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total P&L</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: totalPL >= 0 ? '#10b981' : '#ef4444'
             }}>
               ${totalPL >= 0 ? '' : '-'}{Math.abs(totalPL).toFixed(2)}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Win Rate</div>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: `1px solid ${winRate >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: winRate >= 50 ? '#10b981' : '#ef4444'
             }}>
               {winRate.toFixed(1)}%
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total Trades</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#f1f5f9' }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(51,65,85,0.5)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Trades</div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: '#f1f5f9' }}>
               {totalTrades}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Profit Factor</div>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: `1px solid ${profitFactor >= 1 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profit Factor</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: profitFactor >= 1 ? '#10b981' : '#ef4444'
             }}>
               {profitFactor.toFixed(2)}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Avg Win</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(16,185,129,0.3)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Win</div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: '#10b981' }}>
               ${avgWin.toFixed(2)}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Avg Loss</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(239,68,68,0.3)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Loss</div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: '#ef4444' }}>
               ${avgLoss.toFixed(2)}
             </div>
           </div>
@@ -383,21 +419,38 @@ function JournalContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 16px' }}>
         {/* Add Entry Form */}
         {showAddForm && (
           <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            border: '1px solid rgba(51,65,85,0.8)',
+            borderRadius: '16px',
             padding: '24px',
-            marginBottom: '24px'
+            marginBottom: '24px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
           }}>
-            <h3 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
+            <h3 style={{ 
+              color: '#f1f5f9', 
+              fontSize: '15px', 
+              fontWeight: '600', 
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              <span style={{ 
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                borderRadius: '8px',
+                padding: '6px 8px',
+                fontSize: '14px'
+              }}>➕</span>
               New Journal Entry
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                   Date *
@@ -681,14 +734,16 @@ function JournalContent() {
         {/* Filters */}
         {entries.length > 0 && (
           <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            border: '1px solid rgba(51,65,85,0.8)',
+            borderRadius: '16px',
             padding: '16px 24px',
             marginBottom: '24px',
             display: 'flex',
             gap: '20px',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
           }}>
             <div style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>
               Filters:
@@ -742,9 +797,9 @@ function JournalContent() {
         {/* Journal Entries */}
         {filteredEntries.length === 0 ? (
           <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            border: '1px solid rgba(51,65,85,0.8)',
+            borderRadius: '16px',
             padding: '60px 24px',
             textAlign: 'center'
           }}>
@@ -781,11 +836,12 @@ function JournalContent() {
               <div
                 key={entry.id}
                 style={{
-                  background: '#0f172a',
-                  border: `2px solid ${entry.outcome === 'win' ? '#10b981' : entry.outcome === 'loss' ? '#ef4444' : '#64748b'}`,
-                  borderRadius: '8px',
+                  background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                  border: `2px solid ${entry.outcome === 'win' ? 'rgba(16,185,129,0.6)' : entry.outcome === 'loss' ? 'rgba(239,68,68,0.6)' : 'rgba(100,116,139,0.6)'}`,
+                  borderRadius: '16px',
                   padding: '20px',
-                  position: 'relative'
+                  position: 'relative',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
                 }}
               >
                 {/* Header Row */}

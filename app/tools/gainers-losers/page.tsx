@@ -57,21 +57,19 @@ export default function GainersLosersPage() {
         {/* Tabs */}
         <div
           style={{
-            display: 'flex',
-            gap: '1rem',
-            marginBottom: '2rem',
-            borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
-            flexDirection: typeof window !== 'undefined' && window.innerWidth < 600 ? 'column' : 'row',
-            alignItems: typeof window !== 'undefined' && window.innerWidth < 600 ? 'stretch' : 'center',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '12px',
+            marginBottom: '24px',
           }}
         >
-          <button onClick={() => setActiveTab("gainers")} style={{ padding: "1rem 2rem", background: activeTab === "gainers" ? "rgba(16, 185, 129, 0.2)" : "transparent", border: "none", borderBottom: activeTab === "gainers" ? "2px solid #10B981" : "none", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer" }}>
+          <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             🚀 Top Gainers
           </button>
-          <button onClick={() => setActiveTab("losers")} style={{ padding: "1rem 2rem", background: activeTab === "losers" ? "rgba(239, 68, 68, 0.2)" : "transparent", border: "none", borderBottom: activeTab === "losers" ? "2px solid #EF4444" : "none", color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: "600", cursor: "pointer" }}>
+          <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             📉 Top Losers
           </button>
-          <button onClick={() => setActiveTab("active")} style={{ padding: "1rem 2rem", background: activeTab === "active" ? "rgba(59, 130, 246, 0.2)" : "transparent", border: "none", borderBottom: activeTab === "active" ? "2px solid #3B82F6" : "none", color: activeTab === "active" ? "#3B82F6" : "#94A3B8", fontWeight: "600", cursor: "pointer" }}>
+          <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "active" ? "#3B82F6" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             🔥 Most Active
           </button>
         </div>
@@ -81,7 +79,7 @@ export default function GainersLosersPage() {
             Loading market data...
           </div>
         ) : (
-          <div style={{ background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(16, 185, 129, 0.2)", overflow: "auto", width: '100%' }}>
+          <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
             <div style={{ minWidth: 400, width: '100%' }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>

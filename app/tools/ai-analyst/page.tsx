@@ -328,10 +328,10 @@ function AiAnalystContent() {
         >
           {/* LEFT SIDE: inputs */}
           <section style={{
-            background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
-            borderRadius: 18,
-            border: '1px solid #1f2933',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            borderRadius: 16,
+            border: '1px solid rgba(51,65,85,0.8)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             padding: 24
           }}>
             <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16, color: '#f9fafb' }}>Ask the Analyst</h2>
@@ -599,10 +599,10 @@ function AiAnalystContent() {
             display: 'flex',
             minHeight: 400,
             flexDirection: 'column',
-            background: 'radial-gradient(circle at top right, #111827, #020617 60%)',
-            borderRadius: 18,
-            border: '1px solid #1f2933',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            borderRadius: 16,
+            border: '1px solid rgba(51,65,85,0.8)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             padding: 24
           }}>
             <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 12, color: '#f9fafb' }}>

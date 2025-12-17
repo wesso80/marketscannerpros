@@ -170,14 +170,31 @@ function BacktestContent() {
 
         {/* Backtest Configuration */}
         <div style={{
-          background: '#0f172a',
-          border: '1px solid #334155',
-          borderRadius: '12px',
+          background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+          border: '1px solid rgba(51,65,85,0.8)',
+          borderRadius: '16px',
           padding: '24px',
-          marginBottom: '20px'
+          marginBottom: '24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
         }}>
-          <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-            ⚙️ Backtest Configuration
+          <h2 style={{ 
+            color: '#f1f5f9', 
+            fontSize: '15px', 
+            fontWeight: '600', 
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <span style={{ 
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              borderRadius: '8px',
+              padding: '6px 8px',
+              fontSize: '14px'
+            }}>⚙️</span>
+            Backtest Configuration
           </h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -360,14 +377,31 @@ function BacktestContent() {
 
             {/* Equity Curve Chart */}
             <div style={{
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '12px',
+              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '16px',
               padding: '24px',
-              marginBottom: '20px'
+              marginBottom: '24px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-                📈 Backtest Performance Analysis
+              <h2 style={{ 
+                color: '#f1f5f9', 
+                fontSize: '15px', 
+                fontWeight: '600', 
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                <span style={{ 
+                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  fontSize: '14px'
+                }}>📈</span>
+                Backtest Performance Analysis
               </h2>
               
               <div style={{ 
@@ -561,119 +595,136 @@ function BacktestContent() {
 
             {/* Performance Metrics */}
             <div style={{
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '12px',
+              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '16px',
               padding: '24px',
-              marginBottom: '20px'
+              marginBottom: '24px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>
-                📊 Performance Metrics
+              <h2 style={{ 
+                color: '#f1f5f9', 
+                fontSize: '15px', 
+                fontWeight: '600', 
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                <span style={{ 
+                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  fontSize: '14px'
+                }}>📊</span>
+                Performance Metrics
               </h2>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total Return</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Return</div>
                   <div style={{ 
                     color: results.totalReturn >= 0 ? '#10b981' : '#ef4444', 
-                    fontSize: '24px', 
+                    fontSize: '22px', 
                     fontWeight: '700' 
                   }}>
                     {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Win Rate</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.winRate.toFixed(1)}%
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total Trades</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Trades</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.totalTrades}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Profit Factor</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profit Factor</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.profitFactor.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Sharpe Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sharpe Ratio</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.sharpeRatio.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Max Drawdown</div>
-                  <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Max Drawdown</div>
+                  <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '700' }}>
                     {results.maxDrawdown.toFixed(2)}%
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Avg Win</div>
-                  <div style={{ color: '#10b981', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Win</div>
+                  <div style={{ color: '#10b981', fontSize: '22px', fontWeight: '700' }}>
                     ${results.avgWin.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Avg Loss</div>
-                  <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Loss</div>
+                  <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '700' }}>
                     ${results.avgLoss.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>CAGR</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CAGR</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.cagr >= 0 ? '+' : ''}{results.cagr.toFixed(2)}%
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Volatility (Ann.)</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Volatility (Ann.)</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.volatility.toFixed(2)}%
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Sortino Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sortino Ratio</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.sortinoRatio.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Calmar Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Calmar Ratio</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.calmarRatio.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Time in Market</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time in Market</div>
+                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
                     {results.timeInMarket.toFixed(1)}%
                   </div>
                 </div>
 
                 {results.bestTrade && (
-                  <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Best Trade</div>
+                  <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Best Trade</div>
                     <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '700' }}>
                       +{results.bestTrade.returnPercent.toFixed(2)}% ({results.bestTrade.symbol})
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
                       {new Date(results.bestTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {` x${results.bestTrade.holdingPeriodDays}d`}
                     </div>
@@ -681,12 +732,12 @@ function BacktestContent() {
                 )}
 
                 {results.worstTrade && (
-                  <div style={{ background: '#1e293b', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Worst Trade</div>
+                  <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worst Trade</div>
                     <div style={{ color: '#ef4444', fontSize: '18px', fontWeight: '700' }}>
                       {results.worstTrade.returnPercent.toFixed(2)}% ({results.worstTrade.symbol})
                     </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
                       {new Date(results.worstTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {` x${results.worstTrade.holdingPeriodDays}d`}
                     </div>
@@ -697,14 +748,31 @@ function BacktestContent() {
 
             {/* Trade History */}
             <div style={{
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '12px',
-              overflow: 'hidden'
+              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #334155' }}>
-                <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                  📋 Trade History
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
+                <h2 style={{ 
+                  color: '#f1f5f9', 
+                  fontSize: '15px', 
+                  fontWeight: '600', 
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ 
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    fontSize: '14px'
+                  }}>📋</span>
+                  Trade History
                 </h2>
               </div>
               
