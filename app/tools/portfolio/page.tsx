@@ -54,9 +54,10 @@ function PortfolioContent() {
     let s = raw.toUpperCase().trim();
     
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
-    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT → BTC, XRP-USD → XRP
-    s = s.replace(/[-_\/]?EUR$/i, '');
-    s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
+    // Only remove if they appear at the end with separators
+    s = s.replace(/[-_\/](USDT|USD)$/i, ''); // BTC-USD → BTC, XRP-USDT → XRP
+    s = s.replace(/[-_\/]EUR$/i, '');
+    s = s.replace(/[-_\/]PERP$/i, '');    // Futures suffix
     
     return s;
   }

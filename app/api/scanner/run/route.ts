@@ -1,22 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // Disable static optimization
+export const revalidate = 0; // Disable ISR caching
 
 // Alpha Vantage API for technical indicators (web-only)
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
 async function fetchAlphaJson(url: string, tag: string) {
-  const res = await fetch(url, { next: { revalidate: 0 }, cache: "no-store" });
+  // Add cache-busting timestamp
+  const cacheBustUrl = url + (url.includes('?') ? '&' : '?') + `_nocache=${Date.now()}`;
+  console.info(`[AV] Fetching ${tag}: ${url.substring(0, 100)}...`);
+  
+  const res = await fetch(cacheBustUrl, { 
+    next: { revalidate: 0 }, 
+    cache: "no-store",
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    }
+  });
+  
+  if (!res.ok) {
+    console.error(`[AV] HTTP ${res.status} for ${tag}`);
+    throw new Error(`Alpha Vantage HTTP ${res.status} during ${tag}`);
+  }
+  
   const json = await res.json();
 
   const note = (json && (json.Note || json.Information)) as string | undefined;
   const errMsg = (json && json["Error Message"]) as string | undefined;
 
   if (note) {
+    console.warn(`[AV] Rate limit/premium notice for ${tag}:`, note.substring(0, 100));
     throw new Error(`Alpha Vantage limit or premium notice during ${tag}: ${note}`);
   }
   if (errMsg) {
+    console.error(`[AV] Error for ${tag}:`, errMsg);
     throw new Error(`Alpha Vantage error during ${tag}: ${errMsg}`);
   }
 
@@ -47,6 +68,7 @@ interface ScanResult {
   aroon_up?: number;
   aroon_down?: number;
   obv?: number;
+  lastCandleTime?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -102,11 +124,12 @@ export async function POST(req: NextRequest) {
 
     const intervalMap: Record<string, string> = {
       "1h": "60min",
-      "4h": "60min",
+      "30m": "30min",
       "1d": "daily",
       "daily": "daily"
     };
     const avInterval = intervalMap[timeframe] || "daily";
+    console.info("[scanner] Using Alpha Vantage interval:", avInterval, "for timeframe:", timeframe);
 
 
     async function fetchRSI(sym: string) {
@@ -362,6 +385,11 @@ export async function POST(req: NextRequest) {
           const baseSym = sym;
           const candles = avInterval === "daily" ? await fetchCryptoDaily(baseSym, market) : await fetchCryptoIntraday(baseSym, market, avInterval);
           if (!candles.length) throw new Error("No crypto candles returned");
+          
+          // Log the latest candle time for debugging
+          const lastCandleTime = candles[candles.length - 1]?.t;
+          console.info(`[scanner] Crypto ${baseSym}: Got ${candles.length} candles, latest: ${lastCandleTime}`);
+          
           const closes = candles.map(c => c.close);
           const highs = candles.map(c => c.high);
           const lows = candles.map(c => c.low);
@@ -405,20 +433,41 @@ export async function POST(req: NextRequest) {
             aroon_up: aroonObj.up,
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
+            lastCandleTime,
           };
           if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
           // Fetch OHLCV data for equity/forex (best-effort) to compute all indicators locally
-          const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&apikey=${ALPHA_KEY}`;
-          const r = await fetch(url, { next: { revalidate: 0 }, cache: "no-store" });
+          const cacheBuster = Date.now();
+          const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+          const r = await fetch(url, { 
+            next: { revalidate: 0 }, 
+            cache: "no-store",
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            }
+          });
           const j = await r.json();
           
-          // Log response for debugging
-          if (!j["Time Series (60min)"] && !j["Time Series (daily)"]) {
-            console.warn("[scanner] No time series data", { sym, keys: Object.keys(j).slice(0, 3) });
+          // Check for AV errors/rate limits
+          if (j.Note || j.Information) {
+            console.warn(`[scanner] AV rate limit for ${sym}:`, j.Note || j.Information);
+            throw new Error(`Alpha Vantage rate limit: ${(j.Note || j.Information).substring(0, 100)}`);
+          }
+          if (j["Error Message"]) {
+            console.error(`[scanner] AV error for ${sym}:`, j["Error Message"]);
+            throw new Error(`Alpha Vantage error: ${j["Error Message"]}`);
           }
           
-          const key = avInterval === "60min" ? "Time Series (60min)" : `Time Series (${avInterval})`;
+          // Log response for debugging
+          const keyOptions = [`Time Series (${avInterval})`, "Time Series (60min)", "Time Series (30min)", "Time Series (daily)"];
+          const foundKey = keyOptions.find(k => j[k]);
+          if (!foundKey) {
+            console.warn("[scanner] No time series data", { sym, avInterval, keys: Object.keys(j).slice(0, 5) });
+          }
+          
+          const key = foundKey || `Time Series (${avInterval})`;
           const ts = j[key] || {};
           const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
             t: date as string,
@@ -429,6 +478,10 @@ export async function POST(req: NextRequest) {
           })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
           
           if (!candles.length) throw new Error("No equity candles returned");
+          
+          // Log the latest candle time
+          const lastCandleTime = candles[candles.length - 1]?.t;
+          console.info(`[scanner] Equity ${sym}: Got ${candles.length} candles, latest: ${lastCandleTime}`);
           
           const closes = candles.map(c => c.close);
           const highs = candles.map(c => c.high);
@@ -473,6 +526,7 @@ export async function POST(req: NextRequest) {
             aroon_up: aroonObj.up,
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
+            lastCandleTime,
           };
           if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         }
@@ -486,6 +540,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Return results with cache-prevention headers
     return NextResponse.json({
       success: true,
       message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
@@ -499,6 +554,12 @@ export async function POST(req: NextRequest) {
         timeframe,
         type
       },
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
 
   } catch (error: any) {
@@ -514,7 +575,12 @@ export async function POST(req: NextRequest) {
         details: msg,
         hint: "If this persists, reduce frequency or try again shortly.",
       },
-      { status: 503 }
+      { 
+        status: 503,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        }
+      }
     );
   }
 }

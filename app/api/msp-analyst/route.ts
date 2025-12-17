@@ -29,6 +29,7 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
+import { SCANNER_EXPLAINER_RULES, getScannerExplainerContext } from "@/lib/prompts/scannerExplainerRules";
 import { getSessionFromCookie } from "@/lib/auth";
 import { sql } from "@vercel/postgres";
 import { logger } from "@/lib/logger";
@@ -151,25 +152,58 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // NEW: inject scanner metadata if this came from scanner
+    // NEW: inject strict scanner explainer rules if this came from scanner
     if (scanner && scanner.source === "msp-web-scanner") {
+      // First, inject the hard constraint rules
       messages.push({
         role: "system",
-        content: `
+        content: SCANNER_EXPLAINER_RULES,
+      });
+
+      // Then inject the specific scan context with score-locked guidance
+      if (scanner.scanData) {
+        const scannerContext = getScannerExplainerContext({
+          score: scanner.score ?? 0,
+          symbol: context?.symbol ?? scanner.scanData.symbol ?? "Unknown",
+          timeframe: context?.timeframe ?? "N/A",
+          price: scanner.scanData.price,
+          rsi: scanner.scanData.rsi,
+          cci: scanner.scanData.cci,
+          macd_hist: scanner.scanData.macd_hist,
+          ema200: scanner.scanData.ema200,
+          atr: scanner.scanData.atr,
+          adx: scanner.scanData.adx,
+          stoch_k: scanner.scanData.stoch_k,
+          stoch_d: scanner.scanData.stoch_d,
+          aroon_up: scanner.scanData.aroon_up,
+          aroon_down: scanner.scanData.aroon_down,
+          obv: scanner.scanData.obv,
+        });
+        messages.push({
+          role: "system",
+          content: scannerContext,
+        });
+      } else {
+        // Fallback: legacy scanner format without full scanData
+        messages.push({
+          role: "system",
+          content: `
 Scanner Origin Context:
 This query originated from the MarketScanner Pro scanner.
 - Signal Type: ${scanner.signal ?? "N/A"}
 - Direction: ${scanner.direction ?? "N/A"}
 - Signal Score: ${scanner.score ?? "N/A"}
 
+CRITICAL: Your trade guidance MUST NOT contradict the score of ${scanner.score ?? "N/A"}.
 Use scanner-specific logic:
 1. Focus on explaining WHY this specific signal fired
 2. Reference the technical indicators that created this setup
 3. Provide entry/exit guidance based on the signal strength
 4. Discuss risk management specific to this signal type
-5. Be more tactical and trade-focused vs. general analysis
-        `.trim(),
-      });
+5. End with a verdict: ✅ Trade-Ready | ⚠️ Wait for Confirmation | ❌ No-Trade Zone
+          `.trim(),
+        });
+      }
     }
 
     // NEW: inject structured market context so the model uses REAL values

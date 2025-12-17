@@ -2381,7 +2381,7 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
 
     if is_crypto:
         # Crypto-specific mappings
-        crypto_interval_map = {"1h": "60min", "4h": "60min", "30m": "30min", "15m": "15min", "5m": "5min"}
+        crypto_interval_map = {"1h": "60min", "30m": "30min", "15m": "15min", "5m": "5min"}
         base_symbol = symbol.replace("-USD", "").upper()
 
         if timeframe == "1d":
@@ -2470,12 +2470,11 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
         function_map = {
             "1d": "TIME_SERIES_DAILY",
             "1h": "TIME_SERIES_INTRADAY",
-            "4h": "TIME_SERIES_INTRADAY",
+            "30m": "TIME_SERIES_INTRADAY",
             "15m": "TIME_SERIES_INTRADAY",
-            "5m": "TIME_SERIES_INTRADAY",
-            "30m": "TIME_SERIES_INTRADAY"
+            "5m": "TIME_SERIES_INTRADAY"
         }
-        interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min", "30m": "30min"}
+        interval_map = {"1h": "60min", "15m": "15min", "5m": "5min", "30m": "30min"}
 
         function = function_map.get(timeframe, "TIME_SERIES_DAILY")
         params = {
@@ -2641,7 +2640,7 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
     rows, errs = [], []
     for sym in symbols:
         try:
-            tfs_to_fetch = sorted(set([timeframe, "1h", "4h", "1d"]))
+            tfs_to_fetch = sorted(set([timeframe, "30m", "1h", "1d"]))
             dfs: Dict[str, pd.DataFrame] = {}
 
             for tf in tfs_to_fetch:
@@ -2683,8 +2682,8 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
                 "risk_$": round(float(risk_usd), 2),
                 "notional_$": round(float(notional), 2),
                 "last_bar_main": main_df.index[-1].isoformat() if not main_df.empty else None,
+                "last_bar_30m": dfs.get("30m", pd.DataFrame()).index[-1].isoformat() if dfs.get("30m") is not None and not dfs.get("30m").empty else None,
                 "last_bar_1h": dfs.get("1h", pd.DataFrame()).index[-1].isoformat() if dfs.get("1h") is not None and not dfs.get("1h").empty else None,
-                "last_bar_4h": dfs.get("4h", pd.DataFrame()).index[-1].isoformat() if dfs.get("4h") is not None and not dfs.get("4h").empty else None,
                 "last_bar_1d": dfs.get("1d", pd.DataFrame()).index[-1].isoformat() if dfs.get("1d") is not None and not dfs.get("1d").empty else None,
                 "updated_at_utc": datetime.now(timezone.utc).isoformat(),
             })
@@ -5856,8 +5855,8 @@ if total_count > 0:
     st.sidebar.info(f"📊 {total_count} symbols ready to scan")
 
 st.sidebar.header("Timeframes")
-tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m","15m","5m"], index=0)
-tf_cx = st.sidebar.selectbox("Crypto Timeframe:", ["1h","4h","1D","15m","5m"], index=0)
+tf_eq = st.sidebar.selectbox("Equity Timeframe:", ["1D","1h","30m"], index=0)
+tf_cx = st.sidebar.selectbox("Crypto Timeframe:", ["1D","1h","30m"], index=1)
 
 st.sidebar.header("Filters")
 topk = st.sidebar.number_input("Top K Results:", 5, 100, value=CFG.top_k, step=1)

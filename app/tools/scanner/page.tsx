@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 
-type TimeframeOption = "1h" | "4h" | "1d";
+type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
 
 interface ScanResult {
@@ -26,6 +26,8 @@ interface ScanResult {
   aroon_up?: number;
   aroon_down?: number;
   obv?: number;
+  lastCandleTime?: string;
+  fetchedAt?: string;
 }
 
 // Top 500+ cryptocurrencies from Alpha Vantage
@@ -196,6 +198,8 @@ function ScannerContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
 
   // Get filtered suggestions based on input
   const getSuggestions = () => {
@@ -217,13 +221,20 @@ function ScannerContent() {
     setAiText(null);
     setAiError(null);
     setAiLoading(false);
+    setLastUpdated(null);
+    setScanKey(prev => prev + 1); // Force new render
 
     try {
-      const response = await fetch("/api/scanner/run", {
+      // Add cache-busting timestamp to ensure fresh data
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/scanner/run?_t=${cacheBuster}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
         },
+        cache: "no-store",
         body: JSON.stringify({
           type: assetType === "forex" ? "forex" : assetType,
           timeframe,
@@ -241,7 +252,13 @@ function ScannerContent() {
       if (data.success && data.results?.length > 0) {
         console.log('Scanner API Response:', data.results[0]);
         console.log('ATR value:', data.results[0].atr, 'isFinite:', Number.isFinite(data.results[0].atr));
-        setResult(data.results[0]);
+        console.log('Candle time:', data.results[0].lastCandleTime);
+        // Create new object reference to force React re-render
+        setResult({ ...data.results[0] });
+        setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
+      } else if (data.errors?.length > 0) {
+        // Surface Alpha Vantage errors
+        setError(data.errors.join(' | '));
       } else {
         setError(data.error || "No data returned for this ticker");
       }
@@ -261,7 +278,7 @@ function ScannerContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `You are an analyst. Explain this scan briefly: symbol ${result.symbol}, timeframe ${timeframe}, score ${result.score}. Indicators: price ${result.price ?? 'n/a'}, RSI ${result.rsi ?? 'n/a'}, MACD hist ${result.macd_hist ?? 'n/a'}, EMA200 ${result.ema200 ?? 'n/a'}, ATR ${result.atr ?? 'n/a'}, ADX ${result.adx ?? 'n/a'}, Stoch K ${result.stoch_k ?? 'n/a'}, Stoch D ${result.stoch_d ?? 'n/a'}, CCI ${result.cci ?? 'n/a'}, Aroon up ${result.aroon_up ?? 'n/a'}, Aroon down ${result.aroon_down ?? 'n/a'}, OBV ${result.obv ?? 'n/a'}. Return 3 short bullets plus a one-line risk caution.`,
+          query: `Analyze this scan and provide a structured explanation following the Scanner Explainer Rules. Include Phase Assessment, Trend & Momentum Alignment, Trade Guidance, Risk Considerations, and Final Verdict.`,
           context: {
             symbol: result.symbol,
             timeframe,
@@ -271,6 +288,22 @@ function ScannerContent() {
             source: "msp-web-scanner",
             score: result.score,
             signal: "confluence-scan",
+            scanData: {
+              symbol: result.symbol,
+              price: result.price,
+              score: result.score,
+              rsi: result.rsi,
+              cci: result.cci,
+              macd_hist: result.macd_hist,
+              ema200: result.ema200,
+              atr: result.atr,
+              adx: result.adx,
+              stoch_k: result.stoch_k,
+              stoch_d: result.stoch_d,
+              aroon_up: result.aroon_up,
+              aroon_down: result.aroon_down,
+              obv: result.obv,
+            },
           },
         })
       });
@@ -485,7 +518,7 @@ function ScannerContent() {
                 }}
               >
                 <option value="1h">⚡ 1 Hour</option>
-                <option value="4h">🕐 4 Hours</option>
+                <option value="30m">🕐 30 Minutes</option>
                 <option value="1d">📅 1 Day</option>
               </select>
             </div>
@@ -529,7 +562,7 @@ function ScannerContent() {
 
         {/* Results Card */}
         {result && (
-          <div style={{
+          <div key={scanKey} style={{
             background: "rgba(15, 23, 42, 0.9)",
             borderRadius: "16px",
             border: "1px solid rgba(16, 185, 129, 0.3)",
@@ -538,6 +571,35 @@ function ScannerContent() {
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
               {result.symbol} — {timeframe.toUpperCase()}
             </h2>
+            {/* Timestamp Info */}
+            <div style={{ 
+              display: "flex", 
+              gap: "1.5rem", 
+              flexWrap: "wrap",
+              marginBottom: "1rem",
+              padding: "0.75rem 1rem",
+              background: "rgba(16, 185, 129, 0.08)",
+              borderRadius: "8px",
+              border: "1px solid rgba(16, 185, 129, 0.2)",
+            }}>
+              {lastUpdated && (
+                <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
+                  <span style={{ color: "#10B981", fontWeight: "600" }}>Last Updated:</span>{" "}
+                  {new Date(lastUpdated).toLocaleString('en-US', { 
+                    timeZone: 'UTC',
+                    month: 'short', day: 'numeric', 
+                    hour: '2-digit', minute: '2-digit', second: '2-digit',
+                    hour12: false 
+                  })} UTC
+                </div>
+              )}
+              {result.lastCandleTime && (
+                <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
+                  <span style={{ color: "#10B981", fontWeight: "600" }}>Candle Time:</span>{" "}
+                  {result.lastCandleTime}
+                </div>
+              )}
+            </div>
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
               <button
                 onClick={explainScan}

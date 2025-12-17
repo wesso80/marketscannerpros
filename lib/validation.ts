@@ -46,6 +46,25 @@ export const analystRequestSchema = z.object({
       signal: z.string().optional(),
       direction: z.string().optional(),
       score: z.number().optional(),
+      // Full scan data for strict explainer rules
+      scanData: z
+        .object({
+          symbol: z.string().optional(),
+          price: z.number().optional(),
+          score: z.number().optional(),
+          rsi: z.number().optional(),
+          cci: z.number().optional(),
+          macd_hist: z.number().optional(),
+          ema200: z.number().optional(),
+          atr: z.number().optional(),
+          adx: z.number().optional(),
+          stoch_k: z.number().optional(),
+          stoch_d: z.number().optional(),
+          aroon_up: z.number().optional(),
+          aroon_down: z.number().optional(),
+          obv: z.number().optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
