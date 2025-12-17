@@ -2368,15 +2368,19 @@ ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
 
 def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
     """Fetch from Alpha Vantage Premium (75 calls/minute)"""
+    # Normalize timeframe to lowercase for consistent lookup
+    timeframe = timeframe.lower()
+    
     # Map timeframes
     function_map = {
         "1d": "TIME_SERIES_DAILY",
         "1h": "TIME_SERIES_INTRADAY",
         "4h": "TIME_SERIES_INTRADAY",
         "15m": "TIME_SERIES_INTRADAY",
-        "5m": "TIME_SERIES_INTRADAY"
+        "5m": "TIME_SERIES_INTRADAY",
+        "30m": "TIME_SERIES_INTRADAY"
     }
-    interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min"}
+    interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min", "30m": "30min"}
     
     function = function_map.get(timeframe, "TIME_SERIES_DAILY")
     params = {
@@ -2417,6 +2421,21 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
         })
     
     df = pd.DataFrame(rows).set_index("timestamp").sort_index()
+    
+    # Store data freshness info in session state for later display
+    if "data_freshness" not in st.session_state:
+        st.session_state.data_freshness = {}
+    
+    last_bar_time = df.index[-1]
+    now_utc = datetime.now(timezone.utc)
+    hours_ago = (now_utc - last_bar_time).total_seconds() / 3600
+    
+    st.session_state.data_freshness[symbol] = {
+        "last_bar": last_bar_time,
+        "hours_ago": hours_ago,
+        "timeframe": timeframe
+    }
+    
     return df
 
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
@@ -6109,6 +6128,48 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('eq_errors', pd.DataFrame()),
     st.session_state.get('cx_errors', pd.DataFrame())
 )
+
+# Display data freshness warnings
+if st.session_state.get('data_freshness'):
+    data_freshness = st.session_state.data_freshness
+    # Get the oldest and newest data
+    ages = [v['hours_ago'] for v in data_freshness.values()]
+    if ages:
+        max_age = max(ages)
+        
+        # Determine if data is stale based on timeframe
+        is_stale = False
+        warning_msg = ""
+        
+        # Get the primary timeframe being used
+        sample_tf = next(iter(data_freshness.values()))['timeframe']
+        
+        if sample_tf == '1d':
+            # For daily, if data is more than 36 hours old, it's from 2+ days ago
+            if max_age > 36:
+                is_stale = True
+                days_old = int(max_age / 24)
+                warning_msg = f"📅 **Data from {days_old} trading days ago** - Most recent bars are from {datetime.now(timezone.utc).astimezone(SYD).strftime('%B %d')} earlier"
+        else:
+            # For intraday, if data is more than 6 hours old (covers after-hours)
+            if max_age > 6:
+                is_stale = True
+                warning_msg = f"⏰ **Data is {max_age:.1f} hours old** - Market may not have opened yet or data is from yesterday"
+        
+        if is_stale:
+            st.warning(f"""
+{warning_msg}
+
+**Why this happens:**
+- Alpha Vantage updates after market close (US market)
+- During pre-market hours or when market is closed, the most recent available data is from the previous trading day
+- This is completely normal and your analysis is still valid
+
+**What to do:**
+- For most accurate results, scan during or after US market hours (9:30 AM - 4:00 PM ET)
+- Current time: {datetime.now(timezone.utc).astimezone(SYD).strftime('%I:%M %p %Z')} (Sydney time)
+- US Market hours: 1:00 AM - 9:00 PM Sydney time (varies with DST)
+            """)
 
 # Equity Markets Section with Professional Cards
 st.markdown("""
