@@ -157,21 +157,26 @@ export async function POST(req: NextRequest) {
 
     // Store in database
     for (const c of explained) {
+      const payload = c.scannerPayload || {};
       await q(
-        `insert into daily_market_focus_items
-          (focus_id, asset_class, symbol, name, venue, score, scanner_payload, explanation, key_levels, risks)
-         values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10::jsonb)`,
+        `INSERT INTO daily_market_focus_items
+          (focus_id, asset_class, symbol, score, phase, structure, risk_level, 
+           price, change_percent, rsi, macd_histogram, atr, ai_explanation)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           focusId,
-          c.assetClass,
+          c.assetClass.toLowerCase(),
           c.symbol,
-          c.name ?? null,
-          c.venue ?? null,
-          c.score ?? null,
-          JSON.stringify(c.scannerPayload ?? {}),
+          c.score ?? 0,
+          payload.phase ?? null,
+          payload.structure ?? null,
+          payload.risk ?? null,
+          payload.price ?? null,
+          null, // change_percent not in scanner payload
+          payload.rsi ?? null,
+          payload.macdHist ?? null,
+          payload.atr ?? null,
           c.explanation ?? "",
-          JSON.stringify(c.keyLevels ?? {}),
-          JSON.stringify(c.risks ?? {}),
         ]
       );
     }
