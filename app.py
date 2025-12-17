@@ -2371,62 +2371,153 @@ def delete_watchlist(watchlist_id: int) -> bool:
 # ================= Data Source (Alpha Vantage Premium - 100% Legal) =================
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "UI755FUUAM6FRRI9")
 
-def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
-    """Fetch from Alpha Vantage Premium (75 calls/minute)"""
-    # Normalize timeframe to lowercase for consistent lookup
+def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[bool] = None) -> pd.DataFrame:
+    """Fetch from Alpha Vantage Premium (75 calls/minute). Auto-detect crypto pairs like BTC-USD."""
     timeframe = timeframe.lower()
+
+    # Auto-detect crypto if not explicitly provided (symbols like BTC-USD, ETH-USD)
+    if is_crypto is None:
+        is_crypto = symbol.upper().endswith("-USD")
+
+    if is_crypto:
+        # Crypto-specific mappings
+        crypto_interval_map = {"1h": "60min", "4h": "60min", "30m": "30min", "15m": "15min", "5m": "5min"}
+        base_symbol = symbol.replace("-USD", "").upper()
+
+        if timeframe == "1d":
+            # Daily crypto uses DIGITAL_CURRENCY_DAILY
+            params = {
+                "function": "DIGITAL_CURRENCY_DAILY",
+                "symbol": base_symbol,
+                "market": "USD",
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+            response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+
+            ts_key = None
+            for key in data.keys():
+                if "Time Series" in key:
+                    ts_key = key
+                    break
+            if not ts_key or ts_key not in data:
+                raise ValueError(f"No Alpha Vantage crypto data for {symbol}")
+
+            ts = data[ts_key]
+            rows = []
+            for timestamp, values in ts.items():
+                rows.append({
+                    "timestamp": pd.to_datetime(timestamp, utc=True),
+                    "open": float(values.get("1a. open (USD)", 0)),
+                    "high": float(values.get("2a. high (USD)", 0)),
+                    "low": float(values.get("3a. low (USD)", 0)),
+                    "close": float(values.get("4a. close (USD)", 0)),
+                    "volume": float(values.get("5. volume", 0)),
+                })
+        else:
+            # Intraday crypto uses CRYPTO_INTRADAY (premium)
+            interval = crypto_interval_map.get(timeframe, "60min")
+            params = {
+                "function": "CRYPTO_INTRADAY",
+                "symbol": base_symbol,
+                "market": "USD",
+                "interval": interval,
+                "apikey": ALPHA_VANTAGE_API_KEY,
+                "datatype": "json"
+            }
+
+            response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+
+            ts_key = None
+            for key in data.keys():
+                if "Time Series" in key:
+                    ts_key = key
+                    break
+            if not ts_key or ts_key not in data:
+                raise ValueError(f"No Alpha Vantage crypto data for {symbol}")
+
+            ts = data[ts_key]
+            rows = []
+            for timestamp, values in ts.items():
+                rows.append({
+                    "timestamp": pd.to_datetime(timestamp, utc=True),
+                    "open": float(values.get("1. open", 0)),
+                    "high": float(values.get("2. high", 0)),
+                    "low": float(values.get("3. low", 0)),
+                    "close": float(values.get("4. close", 0)),
+                    "volume": float(values.get("5. volume", 0)),
+                })
+    else:
+        # Equities/forex mappings
+        function_map = {
+            "1d": "TIME_SERIES_DAILY",
+            "1h": "TIME_SERIES_INTRADAY",
+            "4h": "TIME_SERIES_INTRADAY",
+            "15m": "TIME_SERIES_INTRADAY",
+            "5m": "TIME_SERIES_INTRADAY",
+            "30m": "TIME_SERIES_INTRADAY"
+        }
+        interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min", "30m": "30min"}
+
+        function = function_map.get(timeframe, "TIME_SERIES_DAILY")
+        params = {
+            "function": function,
+            "symbol": symbol.replace("-USD", "").upper(),
+            "apikey": ALPHA_VANTAGE_API_KEY,
+            "outputsize": "full",
+            "datatype": "json"
+        }
+
+        if function == "TIME_SERIES_INTRADAY":
+            params["interval"] = interval_map.get(timeframe, "60min")
+            params["extended_hours"] = "true"  # Premium: include pre/post market
+
+        response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+
+        ts_key = None
+        for key in data.keys():
+            if "Time Series" in key:
+                ts_key = key
+                break
+        if not ts_key or ts_key not in data:
+            raise ValueError(f"No Alpha Vantage data for {symbol}")
+
+        ts = data[ts_key]
+        rows = []
+        for timestamp, values in ts.items():
+            rows.append({
+                "timestamp": pd.to_datetime(timestamp, utc=True),
+                "open": float(values.get("1. open", 0)),
+                "high": float(values.get("2. high", 0)),
+                "low": float(values.get("3. low", 0)),
+                "close": float(values.get("4. close", 0)),
+                "volume": float(values.get("5. volume", 0)),
+            })
     
-    # Map timeframes
-    function_map = {
-        "1d": "TIME_SERIES_DAILY",
-        "1h": "TIME_SERIES_INTRADAY",
-        "4h": "TIME_SERIES_INTRADAY",
-        "15m": "TIME_SERIES_INTRADAY",
-        "5m": "TIME_SERIES_INTRADAY",
-        "30m": "TIME_SERIES_INTRADAY"
-    }
-    interval_map = {"1h": "60min", "4h": "60min", "15m": "15min", "5m": "5min", "30m": "30min"}
-    
-    function = function_map.get(timeframe, "TIME_SERIES_DAILY")
-    params = {
-        "function": function,
-        "symbol": symbol.replace("-USD", "").upper(),  # BTC-USD → BTC for crypto
-        "apikey": ALPHA_VANTAGE_API_KEY,
-        "outputsize": "full",
-        "datatype": "json"
-    }
-    
-    if function == "TIME_SERIES_INTRADAY":
-        params["interval"] = interval_map.get(timeframe, "60min")
-        params["extended_hours"] = "true"  # Premium: include pre-market (4am) and post-market (8pm ET)
-    
-    response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    
-    # Find the time series key
-    ts_key = None
-    for key in data.keys():
-        if "Time Series" in key:
-            ts_key = key
-            break
-    
-    if not ts_key or ts_key not in data:
-        raise ValueError(f"No Alpha Vantage data for {symbol}")
-    
-    ts = data[ts_key]
-    rows = []
-    for timestamp, values in ts.items():
-        rows.append({
-            "timestamp": pd.to_datetime(timestamp, utc=True),
-            "open": float(values.get("1. open", 0)),
-            "high": float(values.get("2. high", 0)),
-            "low": float(values.get("3. low", 0)),
-            "close": float(values.get("4. close", 0)),
-            "volume": float(values.get("5. volume", 0)),
-        })
-    
+    # Build dataframe from the Alpha Vantage response (single call above)
     df = pd.DataFrame(rows).set_index("timestamp").sort_index()
+
+    # Track Alpha Vantage status to surface throttling/notes in UI
+    note = None
+    if isinstance(data, dict):
+        note = data.get("Note") or data.get("Information")
+    if "av_debug" not in st.session_state:
+        st.session_state.av_debug = []
+    st.session_state.av_debug.insert(0, {
+        "symbol": symbol.upper(),
+        "timeframe": timeframe,
+        "status": getattr(response, "status_code", None),
+        "note": note,
+        "last_bar": df.index[-1].isoformat() if not df.empty else None,
+        "rows": len(df)
+    })
+    st.session_state.av_debug = st.session_state.av_debug[:8]
     
     # Store data freshness info in session state for later display
     if "data_freshness" not in st.session_state:
@@ -2445,7 +2536,7 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str) -> pd.DataFrame:
     return df
 
 def get_ohlcv(symbol: str, timeframe: str, period: Optional[str] = None, start: Optional[str] = None, end: Optional[str] = None) -> pd.DataFrame:
-    """Fetch OHLCV data using Alpha Vantage Premium exclusively (no yfinance)"""
+    """Fetch OHLCV data (Alpha Vantage Premium). Auto-detect crypto to use CRYPTO_INTRADAY/DIGITAL_CURRENCY."""
     try:
         df = get_ohlcv_alpha_vantage(symbol, timeframe)
         if len(df) >= 10:
@@ -6175,6 +6266,15 @@ if st.session_state.get('data_freshness'):
 - Current time: {datetime.now(timezone.utc).astimezone(SYD).strftime('%I:%M %p %Z')} (Sydney time)
 - US Market hours: 1:00 AM - 9:00 PM Sydney time (varies with DST)
             """)
+
+# Show recent Alpha Vantage responses to debug throttling/staleness
+if st.session_state.get('av_debug'):
+    with st.expander("Alpha Vantage status (last calls)", icon="🛰️"):
+        for entry in st.session_state.av_debug[:5]:
+            status = entry.get("status")
+            note = entry.get("note") or "No note"
+            last_bar = entry.get("last_bar")
+            st.write(f"{entry.get('symbol')} {entry.get('timeframe')} — status {status}, last bar {last_bar}, note: {note}")
 
 # Equity Markets Section with Professional Cards
 st.markdown("""
