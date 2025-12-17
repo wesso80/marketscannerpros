@@ -99,6 +99,10 @@ export async function POST(req: NextRequest) {
   }
 
   const dateKey = todayKeyUTC();
+  
+  // Check for force regenerate parameter
+  const { searchParams } = new URL(req.url);
+  const forceRegenerate = searchParams.get("force") === "true";
 
   try {
     // Check if already generated today
@@ -107,8 +111,8 @@ export async function POST(req: NextRequest) {
       [dateKey]
     );
 
-    if (existing[0]?.status === "ready") {
-      return NextResponse.json({ status: "already_ready", date: dateKey, message: "Already generated today" });
+    if (existing[0]?.status === "ready" && !forceRegenerate) {
+      return NextResponse.json({ status: "already_ready", date: dateKey, message: "Already generated today. Use ?force=true to regenerate." });
     }
 
     let focusId = existing[0]?.id;
@@ -139,12 +143,30 @@ export async function POST(req: NextRequest) {
     const candidatesData = await candidatesRes.json();
     const allCandidates = candidatesData.candidates || [];
 
+    // Log what we got
+    console.log("[generate] Total candidates:", allCandidates.length);
+    console.log("[generate] By asset class:", {
+      equity: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "equity").length,
+      crypto: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "crypto").length,
+      commodity: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "commodity").length,
+    });
+
     // Pick top from each asset class
     const pickTop = (cls: string) => allCandidates
       .filter((c: Candidate) => c.assetClass.toLowerCase() === cls)
       .sort((a: Candidate, b: Candidate) => b.score - a.score)[0];
 
-    const picks = [pickTop("equity"), pickTop("crypto"), pickTop("commodity")].filter(Boolean) as Candidate[];
+    const equityPick = pickTop("equity");
+    const cryptoPick = pickTop("crypto");
+    const commodityPick = pickTop("commodity");
+    
+    console.log("[generate] Picks:", {
+      equity: equityPick?.symbol || "NONE",
+      crypto: cryptoPick?.symbol || "NONE",
+      commodity: commodityPick?.symbol || "NONE",
+    });
+
+    const picks = [equityPick, cryptoPick, commodityPick].filter(Boolean) as Candidate[];
 
     if (picks.length === 0) {
       throw new Error("No candidates available from scanner");
