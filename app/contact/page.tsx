@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Contact — MarketScanner Pros",
   alternates: { canonical: "/contact" },
@@ -5,19 +7,78 @@ export const metadata = {
 
 export default function ContactPage() {
   return (
-    <main>
-      <h1>Contact</h1>
-      <p>Questions, feedback, or privacy requests? We’d love to hear from you.</p>
+    <main style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)',
+      color: '#E5E7EB',
+      padding: '4rem 1rem',
+    }}>
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+      }}>
+        <div style={{
+          background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.6) 100%)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          borderRadius: '1.5rem',
+          padding: '3rem',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+        }}>
+          <h1 style={{
+            fontSize: '2.5rem',
+            fontWeight: 700,
+            marginBottom: '0.5rem',
+            background: 'linear-gradient(135deg, #10B981, #34D399)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>Contact Us</h1>
+          <p style={{ color: '#9CA3AF', marginBottom: '2rem', fontSize: '1.1rem' }}>
+            Questions, feedback, or privacy requests? We'd love to hear from you.
+          </p>
 
-      <ul style={{ lineHeight: 1.8, marginLeft: "1.2rem" }}>
-        <li>Email: <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a></li>
-        <li>Privacy requests: see <a href="/privacy">Privacy Policy</a></li>
-        <li>Status/updates: see <a href="/guide">User Guide</a></li>
-      </ul>
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            marginBottom: '2rem',
+          }}>
+            <ul style={{ lineHeight: 2, margin: 0, paddingLeft: '1.2rem', color: '#E5E7EB' }}>
+              <li>
+                <strong style={{ color: '#10B981' }}>Email:</strong>{' '}
+                <a href="mailto:support@marketscannerpros.app" style={{ color: '#34D399' }}>
+                  support@marketscannerpros.app
+                </a>
+              </li>
+              <li>
+                <strong style={{ color: '#10B981' }}>Privacy requests:</strong>{' '}
+                <Link href="/privacy" style={{ color: '#34D399' }}>Privacy Policy</Link>
+              </li>
+              <li>
+                <strong style={{ color: '#10B981' }}>Status/updates:</strong>{' '}
+                <Link href="/guide" style={{ color: '#34D399' }}>User Guide</Link>
+              </li>
+            </ul>
+          </div>
 
-      <p style={{ marginTop: 16 }}>
-        <a className="btn" href="mailto:support@marketscannerpros.app?subject=Support%20Request">Email Support</a>
-      </p>
+          <a 
+            href="mailto:support@marketscannerpros.app?subject=Support%20Request"
+            style={{
+              display: 'inline-block',
+              padding: '0.875rem 1.5rem',
+              background: 'linear-gradient(135deg, #10B981, #059669)',
+              color: '#fff',
+              fontWeight: 600,
+              borderRadius: '0.75rem',
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            ✉️ Email Support
+          </a>
+        </div>
+      </div>
     </main>
   );
 }

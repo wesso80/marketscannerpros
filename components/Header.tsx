@@ -21,12 +21,12 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/70 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-xl font-semibold tracking-tight text-emerald-300 flex-shrink-0">
+        <Link href="/" className="text-xl font-semibold tracking-tight text-emerald-300 flex-shrink-0 mr-6">
           MarketScannerPros
         </Link>
 
         {/* Desktop Navigation - Always visible on desktop */}
-        <nav className="flex items-center gap-3 lg:gap-4 text-sm text-emerald-300/90 max-md:hidden">
+        <nav className="flex items-center gap-4 lg:gap-5 text-sm text-emerald-300/90 max-md:hidden">
           <Link href="/tools/scanner" className="hover:text-emerald-300 whitespace-nowrap">Scanner</Link>
           <Link href="/tools/portfolio" className="hover:text-emerald-300 whitespace-nowrap">Portfolio</Link>
           <Link href="/tools/backtest" className="hover:text-emerald-300 whitespace-nowrap">Backtest</Link>

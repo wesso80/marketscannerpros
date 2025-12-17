@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Footer() {
   return (
     <footer style={{borderTop:"1px solid #27272a", marginTop:32}}>
@@ -23,11 +25,11 @@ export default function Footer() {
         </p>
       </div>
       
-      <div className="container" style={{display:"flex",gap:"1rem",padding:"1rem 0",opacity:.85}}>
-        <a href="/blog">Blog</a>
-        <a href="/disclaimer">Disclaimer</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
+      <div className="container" style={{display:"flex",gap:"1.5rem",padding:"1rem 0",opacity:.85,flexWrap:"wrap",justifyContent:"center"}}>
+        <Link href="/blog">Blog</Link>
+        <Link href="/disclaimer">Disclaimer</Link>
+        <Link href="/privacy">Privacy</Link>
+        <Link href="/terms">Terms</Link>
         <a href="mailto:support@marketscannerpros.app">Contact</a>
       </div>
     </footer>
