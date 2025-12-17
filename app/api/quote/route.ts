@@ -125,6 +125,9 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
       TIA: "celestia",
       PEPE: "pepe",
       WIF: "dogwifcoin",
+      JUP: "jupiter-exchange-solana",
+      HBAR: "hedera-hashgraph",
+      KAS: "kaspa",
     };
 
     const coinId = idMap[symbol] || symbol.toLowerCase();
