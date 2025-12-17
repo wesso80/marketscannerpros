@@ -2524,7 +2524,6 @@ def position_sizing(last, direction: str, account_equity: float, risk_pct: float
     return size_units, risk_dollars, notional, stop_price
 
 # ================= Scanner =================
-@st.cache_data(show_spinner=False, ttl=300)
 def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
                   account_equity: float, risk_pct: float, stop_mult: float, min_vol: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rows, errs = [], []
