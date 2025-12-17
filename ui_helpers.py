@@ -22,7 +22,7 @@ def hero():
     with left:
         st.markdown('<div class="ms-h1">Market<span style="color:#10B981">Scanner</span> Pros</div>', unsafe_allow_html=True)
         st.write("Run smart scans, interpret scores, and manage alerts.")
-        st.markdown('<a class="ms-btn" href="https://app.marketscannerpros.app">🚀 Launch App</a>', unsafe_allow_html=True)
+        st.markdown('<a class="ms-btn" href="https://www.marketscannerpros.app">🚀 Launch App</a>', unsafe_allow_html=True)
         st.markdown('<div class="ms-h2">Why MarketScanner?</div>', unsafe_allow_html=True)
         st.markdown("""
         <ul class="ms-bullets">

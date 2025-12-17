@@ -1234,16 +1234,8 @@ st.markdown("""
                   window.navigator.standalone === true;
     const isMobile = mobileParam === '1' || isIOS;
     
-    // REDIRECT logic: marketscannerpros.app → app.marketscannerpros.app
-    // replit.app URL → mobile mode
+    // Mobile mode detection
     const hostname = window.location.hostname;
-    
-    if (hostname === 'marketscannerpros.app' || hostname === 'www.marketscannerpros.app') {
-        // Redirect marketing domain to app subdomain
-        const newUrl = 'https://app.marketscannerpros.app' + window.location.pathname + window.location.search;
-        window.location.replace(newUrl);
-        return; // Stop execution
-    }
     
     // Force mobile mode for Replit URL
     if (hostname.includes('replit.app') && !mobileParam) {
@@ -2865,8 +2857,8 @@ def send_email_to_user(subject: str, body: str, to_email: str) -> bool:
                     <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
                     <p style="color: #6b7280; font-size: 14px; margin: 0;">
                         This alert was sent by MarketScanner Pro<br>
-                        <a href="https://marketscannerpros.app" style="color: #10B981;">Visit Dashboard</a> | 
-                        <a href="https://app.marketscannerpros.app" style="color: #10B981;">Open Scanner</a>
+                        <a href="https://www.marketscannerpros.app" style="color: #10B981;">Visit Dashboard</a> | 
+                        <a href="https://www.marketscannerpros.app/tools" style="color: #10B981;">Open Scanner</a>
                     </p>
                 </div>
             </div>
@@ -4885,8 +4877,8 @@ def create_stripe_checkout_session(plan_code: str, workspace_id: str, customer_e
         # Determine base URL for redirects
         base_url = os.getenv('DOMAIN_URL')
         if not base_url:
-            # Use the actual Streamlit app domain
-            base_url = 'https://app.marketscannerpros.app'
+            # Use the main domain
+            base_url = 'https://www.marketscannerpros.app'
         
         # Create checkout session with free trial
         session_params = {

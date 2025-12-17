@@ -151,7 +151,7 @@ export default function Hero() {
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 14, zIndex: 2, position: 'relative' }}>
-                <Link href="https://app.marketscannerpros.app" style={{
+                <Link href="https://www.marketscannerpros.app" style={{
                   borderRadius: 999,
                   border: 'none',
                   cursor: 'pointer',

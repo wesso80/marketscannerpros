@@ -7,7 +7,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   
   const getStreamlitUrl = () => {
-    return process.env.NEXT_PUBLIC_STREAMLIT_URL || 'https://app.marketscannerpros.app';
+    return process.env.NEXT_PUBLIC_STREAMLIT_URL || 'https://www.marketscannerpros.app';
   };
 
   const handleFreeLaunch = () => {
