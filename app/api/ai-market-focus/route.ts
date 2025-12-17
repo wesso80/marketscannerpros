@@ -104,11 +104,9 @@ export async function GET(_req: NextRequest) {
     });
   }
 
-  // 2) FREE_FOR_ALL_MODE: show panel to everyone but blur explanations
+  // 2) FREE_FOR_ALL_MODE: show full content including AI explanations to everyone
   if (process.env.FREE_FOR_ALL_MODE === "true") {
-    return NextResponse.json(
-      blurExplanations(latest, "Upgrade to Pro to see today’s AI explanations.")
-    );
+    return NextResponse.json(latest);
   }
 
   // 3) Standard entitlement flow

@@ -17,8 +17,13 @@ const CRYPTO_SYMBOLS = [
   "ADA", "DOGE", "AVAX", "DOT", "MATIC"
 ];
 
-const COMMODITY_SYMBOLS = [
-  "WTI", "BRENT", "NATURAL_GAS", "COPPER", "ALUMINUM"
+// Use commodity ETFs instead of premium commodity API
+const COMMODITY_ETFS = [
+  { symbol: "GLD", name: "Gold" },
+  { symbol: "USO", name: "Oil" },
+  { symbol: "SLV", name: "Silver" },
+  { symbol: "UNG", name: "Natural Gas" },
+  { symbol: "COPX", name: "Copper" }
 ];
 
 type Candle = { t: string; open: number; high: number; low: number; close: number };
@@ -145,17 +150,9 @@ async function fetchCryptoDaily(symbol: string): Promise<Candle[]> {
   })).filter(c => Number.isFinite(c.close)).sort((a, b) => a.t.localeCompare(b.t));
 }
 
-async function fetchCommodityDaily(symbol: string): Promise<Candle[]> {
-  const url = `https://www.alphavantage.co/query?function=${symbol}&interval=daily&apikey=${ALPHA_KEY}`;
-  const j = await fetchAlphaJson(url, `COMMODITY_DAILY ${symbol}`);
-  const data = j["data"] || [];
-  return data.map((d: any) => ({
-    t: d.date,
-    open: Number(d.value),
-    high: Number(d.value),
-    low: Number(d.value),
-    close: Number(d.value),
-  })).filter((c: Candle) => Number.isFinite(c.close)).sort((a: Candle, b: Candle) => a.t.localeCompare(b.t));
+// Commodity ETFs use the same equity API
+async function fetchCommodityETF(symbol: string): Promise<Candle[]> {
+  return fetchEquityDaily(symbol);
 }
 
 // ============ SCORING & PHASE LOGIC ============
@@ -345,10 +342,10 @@ export async function GET(req: NextRequest) {
     }
 
     if (!assetClass || assetClass === "commodity") {
-      // Commodities have limited API support, use WTI as proxy
-      const symbols = COMMODITY_SYMBOLS.slice(0, 2);
+      // Use commodity ETFs with equity API (GLD, USO, etc.)
+      const etfs = COMMODITY_ETFS.slice(0, 3);
       const results = await Promise.all(
-        symbols.map(s => analyzeAsset(s, "commodity", fetchCommodityDaily))
+        etfs.map(e => analyzeAsset(e.symbol, "commodity", fetchCommodityETF))
       );
       candidates.push(...results.filter(Boolean) as Candidate[]);
     }
