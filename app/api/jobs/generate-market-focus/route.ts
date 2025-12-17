@@ -5,7 +5,7 @@ import { q } from "@/lib/db";
 export const runtime = "nodejs";
 
 function getOpenAIClient() {
-  return new OpenAI({ apiKey:  process.env.OPENAI_API_KEY });
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
 type Candidate = {
@@ -22,33 +22,34 @@ type Candidate = {
 function todayKeyUTC(): string {
   const d = new Date();
   const yyyy = d.getUTCFullYear();
-  const mm = String(d. getUTCMonth() + 1).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
 async function fetchCandidates(assetClass: Candidate["assetClass"]): Promise<Candidate[]> {
-  const base = process.env.SCANNER_BASE_URL!;
-  const url = `${base}/api/market-focus/candidates?assetClass=${assetClass}`;
+  // Use local API endpoint instead of external SCANNER_BASE_URL
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  
+  const url = `${baseUrl}/api/market-focus/candidates?assetClass=${assetClass}`;
 
   const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(process.env.SCANNER_API_KEY ? { "x-api-key": process.env. SCANNER_API_KEY } : {}),
-    },
+    headers: { "Content-Type": "application/json" },
     cache: "no-store",
   });
 
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`Scanner service error (${assetClass}) ${res.status}: ${txt}`);
+    throw new Error(`Candidates API error (${assetClass}) ${res.status}: ${txt}`);
   }
 
   const data = await res.json();
   return (data.candidates ?? []) as Candidate[];
 }
 
-function buildMSPPrompt(c:  Candidate): string {
+function buildMSPPrompt(c: Candidate): string {
   return `
 You are MSP AI Analyst v1.1 for MarketScanner Pros.
 
@@ -65,10 +66,17 @@ Asset:
 Scanner outputs (raw):
 ${JSON.stringify(c.scannerPayload, null, 2)}
 
+Key Levels:
+${JSON.stringify(c.keyLevels, null, 2)}
+
+Identified Risks:
+${JSON.stringify(c.risks, null, 2)}
+
 Rules:
 - Do NOT give buy/sell instructions.
 - Do NOT predict exact prices.
 - Use MSP language: Bullish Phase / Bearish Phase / Consolidation Phase (Orange), Multi-TF Alignment, Liquidity Zone, Breakout Confirmation, Trend Continuation vs Exhaustion.
+- Keep response under 200 words.
 - Output format (exact headings):
 Executive Summary:
 Core Analysis:
@@ -78,25 +86,32 @@ Next Steps (How to use on MSP):
 `.trim();
 }
 
-// ✅ MOVE this line INSIDE the function below! 
-async function generateExplanation(c:  Candidate): Promise<string> {
+async function generateExplanation(c: Candidate): Promise<string> {
   const input = buildMSPPrompt(c);
-  
-  // ✅ Initialize client HERE (inside the function at runtime)
   const client = getOpenAIClient();
 
-  const resp = await client.responses.create({
-    model: "gpt-5",
-    input,
-  });
+  try {
+    const resp = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are MSP AI Analyst, a professional market structure analyst for MarketScanner Pros." },
+        { role: "user", content: input }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
 
-  return resp.output_text ?? "";
+    return resp.choices[0]?.message?.content ?? "";
+  } catch (err: any) {
+    console.error("[generate-market-focus] OpenAI error:", err?.message);
+    return `Analysis unavailable: ${err?.message || "OpenAI error"}`;
+  }
 }
 
 export async function POST(req: Request) {
   const secret = req.headers.get("x-cron-secret");
-  if (!process.env. CRON_SECRET || secret !== process.env.CRON_SECRET) {
-    return NextResponse. json({ error: "Unauthorized" }, { status: 401 });
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const dateKey = todayKeyUTC();
@@ -162,7 +177,7 @@ export async function POST(req: Request) {
 
     await q(`update daily_market_focus set status='ready', updated_at=now() where id=$1`, [focusId]);
 
-    return NextResponse.json({ status: "ready", date: dateKey, picks: explained.map(p => ({ assetClass: p. assetClass, symbol: p. symbol, score: p.score })) });
+    return NextResponse.json({ status: "ready", date: dateKey, picks: explained.map(p => ({ assetClass: p.assetClass, symbol: p.symbol, score: p.score })) });
   } catch (err: any) {
     await q(
       `update daily_market_focus set status='failed', notes=$2, updated_at=now() where id=$1`,
