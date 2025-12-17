@@ -187,14 +187,43 @@ export async function POST(req: NextRequest) {
         low: Number(v["3a. low (USD)"] ?? v["3. low"] ?? NaN),
         close: Number(v["4a. close (USD)"] ?? v["4. close"] ?? NaN),
       })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
-      console.debug("[scanner] crypto daily candles", { symbol, count: candles.length });
+      console.debug("[scanner] crypto daily candles", { symbol, count: candles.length, latestDate: candles[candles.length-1]?.t });
       return candles;
     }
 
     async function fetchCryptoIntraday(symbol: string, market = "USD", interval = "60min"): Promise<Candle[]> {
-      // Use DIGITAL_CURRENCY_DAILY for free/basic tier compatibility (CRYPTO_INTRADAY requires premium)
-      console.info(`[scanner] Using DIGITAL_CURRENCY_DAILY for ${symbol} (intraday requires premium Alpha Vantage plan)`);
-      return await fetchCryptoDaily(symbol, market);
+      // Use CRYPTO_INTRADAY for Premium Alpha Vantage
+      // Map our intervals to AV intervals
+      const avCryptoInterval = interval === "30min" ? "30min" : "60min";
+      const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(symbol)}&market=${market}&interval=${avCryptoInterval}&outputsize=full&apikey=${ALPHA_KEY}`;
+      
+      console.info(`[scanner] Fetching CRYPTO_INTRADAY for ${symbol} (${avCryptoInterval})`);
+      
+      try {
+        const j = await fetchAlphaJson(url, `CRYPTO_INTRADAY ${symbol}`);
+        const tsKey = `Time Series Crypto (${avCryptoInterval})`;
+        const ts = j[tsKey] || {};
+        
+        if (Object.keys(ts).length === 0) {
+          console.warn(`[scanner] No intraday data for ${symbol}, falling back to daily`);
+          return await fetchCryptoDaily(symbol, market);
+        }
+        
+        const candles: Candle[] = Object.entries(ts).map(([datetime, v]: any) => ({
+          t: datetime as string,
+          open: Number(v["1. open"] ?? NaN),
+          high: Number(v["2. high"] ?? NaN),
+          low: Number(v["3. low"] ?? NaN),
+          close: Number(v["4. close"] ?? NaN),
+        })).filter(c => Number.isFinite(c.close)).sort((a, b) => a.t.localeCompare(b.t));
+        
+        console.info(`[scanner] CRYPTO_INTRADAY ${symbol}: Got ${candles.length} candles, latest: ${candles[candles.length-1]?.t}`);
+        return candles;
+      } catch (err: any) {
+        // If premium endpoint fails, fall back to daily
+        console.warn(`[scanner] CRYPTO_INTRADAY failed for ${symbol}, falling back to daily:`, err?.message);
+        return await fetchCryptoDaily(symbol, market);
+      }
     }
 
     function ema(values: number[], period: number): number[] {
@@ -436,10 +465,26 @@ export async function POST(req: NextRequest) {
             lastCandleTime,
           };
           if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
-        } else {
-          // Fetch OHLCV data for equity/forex (best-effort) to compute all indicators locally
+        } else if (type === "forex") {
+          // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
           const cacheBuster = Date.now();
-          const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+          let url: string;
+          let tsKey: string;
+          
+          // Parse forex pair (e.g., "EURUSD" -> from=EUR, to=USD)
+          const fromCurrency = sym.substring(0, 3);
+          const toCurrency = sym.substring(3, 6) || "USD";
+          
+          if (avInterval === "daily") {
+            url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+            tsKey = "Time Series FX (Daily)";
+          } else {
+            url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&interval=${avInterval}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+            tsKey = `Time Series FX (Intraday)`;
+          }
+          
+          console.info(`[scanner] Fetching FOREX ${fromCurrency}/${toCurrency} (${avInterval})`);
+          
           const r = await fetch(url, { 
             next: { revalidate: 0 }, 
             cache: "no-store",
@@ -460,15 +505,11 @@ export async function POST(req: NextRequest) {
             throw new Error(`Alpha Vantage error: ${j["Error Message"]}`);
           }
           
-          // Log response for debugging
-          const keyOptions = [`Time Series (${avInterval})`, "Time Series (60min)", "Time Series (30min)", "Time Series (daily)"];
-          const foundKey = keyOptions.find(k => j[k]);
-          if (!foundKey) {
-            console.warn("[scanner] No time series data", { sym, avInterval, keys: Object.keys(j).slice(0, 5) });
-          }
+          // Find the time series data
+          const possibleKeys = [tsKey, "Time Series FX (Daily)", "Time Series FX (Intraday)"];
+          const foundKey = possibleKeys.find(k => j[k]);
+          const ts = j[foundKey || tsKey] || {};
           
-          const key = foundKey || `Time Series (${avInterval})`;
-          const ts = j[key] || {};
           const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
             t: date as string,
             open: Number(v["1. open"] ?? NaN),
@@ -477,7 +518,110 @@ export async function POST(req: NextRequest) {
             close: Number(v["4. close"] ?? NaN),
           })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
           
-          if (!candles.length) throw new Error("No equity candles returned");
+          if (!candles.length) throw new Error(`No forex candles returned for ${sym}`);
+          
+          const lastCandleTime = candles[candles.length - 1]?.t;
+          console.info(`[scanner] Forex ${sym}: Got ${candles.length} candles, latest: ${lastCandleTime}`);
+          
+          const closes = candles.map(c => c.close);
+          const highs = candles.map(c => c.high);
+          const lows = candles.map(c => c.low);
+          const volumes = new Array(closes.length).fill(1000);
+          
+          const rsiArr = rsi(closes, 14);
+          const macObj = macd(closes, 12, 26, 9);
+          const emaArr = ema(closes, 200);
+          const atrArr = atr(highs, lows, closes, 14);
+          const adxObj = adx(highs, lows, closes, 14);
+          const stochObj = stochastic(highs, lows, closes, 14, 3);
+          const cciVal = cci(highs, lows, closes, 20);
+          const aroonObj = aroon(highs, lows, 25);
+          const obvArr = obv(closes, volumes);
+          
+          const last = closes.length - 1;
+          const rsiVal = rsiArr[last];
+          const macHist = macObj.hist[last];
+          const macLine = macObj.macdLine[last];
+          const sigLine = macObj.signalLine[last];
+          const ema200Val = emaArr[last];
+          const atrVal = atrArr[last - 1];
+          const close = closes[last];
+          const price = close;
+          
+          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
+          const item: ScanResult = {
+            symbol: sym,
+            score: s,
+            timeframe,
+            type,
+            price,
+            rsi: rsiVal,
+            macd_hist: macHist,
+            ema200: ema200Val,
+            atr: atrVal,
+            adx: adxObj.adx,
+            stoch_k: stochObj.k,
+            stoch_d: stochObj.d,
+            cci: cciVal,
+            aroon_up: aroonObj.up,
+            aroon_down: aroonObj.down,
+            obv: obvArr[last] ?? NaN,
+            lastCandleTime,
+          };
+          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+        } else {
+          // EQUITIES: Use TIME_SERIES_INTRADAY or TIME_SERIES_DAILY
+          const cacheBuster = Date.now();
+          let url: string;
+          let tsKey: string;
+          
+          if (avInterval === "daily") {
+            url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+            tsKey = "Time Series (Daily)";
+          } else {
+            url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
+            tsKey = `Time Series (${avInterval})`;
+          }
+          
+          console.info(`[scanner] Fetching EQUITY ${sym} (${avInterval})`);
+          
+          const r = await fetch(url, { 
+            next: { revalidate: 0 }, 
+            cache: "no-store",
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            }
+          });
+          const j = await r.json();
+          
+          // Check for AV errors/rate limits
+          if (j.Note || j.Information) {
+            console.warn(`[scanner] AV rate limit for ${sym}:`, j.Note || j.Information);
+            throw new Error(`Alpha Vantage rate limit: ${(j.Note || j.Information).substring(0, 100)}`);
+          }
+          if (j["Error Message"]) {
+            console.error(`[scanner] AV error for ${sym}:`, j["Error Message"]);
+            throw new Error(`Alpha Vantage error: ${j["Error Message"]}`);
+          }
+          
+          // Find the time series data
+          const possibleKeys = [tsKey, "Time Series (Daily)", `Time Series (${avInterval})`, "Time Series (60min)", "Time Series (30min)"];
+          const foundKey = possibleKeys.find(k => j[k]);
+          if (!foundKey) {
+            console.warn("[scanner] No time series data", { sym, avInterval, keys: Object.keys(j).slice(0, 5) });
+          }
+          
+          const ts = j[foundKey || tsKey] || {};
+          const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
+            t: date as string,
+            open: Number(v["1. open"] ?? NaN),
+            high: Number(v["2. high"] ?? NaN),
+            low: Number(v["3. low"] ?? NaN),
+            close: Number(v["4. close"] ?? NaN),
+          })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
+          
+          if (!candles.length) throw new Error(`No equity candles returned for ${sym}`);
           
           // Log the latest candle time
           const lastCandleTime = candles[candles.length - 1]?.t;
