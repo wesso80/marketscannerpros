@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 
   if (!focusId) {
     const created = await q<{ id: string }>(
-      `insert into daily_market_focus (date_key, status) values ($1, 'pending') returning id`,
+      `insert into daily_market_focus (focus_date, date_key, status) values ($1, $1, 'pending') returning id`,
       [dateKey]
     );
     focusId = created[0].id;
