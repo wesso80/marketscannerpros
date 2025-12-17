@@ -24,11 +24,24 @@ export async function POST(req: NextRequest) {
       CREATE TABLE IF NOT EXISTS daily_market_focus (
         id SERIAL PRIMARY KEY,
         focus_date DATE NOT NULL UNIQUE,
+        date_key DATE,
+        status VARCHAR(20) DEFAULT 'pending',
         generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ,
+        notes TEXT,
         model_version VARCHAR(50) DEFAULT 'v1.0',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+
+    // Add missing columns to existing table (safe to run multiple times)
+    await q(`ALTER TABLE daily_market_focus ADD COLUMN IF NOT EXISTS date_key DATE`);
+    await q(`ALTER TABLE daily_market_focus ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'`);
+    await q(`ALTER TABLE daily_market_focus ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ`);
+    await q(`ALTER TABLE daily_market_focus ADD COLUMN IF NOT EXISTS notes TEXT`);
+    
+    // Sync date_key with focus_date for existing rows
+    await q(`UPDATE daily_market_focus SET date_key = focus_date WHERE date_key IS NULL`);
 
     // Create daily_market_focus_items table
     await q(`
