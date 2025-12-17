@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const scripts = [
   {
@@ -75,9 +73,7 @@ export default function TradingViewScriptsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #020617 50%, #000 100%)' }}>
-      <Header />
-      
-      <main style={{ paddingTop: 32, paddingBottom: 60 }}>
+      <div style={{ paddingTop: 32, paddingBottom: 60 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
           
           {/* Hero Section */}
@@ -349,9 +345,7 @@ export default function TradingViewScriptsPage() {
             </p>
           </section>
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   );
 }
