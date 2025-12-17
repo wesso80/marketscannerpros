@@ -2391,11 +2391,18 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
                 "symbol": base_symbol,
                 "market": "USD",
                 "apikey": ALPHA_VANTAGE_API_KEY,
-                "datatype": "json"
+                "datatype": "json",
+                "_": int(time.time()),  # cache buster
             }
             response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
             response.raise_for_status()
             data = response.json()
+
+            note = data.get("Note") or data.get("Information")
+            if note:
+                raise ValueError(f"Alpha Vantage note: {note}")
+            if data.get("Error Message"):
+                raise ValueError(data.get("Error Message"))
 
             ts_key = None
             for key in data.keys():
@@ -2425,12 +2432,19 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
                 "market": "USD",
                 "interval": interval,
                 "apikey": ALPHA_VANTAGE_API_KEY,
-                "datatype": "json"
+                "datatype": "json",
+                "_": int(time.time()),  # cache buster
             }
 
             response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
             response.raise_for_status()
             data = response.json()
+
+            note = data.get("Note") or data.get("Information")
+            if note:
+                raise ValueError(f"Alpha Vantage note: {note}")
+            if data.get("Error Message"):
+                raise ValueError(data.get("Error Message"))
 
             ts_key = None
             for key in data.keys():
@@ -2469,7 +2483,8 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
             "symbol": symbol.replace("-USD", "").upper(),
             "apikey": ALPHA_VANTAGE_API_KEY,
             "outputsize": "full",
-            "datatype": "json"
+            "datatype": "json",
+            "_": int(time.time()),  # cache buster
         }
 
         if function == "TIME_SERIES_INTRADAY":
@@ -2479,6 +2494,12 @@ def get_ohlcv_alpha_vantage(symbol: str, timeframe: str, is_crypto: Optional[boo
         response = requests.get("https://www.alphavantage.co/query", params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
+
+        note = data.get("Note") or data.get("Information")
+        if note:
+            raise ValueError(f"Alpha Vantage note: {note}")
+        if data.get("Error Message"):
+            raise ValueError(data.get("Error Message"))
 
         ts_key = None
         for key in data.keys():
@@ -2620,13 +2641,22 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
     rows, errs = [], []
     for sym in symbols:
         try:
-            df = get_ohlcv(sym, timeframe)
-            if len(df) < min_bars_required(timeframe):
-                raise ValueError(f"Not enough history ({len(df)}) for {timeframe}")
-            if not is_crypto and dollar_volume(df) < min_vol:
+            tfs_to_fetch = sorted(set([timeframe, "1h", "4h", "1d"]))
+            dfs: Dict[str, pd.DataFrame] = {}
+
+            for tf in tfs_to_fetch:
+                df_tf = get_ohlcv(sym, tf)
+                if len(df_tf) < min_bars_required(tf):
+                    raise ValueError(f"Not enough history ({len(df_tf)}) for {tf}")
+                dfs[tf] = df_tf
+
+            main_df = dfs[timeframe]
+
+            # Volume filter on main timeframe only
+            if not is_crypto and dollar_volume(main_df) < min_vol:
                 raise ValueError(f"Below min dollar vol ({min_vol:,.0f})")
 
-            f = compute_features(df).dropna()
+            f = compute_features(main_df).dropna()
             if f.empty:
                 raise ValueError("Features empty after dropna()")
             last = f.iloc[-1]
@@ -2651,7 +2681,12 @@ def scan_universe(symbols: List[str], timeframe: str, is_crypto: bool,
                 "stop": round(float(stop), 6),
                 "size": int(size),
                 "risk_$": round(float(risk_usd), 2),
-                "notional_$": round(float(notional), 2)
+                "notional_$": round(float(notional), 2),
+                "last_bar_main": main_df.index[-1].isoformat() if not main_df.empty else None,
+                "last_bar_1h": dfs.get("1h", pd.DataFrame()).index[-1].isoformat() if dfs.get("1h") is not None and not dfs.get("1h").empty else None,
+                "last_bar_4h": dfs.get("4h", pd.DataFrame()).index[-1].isoformat() if dfs.get("4h") is not None and not dfs.get("4h").empty else None,
+                "last_bar_1d": dfs.get("1d", pd.DataFrame()).index[-1].isoformat() if dfs.get("1d") is not None and not dfs.get("1d").empty else None,
+                "updated_at_utc": datetime.now(timezone.utc).isoformat(),
             })
         except Exception as e:
             errs.append({"symbol": sym, "timeframe": timeframe, "error": str(e)})
@@ -6105,6 +6140,11 @@ if run_clicked:
     elif not scan_equities and not scan_crypto:
         st.error("⚠️ Please select at least one market type to scan (Equities or Crypto)")
     else:
+        # Reset freshness trackers for this run
+        st.session_state.data_freshness = {}
+        st.session_state.av_debug = []
+        st.session_state.last_scan_at = None
+
         # Get symbols from inputs (merge text area + selected from dropdown)
         eq_syms_from_text = [s.strip().upper() for s in eq_input.splitlines() if s.strip()] if scan_equities else []
         eq_syms_from_list = [s.strip().upper() for s in selected_eq_from_list] if scan_equities else []
@@ -6132,6 +6172,9 @@ if run_clicked:
             else:
                 st.session_state.cx_results = pd.DataFrame()
                 st.session_state.cx_errors = pd.DataFrame()
+
+        # Record scan timestamp
+        st.session_state.last_scan_at = datetime.now(timezone.utc)
     
     # Send email notifications if enabled
     if send_email_summary_toggle or send_email_toggle:
@@ -6224,6 +6267,18 @@ ios_issue_detected = detect_ios_webview_issues(
     st.session_state.get('eq_errors', pd.DataFrame()),
     st.session_state.get('cx_errors', pd.DataFrame())
 )
+
+# Show last scan timestamp and latest candle time
+if st.session_state.get('last_scan_at'):
+    last_scan_at = st.session_state.last_scan_at
+    st.info(f"Last Updated (UTC): {last_scan_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+if st.session_state.get('data_freshness'):
+    bars = [v['last_bar'] for v in st.session_state.data_freshness.values() if v.get('last_bar') is not None]
+    if bars:
+        newest_bar = max(bars)
+        oldest_bar = min(bars)
+        st.caption(f"Candle times fetched (UTC): latest {newest_bar.strftime('%Y-%m-%d %H:%M')} · oldest {oldest_bar.strftime('%Y-%m-%d %H:%M')}")
 
 # Display data freshness warnings
 if st.session_state.get('data_freshness'):
