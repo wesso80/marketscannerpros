@@ -54,10 +54,9 @@ function PortfolioContent() {
     let s = raw.toUpperCase().trim();
     
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
-    // Only remove if they appear at the end with separators
-    s = s.replace(/[-_\/](USDT|USD)$/i, ''); // BTC-USD → BTC, XRP-USDT → XRP
-    s = s.replace(/[-_\/]EUR$/i, '');
-    s = s.replace(/[-_\/]PERP$/i, '');    // Futures suffix
+    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT → BTC, XRP-USD → XRP
+    s = s.replace(/[-_\/]?EUR$/i, '');
+    s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
     
     return s;
   }
@@ -503,44 +502,70 @@ function PortfolioContent() {
 
       {/* Top Stats Bar */}
       <div style={{ 
-        background: '#0f172a',
-        padding: '20px 24px',
-        borderBottom: '1px solid #334155'
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 100%)',
+        padding: '24px 16px',
+        borderBottom: '1px solid rgba(51,65,85,0.6)'
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Market Value</div>
+        <div style={{ 
+          maxWidth: '1600px', 
+          margin: '0 auto', 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '16px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(51,65,85,0.5)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Market Value</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: '#e2e8f0'
             }}>
               ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Total Return</div>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: `1px solid ${totalReturn >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Return</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: totalReturn >= 0 ? '#10b981' : '#ef4444'
             }}>
               {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Unrealized P&L</div>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: `1px solid ${unrealizedPL >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unrealized P&L</div>
             <div style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: '700',
               color: unrealizedPL >= 0 ? '#10b981' : '#ef4444'
             }}>
               ${unrealizedPL >= 0 ? '+' : ''}{unrealizedPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
-          <div>
-            <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Positions</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: '#e2e8f0' }}>
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(51,65,85,0.5)'
+          }}>
+            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Positions</div>
+            <div style={{ fontSize: '22px', fontWeight: '700', color: '#e2e8f0' }}>
               {numPositions}
             </div>
           </div>
@@ -548,19 +573,19 @@ function PortfolioContent() {
       </div>
 
       {/* View Tabs */}
-      <div style={{ padding: '0 24px' }}>
+      <div style={{ padding: '0 16px' }}>
         <div style={{
           maxWidth: '1600px',
           margin: '0 auto',
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          padding: '12px 0',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: '8px',
+          padding: '16px 0',
           borderBottom: '1px solid rgba(148,163,184,0.1)'
         }}>
           {[
             { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'add position', label: 'Add Position', icon: '➕' },
+            { key: 'add position', label: 'Add', icon: '➕' },
             { key: 'holdings', label: 'Holdings', icon: '💼' },
             { key: 'history', label: 'History', icon: '📜' },
           ].map((tab) => {
@@ -571,28 +596,27 @@ function PortfolioContent() {
                 onClick={() => setActiveTab(tab.key)}
                 style={{
                   position: 'relative',
-                  padding: '12px 18px',
+                  padding: '14px 12px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
+                  justifyContent: 'center',
+                  gap: '8px',
                   background: isActive
                     ? 'linear-gradient(145deg, rgba(34,211,238,0.08), rgba(16,185,129,0.14))'
                     : 'linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.04))',
                   border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.2)',
                   boxShadow: isActive ? '0 10px 30px rgba(16,185,129,0.25)' : 'none',
                   color: isActive ? '#e2e8f0' : '#94a3b8',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 700,
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  minWidth: '150px',
-                  justifyContent: 'center'
                 }}
               >
-                <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+                <span style={{ fontSize: '16px' }}>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {isActive && (
                   <span
@@ -614,282 +638,383 @@ function PortfolioContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 16px' }}>
         {activeTab === 'overview' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            {/* Portfolio Allocation Chart */}
-            <div style={{ 
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '24px'
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Charts Row - responsive grid */}
+            <div className="portfolio-charts-grid" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 450px), 1fr))', 
+              gap: '24px' 
             }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '24px' }}>
-                Portfolio Allocation by Market Value
-              </h2>
-              {positions.length > 0 ? (
-                <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-                  {/* Pie Chart */}
-                  <svg width="280" height="280" viewBox="0 0 280 280">
-                    <g transform="translate(140, 140)">
-                      {allocationData.map((item, index) => {
-                        const startAngle = allocationData.slice(0, index).reduce((sum, d) => sum + (d.percentage * 3.6), 0);
-                        const angle = item.percentage * 3.6;
-                        const endAngle = startAngle + angle;
-                        
-                        const x1 = 100 * Math.cos((startAngle - 90) * Math.PI / 180);
-                        const y1 = 100 * Math.sin((startAngle - 90) * Math.PI / 180);
-                        const x2 = 100 * Math.cos((endAngle - 90) * Math.PI / 180);
-                        const y2 = 100 * Math.sin((endAngle - 90) * Math.PI / 180);
-                        
-                        const largeArc = angle > 180 ? 1 : 0;
-                        
-                        return (
-                          <path
-                            key={item.symbol}
-                            d={`M 0 0 L ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                            fill={colors[index % colors.length]}
-                            stroke="#0f172a"
-                            strokeWidth="2"
-                          />
-                        );
-                      })}
-                      {/* Inner circle to make donut */}
-                      <circle cx="0" cy="0" r="50" fill="#0f172a" />
-                    </g>
-                  </svg>
-                  
-                  {/* Legend */}
-                  <div style={{ flex: 1 }}>
-                    {allocationData.slice(0, 9).map((item, index) => (
-                      <div key={item.symbol} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '8px',
-                        padding: '8px',
-                        background: '#1e293b',
-                        borderRadius: '4px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ 
-                            width: '12px', 
-                            height: '12px', 
-                            background: colors[index % colors.length],
-                            borderRadius: '2px'
-                          }} />
-                          <span style={{ color: '#f1f5f9', fontSize: '13px', fontWeight: '500' }}>
-                            {item.symbol}
-                          </span>
-                        </div>
-                        <span style={{ color: '#94a3b8', fontSize: '13px' }}>
-                          {item.percentage.toFixed(2)}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  No positions to display
-                </div>
-              )}
-            </div>
-
-            {/* Performance Chart */}
-            <div style={{ 
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '24px'
-            }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '24px' }}>
-                Portfolio Performance Over Time
-              </h2>
+              {/* Portfolio Allocation Chart */}
               <div style={{ 
-                height: '250px',
-                position: 'relative',
-                background: '#1e293b',
-                borderRadius: '8px',
-                padding: '20px'
+                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
               }}>
-                {performanceHistory.length > 0 ? (
-                  <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
-                    {(() => {
-                      const width = 800;
-                      const height = 210;
-                      const padding = { top: 20, right: 20, bottom: 30, left: 60 };
-                      const chartWidth = width - padding.left - padding.right;
-                      const chartHeight = height - padding.top - padding.bottom;
-
-                      // Get min/max values for scaling
-                      const values = performanceHistory.map(s => s.totalValue);
-                      const minValue = Math.min(...values, 0);
-                      const maxValue = Math.max(...values);
-                      const valueRange = maxValue - minValue || 1;
-
-                      // Scale functions
-                      const scaleX = (index: number) => padding.left + (index / Math.max(performanceHistory.length - 1, 1)) * chartWidth;
-                      const scaleY = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
-
-                      // Generate path
-                      const pathData = performanceHistory.map((snapshot, i) => {
-                        const x = scaleX(i);
-                        const y = scaleY(snapshot.totalValue);
-                        return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-                      }).join(' ');
-
-                      // Generate gradient path (area under curve)
-                      const gradientPath = pathData + ` L ${scaleX(performanceHistory.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
-
-                      return (
-                        <g>
-                          {/* Gradient definition */}
-                          <defs>
-                            <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-                              <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
-                            </linearGradient>
-                          </defs>
-
-                          {/* Grid lines */}
-                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                            const y = padding.top + chartHeight * ratio;
-                            const value = maxValue - (valueRange * ratio);
-                            return (
-                              <g key={i}>
-                                <line
-                                  x1={padding.left}
-                                  y1={y}
-                                  x2={padding.left + chartWidth}
-                                  y2={y}
-                                  stroke="#334155"
-                                  strokeWidth="1"
-                                  strokeDasharray="4,4"
-                                />
-                                <text
-                                  x={padding.left - 10}
-                                  y={y + 4}
-                                  fill="#64748b"
-                                  fontSize="11"
-                                  textAnchor="end"
-                                >
-                                  ${value.toFixed(0)}
-                                </text>
-                              </g>
-                            );
-                          })}
-
-                          {/* Area under curve */}
-                          <path
-                            d={gradientPath}
-                            fill="url(#performanceGradient)"
-                          />
-
-                          {/* Main line */}
-                          <path
-                            d={pathData}
-                            fill="none"
-                            stroke="#10b981"
-                            strokeWidth="2.5"
-                          />
-
-                          {/* Data points */}
-                          {performanceHistory.map((snapshot, i) => (
-                            <circle
-                              key={i}
-                              cx={scaleX(i)}
-                              cy={scaleY(snapshot.totalValue)}
-                              r="4"
-                              fill="#10b981"
-                              stroke="#0f172a"
-                              strokeWidth="2"
-                            />
-                          ))}
-
-                          {/* X-axis labels */}
-                          {performanceHistory.map((snapshot, i) => {
-                            if (performanceHistory.length > 10 && i % Math.ceil(performanceHistory.length / 6) !== 0) return null;
-                            const date = new Date(snapshot.timestamp);
-                            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                            return (
-                              <text
-                                key={`label-${i}`}
-                                x={scaleX(i)}
-                                y={padding.top + chartHeight + 20}
-                                fill="#64748b"
-                                fontSize="10"
-                                textAnchor="middle"
-                              >
-                                {label}
-                              </text>
-                            );
-                          })}
-                        </g>
-                      );
-                    })()}
-                  </svg>
-                ) : (
+                <h2 style={{ 
+                  color: '#f1f5f9', 
+                  fontSize: '15px', 
+                  fontWeight: '600', 
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ 
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    fontSize: '14px'
+                  }}>🥧</span>
+                  Portfolio Allocation
+                </h2>
+                {positions.length > 0 ? (
                   <div style={{ 
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#64748b'
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    gap: '24px', 
+                    alignItems: 'center'
                   }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
-                      <div>Performance chart coming soon</div>
-                      <div style={{ fontSize: '12px', marginTop: '4px' }}>Add positions to track performance over time</div>
+                    {/* Pie Chart - responsive SVG */}
+                    <div style={{ width: '100%', maxWidth: '220px', aspectRatio: '1' }}>
+                      <svg viewBox="0 0 280 280" style={{ width: '100%', height: '100%' }}>
+                        <g transform="translate(140, 140)">
+                          {allocationData.map((item, index) => {
+                            const startAngle = allocationData.slice(0, index).reduce((sum, d) => sum + (d.percentage * 3.6), 0);
+                            const angle = item.percentage * 3.6;
+                            const endAngle = startAngle + angle;
+                            
+                            const x1 = 100 * Math.cos((startAngle - 90) * Math.PI / 180);
+                            const y1 = 100 * Math.sin((startAngle - 90) * Math.PI / 180);
+                            const x2 = 100 * Math.cos((endAngle - 90) * Math.PI / 180);
+                            const y2 = 100 * Math.sin((endAngle - 90) * Math.PI / 180);
+                            
+                            const largeArc = angle > 180 ? 1 : 0;
+                            
+                            return (
+                              <path
+                                key={item.symbol}
+                                d={`M 0 0 L ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                                fill={colors[index % colors.length]}
+                                stroke="#0f172a"
+                                strokeWidth="2"
+                              />
+                            );
+                          })}
+                          {/* Inner circle to make donut */}
+                          <circle cx="0" cy="0" r="50" fill="#0f172a" />
+                          {/* Center text */}
+                          <text 
+                            x="0" 
+                            y="-5" 
+                            textAnchor="middle" 
+                            fill="#94a3b8" 
+                            fontSize="11"
+                            fontWeight="500"
+                          >
+                            Total
+                          </text>
+                          <text 
+                            x="0" 
+                            y="15" 
+                            textAnchor="middle" 
+                            fill="#f1f5f9" 
+                            fontSize="14"
+                            fontWeight="700"
+                          >
+                            {positions.length}
+                          </text>
+                        </g>
+                      </svg>
+                    </div>
+                    
+                    {/* Legend */}
+                    <div style={{ width: '100%' }}>
+                      {allocationData.slice(0, 9).map((item, index) => (
+                        <div key={item.symbol} style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '8px',
+                          padding: '10px 12px',
+                          background: 'rgba(30,41,59,0.6)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(51,65,85,0.5)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ 
+                              width: '14px', 
+                              height: '14px', 
+                              background: colors[index % colors.length],
+                              borderRadius: '4px',
+                              boxShadow: `0 2px 8px ${colors[index % colors.length]}40`
+                            }} />
+                            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
+                              {item.symbol}
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '700' }}>
+                              {item.percentage.toFixed(1)}%
+                            </span>
+                            <div style={{ color: '#64748b', fontSize: '11px' }}>
+                              ${item.value.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ) : (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '60px 20px', 
+                    color: '#64748b',
+                    background: 'rgba(30,41,59,0.3)',
+                    borderRadius: '12px'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>📊</div>
+                    <div style={{ color: '#94a3b8', fontWeight: '500' }}>No positions to display</div>
+                    <div style={{ fontSize: '13px', marginTop: '8px' }}>Add positions to see allocation</div>
+                  </div>
                 )}
+              </div>
+
+              {/* Performance Chart */}
+              <div style={{ 
+                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '16px',
+                padding: '24px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+              }}>
+                <h2 style={{ 
+                  color: '#f1f5f9', 
+                  fontSize: '15px', 
+                  fontWeight: '600', 
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <span style={{ 
+                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    fontSize: '14px'
+                  }}>📈</span>
+                  Performance Over Time
+                </h2>
+                <div style={{ 
+                  minHeight: '280px',
+                  position: 'relative',
+                  background: 'rgba(30,41,59,0.4)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: '1px solid rgba(51,65,85,0.3)'
+                }}>
+                  {performanceHistory.length > 0 ? (
+                    <svg 
+                      viewBox="0 0 400 200" 
+                      preserveAspectRatio="xMidYMid meet"
+                      style={{ width: '100%', height: '100%', minHeight: '200px' }}
+                    >
+                      {(() => {
+                        const width = 400;
+                        const height = 200;
+                        const padding = { top: 15, right: 15, bottom: 25, left: 45 };
+                        const chartWidth = width - padding.left - padding.right;
+                        const chartHeight = height - padding.top - padding.bottom;
+
+                        // Get min/max values for scaling
+                        const values = performanceHistory.map(s => s.totalValue);
+                        const minValue = Math.min(...values, 0);
+                        const maxValue = Math.max(...values);
+                        const valueRange = maxValue - minValue || 1;
+
+                        // Scale functions
+                        const scaleX = (index: number) => padding.left + (index / Math.max(performanceHistory.length - 1, 1)) * chartWidth;
+                        const scaleY = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
+
+                        // Generate path
+                        const pathData = performanceHistory.map((snapshot, i) => {
+                          const x = scaleX(i);
+                          const y = scaleY(snapshot.totalValue);
+                          return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                        }).join(' ');
+
+                        // Generate gradient path (area under curve)
+                        const gradientPath = pathData + ` L ${scaleX(performanceHistory.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
+
+                        return (
+                          <g>
+                            {/* Gradient definition */}
+                            <defs>
+                              <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
+                              </linearGradient>
+                            </defs>
+
+                            {/* Grid lines */}
+                            {[0, 0.5, 1].map((ratio, i) => {
+                              const y = padding.top + chartHeight * ratio;
+                              const value = maxValue - (valueRange * ratio);
+                              return (
+                                <g key={i}>
+                                  <line
+                                    x1={padding.left}
+                                    y1={y}
+                                    x2={padding.left + chartWidth}
+                                    y2={y}
+                                    stroke="#334155"
+                                    strokeWidth="0.5"
+                                    strokeDasharray="3,3"
+                                  />
+                                  <text
+                                    x={padding.left - 5}
+                                    y={y + 3}
+                                    fill="#64748b"
+                                    fontSize="8"
+                                    textAnchor="end"
+                                  >
+                                    ${value.toFixed(0)}
+                                  </text>
+                                </g>
+                              );
+                            })}
+
+                            {/* Area under curve */}
+                            <path
+                              d={gradientPath}
+                              fill="url(#performanceGradient)"
+                            />
+
+                            {/* Main line */}
+                            <path
+                              d={pathData}
+                              fill="none"
+                              stroke="#10b981"
+                              strokeWidth="2"
+                            />
+
+                            {/* Data points */}
+                            {performanceHistory.map((snapshot, i) => (
+                              <circle
+                                key={i}
+                                cx={scaleX(i)}
+                                cy={scaleY(snapshot.totalValue)}
+                                r="3"
+                                fill="#10b981"
+                                stroke="#0f172a"
+                                strokeWidth="1.5"
+                              />
+                            ))}
+
+                            {/* X-axis labels */}
+                            {performanceHistory.map((snapshot, i) => {
+                              if (performanceHistory.length > 5 && i % Math.ceil(performanceHistory.length / 4) !== 0) return null;
+                              const date = new Date(snapshot.timestamp);
+                              const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              return (
+                                <text
+                                  key={`label-${i}`}
+                                  x={scaleX(i)}
+                                  y={padding.top + chartHeight + 15}
+                                  fill="#64748b"
+                                  fontSize="8"
+                                  textAnchor="middle"
+                                >
+                                  {label}
+                                </text>
+                              );
+                            })}
+                          </g>
+                        );
+                      })()}
+                    </svg>
+                  ) : (
+                    <div style={{ 
+                      height: '100%',
+                      minHeight: '200px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#64748b'
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
+                        <div style={{ color: '#94a3b8', fontWeight: '500' }}>Performance tracking</div>
+                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Add positions to track over time</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Portfolio Metrics Table */}
             <div style={{ 
-              background: '#0f172a',
-              border: '1px solid #334155',
-              borderRadius: '8px',
+              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '16px',
               padding: '24px',
-              gridColumn: '1 / -1'
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
             }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📊 Portfolio Metrics
+              <h2 style={{ 
+                color: '#f1f5f9', 
+                fontSize: '15px', 
+                fontWeight: '600', 
+                marginBottom: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                <span style={{ 
+                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  fontSize: '14px'
+                }}>📊</span>
+                Portfolio Metrics
               </h2>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
-                      Metric
-                    </th>
-                    <th style={{ padding: '12px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
-                      Value
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metricsData.map((metric, index) => (
-                    <tr key={metric.label} style={{ borderBottom: index < metricsData.length - 1 ? '1px solid #334155' : 'none' }}>
-                      <td style={{ padding: '12px', color: '#f1f5f9', fontSize: '14px' }}>
-                        {metric.label}
-                      </td>
-                      <td style={{ 
-                        padding: '12px', 
-                        textAlign: 'right',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: metric.label.includes('P&L') || metric.label.includes('Return') 
-                          ? (metric.value.includes('-') ? '#ef4444' : '#10b981')
-                          : '#f1f5f9'
-                      }}>
-                        {metric.value}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="metrics-grid" style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                gap: '12px' 
+              }}>
+                {metricsData.map((metric) => (
+                  <div key={metric.label} style={{ 
+                    background: 'rgba(30,41,59,0.5)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(51,65,85,0.4)'
+                  }}>
+                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '6px', fontWeight: '500' }}>
+                      {metric.label}
+                    </div>
+                    <div style={{ 
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: metric.label.includes('P&L') || metric.label.includes('Return') 
+                        ? (metric.value.includes('-') ? '#ef4444' : '#10b981')
+                        : '#f1f5f9'
+                    }}>
+                      {metric.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
