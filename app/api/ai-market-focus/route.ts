@@ -6,20 +6,22 @@ export const runtime = "nodejs";
 
 type FocusRow = {
   id: string;
-  date_key: string; // YYYY-MM-DD
-  status: string;
+  focus_date: string; // YYYY-MM-DD
 };
 
 type ItemRow = {
   asset_class: string; // equity|crypto|commodity
   symbol: string;
-  name: string | null;
-  venue: string | null;
   score: number | null;
-  explanation: string | null;
-  scanner_payload: any;
-  key_levels: any;
-  risks: any;
+  phase: string | null;
+  structure: string | null;
+  risk_level: string | null;
+  price: number | null;
+  change_percent: number | null;
+  rsi: number | null;
+  macd_histogram: number | null;
+  atr: number | null;
+  ai_explanation: string | null;
 };
 
 function titleCase(s: string) {
@@ -29,11 +31,10 @@ function titleCase(s: string) {
 async function readLatestDailyFocus(): Promise<null | { date: string; picks: any[] }> {
   const focus = await q<FocusRow>(
     `
-    select id, date_key::text as date_key, status
-    from daily_market_focus
-    where status = 'ready'
-    order by date_key desc
-    limit 1
+    SELECT id, focus_date::text as focus_date
+    FROM daily_market_focus
+    ORDER BY focus_date DESC
+    LIMIT 1
     `
   );
 
@@ -41,52 +42,37 @@ async function readLatestDailyFocus(): Promise<null | { date: string; picks: any
 
   const items = await q<ItemRow>(
     `
-    select asset_class, symbol, name, venue, score, explanation, scanner_payload, key_levels, risks
-    from daily_market_focus_items
-    where focus_id = $1
-    order by
-      case asset_class
-        when 'equity' then 1
-        when 'crypto' then 2
-        when 'commodity' then 3
-        else 99
-      end asc
+    SELECT asset_class, symbol, score, phase, structure, risk_level, 
+           price, change_percent, rsi, macd_histogram, atr, ai_explanation
+    FROM daily_market_focus_items
+    WHERE focus_id = $1
+    ORDER BY
+      CASE asset_class
+        WHEN 'equity' THEN 1
+        WHEN 'crypto' THEN 2
+        WHEN 'commodity' THEN 3
+        ELSE 99
+      END ASC
     `,
     [focus[0].id]
   );
 
   return {
-    date: focus[0].date_key,
+    date: focus[0].focus_date,
     picks: items.map((it) => {
-      // Map DB fields to your UI-friendly structure.
-      // Keep "phase/structure/risk" either from scanner_payload (recommended) or fallback.
-      const phase =
-        it.scanner_payload?.phase ??
-        it.scanner_payload?.phaseLabel ??
-        "—";
-
-      const structure =
-        it.scanner_payload?.structure ??
-        it.scanner_payload?.structureLabel ??
-        "—";
-
-      const risk =
-        ((Array.isArray(it.risks) && it.risks[0]) || it.scanner_payload?.risk) ??
-        "—";
-
       return {
         assetClass: titleCase(it.asset_class), // Equity/Crypto/Commodity
         asset: it.symbol,
-        name: it.name,
-        venue: it.venue,
         score: it.score,
-        phase,
-        structure,
-        risk,
-        explanation: it.explanation, // will be blurred for free users below
-        // Optional: expose raw payload for debugging (remove later)
-        // scanner: it.scanner_payload,
-        // keyLevels: it.key_levels,
+        phase: it.phase ?? "—",
+        structure: it.structure ?? "—",
+        risk: it.risk_level ?? "—",
+        price: it.price,
+        changePercent: it.change_percent,
+        rsi: it.rsi,
+        macdHistogram: it.macd_histogram,
+        atr: it.atr,
+        explanation: it.ai_explanation,
       };
     }),
   };

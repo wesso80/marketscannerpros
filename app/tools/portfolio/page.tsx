@@ -129,10 +129,10 @@ function PortfolioContent() {
 
   // Save positions to localStorage whenever they change
   useEffect(() => {
-    if (positions.length > 0) {
+    if (mounted) {
       localStorage.setItem('portfolio_positions', JSON.stringify(positions));
     }
-  }, [positions]);
+  }, [positions, mounted]);
 
   useEffect(() => {
     if (closedPositions.length > 0) {
