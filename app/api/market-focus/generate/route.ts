@@ -123,13 +123,18 @@ export async function POST(req: NextRequest) {
       await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
     }
 
-    // Fetch candidates from our local API
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // Fetch candidates from our local API - use production URL to avoid VERCEL_URL issues
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
-    const candidatesRes = await fetch(`${baseUrl}/api/market-focus/candidates`, { cache: "no-store" });
+    console.log("[generate] Fetching candidates from:", baseUrl);
+    const candidatesRes = await fetch(`${baseUrl}/api/market-focus/candidates`, { 
+      cache: "no-store",
+      headers: { 'Content-Type': 'application/json' }
+    });
     if (!candidatesRes.ok) {
+      const errorText = await candidatesRes.text();
+      console.error("[generate] Candidates error:", candidatesRes.status, errorText);
       throw new Error(`Candidates API error: ${candidatesRes.status}`);
     }
     const candidatesData = await candidatesRes.json();
