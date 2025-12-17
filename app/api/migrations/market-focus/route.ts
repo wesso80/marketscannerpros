@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 
 export async function POST(req: NextRequest) {
-  // Simple auth check - only allow with secret or in dev
-  const authHeader = req.headers.get('authorization');
+  // Allow running migration with setup key or in FREE_FOR_ALL_MODE
+  const { searchParams } = new URL(req.url);
+  const setupKey = searchParams.get('key');
   const secret = process.env.CRON_SECRET || process.env.APP_SIGNING_SECRET;
+  const freeForAll = process.env.FREE_FOR_ALL_MODE === 'true';
   
-  if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${secret}`) {
+  // Allow if: FREE_FOR_ALL_MODE, valid key, or valid auth header
+  const authHeader = req.headers.get('authorization');
+  const isAuthorized = freeForAll || 
+    setupKey === secret || 
+    authHeader === `Bearer ${secret}`;
+  
+  if (process.env.NODE_ENV === 'production' && !isAuthorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
