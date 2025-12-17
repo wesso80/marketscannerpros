@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 /**
  * Manual trigger for generating AI Market Focus.
- * Only accessible to authenticated pro_trader users or with admin API key.
+ * Accessible when FREE_FOR_ALL_MODE is enabled, or to authenticated pro_trader users, or with admin API key.
  */
 export async function POST(req: NextRequest) {
   // Check for admin API key or pro_trader session
@@ -14,11 +14,14 @@ export async function POST(req: NextRequest) {
   
   let authorized = false;
   
-  if (adminKey && apiKey === adminKey) {
+  // FREE_FOR_ALL_MODE bypasses auth
+  if (process.env.FREE_FOR_ALL_MODE === "true") {
+    authorized = true;
+  } else if (adminKey && apiKey === adminKey) {
     authorized = true;
   } else {
     const session = await getSessionFromCookie();
-    if (session?.tier === "pro_trader") {
+    if (session?.tier === "pro_trader" || session?.tier === "pro") {
       authorized = true;
     }
   }
