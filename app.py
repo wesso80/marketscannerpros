@@ -212,7 +212,12 @@ if 'is_mobile' not in st.session_state:
 is_mobile = st.session_state.is_mobile
 
 # ================= PWA Configuration =================
-st.set_page_config(page_title="Market Scanner Dashboard", page_icon="📈", layout="wide")
+st.set_page_config(
+    page_title="Market Scanner Dashboard", 
+    page_icon="📈", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # ================= LAZY-LOAD CSS STYLING =================
 # Load CSS only when needed (not during health checks) for faster startup
