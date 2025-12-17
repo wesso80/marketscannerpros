@@ -123,9 +123,8 @@ export async function POST(req: NextRequest) {
       await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
     }
 
-    // Fetch candidates from our local API - use production URL to avoid VERCEL_URL issues
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    // Fetch candidates - use production URL directly to avoid subdomain/deployment issues
+    const baseUrl = "https://www.marketscannerpros.app";
 
     console.log("[generate] Fetching candidates from:", baseUrl);
     const candidatesRes = await fetch(`${baseUrl}/api/market-focus/candidates`, { 
