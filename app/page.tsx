@@ -38,6 +38,60 @@ export default function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
   return (
     <>
+      {/* Holiday Sale Banner */}
+      <div style={{
+        background: 'linear-gradient(90deg, #dc2626 0%, #16a34a 50%, #dc2626 100%)',
+        padding: '12px 20px',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
+          animation: 'shimmer 2s infinite'
+        }} />
+        <style>{`
+          @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+        `}</style>
+        <p style={{ 
+          margin: 0, 
+          color: '#fff', 
+          fontSize: 15, 
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          flexWrap: 'wrap'
+        }}>
+          <span>🎄</span>
+          <span>End of Year Sale — <strong>25% OFF</strong> all plans!</span>
+          <span style={{ 
+            background: 'rgba(0,0,0,0.3)', 
+            padding: '4px 12px', 
+            borderRadius: 999, 
+            fontSize: 13 
+          }}>
+            Code: <strong>NEWYEAR25</strong>
+          </span>
+          <Link href="/pricing" style={{ 
+            color: '#fef08a', 
+            textDecoration: 'underline', 
+            fontWeight: 700 
+          }}>
+            Claim Offer →
+          </Link>
+          <span>🎁</span>
+        </p>
+      </div>
 
       {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{
