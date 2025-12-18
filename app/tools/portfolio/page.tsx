@@ -35,6 +35,7 @@ function PortfolioContent() {
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [drawdownAcknowledged, setDrawdownAcknowledged] = useState(false);
   const [newPosition, setNewPosition] = useState({
     symbol: '',
     side: 'LONG' as 'LONG' | 'SHORT',
@@ -440,7 +441,20 @@ function PortfolioContent() {
               </button>
             )}
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={() => {
+                // Soft friction: warn during drawdown
+                const inDrawdown = totalReturn < -20 && positions.length > 0;
+                if (inDrawdown && !showAddForm && !drawdownAcknowledged) {
+                  const proceed = confirm(
+                    '⚠️ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+                    'Consider reviewing your risk exposure before adding new positions.\n\n' +
+                    'Click OK to proceed anyway, or Cancel to review first.'
+                  );
+                  if (!proceed) return;
+                  setDrawdownAcknowledged(true);
+                }
+                setShowAddForm(!showAddForm);
+              }}
               style={{
                 padding: '10px 16px',
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -646,6 +660,98 @@ function PortfolioContent() {
       <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 16px' }}>
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* Portfolio Intelligence Summary - Only show when there are positions */}
+            {positions.length > 0 && (() => {
+              const topAsset = allocationData[0];
+              const isConcentrated = topAsset && topAsset.percentage > 50;
+              const inDrawdown = totalReturn < -10;
+              const severeDrawdown = totalReturn < -30;
+              const isCryptoHeavy = positions.filter(p => 
+                ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LINK', 'MATIC', 'HBAR', 'FET', 'KAS', 'RENDER', 'XLM', 'JUP', 'XCN'].includes(p.symbol.toUpperCase().replace('-USD', ''))
+              ).reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0) / totalValue > 0.7;
+              
+              // Determine portfolio state
+              let portfolioState = 'Growth Phase';
+              let stateColor = '#10b981';
+              let stateIcon = '📈';
+              if (severeDrawdown) {
+                portfolioState = 'Significant Drawdown';
+                stateColor = '#ef4444';
+                stateIcon = '📉';
+              } else if (inDrawdown) {
+                portfolioState = 'Drawdown Phase';
+                stateColor = '#f59e0b';
+                stateIcon = '⚠️';
+              } else if (totalReturn > 20) {
+                portfolioState = 'Strong Performance';
+                stateColor = '#10b981';
+                stateIcon = '🚀';
+              }
+              
+              // Build insight text
+              let insight = '';
+              if (severeDrawdown && isConcentrated) {
+                insight = `Your portfolio is experiencing a significant drawdown (${totalReturn.toFixed(1)}%), primarily driven by high exposure to ${topAsset.symbol} (${topAsset.percentage.toFixed(0)}% allocation). ${isCryptoHeavy ? 'Heavy crypto weighting increases correlation to market cycles.' : ''} Consider reviewing concentration risk.`;
+              } else if (inDrawdown) {
+                insight = `Portfolio is in a drawdown phase. ${isConcentrated ? `Top holding ${topAsset.symbol} represents ${topAsset.percentage.toFixed(0)}% of value, amplifying volatility.` : 'Diversification may help reduce drawdown severity.'} Focus on risk management over new entries.`;
+              } else if (isConcentrated) {
+                insight = `${topAsset.symbol} represents ${topAsset.percentage.toFixed(0)}% of your portfolio. While conviction positions can outperform, concentration increases single-asset risk. Consider rebalancing if unintentional.`;
+              } else {
+                insight = `Portfolio is well-distributed across ${positions.length} positions. Current exposure is ${isCryptoHeavy ? 'crypto-weighted, tied to digital asset cycles' : 'balanced across asset types'}.`;
+              }
+              
+              return (
+                <div style={{
+                  background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                  border: `1px solid ${severeDrawdown ? 'rgba(239,68,68,0.4)' : inDrawdown ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.3)'}`,
+                  borderRadius: '16px',
+                  padding: '20px 24px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '20px' }}>🧠</span>
+                    <h3 style={{ color: '#e2e8f0', fontSize: '15px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Portfolio Insight
+                    </h3>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 12px',
+                      background: `${stateColor}20`,
+                      border: `1px solid ${stateColor}40`,
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: stateColor
+                    }}>
+                      {stateIcon} {portfolioState}
+                    </span>
+                    {isConcentrated && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        background: 'rgba(245,158,11,0.15)',
+                        border: '1px solid rgba(245,158,11,0.3)',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#fbbf24'
+                      }}>
+                        ⚠️ High Concentration
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+                    {insight}
+                  </p>
+                </div>
+              );
+            })()}
+
             {/* Charts Row - responsive grid */}
             <div className="portfolio-charts-grid" style={{ 
               display: 'grid', 
