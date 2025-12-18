@@ -95,21 +95,58 @@ export default function PricingPage() {
       color: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
     }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.85; transform: scale(1.05); }
+        }
+        @keyframes sparkle {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+      `}</style>
       <div style={{ maxWidth: 1000, padding: '48px 20px 60px', margin: '0 auto' }}>
-        {/* Free Banner */}
+        {/* Holiday Sale Banner */}
         <div style={{
           marginBottom: 32,
-          padding: '16px 20px',
-          borderRadius: 12,
-          background: 'rgba(34,197,94,0.1)',
-          border: '1px solid rgba(34,197,94,0.3)',
-          textAlign: 'center'
+          padding: '20px 24px',
+          borderRadius: 16,
+          background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(34,197,94,0.15) 50%, rgba(239,68,68,0.15) 100%)',
+          border: '2px solid rgba(34,197,94,0.4)',
+          textAlign: 'center',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <p style={{ margin: 0, color: '#bbf7d0', fontSize: 15, fontWeight: 600 }}>
-            🎉 Early Access — Full Pro features unlocked for a limited time
+          {/* Decorative snowflakes */}
+          <div style={{ position: 'absolute', top: 10, left: 20, fontSize: 20, opacity: 0.6 }}>❄️</div>
+          <div style={{ position: 'absolute', top: 15, right: 25, fontSize: 16, opacity: 0.5 }}>❄️</div>
+          <div style={{ position: 'absolute', bottom: 10, left: '30%', fontSize: 14, opacity: 0.4 }}>❄️</div>
+          <div style={{ position: 'absolute', bottom: 8, right: '35%', fontSize: 18, opacity: 0.5 }}>❄️</div>
+          
+          <div style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: 8, 
+            marginBottom: 8,
+            padding: '6px 16px',
+            background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+            borderRadius: 999,
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 12,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            🎄 Holiday Sale 🎁
+          </div>
+          <p style={{ margin: 0, color: '#f9fafb', fontSize: 22, fontWeight: 700 }}>
+            25% OFF for 2025! 
           </p>
-          <p style={{ margin: '6px 0 0 0', color: '#86efac', fontSize: 13, fontWeight: 400 }}>
-            We're onboarding early users and partners before public launch.
+          <p style={{ margin: '8px 0 0 0', color: '#bbf7d0', fontSize: 15, fontWeight: 500 }}>
+            Ring in the New Year with massive savings — ends January 7th, 2026
+          </p>
+          <p style={{ margin: '6px 0 0 0', color: '#9ca3af', fontSize: 13 }}>
+            Use code <span style={{ color: '#fbbf24', fontWeight: 700, background: 'rgba(251,191,36,0.2)', padding: '2px 8px', borderRadius: 4 }}>NEWYEAR25</span> at checkout
           </p>
         </div>
 
@@ -228,19 +265,21 @@ export default function PricingPage() {
               fontSize: 10,
               padding: '5px 12px',
               borderRadius: 999,
-              background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
-              color: '#0b1120',
-              fontWeight: 600,
-              textTransform: 'uppercase'
-            }}>Most Popular</div>
+              background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+              color: '#fff',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              animation: 'pulse 2s infinite'
+            }}>🎄 25% OFF</div>
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
-            <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 42, fontWeight: 700 }}>$9.99</span>
-              <span style={{ fontSize: 16, color: '#9ca3af', marginLeft: 8 }}>/ month</span>
+            <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
+              <span style={{ fontSize: 20, color: '#6b7280', textDecoration: 'line-through' }}>$9.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$7.49</span>
+              <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or $99.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+              or <span style={{ textDecoration: 'line-through' }}>$99.99</span> <span style={{ color: '#22c55e', fontWeight: 600 }}>$74.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -295,15 +334,32 @@ export default function PricingPage() {
             borderRadius: 18,
             border: '1px solid rgba(59,130,246,0.3)',
             boxShadow: '0 18px 45px rgba(0,0,0,0.75), 0 0 30px rgba(59,130,246,0.08)',
-            padding: '32px 28px'
+            padding: '32px 28px',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
+            <div style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              fontSize: 10,
+              padding: '5px 12px',
+              borderRadius: 999,
+              background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+              color: '#fff',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              animation: 'pulse 2s infinite'
+            }}>🎄 25% OFF</div>
+            
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
-            <div style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 42, fontWeight: 700 }}>$19.99</span>
-              <span style={{ fontSize: 16, color: '#9ca3af', marginLeft: 8 }}>/ month</span>
+            <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
+              <span style={{ fontSize: 20, color: '#6b7280', textDecoration: 'line-through' }}>$19.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$14.99</span>
+              <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or $199.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+              or <span style={{ textDecoration: 'line-through' }}>$199.99</span> <span style={{ color: '#60a5fa', fontWeight: 600 }}>$149.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
