@@ -58,7 +58,7 @@ export default function PartnersPage() {
 
           <div style={{ 
             maxWidth: 600,
-            margin: '0 auto 40px',
+            margin: '0 auto 32px',
             padding: '24px',
             background: 'rgba(20,184,166,0.05)',
             border: '1px solid rgba(20,184,166,0.2)',
@@ -70,6 +70,21 @@ export default function PartnersPage() {
             </p>
             <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 12, fontStyle: 'italic' }}>
               Together, we give traders clarity — not noise.
+            </p>
+          </div>
+
+          {/* Concrete Example - High Visibility */}
+          <div style={{ 
+            maxWidth: 700,
+            margin: '0 auto 40px',
+            padding: '20px 24px',
+            background: 'linear-gradient(145deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))',
+            border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: 10,
+            borderLeft: '4px solid #3b82f6'
+          }}>
+            <p style={{ fontSize: 15, color: '#e5e7eb', margin: 0, lineHeight: 1.8 }}>
+              <strong style={{ color: '#60a5fa' }}>Example:</strong> A price-action educator maps their consolidation → expansion framework into MSP phases. Members receive consistent AI explanations aligned with the educator's logic — no more repeating the same context in Discord.
             </p>
           </div>
 
@@ -324,7 +339,7 @@ export default function PartnersPage() {
             borderRadius: 8,
             border: '1px solid rgba(34,197,94,0.2)'
           }}>
-            The result: <span style={{ color: '#22c55e' }}>structured learning</span> + <span style={{ color: '#14b8a6' }}>scalable analysis</span>.
+            The result: <span style={{ color: '#22c55e' }}>education that scales</span> without burning out.
           </p>
         </div>
       </section>
@@ -755,7 +770,7 @@ export default function PartnersPage() {
             If you're serious about education, structure, and clarity, let's talk.
           </p>
 
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
             <Link href="/contact" style={{
               display: 'inline-block',
               borderRadius: 999,
@@ -784,6 +799,27 @@ export default function PartnersPage() {
               textDecoration: 'none'
             }}>
               Request a Demo
+            </Link>
+          </div>
+
+          {/* Soft CTA for hesitant partners */}
+          <div style={{ marginBottom: 24 }}>
+            <Link href="/tools" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 15,
+              color: '#60a5fa',
+              textDecoration: 'none',
+              padding: '10px 20px',
+              borderRadius: 8,
+              background: 'rgba(59,130,246,0.08)',
+              border: '1px solid rgba(59,130,246,0.2)',
+              transition: 'all 0.2s'
+            }}>
+              <span>🔍</span>
+              <span>Explore the Platform First</span>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>→</span>
             </Link>
           </div>
 
