@@ -2,10 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signToken } from "@/lib/auth";
+import { q } from "@/lib/db";
+
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
 const FALLBACK_PRO_TRADER = "price_1SEhYxLyhHN1qVrAWiuGgO0q";
+
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
   if ((PRICE_PRO_TRADER || FALLBACK_PRO_TRADER) &&
@@ -13,6 +16,30 @@ function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   if (PRICE_PRO && arr.includes(PRICE_PRO)) return "pro";
   return "free";
 }
+
+// Check if user has an active trial
+async function checkTrialAccess(email: string): Promise<{ tier: "pro" | "pro_trader"; expiresAt: Date } | null> {
+  try {
+    const trials = await q<{ tier: string; expires_at: string }>(
+      `SELECT tier, expires_at FROM user_trials 
+       WHERE email = $1 AND expires_at > NOW() 
+       ORDER BY expires_at DESC LIMIT 1`,
+      [email.toLowerCase().trim()]
+    );
+    
+    if (trials.length > 0) {
+      return {
+        tier: trials[0].tier as "pro" | "pro_trader",
+        expiresAt: new Date(trials[0].expires_at)
+      };
+    }
+  } catch (error) {
+    console.error("Trial check error:", error);
+    // Don't fail login if trial check fails, just continue to Stripe
+  }
+  return null;
+}
+
 const ALLOWED_ORIGINS = new Set([
   "https://app.marketscannerpros.app",
   "https://marketscannerpros.app",
@@ -37,12 +64,55 @@ export async function POST(req: NextRequest) {
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // ========================================
+    // STEP 1: Check for active trial FIRST
+    // ========================================
+    const trial = await checkTrialAccess(normalizedEmail);
+    if (trial) {
+      // User has an active trial - grant access without Stripe
+      const workspaceId = hashWorkspaceId(`trial_${normalizedEmail}`);
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const token = signToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp });
+      
+      const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      
+      const body = { 
+        ok: true, 
+        tier: trial.tier, 
+        workspaceId, 
+        message: `Trial activated! ${daysLeft} days remaining.`,
+        isTrial: true,
+        trialExpiresAt: trial.expiresAt.toISOString()
+      };
+      
+      const res = NextResponse.json(body);
+      res.cookies.set("ms_auth", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        domain: ".marketscannerpros.app",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      
+      const origin = req.headers.get("origin");
+      const headers = corsHeaders(origin);
+      for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+      return res;
+    }
+
+    // ========================================
+    // STEP 2: No trial found - check Stripe
+    // ========================================
     const customers = await stripe.customers.list({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       limit: 1,
     });
     if (!customers.data?.length) {
-      return NextResponse.json({ error: "No subscription found for this email" }, { status: 404 });
+      return NextResponse.json({ error: "No subscription or trial found for this email" }, { status: 404 });
     }
     const customer = customers.data[0];
     const customerId = customer.id;
