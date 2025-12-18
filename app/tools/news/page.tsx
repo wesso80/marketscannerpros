@@ -21,6 +21,9 @@ interface NewsArticle {
     score: number;
   };
   tickerSentiments: TickerSentiment[];
+  // AI-generated fields
+  aiTags?: string[];
+  aiWhyMatters?: string;
 }
 
 interface EarningsEvent {
@@ -30,6 +33,13 @@ interface EarningsEvent {
   fiscalDateEnding: string;
   estimate: number | null;
   currency: string;
+}
+
+interface AISummary {
+  overview: string;
+  sentiment: 'bullish' | 'bearish' | 'mixed' | 'neutral';
+  keyThemes: string[];
+  tickerHighlights: { ticker: string; outlook: string }[];
 }
 
 type TabType = "news" | "earnings";
@@ -44,6 +54,12 @@ export default function NewsSentimentPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [error, setError] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
+
+  // AI Summary state
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [expandedArticle, setExpandedArticle] = useState<number | null>(null);
 
   // Earnings state
   const [earningsSymbol, setEarningsSymbol] = useState("");
@@ -61,6 +77,8 @@ export default function NewsSentimentPage() {
     setLoading(true);
     setError("");
     setArticles([]);
+    setAiSummary(null);
+    setAiError(null);
 
     try {
       const response = await fetch(`/api/news-sentiment?tickers=${tickers.toUpperCase()}&limit=${limit}`);
@@ -75,6 +93,123 @@ export default function NewsSentimentPage() {
       setError("Network error - please try again");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateAISummary = async () => {
+    if (articles.length === 0) return;
+    
+    setAiLoading(true);
+    setAiError(null);
+    
+    try {
+      // Prepare news data for AI - only pass relevant headlines and sentiment
+      const newsContext = articles.slice(0, 15).map(a => ({
+        title: a.title,
+        sentiment: a.sentiment.label,
+        source: a.source,
+        tickers: a.tickerSentiments?.map(t => t.ticker) || []
+      }));
+
+      const response = await fetch('/api/msp-analyst', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `Analyze these ${newsContext.length} news headlines for ${tickers}. Provide:
+1. A 2-3 sentence market summary
+2. Overall sentiment (bullish/bearish/mixed/neutral)
+3. 3-4 key themes emerging from the news
+4. Brief outlook for each ticker mentioned
+
+Headlines: ${JSON.stringify(newsContext)}
+
+Respond in JSON format:
+{
+  "overview": "2-3 sentence summary",
+  "sentiment": "bullish|bearish|mixed|neutral",
+  "keyThemes": ["theme1", "theme2", "theme3"],
+  "tickerHighlights": [{"ticker": "AAPL", "outlook": "brief outlook"}]
+}`,
+          context: { symbol: tickers, timeframe: "recent news" }
+        })
+      });
+
+      if (response.status === 401) {
+        setAiError('Sign in to use AI Market Summary');
+        return;
+      }
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.error || `AI request failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      const text = data?.text || data?.content || '';
+      
+      // Parse JSON from response
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          setAiSummary(parsed);
+        } else {
+          // Fallback: create summary from text
+          setAiSummary({
+            overview: text.slice(0, 300),
+            sentiment: 'neutral',
+            keyThemes: [],
+            tickerHighlights: []
+          });
+        }
+      } catch {
+        setAiSummary({
+          overview: text.slice(0, 300),
+          sentiment: 'neutral',
+          keyThemes: [],
+          tickerHighlights: []
+        });
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to generate AI summary');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const getSentimentBgColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish': return 'rgba(16, 185, 129, 0.15)';
+      case 'bearish': return 'rgba(239, 68, 68, 0.15)';
+      case 'mixed': return 'rgba(245, 158, 11, 0.15)';
+      default: return 'rgba(148, 163, 184, 0.15)';
+    }
+  };
+
+  const getSentimentBorderColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish': return 'rgba(16, 185, 129, 0.4)';
+      case 'bearish': return 'rgba(239, 68, 68, 0.4)';
+      case 'mixed': return 'rgba(245, 158, 11, 0.4)';
+      default: return 'rgba(148, 163, 184, 0.4)';
+    }
+  };
+
+  const getSentimentTextColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish': return '#10B981';
+      case 'bearish': return '#EF4444';
+      case 'mixed': return '#F59E0B';
+      default: return '#94A3B8';
+    }
+  };
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish': return '📈';
+      case 'bearish': return '📉';
+      case 'mixed': return '↔️';
+      default: return '➖';
     }
   };
 
@@ -260,6 +395,168 @@ export default function NewsSentimentPage() {
           </div>
         )}
 
+        {/* AI Market Summary */}
+        {articles.length > 0 && (
+          <div style={{ 
+            background: "linear-gradient(145deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08))", 
+            borderRadius: "16px", 
+            border: "1px solid rgba(59,130,246,0.3)", 
+            padding: "1.5rem", 
+            marginBottom: "2rem",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiSummary ? "1rem" : "0", flexWrap: "wrap", gap: "1rem" }}>
+              <h3 style={{ 
+                fontSize: "1.1rem", 
+                fontWeight: "bold", 
+                color: "#60A5FA", 
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: "10px"
+              }}>
+                <span style={{ fontSize: "1.25rem" }}>🧠</span> AI Market Summary
+              </h3>
+              {!aiSummary && (
+                <button
+                  onClick={generateAISummary}
+                  disabled={aiLoading}
+                  style={{ 
+                    padding: "0.6rem 1.25rem", 
+                    background: aiLoading ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg, #3B82F6, #8B5CF6)", 
+                    border: "none", 
+                    borderRadius: "8px", 
+                    color: "#fff", 
+                    fontWeight: "600", 
+                    cursor: aiLoading ? "not-allowed" : "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
+                  }}
+                >
+                  {aiLoading ? (
+                    <>
+                      <span style={{ animation: "spin 1s linear infinite" }}>⏳</span>
+                      Analyzing {articles.length} articles...
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      Generate Summary
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {aiError && (
+              <div style={{ padding: "0.75rem", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "8px", color: "#FCA5A5", fontSize: "14px" }}>
+                {aiError}
+              </div>
+            )}
+
+            {aiSummary && (
+              <div>
+                {/* Overall Sentiment Badge */}
+                <div style={{ 
+                  display: "inline-flex", 
+                  alignItems: "center", 
+                  gap: "8px",
+                  padding: "6px 14px",
+                  background: getSentimentBgColor(aiSummary.sentiment),
+                  border: `1px solid ${getSentimentBorderColor(aiSummary.sentiment)}`,
+                  borderRadius: "20px",
+                  marginBottom: "1rem"
+                }}>
+                  <span>{getSentimentIcon(aiSummary.sentiment)}</span>
+                  <span style={{ 
+                    color: getSentimentTextColor(aiSummary.sentiment), 
+                    fontWeight: "600", 
+                    fontSize: "14px",
+                    textTransform: "capitalize"
+                  }}>
+                    {aiSummary.sentiment} Outlook
+                  </span>
+                </div>
+
+                {/* Overview */}
+                <p style={{ color: "#E2E8F0", lineHeight: "1.8", fontSize: "15px", marginBottom: "1rem" }}>
+                  {aiSummary.overview}
+                </p>
+
+                {/* Key Themes */}
+                {aiSummary.keyThemes && aiSummary.keyThemes.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
+                      Key Themes:
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {aiSummary.keyThemes.map((theme, i) => (
+                        <span key={i} style={{
+                          padding: "6px 12px",
+                          background: "rgba(59, 130, 246, 0.15)",
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
+                          borderRadius: "6px",
+                          color: "#93C5FD",
+                          fontSize: "13px"
+                        }}>
+                          {theme}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ticker Highlights */}
+                {aiSummary.tickerHighlights && aiSummary.tickerHighlights.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
+                      Ticker Insights:
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+                      {aiSummary.tickerHighlights.map((th, i) => (
+                        <div key={i} style={{
+                          padding: "12px",
+                          background: "rgba(15, 23, 42, 0.6)",
+                          border: "1px solid rgba(51, 65, 85, 0.5)",
+                          borderRadius: "8px"
+                        }}>
+                          <span style={{ color: "#10B981", fontWeight: "bold", fontSize: "14px" }}>{th.ticker}</span>
+                          <p style={{ color: "#94A3B8", fontSize: "13px", margin: "6px 0 0", lineHeight: "1.5" }}>
+                            {th.outlook}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Regenerate Button */}
+                <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(59,130,246,0.2)" }}>
+                  <button
+                    onClick={generateAISummary}
+                    disabled={aiLoading}
+                    style={{ 
+                      padding: "0.5rem 1rem", 
+                      background: "transparent", 
+                      border: "1px solid rgba(59,130,246,0.3)", 
+                      borderRadius: "6px", 
+                      color: "#60A5FA", 
+                      fontWeight: "500", 
+                      cursor: aiLoading ? "not-allowed" : "pointer",
+                      fontSize: "13px",
+                      opacity: aiLoading ? 0.5 : 1
+                    }}
+                  >
+                    🔄 Regenerate Summary
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Articles Grid */}
         {filteredArticles.length > 0 && (
           <div>
@@ -268,45 +565,95 @@ export default function NewsSentimentPage() {
             </div>
             <div style={{ display: "grid", gap: "1.5rem" }}>
               {filteredArticles.map((article, index) => (
-                <div key={index} style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <div key={index} style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
                   {/* Article Header */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem", gap: "1rem" }}>
                     <div style={{ flex: 1 }}>
-                      <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#fff", textDecoration: "none", display: "block", marginBottom: "0.5rem" }}>
+                      <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#fff", textDecoration: "none", display: "block", marginBottom: "0.5rem", lineHeight: "1.4" }}>
                         {article.title}
                       </a>
-                      <div style={{ display: "flex", gap: "1rem", fontSize: "0.875rem", color: "#94A3B8" }}>
-                        <span> {formatDate(article.timePublished)}</span>
-                        <span> {article.source}</span>
+                      <div style={{ display: "flex", gap: "1rem", fontSize: "0.8rem", color: "#64748B", flexWrap: "wrap" }}>
+                        <span>🕐 {formatDate(article.timePublished)}</span>
+                        <span>📰 {article.source}</span>
                       </div>
                     </div>
-                    <div style={{ padding: "0.5rem 1rem", background: `${getSentimentColor(article.sentiment.label)}20`, borderRadius: "8px", color: getSentimentColor(article.sentiment.label), fontWeight: "600", whiteSpace: "nowrap", marginLeft: "1rem" }}>
+                    <div style={{ padding: "0.4rem 0.8rem", background: `${getSentimentColor(article.sentiment.label)}20`, borderRadius: "6px", color: getSentimentColor(article.sentiment.label), fontWeight: "600", whiteSpace: "nowrap", fontSize: "0.85rem" }}>
                       {getSentimentEmoji(article.sentiment.label)} {article.sentiment.label}
                     </div>
                   </div>
 
-                  {/* Summary */}
-                  <p style={{ color: "#94A3B8", lineHeight: "1.6", marginBottom: "1rem" }}>
+                  {/* Inline Tags - Quick Context */}
+                  {article.tickerSentiments && article.tickerSentiments.length > 0 && (
+                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+                      {article.tickerSentiments.slice(0, 5).map((ts, tsIndex) => (
+                        <span key={tsIndex} style={{ 
+                          padding: "4px 10px", 
+                          background: `${getSentimentColor(ts.sentimentLabel)}15`,
+                          border: `1px solid ${getSentimentColor(ts.sentimentLabel)}40`,
+                          borderRadius: "4px", 
+                          fontSize: "0.75rem",
+                          color: getSentimentColor(ts.sentimentLabel),
+                          fontWeight: "600"
+                        }}>
+                          {ts.ticker}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Summary - Collapsed by Default */}
+                  <p style={{ 
+                    color: "#94A3B8", 
+                    lineHeight: "1.6", 
+                    fontSize: "0.9rem",
+                    marginBottom: expandedArticle === index ? "1rem" : "0",
+                    display: "-webkit-box",
+                    WebkitLineClamp: expandedArticle === index ? "none" : 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: expandedArticle === index ? "visible" : "hidden"
+                  }}>
                     {article.summary}
                   </p>
 
-                  {/* Ticker-Specific Sentiment */}
-                  {article.tickerSentiments && article.tickerSentiments.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
+                  {/* Expand/Collapse Button */}
+                  {article.summary && article.summary.length > 150 && (
+                    <button
+                      onClick={() => setExpandedArticle(expandedArticle === index ? null : index)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#60A5FA",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        padding: "4px 0",
+                        fontWeight: "500"
+                      }}
+                    >
+                      {expandedArticle === index ? "Show less ↑" : "Read more ↓"}
+                    </button>
+                  )}
+
+                  {/* Expanded: Per-Ticker Sentiment Details */}
+                  {expandedArticle === index && article.tickerSentiments && article.tickerSentiments.length > 0 && (
+                    <div style={{ 
+                      marginTop: "1rem", 
+                      paddingTop: "1rem", 
+                      borderTop: "1px solid rgba(51,65,85,0.5)" 
+                    }}>
+                      <div style={{ fontSize: "0.8rem", color: "#64748B", marginBottom: "0.5rem", fontWeight: "600" }}>
                         Per-Ticker Sentiment:
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         {article.tickerSentiments.map((ts, tsIndex) => (
-                          <div key={tsIndex} style={{ padding: "0.5rem 1rem", background: "rgba(30, 41, 59, 0.8)", borderRadius: "8px", border: `1px solid ${getSentimentColor(ts.sentimentLabel)}`, fontSize: "0.875rem" }}>
+                          <div key={tsIndex} style={{ padding: "0.4rem 0.75rem", background: "rgba(30, 41, 59, 0.8)", borderRadius: "6px", border: `1px solid ${getSentimentColor(ts.sentimentLabel)}40`, fontSize: "0.8rem" }}>
                             <span style={{ color: "#fff", fontWeight: "600" }}>{ts.ticker}</span>
                             {" "}
                             <span style={{ color: getSentimentColor(ts.sentimentLabel) }}>
-                              {getSentimentEmoji(ts.sentimentLabel)} {ts.sentimentLabel}
+                              {ts.sentimentLabel}
                             </span>
                             {" "}
-                            <span style={{ color: "#94A3B8" }}>
-                              (score: {ts.sentimentScore.toFixed(2)}, rel: {(ts.relevance * 100).toFixed(0)}%)
+                            <span style={{ color: "#64748B", fontSize: "0.75rem" }}>
+                              ({(ts.relevance * 100).toFixed(0)}% rel)
                             </span>
                           </div>
                         ))}
