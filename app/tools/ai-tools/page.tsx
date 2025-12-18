@@ -3,8 +3,11 @@
 import React, { useState } from "react";
 import DailyAIMarketFocus from "@/components/DailyAIMarketFocus";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 export default function AIToolsPage() {
+  const { tier } = useUserTier();
   const [generating, setGenerating] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
@@ -31,6 +34,24 @@ export default function AIToolsPage() {
       setGenerating(false);
     }
   };
+
+  // Gate entire page for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+        <ToolsPageHeader
+          badge="AI LAB"
+          title="AI & Machine Learning Tools"
+          subtitle="AI-powered market analysis using multi-timeframe structure and phase logic."
+          icon="🤖"
+          backHref="/tools"
+        />
+        <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
+          <UpgradeGate feature="AI Tools" requiredTier="pro" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f172a" }}>
