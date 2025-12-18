@@ -47,24 +47,24 @@ const scripts = [
 ];
 
 const steps = [
-  { step: "1", text: "Make sure you have a TradingView account" },
-  { step: "2", text: "Click any \"Request Free Trial\" button – opens a pre-filled email" },
-  { step: "3", text: "Add your TradingView username and which scripts you want" },
-  { step: "4", text: "We'll add you to the invite-only scripts and reply when active" }
+  { step: "1", text: "Subscribe to Pro Trader ($9.99/mo or $99.99/yr)" },
+  { step: "2", text: "Email us with your TradingView username" },
+  { step: "3", text: "We'll add you to all invite-only scripts" },
+  { step: "4", text: "Access granted within 24 hours" }
 ];
 
 const faqs = [
   {
-    q: "How long does the free trial last?",
-    a: "Currently open-ended beta. While we're building out the full product, all scripts are available on a manual free-trial basis."
+    q: "How do I get access to the scripts?",
+    a: "All TradingView scripts and indicators are included with your Pro Trader subscription. Simply email us your TradingView username after subscribing and we'll grant you access within 24 hours."
   },
   {
     q: "What do I need to get started?",
-    a: "Just a valid TradingView username. No card required, no automated billing – access is granted manually via TradingView's invite-only system."
+    a: "A Pro Trader subscription and a valid TradingView username. Access is granted manually via TradingView's invite-only system."
   },
   {
-    q: "Can I test all the scripts?",
-    a: "Yes! Request access to whichever scripts interest you, or just say 'all of them' in your email. There's no limit during the beta phase."
+    q: "Do I get access to all scripts?",
+    a: "Yes! Pro Trader subscribers get full access to ALL scripts and indicators – including the Multi-TF Dashboard, Auto Fib Tool, Confluence Strategy, and any new scripts we release."
   }
 ];
 
@@ -113,22 +113,38 @@ export default function TradingViewScriptsPage() {
                 marginBottom: 16
               }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
-                Early-access beta · Free trials available
+                Included with Pro Trader subscription
               </div>
 
               <h1 style={{ fontSize: 32, fontWeight: 800, color: '#f1f5f9', marginBottom: 12, lineHeight: 1.2 }}>
                 TradingView Scripts & Indicators
               </h1>
-              <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 600, marginBottom: 24, lineHeight: 1.7 }}>
+              <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 600, marginBottom: 16, lineHeight: 1.7 }}>
                 Professional multi-timeframe dashboards, auto-Fib tools, and confluence strategies built for traders who want structure and clarity.
               </p>
+              
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 18px',
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))',
+                border: '1px solid rgba(139,92,246,0.3)',
+                marginBottom: 24
+              }}>
+                <span style={{ fontSize: 20 }}>👑</span>
+                <span style={{ color: '#a78bfa', fontSize: 14, fontWeight: 600 }}>
+                  Pro Trader subscribers get full access to ALL scripts & indicators
+                </span>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 28 }}>
                 {[
                   { icon: '📊', text: 'Multi-TF dashboards for bias & alignment' },
                   { icon: '📐', text: 'Auto-Fib tools with smart levels & alerts' },
                   { icon: '⏰', text: 'Time confluence windows for key zones' },
-                  { icon: '🔒', text: 'Invite-only access via TradingView' }
+                  { icon: '🔓', text: 'Full access with Pro Trader tier' }
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#cbd5e1', fontSize: 14 }}>
                     <span style={{ fontSize: 18 }}>{item.icon}</span>
@@ -138,7 +154,7 @@ export default function TradingViewScriptsPage() {
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                <a href={emailLink} style={{
+                <Link href="/pricing" style={{
                   padding: '14px 28px',
                   background: 'linear-gradient(135deg, #10b981, #22c55e)',
                   borderRadius: 12,
@@ -151,8 +167,8 @@ export default function TradingViewScriptsPage() {
                   gap: 8,
                   boxShadow: '0 8px 25px rgba(16, 185, 129, 0.35)'
                 }}>
-                  📩 Request Free Trial
-                </a>
+                  👑 Get Pro Trader
+                </Link>
                 <a href="https://www.tradingview.com/u/Marketscannerpros/" target="_blank" rel="noreferrer" style={{
                   padding: '14px 28px',
                   background: 'transparent',
@@ -312,10 +328,10 @@ export default function TradingViewScriptsPage() {
               Ready to enhance your trading?
             </h2>
             <p style={{ fontSize: 16, color: '#94a3b8', marginBottom: 28, maxWidth: 500, margin: '0 auto 28px' }}>
-              Get instant access to all our professional TradingView scripts — completely free during beta.
+              Pro Trader subscribers get full access to ALL TradingView scripts and indicators included in their subscription.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-              <a href={emailLink} style={{
+              <Link href="/pricing" style={{
                 padding: '16px 32px',
                 background: 'linear-gradient(135deg, #10b981, #22c55e)',
                 borderRadius: 12,
@@ -325,8 +341,8 @@ export default function TradingViewScriptsPage() {
                 textDecoration: 'none',
                 boxShadow: '0 8px 25px rgba(16, 185, 129, 0.35)'
               }}>
-                Request Free Trial →
-              </a>
+                Get Pro Trader →
+              </Link>
               <Link href="/tools" style={{
                 padding: '16px 32px',
                 background: 'transparent',
