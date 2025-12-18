@@ -102,7 +102,8 @@ export async function POST(req: NextRequest) {
       isAnonymous = true;
     }
 
-    const { workspaceId, tier } = session;
+    const workspaceId = session!.workspaceId;
+    const tier = session!.tier;
 
     // Define tier limits (fair-use caps to prevent abuse)
     const tierLimits: Record<string, number> = {
