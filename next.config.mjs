@@ -12,8 +12,34 @@ const nextConfig = {
     root: __dirname,
   },
   async redirects() {
-    // No global redirects; host-based redirect is handled in middleware.
-    return [];
+    return [
+      // Fix old URLs that were in previous sitemaps
+      {
+        source: '/ai-analyst',
+        destination: '/tools/ai-analyst',
+        permanent: true,
+      },
+      {
+        source: '/scanner',
+        destination: '/tools/scanner',
+        permanent: true,
+      },
+      {
+        source: '/portfolio',
+        destination: '/tools/portfolio',
+        permanent: true,
+      },
+      {
+        source: '/backtest',
+        destination: '/tools/backtest',
+        permanent: true,
+      },
+      {
+        source: '/journal',
+        destination: '/tools/journal',
+        permanent: true,
+      },
+    ];
   },
 };
 export default nextConfig;

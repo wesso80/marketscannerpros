@@ -20,7 +20,32 @@ if (typeof window === 'undefined') {
 }
 
 export const metadata = { 
-  title: "MarketScanner Pros"
+  title: {
+    default: "MarketScanner Pros - AI-Powered Market Analysis",
+    template: "%s | MarketScanner Pros",
+  },
+  description: "Professional market scanning tool with AI analysis, technical indicators, and real-time alerts for stocks, crypto, and forex trading.",
+  metadataBase: new URL('https://marketscannerpros.app'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://marketscannerpros.app',
+    siteName: 'MarketScanner Pros',
+    title: 'MarketScanner Pros - AI-Powered Market Analysis',
+    description: 'Professional market scanning tool with AI analysis, technical indicators, and real-time alerts for stocks, crypto, and forex trading.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MarketScanner Pros',
+    description: 'AI-powered market scanning for stocks, crypto, and forex.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport = {
