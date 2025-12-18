@@ -303,7 +303,7 @@ export default function CompanyOverviewPage() {
           backHref="/tools"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
-          <UpgradeGate feature="Company Overview" />
+          <UpgradeGate feature="Company Overview" requiredTier="pro" />
         </main>
       </div>
     );

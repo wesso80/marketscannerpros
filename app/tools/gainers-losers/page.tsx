@@ -268,7 +268,7 @@ export default function GainersLosersPage() {
           backHref="/tools"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
-          <UpgradeGate feature="Market Movers" />
+          <UpgradeGate feature="Market Movers" requiredTier="pro" />
         </main>
       </div>
     );

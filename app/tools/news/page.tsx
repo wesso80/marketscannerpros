@@ -148,7 +148,7 @@ export default function NewsSentimentPage() {
           backHref="/tools"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
-          <UpgradeGate feature="Market Intelligence" />
+          <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
         </main>
       </div>
     );
