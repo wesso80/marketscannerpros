@@ -41,7 +41,15 @@ const scripts = [
     image: "/images/squeeze-strategy.png",
     status: "Live · Invite-only",
     focus: "Volatility breakouts",
-    type: "TV: Strategy",
+    type: "TV: Strategy"
+  },
+  {
+    name: "A+ Setup Scanner - Bullish/Bearish",
+    description: "Combines EMA alignment, RSI momentum, MACD, volume and breakout detection into a single score. Mobile-optimized table shows bias from Strong Bullish to Strong Bearish at a glance.",
+    image: "/images/aplus-scanner.png",
+    status: "Live · Invite-only",
+    focus: "Setup scoring",
+    type: "TV: Indicator",
     isNew: true
   }
 ];
