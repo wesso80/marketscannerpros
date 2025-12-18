@@ -336,8 +336,8 @@ export default function Home() {
                   { text: "Top 10 equities + Top 10 crypto", highlight: false },
                   { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
                   { text: "Multi-timeframe scanning", highlight: false },
-                  { text: "Trade journal + Portfolio", highlight: false },
-                  { text: "Real-time market data", highlight: false }
+                  { text: "Portfolio tracker (3 positions)", highlight: false },
+                  { text: "Trade journal", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
@@ -403,19 +403,20 @@ export default function Home() {
                 fontSize: 10,
                 padding: '4px 10px',
                 borderRadius: 999,
-                background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
-                color: '#0b1120',
+                background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+                color: '#fff',
                 fontWeight: 600,
                 textTransform: 'uppercase'
-              }}>Most Popular</div>
+              }}>🎄 25% OFF</div>
               
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 36, fontWeight: 700 }}>$9.99</span>
-                <span style={{ fontSize: 15, color: '#9ca3af', marginLeft: 6 }}>/ month</span>
+              <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 18, color: '#6b7280', textDecoration: 'line-through' }}>$9.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$7.49</span>
+                <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or $99.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+                or <span style={{ textDecoration: 'line-through' }}>$99.99</span> <span style={{ color: '#22c55e' }}>$74.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
@@ -423,9 +424,10 @@ export default function Home() {
                   { text: "Everything in Free", highlight: false },
                   { text: "Unlimited symbol scanning", highlight: false },
                   { text: "🤖 MSP Analyst AI (50/day)", highlight: true },
-                  { text: "Advanced technical charts", highlight: false },
-                  { text: "CSV exports (all tools)", highlight: false },
-                  { text: "Priority support", highlight: false }
+                  { text: "📊 Market Movers & News", highlight: false },
+                  { text: "🏢 Company Overview", highlight: false },
+                  { text: "🤖 AI Tools & Insights", highlight: false },
+                  { text: "CSV exports (all tools)", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
@@ -475,24 +477,38 @@ export default function Home() {
               border: '1px solid rgba(59,130,246,0.3)',
               boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
               padding: '28px 26px',
-              position: 'relative'
+              position: 'relative',
+              overflow: 'hidden'
             }}>
+              <div style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                fontSize: 10,
+                padding: '4px 10px',
+                borderRadius: 999,
+                background: 'linear-gradient(135deg, #ef4444, #22c55e)',
+                color: '#fff',
+                fontWeight: 600,
+                textTransform: 'uppercase'
+              }}>🎄 25% OFF</div>
+              
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 36, fontWeight: 700 }}>$19.99</span>
-                <span style={{ fontSize: 15, color: '#9ca3af', marginLeft: 6 }}>/ month</span>
+              <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 18, color: '#6b7280', textDecoration: 'line-through' }}>$19.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$14.99</span>
+                <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or $199.99/year <span style={{ color: '#22c55e' }}>(save 17%)</span>
+                or <span style={{ textDecoration: 'line-through' }}>$199.99</span> <span style={{ color: '#60a5fa' }}>$149.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
                   { text: "Everything in Pro", highlight: false },
                   { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
-                  { text: "Real Alpha Vantage backtesting", highlight: false },
+                  { text: "📈 Full backtesting engine", highlight: false },
                   { text: "TradingView script access", highlight: false },
-                  { text: "Advanced indicators", highlight: false },
                   { text: "Premium support", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{

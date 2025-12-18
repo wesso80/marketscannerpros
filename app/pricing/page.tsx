@@ -60,8 +60,7 @@ export default function PricingPage() {
     { text: "Top 10 equities + Top 10 crypto", highlight: false },
     { text: "Multi-timeframe scanning", highlight: false },
     { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
-    { text: "AI market insights & explanations", highlight: false },
-    { text: "Basic portfolio tracker", highlight: false },
+    { text: "Basic portfolio tracker (3 positions)", highlight: false },
     { text: "Trade journal", highlight: false },
     { text: "Community support", highlight: false }
   ];
@@ -70,11 +69,12 @@ export default function PricingPage() {
     { text: "Everything in Free", highlight: false },
     { text: "Unlimited symbols scanning", highlight: false },
     { text: "🤖 MSP Analyst AI (50/day)", highlight: true },
-    { text: "AI-powered trade recommendations", highlight: false },
-    { text: "AI technical analysis explanations", highlight: false },
-    { text: "Multi-timeframe confluence", highlight: false },
-    { text: "Advanced technical charts", highlight: false },
-    { text: "Portfolio tracker with P&L", highlight: false },
+    { text: "📊 Market Movers (Gainers/Losers)", highlight: false },
+    { text: "🏢 Company Overview & Fundamentals", highlight: false },
+    { text: "📰 News & Market Intelligence", highlight: false },
+    { text: "🤖 AI Tools & Market Focus", highlight: false },
+    { text: "Portfolio insights & P&L tracking", highlight: false },
+    { text: "Journal insights & analytics", highlight: false },
     { text: "CSV exports (all tools)", highlight: false },
     { text: "Priority support", highlight: false }
   ];
@@ -82,14 +82,10 @@ export default function PricingPage() {
   const proTraderFeatures = [
     { text: "Everything in Pro", highlight: false },
     { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
-    { text: "AI-powered backtest analysis", highlight: false },
-    { text: "AI strategy optimization suggestions", highlight: false },
-    { text: "Real Alpha Vantage backtesting", highlight: false },
-    { text: "Advanced strategy testing", highlight: false },
+    { text: "📈 Full backtesting engine", highlight: false },
+    { text: "Real Alpha Vantage market data", highlight: false },
     { text: "TradingView script access", highlight: false },
-    { text: "Priority email alerts", highlight: false },
-    { text: "Advanced chart indicators", highlight: false },
-    { text: "Psychology tracking in journal", highlight: false },
+    { text: "Advanced strategy testing", highlight: false },
     { text: "Premium support", highlight: false }
   ];
 

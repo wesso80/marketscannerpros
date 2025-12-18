@@ -26,8 +26,10 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             <h3 className="text-xl font-semibold">Free</h3>
             <p className="mt-1 text-2xl font-bold">$0</p>
             <ul className="mt-6 space-y-3">
-              <li className={featureItem}>• Limited symbols</li>
-              <li className={featureItem}>• Core scanner</li>
+              <li className={featureItem}>• Top 10 equities + Top 10 crypto</li>
+              <li className={featureItem}>• 🤖 MSP Analyst AI (10/day)</li>
+              <li className={featureItem}>• Portfolio tracker (3 positions)</li>
+              <li className={featureItem}>• Trade journal</li>
             </ul>
             <button
               onClick={onLaunch}
@@ -36,60 +38,73 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               Start Free Now
             </button>
             <p className="mt-3 text-xs text-neutral-500">
-              Powered by Stripe • Cancel anytime
+              No credit card required
             </p>
           </div>
 
           {/* Pro (Most Popular) */}
           <div className={`${baseCard} border-emerald-500/40 ring-1 ring-emerald-500/30`}>
             <div className="mb-2">
-              <span className="rounded-full bg-emerald-600 px-2 py-1 text-xs text-white">
-                Most Popular
+              <span className="rounded-full bg-gradient-to-r from-red-500 to-emerald-500 px-2 py-1 text-xs text-white font-bold">
+                🎄 25% OFF
               </span>
             </div>
             <h3 className="text-xl font-semibold">Pro</h3>
             <p className="mt-1 text-2xl font-bold">
-              $4.99 <span className="text-sm font-normal text-neutral-400">/ month</span>
+              <span className="text-neutral-500 line-through text-lg mr-2">$9.99</span>
+              <span className="text-emerald-400">$7.49</span>
+              <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">
-              <li className={featureItem}>• Unlimited symbols</li>
-              <li className={featureItem}>• Multi-TF confluence scoring</li>
-              <li className={featureItem}>• Squeeze detection</li>
-              <li className={featureItem}>• CSV exports</li>
-              <li className={featureItem}>• Basic alerts</li>
+              <li className={featureItem}>• Everything in Free</li>
+              <li className={featureItem}>• Unlimited symbol scanning</li>
+              <li className={featureItem}>• 🤖 MSP Analyst AI (50/day)</li>
+              <li className={featureItem}>• 📊 Market Movers & News</li>
+              <li className={featureItem}>• 🏢 Company Overview</li>
+              <li className={featureItem}>• 🤖 AI Tools & Insights</li>
+              <li className={featureItem}>• CSV exports (all tools)</li>
             </ul>
             <button
               onClick={() => onCheckout("pro")}
               disabled={loading === "pro"}
               className="mt-6 w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-neutral-900 hover:bg-emerald-400 disabled:opacity-60"
             >
-              {loading === "pro" ? "Processing…" : "Start 7-Day Free Trial"}
+              {loading === "pro" ? "Processing…" : "Upgrade to Pro"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
-              Payments secured by Stripe • Cancel anytime
+              Use code NEWYEAR25 • Cancel anytime
             </p>
           </div>
 
           {/* Full Pro Trader */}
           <div className={baseCard}>
-            <h3 className="text-xl font-semibold">Full Pro Trader</h3>
+            <div className="mb-2">
+              <span className="rounded-full bg-gradient-to-r from-red-500 to-emerald-500 px-2 py-1 text-xs text-white font-bold">
+                🎄 25% OFF
+              </span>
+            </div>
+            <h3 className="text-xl font-semibold text-blue-400">Pro Trader</h3>
             <p className="mt-1 text-2xl font-bold">
-              $9.99 <span className="text-sm font-normal text-neutral-400">/ month</span>
+              <span className="text-neutral-500 line-through text-lg mr-2">$19.99</span>
+              <span className="text-blue-400">$14.99</span>
+              <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Pro</li>
-              <li className={featureItem}>• Advanced/priority alerts</li>
-              <li className={featureItem}>• Priority support</li>
+              <li className={featureItem}>• 🤖 MSP Analyst AI (200/day)</li>
+              <li className={featureItem}>• 📈 Full backtesting engine</li>
+              <li className={featureItem}>• TradingView script access</li>
+              <li className={featureItem}>• Premium support</li>
             </ul>
             <button
               onClick={() => onCheckout("pro_trader")}
               disabled={loading === "pro_trader"}
-              className="mt-6 w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-neutral-900 hover:bg-emerald-400 disabled:opacity-60"
+              className="mt-6 w-full rounded-lg bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-400 disabled:opacity-60"
             >
-              {loading === "pro_trader" ? "Processing…" : "Start 5-Day Free Trial"}
+              {loading === "pro_trader" ? "Processing…" : "Upgrade to Pro Trader"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
-              Payments secured by Stripe • Cancel anytime
+              Use code NEWYEAR25 • Cancel anytime
             </p>
           </div>
         </div>
