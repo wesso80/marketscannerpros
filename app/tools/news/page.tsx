@@ -103,20 +103,20 @@ export default function NewsSentimentPage() {
     setAiError(null);
     
     try {
-      // Prepare compact news data for AI - only titles and sentiment, max 10
-      const newsContext = articles.slice(0, 10).map(a => 
+      // Use only the 3 most recent articles (already sorted by date from API)
+      const recentArticles = articles.slice(0, 3);
+      const newsContext = recentArticles.map(a => 
         `${a.title} [${a.sentiment.label}]`
       ).join('\n');
+
+      const tickerList = tickers.split(',').map(t => t.trim()).slice(0, 3).join(', ');
 
       const response = await fetch('/api/msp-analyst', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Summarize these ${Math.min(articles.length, 10)} headlines for ${tickers}:
-${newsContext}
-
-JSON response: {"overview":"2 sentences","sentiment":"bullish|bearish|mixed|neutral","keyThemes":["theme1","theme2"],"tickerHighlights":[{"ticker":"SYM","outlook":"brief"}]}`,
-          context: { symbol: tickers }
+          query: `Summarize these 3 latest headlines for ${tickerList}:\n${newsContext}\n\nJSON: {"overview":"2 sentences","sentiment":"bullish|bearish|mixed|neutral","keyThemes":["theme1","theme2"]}`,
+          context: { symbol: tickerList }
         })
       });
 
