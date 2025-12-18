@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 interface CompanyData {
   symbol: string;
@@ -289,6 +290,24 @@ export default function CompanyOverviewPage() {
   const decisionLens = generateDecisionLens();
   const bullCase = generateBullCase();
   const bearCase = generateBearCase();
+
+  // Gate entire page for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+        <ToolsPageHeader
+          badge="FUNDAMENTALS"
+          title="Company Overview"
+          subtitle="Key fundamentals, technicals, and valuation metrics."
+          icon="🏢"
+          backHref="/tools"
+        />
+        <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
+          <UpgradeGate feature="Company Overview" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f172a" }}>

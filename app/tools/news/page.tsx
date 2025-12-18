@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 interface TickerSentiment {
   ticker: string;
@@ -38,6 +40,7 @@ interface EarningsEvent {
 type TabType = "news" | "earnings";
 
 export default function NewsSentimentPage() {
+  const { tier } = useUserTier();
   const [activeTab, setActiveTab] = useState<TabType>("news");
   
   // News state
@@ -133,13 +136,31 @@ export default function NewsSentimentPage() {
     ? articles 
     : articles.filter(a => a.sentiment.label.toLowerCase().includes(sentimentFilter));
 
+  // Gate entire page for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+        <ToolsPageHeader
+          badge="INTELLIGENCE"
+          title="Market Intelligence"
+          subtitle="News sentiment, earnings calendar, and insider activity."
+          icon="📰"
+          backHref="/tools"
+        />
+        <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
+          <UpgradeGate feature="Market Intelligence" />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "#0f172a" }}>
       <ToolsPageHeader
         badge="INTELLIGENCE"
         title="Market Intelligence"
         subtitle="News sentiment, earnings calendar, and insider activity."
-        icon=""
+        icon="📰"
         backHref="/tools"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>

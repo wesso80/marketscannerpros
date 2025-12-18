@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 interface MarketMover {
   ticker: string;
@@ -254,6 +255,24 @@ export default function GainersLosersPage() {
     };
     return { ...styles[level], padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "600" };
   };
+
+  // Gate entire page for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+        <ToolsPageHeader
+          badge="MARKET MOVERS"
+          title="Top Gainers & Losers"
+          subtitle="Live gainers, losers, and most active tickers with risk context."
+          icon="📊"
+          backHref="/tools"
+        />
+        <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
+          <UpgradeGate feature="Market Movers" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f172a" }}>
