@@ -18,7 +18,8 @@ function AuthContent() {
     setError("");
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE ?? ""}/api/auth/login`, {
+      // Always use relative URL - the API is on the same domain
+      const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
