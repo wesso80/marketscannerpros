@@ -40,68 +40,31 @@ function getScoreBias(score: number): { bias: string; stance: string } {
 function buildMSPPrompt(c: Candidate): string {
   const { bias, stance } = getScoreBias(c.score);
   const payload = c.scannerPayload || {};
+  const biasWord = c.score >= 70 ? "bullish" : c.score < 40 ? "bearish" : "neutral";
   
   return `
-You are MSP AI Analyst v2.0 for MarketScanner Pros.
+MSP AI Analyst v2.1 — Concise Market Analysis
 
-TASK: Generate a concise, internally consistent market analysis for today's AI Market Focus pick.
+ASSET: ${c.symbol} (${c.assetClass}) | Score: ${c.score} | Phase: ${payload.phase || "N/A"} | Structure: ${payload.structure || "N/A"}
+Support: ${c.keyLevels?.support ?? "N/A"} | Resistance: ${c.keyLevels?.resistance ?? "N/A"}
 
-═══════════════════════════════════════
-ASSET DATA (use these as source of truth)
-═══════════════════════════════════════
-Asset: ${c.symbol} (${c.assetClass})
-Score: ${c.score}/100
-Phase: ${payload.phase || "N/A"}
-Structure: ${payload.structure || "N/A"}
-Risk Flag: ${payload.risk || "Normal"}
+BIAS LOCK: Score ${c.score} = ${bias.toUpperCase()}. Do NOT contradict this.
 
-Indicators:
-- Price: ${payload.price}
-- RSI: ${payload.rsi}
-- MACD Histogram: ${payload.macdHist}
-- EMA200: ${payload.ema200}
-- ATR: ${payload.atr}
-
-Key Levels: Support ${c.keyLevels?.support ?? "N/A"} | Resistance ${c.keyLevels?.resistance ?? "N/A"}
-
-═══════════════════════════════════════
-MANDATORY BIAS RULE (DO NOT VIOLATE)
-═══════════════════════════════════════
-Score ${c.score} = ${bias.toUpperCase()} BIAS
-
-Your entire analysis MUST align with this bias:
-- Score ≥80: Bullish only. No hedging language.
-- Score 70-79: Bullish-leaning. Acknowledge minor caution.
-- Score 55-69: Neutral. Emphasize range-bound, wait for breakout/breakdown.
-- Score 40-54: Bearish-leaning. Favor caution, highlight downside risks.
-- Score <40: Bearish only. No bullish hints.
-
-If Phase or Structure seems to conflict with Score, EXPLAIN WHY (e.g., "Recovery within a larger range" or "Oversold bounce within downtrend").
-
-═══════════════════════════════════════
-OUTPUT FORMAT (exactly this structure)
-═══════════════════════════════════════
+OUTPUT (exactly this format, ~80 words max):
 
 **Trade Stance:** ${stance}
 
-**Summary:** [1-2 sentences. Lead with the dominant bias. No indicator lists.]
+**Summary:** [1 sentence stating the ${biasWord} bias and primary driver.]
 
-**Context:** [2-3 sentences. Explain WHY this score/phase/structure combination makes sense. Use market intent language like "momentum favors continuation" or "price testing key support" rather than listing indicator values.]
+**Context:** [1-2 sentences on WHY momentum/structure supports this view. No indicator lists.]
 
 **Key Levels:**
-- Support: [value] – [what happens if broken]
-- Resistance: [value] – [what happens if cleared]
+- Support: ${c.keyLevels?.support ?? "N/A"} – break invalidates ${biasWord} thesis
+- Resistance: ${c.keyLevels?.resistance ?? "N/A"} – clear to accelerate move
 
-**Risk:** [1 actionable sentence. Examples: "Avoid chasing extended moves" / "Best entries on pullbacks to EMA20" / "Break below X invalidates bullish thesis"]
+**Risk:** [1 sentence: entry guidance + "A break below/above X invalidates the ${biasWord} thesis."]
 
-═══════════════════════════════════════
-RULES
-═══════════════════════════════════════
-- NEVER contradict the score-derived bias
-- NO buy/sell instructions or price predictions
-- NO generic filler ("traders should watch carefully")
-- Keep total response under 120 words
-- Sound like a hedge fund morning note, not a tutorial
+RULES: No buy/sell advice. No filler. Sound like a desk note, not a tutorial.
 `.trim();
 }
 

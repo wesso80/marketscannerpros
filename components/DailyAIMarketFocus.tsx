@@ -138,6 +138,13 @@ export default function DailyAIMarketFocus() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
         {data.picks.map((pick) => {
           const colors = assetColors[pick.assetClass] || assetColors.Equity;
+          const score = pick.score ?? 0;
+          const microBadge = score >= 70 
+            ? { icon: '🟢', label: 'Trend-Favored', color: '#34d399' }
+            : score >= 40 
+            ? { icon: '🟡', label: 'Neutral / Range', color: '#fbbf24' }
+            : { icon: '🔴', label: 'Risk-Off', color: '#f87171' };
+          
           return (
             <div
               key={pick.assetClass}
@@ -149,6 +156,25 @@ export default function DailyAIMarketFocus() {
                 transition: 'transform 0.2s, box-shadow 0.2s',
               }}
             >
+              {/* Micro-Badge for instant scan */}
+              {score > 0 && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: 20,
+                  marginBottom: 12,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: microBadge.color,
+                }}>
+                  <span>{microBadge.icon}</span>
+                  <span>{microBadge.label}</span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <h3 style={{ color: colors.accent, fontSize: 20, fontWeight: 700, margin: 0 }}>
                   {pick.assetClass}
