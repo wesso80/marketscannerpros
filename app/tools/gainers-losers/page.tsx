@@ -15,6 +15,7 @@ export default function GainersLosersPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [marketDate, setMarketDate] = useState<string | null>(null);
   const [gainers, setGainers] = useState<MarketMover[]>([]);
   const [losers, setLosers] = useState<MarketMover[]>([]);
   const [active, setActive] = useState<MarketMover[]>([]);
@@ -41,6 +42,10 @@ export default function GainersLosersPage() {
         setLosers(data.topLosers.slice(0, 20));
         setActive(data.mostActive.slice(0, 20));
         setLastUpdated(new Date());
+        // Extract the date from Alpha Vantage metadata
+        if (data.metadata?.last_updated) {
+          setMarketDate(data.metadata.last_updated);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch market movers:", error);
@@ -74,7 +79,11 @@ export default function GainersLosersPage() {
           gap: '12px'
         }}>
           <div style={{ color: '#64748b', fontSize: '13px' }}>
-            {lastUpdated && `Last updated: ${lastUpdated.toLocaleTimeString()}`}
+            {marketDate && <div>📅 Market data: {marketDate}</div>}
+            {lastUpdated && <div style={{ marginTop: '2px' }}>🔄 Fetched: {lastUpdated.toLocaleTimeString()}</div>}
+            <div style={{ marginTop: '4px', fontSize: '11px', color: '#475569' }}>
+              Note: Alpha Vantage updates this data once daily after market close
+            </div>
           </div>
           <button
             onClick={() => fetchData(true)}
