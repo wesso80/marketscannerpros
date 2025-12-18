@@ -252,11 +252,12 @@ function determineRisk(ind: ReturnType<typeof computeIndicators>): string {
   const { rsi, atr, price, prevClose } = ind;
   const volatility = (atr / price) * 100;
   
-  if (rsi > 70) return "Overbought - Pullback Risk";
-  if (rsi < 30) return "Oversold - Bounce Likely";
+  // Keep labels under 20 chars for VARCHAR(20) column
+  if (rsi > 70) return "Overbought";
+  if (rsi < 30) return "Oversold";
   if (volatility > 5) return "High Volatility";
-  if (Math.abs(price - prevClose) / prevClose > 0.05) return "Extended Move";
-  return "Normal Range";
+  if (Math.abs(price - prevClose) / prevClose > 0.05) return "Extended";
+  return "Normal";
 }
 
 function computeScore(ind: ReturnType<typeof computeIndicators>): number {
