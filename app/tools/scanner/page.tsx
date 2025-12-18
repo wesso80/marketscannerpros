@@ -310,7 +310,12 @@ function ScannerContent() {
       });
 
       if (response.status === 401) {
-        setAiError("Please sign in to use AI.");
+        setAiError("Unable to use AI. Please try again later.");
+        return;
+      }
+      if (response.status === 429) {
+        const data = await response.json();
+        setAiError(data.error || "Daily limit reached. Upgrade for more AI questions.");
         return;
       }
       if (!response.ok) throw new Error(`AI request failed (${response.status})`);

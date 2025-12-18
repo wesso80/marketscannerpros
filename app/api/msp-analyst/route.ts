@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
     // Get user session for tier checking; allow free-for-all mode to bypass auth
     const freeForAll = process.env.FREE_FOR_ALL_MODE === "true";
     let session = await getSessionFromCookie();
+    let isAnonymous = false;
+    
     if (!session && freeForAll) {
       // Temporary open-access session for free mode
       session = {
@@ -77,11 +79,27 @@ export async function POST(req: NextRequest) {
       } as any;
     }
 
+    // Allow anonymous users with 10 free AI questions per day
     if (!session) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - Please log in" }),
-        { status: 401 }
-      );
+      // Generate anonymous workspace ID from request fingerprint
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                 req.headers.get('x-real-ip') || 
+                 'unknown';
+      const userAgent = req.headers.get('user-agent') || 'unknown';
+      
+      // Create a simple fingerprint hash
+      const encoder = new TextEncoder();
+      const data = encoder.encode(`anon_${ip}_${userAgent.slice(0, 50)}`);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const fingerprint = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      session = {
+        workspaceId: `anon_${fingerprint}`,
+        tier: "free",
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      } as any;
+      isAnonymous = true;
     }
 
     const { workspaceId, tier } = session;
@@ -114,9 +132,13 @@ export async function POST(req: NextRequest) {
             usageCount
           });
           
+          const upgradeMsg = tier === 'free' 
+            ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' 
+            : 'Limit resets at midnight UTC.';
+          
           return new Response(
             JSON.stringify({ 
-              error: `Daily AI question limit reached (${dailyLimit}/day). ${tier === 'free' ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' : 'Limit resets at midnight UTC.'}`,
+              error: `Daily AI question limit reached (${dailyLimit}/day). ${upgradeMsg}`,
               limitReached: true,
               tier,
               dailyLimit,

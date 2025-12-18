@@ -114,7 +114,11 @@ function BacktestContent() {
       });
       const data = await response.json();
       if (response.status === 401) {
-        setAiError('Please sign in to use AI features.');
+        setAiError('Unable to use AI. Please try again later.');
+        return;
+      }
+      if (response.status === 429) {
+        setAiError(data.error || 'Daily limit reached. Upgrade for more AI questions.');
         return;
       }
       if (!response.ok) {

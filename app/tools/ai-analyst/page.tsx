@@ -217,12 +217,15 @@ function AiAnalystContent() {
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`HTTP ${res.status}: ${body}`);
+      const data = await res.json();
+
+      if (res.status === 429) {
+        throw new Error(data.error || "Daily limit reached. Upgrade for more AI questions.");
       }
 
-      const data: { ok: boolean; text?: string; error?: string } = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
 
       if (!data.ok) {
         throw new Error(data.error || "Unknown error from MSP Analyst API");
