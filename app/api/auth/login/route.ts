@@ -7,12 +7,24 @@ import { q } from "@/lib/db";
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
-const FALLBACK_PRO_TRADER = "price_1SEhYxLyhHN1qVrAWiuGgO0q";
+
+// New Live Price IDs
+const PRO_PRICE_IDS = [
+  "price_1SfcQJLyhHN1qVrAfOpufz0L", // Pro Monthly
+  "price_1SfcRsLyhHN1qVrAuRE6IRU1", // Pro Yearly
+];
+const PRO_TRADER_PRICE_IDS = [
+  "price_1SfcSZLyhHN1qVrAaVrilpyO", // Pro Trader Monthly
+  "price_1SfcTALyhHN1qVrAoIHo4LN1", // Pro Trader Yearly
+];
 
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
-  if ((PRICE_PRO_TRADER || FALLBACK_PRO_TRADER) &&
-      arr.includes(PRICE_PRO_TRADER || FALLBACK_PRO_TRADER)) return "pro_trader";
+  // Check Pro Trader first (higher tier)
+  if (arr.some(id => PRO_TRADER_PRICE_IDS.includes(id))) return "pro_trader";
+  if (arr.some(id => PRO_PRICE_IDS.includes(id))) return "pro";
+  // Legacy fallback
+  if (PRICE_PRO_TRADER && arr.includes(PRICE_PRO_TRADER)) return "pro_trader";
   if (PRICE_PRO && arr.includes(PRICE_PRO)) return "pro";
   return "free";
 }
@@ -33,9 +45,11 @@ async function checkTrialAccess(email: string): Promise<{ tier: "pro" | "pro_tra
         expiresAt: new Date(trials[0].expires_at)
       };
     }
-  } catch (error) {
-    console.error("Trial check error:", error);
-    // Don't fail login if trial check fails, just continue to Stripe
+  } catch (error: any) {
+    // Table might not exist yet - that's OK, just skip trials
+    if (!error?.message?.includes('does not exist')) {
+      console.error("Trial check error:", error);
+    }
   }
   return null;
 }
