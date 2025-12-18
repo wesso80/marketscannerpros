@@ -138,17 +138,27 @@ export async function POST(req: Request) {
 
   try {
     const [eq, cr, co] = await Promise.all([
-      fetchCandidates("equity"),
-      fetchCandidates("crypto"),
-      fetchCandidates("commodity"),
+      fetchCandidates("equity").catch(e => { console.error("Equity fetch failed:", e); return []; }),
+      fetchCandidates("crypto").catch(e => { console.error("Crypto fetch failed:", e); return []; }),
+      fetchCandidates("commodity").catch(e => { console.error("Commodity fetch failed:", e); return []; }),
     ]);
 
-    const pickTop = (arr: Candidate[]) => arr.sort((a, b) => b.score - a.score)[0];
-    const picks = [pickTop(eq), pickTop(cr), pickTop(co)].filter(Boolean) as Candidate[];
+    console.log(`[generate-market-focus] Got candidates: equity=${eq.length} crypto=${cr.length} commodity=${co.length}`);
 
-    if (picks.length !== 3) {
-      throw new Error(`Not enough candidates. equity=${eq.length} crypto=${cr.length} commodity=${co.length}`);
+    const pickTop = (arr: Candidate[]) => arr.sort((a, b) => b.score - a.score)[0];
+    
+    // Build picks array, skipping any empty asset classes
+    const picks: Candidate[] = [];
+    if (eq.length > 0) picks.push(pickTop(eq));
+    if (cr.length > 0) picks.push(pickTop(cr));
+    if (co.length > 0) picks.push(pickTop(co));
+
+    if (picks.length === 0) {
+      throw new Error(`No candidates at all. equity=${eq.length} crypto=${cr.length} commodity=${co.length}`);
     }
+    
+    // Log what we're picking
+    console.log(`[generate-market-focus] Top picks: ${picks.map(p => `${p.assetClass}:${p.symbol}(${p.score})`).join(", ")}`);
 
     const explained = await Promise.all(
       picks.map(async (c) => ({ ...c, explanation: await generateExplanation(c) }))

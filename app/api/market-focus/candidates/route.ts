@@ -5,16 +5,23 @@ export const dynamic = "force-dynamic";
 
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
-// Asset lists for scanning
+// Asset lists for scanning - expanded for better variety
 const EQUITY_SYMBOLS = [
-  "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN",
-  "META", "AVGO", "LLY", "TSLA", "JPM",
-  "V", "UNH", "XOM", "MA", "HD"
+  // Mega caps
+  "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "AVGO", "LLY", "JPM",
+  // Large caps
+  "V", "UNH", "XOM", "MA", "HD", "PG", "JNJ", "COST", "MRK", "ABBV",
+  // Growth & Tech
+  "AMD", "CRM", "ADBE", "NFLX", "ORCL", "QCOM", "INTC", "AMAT", "PANW", "SNOW"
 ];
 
 const CRYPTO_SYMBOLS = [
+  // Top 10
   "BTC", "ETH", "BNB", "SOL", "XRP",
-  "ADA", "DOGE", "AVAX", "DOT", "MATIC"
+  "ADA", "DOGE", "AVAX", "DOT", "MATIC",
+  // Alt coins
+  "LINK", "UNI", "ATOM", "LTC", "FIL",
+  "NEAR", "APT", "ARB", "OP", "INJ"
 ];
 
 // Use commodity ETFs instead of premium commodity API
@@ -325,8 +332,10 @@ export async function GET(req: NextRequest) {
     let candidates: Candidate[] = [];
 
     if (!assetClass || assetClass === "equity") {
-      // Analyze top equities (limit to avoid rate limits)
-      const symbols = EQUITY_SYMBOLS.slice(0, 5);
+      // Shuffle and scan 10 equities for variety
+      const shuffled = [...EQUITY_SYMBOLS].sort(() => Math.random() - 0.5);
+      const symbols = shuffled.slice(0, 10);
+      console.log(`[market-focus] Scanning equities: ${symbols.join(", ")}`);
       const results = await Promise.all(
         symbols.map(s => analyzeAsset(s, "equity", fetchEquityDaily))
       );
@@ -334,16 +343,22 @@ export async function GET(req: NextRequest) {
     }
 
     if (!assetClass || assetClass === "crypto") {
-      const symbols = CRYPTO_SYMBOLS.slice(0, 5);
+      // Shuffle and scan 10 cryptos for variety
+      const shuffled = [...CRYPTO_SYMBOLS].sort(() => Math.random() - 0.5);
+      const symbols = shuffled.slice(0, 10);
+      console.log(`[market-focus] Scanning crypto: ${symbols.join(", ")}`);
       const results = await Promise.all(
         symbols.map(s => analyzeAsset(s, "crypto", fetchCryptoDaily))
       );
-      candidates.push(...results.filter(Boolean) as Candidate[]);
+      const validCrypto = results.filter(Boolean) as Candidate[];
+      console.log(`[market-focus] Got ${validCrypto.length} valid crypto candidates`);
+      candidates.push(...validCrypto);
     }
 
     if (!assetClass || assetClass === "commodity") {
       // Use commodity ETFs with equity API (GLD, USO, etc.)
-      const etfs = COMMODITY_ETFS.slice(0, 3);
+      const etfs = COMMODITY_ETFS.slice(0, 5);
+      console.log(`[market-focus] Scanning commodities: ${etfs.map(e => e.symbol).join(", ")}`);
       const results = await Promise.all(
         etfs.map(e => analyzeAsset(e.symbol, "commodity", fetchCommodityETF))
       );
