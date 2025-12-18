@@ -29,29 +29,79 @@ function todayKeyUTC(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function getScoreBias(score: number): { bias: string; stance: string } {
+  if (score >= 80) return { bias: "Bullish", stance: "Bullish Continuation" };
+  if (score >= 70) return { bias: "Bullish-Leaning", stance: "Constructive – Favor Longs" };
+  if (score >= 55) return { bias: "Neutral", stance: "Range Rotation – Wait for Clarity" };
+  if (score >= 40) return { bias: "Bearish-Leaning", stance: "Cautious – Reduce Exposure" };
+  return { bias: "Bearish", stance: "Risk-Off – Defensive Positioning" };
+}
+
 function buildMSPPrompt(c: Candidate): string {
+  const { bias, stance } = getScoreBias(c.score);
+  const payload = c.scannerPayload || {};
+  
   return `
-You are MSP AI Analyst v1.1 for MarketScanner Pros.
+You are MSP AI Analyst v2.0 for MarketScanner Pros.
 
-Task: Generate a concise institutional-style explanation for today's DAILY AI MARKET FOCUS pick.
+TASK: Generate a concise, internally consistent market analysis for today's AI Market Focus pick.
 
-Asset:
-- Asset class: ${c.assetClass}
-- Symbol: ${c.symbol}
-- Name: ${c.name ?? "N/A"}
-- Score: ${c.score}
+═══════════════════════════════════════
+ASSET DATA (use these as source of truth)
+═══════════════════════════════════════
+Asset: ${c.symbol} (${c.assetClass})
+Score: ${c.score}/100
+Phase: ${payload.phase || "N/A"}
+Structure: ${payload.structure || "N/A"}
+Risk Flag: ${payload.risk || "Normal"}
 
-Scanner outputs:
-${JSON.stringify(c.scannerPayload, null, 2)}
+Indicators:
+- Price: ${payload.price}
+- RSI: ${payload.rsi}
+- MACD Histogram: ${payload.macdHist}
+- EMA200: ${payload.ema200}
+- ATR: ${payload.atr}
 
-Key Levels: ${JSON.stringify(c.keyLevels, null, 2)}
-Risks: ${JSON.stringify(c.risks, null, 2)}
+Key Levels: Support ${c.keyLevels?.support ?? "N/A"} | Resistance ${c.keyLevels?.resistance ?? "N/A"}
 
-Rules:
-- Do NOT give buy/sell instructions or predict prices.
-- Use MSP language: Bullish/Bearish Phase, Multi-TF Alignment, Liquidity Zone.
-- Keep response under 150 words.
-- Format: Executive Summary, Core Analysis, Key Levels, Risks.
+═══════════════════════════════════════
+MANDATORY BIAS RULE (DO NOT VIOLATE)
+═══════════════════════════════════════
+Score ${c.score} = ${bias.toUpperCase()} BIAS
+
+Your entire analysis MUST align with this bias:
+- Score ≥80: Bullish only. No hedging language.
+- Score 70-79: Bullish-leaning. Acknowledge minor caution.
+- Score 55-69: Neutral. Emphasize range-bound, wait for breakout/breakdown.
+- Score 40-54: Bearish-leaning. Favor caution, highlight downside risks.
+- Score <40: Bearish only. No bullish hints.
+
+If Phase or Structure seems to conflict with Score, EXPLAIN WHY (e.g., "Recovery within a larger range" or "Oversold bounce within downtrend").
+
+═══════════════════════════════════════
+OUTPUT FORMAT (exactly this structure)
+═══════════════════════════════════════
+
+**Trade Stance:** ${stance}
+
+**Summary:** [1-2 sentences. Lead with the dominant bias. No indicator lists.]
+
+**Context:** [2-3 sentences. Explain WHY this score/phase/structure combination makes sense. Use market intent language like "momentum favors continuation" or "price testing key support" rather than listing indicator values.]
+
+**Key Levels:**
+- Support: [value] – [what happens if broken]
+- Resistance: [value] – [what happens if cleared]
+
+**Risk:** [1 actionable sentence. Examples: "Avoid chasing extended moves" / "Best entries on pullbacks to EMA20" / "Break below X invalidates bullish thesis"]
+
+═══════════════════════════════════════
+RULES
+═══════════════════════════════════════
+- NEVER contradict the score-derived bias
+- NO buy/sell instructions or price predictions
+- NO generic filler ("traders should watch carefully")
+- Keep total response under 120 words
+- Sound like a hedge fund morning note, not a tutorial
 `.trim();
 }
 
@@ -61,11 +111,11 @@ async function generateExplanation(c: Candidate): Promise<string> {
     const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are MSP AI Analyst, a professional market structure analyst." },
+        { role: "system", content: "You are MSP AI Analyst, a senior market structure analyst at an institutional trading desk. You write concise, internally consistent analysis. You never contradict your own data." },
         { role: "user", content: buildMSPPrompt(c) }
       ],
-      max_tokens: 400,
-      temperature: 0.7,
+      max_tokens: 350,
+      temperature: 0.5,
     });
     return resp.choices[0]?.message?.content ?? "";
   } catch (err: any) {
