@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import UpgradeGate from '@/components/UpgradeGate';
+import { useUserTier, canAccessTradingViewScripts } from '@/lib/useUserTier';
 
 const scripts = [
   {
@@ -69,7 +71,41 @@ const faqs = [
 ];
 
 export default function TradingViewScriptsPage() {
+  const { tier, isLoading } = useUserTier();
   const emailLink = "mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20MarketScannerPros&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20a%20free%20trial%20of%20your%20TradingView%20indicators.%0A%0ATradingView%20username%3A%20%0AScripts%20I%27m%20most%20interested%20in%3A%20%0A%0AThanks%2C%0A";
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#94a3b8' }}>Loading...</div>
+      </div>
+    );
+  }
+
+  // Tier gate - Pro Trader only
+  if (!canAccessTradingViewScripts(tier)) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #020617 50%, #000 100%)' }}>
+        <div style={{ paddingTop: 32 }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+            <Link href="/tools" style={{ color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+              ← Back to Tools
+            </Link>
+          </div>
+        </div>
+        <UpgradeGate requiredTier="pro_trader" feature="TradingView Scripts Access">
+          <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
+            <li>MSP Multi-TF Dashboard</li>
+            <li>Auto Fib Tool with alerts</li>
+            <li>Confluence Strategy</li>
+            <li>Time Confluence Windows</li>
+            <li>Short & Long Squeeze Backtest</li>
+          </ul>
+        </UpgradeGate>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #020617 50%, #000 100%)' }}>

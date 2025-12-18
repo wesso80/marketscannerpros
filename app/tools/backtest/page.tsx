@@ -3,6 +3,8 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import UpgradeGate from '@/components/UpgradeGate';
+import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 
 interface BacktestResult {
   totalTrades: number;
@@ -45,6 +47,7 @@ interface EquityPoint {
 }
 
 function BacktestContent() {
+  const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('SPY');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-12-31');
@@ -55,6 +58,37 @@ function BacktestContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Tier gate - Pro Trader only
+  if (tierLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#94a3b8' }}>Loading...</div>
+      </div>
+    );
+  }
+
+  if (!canAccessBacktest(tier)) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+        <ToolsPageHeader
+          badge="STRATEGY LAB"
+          title="Strategy Backtester"
+          subtitle="Test and iterate trading ideas with historical data."
+          icon="📊"
+          backHref="/tools"
+        />
+        <UpgradeGate requiredTier="pro_trader" feature="Real Alpha Vantage Backtesting">
+          <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
+            <li>Test strategies with real market data</li>
+            <li>Multiple strategy types (EMA, MACD, RSI)</li>
+            <li>Full performance metrics & equity curves</li>
+            <li>AI-powered backtest analysis</li>
+          </ul>
+        </UpgradeGate>
+      </div>
+    );
+  }
 
   const runBacktest = async () => {
     setIsLoading(true);

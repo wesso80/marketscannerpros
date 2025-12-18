@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 
 interface JournalEntry {
   id: number;
@@ -23,6 +24,7 @@ interface JournalEntry {
 }
 
 function JournalContent() {
+  const { tier } = useUserTier();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterTag, setFilterTag] = useState<string>('all');
@@ -230,19 +232,26 @@ function JournalContent() {
       {entries.length > 0 && (
         <>
           <button
-            onClick={exportToCSV}
+            onClick={() => {
+              if (canExportCSV(tier)) {
+                exportToCSV();
+              } else {
+                alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+              }
+            }}
             style={{
               padding: '10px 16px',
               background: 'transparent',
               border: '1px solid rgba(16,185,129,0.45)',
               borderRadius: '10px',
-              color: '#34d399',
+              color: canExportCSV(tier) ? '#34d399' : '#6b7280',
               fontSize: '13px',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              opacity: canExportCSV(tier) ? 1 : 0.6
             }}
           >
-            📥 Export CSV
+            📥 Export CSV {!canExportCSV(tier) && '🔒'}
           </button>
           <button
             onClick={clearAllEntries}

@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import { useUserTier, canExportCSV, getPortfolioLimit } from '@/lib/useUserTier';
 
 interface Position {
   id: number;
@@ -29,6 +30,8 @@ interface PerformanceSnapshot {
 }
 
 function PortfolioContent() {
+  const { tier } = useUserTier();
+  const portfolioLimit = getPortfolioLimit(tier);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [positions, setPositions] = useState<Position[]>([]);
@@ -174,6 +177,12 @@ function PortfolioContent() {
   }, [positions, closedPositions]);
 
   const addPosition = () => {
+    // Check portfolio limit for free tier
+    if (positions.length >= portfolioLimit) {
+      alert(`Free tier is limited to ${portfolioLimit} positions. Upgrade to Pro for unlimited portfolio tracking.`);
+      return;
+    }
+    
     if (!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice) {
       alert('Please fill in all fields');
       return;
@@ -389,31 +398,44 @@ function PortfolioContent() {
           <>
             {positions.length > 0 && (
               <button
-                onClick={exportPositionsToCSV}
+                onClick={() => {
+                  if (canExportCSV(tier)) {
+                    exportPositionsToCSV();
+                  } else {
+                    alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+                  }
+                }}
                 style={{
                   padding: '8px 16px',
                   background: 'transparent',
                   border: '1px solid #10b981',
                   borderRadius: '6px',
-                  color: '#10b981',
+                  color: canExportCSV(tier) ? '#10b981' : '#6b7280',
                   fontSize: '13px',
                   fontWeight: '500',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  opacity: canExportCSV(tier) ? 1 : 0.6
                 }}
               >
-                📥 Export Positions
+                📥 Export Positions {!canExportCSV(tier) && '🔒'}
               </button>
             )}
             {closedPositions.length > 0 && (
               <button
-                onClick={exportHistoryToCSV}
+                onClick={() => {
+                  if (canExportCSV(tier)) {
+                    exportHistoryToCSV();
+                  } else {
+                    alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+                  }
+                }}
                 style={{
                   padding: '8px 16px',
                   background: 'transparent',
                   border: '1px solid #3b82f6',
                   borderRadius: '6px',
-                  color: '#3b82f6',
+                  color: canExportCSV(tier) ? '#3b82f6' : '#6b7280',
                   fontSize: '13px',
                   fontWeight: '500',
                   cursor: 'pointer',
