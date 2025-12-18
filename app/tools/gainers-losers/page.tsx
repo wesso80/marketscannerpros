@@ -43,8 +43,8 @@ export default function GainersLosersPage() {
         setActive(data.mostActive.slice(0, 20));
         setLastUpdated(new Date());
         // Extract the date from Alpha Vantage metadata
-        if (data.metadata?.last_updated) {
-          setMarketDate(data.metadata.last_updated);
+        if (data.lastUpdated) {
+          setMarketDate(data.lastUpdated);
         }
       }
     } catch (error) {

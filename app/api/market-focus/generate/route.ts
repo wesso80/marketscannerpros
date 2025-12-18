@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // Allow up to 60 seconds for generation
 
 function getOpenAIClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -127,25 +128,26 @@ export async function POST(req: NextRequest) {
       await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
     }
 
-    // Fetch candidates - use current domain to avoid cross-origin issues
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL || "https://www.marketscannerpros.app";
+    // Fetch candidates - always use production URL to avoid deployment URL issues
+    const baseUrl = "https://www.marketscannerpros.app";
 
     console.log("[generate] Fetching candidates from:", baseUrl);
     
     // Fetch each asset class separately to handle failures individually
     const fetchCandidatesForClass = async (assetClass: string) => {
       try {
+        console.log(`[generate] Fetching ${assetClass} candidates...`);
         const res = await fetch(`${baseUrl}/api/market-focus/candidates?assetClass=${assetClass}&_t=${Date.now()}`, { 
           cache: "no-store",
           headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }
         });
         if (!res.ok) {
-          console.error(`[generate] ${assetClass} candidates error:`, res.status);
+          const errText = await res.text().catch(() => '');
+          console.error(`[generate] ${assetClass} candidates error:`, res.status, errText);
           return [];
         }
         const data = await res.json();
+        console.log(`[generate] ${assetClass} got ${data.candidates?.length || 0} candidates`);
         return data.candidates || [];
       } catch (err: any) {
         console.error(`[generate] ${assetClass} fetch failed:`, err?.message);

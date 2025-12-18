@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       metadata: data.metadata,
+      lastUpdated: data.last_updated, // Alpha Vantage's last update timestamp
       topGainers: data.top_gainers || [],
       topLosers: data.top_losers || [],
       mostActive: data.most_actively_traded || [],
