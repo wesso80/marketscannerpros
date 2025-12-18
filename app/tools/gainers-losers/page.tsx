@@ -13,6 +13,8 @@ interface MarketMover {
 
 export default function GainersLosersPage() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [gainers, setGainers] = useState<MarketMover[]>([]);
   const [losers, setLosers] = useState<MarketMover[]>([]);
   const [active, setActive] = useState<MarketMover[]>([]);
@@ -22,21 +24,29 @@ export default function GainersLosersPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    
     try {
-      const response = await fetch("/api/market-movers");
+      // Add cache-busting timestamp
+      const response = await fetch(`/api/market-movers?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       const data = await response.json();
       
       if (data.success) {
         setGainers(data.topGainers.slice(0, 20));
         setLosers(data.topLosers.slice(0, 20));
         setActive(data.mostActive.slice(0, 20));
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error("Failed to fetch market movers:", error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -53,6 +63,45 @@ export default function GainersLosersPage() {
       />
       <main style={{ padding: "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>
+
+        {/* Refresh bar */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '16px',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ color: '#64748b', fontSize: '13px' }}>
+            {lastUpdated && `Last updated: ${lastUpdated.toLocaleTimeString()}`}
+          </div>
+          <button
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              background: refreshing ? '#334155' : 'linear-gradient(135deg, #10b981, #059669)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#fff',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: refreshing ? 'wait' : 'pointer',
+              opacity: refreshing ? 0.7 : 1,
+              transition: 'all 0.2s'
+            }}
+          >
+            <span style={{ 
+              display: 'inline-block',
+              animation: refreshing ? 'spin 1s linear infinite' : 'none'
+            }}>🔄</span>
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          </button>
+        </div>
 
         {/* Tabs */}
         <div
