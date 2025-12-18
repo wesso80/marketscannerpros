@@ -2175,12 +2175,41 @@ def delete_alert(alert_id: int, workspace_id: Optional[str] = None) -> bool:
     return result is not None and result > 0
 
 def get_current_price(symbol: str) -> Optional[float]:
-    """Get current price for a symbol using Alpha Vantage (no yfinance)"""
+    """Get current price for a symbol using Alpha Vantage (no yfinance).
+    Auto-detects crypto (symbols ending in -USD) and uses appropriate endpoint."""
     try:
-        # Use Alpha Vantage GLOBAL_QUOTE for current price
+        # Auto-detect crypto (symbols like BTC-USD, ETH-USD, JUP-USD)
+        is_crypto = symbol.upper().endswith("-USD")
+        base_symbol = symbol.replace("-USD", "").replace("-AUD", "").upper()
+        
+        if is_crypto:
+            # Use DIGITAL_CURRENCY_DAILY for crypto
+            params = {
+                "function": "DIGITAL_CURRENCY_DAILY",
+                "symbol": base_symbol,
+                "market": "USD",
+                "apikey": ALPHA_VANTAGE_API_KEY
+            }
+            response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Find Time Series key
+            for key in data.keys():
+                if "Time Series" in key:
+                    ts = data[key]
+                    if ts:
+                        # Get latest entry (first item in ordered dict)
+                        latest = next(iter(ts.values()))
+                        price = latest.get("4a. close (USD)") or latest.get("4. close")
+                        if price:
+                            return float(price)
+            return None
+        
+        # For stocks/equities, use GLOBAL_QUOTE
         params = {
             "function": "GLOBAL_QUOTE",
-            "symbol": symbol.replace("-USD", "").upper(),
+            "symbol": base_symbol,
             "apikey": ALPHA_VANTAGE_API_KEY
         }
         response = requests.get("https://www.alphavantage.co/query", params=params, timeout=10)
@@ -2195,7 +2224,7 @@ def get_current_price(symbol: str) -> Optional[float]:
         # Fallback: get latest close from TIME_SERIES_INTRADAY
         params = {
             "function": "TIME_SERIES_INTRADAY",
-            "symbol": symbol.replace("-USD", "").upper(),
+            "symbol": base_symbol,
             "interval": "5min",
             "apikey": ALPHA_VANTAGE_API_KEY
         }
