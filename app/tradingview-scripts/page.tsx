@@ -28,12 +28,13 @@ const scripts = [
     type: "TV: Strategy"
   },
   {
-    name: "Time Confluence Windows v6",
-    description: "Tracks multiple timeframe closes (30m to 8h) with countdown timers, previous 50% levels, and background shading when confluence stacks. Scans D/W/M within 22h of close for high-probability timing zones.",
+    name: "Time Confluence Windows v6.7 - Hot Zones",
+    description: "Tracks multiple timeframe closes (30m to 8h) with countdown timers, 50% levels, distance percentage, and cluster detection. Hot Zone alerts when 3+ TFs close within 5 minutes.",
     image: "/images/time-confluence.png",
     status: "Live · Invite-only",
     focus: "Timing zones",
-    type: "TV: Indicator"
+    type: "TV: Indicator",
+    isNew: true
   },
   {
     name: "Short & Long Squeeze Backtest v6",
@@ -49,8 +50,7 @@ const scripts = [
     image: "/images/aplus-scanner.png",
     status: "Live · Invite-only",
     focus: "Setup scoring",
-    type: "TV: Indicator",
-    isNew: true
+    type: "TV: Indicator"
   }
 ];
 
