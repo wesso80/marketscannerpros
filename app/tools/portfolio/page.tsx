@@ -64,10 +64,15 @@ function PortfolioContent() {
   // Fetch price from backend quote API; try crypto first, then stock, finally fx.
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = normalizeSymbol(symbol);
+    const cacheBust = Date.now(); // Force fresh data
     
     const tryFetch = async (url: string) => {
       try {
-        const r = await fetch(url, { cache: 'no-store' });
+        const fullUrl = `${url}&_t=${cacheBust}`;
+        const r = await fetch(fullUrl, { 
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
         if (!r.ok) {
           console.warn(`API returned ${r.status} for ${url}`);
           return null;

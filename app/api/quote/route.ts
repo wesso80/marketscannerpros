@@ -73,7 +73,7 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
     try {
       // Use DIGITAL_CURRENCY_DAILY to get latest close price
       const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url, { next: { revalidate: 60 } }); // Cache 60s
+      const res = await fetch(url, { cache: 'no-store' }); // Always fresh
       const data = await res.json();
 
       // Get the most recent day's closing price
@@ -134,7 +134,7 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
     const marketLower = market.toLowerCase();
 
     const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=${marketLower}`;
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();
 
     const price = data[coinId]?.[marketLower];
@@ -157,7 +157,7 @@ async function getStockPrice(symbol: string): Promise<number | null> {
 
   try {
     const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();
 
     const price = data["Global Quote"]?.["05. price"];
@@ -181,7 +181,7 @@ async function getFxPrice(symbol: string, market: string): Promise<number | null
 
   try {
     const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const res = await fetch(url, { next: { revalidate: 60 } });
+    const res = await fetch(url, { cache: 'no-store' });
     const data = await res.json();
 
     const rate = data["Realtime Currency Exchange Rate"]?.[
