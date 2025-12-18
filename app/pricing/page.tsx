@@ -105,8 +105,11 @@ export default function PricingPage() {
           border: '1px solid rgba(34,197,94,0.3)',
           textAlign: 'center'
         }}>
-          <p style={{ margin: 0, color: '#bbf7d0', fontSize: 15, fontWeight: 500 }}>
-            🎉 Currently FREE for everyone while we finalize our platform. Enjoy Pro features at no cost!
+          <p style={{ margin: 0, color: '#bbf7d0', fontSize: 15, fontWeight: 600 }}>
+            🎉 Early Access — Full Pro features unlocked for a limited time
+          </p>
+          <p style={{ margin: '6px 0 0 0', color: '#86efac', fontSize: 13, fontWeight: 400 }}>
+            We're onboarding early users and partners before public launch.
           </p>
         </div>
 
