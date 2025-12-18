@@ -35,14 +35,6 @@ interface EarningsEvent {
   currency: string;
 }
 
-interface AISummary {
-  bias: 'Bullish' | 'Bearish' | 'Mixed' | 'Neutral';
-  themes: string[];
-  topAssets?: string[];
-  risks: string;
-  overview?: string; // fallback
-}
-
 type TabType = "news" | "earnings";
 
 export default function NewsSentimentPage() {
@@ -55,11 +47,6 @@ export default function NewsSentimentPage() {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [error, setError] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
-
-  // AI Summary state
-  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
   const [expandedArticle, setExpandedArticle] = useState<number | null>(null);
 
   // Earnings state
@@ -78,8 +65,6 @@ export default function NewsSentimentPage() {
     setLoading(true);
     setError("");
     setArticles([]);
-    setAiSummary(null);
-    setAiError(null);
 
     try {
       const response = await fetch(`/api/news-sentiment?tickers=${tickers.toUpperCase()}&limit=${limit}`);
@@ -94,118 +79,6 @@ export default function NewsSentimentPage() {
       setError("Network error - please try again");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const generateAISummary = async () => {
-    if (articles.length === 0) return;
-    
-    setAiLoading(true);
-    setAiError(null);
-    
-    try {
-      // Use top 5 articles with sentiment labels for analysis
-      const recentArticles = articles.slice(0, 5);
-      const newsContext = recentArticles.map((a, i) => 
-        `${i+1}. ${a.title} [${a.sentiment.label}]`
-      ).join('\n');
-
-      const tickerList = tickers.split(',').map(t => t.trim()).slice(0, 5).join(', ');
-
-      const response = await fetch('/api/msp-analyst', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `Analyze these ${recentArticles.length} headlines for ${tickerList}:
-${newsContext}
-
-Rules:
-- Weight by impact and recurrence
-- State uncertainty if sentiment is mixed
-- No optimistic/pessimistic language without support
-
-JSON response:
-{"bias":"Bullish|Neutral|Bearish|Mixed","themes":["theme1","theme2","theme3"],"topAssets":["SYM1","SYM2"],"risks":"key risks/caveats"}`,
-          context: { symbol: tickerList }
-        })
-      });
-
-      if (response.status === 401) {
-        setAiError('Sign in to use AI Market Summary');
-        return;
-      }
-      
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData?.error || `AI request failed (${response.status})`);
-      }
-
-      const data = await response.json();
-      const text = data?.text || data?.content || '';
-      
-      // Parse JSON from response
-      try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          setAiSummary(parsed);
-        } else {
-          // Fallback: create summary from text
-          setAiSummary({
-            bias: 'Neutral',
-            themes: [],
-            topAssets: [],
-            risks: 'Unable to parse AI response'
-          });
-        }
-      } catch {
-        setAiSummary({
-          bias: 'Neutral',
-          themes: [],
-          topAssets: [],
-          risks: 'Unable to parse AI response'
-        });
-      }
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'Failed to generate AI summary');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const getSentimentBgColor = (sentiment: string) => {
-    switch (sentiment) {
-      case 'bullish': return 'rgba(16, 185, 129, 0.15)';
-      case 'bearish': return 'rgba(239, 68, 68, 0.15)';
-      case 'mixed': return 'rgba(245, 158, 11, 0.15)';
-      default: return 'rgba(148, 163, 184, 0.15)';
-    }
-  };
-
-  const getSentimentBorderColor = (sentiment: string) => {
-    switch (sentiment) {
-      case 'bullish': return 'rgba(16, 185, 129, 0.4)';
-      case 'bearish': return 'rgba(239, 68, 68, 0.4)';
-      case 'mixed': return 'rgba(245, 158, 11, 0.4)';
-      default: return 'rgba(148, 163, 184, 0.4)';
-    }
-  };
-
-  const getSentimentTextColor = (sentiment: string) => {
-    switch (sentiment) {
-      case 'bullish': return '#10B981';
-      case 'bearish': return '#EF4444';
-      case 'mixed': return '#F59E0B';
-      default: return '#94A3B8';
-    }
-  };
-
-  const getSentimentIcon = (sentiment: string) => {
-    switch (sentiment) {
-      case 'bullish': return '📈';
-      case 'bearish': return '📉';
-      case 'mixed': return '↔️';
-      default: return '➖';
     }
   };
 
@@ -388,179 +261,6 @@ JSON response:
         {error && (
           <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
             {error}
-          </div>
-        )}
-
-        {/* AI Market Summary */}
-        {articles.length > 0 && (
-          <div style={{ 
-            background: "linear-gradient(145deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08))", 
-            borderRadius: "16px", 
-            border: "1px solid rgba(59,130,246,0.3)", 
-            padding: "1.5rem", 
-            marginBottom: "2rem",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.2)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: aiSummary ? "1rem" : "0", flexWrap: "wrap", gap: "1rem" }}>
-              <h3 style={{ 
-                fontSize: "1.1rem", 
-                fontWeight: "bold", 
-                color: "#60A5FA", 
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: "10px"
-              }}>
-                <span style={{ fontSize: "1.25rem" }}>🧠</span> AI Market Summary
-              </h3>
-              {!aiSummary && (
-                <button
-                  onClick={generateAISummary}
-                  disabled={aiLoading}
-                  style={{ 
-                    padding: "0.6rem 1.25rem", 
-                    background: aiLoading ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg, #3B82F6, #8B5CF6)", 
-                    border: "none", 
-                    borderRadius: "8px", 
-                    color: "#fff", 
-                    fontWeight: "600", 
-                    cursor: aiLoading ? "not-allowed" : "pointer",
-                    fontSize: "14px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px"
-                  }}
-                >
-                  {aiLoading ? (
-                    <>
-                      <span style={{ animation: "spin 1s linear infinite" }}>⏳</span>
-                      Analyzing {articles.length} articles...
-                    </>
-                  ) : (
-                    <>
-                      <span>✨</span>
-                      Generate Summary
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-
-            {aiError && (
-              <div style={{ padding: "0.75rem", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "8px", color: "#FCA5A5", fontSize: "14px" }}>
-                {aiError}
-              </div>
-            )}
-
-            {aiSummary && (
-              <div>
-                {/* Overall Bias Badge */}
-                <div style={{ 
-                  display: "inline-flex", 
-                  alignItems: "center", 
-                  gap: "8px",
-                  padding: "6px 14px",
-                  background: getSentimentBgColor(aiSummary.bias.toLowerCase()),
-                  border: `1px solid ${getSentimentBorderColor(aiSummary.bias.toLowerCase())}`,
-                  borderRadius: "20px",
-                  marginBottom: "1rem"
-                }}>
-                  <span>{getSentimentIcon(aiSummary.bias.toLowerCase())}</span>
-                  <span style={{ 
-                    color: getSentimentTextColor(aiSummary.bias.toLowerCase()), 
-                    fontWeight: "600", 
-                    fontSize: "14px"
-                  }}>
-                    {aiSummary.bias} Outlook
-                  </span>
-                </div>
-
-                {/* Key Themes */}
-                {aiSummary.themes && aiSummary.themes.length > 0 && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
-                      📊 Dominant Themes:
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {aiSummary.themes.map((theme, i) => (
-                        <span key={i} style={{
-                          padding: "6px 12px",
-                          background: "rgba(59, 130, 246, 0.15)",
-                          border: "1px solid rgba(59, 130, 246, 0.3)",
-                          borderRadius: "6px",
-                          color: "#93C5FD",
-                          fontSize: "13px"
-                        }}>
-                          {theme}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Top Assets */}
-                {aiSummary.topAssets && aiSummary.topAssets.length > 0 && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
-                      🎯 Most Mentioned Assets:
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {aiSummary.topAssets.map((asset, i) => (
-                        <span key={i} style={{
-                          padding: "6px 12px",
-                          background: "rgba(16, 185, 129, 0.15)",
-                          border: "1px solid rgba(16, 185, 129, 0.3)",
-                          borderRadius: "6px",
-                          color: "#10B981",
-                          fontSize: "13px",
-                          fontWeight: "600"
-                        }}>
-                          {asset}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Risks & Caveats */}
-                {aiSummary.risks && (
-                  <div style={{
-                    padding: "12px 16px",
-                    background: "rgba(251, 191, 36, 0.08)",
-                    border: "1px solid rgba(251, 191, 36, 0.25)",
-                    borderRadius: "8px"
-                  }}>
-                    <div style={{ fontSize: "13px", color: "#FBBF24", marginBottom: "6px", fontWeight: "600" }}>
-                      ⚠️ Key Risks & Caveats:
-                    </div>
-                    <p style={{ color: "#FDE68A", fontSize: "13px", lineHeight: "1.6", margin: 0 }}>
-                      {aiSummary.risks}
-                    </p>
-                  </div>
-                )}
-
-                {/* Regenerate Button */}
-                <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(59,130,246,0.2)" }}>
-                  <button
-                    onClick={generateAISummary}
-                    disabled={aiLoading}
-                    style={{ 
-                      padding: "0.5rem 1rem", 
-                      background: "transparent", 
-                      border: "1px solid rgba(59,130,246,0.3)", 
-                      borderRadius: "6px", 
-                      color: "#60A5FA", 
-                      fontWeight: "500", 
-                      cursor: aiLoading ? "not-allowed" : "pointer",
-                      fontSize: "13px",
-                      opacity: aiLoading ? 0.5 : 1
-                    }}
-                  >
-                    🔄 Regenerate Summary
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
