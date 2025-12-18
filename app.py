@@ -3328,6 +3328,7 @@ def init_trade_journal_table():
         quantity DECIMAL(12,4) NOT NULL,
         direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT')),
         trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin')),
+        option_type TEXT CHECK (option_type IN ('Call', 'Put')),
         strike_price DECIMAL(12,4),
         expiration_date DATE,
         stop_loss DECIMAL(12,4),
@@ -3354,16 +3355,20 @@ def init_trade_journal_table():
     try:
         # Add columns if missing
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot'")
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS option_type TEXT")
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS strike_price DECIMAL(12,4)")
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS expiration_date DATE")
         # Update constraint to allow all trade types (drop old constraint if exists, add new)
         execute_db_write("ALTER TABLE trade_journal DROP CONSTRAINT IF EXISTS trade_journal_trade_type_check")
         execute_db_write("ALTER TABLE trade_journal ADD CONSTRAINT trade_journal_trade_type_check CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin', 'Leverage'))")
+        execute_db_write("ALTER TABLE trade_journal DROP CONSTRAINT IF EXISTS trade_journal_option_type_check")
+        execute_db_write("ALTER TABLE trade_journal ADD CONSTRAINT trade_journal_option_type_check CHECK (option_type IN ('Call', 'Put'))")
     except:
         pass
 
 def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price: float, 
                          quantity: float, direction: str, trade_type: str = "Spot",
+                         option_type: Optional[str] = None,
                          strike_price: Optional[float] = None, expiration_date = None,
                          stop_loss: Optional[float] = None, 
                          take_profit: Optional[float] = None, setup_type: Optional[str] = None, 
@@ -3373,12 +3378,12 @@ def add_trade_to_journal(workspace_id: str, symbol: str, entry_date, entry_price
         query = """
         INSERT INTO trade_journal 
         (workspace_id, symbol, entry_date, entry_price, quantity, direction, trade_type,
-         strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+         option_type, strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
         RETURNING id
         """
         params = (workspace_id, symbol.upper(), entry_date, entry_price, quantity, 
-                 direction, trade_type, strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags)
+                 direction, trade_type, option_type, strike_price, expiration_date, stop_loss, take_profit, setup_type, entry_reason, tags)
         result = execute_db_write_returning(query, params)
         return result is not None
     except Exception as e:
@@ -7581,6 +7586,7 @@ else:
             quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
     
         with col2:
+            option_type = st.selectbox("Option Type:", ["", "Call", "Put"], key="journal_option_type", help="For options trades only") if trade_type == "Options" else None
             strike_price = st.number_input("Strike Price (Options):", min_value=0.0, step=0.5, key="journal_strike", help="For options trades only")
             expiration_date = st.date_input("Expiration Date (Options):", value=None, key="journal_expiration", help="For options trades only")
             stop_loss = st.number_input("Stop Loss (Optional):", min_value=0.0, step=0.01, key="journal_stop", help="Used for R-multiple calculation")
@@ -7621,6 +7627,7 @@ else:
                         quantity=quantity,
                         direction=direction,
                         trade_type=trade_type,
+                        option_type=option_type if option_type else None,
                         strike_price=strike_price if strike_price > 0 else None,
                         expiration_date=expiration_date if expiration_date else None,
                         stop_loss=stop_loss if stop_loss > 0 else None,
