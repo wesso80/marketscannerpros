@@ -10,6 +10,10 @@ interface JournalEntry {
   date: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
+  tradeType: 'Spot' | 'Options' | 'Futures' | 'Margin';
+  optionType?: 'Call' | 'Put';
+  strikePrice?: number;
+  expirationDate?: string;
   entryPrice: number;
   exitPrice: number;
   quantity: number;
@@ -33,6 +37,10 @@ function JournalContent() {
     date: new Date().toISOString().split('T')[0],
     symbol: '',
     side: 'LONG' as 'LONG' | 'SHORT',
+    tradeType: 'Spot' as 'Spot' | 'Options' | 'Futures' | 'Margin',
+    optionType: '' as '' | 'Call' | 'Put',
+    strikePrice: '',
+    expirationDate: '',
     entryPrice: '',
     exitPrice: '',
     quantity: '',
@@ -91,6 +99,10 @@ function JournalContent() {
       date: newEntry.date,
       symbol: newEntry.symbol.toUpperCase(),
       side: newEntry.side,
+      tradeType: newEntry.tradeType,
+      optionType: newEntry.optionType || undefined,
+      strikePrice: newEntry.strikePrice ? parseFloat(newEntry.strikePrice) : undefined,
+      expirationDate: newEntry.expirationDate || undefined,
       entryPrice: entry,
       exitPrice: exit,
       quantity: qty,
@@ -109,6 +121,10 @@ function JournalContent() {
       date: new Date().toISOString().split('T')[0],
       symbol: '',
       side: 'LONG',
+      tradeType: 'Spot',
+      optionType: '',
+      strikePrice: '',
+      expirationDate: '',
       entryPrice: '',
       exitPrice: '',
       quantity: '',
@@ -144,13 +160,17 @@ function JournalContent() {
     }
 
     // CSV headers
-    const headers = ['Date', 'Symbol', 'Side', 'Quantity', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Strategy', 'Setup', 'Notes', 'Emotions', 'Tags', 'Outcome'];
+    const headers = ['Date', 'Symbol', 'Side', 'Trade Type', 'Option Type', 'Strike Price', 'Expiration', 'Quantity', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Strategy', 'Setup', 'Notes', 'Emotions', 'Tags', 'Outcome'];
     
     // CSV rows
     const rows = filteredEntries.map(entry => [
       entry.date,
       entry.symbol,
       entry.side,
+      entry.tradeType || 'Spot',
+      entry.optionType || '',
+      entry.strikePrice || '',
+      entry.expirationDate || '',
       entry.quantity,
       entry.entryPrice,
       entry.exitPrice,
@@ -580,6 +600,30 @@ function JournalContent() {
 
               <div>
                 <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
+                  Trade Type *
+                </label>
+                <select
+                  value={newEntry.tradeType}
+                  onChange={(e) => setNewEntry({...newEntry, tradeType: e.target.value as 'Spot' | 'Options' | 'Futures' | 'Margin', optionType: e.target.value !== 'Options' ? '' : newEntry.optionType})}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="Spot">Spot</option>
+                  <option value="Options">Options</option>
+                  <option value="Futures">Futures</option>
+                  <option value="Margin">Margin</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                   Quantity *
                 </label>
                 <input
@@ -646,6 +690,74 @@ function JournalContent() {
                 />
               </div>
             </div>
+
+            {/* Options-specific fields */}
+            {newEntry.tradeType === 'Options' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
+                    Option Type *
+                  </label>
+                  <select
+                    value={newEntry.optionType}
+                    onChange={(e) => setNewEntry({...newEntry, optionType: e.target.value as '' | 'Call' | 'Put'})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: '#f1f5f9',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    <option value="Call">Call</option>
+                    <option value="Put">Put</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
+                    Strike Price
+                  </label>
+                  <input
+                    type="number"
+                    value={newEntry.strikePrice}
+                    onChange={(e) => setNewEntry({...newEntry, strikePrice: e.target.value})}
+                    placeholder="150.00"
+                    step="0.5"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: '#f1f5f9',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
+                    Expiration Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newEntry.expirationDate}
+                    onChange={(e) => setNewEntry({...newEntry, expirationDate: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      background: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '6px',
+                      color: '#f1f5f9',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
               <div>
