@@ -3327,7 +3327,7 @@ def init_trade_journal_table():
         exit_price DECIMAL(12,4),
         quantity DECIMAL(12,4) NOT NULL,
         direction TEXT NOT NULL CHECK (direction IN ('LONG', 'SHORT')),
-        trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage')),
+        trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin')),
         strike_price DECIMAL(12,4),
         expiration_date DATE,
         stop_loss DECIMAL(12,4),
@@ -3352,9 +3352,13 @@ def init_trade_journal_table():
     execute_db_write(create_table_query)
     
     try:
-        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot' CHECK (trade_type IN ('Spot', 'Leverage'))")
+        # Add columns if missing
+        execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS trade_type TEXT DEFAULT 'Spot'")
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS strike_price DECIMAL(12,4)")
         execute_db_write("ALTER TABLE trade_journal ADD COLUMN IF NOT EXISTS expiration_date DATE")
+        # Update constraint to allow all trade types (drop old constraint if exists, add new)
+        execute_db_write("ALTER TABLE trade_journal DROP CONSTRAINT IF EXISTS trade_journal_trade_type_check")
+        execute_db_write("ALTER TABLE trade_journal ADD CONSTRAINT trade_journal_trade_type_check CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin', 'Leverage'))")
     except:
         pass
 
@@ -7571,7 +7575,7 @@ else:
         with col1:
             journal_symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="journal_symbol").upper()
             direction = st.selectbox("Direction:", ["LONG", "SHORT"], key="journal_direction")
-            trade_type = st.selectbox("Trade Type:", ["Spot", "Leverage"], key="journal_trade_type")
+            trade_type = st.selectbox("Trade Type:", ["Spot", "Options", "Futures", "Margin"], key="journal_trade_type")
             entry_date = st.date_input("Entry Date:", key="journal_entry_date")
             entry_price = st.number_input("Entry Price:", min_value=0.01, step=0.01, key="journal_entry_price")
             quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="journal_quantity")
