@@ -76,15 +76,21 @@ function BacktestContent() {
         })
       });
 
+      const result = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Backtest failed');
+        throw new Error(result?.error || 'Backtest failed');
       }
 
-      const result = await response.json();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
       setResults(result);
     } catch (error) {
       console.error('Backtest error:', error);
-      alert('Failed to run backtest. Please try again.');
+      const errMsg = error instanceof Error ? error.message : 'Failed to run backtest';
+      alert(`Backtest error: ${errMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -106,13 +112,16 @@ function BacktestContent() {
           },
         })
       });
+      const data = await response.json();
       if (response.status === 401) {
-        setAiError('Please sign in to use AI.');
+        setAiError('Please sign in to use AI features.');
         return;
       }
-      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-      const data = await response.json();
-      const text = data?.text || data?.message || data?.response || JSON.stringify(data);
+      if (!response.ok) {
+        const errMsg = data?.error || data?.message || `AI request failed (${response.status})`;
+        throw new Error(errMsg);
+      }
+      const text = data?.text || data?.content || data?.message || data?.response || JSON.stringify(data);
       setAiText(text);
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Failed to get AI summary');

@@ -11,10 +11,14 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    // Fetch both overview and current quote in parallel
+    const [overviewResponse, quoteResponse] = await Promise.all([
+      fetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
+      fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`)
+    ]);
     
-    const response = await fetch(url);
-    const data = await response.json();
+    const data = await overviewResponse.json();
+    const quoteData = await quoteResponse.json();
     
     if (data['Error Message'] || data['Note']) {
       return NextResponse.json(
@@ -29,6 +33,11 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Extract current price from quote
+    const globalQuote = quoteData['Global Quote'] || {};
+    const currentPrice = globalQuote['05. price'] || null;
+    const changePercent = globalQuote['10. change percent'] || null;
     
     return NextResponse.json({
       success: true,
@@ -69,6 +78,9 @@ export async function GET(request: NextRequest) {
         sharesOutstanding: data.SharesOutstanding,
         dividendDate: data.DividendDate,
         exDividendDate: data.ExDividendDate,
+        // New: current price data
+        currentPrice,
+        changePercent,
       }
     });
   } catch (error) {
