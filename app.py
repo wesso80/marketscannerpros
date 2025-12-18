@@ -5511,7 +5511,7 @@ def is_ios_app() -> bool:
 TIER_CONFIG = {
     'free': {
         'name': '📱 Free Tier',
-        'features': ['Top 10 equities + Top 10 crypto', 'MSP Analyst AI (5 questions/day)', 'Portfolio tracking (3 symbols)', 'Trade journal', 'Real-time data'],
+        'features': ['Top 10 equities + Top 10 crypto', 'MSP Analyst AI (10 questions/day)', 'Portfolio tracking (3 symbols)', 'Trade journal', 'Real-time data'],
         'scan_limit': None,
         'alert_limit': 0,
         'portfolio_limit': 3,

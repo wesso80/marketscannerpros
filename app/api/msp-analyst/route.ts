@@ -86,17 +86,17 @@ export async function POST(req: NextRequest) {
 
     const { workspaceId, tier } = session;
 
-    // Define tier limits
-    const tierLimits: Record<string, number | null> = {
-      'free': 5,
+    // Define tier limits (fair-use caps to prevent abuse)
+    const tierLimits: Record<string, number> = {
+      'free': 10,
       'pro': 50,
-      'pro_trader': null, // Unlimited
+      'pro_trader': 200, // Fair-use cap (generous for professional workflows)
     };
 
-    const dailyLimit = tierLimits[tier] || 5; // Default to free tier
+    const dailyLimit = tierLimits[tier] || 10; // Default to free tier
 
-    // Check usage if not unlimited
-    if (dailyLimit !== null) {
+    // Check usage against daily limit
+    if (dailyLimit) {
       try {
         const today = new Date().toISOString().split('T')[0];
         const usageResult = await sql`
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
           
           return new Response(
             JSON.stringify({ 
-              error: `Daily AI question limit reached (${dailyLimit} questions/day). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for unlimited.' : 'Limit resets at midnight UTC.'}`,
+              error: `Daily AI question limit reached (${dailyLimit}/day). ${tier === 'free' ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' : 'Limit resets at midnight UTC.'}`,
               limitReached: true,
               tier,
               dailyLimit,

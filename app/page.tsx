@@ -333,21 +333,27 @@ export default function Home() {
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
-                  "Top 10 equities + Top 10 crypto",
-                  "MSP Analyst AI (5 questions/day)",
-                  "Multi-timeframe scanning",
-                  "Trade journal + Portfolio",
-                  "Real-time market data"
+                  { text: "Top 10 equities + Top 10 crypto", highlight: false },
+                  { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
+                  { text: "Multi-timeframe scanning", highlight: false },
+                  { text: "Trade journal + Portfolio", highlight: false },
+                  { text: "Real-time market data", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 0',
-                    borderBottom: i < 4 ? '1px solid rgba(15,23,42,0.85)' : 'none'
+                    borderBottom: i < 4 ? '1px solid rgba(15,23,42,0.85)' : 'none',
+                    background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
+                    borderRadius: item.highlight ? 6 : 0,
+                    marginLeft: item.highlight ? -8 : 0,
+                    paddingLeft: item.highlight ? 8 : 0,
+                    marginRight: item.highlight ? -8 : 0,
+                    paddingRight: item.highlight ? 8 : 0
                   }}>
                     <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                    <span style={{ color: '#e5e7eb' }}>{item}</span>
+                    <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                   </li>
                 ))}
               </ul>
@@ -414,22 +420,28 @@ export default function Home() {
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
-                  "Everything in Free",
-                  "Unlimited symbol scanning",
-                  "MSP Analyst AI (50 questions/day)",
-                  "Advanced technical charts",
-                  "CSV exports (all tools)",
-                  "Priority support"
+                  { text: "Everything in Free", highlight: false },
+                  { text: "Unlimited symbol scanning", highlight: false },
+                  { text: "🤖 MSP Analyst AI (50/day)", highlight: true },
+                  { text: "Advanced technical charts", highlight: false },
+                  { text: "CSV exports (all tools)", highlight: false },
+                  { text: "Priority support", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 0',
-                    borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none'
+                    borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none',
+                    background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
+                    borderRadius: item.highlight ? 6 : 0,
+                    marginLeft: item.highlight ? -8 : 0,
+                    paddingLeft: item.highlight ? 8 : 0,
+                    marginRight: item.highlight ? -8 : 0,
+                    paddingRight: item.highlight ? 8 : 0
                   }}>
                     <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                    <span style={{ color: '#e5e7eb' }}>{item}</span>
+                    <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                   </li>
                 ))}
               </ul>
@@ -476,22 +488,28 @@ export default function Home() {
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
                 {[
-                  "Everything in Pro",
-                  "MSP Analyst AI (Unlimited)",
-                  "Real Alpha Vantage backtesting",
-                  "TradingView script access",
-                  "Advanced indicators",
-                  "Premium support"
+                  { text: "Everything in Pro", highlight: false },
+                  { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
+                  { text: "Real Alpha Vantage backtesting", highlight: false },
+                  { text: "TradingView script access", highlight: false },
+                  { text: "Advanced indicators", highlight: false },
+                  { text: "Premium support", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
                     padding: '8px 0',
+                    background: item.highlight ? 'rgba(96,165,250,0.1)' : 'transparent',
+                    borderRadius: item.highlight ? 6 : 0,
+                    marginLeft: item.highlight ? -8 : 0,
+                    paddingLeft: item.highlight ? 8 : 0,
+                    marginRight: item.highlight ? -8 : 0,
+                    paddingRight: item.highlight ? 8 : 0,
                     borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none'
                   }}>
                     <span style={{ color: '#60a5fa', fontSize: 16 }}>✓</span>
-                    <span style={{ color: '#e5e7eb' }}>{item}</span>
+                    <span style={{ color: item.highlight ? '#93c5fd' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                   </li>
                 ))}
               </ul>

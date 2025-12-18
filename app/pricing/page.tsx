@@ -25,51 +25,50 @@ export default function PricingPage() {
   };
 
   const freeFeatures = [
-    "Top 10 equities + Top 10 crypto",
-    "Multi-timeframe scanning",
-    "MSP Analyst AI (5 questions/day)",
-    "AI market insights & explanations",
-    "Basic portfolio tracker",
-    "Trade journal",
-    "Community support"
+    { text: "Top 10 equities + Top 10 crypto", highlight: false },
+    { text: "Multi-timeframe scanning", highlight: false },
+    { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
+    { text: "AI market insights & explanations", highlight: false },
+    { text: "Basic portfolio tracker", highlight: false },
+    { text: "Trade journal", highlight: false },
+    { text: "Community support", highlight: false }
   ];
 
   const proFeatures = [
-    "Everything in Free",
-    "Unlimited symbols scanning",
-    "MSP Analyst AI (50 questions/day)",
-    "AI-powered trade recommendations",
-    "AI technical analysis explanations",
-    "Multi-timeframe confluence",
-    "Advanced technical charts",
-    "Portfolio tracker with P&L",
-    "CSV exports (all tools)",
-    "Price alerts & notifications",
-    "Priority support"
+    { text: "Everything in Free", highlight: false },
+    { text: "Unlimited symbols scanning", highlight: false },
+    { text: "🤖 MSP Analyst AI (50/day)", highlight: true },
+    { text: "AI-powered trade recommendations", highlight: false },
+    { text: "AI technical analysis explanations", highlight: false },
+    { text: "Multi-timeframe confluence", highlight: false },
+    { text: "Advanced technical charts", highlight: false },
+    { text: "Portfolio tracker with P&L", highlight: false },
+    { text: "CSV exports (all tools)", highlight: false },
+    { text: "Priority support", highlight: false }
   ];
 
   const proTraderFeatures = [
-    "Everything in Pro",
-    "MSP Analyst AI (Unlimited questions)",
-    "AI-powered backtest analysis",
-    "AI strategy optimization suggestions",
-    "Real Alpha Vantage backtesting",
-    "Advanced strategy testing",
-    "TradingView script access",
-    "Priority email alerts",
-    "Advanced chart indicators",
-    "Psychology tracking in journal",
-    "Premium support"
+    { text: "Everything in Pro", highlight: false },
+    { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
+    { text: "AI-powered backtest analysis", highlight: false },
+    { text: "AI strategy optimization suggestions", highlight: false },
+    { text: "Real Alpha Vantage backtesting", highlight: false },
+    { text: "Advanced strategy testing", highlight: false },
+    { text: "TradingView script access", highlight: false },
+    { text: "Priority email alerts", highlight: false },
+    { text: "Advanced chart indicators", highlight: false },
+    { text: "Psychology tracking in journal", highlight: false },
+    { text: "Premium support", highlight: false }
   ];
 
   const faqs = [
     {
       q: "What is MSP Analyst AI?",
-      a: "MSP Analyst is your personal AI trading assistant powered by OpenAI GPT-4. Ask questions about market conditions, get technical analysis explanations, request trade ideas, and receive personalized insights based on your scans. Free tier gets 5 questions/day, Pro gets 50/day, Pro Trader gets unlimited."
+      a: "MSP Analyst is your personal AI trading assistant powered by OpenAI GPT-4. Ask questions about market conditions, get technical analysis explanations, request trade ideas, and receive personalized insights based on your scans. Free tier gets 10 questions/day, Pro gets 50/day, Pro Trader gets 200/day."
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
-      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds unlimited AI questions, real Alpha Vantage backtesting with actual market data, TradingView script access, and advanced indicators - essential tools for serious technical traders."
+      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds 200 AI questions/day, real Alpha Vantage backtesting with actual market data, TradingView script access, and advanced indicators - essential tools for serious technical traders."
     },
     {
       q: "How do I upgrade?",
@@ -164,10 +163,16 @@ export default function PricingPage() {
                   gap: 12,
                   padding: '10px 0',
                   borderBottom: i < freeFeatures.length - 1 ? '1px solid rgba(15,23,42,0.85)' : 'none',
-                  fontSize: 15
+                  fontSize: 15,
+                  background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
+                  borderRadius: item.highlight ? 6 : 0,
+                  marginLeft: item.highlight ? -10 : 0,
+                  paddingLeft: item.highlight ? 10 : 0,
+                  marginRight: item.highlight ? -10 : 0,
+                  paddingRight: item.highlight ? 10 : 0
                 }}>
                   <span style={{ color: '#22c55e', fontSize: 18 }}>✓</span>
-                  <span style={{ color: '#e5e7eb' }}>{item}</span>
+                  <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                 </li>
               ))}
             </ul>
@@ -243,10 +248,16 @@ export default function PricingPage() {
                   gap: 12,
                   padding: '10px 0',
                   borderBottom: i < proFeatures.length - 1 ? '1px solid rgba(15,23,42,0.85)' : 'none',
-                  fontSize: 15
+                  fontSize: 15,
+                  background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
+                  borderRadius: item.highlight ? 6 : 0,
+                  marginLeft: item.highlight ? -10 : 0,
+                  paddingLeft: item.highlight ? 10 : 0,
+                  marginRight: item.highlight ? -10 : 0,
+                  paddingRight: item.highlight ? 10 : 0
                 }}>
                   <span style={{ color: '#22c55e', fontSize: 18 }}>✓</span>
-                  <span style={{ color: '#e5e7eb' }}>{item}</span>
+                  <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                 </li>
               ))}
             </ul>
@@ -300,10 +311,16 @@ export default function PricingPage() {
                   gap: 12,
                   padding: '10px 0',
                   borderBottom: i < proTraderFeatures.length - 1 ? '1px solid rgba(15,23,42,0.85)' : 'none',
-                  fontSize: 15
+                  fontSize: 15,
+                  background: item.highlight ? 'rgba(96,165,250,0.1)' : 'transparent',
+                  borderRadius: item.highlight ? 6 : 0,
+                  marginLeft: item.highlight ? -10 : 0,
+                  paddingLeft: item.highlight ? 10 : 0,
+                  marginRight: item.highlight ? -10 : 0,
+                  paddingRight: item.highlight ? 10 : 0
                 }}>
                   <span style={{ color: '#60a5fa', fontSize: 18 }}>✓</span>
-                  <span style={{ color: '#e5e7eb' }}>{item}</span>
+                  <span style={{ color: item.highlight ? '#93c5fd' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                 </li>
               ))}
             </ul>
