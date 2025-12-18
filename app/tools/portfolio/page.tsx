@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
-import { useUserTier, canExportCSV, getPortfolioLimit } from '@/lib/useUserTier';
+import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 
 interface Position {
   id: number;
@@ -683,8 +683,8 @@ function PortfolioContent() {
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
-            {/* Portfolio Intelligence Summary - Only show when there are positions */}
-            {positions.length > 0 && (() => {
+            {/* Portfolio Intelligence Summary - Only show when there are positions AND user is Pro+ */}
+            {positions.length > 0 && canAccessPortfolioInsights(tier) && (() => {
               const topAsset = allocationData[0];
               const isConcentrated = topAsset && topAsset.percentage > 50;
               const inDrawdown = totalReturn < -10;

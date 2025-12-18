@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
-import { useUserTier, canExportCSV } from '@/lib/useUserTier';
+import { useUserTier, canExportCSV, canAccessAdvancedJournal } from '@/lib/useUserTier';
 
 interface JournalEntry {
   id: number;
@@ -452,8 +452,8 @@ function JournalContent() {
           </div>
         )}
         
-        {/* Journal Insight */}
-        {totalTrades > 0 && (
+        {/* Journal Insight - Pro feature */}
+        {totalTrades > 0 && canAccessAdvancedJournal(tier) && (
           <div style={{
             maxWidth: '1600px',
             margin: '16px auto 0',

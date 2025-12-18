@@ -50,6 +50,7 @@ export const canAccessUnlimitedScanning = (tier: UserTier) => tier === "pro" || 
 export const canExportCSV = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessTradingViewScripts = (tier: UserTier) => tier === "pro_trader";
 export const canAccessAdvancedJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
+export const canAccessPortfolioInsights = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const getPortfolioLimit = (tier: UserTier) => tier === "anonymous" || tier === "free" ? 3 : Infinity;
 export const getAILimit = (tier: UserTier) => {
   switch (tier) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 
 interface MarketMover {
   ticker: string;
@@ -117,6 +118,7 @@ type SortField = "ticker" | "price" | "change" | "percent" | "volume";
 type SortDirection = "asc" | "desc";
 
 export default function GainersLosersPage() {
+  const { tier } = useUserTier();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -321,8 +323,8 @@ export default function GainersLosersPage() {
           </button>
         </div>
         
-        {/* Mover Insight */}
-        {insight && (
+        {/* Mover Insight - Pro feature */}
+        {insight && canAccessPortfolioInsights(tier) && (
           <div style={{
             padding: "12px 16px",
             background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",

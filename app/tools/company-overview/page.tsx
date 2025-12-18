@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 
 interface CompanyData {
   symbol: string;
@@ -34,6 +35,7 @@ interface CompanyData {
 }
 
 export default function CompanyOverviewPage() {
+  const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CompanyData | null>(null);
@@ -363,8 +365,8 @@ export default function CompanyOverviewPage() {
               <p style={{ color: "#94A3B8", lineHeight: "1.7", fontSize: "14px" }}>{data.description}</p>
             </div>
 
-            {/* AI Decision Lens */}
-            {decisionLens && (
+            {/* AI Decision Lens - Pro feature */}
+            {decisionLens && canAccessPortfolioInsights(tier) && (
               <div style={{ background: "linear-gradient(145deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))", borderRadius: "16px", border: "1px solid rgba(59,130,246,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#3B82F6", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                   <span style={{ fontSize: "1.5rem" }}>🧠</span> AI Decision Lens
@@ -380,8 +382,8 @@ export default function CompanyOverviewPage() {
               </div>
             )}
 
-            {/* Bull & Bear Cases */}
-            {(bullCase.length > 0 || bearCase.length > 0) && (
+            {/* Bull & Bear Cases - Pro+ only */}
+            {(bullCase.length > 0 || bearCase.length > 0) && canAccessPortfolioInsights(tier) && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
                 {/* Bull Case */}
                 <div style={{ background: "linear-gradient(145deg, rgba(16, 185, 129, 0.08), rgba(15,23,42,0.95))", borderRadius: "16px", border: "1px solid rgba(16,185,129,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
