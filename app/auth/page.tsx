@@ -33,6 +33,23 @@ function AuthContent() {
         setTimeout(() => {
           router.push("/dashboard");
         }, 1500);
+      } else if (res.status === 404 && plan) {
+        // No subscription found, but they came from pricing - redirect to checkout
+        const checkoutRes = await fetch('/api/payments/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            plan: plan === 'pro_trader' ? 'pro_trader' : 'pro',
+            billing: 'monthly',
+            email 
+          }),
+        });
+        const checkoutData = await checkoutRes.json();
+        if (checkoutData.url) {
+          window.location.href = checkoutData.url;
+        } else {
+          setError("Failed to start checkout. Please try again.");
+        }
       } else {
         setError(data.error || "Authentication failed");
       }

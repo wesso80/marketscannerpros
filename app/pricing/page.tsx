@@ -16,12 +16,44 @@ export default function PricingPage() {
 
   const handleProCheckout = async () => {
     setLoading('pro');
-    window.location.href = '/auth?plan=pro';
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'pro', billing: 'monthly' }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to start checkout. Please try again.');
+        setLoading(null);
+      }
+    } catch (err) {
+      alert('Error starting checkout. Please try again.');
+      setLoading(null);
+    }
   };
 
   const handleProTraderCheckout = async () => {
     setLoading('pro_trader');
-    window.location.href = '/auth?plan=pro_trader';
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'pro_trader', billing: 'monthly' }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to start checkout. Please try again.');
+        setLoading(null);
+      }
+    } catch (err) {
+      alert('Error starting checkout. Please try again.');
+      setLoading(null);
+    }
   };
 
   const freeFeatures = [
