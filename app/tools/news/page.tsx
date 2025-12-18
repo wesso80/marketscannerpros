@@ -36,10 +36,11 @@ interface EarningsEvent {
 }
 
 interface AISummary {
-  overview: string;
-  sentiment: 'bullish' | 'bearish' | 'mixed' | 'neutral';
-  keyThemes: string[];
-  tickerHighlights: { ticker: string; outlook: string }[];
+  bias: 'Bullish' | 'Bearish' | 'Mixed' | 'Neutral';
+  themes: string[];
+  topAssets?: string[];
+  risks: string;
+  overview?: string; // fallback
 }
 
 type TabType = "news" | "earnings";
@@ -103,19 +104,28 @@ export default function NewsSentimentPage() {
     setAiError(null);
     
     try {
-      // Use only the 3 most recent articles (already sorted by date from API)
-      const recentArticles = articles.slice(0, 3);
-      const newsContext = recentArticles.map(a => 
-        `${a.title} [${a.sentiment.label}]`
+      // Use top 5 articles with sentiment labels for analysis
+      const recentArticles = articles.slice(0, 5);
+      const newsContext = recentArticles.map((a, i) => 
+        `${i+1}. ${a.title} [${a.sentiment.label}]`
       ).join('\n');
 
-      const tickerList = tickers.split(',').map(t => t.trim()).slice(0, 3).join(', ');
+      const tickerList = tickers.split(',').map(t => t.trim()).slice(0, 5).join(', ');
 
       const response = await fetch('/api/msp-analyst', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Summarize these 3 latest headlines for ${tickerList}:\n${newsContext}\n\nJSON: {"overview":"2 sentences","sentiment":"bullish|bearish|mixed|neutral","keyThemes":["theme1","theme2"]}`,
+          query: `Analyze these ${recentArticles.length} headlines for ${tickerList}:
+${newsContext}
+
+Rules:
+- Weight by impact and recurrence
+- State uncertainty if sentiment is mixed
+- No optimistic/pessimistic language without support
+
+JSON response:
+{"bias":"Bullish|Neutral|Bearish|Mixed","themes":["theme1","theme2","theme3"],"topAssets":["SYM1","SYM2"],"risks":"key risks/caveats"}`,
           context: { symbol: tickerList }
         })
       });
@@ -142,18 +152,18 @@ export default function NewsSentimentPage() {
         } else {
           // Fallback: create summary from text
           setAiSummary({
-            overview: text.slice(0, 300),
-            sentiment: 'neutral',
-            keyThemes: [],
-            tickerHighlights: []
+            bias: 'Neutral',
+            themes: [],
+            topAssets: [],
+            risks: 'Unable to parse AI response'
           });
         }
       } catch {
         setAiSummary({
-          overview: text.slice(0, 300),
-          sentiment: 'neutral',
-          keyThemes: [],
-          tickerHighlights: []
+          bias: 'Neutral',
+          themes: [],
+          topAssets: [],
+          risks: 'Unable to parse AI response'
         });
       }
     } catch (err) {
@@ -444,41 +454,35 @@ export default function NewsSentimentPage() {
 
             {aiSummary && (
               <div>
-                {/* Overall Sentiment Badge */}
+                {/* Overall Bias Badge */}
                 <div style={{ 
                   display: "inline-flex", 
                   alignItems: "center", 
                   gap: "8px",
                   padding: "6px 14px",
-                  background: getSentimentBgColor(aiSummary.sentiment),
-                  border: `1px solid ${getSentimentBorderColor(aiSummary.sentiment)}`,
+                  background: getSentimentBgColor(aiSummary.bias.toLowerCase()),
+                  border: `1px solid ${getSentimentBorderColor(aiSummary.bias.toLowerCase())}`,
                   borderRadius: "20px",
                   marginBottom: "1rem"
                 }}>
-                  <span>{getSentimentIcon(aiSummary.sentiment)}</span>
+                  <span>{getSentimentIcon(aiSummary.bias.toLowerCase())}</span>
                   <span style={{ 
-                    color: getSentimentTextColor(aiSummary.sentiment), 
+                    color: getSentimentTextColor(aiSummary.bias.toLowerCase()), 
                     fontWeight: "600", 
-                    fontSize: "14px",
-                    textTransform: "capitalize"
+                    fontSize: "14px"
                   }}>
-                    {aiSummary.sentiment} Outlook
+                    {aiSummary.bias} Outlook
                   </span>
                 </div>
 
-                {/* Overview */}
-                <p style={{ color: "#E2E8F0", lineHeight: "1.8", fontSize: "15px", marginBottom: "1rem" }}>
-                  {aiSummary.overview}
-                </p>
-
                 {/* Key Themes */}
-                {aiSummary.keyThemes && aiSummary.keyThemes.length > 0 && (
+                {aiSummary.themes && aiSummary.themes.length > 0 && (
                   <div style={{ marginBottom: "1rem" }}>
                     <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
-                      Key Themes:
+                      📊 Dominant Themes:
                     </div>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {aiSummary.keyThemes.map((theme, i) => (
+                      {aiSummary.themes.map((theme, i) => (
                         <span key={i} style={{
                           padding: "6px 12px",
                           background: "rgba(59, 130, 246, 0.15)",
@@ -494,27 +498,44 @@ export default function NewsSentimentPage() {
                   </div>
                 )}
 
-                {/* Ticker Highlights */}
-                {aiSummary.tickerHighlights && aiSummary.tickerHighlights.length > 0 && (
-                  <div>
+                {/* Top Assets */}
+                {aiSummary.topAssets && aiSummary.topAssets.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
                     <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px", fontWeight: "600" }}>
-                      Ticker Insights:
+                      🎯 Most Mentioned Assets:
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                      {aiSummary.tickerHighlights.map((th, i) => (
-                        <div key={i} style={{
-                          padding: "12px",
-                          background: "rgba(15, 23, 42, 0.6)",
-                          border: "1px solid rgba(51, 65, 85, 0.5)",
-                          borderRadius: "8px"
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {aiSummary.topAssets.map((asset, i) => (
+                        <span key={i} style={{
+                          padding: "6px 12px",
+                          background: "rgba(16, 185, 129, 0.15)",
+                          border: "1px solid rgba(16, 185, 129, 0.3)",
+                          borderRadius: "6px",
+                          color: "#10B981",
+                          fontSize: "13px",
+                          fontWeight: "600"
                         }}>
-                          <span style={{ color: "#10B981", fontWeight: "bold", fontSize: "14px" }}>{th.ticker}</span>
-                          <p style={{ color: "#94A3B8", fontSize: "13px", margin: "6px 0 0", lineHeight: "1.5" }}>
-                            {th.outlook}
-                          </p>
-                        </div>
+                          {asset}
+                        </span>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Risks & Caveats */}
+                {aiSummary.risks && (
+                  <div style={{
+                    padding: "12px 16px",
+                    background: "rgba(251, 191, 36, 0.08)",
+                    border: "1px solid rgba(251, 191, 36, 0.25)",
+                    borderRadius: "8px"
+                  }}>
+                    <div style={{ fontSize: "13px", color: "#FBBF24", marginBottom: "6px", fontWeight: "600" }}>
+                      ⚠️ Key Risks & Caveats:
+                    </div>
+                    <p style={{ color: "#FDE68A", fontSize: "13px", lineHeight: "1.6", margin: 0 }}>
+                      {aiSummary.risks}
+                    </p>
                   </div>
                 )}
 
