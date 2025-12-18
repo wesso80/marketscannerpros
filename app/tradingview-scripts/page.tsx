@@ -28,10 +28,10 @@ const scripts = [
     type: "TV: Strategy"
   },
   {
-    name: "Time Confluence Windows — 50% Levels",
-    description: "Highlights stacked time windows and key 50% levels so you can see where multiple sessions and swings overlap – ideal for planning zones in advance.",
+    name: "Time Confluence Windows v6",
+    description: "Tracks multiple timeframe closes (30m to 8h) with countdown timers, previous 50% levels, and background shading when confluence stacks. Scans D/W/M within 22h of close for high-probability timing zones.",
     image: "/images/time-confluence.png",
-    status: "Live · Public",
+    status: "Live · Invite-only",
     focus: "Timing zones",
     type: "TV: Indicator"
   },
