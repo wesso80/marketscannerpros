@@ -23,14 +23,19 @@ interface JournalEntry {
   setup: string;
   notes: string;
   emotions: string;
-  outcome: 'win' | 'loss' | 'breakeven';
+  outcome: 'win' | 'loss' | 'breakeven' | 'open';
   tags: string[];
+  isOpen: boolean;
+  exitDate?: string;
 }
 
 function JournalContent() {
   const { tier } = useUserTier();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [journalTab, setJournalTab] = useState<'open' | 'closed'>('open');
+  const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
+  const [closeTradeData, setCloseTradeData] = useState({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterOutcome, setFilterOutcome] = useState<string>('all');
   const [newEntry, setNewEntry] = useState({
@@ -71,29 +76,20 @@ function JournalContent() {
   }, [entries]);
 
   const addEntry = () => {
-    if (!newEntry.symbol || !newEntry.entryPrice || !newEntry.exitPrice || !newEntry.quantity) {
-      alert('Please fill in all required fields (Symbol, Entry, Exit, Quantity)');
+    if (!newEntry.symbol || !newEntry.entryPrice || !newEntry.quantity) {
+      alert('Please fill in all required fields (Symbol, Entry Price, Quantity)');
       return;
     }
 
     const entry = parseFloat(newEntry.entryPrice);
-    const exit = parseFloat(newEntry.exitPrice);
     const qty = parseFloat(newEntry.quantity);
-
-    const pl = newEntry.side === 'LONG' 
-      ? (exit - entry) * qty 
-      : (entry - exit) * qty;
-    const plPercent = ((exit - entry) / entry) * 100 * (newEntry.side === 'LONG' ? 1 : -1);
-
-    let outcome: 'win' | 'loss' | 'breakeven' = 'breakeven';
-    if (pl > 0) outcome = 'win';
-    else if (pl < 0) outcome = 'loss';
 
     const tags = newEntry.tags
       .split(',')
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    // New trades are always open
     const journalEntry: JournalEntry = {
       id: Date.now(),
       date: newEntry.date,
@@ -104,19 +100,21 @@ function JournalContent() {
       strikePrice: newEntry.strikePrice ? parseFloat(newEntry.strikePrice) : undefined,
       expirationDate: newEntry.expirationDate || undefined,
       entryPrice: entry,
-      exitPrice: exit,
+      exitPrice: 0,
       quantity: qty,
-      pl,
-      plPercent,
+      pl: 0,
+      plPercent: 0,
       strategy: newEntry.strategy,
       setup: newEntry.setup,
       notes: newEntry.notes,
       emotions: newEntry.emotions,
-      outcome,
-      tags
+      outcome: 'open',
+      tags,
+      isOpen: true
     };
 
     setEntries([journalEntry, ...entries]);
+    setShowAddForm(false);
     setNewEntry({
       date: new Date().toISOString().split('T')[0],
       symbol: '',
@@ -144,6 +142,42 @@ function JournalContent() {
         localStorage.removeItem('trade_journal_entries');
       }
     }
+  };
+
+  const closeTrade = (id: number) => {
+    if (!closeTradeData.exitPrice) {
+      alert('Please enter an exit price');
+      return;
+    }
+    
+    const exitPrice = parseFloat(closeTradeData.exitPrice);
+    
+    setEntries(entries.map(entry => {
+      if (entry.id === id) {
+        const pl = entry.side === 'LONG' 
+          ? (exitPrice - entry.entryPrice) * entry.quantity 
+          : (entry.entryPrice - exitPrice) * entry.quantity;
+        const plPercent = ((exitPrice - entry.entryPrice) / entry.entryPrice) * 100 * (entry.side === 'LONG' ? 1 : -1);
+        
+        let outcome: 'win' | 'loss' | 'breakeven' | 'open' = 'breakeven';
+        if (pl > 0) outcome = 'win';
+        else if (pl < 0) outcome = 'loss';
+        
+        return {
+          ...entry,
+          exitPrice,
+          exitDate: closeTradeData.exitDate,
+          pl,
+          plPercent,
+          outcome,
+          isOpen: false
+        };
+      }
+      return entry;
+    }));
+    
+    setClosingTradeId(null);
+    setCloseTradeData({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
   };
 
   const clearAllEntries = () => {
@@ -201,24 +235,28 @@ function JournalContent() {
     document.body.removeChild(link);
   };
 
-  // Filter entries
-  const filteredEntries = entries.filter(entry => {
+  // Separate open and closed trades
+  const openTrades = entries.filter(e => e.isOpen === true || e.isOpen === undefined && e.outcome === 'open');
+  const closedTrades = entries.filter(e => e.isOpen === false || (e.isOpen === undefined && e.outcome !== 'open'));
+
+  // Filter entries based on current tab
+  const filteredEntries = (journalTab === 'open' ? openTrades : closedTrades).filter(entry => {
     if (filterTag !== 'all' && !entry.tags.includes(filterTag)) return false;
-    if (filterOutcome !== 'all' && entry.outcome !== filterOutcome) return false;
+    if (journalTab === 'closed' && filterOutcome !== 'all' && entry.outcome !== filterOutcome) return false;
     return true;
   });
 
-  // Calculate stats
-  const totalTrades = filteredEntries.length;
-  const wins = filteredEntries.filter(e => e.outcome === 'win').length;
-  const losses = filteredEntries.filter(e => e.outcome === 'loss').length;
+  // Calculate stats (only from closed trades)
+  const totalTrades = closedTrades.length;
+  const wins = closedTrades.filter(e => e.outcome === 'win').length;
+  const losses = closedTrades.filter(e => e.outcome === 'loss').length;
   const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-  const totalPL = filteredEntries.reduce((sum, e) => sum + e.pl, 0);
+  const totalPL = closedTrades.reduce((sum, e) => sum + e.pl, 0);
   const avgWin = wins > 0 
-    ? filteredEntries.filter(e => e.outcome === 'win').reduce((sum, e) => sum + e.pl, 0) / wins 
+    ? closedTrades.filter(e => e.outcome === 'win').reduce((sum, e) => sum + e.pl, 0) / wins 
     : 0;
   const avgLoss = losses > 0 
-    ? filteredEntries.filter(e => e.outcome === 'loss').reduce((sum, e) => sum + e.pl, 0) / losses 
+    ? closedTrades.filter(e => e.outcome === 'loss').reduce((sum, e) => sum + e.pl, 0) / losses 
     : 0;
   const profitFactor = Math.abs(avgLoss) > 0 ? Math.abs(avgWin * wins) / Math.abs(avgLoss * losses) : (wins > 0 ? Infinity : 0);
   const profitFactorDisplay = profitFactor === Infinity ? '∞' : profitFactor.toFixed(2);
@@ -670,13 +708,13 @@ function JournalContent() {
 
               <div>
                 <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
-                  Exit Price *
+                  Exit Price
                 </label>
                 <input
                   type="number"
                   value={newEntry.exitPrice}
                   onChange={(e) => setNewEntry({...newEntry, exitPrice: e.target.value})}
-                  placeholder="155.75"
+                  placeholder="Leave empty if still open"
                   step="0.01"
                   style={{
                     width: '100%',
@@ -907,6 +945,50 @@ function JournalContent() {
           </div>
         )}
 
+        {/* Open/Closed Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '0',
+          marginBottom: '24px',
+          background: 'rgba(30,41,59,0.5)',
+          borderRadius: '12px',
+          padding: '4px',
+          width: 'fit-content'
+        }}>
+          <button
+            onClick={() => setJournalTab('open')}
+            style={{
+              padding: '10px 24px',
+              background: journalTab === 'open' ? '#10b981' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: journalTab === 'open' ? '#fff' : '#94a3b8',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            📈 Open Trades ({openTrades.length})
+          </button>
+          <button
+            onClick={() => setJournalTab('closed')}
+            style={{
+              padding: '10px 24px',
+              background: journalTab === 'closed' ? '#10b981' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: journalTab === 'closed' ? '#fff' : '#94a3b8',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            ✅ Closed Trades ({closedTrades.length})
+          </button>
+        </div>
+
         {/* Filters */}
         {entries.length > 0 && (
           <div style={{
@@ -924,6 +1006,7 @@ function JournalContent() {
             <div style={{ color: '#94a3b8', fontSize: '14px', fontWeight: '500' }}>
               Filters:
             </div>
+            {journalTab === 'closed' && (
             <div>
               <select
                 value={filterOutcome}
@@ -943,6 +1026,7 @@ function JournalContent() {
                 <option value="breakeven">Breakeven Only</option>
               </select>
             </div>
+            )}
             {allTags.length > 0 && (
               <div>
                 <select
@@ -1045,21 +1129,53 @@ function JournalContent() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ 
-                        fontSize: '24px', 
-                        fontWeight: '700',
-                        color: entry.pl >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        ${entry.pl >= 0 ? '' : '-'}{Math.abs(entry.pl).toFixed(2)}
+                    {entry.isOpen ? (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ 
+                          fontSize: '18px', 
+                          fontWeight: '600',
+                          color: '#fbbf24'
+                        }}>
+                          OPEN
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          @ ${entry.entryPrice.toFixed(2)}
+                        </div>
                       </div>
-                      <div style={{ 
-                        fontSize: '14px',
-                        color: entry.pl >= 0 ? '#10b981' : '#ef4444'
-                      }}>
-                        {entry.plPercent >= 0 ? '+' : ''}{entry.plPercent.toFixed(2)}%
+                    ) : (
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ 
+                          fontSize: '24px', 
+                          fontWeight: '700',
+                          color: entry.pl >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          ${entry.pl >= 0 ? '' : '-'}{Math.abs(entry.pl).toFixed(2)}
+                        </div>
+                        <div style={{ 
+                          fontSize: '14px',
+                          color: entry.pl >= 0 ? '#10b981' : '#ef4444'
+                        }}>
+                          {entry.plPercent >= 0 ? '+' : ''}{entry.plPercent.toFixed(2)}%
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    {entry.isOpen && (
+                      <button
+                        onClick={() => setClosingTradeId(entry.id)}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#10b981',
+                          border: 'none',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Close Trade
+                      </button>
+                    )}
                     <button
                       onClick={() => deleteEntry(entry.id)}
                       style={{
@@ -1076,6 +1192,86 @@ function JournalContent() {
                     </button>
                   </div>
                 </div>
+
+                {/* Close Trade Modal */}
+                {closingTradeId === entry.id && (
+                  <div style={{
+                    background: 'rgba(16,185,129,0.1)',
+                    border: '1px solid #10b981',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    gap: '16px',
+                    alignItems: 'flex-end',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Exit Price *</label>
+                      <input
+                        type="number"
+                        value={closeTradeData.exitPrice}
+                        onChange={(e) => setCloseTradeData({...closeTradeData, exitPrice: e.target.value})}
+                        placeholder="0.00"
+                        step="0.01"
+                        style={{
+                          padding: '8px 12px',
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#f1f5f9',
+                          fontSize: '14px',
+                          width: '120px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Exit Date</label>
+                      <input
+                        type="date"
+                        value={closeTradeData.exitDate}
+                        onChange={(e) => setCloseTradeData({...closeTradeData, exitDate: e.target.value})}
+                        style={{
+                          padding: '8px 12px',
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '6px',
+                          color: '#f1f5f9',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => closeTrade(entry.id)}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#10b981',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: '#fff',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Confirm Close
+                    </button>
+                    <button
+                      onClick={() => { setClosingTradeId(null); setCloseTradeData({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] }); }}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'transparent',
+                        border: '1px solid #64748b',
+                        borderRadius: '6px',
+                        color: '#94a3b8',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
 
                 {/* Trade Details */}
                 <div style={{ 
