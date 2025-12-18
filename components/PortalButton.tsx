@@ -1,10 +1,48 @@
+"use client";
+
+import { useState } from "react";
+
 export default function PortalButton() {
+  const [loading, setLoading] = useState(false);
+
+  const openPortal = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/payments/portal", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Unable to open billing portal");
+      }
+    } catch (err) {
+      alert("Failed to open billing portal. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <a 
-      href="/pricing"
-      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 inline-block"
+    <button 
+      onClick={openPortal}
+      disabled={loading}
+      style={{
+        padding: "10px 20px",
+        background: loading ? "#475569" : "linear-gradient(135deg, #3b82f6, #6366f1)",
+        border: "none",
+        borderRadius: "10px",
+        color: "#fff",
+        fontWeight: 600,
+        fontSize: "14px",
+        cursor: loading ? "not-allowed" : "pointer",
+        boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
+      }}
     >
-      View Pricing
-    </a>
+      {loading ? "Loading..." : "⚙️ Manage Subscription"}
+    </button>
   );
 }

@@ -104,11 +104,15 @@ export default function MobileNav() {
           >
             ✕
           </button>
-          <a href="/blog" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Blog</a>
-          <a href="/guide" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>User Guide</a>
+          <a href="/tools/scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Scanner</a>
+          <a href="/tools/portfolio" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Portfolio</a>
+          <a href="/tools/backtest" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Backtest</a>
+          <a href="/tools/journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>
+          <a href="/tools/ai-analyst" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>AI Analyst</a>
           <a href="/pricing" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Pricing</a>
-          <a href="/contact" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Contact</a>
-          <a href="/dashboard" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Dashboard</a>
+          <a href="/account" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Account</a>
+          <a href="/guide" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>User Guide</a>
+          <a href="/auth" className="py-2 mt-2 text-center bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-lg text-emerald-300 font-medium" onClick={() => setIsOpen(false)}>Sign In</a>
         </div>
       </div>
     </>

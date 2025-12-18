@@ -31,14 +31,9 @@ export default function Header() {
           <Link href="/tools/portfolio" className="hover:text-emerald-300 whitespace-nowrap">Portfolio</Link>
           <Link href="/tools/backtest" className="hover:text-emerald-300 whitespace-nowrap">Backtest</Link>
           <Link href="/tools/journal" className="hover:text-emerald-300 whitespace-nowrap">Journal</Link>
-          <Link href="/tools/ai-tools" className="hover:text-emerald-300 whitespace-nowrap">AI Tools</Link>
           <Link href="/tools/ai-analyst" className="hover:text-emerald-300 whitespace-nowrap">AI Analyst</Link>
-          <Link href="/tools/gainers-losers" className="hover:text-emerald-300 whitespace-nowrap">Gainers</Link>
-          <Link href="/tools/company-overview" className="hover:text-emerald-300 whitespace-nowrap">Overview</Link>
-          <Link href="/tools/news" className="hover:text-emerald-300 whitespace-nowrap">News</Link>
-          <Link href="/tradingview-scripts" className="hover:text-emerald-300 whitespace-nowrap">Scripts</Link>
-          <Link href="/partners" className="hover:text-emerald-300 whitespace-nowrap">Partners</Link>
           <Link href="/pricing" className="hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
+          <Link href="/account" className="hover:text-emerald-300 whitespace-nowrap">Account</Link>
           <Link href="/auth" className="ml-2 px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-lg text-emerald-300 font-medium whitespace-nowrap transition-all">Sign In</Link>
         </nav>
 
