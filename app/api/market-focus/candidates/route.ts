@@ -57,14 +57,36 @@ interface Candidate {
   risks?: string[];
 }
 
-// Fetch helper with rate limit handling
-async function fetchAlphaJson(url: string, tag: string): Promise<any> {
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Alpha Vantage HTTP ${res.status} for ${tag}`);
-  const json = await res.json();
-  if (json.Note || json.Information) throw new Error(`Rate limit: ${json.Note || json.Information}`);
-  if (json["Error Message"]) throw new Error(`API error: ${json["Error Message"]}`);
-  return json;
+// Fetch helper with rate limit handling and retry logic
+async function fetchAlphaJson(url: string, tag: string, retries = 2): Promise<any> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        if (attempt < retries && (res.status === 503 || res.status === 429)) {
+          console.warn(`[market-focus] ${tag}: HTTP ${res.status}, retrying in 1s (attempt ${attempt + 1}/${retries + 1})`);
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw new Error(`Alpha Vantage HTTP ${res.status} for ${tag}`);
+      }
+      const json = await res.json();
+      if (json.Note || json.Information) {
+        if (attempt < retries) {
+          console.warn(`[market-focus] ${tag}: Rate limit, retrying in 2s`);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+        throw new Error(`Rate limit: ${json.Note || json.Information}`);
+      }
+      if (json["Error Message"]) throw new Error(`API error: ${json["Error Message"]}`);
+      return json;
+    } catch (err: any) {
+      if (attempt === retries) throw err;
+      console.warn(`[market-focus] ${tag}: Error, retrying...`, err?.message);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
 }
 
 // ============ INDICATOR CALCULATIONS ============

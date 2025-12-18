@@ -44,7 +44,12 @@ export default function DailyAIMarketFocus() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/ai-market-focus', { credentials: 'include' });
+        // Add cache-busting to ensure fresh data
+        const res = await fetch(`/api/ai-market-focus?_t=${Date.now()}`, { 
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
         if (!res.ok) {
           const text = await res.text();
           throw new Error(`API ${res.status}: ${text || 'unknown error'}`);

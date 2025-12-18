@@ -127,38 +127,50 @@ export async function POST(req: NextRequest) {
       await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
     }
 
-    // Fetch candidates - use production URL directly to avoid subdomain/deployment issues
-    const baseUrl = "https://www.marketscannerpros.app";
+    // Fetch candidates - use current domain to avoid cross-origin issues
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_APP_URL || "https://www.marketscannerpros.app";
 
     console.log("[generate] Fetching candidates from:", baseUrl);
-    const candidatesRes = await fetch(`${baseUrl}/api/market-focus/candidates`, { 
-      cache: "no-store",
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!candidatesRes.ok) {
-      const errorText = await candidatesRes.text();
-      console.error("[generate] Candidates error:", candidatesRes.status, errorText);
-      throw new Error(`Candidates API error: ${candidatesRes.status}`);
-    }
-    const candidatesData = await candidatesRes.json();
-    const allCandidates = candidatesData.candidates || [];
+    
+    // Fetch each asset class separately to handle failures individually
+    const fetchCandidatesForClass = async (assetClass: string) => {
+      try {
+        const res = await fetch(`${baseUrl}/api/market-focus/candidates?assetClass=${assetClass}&_t=${Date.now()}`, { 
+          cache: "no-store",
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }
+        });
+        if (!res.ok) {
+          console.error(`[generate] ${assetClass} candidates error:`, res.status);
+          return [];
+        }
+        const data = await res.json();
+        return data.candidates || [];
+      } catch (err: any) {
+        console.error(`[generate] ${assetClass} fetch failed:`, err?.message);
+        return [];
+      }
+    };
 
-    // Log what we got
-    console.log("[generate] Total candidates:", allCandidates.length);
-    console.log("[generate] By asset class:", {
-      equity: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "equity").length,
-      crypto: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "crypto").length,
-      commodity: allCandidates.filter((c: Candidate) => c.assetClass.toLowerCase() === "commodity").length,
+    const [equityCandidates, cryptoCandidates, commodityCandidates] = await Promise.all([
+      fetchCandidatesForClass("equity"),
+      fetchCandidatesForClass("crypto"),
+      fetchCandidatesForClass("commodity"),
+    ]);
+
+    console.log("[generate] Candidates fetched:", {
+      equity: equityCandidates.length,
+      crypto: cryptoCandidates.length,
+      commodity: commodityCandidates.length,
     });
 
     // Pick top from each asset class
-    const pickTop = (cls: string) => allCandidates
-      .filter((c: Candidate) => c.assetClass.toLowerCase() === cls)
-      .sort((a: Candidate, b: Candidate) => b.score - a.score)[0];
+    const pickTop = (arr: Candidate[]) => arr.sort((a, b) => b.score - a.score)[0];
 
-    const equityPick = pickTop("equity");
-    const cryptoPick = pickTop("crypto");
-    const commodityPick = pickTop("commodity");
+    const equityPick = equityCandidates.length > 0 ? pickTop(equityCandidates) : null;
+    const cryptoPick = cryptoCandidates.length > 0 ? pickTop(cryptoCandidates) : null;
+    const commodityPick = commodityCandidates.length > 0 ? pickTop(commodityCandidates) : null;
     
     console.log("[generate] Picks:", {
       equity: equityPick?.symbol || "NONE",

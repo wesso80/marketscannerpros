@@ -3,6 +3,8 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type FocusRow = {
   id: string;
