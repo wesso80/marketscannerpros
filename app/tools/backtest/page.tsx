@@ -370,6 +370,33 @@ function BacktestContent() {
                 lineHeight: 1.55,
                 fontSize: '14px'
               }}>
+                {/* Strategy Verdict Badge */}
+                {(() => {
+                  const hasPositiveExpectancy = results && results.totalReturn > 0 && results.profitFactor > 1;
+                  const hasNeutralExpectancy = results && results.totalReturn >= -5 && results.totalReturn <= 5;
+                  const verdict = hasPositiveExpectancy 
+                    ? { label: '✅ Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
+                    : hasNeutralExpectancy
+                    ? { label: '⚠️ Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
+                    : { label: '❌ Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+                  
+                  return (
+                    <div style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center',
+                      padding: '6px 12px',
+                      background: verdict.bg,
+                      border: `1px solid ${verdict.color}40`,
+                      borderRadius: '20px',
+                      marginBottom: '12px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: verdict.color
+                    }}>
+                      Strategy Verdict: {verdict.label}
+                    </div>
+                  );
+                })()}
                 <div style={{ fontWeight: 700, marginBottom: '6px', color: '#34d399' }}>AI Insight</div>
                 <div style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
               </div>
@@ -636,8 +663,11 @@ function BacktestContent() {
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '20px', fontWeight: '600' }}>
                     {results.winRate.toFixed(1)}%
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
+                    (context matters more than %)
                   </div>
                 </div>
 
@@ -648,10 +678,23 @@ function BacktestContent() {
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profit Factor</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
+                {/* Profit Factor - EMPHASIZED */}
+                <div style={{ 
+                  background: results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.15)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.1)', 
+                  padding: '16px', 
+                  borderRadius: '12px', 
+                  border: `2px solid ${results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.5)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.4)'}` 
+                }}>
+                  <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⚡ Profit Factor</div>
+                  <div style={{ 
+                    color: results.profitFactor >= 1.5 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#ef4444', 
+                    fontSize: '24px', 
+                    fontWeight: '800' 
+                  }}>
                     {results.profitFactor.toFixed(2)}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
+                    {results.profitFactor >= 1.5 ? 'Strong edge' : results.profitFactor >= 1 ? 'Break-even' : 'Losing money'}
                   </div>
                 </div>
 
@@ -662,10 +705,23 @@ function BacktestContent() {
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Max Drawdown</div>
-                  <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '700' }}>
+                {/* Max Drawdown - EMPHASIZED */}
+                <div style={{ 
+                  background: results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.1)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '12px', 
+                  border: `2px solid ${results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.4)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.5)'}` 
+                }}>
+                  <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Max Drawdown</div>
+                  <div style={{ 
+                    color: results.maxDrawdown <= 10 ? '#10b981' : results.maxDrawdown <= 20 ? '#fbbf24' : '#ef4444', 
+                    fontSize: '24px', 
+                    fontWeight: '800' 
+                  }}>
                     {results.maxDrawdown.toFixed(2)}%
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
+                    {results.maxDrawdown <= 10 ? 'Controlled risk' : results.maxDrawdown <= 20 ? 'Moderate risk' : 'High risk'}
                   </div>
                 </div>
 
