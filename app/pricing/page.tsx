@@ -5,13 +5,9 @@ import Link from "next/link";
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
-  
-  const getStreamlitUrl = () => {
-    return process.env.NEXT_PUBLIC_STREAMLIT_URL || 'https://www.marketscannerpros.app';
-  };
 
   const handleFreeLaunch = () => {
-    window.open(getStreamlitUrl(), '_blank');
+    window.location.href = '/tools/scanner';
   };
 
   const handleProCheckout = async () => {

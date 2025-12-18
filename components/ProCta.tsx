@@ -11,7 +11,7 @@ export default function ProCta(){
         setWid(d.workspaceId||null)
       }).catch(()=>{})
   },[])
-  const appUrl = wid ? `https://www.marketscannerpros.app?wid=${wid}` : 'https://www.marketscannerpros.app'
+  const appUrl = wid ? `/tools/scanner?wid=${wid}` : '/tools/scanner'
   return t==='pro_trader'
     ? <a href={appUrl} target="_blank" rel="noopener noreferrer"
          className="inline-block mt-2 rounded bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">

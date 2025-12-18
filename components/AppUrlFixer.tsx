@@ -3,7 +3,7 @@ import { useEffect } from "react";
 
 export default function AppUrlFixer() {
   useEffect(() => {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.marketscannerpros.app";
+    const appUrl = "/tools/scanner";
     // Rewrite any stale links
     document.querySelectorAll('a[href="https://your-real-app-url"], a[href="/launch"]').forEach((a) => {
       (a as HTMLAnchorElement).setAttribute("href", appUrl);

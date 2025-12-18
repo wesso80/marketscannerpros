@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Price not found" }, { status: 400 });
     }
 
-    // Base URL for redirects
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://marketscannerpros.app";
+    // Base URL for redirects - always use Next.js site (not Streamlit)
+    const baseUrl = "https://marketscannerpros.app";
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

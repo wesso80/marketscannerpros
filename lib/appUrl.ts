@@ -1,2 +1,2 @@
-export const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://www.marketscannerpros.app';
+// Next.js marketing site URL (NOT Streamlit)
+export const APP_URL = 'https://marketscannerpros.app';
