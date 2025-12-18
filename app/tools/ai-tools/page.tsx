@@ -12,7 +12,8 @@ export default function AIToolsPage() {
     setGenerating(true);
     setGenStatus(null);
     try {
-      const res = await fetch("/api/market-focus/generate", {
+      // Always force regenerate when clicking the button
+      const res = await fetch("/api/market-focus/generate?force=true", {
         method: "POST",
         credentials: "include",
       });
