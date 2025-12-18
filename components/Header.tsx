@@ -39,6 +39,7 @@ export default function Header() {
           <Link href="/tradingview-scripts" className="hover:text-emerald-300 whitespace-nowrap">Scripts</Link>
           <Link href="/partners" className="hover:text-emerald-300 whitespace-nowrap">Partners</Link>
           <Link href="/pricing" className="hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
+          <Link href="/auth" className="ml-2 px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-lg text-emerald-300 font-medium whitespace-nowrap transition-all">Sign In</Link>
         </nav>
 
         {/* Mobile Hamburger Button - Only on mobile */}
@@ -95,6 +96,13 @@ export default function Header() {
               <Link href="/tradingview-scripts" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>TradingView Scripts</Link>
               <Link href="/partners" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Partners</Link>
               <Link href="/pricing" className="px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Pricing</Link>
+              
+              {/* Sign In Button */}
+              <div className="mt-4 pt-4 border-t border-emerald-300/20">
+                <Link href="/auth" className="flex items-center justify-center px-4 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-lg text-emerald-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
+                  🔐 Sign In
+                </Link>
+              </div>
             </div>
           </div>
         </div>
