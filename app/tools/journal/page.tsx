@@ -198,7 +198,10 @@ function JournalContent() {
   const avgLoss = losses > 0 
     ? filteredEntries.filter(e => e.outcome === 'loss').reduce((sum, e) => sum + e.pl, 0) / losses 
     : 0;
-  const profitFactor = Math.abs(avgLoss) > 0 ? Math.abs(avgWin * wins) / Math.abs(avgLoss * losses) : 0;
+  const profitFactor = Math.abs(avgLoss) > 0 ? Math.abs(avgWin * wins) / Math.abs(avgLoss * losses) : (wins > 0 ? Infinity : 0);
+  const profitFactorDisplay = profitFactor === Infinity ? '∞' : profitFactor.toFixed(2);
+  const hasNoLosses = losses === 0 && wins > 0;
+  const smallSampleSize = totalTrades > 0 && totalTrades < 10;
 
   // Get all unique tags
   const allTags = Array.from(new Set(entries.flatMap(e => e.tags)));
@@ -382,16 +385,19 @@ function JournalContent() {
             background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
             borderRadius: '12px',
             padding: '16px',
-            border: `1px solid ${profitFactor >= 1 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
+            border: `1px solid ${profitFactor >= 1 || hasNoLosses ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
           }}>
             <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profit Factor</div>
             <div style={{ 
               fontSize: '22px', 
               fontWeight: '700',
-              color: profitFactor >= 1 ? '#10b981' : '#ef4444'
+              color: profitFactor >= 1 || hasNoLosses ? '#10b981' : '#ef4444'
             }}>
-              {profitFactor.toFixed(2)}
+              {profitFactorDisplay}
             </div>
+            {hasNoLosses && (
+              <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>No losses recorded</div>
+            )}
           </div>
           <div style={{
             background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
@@ -416,6 +422,55 @@ function JournalContent() {
             </div>
           </div>
         </div>
+        
+        {/* Small Sample Size Warning */}
+        {smallSampleSize && (
+          <div style={{
+            maxWidth: '1600px',
+            margin: '16px auto 0',
+            padding: '12px 16px',
+            background: 'rgba(251,191,36,0.1)',
+            border: '1px solid rgba(251,191,36,0.3)',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <span style={{ color: '#fbbf24', fontSize: '13px', fontWeight: '500' }}>
+              Metrics based on {totalTrades} trade{totalTrades !== 1 ? 's' : ''}. Statistical reliability increases with more data (10+ trades recommended).
+            </span>
+          </div>
+        )}
+        
+        {/* Journal Insight */}
+        {totalTrades > 0 && (
+          <div style={{
+            maxWidth: '1600px',
+            margin: '16px auto 0',
+            padding: '16px 20px',
+            background: 'linear-gradient(145deg, rgba(139,92,246,0.08), rgba(139,92,246,0.03))',
+            border: '1px solid rgba(139,92,246,0.25)',
+            borderRadius: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '16px' }}>📊</span>
+              <span style={{ color: '#a78bfa', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Journal Insight</span>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+              {(() => {
+                if (totalTrades < 5) {
+                  return `You have recorded ${totalTrades} trade${totalTrades !== 1 ? 's' : ''} with ${wins > 0 ? 'positive' : losses > 0 ? 'negative' : 'neutral'} outcome${totalTrades !== 1 ? 's' : ''}. Continue logging to build a meaningful performance baseline.`;
+                } else if (totalTrades < 20) {
+                  const winRateAssessment = winRate >= 60 ? 'strong' : winRate >= 40 ? 'moderate' : 'low';
+                  return `With ${totalTrades} trades logged, your ${winRateAssessment} win rate (${winRate.toFixed(0)}%) is emerging. ${profitFactor >= 1.5 ? 'Profit factor suggests a viable edge.' : profitFactor >= 1 ? 'Profit factor is break-even—review risk:reward.' : 'Losses outweigh gains—consider tighter stops or better entries.'} More data will confirm consistency.`;
+                } else {
+                  return `Your journal now has ${totalTrades} trades—enough to assess patterns. Win rate: ${winRate.toFixed(0)}%, Profit Factor: ${profitFactorDisplay}. ${avgWin > Math.abs(avgLoss) ? 'Winners are larger than losers—good risk management.' : 'Losers exceed winners—review exit strategy.'}`;
+                }
+              })()}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
