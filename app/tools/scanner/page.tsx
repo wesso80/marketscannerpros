@@ -198,6 +198,7 @@ function ScannerContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiExpanded, setAiExpanded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
 
@@ -579,6 +580,68 @@ function ScannerContent() {
             padding: "2rem",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
           }}>
+            {/* Bias Banner - Instant Context */}
+            {(() => {
+              const score = result.score ?? 0;
+              const isBullish = score >= 70;
+              const isBearish = score < 40;
+              const isNeutral = score >= 40 && score < 70;
+              
+              const biasText = isBullish ? "Bullish" : isBearish ? "Bearish" : "Neutral / Mixed";
+              const stanceText = isBullish ? "Long Bias – Favor Continuation" : 
+                                 isBearish ? "Risk-Off – Defensive Positioning" : 
+                                 "Wait for Clarity – No Clear Edge";
+              const bgColor = isBullish ? "rgba(16, 185, 129, 0.15)" : 
+                              isBearish ? "rgba(239, 68, 68, 0.15)" : 
+                              "rgba(251, 191, 36, 0.15)";
+              const borderColor = isBullish ? "rgba(16, 185, 129, 0.4)" : 
+                                  isBearish ? "rgba(239, 68, 68, 0.4)" : 
+                                  "rgba(251, 191, 36, 0.4)";
+              const textColor = isBullish ? "#34D399" : isBearish ? "#F87171" : "#FBBF24";
+              
+              return (
+                <div style={{
+                  background: bgColor,
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: "12px",
+                  padding: "1rem 1.25rem",
+                  marginBottom: "1.25rem",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
+                      Market Bias
+                    </div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: "700", color: textColor }}>
+                      {biasText}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
+                      Execution State
+                    </div>
+                    <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#E2E8F0" }}>
+                      {stanceText}
+                    </div>
+                  </div>
+                  <div style={{
+                    background: isBullish ? "#10B981" : isBearish ? "#EF4444" : "#F59E0B",
+                    color: "#fff",
+                    padding: "0.5rem 1rem",
+                    borderRadius: "8px",
+                    fontWeight: "700",
+                    fontSize: "1.1rem"
+                  }}>
+                    {score}
+                  </div>
+                </div>
+              );
+            })()}
+
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
               {result.symbol} — {timeframe.toUpperCase()}
             </h2>
@@ -626,7 +689,7 @@ function ScannerContent() {
                   fontSize: "0.95rem",
                 }}
               >
-                {aiLoading ? "Asking AI..." : "Explain this scan"}
+                {aiLoading ? "Analyzing..." : result.score >= 70 ? "Why is this Bullish?" : result.score < 40 ? "Why is this Bearish?" : "Explain this Verdict"}
               </button>
               {aiError && <span style={{ color: "#fca5a5", fontSize: "0.9rem" }}>{aiError}</span>}
             </div>
@@ -647,8 +710,54 @@ function ScannerContent() {
                 lineHeight: 1.55,
                 fontSize: "0.95rem",
               }}>
-                <div style={{ fontWeight: 700, marginBottom: "0.5rem", color: "#34d399" }}>AI Insight</div>
-                <div style={{ whiteSpace: "pre-wrap" }}>{aiText}</div>
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  marginBottom: "0.75rem"
+                }}>
+                  <div style={{ fontWeight: 700, color: "#34d399" }}>AI Insight</div>
+                  <button
+                    onClick={() => setAiExpanded(!aiExpanded)}
+                    style={{
+                      background: "rgba(52, 211, 153, 0.2)",
+                      border: "1px solid rgba(52, 211, 153, 0.3)",
+                      borderRadius: "6px",
+                      padding: "0.35rem 0.75rem",
+                      color: "#34d399",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      fontWeight: 500
+                    }}
+                  >
+                    {aiExpanded ? "Show Less ▲" : "Expand Analysis ▼"}
+                  </button>
+                </div>
+                {/* Condensed Summary (always visible) */}
+                {(() => {
+                  // Extract Final Verdict line or first meaningful paragraph
+                  const lines = aiText.split('\n').filter(l => l.trim());
+                  const verdictLine = lines.find(l => l.includes('✅') || l.includes('⚠️') || l.includes('❌') || l.toLowerCase().includes('verdict'));
+                  const phaseLine = lines.find(l => l.toLowerCase().includes('phase'));
+                  const summary = verdictLine || phaseLine || lines[0] || '';
+                  
+                  return (
+                    <div style={{ 
+                      padding: "0.75rem",
+                      background: "rgba(0,0,0,0.2)",
+                      borderRadius: "8px",
+                      marginBottom: aiExpanded ? "0.75rem" : 0
+                    }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{summary}</div>
+                    </div>
+                  );
+                })()}
+                {/* Full Analysis (collapsible) */}
+                {aiExpanded && (
+                  <div style={{ whiteSpace: "pre-wrap", paddingTop: "0.5rem", borderTop: "1px solid rgba(52, 211, 153, 0.2)" }}>
+                    {aiText}
+                  </div>
+                )}
               </div>
             )}
 
