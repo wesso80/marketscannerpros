@@ -103,34 +103,20 @@ export default function NewsSentimentPage() {
     setAiError(null);
     
     try {
-      // Prepare news data for AI - only pass relevant headlines and sentiment
-      const newsContext = articles.slice(0, 15).map(a => ({
-        title: a.title,
-        sentiment: a.sentiment.label,
-        source: a.source,
-        tickers: a.tickerSentiments?.map(t => t.ticker) || []
-      }));
+      // Prepare compact news data for AI - only titles and sentiment, max 10
+      const newsContext = articles.slice(0, 10).map(a => 
+        `${a.title} [${a.sentiment.label}]`
+      ).join('\n');
 
       const response = await fetch('/api/msp-analyst', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: `Analyze these ${newsContext.length} news headlines for ${tickers}. Provide:
-1. A 2-3 sentence market summary
-2. Overall sentiment (bullish/bearish/mixed/neutral)
-3. 3-4 key themes emerging from the news
-4. Brief outlook for each ticker mentioned
+          query: `Summarize these ${Math.min(articles.length, 10)} headlines for ${tickers}:
+${newsContext}
 
-Headlines: ${JSON.stringify(newsContext)}
-
-Respond in JSON format:
-{
-  "overview": "2-3 sentence summary",
-  "sentiment": "bullish|bearish|mixed|neutral",
-  "keyThemes": ["theme1", "theme2", "theme3"],
-  "tickerHighlights": [{"ticker": "AAPL", "outlook": "brief outlook"}]
-}`,
-          context: { symbol: tickers, timeframe: "recent news" }
+JSON response: {"overview":"2 sentences","sentiment":"bullish|bearish|mixed|neutral","keyThemes":["theme1","theme2"],"tickerHighlights":[{"ticker":"SYM","outlook":"brief"}]}`,
+          context: { symbol: tickers }
         })
       });
 
