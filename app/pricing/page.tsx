@@ -16,12 +16,12 @@ export default function PricingPage() {
 
   const handleProCheckout = async () => {
     setLoading('pro');
-    window.location.href = '/auth/login?plan=pro';
+    window.location.href = '/auth?plan=pro';
   };
 
   const handleProTraderCheckout = async () => {
     setLoading('pro_trader');
-    window.location.href = '/auth/login?plan=pro_trader';
+    window.location.href = '/auth?plan=pro_trader';
   };
 
   const freeFeatures = [
