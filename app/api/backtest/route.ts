@@ -184,6 +184,88 @@ function calculateMACD(prices: number[]): { macd: number[], signal: number[], hi
   return { macd, signal, histogram };
 }
 
+// Calculate ATR
+function calculateATR(highs: number[], lows: number[], closes: number[], period: number = 14): number[] {
+  const atr: number[] = [];
+  const tr: number[] = [];
+  
+  for (let i = 1; i < closes.length; i++) {
+    const hl = highs[i] - lows[i];
+    const hc = Math.abs(highs[i] - closes[i - 1]);
+    const lc = Math.abs(lows[i] - closes[i - 1]);
+    tr[i] = Math.max(hl, hc, lc);
+  }
+  
+  // First ATR is simple average
+  let sum = 0;
+  for (let i = 1; i <= period; i++) {
+    sum += tr[i] || 0;
+  }
+  atr[period] = sum / period;
+  
+  // Subsequent ATRs use smoothing
+  for (let i = period + 1; i < closes.length; i++) {
+    atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period;
+  }
+  
+  return atr;
+}
+
+// Calculate ADX
+function calculateADX(highs: number[], lows: number[], closes: number[], period: number = 14): { adx: number[], diPlus: number[], diMinus: number[] } {
+  const adx: number[] = [];
+  const diPlus: number[] = [];
+  const diMinus: number[] = [];
+  const tr: number[] = [];
+  const dmPlus: number[] = [];
+  const dmMinus: number[] = [];
+  
+  for (let i = 1; i < closes.length; i++) {
+    const hl = highs[i] - lows[i];
+    const hc = Math.abs(highs[i] - closes[i - 1]);
+    const lc = Math.abs(lows[i] - closes[i - 1]);
+    tr[i] = Math.max(hl, hc, lc);
+    
+    const upMove = highs[i] - highs[i - 1];
+    const downMove = lows[i - 1] - lows[i];
+    
+    dmPlus[i] = upMove > downMove && upMove > 0 ? upMove : 0;
+    dmMinus[i] = downMove > upMove && downMove > 0 ? downMove : 0;
+  }
+  
+  // Smoothed values
+  let smoothedTR = 0, smoothedDMPlus = 0, smoothedDMMinus = 0;
+  
+  for (let i = 1; i <= period; i++) {
+    smoothedTR += tr[i] || 0;
+    smoothedDMPlus += dmPlus[i] || 0;
+    smoothedDMMinus += dmMinus[i] || 0;
+  }
+  
+  for (let i = period; i < closes.length; i++) {
+    if (i > period) {
+      smoothedTR = smoothedTR - (smoothedTR / period) + (tr[i] || 0);
+      smoothedDMPlus = smoothedDMPlus - (smoothedDMPlus / period) + (dmPlus[i] || 0);
+      smoothedDMMinus = smoothedDMMinus - (smoothedDMMinus / period) + (dmMinus[i] || 0);
+    }
+    
+    diPlus[i] = smoothedTR > 0 ? (smoothedDMPlus / smoothedTR) * 100 : 0;
+    diMinus[i] = smoothedTR > 0 ? (smoothedDMMinus / smoothedTR) * 100 : 0;
+    
+    const diDiff = Math.abs(diPlus[i] - diMinus[i]);
+    const diSum = diPlus[i] + diMinus[i];
+    const dx = diSum > 0 ? (diDiff / diSum) * 100 : 0;
+    
+    if (i === period) {
+      adx[i] = dx;
+    } else if (adx[i - 1] !== undefined) {
+      adx[i] = (adx[i - 1] * (period - 1) + dx) / period;
+    }
+  }
+  
+  return { adx, diPlus, diMinus };
+}
+
 // Calculate Bollinger Bands
 function calculateBollingerBands(prices: number[], period: number = 20, stdDev: number = 2) {
   const bands: { upper: number[], middle: number[], lower: number[] } = {
@@ -227,18 +309,39 @@ function runStrategy(
   const trades: Trade[] = [];
   let position: { entry: number; entryDate: string; entryIdx: number } | null = null;
   
+  // Get all OHLC data for MSP strategies
+  const highs = dates.map(d => priceData[d].high);
+  const lows = dates.map(d => priceData[d].low);
+  const volumes = dates.map(d => priceData[d].volume);
+  
   // Calculate indicators based on strategy
   let ema9: number[] = [];
   let ema21: number[] = [];
+  let ema55: number[] = [];
+  let ema200: number[] = [];
   let sma50: number[] = [];
   let sma200: number[] = [];
   let rsi: number[] = [];
   let macdData: { macd: number[], signal: number[], histogram: number[] } | null = null;
   let bbands: { upper: number[], middle: number[], lower: number[] } | null = null;
+  let adxData: { adx: number[], diPlus: number[], diMinus: number[] } | null = null;
+  let atr: number[] = [];
+  let volSMA: number[] = [];
   
-  if (strategy.includes('ema') || strategy === 'multi_ema_rsi') {
+  // MSP strategies need all indicators
+  const isMSP = strategy.startsWith('msp_');
+  
+  if (strategy.includes('ema') || strategy === 'multi_ema_rsi' || isMSP) {
     ema9 = calculateEMA(closes, 9);
     ema21 = calculateEMA(closes, 21);
+  }
+  
+  if (isMSP) {
+    ema55 = calculateEMA(closes, 55);
+    ema200 = calculateEMA(closes, 200);
+    adxData = calculateADX(highs, lows, closes, 14);
+    atr = calculateATR(highs, lows, closes, 14);
+    volSMA = calculateSMA(volumes, 20);
   }
   
   if (strategy.includes('sma')) {
@@ -246,11 +349,11 @@ function runStrategy(
     sma200 = calculateSMA(closes, 200);
   }
   
-  if (strategy.includes('rsi') || strategy === 'multi_ema_rsi') {
+  if (strategy.includes('rsi') || strategy === 'multi_ema_rsi' || isMSP) {
     rsi = calculateRSI(closes, 14);
   }
   
-  if (strategy.includes('macd') || strategy === 'multi_macd_adx') {
+  if (strategy.includes('macd') || strategy === 'multi_macd_adx' || isMSP) {
     macdData = calculateMACD(closes);
   }
   
@@ -457,6 +560,219 @@ function runStrategy(
             return: returnDollars,
             returnPercent,
             holdingPeriodDays: i - position.entryIdx + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // MSP MULTI-TF DASHBOARD STRATEGY
+    // ═══════════════════════════════════════════════════════════════
+    
+    if ((strategy === 'msp_multi_tf' || strategy === 'msp_multi_tf_strict') && adxData && macdData) {
+      const { adx, diPlus, diMinus } = adxData;
+      const { macd, signal, histogram } = macdData;
+      const minBias = strategy === 'msp_multi_tf_strict' ? 8 : 6;
+      
+      // Calculate per-TF bias score (simulated using multi-period analysis)
+      // TF1 (fast) - using short EMAs
+      const tf1Trend = close > ema9[i] && ema9[i] > ema21[i] ? 1 : close < ema9[i] && ema9[i] < ema21[i] ? -1 : 0;
+      const tf1RSI = rsi[i] > 55 ? 1 : rsi[i] < 45 ? -1 : 0;
+      const tf1MACD = macd[i] > signal[i] && histogram[i] > 0 ? 1 : macd[i] < signal[i] && histogram[i] < 0 ? -1 : 0;
+      const tf1Vol = volumes[i] > (volSMA[i] || 0) * 1.2 ? 1 : 0;
+      const tf1Bias = tf1Trend + tf1RSI + tf1MACD + (tf1Trend !== 0 && tf1Vol ? (tf1Trend > 0 ? 1 : -1) : 0);
+      
+      // TF2 (medium) - using medium EMAs  
+      const tf2Trend = close > ema21[i] && ema21[i] > ema55[i] ? 1 : close < ema21[i] && ema21[i] < ema55[i] ? -1 : 0;
+      const rsi21 = calculateRSI(closes.slice(0, i+1), 21);
+      const tf2RSI = (rsi21[rsi21.length-1] || 50) > 55 ? 1 : (rsi21[rsi21.length-1] || 50) < 45 ? -1 : 0;
+      const tf2Bias = tf2Trend + tf2RSI + tf1MACD;
+      
+      // TF3 (slow) - using slow EMAs
+      const tf3Trend = close > ema55[i] && ema55[i] > ema200[i] ? 1 : close < ema55[i] && ema55[i] < ema200[i] ? -1 : 0;
+      const tf3Bias = tf3Trend + (adx[i] > 25 && diPlus[i] > diMinus[i] ? 1 : adx[i] > 25 && diMinus[i] > diPlus[i] ? -1 : 0);
+      
+      // TF4 (very slow) - using 200 EMA context
+      const tf4Trend = close > ema200[i] ? 1 : close < ema200[i] ? -1 : 0;
+      const tf4Bias = tf4Trend;
+      
+      // Total bias across all TFs
+      const totalBias = tf1Bias + tf2Bias + tf3Bias + tf4Bias;
+      
+      // All TFs aligned
+      const allBull = tf1Trend === 1 && tf2Trend === 1 && tf3Trend === 1 && tf4Trend === 1;
+      const allBear = tf1Trend === -1 && tf2Trend === -1 && tf3Trend === -1 && tf4Trend === -1;
+      
+      // ADX confirmation
+      const adxOk = adx[i] > 20;
+      
+      // Entry conditions
+      const longSignal = totalBias >= minBias && adxOk && !position;
+      const shortSignal = totalBias <= -minBias && adxOk && !position;
+      
+      // Position management with ATR-based exits (matching v1 settings)
+      const slATR = 1.5;
+      const tpATR = 3.0;
+      
+      if (longSignal) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const entryPrice = position.entry;
+        const sl = entryPrice - (atr[i] || close * 0.02) * slATR;
+        const tp = entryPrice + (atr[i] || close * 0.02) * tpATR;
+        
+        // Exit conditions
+        const hitSL = lows[i] <= sl;
+        const hitTP = highs[i] >= tp;
+        const biasReversal = totalBias <= 0; // Exit when bias goes neutral/negative
+        const barsHeld = i - position.entryIdx;
+        
+        if (hitSL || hitTP || biasReversal) {
+          let exitPrice = close;
+          if (hitSL) exitPrice = sl;
+          if (hitTP) exitPrice = tp;
+          
+          const shares = (initialCapital * 0.95) / position.entry;
+          const returnDollars = (exitPrice - position.entry) * shares;
+          const returnPercent = ((exitPrice - position.entry) / position.entry) * 100;
+          
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: date,
+            symbol,
+            side: 'LONG',
+            entry: position.entry,
+            exit: exitPrice,
+            return: returnDollars,
+            returnPercent,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // MSP DAY TRADER STRATEGIES
+    // ═══════════════════════════════════════════════════════════════
+    
+    if ((strategy === 'msp_day_trader' || strategy === 'msp_day_trader_strict' || strategy === 'msp_trend_pullback' || strategy === 'msp_liquidity_reversal') && adxData && macdData) {
+      const { adx, diPlus, diMinus } = adxData;
+      const { macd, signal, histogram } = macdData;
+      const minScore = strategy === 'msp_day_trader_strict' ? 6 : 5;
+      
+      // Calculate indicators for this bar
+      const bullTrend = ema9[i] > ema21[i] && ema21[i] > ema55[i] && close > ema55[i];
+      const bearTrend = ema9[i] < ema21[i] && ema21[i] < ema55[i] && close < ema55[i];
+      const htfBull = close > ema200[i] && ema9[i] > ema200[i];
+      const htfBear = close < ema200[i] && ema9[i] < ema200[i];
+      const strongTrend = adx[i] >= 25;
+      const trendUp = diPlus[i] > diMinus[i] && strongTrend;
+      const trendDn = diMinus[i] > diPlus[i] && strongTrend;
+      
+      // Momentum
+      const rsiBull = rsi[i] > 55 && rsi[i] < 75;
+      const rsiBear = rsi[i] < 45 && rsi[i] > 25;
+      const macdBull = macd[i] > signal[i] && histogram[i] > 0 && histogram[i] > (histogram[i-1] || 0);
+      const macdBear = macd[i] < signal[i] && histogram[i] < 0 && histogram[i] < (histogram[i-1] || 0);
+      const momBull = rsiBull && macdBull;
+      const momBear = rsiBear && macdBear;
+      
+      // Volume
+      const volSpike = volumes[i] > (volSMA[i] || 0) * 1.3;
+      
+      // Liquidity sweeps
+      const body = Math.abs(close - priceData[dates[i]].open);
+      const upWick = highs[i] - Math.max(close, priceData[dates[i]].open);
+      const dnWick = Math.min(close, priceData[dates[i]].open) - lows[i];
+      const priorHH = Math.max(...highs.slice(Math.max(0, i-10), i));
+      const priorLL = Math.min(...lows.slice(Math.max(0, i-10), i));
+      const sweepLow = lows[i] < priorLL && dnWick > body * 1.5 && close > priorLL;
+      const sweepHigh = highs[i] > priorHH && upWick > body * 1.5 && close < priorHH;
+      
+      // FVG detection
+      const bullFVG = i >= 2 && lows[i] > highs[i-2];
+      const bearFVG = i >= 2 && highs[i] < lows[i-2];
+      const nearBullFVG = (i >= 1 && lows[i-1] > highs[i-3]) || (i >= 2 && lows[i-2] > highs[i-4]);
+      const nearBearFVG = (i >= 1 && highs[i-1] < lows[i-3]) || (i >= 2 && highs[i-2] < lows[i-4]);
+      
+      // Scoring system
+      let scoreBull = 0;
+      scoreBull += bullTrend ? 1 : 0;
+      scoreBull += htfBull ? 1 : 0;
+      scoreBull += trendUp ? 1 : 0;
+      scoreBull += momBull ? 1 : 0;
+      scoreBull += sweepLow ? 1 : 0;
+      scoreBull += nearBullFVG ? 1 : 0;
+      scoreBull += volSpike ? 1 : 0;
+      
+      let scoreBear = 0;
+      scoreBear += bearTrend ? 1 : 0;
+      scoreBear += htfBear ? 1 : 0;
+      scoreBear += trendDn ? 1 : 0;
+      scoreBear += momBear ? 1 : 0;
+      scoreBear += sweepHigh ? 1 : 0;
+      scoreBear += nearBearFVG ? 1 : 0;
+      scoreBear += volSpike ? 1 : 0;
+      
+      // Specific strategy variants
+      const isTrendPullback = strategy === 'msp_trend_pullback';
+      const isLiquidityReversal = strategy === 'msp_liquidity_reversal';
+      
+      // Entry conditions
+      let longSignal = false;
+      let shortSignal = false;
+      
+      if (isTrendPullback) {
+        longSignal = bullTrend && htfBull && momBull && scoreBull >= 4;
+        shortSignal = bearTrend && htfBear && momBear && scoreBear >= 4;
+      } else if (isLiquidityReversal) {
+        longSignal = sweepLow && momBull && htfBull && scoreBull >= 4;
+        shortSignal = sweepHigh && momBear && htfBear && scoreBear >= 4;
+      } else {
+        // Default MSP Day Trader
+        longSignal = scoreBull >= minScore && htfBull && strongTrend;
+        shortSignal = scoreBear >= minScore && htfBear && strongTrend;
+      }
+      
+      // Position management with ATR-based exits
+      const slATR = 1.0;
+      const tpATR = 3.5;
+      
+      if (!position && longSignal) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const entryPrice = position.entry;
+        const sl = entryPrice - (atr[i] || close * 0.02) * slATR;
+        const tp = entryPrice + (atr[i] || close * 0.02) * tpATR;
+        
+        // Exit conditions
+        const hitSL = lows[i] <= sl;
+        const hitTP = highs[i] >= tp;
+        const trendFlip = bearTrend && adx[i] > 25;
+        const barsHeld = i - position.entryIdx;
+        const timeExit = barsHeld >= 20 && close < entryPrice + (atr[i] || 0) * 0.5;
+        
+        if (hitSL || hitTP || trendFlip || timeExit) {
+          let exitPrice = close;
+          if (hitSL) exitPrice = sl;
+          if (hitTP) exitPrice = tp;
+          
+          const shares = (initialCapital * 0.95) / position.entry;
+          const returnDollars = (exitPrice - position.entry) * shares;
+          const returnPercent = ((exitPrice - position.entry) / position.entry) * 100;
+          
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: date,
+            symbol,
+            side: 'LONG',
+            entry: position.entry,
+            exit: exitPrice,
+            return: returnDollars,
+            returnPercent,
+            holdingPeriodDays: barsHeld + 1
           });
           position = null;
         }

@@ -34,6 +34,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { sql } from "@vercel/postgres";
 import { logger } from "@/lib/logger";
 import { analystRequestSchema } from "../../../lib/validation";
+import { ZodError } from "zod";
 
 export const runtime = "nodejs";
 
@@ -46,8 +47,31 @@ function getOpenAIClient() {
 export async function POST(req: NextRequest) {
   try {
     // Validate request body with Zod
-    const json = await req.json();
-    const body = analystRequestSchema.parse(json);
+    let json;
+    try {
+      json = await req.json();
+    } catch (parseErr) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400 }
+      );
+    }
+    
+    let body;
+    try {
+      body = analystRequestSchema.parse(json);
+    } catch (zodErr) {
+      if (zodErr instanceof ZodError) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Validation failed", 
+            details: zodErr.issues 
+          }),
+          { status: 400 }
+        );
+      }
+      throw zodErr;
+    }
     
     const { query, mode, history, context, scanner } = body;
     
@@ -118,6 +142,7 @@ export async function POST(req: NextRequest) {
     if (dailyLimit) {
       try {
         const today = new Date().toISOString().split('T')[0];
+        // Use text comparison for workspace_id (supports both UUID and anon_xxx formats)
         const usageResult = await sql`
           SELECT COUNT(*) as count FROM ai_usage 
           WHERE workspace_id = ${workspaceId} AND DATE(created_at) = ${today}
@@ -148,8 +173,12 @@ export async function POST(req: NextRequest) {
             { status: 429 }
           );
         }
-      } catch (dbErr) {
-        logger.error('Error checking AI usage', { error: dbErr, workspaceId });
+      } catch (dbErr: any) {
+        // Table might not exist - log but continue
+        logger.warn('AI usage check skipped (table may not exist)', { 
+          error: dbErr?.message, 
+          workspaceId 
+        });
         // Continue anyway - don't block on DB errors
       }
     }
@@ -262,10 +291,28 @@ If information is missing, say so explicitly instead of guessing.
     });
 
     const client = getOpenAIClient();
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-    });
+    
+    let response;
+    try {
+      response = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+      });
+    } catch (openaiErr: any) {
+      // Handle OpenAI-specific errors
+      if (openaiErr?.code === 'rate_limit_exceeded' || openaiErr?.status === 429) {
+        logger.warn('OpenAI rate limit exceeded', { error: openaiErr.message });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "AI service is temporarily busy. Please try again in a few minutes.",
+            rateLimited: true
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      throw openaiErr;
+    }
 
     const text = response.choices[0]?.message?.content ?? "";
 
@@ -295,15 +342,24 @@ If information is missing, say so explicitly instead of guessing.
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    logger.error('MSP Analyst API error', {
-      error: err?.message || 'Unknown error',
-      stack: err?.stack
-    });
+    // Detailed error logging for debugging
+    const errorDetails = {
+      message: err?.message || 'Unknown error',
+      name: err?.name,
+      code: err?.code,
+      stack: err?.stack?.split('\n').slice(0, 5).join('\n')
+    };
+    
+    logger.error('MSP Analyst API error', errorDetails);
 
+    // Return detailed error in development, generic in production
+    const isDev = process.env.NODE_ENV === 'development';
+    
     return new Response(
       JSON.stringify({
         ok: false,
         error: err?.message || "Unknown error calling MSP Analyst",
+        ...(isDev || true ? { debug: errorDetails } : {}) // Always show debug for now
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );

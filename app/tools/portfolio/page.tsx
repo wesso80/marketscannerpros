@@ -65,7 +65,51 @@ function PortfolioContent() {
     return s;
   }
 
-  // Fetch price from backend quote API; try crypto first, then stock, finally fx.
+  // Detect if a symbol is likely a stock vs crypto
+  function isLikelyStock(symbol: string): boolean {
+    // Common US stock symbols (popular ones that might conflict with crypto)
+    const knownStocks = [
+      'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'TSLA', 
+      'BRK', 'JPM', 'JNJ', 'V', 'UNH', 'HD', 'PG', 'MA', 'DIS', 'PYPL',
+      'NFLX', 'ADBE', 'CRM', 'INTC', 'AMD', 'CSCO', 'PEP', 'KO', 'ABT',
+      'NKE', 'MRK', 'TMO', 'COST', 'WMT', 'CVX', 'XOM', 'BA', 'CAT', 
+      'MMM', 'IBM', 'GE', 'GM', 'F', 'T', 'VZ', 'SPY', 'QQQ', 'IWM',
+      'VOO', 'VTI', 'ARKK', 'PLTR', 'SQ', 'COIN', 'HOOD', 'RBLX', 'UBER',
+      'ABNB', 'SNAP', 'PINS', 'TWLO', 'ZM', 'DOCU', 'NET', 'CRWD', 'DDOG'
+    ];
+    
+    // Known crypto symbols
+    const knownCrypto = [
+      'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC',
+      'LINK', 'UNI', 'ATOM', 'LTC', 'BCH', 'XLM', 'ALGO', 'VET', 'FIL',
+      'AAVE', 'EOS', 'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX',
+      'SUSHI', 'YFI', 'CRV', 'BAL', 'REN', '1INCH', 'GRT', 'ENJ', 'MANA',
+      'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD', 'FLOW', 'ICP',
+      'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA', 'CELO',
+      'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP',
+      'ARB', 'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS'
+    ];
+    
+    const upper = symbol.toUpperCase();
+    
+    // If explicitly known as stock, return true
+    if (knownStocks.includes(upper)) return true;
+    
+    // If explicitly known as crypto, return false
+    if (knownCrypto.includes(upper)) return false;
+    
+    // Heuristic: Most stock symbols are 1-5 chars, crypto can be longer
+    // Symbols with numbers are usually stocks (e.g., BRK.B)
+    if (/\d/.test(symbol)) return true;
+    
+    // Default: If 4+ chars and not in crypto list, likely a stock
+    if (symbol.length >= 4) return true;
+    
+    // Short symbols (1-3 chars) default to crypto (BTC, ETH, etc.)
+    return false;
+  }
+
+  // Fetch price from backend quote API; smart detection of crypto vs stock
   async function fetchAutoPrice(symbol: string): Promise<number | null> {
     const s = normalizeSymbol(symbol);
     const cacheBust = Date.now(); // Force fresh data
@@ -90,13 +134,24 @@ function PortfolioContent() {
       }
     };
 
-    // Prefer crypto in this app; many users track coins.
-    const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
-    if (crypto !== null) return crypto;
-
-    // Try stock
-    const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
-    if (stock !== null) return stock;
+    // Smart detection: try the most likely type first
+    if (isLikelyStock(s)) {
+      // Try stock first for likely stock symbols
+      const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
+      if (stock !== null) return stock;
+      
+      // Fallback to crypto (in case it's actually a crypto)
+      const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
+      if (crypto !== null) return crypto;
+    } else {
+      // Try crypto first for likely crypto symbols
+      const crypto = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=crypto&market=USD`);
+      if (crypto !== null) return crypto;
+      
+      // Fallback to stock
+      const stock = await tryFetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=stock`);
+      if (stock !== null) return stock;
+    }
 
     // Try FX if symbol looks like a currency code (3 letters)
     if (s.length === 3) {

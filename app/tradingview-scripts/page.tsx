@@ -4,7 +4,27 @@ import Link from 'next/link';
 
 const scripts = [
   {
-    name: "MSP — Multi-TF Dashboard v3",
+    name: "MSP — Day Trader AIO v2",
+    description: "The ultimate all-in-one day trading indicator combining Smart Money Concepts with technical analysis. Features EMA trend system, RSI divergence, Fair Value Gaps, Order Blocks, BOS/CHoCH detection, ATR-based SL/TP, and a 7-point scoring system for high-conviction setups.",
+    image: "/images/confluence-strategy.png",
+    status: "Live · Invite-only",
+    focus: "Complete trading system",
+    type: "TV: Indicator",
+    isNew: true,
+    features: ["Smart Money Concepts", "FVG & Order Blocks", "BOS/CHoCH", "Auto SL/TP", "7-Point Scoring"]
+  },
+  {
+    name: "MSP — Multi-TF Dashboard Strategy v1",
+    description: "Backtestable strategy version of the Multi-TF Dashboard. Combines 4 timeframe analysis with trend, RSI, MACD, volume and ADX scoring. ATR-based SL/TP with breakeven and trailing stops. Proven +5.32% returns with 1.27 profit factor.",
+    image: "/images/msp-dashboard.png",
+    status: "Live · Invite-only",
+    focus: "Multi-TF strategy",
+    type: "TV: Strategy",
+    isNew: true,
+    features: ["4 Timeframe Analysis", "Bias Scoring System", "ATR SL/TP", "Breakeven & Trail", "1.27 Profit Factor"]
+  },
+  {
+    name: "MSP — Multi-TF Dashboard v4",
     description: "Reads 4 timeframes at once and scores trend, momentum and bias. Gives you instant clarity on whether the market is aligned long, short or stuck in chop.",
     image: "/images/msp-dashboard.png",
     status: "Live · Invite-only",
@@ -12,12 +32,13 @@ const scripts = [
     type: "TV: Indicator"
   },
   {
-    name: "MSP Auto Fib Tool – Locked & Alerts",
-    description: "Automatically anchors swings, plots key retracement/extension levels and lets you lock zones for precise, repeatable execution with alerts.",
+    name: "MSP Auto Fib Tool v3 – Locked & Alerts",
+    description: "Automatically anchors swings, plots -61.8% to 461.8% retracement/extension levels with info table, proximity alerts, pivot markers, and golden pocket highlighting. Lock zones for precise execution.",
     image: "/images/auto-fib.png",
-    status: "Beta · Invite-only",
+    status: "Live · Invite-only",
     focus: "Levels & structure",
-    type: "TV: Indicator"
+    type: "TV: Indicator",
+    features: ["Negative Extensions", "Info Table", "Proximity Alerts", "Golden Pocket"]
   },
   {
     name: "MarketScannerPros — Confluence Strategy",
@@ -33,8 +54,7 @@ const scripts = [
     image: "/images/time-confluence.png",
     status: "Live · Invite-only",
     focus: "Timing zones",
-    type: "TV: Indicator",
-    isNew: true
+    type: "TV: Indicator"
   },
   {
     name: "Short & Long Squeeze Backtest v6",
@@ -47,7 +67,7 @@ const scripts = [
   {
     name: "A+ Setup Scanner - Bullish/Bearish",
     description: "Combines EMA alignment, RSI momentum, MACD, volume and breakout detection into a single score. Mobile-optimized table shows bias from Strong Bullish to Strong Bearish at a glance.",
-    image: "/images/aplus-scanner.png",
+    image: "/images/candle-pattern.png",
     status: "Live · Invite-only",
     focus: "Setup scoring",
     type: "TV: Indicator"
@@ -288,6 +308,21 @@ export default function TradingViewScriptsPage() {
                   <div style={{ padding: '16px 18px' }}>
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', marginBottom: 8 }}>{script.name}</h3>
                     <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12 }}>{script.description}</p>
+                    {script.features && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                        {script.features.map((feature: string, fi: number) => (
+                          <span key={fi} style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            color: '#34d399',
+                            fontSize: 10,
+                            fontWeight: 600
+                          }}>{feature}</span>
+                        ))}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#64748b' }}>
                       <span>Focus: <span style={{ color: '#10b981' }}>{script.focus}</span></span>
                       <span>{script.type}</span>

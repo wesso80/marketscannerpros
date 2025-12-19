@@ -1,14 +1,16 @@
 -- AI Usage Tracking Table
 -- Run this SQL in your Vercel Postgres database
 
+-- Drop existing table if needed to update schema
+-- DROP TABLE IF EXISTS ai_usage;
+
 CREATE TABLE IF NOT EXISTS ai_usage (
     id SERIAL PRIMARY KEY,
-    workspace_id UUID NOT NULL,
+    workspace_id VARCHAR(100) NOT NULL,  -- VARCHAR to support both UUID and anon_xxx formats
     question TEXT NOT NULL,
     response_length INTEGER NOT NULL,
     tier VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    INDEX idx_workspace_date (workspace_id, created_at)
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Create index for efficient daily usage queries

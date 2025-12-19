@@ -7130,7 +7130,9 @@ else:
         col1, col2 = st.columns(2)
     
         with col1:
-            symbol = st.text_input("Symbol:", placeholder="e.g., AAPL", key="portfolio_symbol").upper()
+            symbol = st.text_input("Symbol:", placeholder="e.g., AAPL, BTC", key="portfolio_symbol").upper()
+            asset_type = st.selectbox("Asset Type:", ["Equity (Stock/ETF)", "Crypto"], key="portfolio_asset_type",
+                                      help="Select 'Crypto' for BTC, ETH, etc. Select 'Equity' for stocks like AAPL, TSLA")
             quantity = st.number_input("Quantity:", min_value=0.0001, step=0.1, key="portfolio_quantity")
             transaction_type = st.selectbox("Transaction Type:", ["BUY", "SELL"], key="portfolio_transaction_type")
     
@@ -7139,8 +7141,12 @@ else:
             notes = st.text_area("Notes (Optional):", placeholder="e.g., Earnings play, long-term hold", height=100, key="portfolio_notes")
     
         if symbol and quantity > 0 and average_cost > 0:
+            # Format symbol based on asset type for proper price fetching
+            is_crypto = asset_type == "Crypto"
+            display_symbol = f"{symbol}-USD" if is_crypto and not symbol.endswith("-USD") else symbol
+            
             total_value = quantity * average_cost
-            st.info(f"Total Transaction Value: ${total_value:,.2f}")
+            st.info(f"Total Transaction Value: ${total_value:,.2f} | Symbol: {display_symbol}")
         
             col1, col2, col3 = st.columns([1, 1, 1])
             with col2:
@@ -7156,7 +7162,7 @@ else:
                         # Check if trying to add new position beyond limit
                         if tier_info['portfolio_limit'] and position_count >= tier_info['portfolio_limit']:
                             existing_symbols = [p['symbol'] for p in current_positions]
-                            if symbol not in existing_symbols:
+                            if display_symbol not in existing_symbols:
                                 st.error(f"🔒 Portfolio limit reached! You have {position_count}/{tier_info['portfolio_limit']} symbols.")
                                 if current_tier == 'free':
                                     st.info("✨ Upgrade to Pro for 8 portfolio symbols (try free for 5-7 days)!")
@@ -7165,9 +7171,10 @@ else:
                                 can_add = False
                 
                     if can_add:
-                        success = add_portfolio_position(symbol, quantity, average_cost, transaction_type, notes)
+                        # Use formatted symbol (with -USD for crypto)
+                        success = add_portfolio_position(display_symbol, quantity, average_cost, transaction_type, notes)
                         if success:
-                            st.success(f"Successfully added {transaction_type} of {quantity} shares of {symbol}")
+                            st.success(f"Successfully added {transaction_type} of {quantity} shares of {display_symbol}")
                             st.rerun()
 
     with tab3:
@@ -7216,22 +7223,40 @@ else:
                                     st.rerun()
         
             with col2:
-                st.markdown("**🗑️ Remove Position**")
-                remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
-                if remove_symbol:
-                    st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
-                
-                    # Confirmation checkbox
-                    confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
-                
-                    if confirm_remove:
-                        if st.button("Remove Position", type="primary"):
-                            success = remove_portfolio_position(remove_symbol)
-                            if success:
-                                st.success(f"Successfully removed {remove_symbol} from portfolio")
-                                st.rerun()
-                            else:
-                                st.error(f"Failed to remove {remove_symbol}")
+                st.markdown("**� Fix Symbol Type**")
+                st.caption("Convert a crypto symbol to proper format (add -USD)")
+                fix_symbol = st.selectbox("Select symbol to fix:", [pos['symbol'] for pos in positions if not pos['symbol'].endswith('-USD')], key="fix_symbol")
+                if fix_symbol:
+                    new_symbol = f"{fix_symbol}-USD"
+                    st.info(f"Will rename: {fix_symbol} → {new_symbol}")
+                    if st.button("Convert to Crypto Format", type="secondary"):
+                        try:
+                            # Update both positions and transactions tables
+                            execute_db_write("UPDATE portfolio_positions SET symbol = %s WHERE symbol = %s", (new_symbol, fix_symbol))
+                            execute_db_write("UPDATE portfolio_transactions SET symbol = %s WHERE symbol = %s", (new_symbol, fix_symbol))
+                            st.success(f"✅ Converted {fix_symbol} to {new_symbol}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to convert: {e}")
+            
+            # Remove position section
+            st.markdown("---")
+            st.markdown("**🗑️ Remove Position**")
+            remove_symbol = st.selectbox("Select position to remove:", [pos['symbol'] for pos in positions], key="remove_symbol")
+            if remove_symbol:
+                st.warning("⚠️ This will permanently delete all transactions and data for this position. Use this only to correct data entry errors.")
+            
+                # Confirmation checkbox
+                confirm_remove = st.checkbox(f"I confirm I want to permanently remove {remove_symbol}", key="confirm_remove")
+            
+                if confirm_remove:
+                    if st.button("Remove Position", type="primary"):
+                        success = remove_portfolio_position(remove_symbol)
+                        if success:
+                            st.success(f"Successfully removed {remove_symbol} from portfolio")
+                            st.rerun()
+                        else:
+                            st.error(f"Failed to remove {remove_symbol}")
         else:
             st.info("No positions found. Add your first position using the 'Add Position' tab.")
 

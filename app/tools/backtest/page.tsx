@@ -52,7 +52,7 @@ function BacktestContent() {
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-12-31');
   const [initialCapital, setInitialCapital] = useState('10000');
-  const [strategy, setStrategy] = useState('ema_crossover');
+  const [strategy, setStrategy] = useState('msp_day_trader');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -283,21 +283,39 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                <option value="ema_crossover">EMA Crossover (9/21)</option>
-                <option value="sma_crossover">SMA Crossover (50/200)</option>
-                <option value="rsi_reversal">RSI Mean Reversion</option>
-                <option value="rsi_trend">RSI Trend Following</option>
-                <option value="macd_momentum">MACD Momentum</option>
-                <option value="macd_crossover">MACD Signal Crossover</option>
-                <option value="bbands_squeeze">Bollinger Bands Squeeze</option>
-                <option value="bbands_breakout">Bollinger Bands Breakout</option>
-                <option value="stoch_oversold">Stochastic Oversold</option>
-                <option value="adx_trend">ADX Trend Filter</option>
-                <option value="cci_reversal">CCI Reversal</option>
-                <option value="obv_volume">OBV Volume Confirmation</option>
-                <option value="multi_ema_rsi">Multi: EMA + RSI</option>
-                <option value="multi_macd_adx">Multi: MACD + ADX</option>
-                <option value="multi_bb_stoch">Multi: BB + Stochastic</option>
+                <optgroup label="🔥 MSP Strategies">
+                  <option value="msp_day_trader">MSP Day Trader AIO (Score 5+)</option>
+                  <option value="msp_day_trader_strict">MSP Day Trader Strict (Score 6+)</option>
+                  <option value="msp_multi_tf">MSP Multi-TF Dashboard (Bias 6+)</option>
+                  <option value="msp_multi_tf_strict">MSP Multi-TF Strict (Bias 8+)</option>
+                  <option value="msp_trend_pullback">MSP Trend Pullback</option>
+                  <option value="msp_liquidity_reversal">MSP Liquidity Reversal</option>
+                </optgroup>
+                <optgroup label="Moving Averages">
+                  <option value="ema_crossover">EMA Crossover (9/21)</option>
+                  <option value="sma_crossover">SMA Crossover (50/200)</option>
+                </optgroup>
+                <optgroup label="Momentum">
+                  <option value="rsi_reversal">RSI Mean Reversion</option>
+                  <option value="rsi_trend">RSI Trend Following</option>
+                  <option value="macd_momentum">MACD Momentum</option>
+                  <option value="macd_crossover">MACD Signal Crossover</option>
+                </optgroup>
+                <optgroup label="Volatility">
+                  <option value="bbands_squeeze">Bollinger Bands Squeeze</option>
+                  <option value="bbands_breakout">Bollinger Bands Breakout</option>
+                </optgroup>
+                <optgroup label="Other">
+                  <option value="stoch_oversold">Stochastic Oversold</option>
+                  <option value="adx_trend">ADX Trend Filter</option>
+                  <option value="cci_reversal">CCI Reversal</option>
+                  <option value="obv_volume">OBV Volume Confirmation</option>
+                </optgroup>
+                <optgroup label="Multi-Indicator">
+                  <option value="multi_ema_rsi">Multi: EMA + RSI</option>
+                  <option value="multi_macd_adx">Multi: MACD + ADX</option>
+                  <option value="multi_bb_stoch">Multi: BB + Stochastic</option>
+                </optgroup>
               </select>
             </div>
 
