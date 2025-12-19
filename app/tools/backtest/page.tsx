@@ -990,6 +990,22 @@ function BacktestContent() {
             </p>
           </div>
         )}
+
+        {/* Legal Disclaimer */}
+        <div style={{
+          marginTop: '24px',
+          padding: '12px 16px',
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: '8px',
+          textAlign: 'center',
+        }}>
+          <p style={{ fontSize: '12px', color: '#D97706', margin: 0 }}>
+            ⚠️ <strong>Important:</strong> Backtesting results are hypothetical and do not guarantee future performance. 
+            Past performance is not indicative of future results. This tool is for educational purposes only and does not constitute investment advice. 
+            Trading involves substantial risk of loss.
+          </p>
+        </div>
       </div>
     </div>
   );

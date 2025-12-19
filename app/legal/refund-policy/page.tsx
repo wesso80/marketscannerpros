@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true }
 };
 
-const effective = "7 October 2025";
+const effective = "20 December 2025";
 
 export default function RefundPolicyPage() {
   return (
@@ -38,9 +38,18 @@ export default function RefundPolicyPage() {
       </ul>
 
       <h2>Refund Policy</h2>
-      <p><strong>No Pro-Rated Refunds:</strong></p>
+      
+      <p><strong style={{ color: '#10B981' }}>7-Day Money-Back Guarantee:</strong></p>
       <ul>
-        <li>We do <strong>not</strong> provide refunds or credits for partial months of service.</li>
+        <li>If you are not satisfied with your subscription, you may request a <strong>full refund within 7 days</strong> of your first payment.</li>
+        <li>To request a refund, email <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> with your account email and reason for cancellation.</li>
+        <li>Refunds are processed within 5-10 business days to your original payment method.</li>
+        <li>This guarantee applies to first-time subscribers only.</li>
+      </ul>
+      
+      <p><strong>After 7 Days - No Pro-Rated Refunds:</strong></p>
+      <ul>
+        <li>After the 7-day guarantee period, we do <strong>not</strong> provide refunds or credits for partial months of service.</li>
         <li>When you cancel, you retain access until the end of your current billing period.</li>
         <li>No refunds are given for unused time after cancellation.</li>
       </ul>

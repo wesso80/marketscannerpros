@@ -53,7 +53,7 @@ export default function TermsPage() {
           }}>
             <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#10B981' }}>On this page</strong>
             <div style={{ color: '#9CA3AF', lineHeight: 1.8 }}>
-              <a href="#eligibility" style={navLinkStyle}>Eligibility</a> · <a href="#use" style={navLinkStyle}>Use</a> · <a href="#billing" style={navLinkStyle}>Subscriptions</a> · <a href="#ip" style={navLinkStyle}>IP</a> · <a href="#warranty" style={navLinkStyle}>Warranties</a> · <a href="#liability" style={navLinkStyle}>Liability</a> · <a href="#privacy" style={navLinkStyle}>Privacy & Cookies</a> · <a href="#termination" style={navLinkStyle}>Termination</a> · <a href="#changes" style={navLinkStyle}>Changes</a> · <a href="#contact" style={navLinkStyle}>Contact</a>
+              <a href="#eligibility" style={navLinkStyle}>Eligibility</a> · <a href="#use" style={navLinkStyle}>Use</a> · <a href="#billing" style={navLinkStyle}>Subscriptions</a> · <a href="#ip" style={navLinkStyle}>IP</a> · <a href="#warranty" style={navLinkStyle}>Warranties</a> · <a href="#liability" style={navLinkStyle}>Liability</a> · <a href="#privacy" style={navLinkStyle}>Privacy & Cookies</a> · <a href="#termination" style={navLinkStyle}>Termination</a> · <a href="#governing" style={navLinkStyle}>Governing Law</a> · <a href="#disputes" style={navLinkStyle}>Disputes</a> · <a href="#changes" style={navLinkStyle}>Changes</a> · <a href="#contact" style={navLinkStyle}>Contact</a>
             </div>
           </nav>
 
@@ -118,11 +118,39 @@ export default function TermsPage() {
             <p style={pStyle}>We may suspend or terminate your access if you violate these Terms. You may stop using the App at any time.</p>
           </Section>
 
-          <Section id="changes" title="9. Changes">
+          <Section id="governing" title="9. Governing Law">
+            <p style={pStyle}>
+              These Terms shall be governed by and construed in accordance with the laws of <strong style={{ color: '#10B981' }}>New South Wales, Australia</strong>, without regard to its conflict of law provisions. 
+              You agree to submit to the personal and exclusive jurisdiction of the courts located in New South Wales, Australia for resolution of any disputes.
+            </p>
+            <p style={pStyle}>
+              Nothing in these Terms excludes, restricts or modifies any consumer rights under the <em>Australian Consumer Law</em> (Schedule 2 of the Competition and Consumer Act 2010 (Cth)) or equivalent legislation that cannot be excluded.
+            </p>
+          </Section>
+
+          <Section id="disputes" title="10. Dispute Resolution">
+            <p style={pStyle}>
+              Any dispute arising from these Terms or your use of the App shall first be attempted to be resolved through informal negotiation by contacting us at <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a>.
+            </p>
+            <p style={pStyle}>
+              If informal resolution is unsuccessful within 30 days, either party may pursue mediation administered by the Australian Disputes Centre (ADC) in Sydney, NSW. If mediation is unsuccessful, disputes may be resolved by binding arbitration or in the courts of New South Wales.
+            </p>
+            <p style={pStyle}>
+              <strong style={{ color: '#F59E0B' }}>Class Action Waiver:</strong> To the extent permitted by law, you agree to resolve disputes only on an individual basis and waive any right to participate in class actions or representative proceedings.
+            </p>
+          </Section>
+
+          <Section id="indemnification" title="11. Indemnification">
+            <p style={pStyle}>
+              You agree to indemnify, defend, and hold harmless MarketScanner Pros, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, or expenses (including legal fees) arising from your use of the App, violation of these Terms, or infringement of any third-party rights.
+            </p>
+          </Section>
+
+          <Section id="changes" title="12. Changes">
             <p style={pStyle}>We may update these Terms occasionally. Changes will be posted on this page with a revised effective date.</p>
           </Section>
 
-          <Section id="contact" title="10. Contact">
+          <Section id="contact" title="13. Contact">
             <p style={pStyle}>
               For questions, please email us at:
               <br />

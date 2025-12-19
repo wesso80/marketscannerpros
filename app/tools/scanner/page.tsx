@@ -1150,6 +1150,21 @@ function ScannerContent() {
             </p>
           </div>
         )}
+
+        {/* Legal Disclaimer */}
+        <div style={{
+          marginTop: "1.5rem",
+          padding: "0.75rem 1rem",
+          background: "rgba(245, 158, 11, 0.1)",
+          border: "1px solid rgba(245, 158, 11, 0.3)",
+          borderRadius: "8px",
+          textAlign: "center",
+        }}>
+          <p style={{ fontSize: "0.75rem", color: "#D97706", margin: 0 }}>
+            ⚠️ <strong>Disclaimer:</strong> Scan results are for educational purposes only. This is not investment advice. 
+            Past performance does not guarantee future results. Always do your own research and consult a licensed financial advisor.
+          </p>
+        </div>
       </div>
     </main>
     </div>
