@@ -56,24 +56,65 @@ function JournalContent() {
     tags: ''
   });
 
-  // Load entries from localStorage
+  // Track if data has been loaded from server
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Load entries from database (with localStorage fallback for migration)
   useEffect(() => {
-    const saved = localStorage.getItem('trade_journal_entries');
-    if (saved) {
+    const loadData = async () => {
       try {
-        setEntries(JSON.parse(saved));
+        const res = await fetch('/api/journal');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.entries?.length > 0) {
+            setEntries(data.entries);
+            setDataLoaded(true);
+            return;
+          }
+        }
       } catch (e) {
-        console.error('Failed to load journal entries');
+        console.error('Failed to load from server, falling back to localStorage');
       }
-    }
+      
+      // Fallback to localStorage (for migration or if not logged in)
+      const saved = localStorage.getItem('trade_journal_entries');
+      if (saved) {
+        try {
+          setEntries(JSON.parse(saved));
+        } catch (e) {
+          console.error('Failed to load journal entries');
+        }
+      }
+      setDataLoaded(true);
+    };
+    
+    loadData();
   }, []);
 
-  // Save entries to localStorage
+  // Save entries to database (and localStorage as backup)
   useEffect(() => {
+    if (!dataLoaded) return;
     if (entries.length > 0) {
       localStorage.setItem('trade_journal_entries', JSON.stringify(entries));
+      
+      // Sync to database
+      const syncToServer = async () => {
+        try {
+          await fetch('/api/journal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entries })
+          });
+        } catch (e) {
+          console.error('Failed to sync journal to server');
+        }
+      };
+      
+      // Debounce the sync
+      const timeoutId = setTimeout(syncToServer, 1000);
+      return () => clearTimeout(timeoutId);
     }
-  }, [entries]);
+  }, [entries, dataLoaded]);
 
   const addEntry = () => {
     if (!newEntry.symbol || !newEntry.entryPrice || !newEntry.quantity) {
@@ -135,11 +176,22 @@ function JournalContent() {
     setShowAddForm(false);
   };
 
-  const deleteEntry = (id: number) => {
+  const deleteEntry = async (id: number) => {
     if (confirm('Delete this journal entry?')) {
-      setEntries(entries.filter(e => e.id !== id));
-      if (entries.filter(e => e.id !== id).length === 0) {
+      const newEntries = entries.filter(e => e.id !== id);
+      setEntries(newEntries);
+      if (newEntries.length === 0) {
         localStorage.removeItem('trade_journal_entries');
+        // Also clear from server
+        try {
+          await fetch('/api/journal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entries: [] })
+          });
+        } catch (e) {
+          console.error('Failed to clear server data');
+        }
       }
     }
   };
@@ -180,10 +232,21 @@ function JournalContent() {
     setCloseTradeData({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
   };
 
-  const clearAllEntries = () => {
+  const clearAllEntries = async () => {
     if (confirm('Clear all journal entries? This cannot be undone.')) {
       setEntries([]);
       localStorage.removeItem('trade_journal_entries');
+      
+      // Also clear from server
+      try {
+        await fetch('/api/journal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entries: [] })
+        });
+      } catch (e) {
+        console.error('Failed to clear server data');
+      }
     }
   };
 

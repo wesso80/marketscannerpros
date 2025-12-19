@@ -162,50 +162,96 @@ function PortfolioContent() {
     return null;
   }
 
-  // Load positions from localStorage on mount
+  // Track if data has been loaded from server
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Load positions from database (with localStorage fallback for migration)
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('portfolio_positions');
-    const savedClosed = localStorage.getItem('portfolio_closed');
-    const savedPerformance = localStorage.getItem('portfolio_performance');
-    if (saved) {
+    
+    const loadData = async () => {
       try {
-        setPositions(JSON.parse(saved));
+        const res = await fetch('/api/portfolio');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.positions?.length > 0 || data.closedPositions?.length > 0 || data.performanceHistory?.length > 0) {
+            setPositions(data.positions || []);
+            setClosedPositions(data.closedPositions || []);
+            setPerformanceHistory(data.performanceHistory || []);
+            setDataLoaded(true);
+            return;
+          }
+        }
       } catch (e) {
-        console.error('Failed to load positions');
+        console.error('Failed to load from server, falling back to localStorage');
       }
-    }
-    if (savedClosed) {
-      try {
-        setClosedPositions(JSON.parse(savedClosed));
-      } catch (e) {
-        console.error('Failed to load closed positions');
+      
+      // Fallback to localStorage (for migration or if not logged in)
+      const saved = localStorage.getItem('portfolio_positions');
+      const savedClosed = localStorage.getItem('portfolio_closed');
+      const savedPerformance = localStorage.getItem('portfolio_performance');
+      if (saved) {
+        try {
+          setPositions(JSON.parse(saved));
+        } catch (e) {
+          console.error('Failed to load positions');
+        }
       }
-    }
-    if (savedPerformance) {
-      try {
-        setPerformanceHistory(JSON.parse(savedPerformance));
-      } catch (e) {
-        console.error('Failed to load performance history');
+      if (savedClosed) {
+        try {
+          setClosedPositions(JSON.parse(savedClosed));
+        } catch (e) {
+          console.error('Failed to load closed positions');
+        }
       }
-    }
+      if (savedPerformance) {
+        try {
+          setPerformanceHistory(JSON.parse(savedPerformance));
+        } catch (e) {
+          console.error('Failed to load performance history');
+        }
+      }
+      setDataLoaded(true);
+    };
+    
+    loadData();
   }, []);
 
-  // Save positions to localStorage whenever they change
+  // Save positions to database (and localStorage as backup)
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('portfolio_positions', JSON.stringify(positions));
-    }
-  }, [positions, mounted]);
+    if (!mounted || !dataLoaded) return;
+    
+    // Save to localStorage as backup
+    localStorage.setItem('portfolio_positions', JSON.stringify(positions));
+    
+    // Sync to database
+    const syncToServer = async () => {
+      try {
+        await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positions, closedPositions, performanceHistory })
+        });
+      } catch (e) {
+        console.error('Failed to sync portfolio to server');
+      }
+    };
+    
+    // Debounce the sync
+    const timeoutId = setTimeout(syncToServer, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [positions, mounted, dataLoaded]);
 
   useEffect(() => {
+    if (!dataLoaded) return;
     if (closedPositions.length > 0) {
       localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
     }
-  }, [closedPositions]);
+  }, [closedPositions, dataLoaded]);
 
   // Track performance snapshots when portfolio changes
   useEffect(() => {
+    if (!dataLoaded) return;
     if (positions.length > 0 || closedPositions.length > 0) {
       const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
       const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
@@ -229,7 +275,7 @@ function PortfolioContent() {
         localStorage.setItem('portfolio_performance', JSON.stringify(updated));
       }
     }
-  }, [positions, closedPositions]);
+  }, [positions, closedPositions, dataLoaded]);
 
   const addPosition = () => {
     // Check portfolio limit for free tier
@@ -332,7 +378,7 @@ function PortfolioContent() {
     closeManual();
   };
 
-  const clearAllData = () => {
+  const clearAllData = async () => {
     if (confirm('Are you sure you want to clear all portfolio data? This cannot be undone.')) {
       setPositions([]);
       setClosedPositions([]);
@@ -340,6 +386,17 @@ function PortfolioContent() {
       localStorage.removeItem('portfolio_positions');
       localStorage.removeItem('portfolio_closed');
       localStorage.removeItem('portfolio_performance');
+      
+      // Also clear from server
+      try {
+        await fetch('/api/portfolio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positions: [], closedPositions: [], performanceHistory: [] })
+        });
+      } catch (e) {
+        console.error('Failed to clear server data');
+      }
     }
   };
 
