@@ -14,10 +14,8 @@ interface Trial {
 }
 
 export default function AdminTrialsPage() {
-  const [secret, setSecret] = useState("");
-  const [isAuthed, setIsAuthed] = useState(false);
   const [trials, setTrials] = useState<Trial[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -27,7 +25,16 @@ export default function AdminTrialsPage() {
   const [newDays, setNewDays] = useState("30");
   const [newNotes, setNewNotes] = useState("");
 
+  useEffect(() => {
+    fetchTrials();
+  }, []);
+
+  const getSecret = () => sessionStorage.getItem("admin_secret") || "";
+
   const fetchTrials = async () => {
+    const secret = getSecret();
+    if (!secret) return;
+    
     setLoading(true);
     try {
       const res = await fetch("/api/admin/trials", {
@@ -36,10 +43,8 @@ export default function AdminTrialsPage() {
       const data = await res.json();
       if (res.ok) {
         setTrials(data.trials || []);
-        setIsAuthed(true);
       } else {
         setError(data.error || "Failed to fetch");
-        setIsAuthed(false);
       }
     } catch {
       setError("Network error");
@@ -59,7 +64,7 @@ export default function AdminTrialsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${secret}`,
+          Authorization: `Bearer ${getSecret()}`,
         },
         body: JSON.stringify({
           email: newEmail,
@@ -94,7 +99,7 @@ export default function AdminTrialsPage() {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${secret}`,
+          Authorization: `Bearer ${getSecret()}`,
         },
         body: JSON.stringify({ email }),
       });
@@ -126,110 +131,25 @@ export default function AdminTrialsPage() {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  if (!isAuthed) {
-    return (
-      <main style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "20px",
-      }}>
-        <div style={{
-          background: "rgba(15,23,42,0.95)",
-          border: "1px solid #334155",
-          borderRadius: "16px",
-          padding: "40px",
-          maxWidth: "400px",
-          width: "100%",
-        }}>
-          <h1 style={{ color: "#f1f5f9", fontSize: "24px", marginBottom: "8px" }}>
-            🔐 Admin Access
-          </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "24px" }}>
-            Enter admin secret to manage trials
-          </p>
-
-          <input
-            type="password"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            placeholder="Admin secret..."
-            style={{
-              width: "100%",
-              padding: "12px",
-              background: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: "8px",
-              color: "#f1f5f9",
-              fontSize: "14px",
-              marginBottom: "16px",
-            }}
-          />
-
-          {error && (
-            <div style={{ color: "#ef4444", fontSize: "14px", marginBottom: "16px" }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={fetchTrials}
-            disabled={loading || !secret}
-            style={{
-              width: "100%",
-              padding: "14px",
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              border: "none",
-              borderRadius: "8px",
-              color: "#fff",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
-          >
-            {loading ? "Checking..." : "Access Admin Panel"}
-          </button>
-        </div>
-      </main>
-    );
+  if (loading) {
+    return <div style={{ color: "#9CA3AF" }}>Loading trials...</div>;
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-      padding: "20px",
-    }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
-          <div>
-            <h1 style={{ color: "#f1f5f9", fontSize: "28px", marginBottom: "4px" }}>
-              🎟️ Trial Management
-            </h1>
-            <p style={{ color: "#94a3b8", fontSize: "14px" }}>
-              Grant and manage user trial access
-            </p>
-          </div>
-          <button
-            onClick={() => setIsAuthed(false)}
-            style={{
-              padding: "8px 16px",
-              background: "transparent",
-              border: "1px solid #334155",
-              borderRadius: "6px",
-              color: "#94a3b8",
-              cursor: "pointer",
-            }}
-          >
-            Logout
-          </button>
-        </div>
+    <div>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ color: "#E5E7EB", fontSize: "1.75rem", fontWeight: 700, marginBottom: "4px" }}>
+          🎁 Trial Management
+        </h1>
+        <p style={{ color: "#9CA3AF", fontSize: "14px" }}>
+          Grant and manage user trial access
+        </p>
+      </div>
 
         {/* Grant New Trial Form */}
         <div style={{
-          background: "rgba(15,23,42,0.95)",
-          border: "1px solid #334155",
+          background: "rgba(17, 24, 39, 0.8)",
+          border: "1px solid rgba(16, 185, 129, 0.2)",
           borderRadius: "16px",
           padding: "24px",
           marginBottom: "24px",
@@ -477,7 +397,6 @@ export default function AdminTrialsPage() {
             </div>
           )}
         </div>
-      </div>
-    </main>
+    </div>
   );
 }
