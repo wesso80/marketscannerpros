@@ -2,20 +2,20 @@
 
 ## Project Architecture
 
-This is a **hybrid Next.js + Python/Streamlit** financial market scanning platform with subscription management and multi-device sync.
+This is a **Next.js** financial market scanning platform with subscription management and multi-device sync.
 
 ### Core Components
-- **Next.js Marketing Site** (`/app`, `/components`, `/lib`) - Public website, auth, API routes
-- **Python/Streamlit App** (`app.py`, 7500+ lines) - Market scanner, backtesting, portfolio tracking
-- **Database** - PostgreSQL via Vercel (workspaces, subscriptions, alerts, trade journal)
+- **Next.js App** (`/app`, `/components`, `/lib`) - Full website, auth, API routes, all trading tools
+- **Database** - PostgreSQL via Vercel (workspaces, subscriptions, portfolio, journal, alerts)
 - **Authentication** - Custom JWT + cookie-based (`lib/auth.ts`, middleware edge-compatible HMAC)
 - **Payments** - Stripe subscriptions with trial abuse prevention
+- **Data Source** - Alpha Vantage API for market data and technical indicators
 
 ### Data Flow
 1. User logs in via Stripe email → `app/api/auth/login/route.ts` validates customer
 2. Session cookie `ms_auth` contains `{cid, tier, workspaceId, exp}` signed with `APP_SIGNING_SECRET`
 3. Middleware (`middleware.ts`) auto-refreshes expiring sessions (< 3 days left)
-4. Streamlit app reads cookie, derives workspace, enforces feature gates by tier
+4. API routes check session and enforce feature gates by tier
 
 ## Critical Patterns
 
@@ -33,52 +33,60 @@ This is a **hybrid Next.js + Python/Streamlit** financial market scanning platfo
 - Cookie domain: `.marketscannerpros.app` for cross-subdomain auth
 
 ### Multi-Tenant Architecture
-```python
-# Every database query MUST include workspace_id filter
-get_active_alerts(workspace_id)  # ✅ Tenant-isolated
-get_active_alerts()              # ❌ Cross-tenant leak
+```typescript
+// Every database query MUST include workspace_id filter
+await q('SELECT * FROM portfolio_positions WHERE workspace_id = $1', [workspaceId]);  // ✅
+await q('SELECT * FROM portfolio_positions');  // ❌ Cross-tenant leak
 ```
 
 - **Workspace-first design**: All user data scoped to `workspace_id` (UUID)
-- Device fingerprinting via URL persistence: `?wid={workspace_id}`
-- Anonymous sync: Multiple devices share workspace via pairing QR codes
+- Portfolio and Journal data syncs across devices via database
 
 ### Subscription Tiers
-```python
-# Tier hierarchy (enforced in app.py)
-'free'        # Limited scans, basic alerts
-'pro'         # Multi-TF confluence, exports ($4.99/mo)
-'pro_trader'  # Backtesting, trade journal, TradingView scripts ($9.99/mo)
+```typescript
+// Tier hierarchy (enforced in useUserTier.ts)
+'free'        // Limited scans, basic features, 5 AI questions/day
+'pro'         // Unlimited scanning, 50 AI questions/day, CSV exports
+'pro_trader'  // Backtesting, trade journal, TradingView scripts, unlimited AI
 ```
 
-Feature gates use `st.session_state.user_tier` - check before rendering Pro/Pro Trader UI.
+Feature gates use `useUserTier()` hook - check before rendering Pro/Pro Trader UI.
 
 ### Database Access Pattern
-```python
-# ALWAYS use these wrappers (handle connection pooling, retries)
-execute_db_query(sql, params)              # SELECT with auto-retry
-execute_db_write(sql, params)              # INSERT/UPDATE/DELETE
-execute_db_write_returning(sql, params)    # Returns affected rows
-```
+```typescript
+// Use the q() helper from lib/db.ts
+import { q } from '@/lib/db';
 
-- Connection pool: 10 max connections, 30s query timeout
-- Retry logic on `OperationalError`/`InterfaceError` (3 attempts with backoff)
-- **Never** use raw `psycopg2.connect()` - breaks connection management
+// SELECT
+const rows = await q('SELECT * FROM table WHERE workspace_id = $1', [workspaceId]);
+
+// INSERT/UPDATE/DELETE
+await q('INSERT INTO table (col) VALUES ($1)', [value]);
+```
 
 ## Key Files & Their Roles
 
 ### Next.js API Routes (`app/api/`)
 - `auth/login/route.ts` - Stripe email → workspace activation
-- `msp-analyst/route.ts` - OpenAI GPT-5.1-mini integration for market analysis
-- `app-token/route.ts` - Bridge JWT for Streamlit auth
+- `msp-analyst/route.ts` - OpenAI GPT integration for market analysis
+- `scanner/run/route.ts` - Alpha Vantage scanner with technical indicators
+- `backtest/route.ts` - Strategy backtesting engine
+- `portfolio/route.ts` - Portfolio CRUD with database sync
+- `journal/route.ts` - Trade journal CRUD with database sync
 - `entitlements/route.ts` - Tier status endpoint
 
-### Python Scanner (`app.py`)
-- Lines 1-30: **Health check endpoint** (ultra-fast, no DB)
-- Lines 4800+: Cookie parsing for auth (`ms_auth` → workspace)
-- `compute_features()`: EMA/RSI/MACD/ATR indicators (pure pandas)
-- `score_row()`: Proprietary scoring algorithm (EMA200, RSI, MACD, volume)
-- `run_backtest()`: Vectorized backtest engine with ATR-based position sizing
+### Trading Tools (`app/tools/`)
+- `scanner/page.tsx` - Market scanner with technical analysis
+- `backtest/page.tsx` - Strategy backtester (Pro Trader only)
+- `portfolio/page.tsx` - Position tracking with P&L
+- `journal/page.tsx` - Trade journal with analytics
+- `ai-analyst/page.tsx` - AI-powered market analysis
+
+### Core Libraries (`lib/`)
+- `auth.ts` - JWT signing/verification, session management
+- `db.ts` - PostgreSQL connection pool and query helper
+- `useUserTier.ts` - React hook for subscription tier checks
+- `stripe.ts` - Stripe client configuration
 
 ### Middleware (`middleware.ts`)
 - Host-based redirects (marketing → app subdomain)
@@ -89,22 +97,23 @@ execute_db_write_returning(sql, params)    # Returns affected rows
 
 ### Running Locally
 ```bash
-# Next.js (port 5000)
+# Next.js development server
 npm run dev
 
-# Streamlit (separate process)
-streamlit run app.py --server.port 8501
+# Build for production
+npm run build
 
 # Database migrations (manual)
-# See SQL in AUTH_SETUP.md, DEPLOYMENT.md
+# See SQL files in /migrations folder
 ```
 
 ### Environment Variables
 **Required:**
-- `APP_SIGNING_SECRET` - HMAC key for JWT (same for both Next.js and Python)
+- `APP_SIGNING_SECRET` - HMAC key for JWT
 - `STRIPE_SECRET_KEY` - Payment processing
-- `DATABASE_URL` / `PG*` vars - Postgres connection
+- `DATABASE_URL` - Postgres connection (Vercel)
 - `OPENAI_API_KEY` - MSP Analyst chatbot
+- `ALPHA_VANTAGE_API_KEY` - Market data
 
 **Optional:**
 - `FREE_FOR_ALL_MODE=true` - Auto-grant Pro Trader to all users
@@ -117,77 +126,87 @@ streamlit run app.py --server.port 8501
 
 ## Common Pitfalls
 
-❌ **Don't** use `st.cache_data` on database queries (stale workspace isolation)
 ❌ **Don't** modify `middleware.ts` without testing Edge runtime compatibility
 ❌ **Don't** create API routes without workspace validation
-❌ **Don't** use yfinance for real-time data (15min delay for free tier)
+❌ **Don't** use localStorage for data that needs cross-device sync (use database)
+❌ **Don't** forget to `await getSessionFromCookie()` - it's async!
 
 ✅ **Do** filter all queries by `workspace_id` (tenant isolation)
-✅ **Do** use `execute_db_*` wrappers for all database access
+✅ **Do** use the `q()` helper for database queries
 ✅ **Do** test cookie expiry behavior (7-day sessions, 3-day refresh window)
 ✅ **Do** validate Stripe webhooks with `STRIPE_WEBHOOK_SECRET`
 
 ## Project-Specific Conventions
 
 ### Styling
-- Inline styles in `app.py` (7000+ lines of CSS in template literals)
+- Tailwind CSS + inline styles for components
 - Dark theme enforced: `#0F172A` (bg), `#10B981` (accent green)
-- Mobile detection via `st.session_state.is_mobile` (query param + user agent)
+- Mobile-responsive design throughout
 
 ### API Design
-- Next.js routes return `NextResponse.json()` (not `res.json()`)
-- Python uses `st.write(json)` for webhook responses (Streamlit limitation)
-- All monetary values in USD (AUD converted at fetch time)
+- Next.js routes return `NextResponse.json()`
+- Always await `getSessionFromCookie()` for auth
+- All monetary values in USD
 
 ### Code Organization
-- One massive `app.py` file (intentional for Replit deployment)
-- React components in `components/` (not `app/components/`)
-- Prompts in `lib/prompts/*.ts` (MSP Analyst system messages)
+- React components in `components/`
+- Page components in `app/` (App Router)
+- API routes in `app/api/`
+- Shared utilities in `lib/`
+- AI prompts in `lib/prompts/*.ts`
 
-## Integration Points
-
-### Stripe Webhooks
-- Handled via `?webhook` query param (Streamlit doesn't support POST body parsing)
-- Events: `checkout.session.completed`, `customer.subscription.deleted`
-
-### TradingView Scripts
-- Pro Trader users submit username → stored in `workspaces.tradingview_username`
-- Admin manually adds to invite-only Pine Scripts
-
-### Email Notifications
-- Resend API via `api/alerts/send` endpoint
-- Fallback: Store in `notifications` table for in-app display
+## Legal & Compliance
+- Jurisdiction: New South Wales, Australia
+- Financial disclaimers on all trading tools
+- Cookie consent with GDPR granular options
+- 7-day money-back guarantee
 
 ## Quick Reference
 
-**Scan a symbol:**
-```python
-df = get_ohlcv("BTC-USD", "1h")
-features = compute_features(df)
-score = score_row(features.iloc[-1])
-```
-
-**Check user tier:**
-```python
-tier = get_user_tier_from_subscription(workspace_id)
-if tier in ['pro', 'pro_trader']:
-    # Unlock feature
-```
-
-**Create API route:**
+**Create authenticated API route:**
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { q } from '@/lib/db';
 
-export async function POST(req: NextRequest) {
-  const session = getSessionFromCookie();
-  if (!session) return NextResponse.json({error: 'Unauthorized'}, {status: 401});
-  // ... workspace_id = session.workspaceId
+export async function GET(req: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const data = await q('SELECT * FROM table WHERE workspace_id = $1', [session.workspaceId]);
+  return NextResponse.json({ data });
 }
 ```
 
+**Check user tier in component:**
+```typescript
+import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
+
+function MyComponent() {
+  const { tier } = useUserTier();
+  
+  if (!canAccessBacktest(tier)) {
+    return <UpgradeGate requiredTier="pro_trader" feature="Backtesting" />;
+  }
+  
+  return <BacktestUI />;
+}
+```
+
+## Database Tables
+- `workspaces` - User workspaces linked to Stripe customers
+- `user_subscriptions` - Subscription status and tiers
+- `portfolio_positions` - Open trading positions
+- `portfolio_closed` - Closed trade history
+- `portfolio_performance` - Daily performance snapshots
+- `journal_entries` - Trade journal entries
+- `user_trials` - Trial tracking for abuse prevention
+- `ai_usage` - AI question quota tracking
+
 ## Need More Context?
-- Auth flow: `AUTH_SETUP.md` (171 lines)
-- Deployment: `DEPLOYMENT.md` + `render.yaml`
-- AI prompts: `lib/prompts/mspAnalystV11.ts` (416 lines)
-- User guide: `USER_INSTRUCTIONS.md` (220 lines)
+- Auth flow: `AUTH_SETUP.md`
+- AI prompts: `lib/prompts/mspAnalystV11.ts`
+- User guide: `USER_INSTRUCTIONS.md`
+- Legal docs: `/app/legal/` pages
