@@ -29,6 +29,42 @@ function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   return "free";
 }
 
+// Track user subscription in database
+async function trackSubscription(
+  workspaceId: string,
+  email: string,
+  tier: string,
+  status: string,
+  stripeCustomerId: string | null = null,
+  stripeSubscriptionId: string | null = null,
+  periodEnd: Date | null = null,
+  isTrial: boolean = false
+) {
+  try {
+    await q(`
+      INSERT INTO user_subscriptions 
+        (workspace_id, email, tier, status, stripe_customer_id, stripe_subscription_id,
+         current_period_end, is_trial, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      ON CONFLICT (workspace_id) 
+      DO UPDATE SET 
+        email = EXCLUDED.email,
+        tier = EXCLUDED.tier,
+        status = EXCLUDED.status,
+        stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, user_subscriptions.stripe_customer_id),
+        stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, user_subscriptions.stripe_subscription_id),
+        current_period_end = COALESCE(EXCLUDED.current_period_end, user_subscriptions.current_period_end),
+        is_trial = EXCLUDED.is_trial,
+        updated_at = NOW()
+    `, [workspaceId, email, tier, status, stripeCustomerId, stripeSubscriptionId, periodEnd, isTrial]);
+  } catch (error: any) {
+    // Table might not exist yet - that's OK
+    if (!error?.message?.includes('does not exist')) {
+      console.error("Track subscription error:", error);
+    }
+  }
+}
+
 // Check if user has an active trial
 async function checkTrialAccess(email: string): Promise<{ tier: "pro" | "pro_trader"; expiresAt: Date } | null> {
   try {
@@ -93,6 +129,18 @@ export async function POST(req: NextRequest) {
       
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       
+      // Track trial user in database
+      await trackSubscription(
+        workspaceId,
+        normalizedEmail,
+        trial.tier,
+        'trialing',
+        null,
+        null,
+        trial.expiresAt,
+        true
+      );
+      
       const body = { 
         ok: true, 
         tier: trial.tier, 
@@ -138,6 +186,24 @@ export async function POST(req: NextRequest) {
     const priceIds = valid.flatMap(s => s.items.data.map(it => it.price.id));
     const tier = detectTierFromPrices(priceIds);
     const workspaceId = hashWorkspaceId(customerId);
+    
+    // Get subscription details for tracking
+    const primarySub = valid[0];
+    const isStripeTrial = primarySub.status === 'trialing';
+    const periodEnd = new Date((primarySub as any).current_period_end * 1000);
+    
+    // Track subscription in database
+    await trackSubscription(
+      workspaceId,
+      normalizedEmail,
+      tier,
+      primarySub.status,
+      customerId,
+      primarySub.id,
+      periodEnd,
+      isStripeTrial
+    );
+    
     await stripe.customers.update(customerId, {
       metadata: { marketscanner_tier: tier, workspace_id: workspaceId },
     });

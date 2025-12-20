@@ -10,39 +10,37 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Try to get subscriptions - table may not exist yet
+    // Try to get subscriptions with the updated schema
     let result;
     try {
       result = await sql`
         SELECT 
-          us.id,
-          us.workspace_id,
-          us.stripe_customer_id,
-          us.tier,
-          us.status,
-          us.current_period_start,
-          us.current_period_end,
-          us.created_at,
-          w.email
-        FROM user_subscriptions us
-        LEFT JOIN workspaces w ON us.workspace_id = w.workspace_id
-        ORDER BY us.created_at DESC
+          id,
+          workspace_id,
+          email,
+          tier,
+          status,
+          stripe_customer_id,
+          stripe_subscription_id,
+          current_period_end,
+          is_trial,
+          created_at,
+          updated_at
+        FROM user_subscriptions
+        ORDER BY updated_at DESC
         LIMIT 100
       `;
-    } catch (joinError) {
-      // If join fails, try without it
-      console.warn("Join failed, trying without email:", joinError);
+    } catch (selectError: any) {
+      // If select fails, check if it's a column issue
+      console.warn("Select failed:", selectError.message);
+      // Try with minimal columns
       result = await sql`
         SELECT 
           id,
           workspace_id,
-          stripe_customer_id,
           tier,
           status,
-          current_period_start,
-          current_period_end,
-          created_at,
-          NULL as email
+          created_at
         FROM user_subscriptions
         ORDER BY created_at DESC
         LIMIT 100
