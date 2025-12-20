@@ -1,6 +1,16 @@
+'use client';
+
 import Link from 'next/link';
 
 export default function Footer() {
+  // Helper to open cookie settings - reloads to show cookie banner again
+  const openCookieSettings = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('msp-consent');
+      window.location.reload();
+    }
+  };
+
   return (
     <footer style={{borderTop:"1px solid #27272a", marginTop:32}}>
       {/* Legal Disclaimer */}
@@ -30,7 +40,28 @@ export default function Footer() {
         <Link href="/disclaimer">Disclaimer</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
+        <Link href="/cookie-policy">Cookies</Link>
+        <button 
+          onClick={openCookieSettings}
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: 'inherit', 
+            cursor: 'pointer',
+            padding: 0,
+            font: 'inherit',
+            textDecoration: 'underline',
+            opacity: 0.7
+          }}
+        >
+          Cookie Settings
+        </button>
         <a href="mailto:support@marketscannerpros.app">Contact</a>
+      </div>
+      
+      {/* CCPA Do Not Sell Link */}
+      <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem', opacity: 0.6, fontSize: 12 }}>
+        <Link href="/privacy#ccpa" style={{ color: '#9ca3af' }}>Do Not Sell My Personal Information</Link>
       </div>
     </footer>
   );

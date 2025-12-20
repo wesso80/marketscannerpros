@@ -74,8 +74,8 @@ export default function PrivacyPage() {
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Stripe</strong> (payments & portal).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>OpenAI</strong> (MSP Analyst AI chatbot powered by GPT-4 - does not train on your data).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Alpha Vantage</strong> (real-time and historical market data provider).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>NextAuth</strong> (JWT session management).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Hosting</strong>: Vercel (app) and Render (Python backend).</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Vercel</strong> (application hosting and serverless functions).</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Neon</strong> (PostgreSQL database hosting).</li>
             </ul>
           </Section>
 
@@ -95,6 +95,32 @@ export default function PrivacyPage() {
 
           <Section title="Your rights">
             <p style={pStyle}>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
+          </Section>
+
+          <Section title="Your rights (GDPR)" id="gdpr">
+            <p style={pStyle}>If you are in the European Economic Area (EEA), United Kingdom, or Switzerland, you have the following rights under the GDPR:</p>
+            <ul style={ulStyle}>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Access:</strong> Request a copy of the personal data we hold about you.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Rectification:</strong> Request correction of inaccurate or incomplete data.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Erasure:</strong> Request deletion of your personal data ("right to be forgotten").</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Restriction:</strong> Request that we limit processing of your data.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Portability:</strong> Request your data in a machine-readable format.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Object:</strong> Object to processing based on legitimate interests or for direct marketing.</li>
+            </ul>
+            <p style={pStyle}>To exercise these rights, email <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a> or use the "Delete My Data" button in your Account settings.</p>
+          </Section>
+
+          <Section title="California Privacy Rights (CCPA/CPRA)" id="ccpa">
+            <p style={pStyle}>If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA):</p>
+            <ul style={ulStyle}>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Know:</strong> Request disclosure of the categories and specific pieces of personal information we have collected about you.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Delete:</strong> Request deletion of personal information we have collected from you.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Correct:</strong> Request correction of inaccurate personal information.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Opt-Out:</strong> Opt out of the "sale" or "sharing" of your personal information.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Non-Discrimination:</strong> We will not discriminate against you for exercising your privacy rights.</li>
+            </ul>
+            <p style={pStyle}><strong style={{ color: '#E5E7EB' }}>Do Not Sell or Share My Personal Information:</strong> We do not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising. Our third-party data processors (Stripe, OpenAI, Alpha Vantage) only process data on our behalf and are contractually prohibited from using it for their own purposes.</p>
+            <p style={pStyle}>To exercise your CCPA rights, email <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a> with the subject line "CCPA Request".</p>
           </Section>
 
           <Section title="Children">
@@ -118,9 +144,9 @@ export default function PrivacyPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <div style={{ marginBottom: '2rem' }}>
+    <div style={{ marginBottom: '2rem' }} id={id}>
       <h2 style={{
         fontSize: '1.5rem',
         fontWeight: 600,

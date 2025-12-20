@@ -228,6 +228,55 @@ export default function AccountPage() {
                 </a>
               </p>
             </div>
+
+            {/* Data Management Card */}
+            <div style={{ 
+              background: "rgba(239,68,68,0.05)",
+              borderRadius: 16,
+              border: "1px solid rgba(239,68,68,0.2)",
+              padding: 24,
+            }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 10, color: "#f87171" }}>
+                <span>🗑️</span> Data Management
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 16 }}>
+                Under GDPR and Australian Privacy laws, you have the right to request deletion of your personal data.
+              </p>
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to request deletion of all your data? This action cannot be undone. You will receive a confirmation email within 48 hours.")) {
+                    // Send deletion request
+                    fetch("/api/auth/delete-request", {
+                      method: "POST",
+                      credentials: "include"
+                    }).then(res => {
+                      if (res.ok) {
+                        alert("Data deletion request submitted. You will receive a confirmation email within 48 hours.");
+                      } else {
+                        alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
+                      }
+                    }).catch(() => {
+                      alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
+                    });
+                  }
+                }}
+                style={{
+                  padding: "10px 20px",
+                  background: "transparent",
+                  border: "1px solid #ef4444",
+                  color: "#ef4444",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 500
+                }}
+              >
+                Request Data Deletion
+              </button>
+              <p style={{ color: "#6b7280", fontSize: 12, marginTop: 12 }}>
+                Or email <a href="mailto:support@marketscannerpros.app?subject=Data%20Deletion%20Request" style={{ color: "#94a3b8" }}>support@marketscannerpros.app</a> with subject "Data Deletion Request"
+              </p>
+            </div>
           </div>
         )}
       </main>
