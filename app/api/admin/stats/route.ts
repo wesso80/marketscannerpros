@@ -48,13 +48,8 @@ export async function GET(req: NextRequest) {
           WHERE created_at > NOW() - INTERVAL '7 days'
           GROUP BY DATE(created_at) ORDER BY date DESC`),
       
-      // Active trials (from user_subscriptions with trialing status OR user_trials table)
-      safeQuery(sql`
-        SELECT (
-          COALESCE((SELECT COUNT(*) FROM user_subscriptions WHERE status = 'trialing'), 0) +
-          COALESCE((SELECT COUNT(*) FROM user_trials WHERE expires_at > NOW() AND is_active = true), 0)
-        ) as count
-      `),
+      // Active trials (from user_subscriptions with trialing status)
+      safeQuery(sql`SELECT COUNT(*) as count FROM user_subscriptions WHERE status = 'trialing'`),
       
       // Pending delete requests
       safeQuery(sql`SELECT COUNT(*) as count FROM delete_requests WHERE status = 'pending'`),
