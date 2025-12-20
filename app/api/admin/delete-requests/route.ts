@@ -21,6 +21,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ requests: result.rows });
   } catch (error: any) {
     console.error("Admin delete requests error:", error);
+    // Return empty if table doesn't exist
+    if (error.message?.includes("does not exist")) {
+      return NextResponse.json({ requests: [], message: "Run migration 006_delete_requests.sql" });
+    }
     return NextResponse.json(
       { error: "Failed to fetch requests", details: error.message },
       { status: 500 }
