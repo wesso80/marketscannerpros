@@ -442,7 +442,7 @@ function ScannerContent() {
                 Today's Top Picks
               </h3>
               <p style={{ color: "#94a3b8", fontSize: "12px", margin: "4px 0 0 0" }}>
-                Daily scans across 60 symbols • Updated at market close
+                Daily scans across 20 symbols • Updated at market close
               </p>
             </div>
           </div>

@@ -458,27 +458,27 @@ export async function POST(req: NextRequest) {
     const results: any[] = [];
     const errors: string[] = [];
 
-    // Scan equities (limit to top 30 to stay within time/rate limits)
+    // Scan equities (limit to top 10 to stay within time/rate limits)
     console.log("Starting equity scan...");
-    const equitiesToScan = EQUITY_UNIVERSE.slice(0, 30);
+    const equitiesToScan = EQUITY_UNIVERSE.slice(0, 10);
     for (const symbol of equitiesToScan) {
       const result = await scanEquity(symbol, apiKey);
       if (result) results.push(result);
       else errors.push(`equity:${symbol}`);
     }
 
-    // Scan crypto (limit to top 20)
+    // Scan crypto (limit to top 5)
     console.log("Starting crypto scan...");
-    const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 20);
+    const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
     for (const symbol of cryptoToScan) {
       const result = await scanCrypto(symbol, apiKey);
       if (result) results.push(result);
       else errors.push(`crypto:${symbol}`);
     }
 
-    // Scan forex (limit to top 10)
+    // Scan forex (limit to top 5)
     console.log("Starting forex scan...");
-    const forexToScan = FOREX_UNIVERSE.slice(0, 10);
+    const forexToScan = FOREX_UNIVERSE.slice(0, 5);
     for (const symbol of forexToScan) {
       const result = await scanForex(symbol, apiKey);
       if (result) results.push(result);
