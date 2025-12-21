@@ -274,70 +274,69 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
 async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
   try {
     const baseUrl = "https://www.alphavantage.co/query";
+    const indicators: Record<string, any> = {};
     
-    // Fetch daily crypto prices
-    const priceUrl = `${baseUrl}?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=USD&apikey=${apiKey}`;
+    // Use same approach as regular scanner - fetch technical indicators directly
+    // These work for crypto when using the symbol format
+    
+    // Fetch RSI
+    const rsiUrl = `${baseUrl}?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${apiKey}`;
+    const rsiData = await fetchWithRetry(rsiUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const rsiSeries = rsiData["Technical Analysis: RSI"];
+    if (rsiSeries) {
+      const rsiDate = Object.keys(rsiSeries)[0];
+      indicators.rsi = parseFloat(rsiSeries[rsiDate]["RSI"]);
+    }
+
+    // Fetch MACD
+    const macdUrl = `${baseUrl}?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${apiKey}`;
+    const macdData = await fetchWithRetry(macdUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const macdSeries = macdData["Technical Analysis: MACD"];
+    if (macdSeries) {
+      const macdDate = Object.keys(macdSeries)[0];
+      indicators.macd = parseFloat(macdSeries[macdDate]["MACD"]);
+      indicators.macdSignal = parseFloat(macdSeries[macdDate]["MACD_Signal"]);
+    }
+
+    // Fetch Stochastic
+    const stochUrl = `${baseUrl}?function=STOCH&symbol=${symbol}&interval=daily&apikey=${apiKey}`;
+    const stochData = await fetchWithRetry(stochUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const stochSeries = stochData["Technical Analysis: STOCH"];
+    if (stochSeries) {
+      const stochDate = Object.keys(stochSeries)[0];
+      indicators.stochK = parseFloat(stochSeries[stochDate]["SlowK"]);
+      indicators.stochD = parseFloat(stochSeries[stochDate]["SlowD"]);
+    }
+
+    // Fetch ADX
+    const adxUrl = `${baseUrl}?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
+    const adxData = await fetchWithRetry(adxUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const adxSeries = adxData["Technical Analysis: ADX"];
+    if (adxSeries) {
+      const adxDate = Object.keys(adxSeries)[0];
+      indicators.adx = parseFloat(adxSeries[adxDate]["ADX"]);
+    }
+
+    // Fetch price from crypto endpoint for price display
+    const priceUrl = `${baseUrl}?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=USD&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
-    
-    // Debug log
-    console.log(`Crypto ${symbol} response keys:`, Object.keys(priceData));
-    
-    const timeSeries = priceData["Time Series (Digital Currency Daily)"];
-    if (!timeSeries) {
-      console.error(`No time series for crypto ${symbol}:`, JSON.stringify(priceData).slice(0, 200));
+    const exchangeRate = priceData["Realtime Currency Exchange Rate"];
+    let price = null;
+    let changePercent = null;
+    if (exchangeRate) {
+      price = parseFloat(exchangeRate["5. Exchange Rate"]);
+      indicators.price = price;
+    }
+
+    // If we got no indicators, this crypto isn't supported
+    if (Object.keys(indicators).length < 2) {
+      console.error(`Insufficient data for crypto ${symbol}`);
       return null;
-    }
-    
-    const dates = Object.keys(timeSeries).sort().reverse();
-    const latestDate = dates[0];
-    const latest = timeSeries[latestDate];
-    const prevDate = dates[1];
-    const prev = timeSeries[prevDate];
-    
-    const price = parseFloat(latest["4a. close (USD)"]);
-    const prevClose = parseFloat(prev["4a. close (USD)"]);
-    const changePercent = ((price - prevClose) / prevClose) * 100;
-
-    // For crypto, we calculate indicators from price history
-    const closes: number[] = [];
-    for (let i = 0; i < Math.min(200, dates.length); i++) {
-      closes.push(parseFloat(timeSeries[dates[i]]["4a. close (USD)"]));
-    }
-
-    const indicators: Record<string, any> = { price };
-    
-    // Calculate RSI manually
-    if (closes.length >= 15) {
-      let gains = 0, losses = 0;
-      for (let i = 1; i <= 14; i++) {
-        const change = closes[i - 1] - closes[i];
-        if (change > 0) gains += change;
-        else losses -= change;
-      }
-      const avgGain = gains / 14;
-      const avgLoss = losses / 14;
-      const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-      indicators.rsi = 100 - (100 / (1 + rs));
-    }
-
-    // Calculate EMA 200
-    if (closes.length >= 200) {
-      const multiplier = 2 / (200 + 1);
-      let ema = closes[closes.length - 1];
-      for (let i = closes.length - 2; i >= 0; i--) {
-        ema = (closes[i] - ema) * multiplier + ema;
-      }
-      indicators.ema200 = ema;
-    }
-
-    // Simple momentum-based signals for crypto
-    if (closes.length >= 20) {
-      const sma20 = closes.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
-      indicators.sma20 = sma20;
-      if (price > sma20 * 1.02) indicators.momentum = 'bullish';
-      else if (price < sma20 * 0.98) indicators.momentum = 'bearish';
-      else indicators.momentum = 'neutral';
     }
 
     const { score, direction, signals } = computeScore(indicators);
