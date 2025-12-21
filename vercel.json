@@ -3,6 +3,10 @@
     {
       "path": "/api/jobs/generate-market-focus",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/jobs/scan-daily",
+      "schedule": "30 21 * * 1-5"
     }
   ]
 }
