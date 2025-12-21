@@ -908,7 +908,7 @@ function ScannerContent() {
                     ✓ EMA200 Trend
                   </div>
                   <div style={{ color: "#CBD5E1" }}>
-                    Price above 200-period average = +20 points (bullish)
+                    Price above 200 EMA = Bullish signal
                   </div>
                 </div>
                 <div>
@@ -916,7 +916,7 @@ function ScannerContent() {
                     ✓ RSI Momentum
                   </div>
                   <div style={{ color: "#CBD5E1" }}>
-                    RSI &gt;60: +15 pts | 45-55: +8 pts | &lt;40: -8 pts
+                    RSI &gt;55 = Bullish | RSI &lt;45 = Bearish
                   </div>
                 </div>
                 <div>
@@ -924,20 +924,44 @@ function ScannerContent() {
                     ✓ MACD Signal
                   </div>
                   <div style={{ color: "#CBD5E1" }}>
-                    Bullish histogram: +12 pts | Line above signal: +8 pts
+                    MACD above signal line = Bullish signal
                   </div>
                 </div>
                 <div>
                   <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ Volatility Guard
+                    ✓ ADX Strength
                   </div>
                   <div style={{ color: "#CBD5E1" }}>
-                    Extreme ATR reduces score by -5 pts for risk management
+                    ADX &gt;25 with +DI &gt; -DI = Strong trend
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
+                    ✓ Stochastic
+                  </div>
+                  <div style={{ color: "#CBD5E1" }}>
+                    %K &gt;50 = Bullish | %K &lt;50 = Bearish
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
+                    ✓ Aroon Indicator
+                  </div>
+                  <div style={{ color: "#CBD5E1" }}>
+                    Aroon Up &gt; Aroon Down = Bullish trend
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
+                    ✓ OBV Volume
+                  </div>
+                  <div style={{ color: "#CBD5E1" }}>
+                    Rising OBV = Bullish volume confirmation
                   </div>
                 </div>
               </div>
               <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid rgba(59, 130, 246, 0.2)", color: "#94A3B8", fontSize: "0.8rem" }}>
-                <strong style={{ color: "#60A5FA" }}>Score Range:</strong> 1-100 | Green (&gt;50) = Strong | Yellow (20-50) = Moderate | Red (&lt;20) = Weak
+                <strong style={{ color: "#60A5FA" }}>Confluence Score:</strong> Percentage of indicators showing bullish signals | 🟢 Bullish: majority agree | 🟡 Neutral: mixed signals | 🔴 Bearish: majority bearish
               </div>
             </div>
             <div style={{
