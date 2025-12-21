@@ -14,6 +14,12 @@ type AssetType = "equity" | "crypto" | "forex";
 interface ScanResult {
   symbol: string;
   score: number;
+  direction?: 'bullish' | 'bearish' | 'neutral';
+  signals?: {
+    bullish: number;
+    bearish: number;
+    neutral: number;
+  };
   price?: number;
   rsi?: number;
   macd_hist?: number;
@@ -585,63 +591,177 @@ function ScannerContent() {
             padding: "2rem",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
           }}>
-            {/* Bias Banner - Instant Context */}
+            {/* NEW: Clear Verdict Tile - The WOW Factor */}
             {(() => {
-              const score = result.score ?? 0;
-              const isBullish = score >= 70;
-              const isBearish = score < 40;
-              const isNeutral = score >= 40 && score < 70;
+              // Use direction from API if available, otherwise calculate from score
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const score = result.score ?? 50;
+              
+              const isBullish = direction === 'bullish';
+              const isBearish = direction === 'bearish';
               
               const biasText = isBullish ? "Bullish" : isBearish ? "Bearish" : "Neutral / Mixed";
-              const stanceText = isBullish ? "Long Bias – Favor Continuation" : 
+              const stanceText = isBullish ? "Risk-On – Favor Long Positions" : 
                                  isBearish ? "Risk-Off – Defensive Positioning" : 
-                                 "Wait for Clarity – No Clear Edge";
-              const bgColor = isBullish ? "rgba(16, 185, 129, 0.15)" : 
-                              isBearish ? "rgba(239, 68, 68, 0.15)" : 
-                              "rgba(251, 191, 36, 0.15)";
-              const borderColor = isBullish ? "rgba(16, 185, 129, 0.4)" : 
-                                  isBearish ? "rgba(239, 68, 68, 0.4)" : 
-                                  "rgba(251, 191, 36, 0.4)";
+                                 "Caution – Wait for Clarity";
+              const emoji = isBullish ? "🟢" : isBearish ? "🔴" : "🟡";
+              const bgGradient = isBullish 
+                ? "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%)" 
+                : isBearish 
+                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%)"
+                : "linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.05) 100%)";
+              const borderColor = isBullish ? "rgba(16, 185, 129, 0.5)" : 
+                                  isBearish ? "rgba(239, 68, 68, 0.5)" : 
+                                  "rgba(251, 191, 36, 0.5)";
               const textColor = isBullish ? "#34D399" : isBearish ? "#F87171" : "#FBBF24";
+              const scoreColor = isBullish ? "#10B981" : isBearish ? "#EF4444" : "#F59E0B";
               
               return (
                 <div style={{
-                  background: bgColor,
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: "12px",
-                  padding: "1rem 1.25rem",
-                  marginBottom: "1.25rem",
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "1rem",
-                  alignItems: "center",
-                  justifyContent: "space-between"
+                  background: bgGradient,
+                  border: `2px solid ${borderColor}`,
+                  borderRadius: "16px",
+                  padding: "1.5rem",
+                  marginBottom: "1.5rem",
+                  position: "relative",
+                  overflow: "hidden"
                 }}>
-                  <div>
-                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
-                      Market Bias
-                    </div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: "700", color: textColor }}>
-                      {biasText}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
-                      Execution State
-                    </div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#E2E8F0" }}>
-                      {stanceText}
-                    </div>
-                  </div>
+                  {/* Glow effect */}
                   <div style={{
-                    background: isBullish ? "#10B981" : isBearish ? "#EF4444" : "#F59E0B",
-                    color: "#fff",
-                    padding: "0.5rem 1rem",
-                    borderRadius: "8px",
-                    fontWeight: "700",
-                    fontSize: "1.1rem"
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: "4px",
+                    background: isBullish 
+                      ? "linear-gradient(90deg, #10B981, #34D399, #10B981)"
+                      : isBearish 
+                      ? "linear-gradient(90deg, #EF4444, #F87171, #EF4444)"
+                      : "linear-gradient(90deg, #F59E0B, #FBBF24, #F59E0B)",
+                    borderRadius: "16px 16px 0 0"
+                  }} />
+                  
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: "1.5rem",
+                    alignItems: "center"
                   }}>
-                    {score}
+                    {/* Left: Verdict Info */}
+                    <div>
+                      <div style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "0.75rem",
+                        marginBottom: "0.5rem"
+                      }}>
+                        <span style={{ fontSize: "2rem" }}>{emoji}</span>
+                        <div>
+                          <div style={{ 
+                            fontSize: "0.7rem", 
+                            color: "#94A3B8", 
+                            textTransform: "uppercase", 
+                            letterSpacing: "0.1em",
+                            marginBottom: "0.25rem"
+                          }}>
+                            Market Bias
+                          </div>
+                          <div style={{ 
+                            fontSize: "1.75rem", 
+                            fontWeight: "800", 
+                            color: textColor,
+                            lineHeight: 1
+                          }}>
+                            {biasText}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ 
+                        fontSize: "0.7rem", 
+                        color: "#94A3B8", 
+                        textTransform: "uppercase", 
+                        letterSpacing: "0.1em",
+                        marginBottom: "0.25rem",
+                        marginTop: "1rem"
+                      }}>
+                        Execution State
+                      </div>
+                      <div style={{ 
+                        fontSize: "1rem", 
+                        fontWeight: "600", 
+                        color: "#E2E8F0"
+                      }}>
+                        {stanceText}
+                      </div>
+                      
+                      {/* Signal breakdown if available */}
+                      {result.signals && (
+                        <div style={{
+                          display: "flex",
+                          gap: "1rem",
+                          marginTop: "1rem",
+                          fontSize: "0.85rem"
+                        }}>
+                          <span style={{ color: "#34D399" }}>
+                            ✓ {result.signals.bullish} Bullish
+                          </span>
+                          <span style={{ color: "#F87171" }}>
+                            ✗ {result.signals.bearish} Bearish
+                          </span>
+                          <span style={{ color: "#94A3B8" }}>
+                            ○ {result.signals.neutral} Neutral
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Right: Score Circle */}
+                    <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}>
+                      <div style={{
+                        width: "90px",
+                        height: "90px",
+                        borderRadius: "50%",
+                        background: `conic-gradient(${scoreColor} ${score * 3.6}deg, rgba(30,41,59,0.8) 0deg)`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        position: "relative"
+                      }}>
+                        <div style={{
+                          width: "70px",
+                          height: "70px",
+                          borderRadius: "50%",
+                          background: "rgba(15,23,42,0.95)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexDirection: "column"
+                        }}>
+                          <span style={{
+                            fontSize: "1.75rem",
+                            fontWeight: "800",
+                            color: scoreColor,
+                            lineHeight: 1
+                          }}>
+                            {score}
+                          </span>
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: "0.7rem",
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em"
+                      }}>
+                        Confluence Score
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -694,7 +814,7 @@ function ScannerContent() {
                   fontSize: "0.95rem",
                 }}
               >
-                {aiLoading ? "Analyzing..." : result.score >= 70 ? "Why is this Bullish?" : result.score < 40 ? "Why is this Bearish?" : "Explain this Verdict"}
+                {aiLoading ? "Analyzing..." : result.direction === 'bullish' ? "Why is this Bullish?" : result.direction === 'bearish' ? "Why is this Bearish?" : "Explain this Verdict"}
               </button>
               {aiError && <span style={{ color: "#fca5a5", fontSize: "0.9rem" }}>{aiError}</span>}
             </div>

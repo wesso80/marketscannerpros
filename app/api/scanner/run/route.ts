@@ -54,6 +54,12 @@ interface ScanRequest {
 interface ScanResult {
   symbol: string;
   score: number;
+  direction?: 'bullish' | 'bearish' | 'neutral';
+  signals?: {
+    bullish: number;
+    bearish: number;
+    neutral: number;
+  };
   timeframe: string;
   type: string;
   price?: number;
@@ -378,27 +384,112 @@ export async function POST(req: NextRequest) {
       return obv_vals;
     }
 
-    function computeScore(close: number | undefined, ema200: number, rsi: number, macd: number, sig: number, hist: number, atr: number) {
-      let score = 0;
-      // Trend vs EMA200
+    function computeScore(
+      close: number | undefined, 
+      ema200: number, 
+      rsi: number, 
+      macd: number, 
+      sig: number, 
+      hist: number, 
+      atr: number,
+      adxVal?: number,
+      stochK?: number,
+      aroonUp?: number,
+      aroonDown?: number
+    ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number } } {
+      // Count individual signals for more accurate direction
+      let bullishSignals = 0;
+      let bearishSignals = 0;
+      let neutralSignals = 0;
+      
+      // 1. Trend vs EMA200 (major signal)
       if (Number.isFinite(ema200) && Number.isFinite(close)) {
-        score += (close! > ema200) ? 20 : -10;
+        if (close! > ema200 * 1.01) { bullishSignals += 2; } // Above EMA200 by 1%+
+        else if (close! < ema200 * 0.99) { bearishSignals += 2; } // Below EMA200 by 1%+
+        else { neutralSignals += 1; }
       }
-      // RSI confluence
+      
+      // 2. RSI
       if (Number.isFinite(rsi)) {
-        if (rsi > 60) score += 15; else if (rsi >= 45 && rsi <= 55) score += 8; else if (rsi < 40) score -= 8;
+        if (rsi >= 55 && rsi <= 70) { bullishSignals += 1; } // Bullish momentum
+        else if (rsi > 70) { bearishSignals += 1; } // Overbought = caution
+        else if (rsi <= 45 && rsi >= 30) { bearishSignals += 1; } // Bearish momentum
+        else if (rsi < 30) { bullishSignals += 1; } // Oversold = potential bounce
+        else { neutralSignals += 1; }
       }
-      // MACD momentum
-      if (Number.isFinite(hist)) score += hist > 0 ? 12 : -8;
-      if (Number.isFinite(macd) && Number.isFinite(sig)) score += macd > sig ? 8 : -5;
-      // Volatility guard (extreme ATR reduces score slightly)
-      if (Number.isFinite(atr)) {
-        // simple normalization guard: high ATR relative to price reduces score
-        const rel = (Number.isFinite(close) && close! > 0) ? atr / close! : 0;
-        if (rel > 0.05) score -= 5;
+      
+      // 3. MACD Histogram
+      if (Number.isFinite(hist)) {
+        if (hist > 0) { bullishSignals += 1; }
+        else { bearishSignals += 1; }
       }
-      // Floor at 1, round
-      return Math.max(1, Math.round(score));
+      
+      // 4. MACD vs Signal
+      if (Number.isFinite(macd) && Number.isFinite(sig)) {
+        if (macd > sig) { bullishSignals += 1; }
+        else { bearishSignals += 1; }
+      }
+      
+      // 5. ADX (trend strength)
+      if (Number.isFinite(adxVal)) {
+        if (adxVal! > 25) { 
+          // Strong trend - amplify the dominant direction
+          if (bullishSignals > bearishSignals) bullishSignals += 1;
+          else if (bearishSignals > bullishSignals) bearishSignals += 1;
+        } else {
+          neutralSignals += 1; // Weak trend
+        }
+      }
+      
+      // 6. Stochastic
+      if (Number.isFinite(stochK)) {
+        if (stochK! > 80) { bearishSignals += 1; } // Overbought
+        else if (stochK! < 20) { bullishSignals += 1; } // Oversold
+        else if (stochK! >= 50) { bullishSignals += 0.5; }
+        else { bearishSignals += 0.5; }
+      }
+      
+      // 7. Aroon
+      if (Number.isFinite(aroonUp) && Number.isFinite(aroonDown)) {
+        if (aroonUp! > aroonDown! && aroonUp! > 70) { bullishSignals += 1; }
+        else if (aroonDown! > aroonUp! && aroonDown! > 70) { bearishSignals += 1; }
+        else { neutralSignals += 0.5; }
+      }
+      
+      // Calculate total signals
+      const totalSignals = bullishSignals + bearishSignals + neutralSignals;
+      
+      // Determine direction based on signal counts
+      let direction: 'bullish' | 'bearish' | 'neutral';
+      if (bullishSignals > bearishSignals * 1.3) {
+        direction = 'bullish';
+      } else if (bearishSignals > bullishSignals * 1.3) {
+        direction = 'bearish';
+      } else {
+        direction = 'neutral';
+      }
+      
+      // Calculate score (0-100 scale)
+      // Base score starts at 50 (neutral)
+      let score = 50;
+      const signalDiff = bullishSignals - bearishSignals;
+      const maxSignalDiff = 8; // Approximate max possible difference
+      
+      // Adjust score based on signal difference
+      score += (signalDiff / maxSignalDiff) * 50;
+      
+      // Clamp to 1-100
+      score = Math.max(1, Math.min(100, Math.round(score)));
+      
+      return {
+        score,
+        direction,
+        signals: {
+          bullish: Math.round(bullishSignals),
+          bearish: Math.round(bearishSignals),
+          neutral: Math.round(neutralSignals)
+        }
+      };
     }
 
     // Keep equities lower due to Alpha Vantage rate limits on TA endpoints
@@ -444,10 +535,12 @@ export async function POST(req: NextRequest) {
           const close = closes[last];
           const price = close;
           
-          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
-          const item: ScanResult = {
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-${market}`,
-            score: s,
+            score: scoreResult.score,
+            direction: scoreResult.direction,
+            signals: scoreResult.signals,
             timeframe,
             type,
             price,
@@ -464,7 +557,7 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
           };
-          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
           const cacheBuster = Date.now();
@@ -548,10 +641,12 @@ export async function POST(req: NextRequest) {
           const close = closes[last];
           const price = close;
           
-          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
-          const item: ScanResult = {
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
-            score: s,
+            score: scoreResult.score,
+            direction: scoreResult.direction,
+            signals: scoreResult.signals,
             timeframe,
             type,
             price,
@@ -568,7 +663,7 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
           };
-          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
           // EQUITIES: Use TIME_SERIES_INTRADAY or TIME_SERIES_DAILY
           const cacheBuster = Date.now();
@@ -652,10 +747,12 @@ export async function POST(req: NextRequest) {
           const close = closes[last];
           const price = close;
           
-          const s = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal);
-          const item: ScanResult = {
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
-            score: s,
+            score: scoreResult.score,
+            direction: scoreResult.direction,
+            signals: scoreResult.signals,
             timeframe,
             type,
             price,
@@ -672,7 +769,7 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
           };
-          if (s >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         }
       } catch (err: any) {
         console.error("[scanner] error for", sym, err);
