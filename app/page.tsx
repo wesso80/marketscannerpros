@@ -5,6 +5,9 @@ import Why from "../components/Why";
 import HowItWorks from "../components/HowItWorks";
 import SocialProof from "../components/SocialProof";
 import ReferralBanner from "../components/ReferralBanner";
+import LiveMarketPulse from "../components/LiveMarketPulse";
+import UrgencyHero from "../components/UrgencyHero";
+import InstantDemo from "../components/InstantDemo";
 import Link from "next/link";
 
 import { useState } from "react";
@@ -92,6 +95,9 @@ export default function Home() {
           <span>🎁</span>
         </p>
       </div>
+
+      {/* 🚀 WOW FACTOR #1 - Urgency Hero with FOMO counters */}
+      <UrgencyHero />
 
       {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{
@@ -238,6 +244,9 @@ export default function Home() {
 
       </section>
 
+      {/* 🚀 WOW FACTOR #2 - Try Before Signup Interactive Demo */}
+      <InstantDemo />
+
       {/* Scan the Market Section (TrendSpider-style, user text) */}
       <section style={{
         width: '100%',
@@ -326,6 +335,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+      
+      {/* THE WOW FACTOR - Live Market Pulse */}
+      <LiveMarketPulse />
       
       <SocialProof />
       <Why />
