@@ -42,6 +42,8 @@ Be direct and specific. Reference actual symbols, strategies, and numbers from t
 For emotional analysis, look for patterns like "Did trades made when feeling 'FOMO' or 'anxious' perform worse?"
 Keep your response concise but comprehensive (400-600 words).
 
+IMPORTANT: Do NOT provide specific buy/sell recommendations, price targets, or tell the user to enter/exit specific positions. This is educational pattern analysis of their past trades only, not investment advice.
+
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 `;
 

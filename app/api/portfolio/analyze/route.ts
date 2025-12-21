@@ -44,6 +44,8 @@ If the portfolio is in drawdown, acknowledge it honestly but constructively.
 Consider position sizing, diversification, and timing of entries.
 Keep your response concise but comprehensive (400-600 words).
 
+IMPORTANT: Do NOT provide specific buy/sell recommendations, price targets, or tell the user to enter/exit specific positions. This is educational portfolio analysis only, not investment advice.
+
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 `;
 
