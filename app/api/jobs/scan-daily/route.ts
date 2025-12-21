@@ -257,6 +257,27 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
       indicators.stochD = parseFloat(stochSeries[stochDate]["SlowD"]);
     }
 
+    // Aroon
+    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
+    const aroonData = await fetchWithRetry(aroonUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const aroonSeries = aroonData["Technical Analysis: AROON"];
+    if (aroonSeries) {
+      const aroonDate = Object.keys(aroonSeries)[0];
+      indicators.aroonUp = parseFloat(aroonSeries[aroonDate]["Aroon Up"]);
+      indicators.aroonDown = parseFloat(aroonSeries[aroonDate]["Aroon Down"]);
+    }
+
+    // CCI
+    const cciUrl = `${baseUrl}?function=CCI&symbol=${symbol}&interval=daily&time_period=20&apikey=${apiKey}`;
+    const cciData = await fetchWithRetry(cciUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const cciSeries = cciData["Technical Analysis: CCI"];
+    if (cciSeries) {
+      const cciDate = Object.keys(cciSeries)[0];
+      indicators.cci = parseFloat(cciSeries[cciDate]["CCI"]);
+    }
+
     const { score, direction, signals } = computeScore(indicators);
 
     return {
@@ -325,6 +346,37 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
     if (adxSeries) {
       const adxDate = Object.keys(adxSeries)[0];
       indicators.adx = parseFloat(adxSeries[adxDate]["ADX"]);
+    }
+
+    // Fetch EMA 200 (major weight in scoring - worth 2 signals!)
+    const emaUrl = `${baseUrl}?function=EMA&symbol=${symbol}&interval=daily&time_period=200&series_type=close&apikey=${apiKey}`;
+    const emaData = await fetchWithRetry(emaUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const emaSeries = emaData["Technical Analysis: EMA"];
+    if (emaSeries) {
+      const emaDate = Object.keys(emaSeries)[0];
+      indicators.ema200 = parseFloat(emaSeries[emaDate]["EMA"]);
+    }
+
+    // Fetch Aroon
+    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
+    const aroonData = await fetchWithRetry(aroonUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const aroonSeries = aroonData["Technical Analysis: AROON"];
+    if (aroonSeries) {
+      const aroonDate = Object.keys(aroonSeries)[0];
+      indicators.aroonUp = parseFloat(aroonSeries[aroonDate]["Aroon Up"]);
+      indicators.aroonDown = parseFloat(aroonSeries[aroonDate]["Aroon Down"]);
+    }
+
+    // Fetch CCI
+    const cciUrl = `${baseUrl}?function=CCI&symbol=${symbol}&interval=daily&time_period=20&apikey=${apiKey}`;
+    const cciData = await fetchWithRetry(cciUrl);
+    await sleep(RATE_LIMIT_DELAY);
+    const cciSeries = cciData["Technical Analysis: CCI"];
+    if (cciSeries) {
+      const cciDate = Object.keys(cciSeries)[0];
+      indicators.cci = parseFloat(cciSeries[cciDate]["CCI"]);
     }
 
     // Fetch price from crypto endpoint for price display
