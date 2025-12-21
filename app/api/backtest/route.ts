@@ -31,6 +31,29 @@ import { backtestRequestSchema, type BacktestRequest } from '../../../lib/valida
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
+// Known crypto symbols for detection
+const KNOWN_CRYPTO = [
+  'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'LINK',
+  'UNI', 'ATOM', 'LTC', 'BCH', 'XLM', 'ALGO', 'VET', 'FIL', 'AAVE', 'EOS',
+  'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX', 'SUSHI', 'YFI', 'CRV',
+  'GRT', 'ENJ', 'MANA', 'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD',
+  'FLOW', 'ICP', 'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA',
+  'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP', 'ARB',
+  'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS', 'HBAR',
+  'RUNE', 'OSMO', 'CELO', 'ONE', 'ZIL', 'ICX', 'QTUM', 'ONT', 'ZRX', 'BAT'
+];
+
+// Detect if symbol is crypto
+function isCryptoSymbol(symbol: string): boolean {
+  const upper = symbol.toUpperCase().replace(/-?USD$/, '').replace(/-?USDT$/, '');
+  return KNOWN_CRYPTO.includes(upper);
+}
+
+// Normalize symbol (remove USD suffix for crypto)
+function normalizeSymbol(symbol: string): string {
+  return symbol.toUpperCase().replace(/-?USD$/, '').replace(/-?USDT$/, '');
+}
+
 interface Trade {
   entryDate: string;
   exitDate: string;
@@ -65,8 +88,8 @@ interface PriceData {
   };
 }
 
-// Fetch daily price data from Alpha Vantage
-async function fetchPriceData(symbol: string): Promise<PriceData> {
+// Fetch daily price data from Alpha Vantage (Stocks)
+async function fetchStockPriceData(symbol: string): Promise<PriceData> {
   const response = await fetch(
     `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`
   );
@@ -74,6 +97,13 @@ async function fetchPriceData(symbol: string): Promise<PriceData> {
   const timeSeries = data['Time Series (Daily)'];
   
   if (!timeSeries) {
+    // Check for error messages
+    if (data['Error Message']) {
+      throw new Error(`Invalid symbol ${symbol}: ${data['Error Message']}`);
+    }
+    if (data['Note']) {
+      throw new Error(`API rate limit exceeded. Please try again in a minute.`);
+    }
     throw new Error(`Failed to fetch price data for ${symbol}`);
   }
 
@@ -89,6 +119,53 @@ async function fetchPriceData(symbol: string): Promise<PriceData> {
   }
   
   return priceData;
+}
+
+// Fetch daily price data from Alpha Vantage (Crypto)
+async function fetchCryptoPriceData(symbol: string, market: string = 'USD'): Promise<PriceData> {
+  const cleanSymbol = normalizeSymbol(symbol);
+  logger.info(`Fetching crypto data for ${cleanSymbol}/${market}`);
+  
+  const response = await fetch(
+    `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cleanSymbol}&market=${market}&apikey=${ALPHA_VANTAGE_KEY}`
+  );
+  const data = await response.json();
+  const timeSeries = data['Time Series (Digital Currency Daily)'];
+  
+  if (!timeSeries) {
+    // Check for error messages
+    if (data['Error Message']) {
+      throw new Error(`Invalid crypto symbol ${cleanSymbol}: ${data['Error Message']}`);
+    }
+    if (data['Note']) {
+      throw new Error(`API rate limit exceeded. Please try again in a minute.`);
+    }
+    throw new Error(`Failed to fetch crypto price data for ${cleanSymbol}. Make sure it's a valid cryptocurrency symbol.`);
+  }
+
+  const priceData: PriceData = {};
+  for (const [date, values] of Object.entries(timeSeries)) {
+    // Crypto data has different field names (with USD suffix)
+    priceData[date] = {
+      open: parseFloat((values as any)['1a. open (USD)'] ?? (values as any)['1. open']),
+      high: parseFloat((values as any)['2a. high (USD)'] ?? (values as any)['2. high']),
+      low: parseFloat((values as any)['3a. low (USD)'] ?? (values as any)['3. low']),
+      close: parseFloat((values as any)['4a. close (USD)'] ?? (values as any)['4. close']),
+      volume: parseFloat((values as any)['5. volume'] ?? 0)
+    };
+  }
+  
+  logger.info(`Fetched ${Object.keys(priceData).length} days of crypto data for ${cleanSymbol}`);
+  return priceData;
+}
+
+// Smart fetch - detects crypto vs stock
+async function fetchPriceData(symbol: string): Promise<PriceData> {
+  if (isCryptoSymbol(symbol)) {
+    return fetchCryptoPriceData(symbol);
+  } else {
+    return fetchStockPriceData(symbol);
+  }
 }
 
 // Calculate EMA
@@ -791,15 +868,25 @@ export async function POST(req: NextRequest) {
     
     const { symbol, strategy, startDate, endDate, initialCapital } = body;
 
-    logger.info('Backtest request started', { symbol, strategy, startDate, endDate, initialCapital });
+    const isCrypto = isCryptoSymbol(symbol);
+    const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
+    
+    logger.info('Backtest request started', { 
+      symbol: normalizedSymbol, 
+      strategy, 
+      startDate, 
+      endDate, 
+      initialCapital,
+      assetType: isCrypto ? 'crypto' : 'stock'
+    });
 
     // Fetch real historical price data from Alpha Vantage
-    logger.debug(`Fetching price data for ${symbol}...`);
-    const priceData = await fetchPriceData(symbol);
+    logger.debug(`Fetching ${isCrypto ? 'crypto' : 'stock'} price data for ${normalizedSymbol}...`);
+    const priceData = await fetchPriceData(normalizedSymbol);
     logger.debug(`Fetched ${Object.keys(priceData).length} days of price data`);
 
     // Run backtest with real indicators
-    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, symbol);
+    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, normalizedSymbol);
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
 
     if (trades.length === 0) {
