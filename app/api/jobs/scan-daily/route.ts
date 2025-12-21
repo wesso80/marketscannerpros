@@ -76,102 +76,108 @@ async function fetchWithRetry(url: string, retries = 2): Promise<any> {
   }
 }
 
-// Compute score from indicators (same logic as scanner)
+// Compute score from indicators (matching main scanner logic)
 function computeScore(indicators: Record<string, any>): { score: number; direction: string; signals: { bullish: number; bearish: number; neutral: number } } {
-  const signals = { bullish: 0, bearish: 0, neutral: 0 };
+  let bullishSignals = 0;
+  let bearishSignals = 0;
+  let neutralSignals = 0;
   
-  // RSI
-  const rsi = indicators.rsi;
-  if (rsi !== undefined) {
-    if (rsi < 30) signals.bullish++;
-    else if (rsi > 70) signals.bearish++;
-    else if (rsi >= 40 && rsi <= 60) signals.neutral++;
-    else if (rsi < 50) signals.bullish++;
-    else signals.bearish++;
-  }
-
-  // MACD
-  const macd = indicators.macd;
-  const macdSignal = indicators.macdSignal;
-  if (macd !== undefined && macdSignal !== undefined) {
-    if (macd > macdSignal && macd > 0) signals.bullish++;
-    else if (macd < macdSignal && macd < 0) signals.bearish++;
-    else if (macd > macdSignal) signals.bullish++;
-    else signals.bearish++;
-  }
-
-  // Price vs EMA200
   const price = indicators.price;
   const ema200 = indicators.ema200;
+  const rsi = indicators.rsi;
+  const macd = indicators.macd;
+  const macdSignal = indicators.macdSignal;
+  const adx = indicators.adx;
+  const stochK = indicators.stochK;
+  const stochD = indicators.stochD;
+  const aroonUp = indicators.aroonUp;
+  const aroonDown = indicators.aroonDown;
+  const cci = indicators.cci;
+
+  // 1. Trend vs EMA200
   if (price && ema200) {
-    const pctAbove = ((price - ema200) / ema200) * 100;
-    if (pctAbove > 5) signals.bullish++;
-    else if (pctAbove < -5) signals.bearish++;
-    else signals.neutral++;
+    if (price > ema200 * 1.01) { bullishSignals += 2; }
+    else if (price < ema200 * 0.99) { bearishSignals += 2; }
+    else { neutralSignals += 1; }
+  }
+  
+  // 2. RSI
+  if (rsi !== undefined) {
+    if (rsi >= 55 && rsi <= 70) { bullishSignals += 1; }
+    else if (rsi > 70) { bearishSignals += 1; }
+    else if (rsi <= 45 && rsi >= 30) { bearishSignals += 1; }
+    else if (rsi < 30) { bullishSignals += 1; }
+    else { neutralSignals += 1; }
   }
 
-  // ADX trend strength
-  const adx = indicators.adx;
-  const plusDI = indicators.plusDI;
-  const minusDI = indicators.minusDI;
-  if (adx !== undefined && plusDI !== undefined && minusDI !== undefined) {
+  // 3. MACD
+  if (macd !== undefined && macdSignal !== undefined) {
+    if (macd > macdSignal) { bullishSignals += 1; }
+    else { bearishSignals += 1; }
+    
+    if (macd > 0) { bullishSignals += 0.5; }
+    else { bearishSignals += 0.5; }
+  }
+
+  // 4. ADX
+  if (adx !== undefined) {
     if (adx > 25) {
-      if (plusDI > minusDI) signals.bullish++;
-      else signals.bearish++;
+      if (bullishSignals > bearishSignals) bullishSignals += 1;
+      else if (bearishSignals > bullishSignals) bearishSignals += 1;
     } else {
-      signals.neutral++;
+      neutralSignals += 1;
     }
   }
 
-  // Stochastic
-  const stochK = indicators.stochK;
-  const stochD = indicators.stochD;
-  if (stochK !== undefined && stochD !== undefined) {
-    if (stochK < 20 && stochK > stochD) signals.bullish++;
-    else if (stochK > 80 && stochK < stochD) signals.bearish++;
-    else if (stochK > stochD) signals.bullish++;
-    else signals.bearish++;
+  // 5. Stochastic
+  if (stochK !== undefined) {
+    if (stochK > 80) { bearishSignals += 1; }
+    else if (stochK < 20) { bullishSignals += 1; }
+    else if (stochK >= 50) { bullishSignals += 0.5; }
+    else { bearishSignals += 0.5; }
   }
 
-  // Aroon
-  const aroonUp = indicators.aroonUp;
-  const aroonDown = indicators.aroonDown;
+  // 6. Aroon
   if (aroonUp !== undefined && aroonDown !== undefined) {
-    if (aroonUp > 70 && aroonDown < 30) signals.bullish++;
-    else if (aroonDown > 70 && aroonUp < 30) signals.bearish++;
-    else signals.neutral++;
+    if (aroonUp > aroonDown && aroonUp > 70) { bullishSignals += 1; }
+    else if (aroonDown > aroonUp && aroonDown > 70) { bearishSignals += 1; }
+    else { neutralSignals += 0.5; }
   }
 
-  // CCI
-  const cci = indicators.cci;
+  // 7. CCI
   if (cci !== undefined) {
-    if (cci > 100) signals.bullish++;
-    else if (cci < -100) signals.bearish++;
-    else signals.neutral++;
+    if (cci > 100) { bullishSignals += 1; }
+    else if (cci > 0) { bullishSignals += 0.5; }
+    else if (cci < -100) { bearishSignals += 1; }
+    else { bearishSignals += 0.5; }
   }
 
-  // Calculate final score
-  const total = signals.bullish + signals.bearish + signals.neutral;
-  if (total === 0) return { score: 50, direction: 'neutral', signals };
-
-  const bullishWeight = signals.bullish / total;
-  const bearishWeight = signals.bearish / total;
-  
-  let score: number;
+  // Calculate direction (same threshold as main scanner)
   let direction: string;
-  
-  if (bullishWeight > bearishWeight) {
-    score = 50 + (bullishWeight * 50);
-    direction = score >= 65 ? 'bullish' : 'neutral';
-  } else if (bearishWeight > bullishWeight) {
-    score = 50 - (bearishWeight * 50);
-    direction = score <= 35 ? 'bearish' : 'neutral';
+  if (bullishSignals > bearishSignals * 1.3) {
+    direction = 'bullish';
+  } else if (bearishSignals > bullishSignals * 1.3) {
+    direction = 'bearish';
   } else {
-    score = 50;
     direction = 'neutral';
   }
 
-  return { score: Math.round(score), direction, signals };
+  // Calculate score (0-100)
+  let score = 50;
+  const signalDiff = bullishSignals - bearishSignals;
+  const maxSignalDiff = 10;
+  score += (signalDiff / maxSignalDiff) * 50;
+  score = Math.max(1, Math.min(100, Math.round(score)));
+
+  return {
+    score,
+    direction,
+    signals: {
+      bullish: Math.round(bullishSignals),
+      bearish: Math.round(bearishSignals),
+      neutral: Math.round(neutralSignals)
+    }
+  };
 }
 
 async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
