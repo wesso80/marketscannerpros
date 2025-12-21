@@ -959,6 +959,22 @@ function ScannerContent() {
                     Rising OBV = Bullish volume confirmation
                   </div>
                 </div>
+                <div>
+                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
+                    ✓ CCI Cycles
+                  </div>
+                  <div style={{ color: "#CBD5E1" }}>
+                    CCI &gt;100 = Strong bullish | CCI &lt;-100 = Strong bearish
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
+                    ✓ ATR Volatility
+                  </div>
+                  <div style={{ color: "#CBD5E1" }}>
+                    High ATR adds caution weight for risk management
+                  </div>
+                </div>
               </div>
               <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid rgba(59, 130, 246, 0.2)", color: "#94A3B8", fontSize: "0.8rem" }}>
                 <strong style={{ color: "#60A5FA" }}>Confluence Score:</strong> Percentage of indicators showing bullish signals | 🟢 Bullish: majority agree | 🟡 Neutral: mixed signals | 🔴 Bearish: majority bearish

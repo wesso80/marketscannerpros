@@ -395,7 +395,10 @@ export async function POST(req: NextRequest) {
       adxVal?: number,
       stochK?: number,
       aroonUp?: number,
-      aroonDown?: number
+      aroonDown?: number,
+      cciVal?: number,
+      obvCurrent?: number,
+      obvPrev?: number
     ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number } } {
       // Count individual signals for more accurate direction
       let bullishSignals = 0;
@@ -456,6 +459,31 @@ export async function POST(req: NextRequest) {
         else { neutralSignals += 0.5; }
       }
       
+      // 8. CCI (Commodity Channel Index)
+      if (Number.isFinite(cciVal)) {
+        if (cciVal! > 100) { bullishSignals += 1; } // Strong bullish
+        else if (cciVal! > 0) { bullishSignals += 0.5; } // Mild bullish
+        else if (cciVal! < -100) { bearishSignals += 1; } // Strong bearish
+        else { bearishSignals += 0.5; } // Mild bearish
+      }
+      
+      // 9. OBV (On Balance Volume) - trend confirmation
+      if (Number.isFinite(obvCurrent) && Number.isFinite(obvPrev)) {
+        if (obvCurrent! > obvPrev!) { bullishSignals += 1; } // Volume confirming up move
+        else if (obvCurrent! < obvPrev!) { bearishSignals += 1; } // Volume confirming down move
+        else { neutralSignals += 0.5; }
+      }
+      
+      // 10. ATR-based volatility adjustment (risk factor)
+      // High ATR in a downtrend is more bearish; high ATR in uptrend can be bullish breakout
+      // For now, extreme volatility adds caution (neutral weight)
+      if (Number.isFinite(atr) && Number.isFinite(close)) {
+        const atrPercent = (atr / close!) * 100;
+        if (atrPercent > 5) { // Very high volatility (>5% daily range)
+          neutralSignals += 1; // Add caution weight
+        }
+      }
+      
       // Calculate total signals
       const totalSignals = bullishSignals + bearishSignals + neutralSignals;
       
@@ -473,7 +501,7 @@ export async function POST(req: NextRequest) {
       // Base score starts at 50 (neutral)
       let score = 50;
       const signalDiff = bullishSignals - bearishSignals;
-      const maxSignalDiff = 8; // Approximate max possible difference
+      const maxSignalDiff = 12; // Max possible difference with all 10 indicators
       
       // Adjust score based on signal difference
       score += (signalDiff / maxSignalDiff) * 50;
@@ -534,8 +562,10 @@ export async function POST(req: NextRequest) {
           const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
           const close = closes[last];
           const price = close;
+          const obvCurrent = obvArr[last];
+          const obvPrev = obvArr[last - 1];
           
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-${market}`,
             score: scoreResult.score,
@@ -640,8 +670,10 @@ export async function POST(req: NextRequest) {
           const atrVal = atrArr[last - 1];
           const close = closes[last];
           const price = close;
+          const obvCurrent = obvArr[last];
+          const obvPrev = obvArr[last - 1];
           
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
             score: scoreResult.score,
@@ -746,8 +778,10 @@ export async function POST(req: NextRequest) {
           const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
           const close = closes[last];
           const price = close;
+          const obvCurrent = obvArr[last];
+          const obvPrev = obvArr[last - 1];
           
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down);
+          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
             score: scoreResult.score,
