@@ -510,7 +510,7 @@ function ScannerContent() {
                     </div>
                     <div style={{ fontSize: "12px", color: "#94a3b8" }}>
                       {dailyPicks.topPicks.equity.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.equity.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.equity.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.equity.direction?.slice(1)}
-                      {dailyPicks.topPicks.equity.change_percent != null && (
+                      {dailyPicks.topPicks.equity.change_percent != null && !isNaN(Number(dailyPicks.topPicks.equity.change_percent)) && (
                         <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.equity.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
                           {Number(dailyPicks.topPicks.equity.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.equity.change_percent).toFixed(2)}%
                         </span>
@@ -564,7 +564,7 @@ function ScannerContent() {
                     </div>
                     <div style={{ fontSize: "12px", color: "#94a3b8" }}>
                       {dailyPicks.topPicks.crypto.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.crypto.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.crypto.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.crypto.direction?.slice(1)}
-                      {dailyPicks.topPicks.crypto.change_percent != null && (
+                      {dailyPicks.topPicks.crypto.change_percent != null && !isNaN(Number(dailyPicks.topPicks.crypto.change_percent)) && (
                         <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.crypto.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
                           {Number(dailyPicks.topPicks.crypto.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.crypto.change_percent).toFixed(2)}%
                         </span>
@@ -618,7 +618,7 @@ function ScannerContent() {
                     </div>
                     <div style={{ fontSize: "12px", color: "#94a3b8" }}>
                       {dailyPicks.topPicks.forex.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.forex.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.forex.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.forex.direction?.slice(1)}
-                      {dailyPicks.topPicks.forex.change_percent != null && (
+                      {dailyPicks.topPicks.forex.change_percent != null && !isNaN(Number(dailyPicks.topPicks.forex.change_percent)) && (
                         <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.forex.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
                           {Number(dailyPicks.topPicks.forex.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.forex.change_percent).toFixed(2)}%
                         </span>

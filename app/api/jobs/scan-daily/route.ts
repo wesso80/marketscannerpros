@@ -280,8 +280,14 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
     
+    // Debug log
+    console.log(`Crypto ${symbol} response keys:`, Object.keys(priceData));
+    
     const timeSeries = priceData["Time Series (Digital Currency Daily)"];
-    if (!timeSeries) return null;
+    if (!timeSeries) {
+      console.error(`No time series for crypto ${symbol}:`, JSON.stringify(priceData).slice(0, 200));
+      return null;
+    }
     
     const dates = Object.keys(timeSeries).sort().reverse();
     const latestDate = dates[0];
