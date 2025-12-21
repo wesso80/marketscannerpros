@@ -38,6 +38,13 @@ function JournalContent() {
   const [closeTradeData, setCloseTradeData] = useState({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterOutcome, setFilterOutcome] = useState<string>('all');
+  
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+  
   const [newEntry, setNewEntry] = useState({
     date: new Date().toISOString().split('T')[0],
     symbol: '',
@@ -58,6 +65,33 @@ function JournalContent() {
 
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // AI Journal Analysis function
+  async function runAiAnalysis() {
+    setAiLoading(true);
+    setAiError(null);
+    setShowAiAnalysis(true);
+    
+    try {
+      const res = await fetch('/api/journal/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to analyze journal');
+      }
+      
+      setAiAnalysis(data.analysis);
+    } catch (err: any) {
+      setAiError(err.message || 'Analysis failed');
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   // Load entries from database (with localStorage fallback for migration)
   useEffect(() => {
@@ -601,6 +635,213 @@ function JournalContent() {
             </p>
           </div>
         )}
+        
+        {/* AI Trading Coach Section */}
+        <div style={{
+          maxWidth: '1600px',
+          margin: '16px auto 0',
+          background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+          border: '1px solid rgba(139,92,246,0.3)',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {/* Gradient accent */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: 'linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6)'
+          }} />
+          
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: showAiAnalysis ? '16px' : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ 
+                fontSize: '24px',
+                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                borderRadius: '10px',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>🧠</span>
+              <div>
+                <h3 style={{ color: '#e2e8f0', fontSize: '15px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  AI Trading Coach
+                </h3>
+                <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>
+                  Analyze patterns, strategies & emotions in your trades
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={runAiAnalysis}
+              disabled={aiLoading || entries.length === 0}
+              style={{
+                padding: '10px 20px',
+                background: aiLoading 
+                  ? 'rgba(139,92,246,0.3)' 
+                  : 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                border: 'none',
+                borderRadius: '10px',
+                color: '#fff',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: aiLoading || entries.length === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+                boxShadow: aiLoading ? 'none' : '0 4px 15px rgba(139,92,246,0.4)'
+              }}
+            >
+              {aiLoading ? (
+                <>
+                  <span style={{ 
+                    animation: 'spin 1s linear infinite',
+                    display: 'inline-block'
+                  }}>⏳</span>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  ✨ Analyze My Journal
+                </>
+              )}
+            </button>
+          </div>
+          
+          {/* AI Error */}
+          {aiError && (
+            <div style={{
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              color: '#f87171',
+              fontSize: '14px',
+              marginTop: '12px'
+            }}>
+              ⚠️ {aiError}
+            </div>
+          )}
+          
+          {/* AI Analysis Results */}
+          {showAiAnalysis && aiAnalysis && (
+            <div style={{
+              background: 'rgba(30,41,59,0.5)',
+              borderRadius: '12px',
+              padding: '20px',
+              marginTop: '4px',
+              border: '1px solid rgba(139,92,246,0.2)'
+            }}>
+              <div style={{
+                color: '#e2e8f0',
+                fontSize: '14px',
+                lineHeight: '1.8',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {aiAnalysis.split('\n').map((line, i) => {
+                  // Style headers
+                  if (line.startsWith('##') || (line.startsWith('**') && line.endsWith('**'))) {
+                    return (
+                      <div key={i} style={{ 
+                        fontWeight: '700', 
+                        fontSize: '16px', 
+                        color: '#f1f5f9',
+                        marginTop: i > 0 ? '16px' : 0,
+                        marginBottom: '8px'
+                      }}>
+                        {line.replace(/[#*]/g, '').trim()}
+                      </div>
+                    );
+                  }
+                  // Style emoji headers
+                  if (/^[📊🎯⚠️🧠💡🏆📈📉✅❌]/.test(line.trim())) {
+                    return (
+                      <div key={i} style={{ 
+                        fontWeight: '600', 
+                        fontSize: '15px', 
+                        color: '#c084fc',
+                        marginTop: '16px',
+                        marginBottom: '8px'
+                      }}>
+                        {line}
+                      </div>
+                    );
+                  }
+                  // Style bullet points
+                  if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+                    return (
+                      <div key={i} style={{ 
+                        paddingLeft: '16px',
+                        color: '#cbd5e1',
+                        marginBottom: '4px'
+                      }}>
+                        {line}
+                      </div>
+                    );
+                  }
+                  // Empty lines
+                  if (!line.trim()) {
+                    return <div key={i} style={{ height: '8px' }} />;
+                  }
+                  // Regular text
+                  return <div key={i} style={{ marginBottom: '4px' }}>{line}</div>;
+                })}
+              </div>
+              
+              <button
+                onClick={() => setShowAiAnalysis(false)}
+                style={{
+                  marginTop: '16px',
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid rgba(148,163,184,0.3)',
+                  borderRadius: '8px',
+                  color: '#94a3b8',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Hide Analysis
+              </button>
+            </div>
+          )}
+          
+          {/* Loading skeleton */}
+          {aiLoading && (
+            <div style={{
+              background: 'rgba(30,41,59,0.5)',
+              borderRadius: '12px',
+              padding: '20px',
+              marginTop: '16px'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div 
+                    key={i}
+                    style={{
+                      height: '16px',
+                      background: 'linear-gradient(90deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.2) 50%, rgba(139,92,246,0.1) 100%)',
+                      borderRadius: '4px',
+                      width: `${100 - (i * 10)}%`,
+                      animation: 'pulse 1.5s ease-in-out infinite'
+                    }}
+                  />
+                ))}
+              </div>
+              <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: '16px', textAlign: 'center' }}>
+                🔮 Analyzing {entries.length} journal entries for patterns and insights...
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
