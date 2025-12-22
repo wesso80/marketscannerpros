@@ -468,8 +468,13 @@ function ScannerContent() {
         </div>
 
         {/* Open Interest Widget */}
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
           <OpenInterestWidget compact />
+        </div>
+
+        {/* Derivatives Data - L/S Ratio & Funding */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <DerivativesWidget compact />
         </div>
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
