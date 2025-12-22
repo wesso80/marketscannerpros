@@ -111,10 +111,10 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
                 <span className="text-amber-400/70">(BTC/Alts only)</span>
                 <button
                   onClick={() => setShowTooltip(!showTooltip)}
-                  className="text-slate-500 hover:text-slate-300 ml-1"
+                  className="ml-2 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"
                   title="What is this?"
                 >
-                  ℹ️
+                  ?
                 </button>
               </div>
               <div className="font-bold" style={{ color }}>

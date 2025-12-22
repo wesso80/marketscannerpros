@@ -116,10 +116,10 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
                   L/S Ratio
                   <button
                     onClick={() => { setShowLsTooltip(!showLsTooltip); setShowFundingTooltip(false); }}
-                    className="text-slate-500 hover:text-slate-300"
+                    className="ml-1 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"
                     title="What is this?"
                   >
-                    ℹ️
+                    ?
                   </button>
                 </div>
                 <div className="font-bold text-white">
@@ -161,10 +161,10 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
                   )}
                   <button
                     onClick={() => { setShowFundingTooltip(!showFundingTooltip); setShowLsTooltip(false); }}
-                    className="text-slate-500 hover:text-slate-300"
+                    className="ml-1 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"
                     title="What is this?"
                   >
-                    ℹ️
+                    ?
                   </button>
                 </div>
                 <div className="font-bold">
