@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import FearGreedGauge from "@/components/FearGreedGauge";
+import OpenInterestWidget from "@/components/OpenInterestWidget";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -461,8 +462,13 @@ function ScannerContent() {
         </div>
 
         {/* Market Sentiment - Fear & Greed Index */}
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
           <FearGreedGauge compact />
+        </div>
+
+        {/* Open Interest Widget */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <OpenInterestWidget compact />
         </div>
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
