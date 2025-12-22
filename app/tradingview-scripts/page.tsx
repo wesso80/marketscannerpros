@@ -6,13 +6,22 @@ import Link from 'next/link';
 // Only includes scripts currently visible on https://www.tradingview.com/u/Marketscannerpros/
 const scripts = [
   {
+    name: "Multi-Timeframe Close and Midpoint Confluence",
+    description: "Multi-Timeframe Close Monitoring and Price Midpoint Confluence Indicator. Designed to assist traders in monitoring multiple timeframe candle closes and identifying price confluence zones around session midpoints. Helps spot key decision points where price interacts with significant levels across timeframes.",
+    image: "/images/mtf-confluence.png",
+    status: "Live - Invite-only",
+    focus: "Multi-TF analysis",
+    type: "TV: Indicator",
+    isNew: true,
+    features: ["Multi-TF Candle Close", "Midpoint Confluence", "Session Levels", "Price Zones"]
+  },
+  {
     name: "MSP Multi-Timeframe Trend & Momentum Dashboard",
     description: "Multi-timeframe trend, momentum, and bias dashboard. Evaluates several technical conditions across multiple timeframes simultaneously to help identify aligned market conditions. Summarizes trend, momentum, participation, and trend-strength metrics into a compact visual table.",
-    image: "/images/confluence-strategy.png",
+    image: "/images/msp-dashboard.png",
     status: "Live - Invite-only",
     focus: "Context & bias",
     type: "TV: Indicator",
-    isNew: true,
     features: ["Multi-TF Analysis", "Trend Context", "Momentum Scoring", "ADX Trend Strength"]
   },
   {
