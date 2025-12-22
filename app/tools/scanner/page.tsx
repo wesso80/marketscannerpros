@@ -7,6 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import FearGreedGauge from "@/components/FearGreedGauge";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -457,6 +458,11 @@ function ScannerContent() {
               <li>AI explanation = context, risk, invalidation. Use it before committing risk.</li>
             </ul>
           </div>
+        </div>
+
+        {/* Market Sentiment - Fear & Greed Index */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <FearGreedGauge compact />
         </div>
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
