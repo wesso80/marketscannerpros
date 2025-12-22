@@ -9,6 +9,7 @@ import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import FearGreedGauge from "@/components/FearGreedGauge";
 import OpenInterestWidget from "@/components/OpenInterestWidget";
+import DerivativesWidget from "@/components/DerivativesWidget";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";

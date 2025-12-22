@@ -50,17 +50,37 @@ export default function OpenInterestWidget({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/open-interest')
-      .then(res => res.json())
-      .then(result => {
-        if (result.error && !result.total) {
-          setError(result.error);
-        } else {
-          setData(result);
-        }
-      })
-      .catch(() => setError('Failed to load OI data'))
-      .finally(() => setLoading(false));
+    let retries = 2;
+    
+    const fetchData = () => {
+      fetch('/api/open-interest')
+        .then(res => res.json())
+        .then(result => {
+          if (result.error && !result.total) {
+            if (retries > 0) {
+              retries--;
+              setTimeout(fetchData, 1000);
+            } else {
+              setError(result.error);
+              setLoading(false);
+            }
+          } else {
+            setData(result);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (retries > 0) {
+            retries--;
+            setTimeout(fetchData, 1000);
+          } else {
+            setError('OI data unavailable');
+            setLoading(false);
+          }
+        });
+    };
+    
+    fetchData();
   }, []);
 
   const formatCompact = (value: number): string => {
@@ -80,8 +100,19 @@ export default function OpenInterestWidget({
 
   if (error && !data) {
     return (
-      <div className={`bg-slate-800/50 rounded-lg p-4 border border-slate-700 ${className}`}>
-        <p className="text-slate-400 text-sm">{error}</p>
+      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 ${className}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📊</span>
+            <span className="text-xs text-slate-400">Open Interest</span>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="text-xs text-emerald-400 hover:text-emerald-300"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
