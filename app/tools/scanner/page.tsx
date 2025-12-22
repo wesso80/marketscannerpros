@@ -208,7 +208,51 @@ function ScannerContent() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
   
-  // Daily Top Picks state
+  // Bulk scan state
+  const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
+  const [bulkScanLoading, setBulkScanLoading] = useState(false);
+  const [bulkScanResults, setBulkScanResults] = useState<{
+    type: string;
+    topPicks: any[];
+    scanned: number;
+    duration: string;
+  } | null>(null);
+  const [bulkScanError, setBulkScanError] = useState<string | null>(null);
+
+  // Run bulk scan
+  const runBulkScan = async (type: 'equity' | 'crypto') => {
+    setBulkScanType(type);
+    setBulkScanLoading(true);
+    setBulkScanError(null);
+    setBulkScanResults(null);
+    
+    try {
+      const res = await fetch('/api/scanner/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setBulkScanResults({
+          type: data.type,
+          topPicks: data.topPicks,
+          scanned: data.scanned,
+          duration: data.duration
+        });
+      } else {
+        setBulkScanError(data.error || 'Scan failed');
+      }
+    } catch (e: any) {
+      setBulkScanError(e.message || 'Network error');
+    } finally {
+      setBulkScanLoading(false);
+    }
+  };
+
+  // Legacy daily picks (keep for backward compat)
   const [dailyPicks, setDailyPicks] = useState<{
     scanDate: string | null;
     topPicks: {
@@ -217,10 +261,11 @@ function ScannerContent() {
       forex: any | null;
     };
   } | null>(null);
-  const [dailyPicksLoading, setDailyPicksLoading] = useState(true);
+  const [dailyPicksLoading, setDailyPicksLoading] = useState(false); // Disabled by default
 
-  // Fetch daily top picks on mount
+  // Fetch daily top picks on mount (disabled - using bulk scan instead)
   useEffect(() => {
+    // Skip fetching - we're using bulk scan buttons now
     const fetchDailyPicks = async () => {
       try {
         const res = await fetch('/api/scanner/daily-picks');
@@ -414,12 +459,12 @@ function ScannerContent() {
           </div>
         </div>
 
-        {/* Daily Top Picks */}
+        {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
         <div style={{
           background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
           border: "1px solid rgba(251,191,36,0.3)",
           borderRadius: "16px",
-          padding: "20px 24px",
+          padding: "24px",
           marginBottom: "1.5rem",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
           position: "relative",
@@ -435,218 +480,272 @@ function ScannerContent() {
             background: "linear-gradient(90deg, #fbbf24, #f59e0b, #fbbf24)"
           }} />
           
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-            <span style={{ fontSize: "24px" }}>🏆</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <span style={{ fontSize: "28px" }}>🔍</span>
             <div>
-              <h3 style={{ color: "#fbbf24", fontSize: "16px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Today's Top Picks
+              <h3 style={{ color: "#fbbf24", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Discover Top 10 Opportunities
               </h3>
-              <p style={{ color: "#94a3b8", fontSize: "12px", margin: "4px 0 0 0" }}>
-                Daily scans across 20 symbols • Updated at market close
+              <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
+                Scan 50+ assets using 7 technical indicators • Powered by Yahoo Finance
               </p>
             </div>
           </div>
+          
+          {/* How It Works Explainer */}
+          <div style={{ 
+            background: "rgba(16,185,129,0.1)", 
+            border: "1px solid rgba(16,185,129,0.3)",
+            borderRadius: "8px", 
+            padding: "12px 16px", 
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+          }}>
+            <span style={{ fontSize: "20px" }}>💡</span>
+            <p style={{ color: "#10b981", fontSize: "13px", margin: 0 }}>
+              <strong>Step 1:</strong> Click a scan button to find today's top 10 opportunities → 
+              <strong>Step 2:</strong> Click any result to deep dive with the full scanner below
+            </p>
+          </div>
 
-          {dailyPicksLoading ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{
-                  background: "rgba(30,41,59,0.5)",
-                  borderRadius: "12px",
-                  padding: "16px",
-                  animation: "pulse 1.5s ease-in-out infinite"
-                }}>
-                  <div style={{ height: "14px", background: "rgba(251,191,36,0.2)", borderRadius: "4px", marginBottom: "8px", width: "60%" }} />
-                  <div style={{ height: "24px", background: "rgba(251,191,36,0.1)", borderRadius: "4px", marginBottom: "8px" }} />
-                  <div style={{ height: "12px", background: "rgba(251,191,36,0.1)", borderRadius: "4px", width: "80%" }} />
-                </div>
-              ))}
+          {/* Scan Buttons */}
+          <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => runBulkScan('crypto')}
+              disabled={bulkScanLoading}
+              style={{
+                flex: "1",
+                minWidth: "200px",
+                padding: "16px 24px",
+                background: bulkScanLoading && bulkScanType === 'crypto' 
+                  ? "rgba(251,191,36,0.3)" 
+                  : "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))",
+                border: "2px solid #fbbf24",
+                borderRadius: "12px",
+                color: "#fbbf24",
+                fontSize: "16px",
+                fontWeight: "700",
+                cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                transition: "all 0.2s ease",
+                opacity: bulkScanLoading && bulkScanType !== 'crypto' ? 0.5 : 1
+              }}
+            >
+              {bulkScanLoading && bulkScanType === 'crypto' ? (
+                <>
+                  <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+                  Scanning Crypto...
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: "20px" }}>🪙</span>
+                  Scan Top 10 Crypto
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => runBulkScan('equity')}
+              disabled={bulkScanLoading}
+              style={{
+                flex: "1",
+                minWidth: "200px",
+                padding: "16px 24px",
+                background: bulkScanLoading && bulkScanType === 'equity' 
+                  ? "rgba(16,185,129,0.3)" 
+                  : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))",
+                border: "2px solid #10b981",
+                borderRadius: "12px",
+                color: "#10b981",
+                fontSize: "16px",
+                fontWeight: "700",
+                cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                transition: "all 0.2s ease",
+                opacity: bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1
+              }}
+            >
+              {bulkScanLoading && bulkScanType === 'equity' ? (
+                <>
+                  <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
+                  Scanning Stocks...
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: "20px" }}>📈</span>
+                  Scan Top 10 Stocks
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Error Display */}
+          {bulkScanError && (
+            <div style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.3)",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              color: "#ef4444",
+              fontSize: "14px",
+              marginBottom: "16px"
+            }}>
+              ⚠️ {bulkScanError}
             </div>
-          ) : dailyPicks && (dailyPicks.topPicks.equity || dailyPicks.topPicks.crypto || dailyPicks.topPicks.forex) ? (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                {/* Equity Pick */}
-                {dailyPicks.topPicks.equity && (
-                  <div 
-                    onClick={() => {
-                      setAssetType("equity");
-                      setTicker(dailyPicks.topPicks.equity.symbol);
-                    }}
-                    style={{
-                      background: "rgba(30,41,59,0.5)",
-                      border: "1px solid rgba(16,185,129,0.3)",
-                      borderRadius: "12px",
-                      padding: "16px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "14px" }}>📈</span>
-                      <span style={{ color: "#94a3b8", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Equity #1</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: "700" }}>
-                        {dailyPicks.topPicks.equity.symbol}
-                      </span>
-                      <span style={{
-                        background: dailyPicks.topPicks.equity.direction === 'bullish' 
-                          ? "rgba(16,185,129,0.2)" 
-                          : dailyPicks.topPicks.equity.direction === 'bearish'
-                          ? "rgba(239,68,68,0.2)"
-                          : "rgba(148,163,184,0.2)",
-                        color: dailyPicks.topPicks.equity.direction === 'bullish' 
-                          ? "#10b981" 
-                          : dailyPicks.topPicks.equity.direction === 'bearish'
-                          ? "#ef4444"
-                          : "#94a3b8",
-                        padding: "4px 8px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "600"
-                      }}>
-                        {dailyPicks.topPicks.equity.score}/100
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                      {dailyPicks.topPicks.equity.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.equity.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.equity.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.equity.direction?.slice(1)}
-                      {dailyPicks.topPicks.equity.change_percent != null && !isNaN(Number(dailyPicks.topPicks.equity.change_percent)) && (
-                        <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.equity.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
-                          {Number(dailyPicks.topPicks.equity.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.equity.change_percent).toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+          )}
 
-                {/* Crypto Pick */}
-                {dailyPicks.topPicks.crypto && (
-                  <div 
-                    onClick={() => {
-                      setAssetType("crypto");
-                      setTicker(dailyPicks.topPicks.crypto.symbol);
-                    }}
-                    style={{
-                      background: "rgba(30,41,59,0.5)",
-                      border: "1px solid rgba(251,191,36,0.3)",
-                      borderRadius: "12px",
-                      padding: "16px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "14px" }}>🪙</span>
-                      <span style={{ color: "#94a3b8", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Crypto #1</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: "700" }}>
-                        {dailyPicks.topPicks.crypto.symbol}
-                      </span>
-                      <span style={{
-                        background: dailyPicks.topPicks.crypto.direction === 'bullish' 
-                          ? "rgba(16,185,129,0.2)" 
-                          : dailyPicks.topPicks.crypto.direction === 'bearish'
-                          ? "rgba(239,68,68,0.2)"
-                          : "rgba(148,163,184,0.2)",
-                        color: dailyPicks.topPicks.crypto.direction === 'bullish' 
-                          ? "#10b981" 
-                          : dailyPicks.topPicks.crypto.direction === 'bearish'
-                          ? "#ef4444"
-                          : "#94a3b8",
-                        padding: "4px 8px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "600"
-                      }}>
-                        {dailyPicks.topPicks.crypto.score}/100
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                      {dailyPicks.topPicks.crypto.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.crypto.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.crypto.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.crypto.direction?.slice(1)}
-                      {dailyPicks.topPicks.crypto.change_percent != null && !isNaN(Number(dailyPicks.topPicks.crypto.change_percent)) && (
-                        <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.crypto.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
-                          {Number(dailyPicks.topPicks.crypto.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.crypto.change_percent).toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Forex Pick */}
-                {dailyPicks.topPicks.forex && (
-                  <div 
-                    onClick={() => {
-                      setAssetType("forex");
-                      setTicker(dailyPicks.topPicks.forex.symbol.replace('/USD', 'USD'));
-                    }}
-                    style={{
-                      background: "rgba(30,41,59,0.5)",
-                      border: "1px solid rgba(139,92,246,0.3)",
-                      borderRadius: "12px",
-                      padding: "16px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                      <span style={{ fontSize: "14px" }}>💱</span>
-                      <span style={{ color: "#94a3b8", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>Forex #1</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "#f1f5f9", fontSize: "20px", fontWeight: "700" }}>
-                        {dailyPicks.topPicks.forex.symbol}
-                      </span>
-                      <span style={{
-                        background: dailyPicks.topPicks.forex.direction === 'bullish' 
-                          ? "rgba(16,185,129,0.2)" 
-                          : dailyPicks.topPicks.forex.direction === 'bearish'
-                          ? "rgba(239,68,68,0.2)"
-                          : "rgba(148,163,184,0.2)",
-                        color: dailyPicks.topPicks.forex.direction === 'bullish' 
-                          ? "#10b981" 
-                          : dailyPicks.topPicks.forex.direction === 'bearish'
-                          ? "#ef4444"
-                          : "#94a3b8",
-                        padding: "4px 8px",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "600"
-                      }}>
-                        {dailyPicks.topPicks.forex.score}/100
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                      {dailyPicks.topPicks.forex.direction === 'bullish' ? '🟢' : dailyPicks.topPicks.forex.direction === 'bearish' ? '🔴' : '⚪'} {dailyPicks.topPicks.forex.direction?.charAt(0).toUpperCase() + dailyPicks.topPicks.forex.direction?.slice(1)}
-                      {dailyPicks.topPicks.forex.change_percent != null && !isNaN(Number(dailyPicks.topPicks.forex.change_percent)) && (
-                        <span style={{ marginLeft: "8px", color: Number(dailyPicks.topPicks.forex.change_percent) >= 0 ? "#10b981" : "#ef4444" }}>
-                          {Number(dailyPicks.topPicks.forex.change_percent) >= 0 ? '+' : ''}{Number(dailyPicks.topPicks.forex.change_percent).toFixed(2)}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+          {/* Results Display */}
+          {bulkScanResults && bulkScanResults.topPicks.length > 0 && (
+            <div>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                marginBottom: "16px",
+                paddingBottom: "12px",
+                borderBottom: "1px solid rgba(148,163,184,0.2)"
+              }}>
+                <h4 style={{ color: "#f1f5f9", fontSize: "16px", fontWeight: "600", margin: 0 }}>
+                  🏆 Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} Right Now
+                </h4>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>
+                  {bulkScanResults.scanned} scanned • {bulkScanResults.duration}
+                </span>
               </div>
               
-              {dailyPicks.scanDate && (
-                <p style={{ color: "#64748b", fontSize: "11px", marginTop: "12px", textAlign: "center" }}>
-                  Last scan: {new Date(dailyPicks.scanDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • Click any pick to load it
-                </p>
-              )}
-            </>
-          ) : (
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
+                gap: "12px" 
+              }}>
+                {bulkScanResults.topPicks.map((pick, idx) => (
+                  <div
+                    key={pick.symbol}
+                    onClick={() => {
+                      setAssetType(bulkScanResults.type as AssetType);
+                      setTicker(pick.symbol);
+                    }}
+                    style={{
+                      background: "rgba(30,41,59,0.6)",
+                      border: `1px solid ${pick.direction === 'bullish' ? 'rgba(16,185,129,0.4)' : pick.direction === 'bearish' ? 'rgba(239,68,68,0.4)' : 'rgba(148,163,184,0.3)'}`,
+                      borderRadius: "12px",
+                      padding: "16px",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      position: "relative"
+                    }}
+                  >
+                    {/* Rank Badge */}
+                    <div style={{
+                      position: "absolute",
+                      top: "-8px",
+                      left: "12px",
+                      background: idx < 3 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : "rgba(100,116,139,0.8)",
+                      color: idx < 3 ? "#0f172a" : "#f1f5f9",
+                      padding: "2px 8px",
+                      borderRadius: "10px",
+                      fontSize: "11px",
+                      fontWeight: "700"
+                    }}>
+                      #{idx + 1}
+                    </div>
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "4px" }}>
+                      <div>
+                        <div style={{ color: "#f1f5f9", fontSize: "18px", fontWeight: "700" }}>
+                          {pick.symbol}
+                        </div>
+                        <div style={{ 
+                          color: pick.direction === 'bullish' ? '#10b981' : pick.direction === 'bearish' ? '#ef4444' : '#94a3b8',
+                          fontSize: "12px",
+                          fontWeight: "600",
+                          marginTop: "4px"
+                        }}>
+                          {pick.direction === 'bullish' ? '🟢' : pick.direction === 'bearish' ? '🔴' : '⚪'} {pick.direction?.toUpperCase()}
+                        </div>
+                      </div>
+                      
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{
+                          background: pick.score >= 70 ? "rgba(16,185,129,0.2)" : pick.score <= 30 ? "rgba(239,68,68,0.2)" : "rgba(148,163,184,0.2)",
+                          color: pick.score >= 70 ? "#10b981" : pick.score <= 30 ? "#ef4444" : "#94a3b8",
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          fontSize: "16px",
+                          fontWeight: "700"
+                        }}>
+                          {pick.score}
+                        </div>
+                        {pick.change24h !== undefined && (
+                          <div style={{
+                            color: pick.change24h >= 0 ? "#10b981" : "#ef4444",
+                            fontSize: "12px",
+                            marginTop: "4px"
+                          }}>
+                            {pick.change24h >= 0 ? '+' : ''}{pick.change24h.toFixed(2)}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Mini indicator bar */}
+                    <div style={{ 
+                      display: "flex", 
+                      gap: "8px", 
+                      marginTop: "12px",
+                      paddingTop: "8px",
+                      borderTop: "1px solid rgba(148,163,184,0.1)",
+                      fontSize: "11px",
+                      color: "#64748b"
+                    }}>
+                      {pick.indicators?.rsi && (
+                        <span>RSI: <span style={{ color: pick.indicators.rsi > 70 ? '#ef4444' : pick.indicators.rsi < 30 ? '#10b981' : '#94a3b8' }}>{pick.indicators.rsi.toFixed(0)}</span></span>
+                      )}
+                      {pick.indicators?.adx && (
+                        <span>ADX: <span style={{ color: pick.indicators.adx > 25 ? '#fbbf24' : '#94a3b8' }}>{pick.indicators.adx.toFixed(0)}</span></span>
+                      )}
+                      {pick.signals && (
+                        <span style={{ marginLeft: "auto" }}>
+                          <span style={{ color: "#10b981" }}>↑{pick.signals.bullish}</span>
+                          {' / '}
+                          <span style={{ color: "#ef4444" }}>↓{pick.signals.bearish}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <p style={{ color: "#64748b", fontSize: "11px", marginTop: "16px", textAlign: "center" }}>
+                Click any result to deep dive with full analysis below • Data: Yahoo Finance
+              </p>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!bulkScanResults && !bulkScanLoading && (
             <div style={{ 
               background: "rgba(30,41,59,0.5)", 
               borderRadius: "12px", 
-              padding: "24px", 
+              padding: "32px 24px", 
               textAlign: "center",
-              color: "#94a3b8",
-              fontSize: "14px"
+              color: "#94a3b8"
             }}>
-              <span style={{ fontSize: "32px", display: "block", marginBottom: "8px" }}>📊</span>
-              Daily picks will appear here after the first scan runs.
-              <br />
-              <span style={{ fontSize: "12px", color: "#64748b" }}>Scans run automatically at market close (4:30 PM EST)</span>
+              <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🎯</span>
+              <p style={{ fontSize: "15px", margin: "0 0 8px 0", color: "#e2e8f0" }}>
+                Click a button above to discover today's best opportunities
+              </p>
+              <p style={{ fontSize: "12px", margin: 0, color: "#64748b" }}>
+                Our algorithm analyzes RSI, MACD, EMA200, ADX, Stochastic, Aroon & CCI
+              </p>
             </div>
           )}
         </div>

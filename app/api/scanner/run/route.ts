@@ -501,13 +501,13 @@ export async function POST(req: NextRequest) {
       // Base score starts at 50 (neutral)
       let score = 50;
       const signalDiff = bullishSignals - bearishSignals;
-      const maxSignalDiff = 12; // Max possible difference with all 10 indicators
+      const maxSignals = 12; // Max possible with all 10 indicators
       
       // Adjust score based on signal difference
-      score += (signalDiff / maxSignalDiff) * 50;
+      score += (signalDiff / maxSignals) * 50;
       
-      // Clamp to 1-100
-      score = Math.max(1, Math.min(100, Math.round(score)));
+      // Clamp to 0-100
+      score = Math.max(0, Math.min(100, Math.round(score)));
       
       return {
         score,

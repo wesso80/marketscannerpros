@@ -6,9 +6,9 @@ import Link from 'next/link';
 // Only includes scripts currently visible on https://www.tradingview.com/u/Marketscannerpros/
 const scripts = [
   {
-    name: "Multi-Timeframe Trend & Momentum Dashboard",
+    name: "MSP Multi-Timeframe Trend & Momentum Dashboard",
     description: "Multi-timeframe trend, momentum, and bias dashboard. Evaluates several technical conditions across multiple timeframes simultaneously to help identify aligned market conditions. Summarizes trend, momentum, participation, and trend-strength metrics into a compact visual table.",
-    image: "/images/msp-dashboard.png",
+    image: "/images/confluence-strategy.png",
     status: "Live - Invite-only",
     focus: "Context & bias",
     type: "TV: Indicator",

@@ -131,3 +131,9 @@ a {
 a:hover {
   color: #6ee7b7;             /* emerald-300ish */
 }
+
+/* Spinner animation for loading states */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

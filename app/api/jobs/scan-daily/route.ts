@@ -165,8 +165,8 @@ function computeScore(indicators: Record<string, any>): { score: number; directi
   // Calculate score (0-100)
   let score = 50;
   const signalDiff = bullishSignals - bearishSignals;
-  const maxSignalDiff = 10;
-  score += (signalDiff / maxSignalDiff) * 50;
+  const maxSignals = 8.5; // True max bullish or bearish signals
+  score += (signalDiff / maxSignals) * 50;
   score = Math.max(1, Math.min(100, Math.round(score)));
 
   return {
@@ -359,7 +359,7 @@ async function scanCrypto(symbol: string, apiKey: string): Promise<any | null> {
     }
 
     // Fetch Aroon
-    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=14&apikey=${apiKey}`;
+    const aroonUrl = `${baseUrl}?function=AROON&symbol=${symbol}&interval=daily&time_period=25&apikey=${apiKey}`;
     const aroonData = await fetchWithRetry(aroonUrl);
     await sleep(RATE_LIMIT_DELAY);
     const aroonSeries = aroonData["Technical Analysis: AROON"];

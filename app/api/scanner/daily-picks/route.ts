@@ -2,7 +2,8 @@
  * Daily Top Picks API
  * 
  * @route GET /api/scanner/daily-picks
- * @description Returns pre-computed top picks for each asset class
+ * @description Returns pre-computed top 10 picks for each asset class
+ *              Includes both bullish (top) and bearish (bottom) opportunities
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,14 +13,35 @@ export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
-    // Get today's picks (or most recent if today not available)
+    // Get query params
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20);
+    const rankType = searchParams.get('type') || 'all'; // 'top', 'bottom', or 'all'
+    
+    // Build the query based on rank type
+    let rankFilter = '';
+    if (rankType === 'top') {
+      rankFilter = "AND (rank_type = 'top' OR rank_type IS NULL)";
+    } else if (rankType === 'bottom') {
+      rankFilter = "AND rank_type = 'bottom'";
+    }
+    
+    // Get picks (or most recent if today not available)
     const picks = await q(`
-      WITH ranked_picks AS (
+      WITH latest_date AS (
+        SELECT MAX(scan_date) as scan_date FROM daily_picks
+      ),
+      ranked_picks AS (
         SELECT 
-          *,
-          ROW_NUMBER() OVER (PARTITION BY asset_class ORDER BY score DESC) as rank
-        FROM daily_picks
-        WHERE scan_date = (SELECT MAX(scan_date) FROM daily_picks)
+          dp.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY dp.asset_class, COALESCE(dp.rank_type, 'top')
+            ORDER BY 
+              CASE WHEN COALESCE(dp.rank_type, 'top') = 'top' THEN dp.score ELSE -dp.score END DESC
+          ) as rank
+        FROM daily_picks dp
+        CROSS JOIN latest_date ld
+        WHERE dp.scan_date = ld.scan_date ${rankFilter}
       )
       SELECT 
         asset_class,
@@ -32,36 +54,69 @@ export async function GET(req: NextRequest) {
         price,
         change_percent,
         indicators,
-        scan_date
+        scan_date,
+        COALESCE(rank_type, 'top') as rank_type
       FROM ranked_picks
-      WHERE rank <= 3
-      ORDER BY asset_class, score DESC
-    `);
+      WHERE rank <= $1
+      ORDER BY asset_class, rank_type, 
+        CASE WHEN COALESCE(rank_type, 'top') = 'top' THEN score ELSE -score END DESC
+    `, [limit]);
 
     // Get the scan date
     const scanDate = picks.length > 0 ? picks[0].scan_date : null;
 
-    // Group by asset class
-    const grouped: Record<string, typeof picks> = {
+    // Group by asset class and rank type
+    const topPicks: Record<string, typeof picks> = {
+      equity: [],
+      crypto: [],
+      forex: []
+    };
+    
+    const bottomPicks: Record<string, typeof picks> = {
       equity: [],
       crypto: [],
       forex: []
     };
 
     for (const pick of picks) {
-      if (grouped[pick.asset_class]) {
-        grouped[pick.asset_class].push(pick);
+      const target = pick.rank_type === 'bottom' ? bottomPicks : topPicks;
+      if (target[pick.asset_class]) {
+        target[pick.asset_class].push({
+          ...pick,
+          signals: {
+            bullish: pick.signals_bullish,
+            bearish: pick.signals_bearish,
+            neutral: pick.signals_neutral
+          }
+        });
       }
     }
 
     return NextResponse.json({
       success: true,
       scanDate,
-      picks: grouped,
+      // Top bullish opportunities
       topPicks: {
-        equity: grouped.equity[0] || null,
-        crypto: grouped.crypto[0] || null,
-        forex: grouped.forex[0] || null
+        equity: topPicks.equity,
+        crypto: topPicks.crypto,
+        forex: topPicks.forex
+      },
+      // Bottom bearish opportunities (for shorts)
+      bottomPicks: {
+        equity: bottomPicks.equity,
+        crypto: bottomPicks.crypto,
+        forex: bottomPicks.forex
+      },
+      // Quick access to #1 picks
+      featured: {
+        topEquity: topPicks.equity[0] || null,
+        topCrypto: topPicks.crypto[0] || null,
+        bottomEquity: bottomPicks.equity[0] || null,
+        bottomCrypto: bottomPicks.crypto[0] || null
+      },
+      // Powered by attribution (required by CoinGecko TOS)
+      attribution: {
+        crypto: "Powered by CoinGecko"
       }
     });
 
@@ -70,8 +125,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       success: false, 
       error: "Failed to fetch daily picks",
-      picks: { equity: [], crypto: [], forex: [] },
-      topPicks: { equity: null, crypto: null, forex: null }
+      topPicks: { equity: [], crypto: [], forex: [] },
+      bottomPicks: { equity: [], crypto: [], forex: [] },
+      featured: { topEquity: null, topCrypto: null, bottomEquity: null, bottomCrypto: null }
     }, { status: 500 });
   }
 }
