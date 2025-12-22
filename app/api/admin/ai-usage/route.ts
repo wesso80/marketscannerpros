@@ -26,25 +26,25 @@ export async function GET(req: NextRequest) {
       topUsers,
       recentQuestions,
     ] = await Promise.all([
-      // Daily usage for last 30 days
+      // Daily usage for last 30 days (Australia/Sydney timezone)
       safeQuery(sql`SELECT 
-            DATE(created_at) as date, 
+            DATE(created_at AT TIME ZONE 'Australia/Sydney') as date, 
             COUNT(*) as questions,
             COUNT(DISTINCT workspace_id) as unique_users,
             SUM(response_length) as total_tokens
           FROM ai_usage 
           WHERE created_at > NOW() - INTERVAL '30 days'
-          GROUP BY DATE(created_at) 
+          GROUP BY DATE(created_at AT TIME ZONE 'Australia/Sydney') 
           ORDER BY date DESC`),
       
-      // Breakdown by tier
+      // Breakdown by tier (today in Australia/Sydney timezone)
       safeQuery(sql`SELECT 
             tier, 
             COUNT(*) as questions,
             COUNT(DISTINCT workspace_id) as unique_users,
             AVG(response_length)::int as avg_tokens
           FROM ai_usage 
-          WHERE DATE(created_at) = CURRENT_DATE
+          WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date
           GROUP BY tier`),
       
       // Top users (all time)

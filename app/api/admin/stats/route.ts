@@ -38,9 +38,9 @@ export async function GET(req: NextRequest) {
       safeQuery(sql`SELECT tier, COUNT(*) as count FROM user_subscriptions 
           WHERE status IN ('active', 'trialing') GROUP BY tier`),
       
-      // AI usage today
+      // AI usage today (Australia/Sydney timezone)
       safeQuery(sql`SELECT COUNT(*) as count, COUNT(DISTINCT workspace_id) as unique_users 
-          FROM ai_usage WHERE DATE(created_at) = CURRENT_DATE`),
+          FROM ai_usage WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date`),
       
       // AI usage last 7 days
       safeQuery(sql`SELECT DATE(created_at) as date, COUNT(*) as count 
@@ -60,10 +60,10 @@ export async function GET(req: NextRequest) {
           WHERE created_at > NOW() - INTERVAL '7 days'
           GROUP BY DATE(created_at) ORDER BY date DESC`),
       
-      // Top AI users today
+      // Top AI users today (Australia/Sydney timezone)
       safeQuery(sql`SELECT workspace_id, tier, COUNT(*) as questions 
           FROM ai_usage 
-          WHERE DATE(created_at) = CURRENT_DATE
+          WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date
           GROUP BY workspace_id, tier
           ORDER BY questions DESC LIMIT 10`),
     ]);
