@@ -45,6 +45,27 @@ export default function DerivativesWidget({
   const [lsData, setLsData] = useState<LSData | null>(null);
   const [fundingData, setFundingData] = useState<FundingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLsTooltip, setShowLsTooltip] = useState(false);
+  const [showFundingTooltip, setShowFundingTooltip] = useState(false);
+
+  const lsTooltipText = `Long/Short Ratio = Ratio of long vs short traders.
+
+🟢 Ratio > 1: More longs than shorts (bullish positioning)
+🔴 Ratio < 1: More shorts than longs (bearish positioning)
+
+⚠️ Contrarian signal: Extreme ratios often precede reversals!
+Very high L/S → Crowded long trade → Vulnerable to long squeeze
+Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
+
+  const fundingTooltipText = `Funding Rate = Fee paid between long/short traders every 8 hours.
+
+🟢 Positive: Longs pay shorts (bullish market, longs paying premium)
+🔴 Negative: Shorts pay longs (bearish market, shorts paying premium)
+
+💡 Trading insight:
+• High positive funding → Market overheated, correction risk
+• Deep negative funding → Oversold, bounce potential
+• Near 0% → Balanced market, no strong directional bias`;
 
   useEffect(() => {
     Promise.all([
@@ -84,14 +105,23 @@ export default function DerivativesWidget({
   // Compact version
   if (compact) {
     return (
-      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 ${className}`}>
+      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 relative ${className}`}>
         <div className="flex items-center justify-between gap-4">
           {/* Long/Short Ratio */}
           {lsData && (
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 relative">
               <span className="text-sm">{getSentimentEmoji(lsData.average.sentiment)}</span>
               <div>
-                <div className="text-xs text-slate-400">L/S Ratio</div>
+                <div className="text-xs text-slate-400 flex items-center gap-1">
+                  L/S Ratio
+                  <button
+                    onClick={() => { setShowLsTooltip(!showLsTooltip); setShowFundingTooltip(false); }}
+                    className="text-slate-500 hover:text-slate-300"
+                    title="What is this?"
+                  >
+                    ℹ️
+                  </button>
+                </div>
                 <div className="font-bold text-white">
                   {lsData.average.longShortRatio}
                   <span className={`ml-1 text-xs ${getSentimentColor(lsData.average.sentiment)}`}>
@@ -99,6 +129,18 @@ export default function DerivativesWidget({
                   </span>
                 </div>
               </div>
+              {/* L/S Tooltip */}
+              {showLsTooltip && (
+                <div className="absolute top-full left-0 mt-2 p-3 bg-slate-900 border border-slate-600 rounded-lg z-50 text-xs text-slate-300 whitespace-pre-line shadow-xl w-64">
+                  <button
+                    onClick={() => setShowLsTooltip(false)}
+                    className="absolute top-2 right-2 text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                  {lsTooltipText}
+                </div>
+              )}
             </div>
           )}
 
@@ -107,16 +149,23 @@ export default function DerivativesWidget({
 
           {/* Funding Rate */}
           {fundingData && (
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 flex-1 relative">
               <span className="text-sm">💰</span>
               <div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-400 flex items-center gap-1">
                   Funding
                   {fundingData.nextFunding.timeUntilFormatted && (
                     <span className="text-slate-500 ml-1">
                       ({fundingData.nextFunding.timeUntilFormatted})
                     </span>
                   )}
+                  <button
+                    onClick={() => { setShowFundingTooltip(!showFundingTooltip); setShowLsTooltip(false); }}
+                    className="text-slate-500 hover:text-slate-300"
+                    title="What is this?"
+                  >
+                    ℹ️
+                  </button>
                 </div>
                 <div className="font-bold">
                   <span className={parseFloat(fundingData.average.fundingRatePercent) >= 0 ? 'text-green-400' : 'text-red-400'}>
@@ -125,6 +174,18 @@ export default function DerivativesWidget({
                   </span>
                 </div>
               </div>
+              {/* Funding Tooltip */}
+              {showFundingTooltip && (
+                <div className="absolute top-full right-0 mt-2 p-3 bg-slate-900 border border-slate-600 rounded-lg z-50 text-xs text-slate-300 whitespace-pre-line shadow-xl w-72">
+                  <button
+                    onClick={() => setShowFundingTooltip(false)}
+                    className="absolute top-2 right-2 text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                  {fundingTooltipText}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -64,6 +64,18 @@ export default function FearGreedGauge({
     return '🤑';
   };
 
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const tooltipText = `Fear & Greed Index measures market sentiment from 0-100.
+
+🔴 0-24: Extreme Fear - Investors worried, potential buying opportunity
+🟠 25-44: Fear - Market anxiety, cautious sentiment
+🟡 45-55: Neutral - Balanced market conditions
+🟢 56-75: Greed - Optimism rising, watch for overextension
+💚 76-100: Extreme Greed - Euphoria, potential market top
+
+Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trends`;
+
   if (loading) {
     return (
       <div className={`animate-pulse bg-slate-800/50 rounded-xl ${compact ? 'p-4 h-24' : 'p-6 h-48'} ${className}`}>
@@ -89,14 +101,21 @@ export default function FearGreedGauge({
   // Compact version for sidebar/header
   if (compact) {
     return (
-      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 ${className}`}>
+      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 relative ${className}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">{getEmoji(value)}</span>
             <div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-400 flex items-center gap-1">
                 Crypto Fear & Greed
-                <span className="ml-1 text-amber-400/70">(BTC/Alts only)</span>
+                <span className="text-amber-400/70">(BTC/Alts only)</span>
+                <button
+                  onClick={() => setShowTooltip(!showTooltip)}
+                  className="text-slate-500 hover:text-slate-300 ml-1"
+                  title="What is this?"
+                >
+                  ℹ️
+                </button>
               </div>
               <div className="font-bold" style={{ color }}>
                 {value} - {classification}
@@ -111,6 +130,18 @@ export default function FearGreedGauge({
             />
           </div>
         </div>
+        {/* Tooltip */}
+        {showTooltip && (
+          <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-slate-900 border border-slate-600 rounded-lg z-50 text-xs text-slate-300 whitespace-pre-line shadow-xl">
+            <button
+              onClick={() => setShowTooltip(false)}
+              className="absolute top-2 right-2 text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+            {tooltipText}
+          </div>
+        )}
       </div>
     );
   }

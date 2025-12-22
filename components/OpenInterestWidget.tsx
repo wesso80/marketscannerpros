@@ -48,6 +48,17 @@ export default function OpenInterestWidget({
   const [data, setData] = useState<OIData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const tooltipText = `Open Interest (OI) = Total value of all open futures contracts.
+
+📈 Rising OI + Rising Price = Strong bullish trend
+📈 Rising OI + Falling Price = Strong bearish trend
+📉 Falling OI + Rising Price = Short squeeze / weak rally
+📉 Falling OI + Falling Price = Capitulation / weak sell-off
+
+BTC/ETH Dominance shows which assets are driving market activity.
+High Alt dominance = Risk-on sentiment, altseason potential.`;
 
   useEffect(() => {
     let retries = 2;
@@ -122,14 +133,21 @@ export default function OpenInterestWidget({
   // Compact version for sidebar/header
   if (compact) {
     return (
-      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 ${className}`}>
+      <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 relative ${className}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">📊</span>
             <div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-slate-400 flex items-center gap-1">
                 Open Interest
-                <span className="ml-1 text-blue-400/70">(Binance Futures)</span>
+                <span className="text-blue-400/70">(Binance Futures)</span>
+                <button
+                  onClick={() => setShowTooltip(!showTooltip)}
+                  className="text-slate-500 hover:text-slate-300 ml-1"
+                  title="What is this?"
+                >
+                  ℹ️
+                </button>
               </div>
               <div className="font-bold text-white">
                 {data.total.formatted}
@@ -141,6 +159,18 @@ export default function OpenInterestWidget({
             <div className="text-blue-400">ETH: {data.total.ethDominance}%</div>
           </div>
         </div>
+        {/* Tooltip */}
+        {showTooltip && (
+          <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-slate-900 border border-slate-600 rounded-lg z-50 text-xs text-slate-300 whitespace-pre-line shadow-xl">
+            <button
+              onClick={() => setShowTooltip(false)}
+              className="absolute top-2 right-2 text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+            {tooltipText}
+          </div>
+        )}
       </div>
     );
   }
