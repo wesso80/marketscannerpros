@@ -311,7 +311,7 @@ export default function UrgencyHero() {
               <span style={{ color: '#22c55e' }}>✓</span> Instant access
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#22c55e' }}>✓</span> Works with any broker
+              <span style={{ color: '#22c55e' }}>✓</span> Real-time market data
             </span>
           </p>
         </div>
