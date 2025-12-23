@@ -35,8 +35,12 @@ import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { analystRequestSchema } from "../../../lib/validation";
 import { ZodError } from "zod";
+import { runMigrations } from "@/lib/migrations";
 
 export const runtime = "nodejs";
+
+// Run migrations on first request
+let migrationsChecked = false;
 
 function getOpenAIClient() {
   return new OpenAI({
@@ -45,6 +49,12 @@ function getOpenAIClient() {
 }
 
 export async function POST(req: NextRequest) {
+  // Ensure migrations are run
+  if (!migrationsChecked) {
+    migrationsChecked = true;
+    runMigrations().catch(console.error);
+  }
+
   try {
     // Validate request body with Zod
     let json;
