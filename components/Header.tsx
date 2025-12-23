@@ -99,6 +99,7 @@ export default function Header() {
 
   const toolsItems: DropdownItem[] = [
     { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
+    { href: '/tools/watchlists', label: 'Watchlists', icon: '📋' },
     { href: '/tools/portfolio', label: 'Portfolio Tracker', icon: '💼' },
     { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
     { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
