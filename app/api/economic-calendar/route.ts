@@ -184,12 +184,14 @@ export async function GET(req: NextRequest) {
     const days = parseInt(url.searchParams.get('days') || '30');
     const impact = url.searchParams.get('impact') || 'all';
     
+    // Use start of today for comparison (so today's events are included)
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
     
     // Filter events within date range
     let events = ECONOMIC_EVENTS_2025.filter(event => {
-      const eventDate = new Date(event.date);
+      const eventDate = new Date(event.date + 'T00:00:00');
       return eventDate >= now && eventDate <= endDate;
     });
     

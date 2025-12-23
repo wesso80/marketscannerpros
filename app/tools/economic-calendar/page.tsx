@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 interface EconomicEvent {
   date: string;
@@ -112,10 +110,8 @@ export default function EconomicCalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white">
-      <Header />
-      
-      <main className="max-w-6xl mx-auto px-4 py-8 pt-24">
+    <div className="min-h-screen text-white">
+      <div className="max-w-6xl mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
@@ -403,9 +399,7 @@ export default function EconomicCalendarPage() {
             before making trading decisions. Past events do not guarantee future results.
           </p>
         </div>
-      </main>
-      
-      <Footer />
+      </div>
     </div>
   );
 }
