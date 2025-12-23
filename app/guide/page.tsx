@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 const sections = [
   {
     icon: "🧭",
@@ -229,6 +231,57 @@ export default function UserGuide() {
               </div>
             </article>
           ))}
+        </div>
+
+        {/* Deep Dive Guides Section */}
+        <div style={{
+          marginTop: 48,
+          padding: 24,
+          background: 'rgba(15,23,42,0.6)',
+          borderRadius: 16,
+          border: '1px solid rgba(55,65,81,0.5)'
+        }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            📚 Deep Dive Guides
+          </h2>
+          <p style={{ color: '#9ca3af', fontSize: 14, marginBottom: 20 }}>
+            Master advanced concepts with our in-depth educational content.
+          </p>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <Link 
+              href="/guide/open-interest"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                padding: 16,
+                background: 'rgba(15,23,42,0.8)',
+                borderRadius: 12,
+                border: '1px solid rgba(55,65,81,0.6)',
+                textDecoration: 'none',
+                color: 'inherit',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24
+              }}>📊</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>How to Read Open Interest</div>
+                <div style={{ color: '#9ca3af', fontSize: 13 }}>
+                  Master OI, funding rates, and L/S ratios for crypto derivatives trading
+                </div>
+              </div>
+              <span style={{ color: '#10b981', fontSize: 20 }}>→</span>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

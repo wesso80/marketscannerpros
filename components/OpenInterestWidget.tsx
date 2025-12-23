@@ -7,6 +7,7 @@ interface CoinOI {
   openInterest: number;
   openInterestCoin: number;
   price: number;
+  change24h?: number;
 }
 
 interface OIData {
@@ -16,18 +17,21 @@ interface OIData {
     btcDominance: string;
     ethDominance: string;
     altDominance: string;
+    change24h?: number;
   };
   btc: {
     openInterest: number;
     formatted: string;
     price: number;
     contracts: number;
+    change24h?: number;
   } | null;
   eth: {
     openInterest: number;
     formatted: string;
     price: number;
     contracts: number;
+    change24h?: number;
   } | null;
   coins: CoinOI[];
   exchange: string;
@@ -100,6 +104,19 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
     return `$${(value / 1e3).toFixed(0)}K`;
   };
 
+  const formatChange = (change: number | undefined): string => {
+    if (change === undefined) return '';
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change.toFixed(2)}%`;
+  };
+
+  const getChangeColor = (change: number | undefined): string => {
+    if (change === undefined) return 'text-slate-400';
+    if (change > 0) return 'text-green-400';
+    if (change < 0) return 'text-red-400';
+    return 'text-slate-400';
+  };
+
   if (loading) {
     return (
       <div className={`animate-pulse bg-slate-800/50 rounded-lg ${compact ? 'p-3 h-16' : 'p-6 h-64'} ${className}`}>
@@ -149,14 +166,35 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                   ?
                 </button>
               </div>
-              <div className="font-bold text-white">
-                {data.total.formatted}
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white">
+                  {data.total.formatted}
+                </span>
+                {data.total.change24h !== undefined && (
+                  <span className={`text-xs font-medium ${getChangeColor(data.total.change24h)}`}>
+                    {formatChange(data.total.change24h)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
           <div className="text-right text-xs">
-            <div className="text-amber-400">BTC: {data.total.btcDominance}%</div>
-            <div className="text-blue-400">ETH: {data.total.ethDominance}%</div>
+            <div className="flex items-center justify-end gap-1">
+              <span className="text-amber-400">BTC: {data.total.btcDominance}%</span>
+              {data.btc?.change24h !== undefined && (
+                <span className={`${getChangeColor(data.btc.change24h)}`}>
+                  ({formatChange(data.btc.change24h)})
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-1">
+              <span className="text-blue-400">ETH: {data.total.ethDominance}%</span>
+              {data.eth?.change24h !== undefined && (
+                <span className={`${getChangeColor(data.eth.change24h)}`}>
+                  ({formatChange(data.eth.change24h)})
+                </span>
+              )}
+            </div>
           </div>
         </div>
         {/* Tooltip */}
@@ -194,8 +232,21 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
 
       {/* Total OI */}
       <div className="text-center mb-6">
-        <div className="text-4xl font-bold text-white mb-2">
-          {data.total.formatted}
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-4xl font-bold text-white">
+            {data.total.formatted}
+          </span>
+          {data.total.change24h !== undefined && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-sm font-medium ${
+              data.total.change24h >= 0 
+                ? 'bg-green-500/20 text-green-400' 
+                : 'bg-red-500/20 text-red-400'
+            }`}>
+              <span>{data.total.change24h >= 0 ? '↑' : '↓'}</span>
+              <span>{Math.abs(data.total.change24h).toFixed(2)}%</span>
+              <span className="text-xs opacity-70">24h</span>
+            </div>
+          )}
         </div>
         <div className="text-sm text-slate-400 mb-3">
           Total Open Interest (Top 20 Coins)
@@ -239,8 +290,13 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
       <div className="grid grid-cols-2 gap-3 mb-4">
         {data.btc && (
           <div className="bg-slate-900/50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-amber-400 font-semibold">₿ BTC</span>
+              {data.btc.change24h !== undefined && (
+                <span className={`text-xs font-medium ${getChangeColor(data.btc.change24h)}`}>
+                  {formatChange(data.btc.change24h)}
+                </span>
+              )}
             </div>
             <div className="text-xl font-bold text-white">{data.btc.formatted}</div>
             <div className="text-xs text-slate-400">
@@ -250,8 +306,13 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
         )}
         {data.eth && (
           <div className="bg-slate-900/50 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-blue-400 font-semibold">Ξ ETH</span>
+              {data.eth.change24h !== undefined && (
+                <span className={`text-xs font-medium ${getChangeColor(data.eth.change24h)}`}>
+                  {formatChange(data.eth.change24h)}
+                </span>
+              )}
             </div>
             <div className="text-xl font-bold text-white">{data.eth.formatted}</div>
             <div className="text-xs text-slate-400">
@@ -271,6 +332,11 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500 w-5 text-right text-xs">{i + 1}</span>
                   <span className="font-medium text-white">{coin.symbol}</span>
+                  {coin.change24h !== undefined && (
+                    <span className={`text-xs ${getChangeColor(coin.change24h)}`}>
+                      {formatChange(coin.change24h)}
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-white text-sm">

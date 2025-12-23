@@ -4,7 +4,6 @@
 
 **Start Date:** December 22, 2025  
 **Target:** State-of-the-Art Trading Platform by Q4 2026  
-**Total Investment:** $95,000 over 18 months  
 **Break-Even Target:** Month 14  
 
 ---
@@ -189,7 +188,7 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ---
 
-## Current Monthly Costs
+## Current Monthly Running Costs
 
 | Service | Monthly Cost | Notes |
 |---------|-------------|-------|
@@ -219,24 +218,22 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Focus: Open Interest MVP
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| OI API Route | `/api/open-interest` - Binance integration | 4 | $200 |
-| OI Widget | Basic component with total OI | 4 | $200 |
-| Scanner Integration | Add to scanner page | 2 | $100 |
-| Testing | Edge cases, error handling | 2 | $100 |
+| Task | Description |
+|------|-------------|
+| OI API Route | `/api/open-interest` - Binance integration |
+| OI Widget | Basic component with total OI |
+| Scanner Integration | Add to scanner page |
+| Testing | Edge cases, error handling |
 
 ### Deliverables
 - [ ] Global Open Interest display (Binance)
 - [ ] Per-coin OI breakdown
 - [ ] Integration with scanner page
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $600 |
 | Infrastructure | $170 |
-| **Month Total** | **$770** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -250,21 +247,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Enhanced Derivatives
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| 24h OI Change | Historical comparison | 3 | $150 |
-| Long/Short Ratio | Binance sentiment data | 3 | $150 |
-| Funding Rates | Real-time funding | 3 | $150 |
-| UI Polish | Charts, animations | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| 24h OI Change | Historical comparison |
+| Long/Short Ratio | Binance sentiment data |
+| Funding Rates | Real-time funding |
+| UI Polish | Charts, animations |
 
 ### Week 3-4: AI Integration
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Prompt Updates | OI-aware analysis | 4 | $200 |
-| Context Injection | Feed OI to AI | 3 | $150 |
-| Testing & QA | Accuracy validation | 3 | $150 |
-| Documentation | User guides | 2 | $100 |
+| Task | Description |
+|------|-------------|
+| Prompt Updates | OI-aware analysis |
+| Context Injection | Feed OI to AI |
+| Testing & QA | Accuracy validation |
+| Documentation | User guides |
 
 ### Deliverables
 - [ ] Long/Short Ratio display
@@ -272,13 +269,10 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] AI analyst uses OI in responses
 - [ ] "How to Read OI" guide
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $1,250 |
 | Infrastructure | $180 |
-| Marketing (launch content) | $200 |
-| **Month Total** | **$1,630** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -294,21 +288,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Market Sentiment
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Custom F&G Index | Build proprietary index | 8 | $400 |
-| Stock Market F&G | Extend beyond crypto | 6 | $300 |
-| Sentiment Dashboard | Combined view | 4 | $200 |
-| Historical Charts | Trend visualization | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Custom F&G Index | Build proprietary index |
+| Stock Market F&G | Extend beyond crypto |
+| Sentiment Dashboard | Combined view |
+| Historical Charts | Trend visualization |
 
 ### Week 3-4: Alerts System (Phase 1)
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Alert Schema | Database design | 3 | $150 |
-| Price Alerts | Basic price triggers | 6 | $300 |
-| Email Notifications | Alert delivery | 4 | $200 |
-| Alert Management UI | CRUD interface | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Alert Schema | Database design |
+| Price Alerts | Basic price triggers |
+| Email Notifications | Alert delivery |
+| Alert Management UI | CRUD interface |
 
 ### Deliverables
 - [ ] Proprietary Fear & Greed Index
@@ -316,13 +310,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Basic price alerts (email)
 - [ ] Alert management dashboard
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $1,950 |
 | Infrastructure | $190 |
 | Email Service (SendGrid) | $20 |
-| **Month Total** | **$2,160** |
+| **Month Total** | **$210** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -338,21 +331,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Alert Conditions
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Technical Alerts | RSI, MACD triggers | 8 | $400 |
-| OI Alerts | OI spike detection | 4 | $200 |
-| Multi-condition | AND/OR logic | 6 | $300 |
-| Alert Templates | Pre-built strategies | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Technical Alerts | RSI, MACD triggers |
+| OI Alerts | OI spike detection |
+| Multi-condition | AND/OR logic |
+| Alert Templates | Pre-built strategies |
 
 ### Week 3-4: Push Notifications
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Web Push Setup | Service worker | 6 | $300 |
-| Push UI | Permission flow | 4 | $200 |
-| Notification Center | In-app alerts | 6 | $300 |
-| Testing | Cross-browser | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Web Push Setup | Service worker |
+| Push UI | Permission flow |
+| Notification Center | In-app alerts |
+| Testing | Cross-browser |
 
 ### New Infrastructure
 | Service | Monthly Cost |
@@ -366,13 +359,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Browser push notifications
 - [ ] In-app notification center
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,100 |
 | Infrastructure | $240 |
 | Push Service | $50 |
-| **Month Total** | **$2,390** |
+| **Month Total** | **$290** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -388,21 +380,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Webhooks
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Webhook System | Outbound webhook engine | 8 | $400 |
-| Discord Integration | Alert to Discord | 4 | $200 |
-| Telegram Integration | Alert to Telegram | 4 | $200 |
-| Slack Integration | Alert to Slack | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Webhook System | Outbound webhook engine |
+| Discord Integration | Alert to Discord |
+| Telegram Integration | Alert to Telegram |
+| Slack Integration | Alert to Slack |
 
 ### Week 3-4: Developer API (Pro Trader)
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| API Key System | Generate/manage keys | 6 | $300 |
-| Rate Limiting | Per-tier limits | 4 | $200 |
-| API Documentation | Swagger/OpenAPI | 6 | $300 |
-| SDK Starter | JavaScript SDK | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| API Key System | Generate/manage keys |
+| Rate Limiting | Per-tier limits |
+| API Documentation | Swagger/OpenAPI |
+| SDK Starter | JavaScript SDK |
 
 ### Deliverables
 - [ ] Webhook alerts to Discord/Telegram/Slack
@@ -410,13 +402,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] API documentation
 - [ ] Rate limiting by tier
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,000 |
 | Infrastructure | $260 |
 | API Gateway | $20 |
-| **Month Total** | **$2,280** |
+| **Month Total** | **$280** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -432,21 +423,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: PWA Optimization
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Offline Support | Service worker caching | 6 | $300 |
-| App Shell | Instant loading | 4 | $200 |
-| Mobile Navigation | Touch-optimized | 6 | $300 |
-| Install Prompts | Add to home screen | 3 | $150 |
+| Task | Description |
+|------|-------------|
+| Offline Support | Service worker caching |
+| App Shell | Instant loading |
+| Mobile Navigation | Touch-optimized |
+| Install Prompts | Add to home screen |
 
 ### Week 3-4: Mobile Features
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Mobile Scanner | Touch-friendly UI | 8 | $400 |
-| Mobile Portfolio | Swipe gestures | 6 | $300 |
-| Mobile Journal | Quick entry | 4 | $200 |
-| Performance | Bundle optimization | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Mobile Scanner | Touch-friendly UI |
+| Mobile Portfolio | Swipe gestures |
+| Mobile Journal | Quick entry |
+| Performance | Bundle optimization |
 
 ### Deliverables
 - [ ] Full offline capability
@@ -454,12 +445,10 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] "Add to Home Screen" flow
 - [ ] Mobile-first scanner redesign
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,050 |
 | Infrastructure | $280 |
-| **Month Total** | **$2,330** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -475,21 +464,21 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Social Trading
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| User Profiles | Public profiles | 6 | $300 |
-| Trade Sharing | Share to feed | 6 | $300 |
-| Follow System | Follow traders | 6 | $300 |
-| Activity Feed | Social feed | 6 | $300 |
+| Task | Description |
+|------|-------------|
+| User Profiles | Public profiles |
+| Trade Sharing | Share to feed |
+| Follow System | Follow traders |
+| Activity Feed | Social feed |
 
 ### Week 3-4: Leaderboards
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Performance Tracking | P&L calculations | 6 | $300 |
-| Leaderboard UI | Rankings display | 4 | $200 |
-| Badges/Achievements | Gamification | 4 | $200 |
-| Privacy Controls | Opt-in sharing | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Performance Tracking | P&L calculations |
+| Leaderboard UI | Rankings display |
+| Badges/Achievements | Gamification |
+| Privacy Controls | Opt-in sharing |
 
 ### Deliverables
 - [ ] Public trader profiles
@@ -498,12 +487,10 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Monthly leaderboards
 - [ ] Achievement badges
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,100 |
 | Infrastructure | $320 |
-| **Month Total** | **$2,420** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -519,14 +506,14 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-4: Backtesting 2.0
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Strategy Builder | Visual strategy creator | 12 | $600 |
-| Multi-Asset Backtest | Portfolio backtesting | 8 | $400 |
-| Walk-Forward | Out-of-sample testing | 8 | $400 |
-| Monte Carlo | Risk simulation | 6 | $300 |
-| Optimization | Parameter optimization | 8 | $400 |
-| Report Export | PDF reports | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Strategy Builder | Visual strategy creator |
+| Multi-Asset Backtest | Portfolio backtesting |
+| Walk-Forward | Out-of-sample testing |
+| Monte Carlo | Risk simulation |
+| Optimization | Parameter optimization |
+| Report Export | PDF reports |
 
 ### Deliverables
 - [ ] Visual strategy builder
@@ -535,12 +522,10 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Monte Carlo simulation
 - [ ] PDF backtest reports
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,300 |
 | Infrastructure | $350 |
-| **Month Total** | **$2,650** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -556,14 +541,14 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-4: Virtual Trading
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Paper Account | Virtual balance system | 8 | $400 |
-| Order System | Market/Limit orders | 10 | $500 |
-| Position Management | P&L tracking | 8 | $400 |
-| Order History | Trade log | 4 | $200 |
-| Leaderboard Integration | Paper trading ranks | 4 | $200 |
-| Reset/Settings | Account controls | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Paper Account | Virtual balance system |
+| Order System | Market/Limit orders |
+| Position Management | P&L tracking |
+| Order History | Trade log |
+| Leaderboard Integration | Paper trading ranks |
+| Reset/Settings | Account controls |
 
 ### Deliverables
 - [ ] Paper trading accounts
@@ -571,12 +556,10 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Real-time P&L
 - [ ] Paper trading leaderboard
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $1,900 |
 | Infrastructure | $380 |
-| **Month Total** | **$2,280** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -592,14 +575,14 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-4: React Native Setup
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Project Setup | React Native + Expo | 8 | $400 |
-| Auth Flow | Native login/signup | 10 | $500 |
-| Navigation | Tab + stack nav | 8 | $400 |
-| Core Screens | Scanner, Portfolio | 16 | $800 |
-| Push Notifications | Native push | 6 | $300 |
-| App Store Prep | Icons, screenshots | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Project Setup | React Native + Expo |
+| Auth Flow | Native login/signup |
+| Navigation | Tab + stack nav |
+| Core Screens | Scanner, Portfolio |
+| Push Notifications | Native push |
+| App Store Prep | Icons, screenshots |
 
 ### New Costs
 | Service | Monthly Cost |
@@ -614,13 +597,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] Portfolio screen (iOS)
 - [ ] Push notification setup
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,600 |
-| Apple Developer | $99 |
+| Apple Developer | $99 (annual) |
 | Infrastructure | $420 |
-| **Month Total** | **$3,119** |
+| **Month Total** | **$519** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -636,27 +618,25 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-4: Feature Parity
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| AI Analyst | Native chat UI | 10 | $500 |
-| Journal | Native journal entry | 8 | $400 |
-| Backtesting | Mobile backtest view | 8 | $400 |
-| Alerts | Native alert management | 6 | $300 |
-| Settings/Profile | Account management | 4 | $200 |
-| Beta Testing | TestFlight | 6 | $300 |
-| Bug Fixes | QA iterations | 8 | $400 |
+| Task | Description |
+|------|-------------|
+| AI Analyst | Native chat UI |
+| Journal | Native journal entry |
+| Backtesting | Mobile backtest view |
+| Alerts | Native alert management |
+| Settings/Profile | Account management |
+| Beta Testing | TestFlight |
+| Bug Fixes | QA iterations |
 
 ### Deliverables
 - [ ] Full feature parity with web
 - [ ] TestFlight beta
 - [ ] App Store submission
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,500 |
 | Infrastructure | $450 |
-| **Month Total** | **$2,950** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -672,25 +652,25 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Android Port
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Android Testing | Device testing | 8 | $400 |
-| Platform Fixes | Android-specific | 8 | $400 |
-| Play Store Prep | Listing, screenshots | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Android Testing | Device testing |
+| Platform Fixes | Android-specific |
+| Play Store Prep | Listing, screenshots |
 
 ### Week 3-4: Launch
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| App Store Review | iOS approval | 4 | $200 |
-| Play Store Review | Android approval | 4 | $200 |
-| Launch Marketing | PR, social | 8 | $400 |
-| In-App Purchase | Stripe + RevenueCat | 8 | $400 |
+| Task | Description |
+|------|-------------|
+| App Store Review | iOS approval |
+| Play Store Review | Android approval |
+| Launch Marketing | PR, social |
+| In-App Purchase | Stripe + RevenueCat |
 
 ### New Costs
 | Service | Monthly Cost |
 |---------|-------------|
-| Google Play Developer | $2.08 ($25 one-time) |
+| Google Play Developer | $25 (one-time) |
 | RevenueCat | $0-99 |
 
 ### Deliverables
@@ -699,14 +679,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 - [ ] In-app purchases working
 - [ ] Launch PR campaign
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,200 |
-| Google Play | $25 |
-| Marketing | $500 |
+| Google Play | $25 (one-time) |
 | Infrastructure | $480 |
-| **Month Total** | **$3,205** |
+| **Month Total** | **$505** |
 
 ### Revenue Projection
 | Metric | Value |
@@ -722,31 +700,29 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### Week 1-2: Year 1 Polish
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Bug Fixes | Accumulated issues | 12 | $600 |
-| Performance | Optimization pass | 8 | $400 |
-| UX Improvements | User feedback | 8 | $400 |
+| Task | Description |
+|------|-------------|
+| Bug Fixes | Accumulated issues |
+| Performance | Optimization pass |
+| UX Improvements | User feedback |
 
 ### Week 3-4: Broker Research
 
-| Task | Description | Dev Hours | Cost |
-|------|-------------|-----------|------|
-| Broker API Research | Alpaca, IBKR, etc. | 8 | $400 |
-| Compliance Research | SEC requirements | 4 | $200 |
-| Architecture Design | Integration plan | 4 | $200 |
+| Task | Description |
+|------|-------------|
+| Broker API Research | Alpaca, IBKR, etc. |
+| Compliance Research | SEC requirements |
+| Architecture Design | Integration plan |
 
 ### Deliverables
 - [ ] Stability improvements
 - [ ] Performance optimization
 - [ ] Broker integration roadmap
 
-### Costs
+### Running Costs
 | Category | Amount |
 |----------|--------|
-| Development | $2,200 |
 | Infrastructure | $520 |
-| **Month Total** | **$2,720** |
 
 ### Revenue Projection (Year 1 End)
 | Metric | Value |
@@ -759,15 +735,13 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 # 📊 YEAR 1 SUMMARY
 
-## Total Investment
+## Running Costs Summary
 
-| Category | Amount |
-|----------|--------|
-| Development | $24,250 |
-| Infrastructure (12 mo) | $4,000 |
-| Marketing | $1,500 |
-| Third-party Services | $300 |
-| **Total Year 1** | **$30,050** |
+| Category | Annual Total |
+|----------|--------------|
+| Infrastructure (12 mo) | ~$4,000 |
+| Third-party Services | ~$300 |
+| **Total Year 1 Running Costs** | **~$4,300** |
 
 ## Revenue Summary (With Price Increases)
 
@@ -787,16 +761,23 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 | Nov 2025 | $14,000 | $24.14 | $56,500 |
 | Dec 2025 | $17,500 | $25.00 | $74,000 |
 
-**Year 1 Total Revenue: ~$74,000** (vs $42K at static pricing)
+**Year 1 Total Revenue: ~$74,000**
 
-## Year 1 P&L (Updated)
+## Year 1 P&L
 
 | Category | Amount |
 |----------|--------|
 | Revenue | $74,000 |
-| Costs | $30,050 |
-| **Net Profit** | **$43,950** |
-| **Profit Margin** | **59%** |
+| Running Costs | $4,300 |
+| **Net Profit** | **$69,700** |
+| **Profit Margin** | **94%** |
+
+### Comparison: With vs Without Development Costs
+
+| Metric | With Dev Costs | Without Dev Costs | Difference |
+|--------|----------------|-------------------|------------|
+| Year 1 Costs | $30,050 | $4,300 | -$25,750 |
+| **Year 1 Profit** | **$43,950** | **$69,700** | **+$25,750** |
 
 ---
 
@@ -805,28 +786,23 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 ## Q1 2026: Broker Integration
 
 ### January 2026
-| Feature | Dev Cost | Monthly Cost |
-|---------|----------|-------------|
-| Phemex Integration | $2,500 | +$0 |
-| Crypto trading via Phemex | $1,500 | $0 |
-| **Month Total** | **$4,000** | |
+| Feature | Description |
+|---------|-------------|
+| Phemex Integration | First broker (IN TALKS) |
+| Crypto Trading | Via Phemex API |
 
 ### February 2026
-| Feature | Dev Cost | Monthly Cost |
-|---------|----------|-------------|
-| Alpaca Integration | $3,000 | +$0 |
-| Stock/Crypto via Alpaca | $1,500 | $0 |
-| **Month Total** | **$4,500** | |
+| Feature | Description |
+|---------|-------------|
+| Alpaca Integration | Stock/Crypto broker |
+| Stock Trading | US equities via Alpaca |
 
 ### March 2026
-| Feature | Dev Cost | Monthly Cost |
-|---------|----------|-------------|
-| Interactive Brokers | $4,000 | +$0 |
-| Coinbase/Kraken | $3,000 | +$0 |
-| Unified dashboard | $1,500 | $0 |
-| **Month Total** | **$8,500** | |
-
-**Q1 Investment: $15,000**
+| Feature | Description |
+|---------|-------------|
+| Interactive Brokers | Global broker |
+| Coinbase/Kraken | Additional crypto exchanges |
+| Unified Dashboard | All accounts in one view |
 
 ---
 
@@ -834,13 +810,12 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### April-June 2026
 
-| Feature | Dev Cost |
-|---------|----------|
-| AI Strategy Generation | $5,000 |
-| Copy Trading System | $8,000 |
-| Signal Marketplace | $6,000 |
-| AI Trade Execution | $4,000 |
-| **Q2 Total** | **$23,000** |
+| Feature | Description |
+|---------|-------------|
+| AI Strategy Generation | AI creates strategies |
+| Copy Trading System | Follow top traders |
+| Signal Marketplace | Buy/sell signals |
+| AI Trade Execution | Auto-execute AI picks |
 
 ---
 
@@ -848,41 +823,47 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ### July-September 2026
 
-| Feature | Dev Cost |
-|---------|----------|
-| White Label System | $10,000 |
-| Enterprise Dashboard | $8,000 |
-| Team Management | $4,000 |
-| API v2 (Enterprise) | $6,000 |
-| **Q3 Total** | **$28,000** |
+| Feature | Description |
+|---------|-------------|
+| White Label System | Resell platform |
+| Enterprise Dashboard | Multi-user management |
+| Team Management | Role-based access |
+| API v2 (Enterprise) | Full API access |
 
 ---
 
 ## Year 2 Summary (With Price Increases)
 
-| Quarter | Investment | Revenue | Avg Pro Price | Avg Pro Trader |
-|---------|-----------|---------|---------------|----------------|
-| Q1 | $15,000 | $65,000 | $19.99 | $39.99 |
-| Q2 | $23,000 | $110,000 | $24.99 | $49.99 |
-| Q3 | $28,000 | $160,000 | $24.99 | $49.99 |
-| Q4 | $10,000 | $200,000 | $29.99 | $59.99 |
-| **Year 2 Total** | **$76,000** | **$535,000** | | |
-
-**Year 2 Net Profit: ~$459,000**
+| Quarter | Revenue | Avg Pro Price | Avg Pro Trader |
+|---------|---------|---------------|----------------|
+| Q1 | $65,000 | $19.99 | $39.99 |
+| Q2 | $110,000 | $24.99 | $49.99 |
+| Q3 | $160,000 | $24.99 | $49.99 |
+| Q4 | $200,000 | $29.99 | $59.99 |
+| **Year 2 Total** | **$535,000** | | |
 
 ## Combined 2-Year Financial Summary
 
 | Metric | Year 1 | Year 2 | Total |
 |--------|--------|--------|-------|
 | Revenue | $74,000 | $535,000 | $609,000 |
-| Investment | $30,050 | $76,000 | $106,050 |
-| **Net Profit** | **$43,950** | **$459,000** | **$502,950** |
+| Running Costs | $4,300 | $15,000 | $19,300 |
+| **Net Profit** | **$69,700** | **$520,000** | **$589,700** |
 | End MRR | $17,500 | $55,000 | - |
 | End ARR | $210,000 | $660,000 | - |
 
+### Comparison: With vs Without Development Costs (2-Year)
+
+| Metric | With Dev Costs | Without Dev Costs | Difference |
+|--------|----------------|-------------------|------------|
+| Total Costs | $106,050 | $19,300 | -$86,750 |
+| **2-Year Profit** | **$502,950** | **$589,700** | **+$86,750** |
+
+> **Note:** This document shows running costs only. Development costs of ~$95,000 over 18 months are tracked separately in `DEVELOPMENT_ROADMAP_2025_2026.md`.
+
 ---
 
-# 💰 MONTHLY COST SUMMARY (Full View)
+# 💰 MONTHLY RUNNING COST SUMMARY (Full View)
 
 ## Fixed Monthly Costs by Phase
 
@@ -1046,9 +1027,8 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 
 ---
 
-*Document Version: 1.1*  
-*Created: December 22, 2025*  
-*Updated: December 23, 2025 (Added AI cost analysis)*  
+*Document Version: 1.0*  
+*Created: December 23, 2025*  
 *Review Schedule: Monthly*  
 *Owner: MarketScanner Pros*
 

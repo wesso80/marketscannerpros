@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 const CACHE_DURATION = 300; // 5 minute cache
 let cache: { data: any; timestamp: number } | null = null;
 
+// Historical OI cache (24h ago snapshot)
+let historicalCache: { data: Map<string, number>; timestamp: number } | null = null;
+const HISTORICAL_CACHE_DURATION = 3600; // 1 hour cache for historical data
+
 // Top coins to track OI
 const SYMBOLS = [
   'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
@@ -16,6 +20,56 @@ interface CoinOI {
   openInterest: number;
   openInterestCoin: number;
   price: number;
+  change24h?: number; // 24h OI change percentage
+}
+
+// Fetch historical OI from 24h ago
+async function fetchHistoricalOI(controller: AbortController): Promise<Map<string, number>> {
+  // Return cached historical data if valid
+  if (historicalCache && Date.now() - historicalCache.timestamp < HISTORICAL_CACHE_DURATION * 1000) {
+    return historicalCache.data;
+  }
+
+  const historicalMap = new Map<string, number>();
+  
+  // Fetch OI history for top coins (BTC, ETH, and a few major alts)
+  const topSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT'];
+  
+  const histPromises = topSymbols.map(async (symbol) => {
+    try {
+      // Binance OI history endpoint - get 24h ago data
+      const res = await fetch(
+        `https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=1h&limit=24`,
+        {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        }
+      );
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Get the oldest entry (24h ago)
+        if (data && data.length > 0) {
+          const oldestEntry = data[0]; // First entry is oldest
+          const sumOI = parseFloat(oldestEntry.sumOpenInterestValue || '0');
+          historicalMap.set(symbol.replace('USDT', ''), sumOI);
+        }
+      }
+    } catch {
+      // Ignore individual failures
+    }
+  });
+
+  await Promise.all(histPromises);
+  
+  // Cache the historical data
+  if (historicalMap.size > 0) {
+    historicalCache = { data: historicalMap, timestamp: Date.now() };
+  }
+  
+  return historicalMap;
 }
 
 export async function GET(req: NextRequest) {
@@ -73,6 +127,17 @@ export async function GET(req: NextRequest) {
       throw new Error('No OI data received');
     }
 
+    // Fetch historical OI for 24h change calculation
+    const historicalOI = await fetchHistoricalOI(controller);
+    
+    // Calculate 24h change for coins that have historical data
+    oiData.forEach(coin => {
+      const historical = historicalOI.get(coin.symbol);
+      if (historical && historical > 0) {
+        coin.change24h = ((coin.openInterest - historical) / historical) * 100;
+      }
+    });
+
     // Calculate totals
     const totalOI = oiData.reduce((sum, d) => sum + d.openInterest, 0);
     const btcData = oiData.find(d => d.symbol === 'BTC');
@@ -81,6 +146,13 @@ export async function GET(req: NextRequest) {
     const ethOI = ethData?.openInterest || 0;
     const altOI = totalOI - btcOI - ethOI;
 
+    // Calculate total 24h change (using BTC+ETH weighted)
+    const totalHistorical = (historicalOI.get('BTC') || 0) + (historicalOI.get('ETH') || 0);
+    const currentBtcEth = btcOI + ethOI;
+    const totalChange24h = totalHistorical > 0 
+      ? ((currentBtcEth - totalHistorical) / totalHistorical) * 100 
+      : undefined;
+
     const result = {
       total: {
         openInterest: totalOI,
@@ -88,18 +160,21 @@ export async function GET(req: NextRequest) {
         btcDominance: ((btcOI / totalOI) * 100).toFixed(1),
         ethDominance: ((ethOI / totalOI) * 100).toFixed(1),
         altDominance: ((altOI / totalOI) * 100).toFixed(1),
+        change24h: totalChange24h,
       },
       btc: btcData ? {
         openInterest: btcOI,
         formatted: formatUSD(btcOI),
         price: btcData.price,
         contracts: btcData.openInterestCoin,
+        change24h: btcData.change24h,
       } : null,
       eth: ethData ? {
         openInterest: ethOI,
         formatted: formatUSD(ethOI),
         price: ethData.price,
         contracts: ethData.openInterestCoin,
+        change24h: ethData.change24h,
       } : null,
       coins: oiData.sort((a, b) => b.openInterest - a.openInterest),
       source: 'binance',

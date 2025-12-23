@@ -276,6 +276,78 @@ If information is missing, say so explicitly instead of guessing.
       });
     }
 
+    // NEW: Inject derivatives context if crypto-related query
+    const isCryptoQuery = context?.symbol?.includes('BTC') || 
+                          context?.symbol?.includes('ETH') || 
+                          context?.symbol?.includes('USDT') ||
+                          query.toLowerCase().includes('bitcoin') ||
+                          query.toLowerCase().includes('crypto') ||
+                          query.toLowerCase().includes('btc') ||
+                          query.toLowerCase().includes('eth');
+    
+    if (isCryptoQuery) {
+      try {
+        // Fetch derivatives data in parallel
+        const baseUrl = req.headers.get('host')?.includes('localhost') 
+          ? 'http://localhost:3000' 
+          : `https://${req.headers.get('host')}`;
+        
+        const [oiRes, lsRes, fundingRes] = await Promise.all([
+          fetch(`${baseUrl}/api/open-interest`).then(r => r.json()).catch(() => null),
+          fetch(`${baseUrl}/api/long-short-ratio`).then(r => r.json()).catch(() => null),
+          fetch(`${baseUrl}/api/funding-rates`).then(r => r.json()).catch(() => null),
+        ]);
+
+        let derivativesContext = '\nDERIVATIVES MARKET DATA (Current Binance Futures):\n';
+        
+        if (oiRes && oiRes.total) {
+          derivativesContext += `
+OPEN INTEREST:
+- Total OI: ${oiRes.total.formatted}
+- 24h Change: ${oiRes.total.change24h !== undefined ? (oiRes.total.change24h >= 0 ? '+' : '') + oiRes.total.change24h.toFixed(2) + '%' : 'N/A'}
+- BTC Dominance: ${oiRes.total.btcDominance}%
+- ETH Dominance: ${oiRes.total.ethDominance}%
+- BTC OI: ${oiRes.btc?.formatted || 'N/A'} (${oiRes.btc?.change24h !== undefined ? (oiRes.btc.change24h >= 0 ? '+' : '') + oiRes.btc.change24h.toFixed(2) + '%' : 'N/A'} 24h)
+- ETH OI: ${oiRes.eth?.formatted || 'N/A'} (${oiRes.eth?.change24h !== undefined ? (oiRes.eth.change24h >= 0 ? '+' : '') + oiRes.eth.change24h.toFixed(2) + '%' : 'N/A'} 24h)
+`;
+        }
+
+        if (lsRes && lsRes.average) {
+          derivativesContext += `
+LONG/SHORT RATIO:
+- Average L/S Ratio: ${lsRes.average.longShortRatio}
+- Long Accounts: ${lsRes.average.longPercent}%
+- Short Accounts: ${lsRes.average.shortPercent}%
+- Sentiment: ${lsRes.average.sentiment}
+`;
+        }
+
+        if (fundingRes && fundingRes.average) {
+          derivativesContext += `
+FUNDING RATES:
+- Average Funding: ${fundingRes.average.fundingRatePercent}%
+- Annualized: ${fundingRes.average.annualized}%
+- Sentiment: ${fundingRes.average.sentiment}
+- Next Funding: ${fundingRes.nextFunding?.timeUntilFormatted || 'N/A'}
+`;
+        }
+
+        if (oiRes?.total || lsRes?.average || fundingRes?.average) {
+          messages.push({
+            role: "system",
+            content: derivativesContext + `
+Use this derivatives data to enhance your analysis. 
+Identify if derivatives confirm or diverge from price action.
+Flag extreme readings (OI change >5%, L/S ratio >1.5 or <0.7, funding >0.05% or <-0.05%).
+            `.trim(),
+          });
+        }
+      } catch (derivErr) {
+        // Silently fail - derivatives data is optional enhancement
+        logger.debug('Failed to fetch derivatives data for AI context', { error: derivErr });
+      }
+    }
+
     if (history && Array.isArray(history)) {
       for (const msg of history) {
         messages.push({
