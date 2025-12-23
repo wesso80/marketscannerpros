@@ -141,6 +141,7 @@ export default function Header() {
           <Dropdown label="Markets" items={marketItems} />
           <Dropdown label="Resources" items={resourceItems} />
           <Link href="/pricing" className="hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
+          <Link href="/dashboard" className="hover:text-emerald-300 whitespace-nowrap">Dashboard</Link>
           <Link href="/account" className="hover:text-emerald-300 whitespace-nowrap">Account</Link>
           <Link href="/auth" className="ml-2 px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 rounded-lg text-emerald-300 font-medium whitespace-nowrap transition-all">Sign In</Link>
         </nav>
@@ -179,6 +180,7 @@ export default function Header() {
 
               <div className="mt-3 pt-3 border-t border-slate-700">
                 <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>💰 Pricing</Link>
+                <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>📊 Dashboard</Link>
                 <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>👤 Account</Link>
               </div>
               

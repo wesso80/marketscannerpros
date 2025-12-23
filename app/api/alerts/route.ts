@@ -18,6 +18,27 @@ const ALERT_LIMITS = {
   pro_trader: 999, // effectively unlimited
 };
 
+// Multi-condition alert condition types
+const MULTI_CONDITION_TYPES = [
+  'price_above', 'price_below', 
+  'percent_change_up', 'percent_change_down',
+  'volume_above', 'volume_below', 'volume_spike',
+  'rsi_above', 'rsi_below',
+  'macd_cross_up', 'macd_cross_down',
+  'sma_cross_above', 'sma_cross_below',
+  'ema_cross_above', 'ema_cross_below',
+  'oi_above', 'oi_below', 'oi_change_up', 'oi_change_down',
+  'funding_above', 'funding_below',
+];
+
+interface AlertCondition {
+  conditionType: string;
+  conditionValue: number;
+  conditionTimeframe?: string;
+  conditionIndicator?: string;
+  conditionPeriod?: number;
+}
+
 interface AlertPayload {
   symbol: string;
   assetType: 'crypto' | 'equity' | 'forex' | 'commodity';
@@ -33,6 +54,10 @@ interface AlertPayload {
   // Smart alert fields
   isSmartAlert?: boolean;
   cooldownMinutes?: number;
+  // Multi-condition alert fields
+  isMultiCondition?: boolean;
+  conditionLogic?: 'AND' | 'OR';
+  conditions?: AlertCondition[];
 }
 
 // Smart alert condition types (Pro Trader only)
@@ -56,13 +81,15 @@ export async function GET(req: NextRequest) {
     const activeOnly = url.searchParams.get('active') === 'true';
     const symbol = url.searchParams.get('symbol');
     const smartOnly = url.searchParams.get('smart') === 'true';
+    const multiOnly = url.searchParams.get('multi') === 'true';
     
     let query = `
       SELECT 
         id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
         name, notes, is_active, is_recurring, notify_email, notify_push,
         triggered_at, trigger_count, last_price, created_at, updated_at, expires_at,
-        is_smart_alert, smart_alert_context, last_derivative_value, cooldown_minutes
+        is_smart_alert, smart_alert_context, last_derivative_value, cooldown_minutes,
+        is_multi_condition, condition_logic
       FROM alerts
       WHERE workspace_id = $1
     `;
@@ -83,9 +110,40 @@ export async function GET(req: NextRequest) {
       query += ` AND is_smart_alert = true`;
     }
 
+    if (multiOnly) {
+      query += ` AND is_multi_condition = true`;
+    }
+
     query += ` ORDER BY created_at DESC`;
 
-    const alerts = await q(query, params);
+    let alerts = await q(query, params);
+
+    // Fetch conditions for multi-condition alerts
+    const multiAlertIds = alerts
+      .filter((a: any) => a.is_multi_condition)
+      .map((a: any) => a.id);
+
+    if (multiAlertIds.length > 0) {
+      const conditionsResult = await q(
+        `SELECT * FROM alert_conditions WHERE alert_id = ANY($1) ORDER BY condition_order`,
+        [multiAlertIds]
+      );
+
+      // Group conditions by alert_id
+      const conditionsByAlert: Record<string, any[]> = {};
+      for (const c of conditionsResult) {
+        if (!conditionsByAlert[c.alert_id]) {
+          conditionsByAlert[c.alert_id] = [];
+        }
+        conditionsByAlert[c.alert_id].push(c);
+      }
+
+      // Attach conditions to alerts
+      alerts = alerts.map((a: any) => ({
+        ...a,
+        conditions: conditionsByAlert[a.id] || [],
+      }));
+    }
 
     // Get quota info
     const quotaResult = await q(
@@ -122,24 +180,64 @@ export async function POST(req: NextRequest) {
   try {
     const body: AlertPayload = await req.json();
 
+    // Check if this is a multi-condition alert
+    const isMultiCondition = body.isMultiCondition && body.conditions && body.conditions.length > 0;
+
     // Validate required fields
-    if (!body.symbol || !body.conditionType || body.conditionValue === undefined) {
+    if (!body.symbol) {
       return NextResponse.json(
-        { error: 'Missing required fields: symbol, conditionType, conditionValue' },
+        { error: 'Missing required field: symbol' },
         { status: 400 }
       );
+    }
+
+    // For single-condition alerts, require conditionType and conditionValue
+    if (!isMultiCondition && (!body.conditionType || body.conditionValue === undefined)) {
+      return NextResponse.json(
+        { error: 'Missing required fields: conditionType, conditionValue' },
+        { status: 400 }
+      );
+    }
+
+    // For multi-condition alerts, validate conditions
+    if (isMultiCondition) {
+      for (const cond of body.conditions!) {
+        if (!cond.conditionType || cond.conditionValue === undefined) {
+          return NextResponse.json(
+            { error: 'Each condition must have conditionType and conditionValue' },
+            { status: 400 }
+          );
+        }
+        if (!MULTI_CONDITION_TYPES.includes(cond.conditionType)) {
+          return NextResponse.json(
+            { error: `Invalid condition type: ${cond.conditionType}` },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Check if this is a smart alert
     const isSmartAlert = SMART_ALERT_TYPES.includes(body.conditionType) || body.isSmartAlert;
     
-    // Smart alerts require Pro Trader
+    // Smart alerts and multi-condition alerts require Pro or Pro Trader
     const tier = session.tier || 'free';
     if (isSmartAlert && tier !== 'pro_trader') {
       return NextResponse.json(
         { 
           error: 'Smart alerts require Pro Trader',
           message: 'Upgrade to Pro Trader to create AI-powered smart alerts.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Multi-condition alerts require Pro or Pro Trader
+    if (isMultiCondition && tier === 'free') {
+      return NextResponse.json(
+        { 
+          error: 'Multi-condition alerts require Pro',
+          message: 'Upgrade to Pro or Pro Trader to create multi-condition alerts.',
         },
         { status: 403 }
       );
@@ -166,31 +264,76 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate alert name
+    let alertName = body.name;
+    if (!alertName) {
+      if (isMultiCondition) {
+        const condCount = body.conditions!.length;
+        const logic = body.conditionLogic || 'AND';
+        alertName = `${body.symbol} ${condCount} conditions (${logic})`;
+      } else {
+        alertName = `${body.symbol} ${body.conditionType.replace(/_/g, ' ')} ${body.conditionValue}`;
+      }
+    }
+
     // Insert alert
     const result = await q(
       `INSERT INTO alerts (
         workspace_id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
         name, notes, is_recurring, notify_email, notify_push, expires_at,
-        is_smart_alert, cooldown_minutes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        is_smart_alert, cooldown_minutes, is_multi_condition, condition_logic
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         session.workspaceId,
         body.symbol.toUpperCase(),
         body.assetType || 'crypto',
-        body.conditionType,
-        body.conditionValue,
+        isMultiCondition ? 'multi' : body.conditionType,
+        isMultiCondition ? 0 : body.conditionValue,
         body.conditionTimeframe || null,
-        body.name || `${body.symbol} ${body.conditionType.replace(/_/g, ' ')} ${body.conditionValue}`,
+        alertName,
         body.notes || null,
-        body.isRecurring ?? (isSmartAlert ? true : false), // Smart alerts default to recurring
+        body.isRecurring ?? (isSmartAlert ? true : false),
         body.notifyEmail ?? true,
         body.notifyPush ?? true,
         body.expiresAt ? new Date(body.expiresAt) : null,
         isSmartAlert,
-        body.cooldownMinutes || (isSmartAlert ? 60 : null), // Default 1hr cooldown for smart alerts
+        body.cooldownMinutes || (isSmartAlert ? 60 : null),
+        isMultiCondition,
+        body.conditionLogic || 'AND',
       ]
     );
+
+    const alertId = result[0].id;
+
+    // Insert conditions for multi-condition alerts
+    if (isMultiCondition && body.conditions) {
+      for (let i = 0; i < body.conditions.length; i++) {
+        const cond = body.conditions[i];
+        await q(
+          `INSERT INTO alert_conditions (
+            alert_id, condition_type, condition_value, condition_timeframe,
+            condition_indicator, condition_period, condition_order
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            alertId,
+            cond.conditionType,
+            cond.conditionValue,
+            cond.conditionTimeframe || null,
+            cond.conditionIndicator || null,
+            cond.conditionPeriod || null,
+            i,
+          ]
+        );
+      }
+
+      // Fetch the conditions we just created
+      const conditions = await q(
+        `SELECT * FROM alert_conditions WHERE alert_id = $1 ORDER BY condition_order`,
+        [alertId]
+      );
+      result[0].conditions = conditions;
+    }
 
     // Update quota tracking
     await q(
@@ -205,6 +348,7 @@ export async function POST(req: NextRequest) {
       success: true, 
       alert: result[0],
       isSmartAlert,
+      isMultiCondition,
       quota: {
         used: activeCount + 1,
         max: maxAlerts,

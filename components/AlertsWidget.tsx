@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import PushNotificationSettings from './PushNotificationSettings';
+import MultiConditionAlertBuilder from './MultiConditionAlertBuilder';
+
+interface AlertCondition {
+  id: string;
+  condition_type: string;
+  condition_value: number;
+  condition_timeframe?: string;
+  condition_indicator?: string;
+  condition_period?: number;
+  is_met?: boolean;
+  last_value?: number;
+}
 
 interface Alert {
   id: string;
@@ -26,6 +38,10 @@ interface Alert {
   smart_alert_context?: Record<string, any>;
   last_derivative_value?: number;
   cooldown_minutes?: number;
+  // Multi-condition fields
+  is_multi_condition?: boolean;
+  condition_logic?: 'AND' | 'OR';
+  conditions?: AlertCondition[];
 }
 
 interface AlertQuota {
@@ -65,8 +81,9 @@ export default function AlertsWidget({
   const [history, setHistory] = useState<AlertHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [activeTab, setActiveTab] = useState<'active' | 'smart' | 'history'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'smart' | 'multi' | 'history'>('active');
   const [showSmartCreate, setShowSmartCreate] = useState(false);
+  const [showMultiCreate, setShowMultiCreate] = useState(false);
   
   // New alert form state
   const [newAlert, setNewAlert] = useState({
@@ -392,7 +409,17 @@ export default function AlertsWidget({
                 : 'text-slate-400 border-transparent hover:text-white'
             }`}
           >
-            Price ({alerts.filter(a => a.is_active && !a.is_smart_alert).length})
+            Price ({alerts.filter(a => a.is_active && !a.is_smart_alert && !a.is_multi_condition).length})
+          </button>
+          <button
+            onClick={() => setActiveTab('multi')}
+            className={`text-sm pb-2 border-b-2 transition-colors ${
+              activeTab === 'multi'
+                ? 'text-purple-400 border-purple-400'
+                : 'text-slate-400 border-transparent hover:text-white'
+            }`}
+          >
+            🔗 Multi ({alerts.filter(a => a.is_active && a.is_multi_condition).length})
           </button>
           <button
             onClick={() => setActiveTab('smart')}
@@ -531,7 +558,7 @@ export default function AlertsWidget({
         {activeTab === 'active' ? (
           // Price Alerts Tab
           (() => {
-            const priceAlerts = alerts.filter(a => !a.is_smart_alert);
+            const priceAlerts = alerts.filter(a => !a.is_smart_alert && !a.is_multi_condition);
             return priceAlerts.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-3">🔕</div>
@@ -862,7 +889,185 @@ export default function AlertsWidget({
               );
             })()}
           </div>
-        ) : (
+        ) : activeTab === 'multi' ? (
+          // Multi-Condition Alerts Tab
+          <div>
+            {/* Multi-Condition Alert Create Form */}
+            {tier !== 'free' ? (
+              <>
+                {!showMultiCreate ? (
+                  <button
+                    onClick={() => setShowMultiCreate(true)}
+                    className="w-full p-4 border-2 border-dashed border-purple-500/30 hover:border-purple-500/50 rounded-lg text-slate-400 hover:text-purple-400 transition-colors mb-4"
+                  >
+                    + Create Multi-Condition Alert
+                  </button>
+                ) : (
+                  <div className="mb-4">
+                    <MultiConditionAlertBuilder
+                      symbol={newAlert.symbol || 'BTC'}
+                      assetType={newAlert.assetType}
+                      onCancel={() => setShowMultiCreate(false)}
+                      creating={creating}
+                      onSave={async (alertData) => {
+                        setCreating(true);
+                        setError('');
+                        try {
+                          const res = await fetch('/api/alerts', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              symbol: alertData.symbol,
+                              assetType: alertData.assetType,
+                              conditionType: 'multi',
+                              conditionValue: 0,
+                              name: alertData.name,
+                              isMultiCondition: true,
+                              conditionLogic: alertData.conditionLogic,
+                              conditions: alertData.conditions.map(c => ({
+                                conditionType: c.conditionType,
+                                conditionValue: parseFloat(c.conditionValue),
+                                conditionTimeframe: c.conditionTimeframe,
+                                conditionIndicator: c.conditionIndicator,
+                                conditionPeriod: c.conditionPeriod,
+                              })),
+                              isRecurring: alertData.isRecurring,
+                              notifyEmail: alertData.notifyEmail,
+                              notifyPush: true,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.error) {
+                            setError(data.message || data.error);
+                          } else {
+                            setShowMultiCreate(false);
+                            fetchAlerts();
+                          }
+                        } catch (err) {
+                          setError('Failed to create alert');
+                        } finally {
+                          setCreating(false);
+                        }
+                      }}
+                    />
+                    {error && (
+                      <p className="text-red-400 text-sm mt-2">{error}</p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-500/20 mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">🔗</span>
+                  <div>
+                    <h4 className="font-semibold text-white">Multi-Condition Alerts - Pro Required</h4>
+                    <p className="text-sm text-slate-400">
+                      Create alerts with multiple conditions (e.g., Price above $50K AND RSI below 30)
+                    </p>
+                  </div>
+                </div>
+                <a 
+                  href="/pricing" 
+                  className="inline-block mt-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Upgrade to Pro
+                </a>
+              </div>
+            )}
+
+            {/* Multi-Condition Alerts List */}
+            {(() => {
+              const multiAlerts = alerts.filter(a => a.is_multi_condition);
+              return multiAlerts.length === 0 ? (
+                tier !== 'free' ? (
+                  <div className="text-center py-6">
+                    <p className="text-slate-500 text-sm">No multi-condition alerts yet. Create one above!</p>
+                  </div>
+                ) : null
+              ) : (
+                <div className="space-y-2">
+                  {multiAlerts.map(alert => (
+                    <div
+                      key={alert.id}
+                      className={`p-3 rounded-lg border transition-colors ${
+                        alert.is_active
+                          ? 'bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:border-purple-500/50'
+                          : 'bg-slate-900/30 border-slate-700/50 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">🔗</span>
+                          <span className="font-mono text-lg font-bold text-purple-400">
+                            {alert.symbol}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            alert.condition_logic === 'AND' 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : 'bg-amber-500/20 text-amber-400'
+                          }`}>
+                            {alert.condition_logic}
+                          </span>
+                          {alert.is_recurring && (
+                            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">
+                              🔄
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleAlert(alert.id, alert.is_active)}
+                            className={`p-1.5 rounded transition-colors ${
+                              alert.is_active
+                                ? 'text-emerald-400 hover:bg-emerald-500/20'
+                                : 'text-slate-500 hover:bg-slate-700'
+                            }`}
+                          >
+                            {alert.is_active ? '⏸' : '▶'}
+                          </button>
+                          <button
+                            onClick={() => deleteAlert(alert.id)}
+                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+                      {/* Conditions Display */}
+                      {alert.conditions && alert.conditions.length > 0 && (
+                        <div className="space-y-1 pl-7">
+                          {alert.conditions.map((cond, idx) => (
+                            <div key={cond.id} className="flex items-center gap-2 text-sm">
+                              {idx > 0 && (
+                                <span className={`text-xs ${
+                                  alert.condition_logic === 'AND' ? 'text-emerald-500' : 'text-amber-500'
+                                }`}>
+                                  {alert.condition_logic}
+                                </span>
+                              )}
+                              <span className={`w-2 h-2 rounded-full ${cond.is_met ? 'bg-emerald-500' : 'bg-slate-600'}`} />
+                              <span className="text-slate-400">
+                                {getConditionLabel(cond.condition_type)}
+                              </span>
+                              <span className="font-mono text-white">
+                                {cond.condition_value}
+                                {cond.condition_period && <span className="text-slate-500"> ({cond.condition_period})</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-slate-500 mt-2 pl-7">
+                        {alert.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        ) : activeTab === 'history' ? (
           // History tab
           history.length === 0 ? (
             <div className="text-center py-8">
@@ -889,7 +1094,7 @@ export default function AlertsWidget({
               ))}
             </div>
           )
-        )}
+        ) : null}
       </div>
 
       {/* Quota warning */}

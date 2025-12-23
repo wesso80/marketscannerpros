@@ -76,20 +76,35 @@ function AlertsContent() {
           </ul>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-xl p-5 border border-purple-500/30">
+        <div className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-xl p-5 border border-purple-500/30">
           <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <span>🧠</span> Smart Alerts
-            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">Pro Trader</span>
+            <span>🔗</span> Multi-Condition Alerts
+            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">Pro</span>
           </h4>
           <ul className="space-y-2 text-sm text-slate-400">
-            <li><strong className="text-purple-300">OI Surge/Drop:</strong> Open Interest spikes or crashes (liquidation events)</li>
-            <li><strong className="text-purple-300">Funding Extremes:</strong> Overleveraged longs or shorts (squeeze setups)</li>
-            <li><strong className="text-purple-300">L/S Ratio:</strong> Crowded trades warning (reversal signals)</li>
-            <li><strong className="text-purple-300">Fear & Greed:</strong> Extreme sentiment (contrarian opportunities)</li>
-            <li><strong className="text-purple-300">OI Divergence:</strong> Smart money accumulation/distribution</li>
+            <li><strong className="text-purple-300">AND Logic:</strong> Trigger when ALL conditions are met (e.g., RSI &lt; 30 AND Price &lt; $45K)</li>
+            <li><strong className="text-purple-300">OR Logic:</strong> Trigger when ANY condition is met (e.g., Volume spike OR Price drop)</li>
+            <li><strong className="text-purple-300">Technical Indicators:</strong> RSI, MACD, SMA, EMA cross conditions</li>
+            <li><strong className="text-purple-300">Derivatives:</strong> Open Interest levels, funding rate thresholds</li>
+            <li><strong className="text-purple-300">Up to 5 conditions:</strong> Combine multiple signals for precision alerts</li>
           </ul>
         </div>
       </div>
+
+      <div className="mt-4 grid md:grid-cols-1 gap-4">
+        <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-xl p-5 border border-indigo-500/30">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+            <span>🧠</span> Smart Alerts
+            <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded">Pro Trader</span>
+          </h4>
+          <ul className="space-y-2 text-sm text-slate-400">
+            <li><strong className="text-indigo-300">OI Surge/Drop:</strong> Open Interest spikes or crashes (liquidation events)</li>
+            <li><strong className="text-indigo-300">Funding Extremes:</strong> Overleveraged longs or shorts (squeeze setups)</li>
+            <li><strong className="text-indigo-300">L/S Ratio:</strong> Crowded trades warning (reversal signals)</li>
+            <li><strong className="text-indigo-300">Fear & Greed:</strong> Extreme sentiment (contrarian opportunities)</li>
+            <li><strong className="text-indigo-300">OI Divergence:</strong> Smart money accumulation/distribution</li>
+          </ul>
+        </div>
 
       {/* Feature Cards */}
       <div className="mt-6 grid md:grid-cols-3 gap-4">
