@@ -1,8 +1,6 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import WatchlistWidget from '@/components/WatchlistWidget';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Watchlists | MarketScanner Pro',
@@ -11,10 +9,8 @@ export const metadata: Metadata = {
 
 function WatchlistsContent() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">
-      <Header />
-      
-      <main className="pt-20 pb-16">
+    <div className="min-h-screen">
+      <main className="pt-6 pb-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Page Header */}
           <div className="mb-8">
@@ -102,8 +98,6 @@ function WatchlistsContent() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
@@ -111,7 +105,7 @@ function WatchlistsContent() {
 export default function WatchlistsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500" />
       </div>
     }>
