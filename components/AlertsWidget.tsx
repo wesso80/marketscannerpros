@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import PushNotificationSettings from './PushNotificationSettings';
 
 interface Alert {
   id: string;
@@ -899,6 +900,11 @@ export default function AlertsWidget({
           </p>
         </div>
       )}
+
+      {/* Push Notification Settings */}
+      <div className="p-4 border-t border-slate-700">
+        <PushNotificationSettings compact />
+      </div>
     </div>
   );
 }
