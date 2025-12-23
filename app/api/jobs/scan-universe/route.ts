@@ -2,7 +2,7 @@
  * Universe Scanner - Bulk Opportunity Discovery
  * 
  * @route POST /api/jobs/scan-universe
- * @description Scans entire stock/crypto universe using Yahoo Finance + CoinGecko
+ * @description Scans entire stock/crypto universe using Yahoo Finance
  *              to find top 10 opportunities in each asset class
  * 
  * Scoring Formula (7 Technical Indicators):
@@ -65,24 +65,21 @@ const EQUITY_UNIVERSE = [
 ];
 
 // =============================================================================
-// CRYPTO UNIVERSE - Top 100 cryptocurrencies by market cap
+// CRYPTO UNIVERSE - Top 100 cryptocurrencies (Yahoo Finance format: SYMBOL-USD)
 // =============================================================================
 const CRYPTO_UNIVERSE = [
-  "bitcoin", "ethereum", "tether", "binancecoin", "solana", "ripple", "usd-coin",
-  "staked-ether", "cardano", "dogecoin", "avalanche-2", "tron", "chainlink",
-  "polkadot", "polygon", "shiba-inu", "litecoin", "bitcoin-cash", "uniswap",
-  "stellar", "near", "cosmos", "monero", "ethereum-classic", "okb", "aptos",
-  "arbitrum", "optimism", "filecoin", "vechain", "hedera", "injective-protocol",
-  "aave", "the-graph", "algorand", "fantom", "the-sandbox", "decentraland",
-  "axie-infinity", "theta-token", "tezos", "eos", "flow", "chiliz", "curve-dao-token",
-  "lido-dao", "maker", "synthetix-network-token", "compound-governance-token",
-  "sushi", "yearn-finance", "balancer", "1inch", "ens", "loopring", "immutable-x",
-  "fetch-ai", "render-token", "ocean-protocol", "singularitynet", "bittensor",
-  "worldcoin", "sei-network", "sui", "celestia", "pyth-network", "jupiter-exchange",
-  "bonk", "pepe", "floki", "memecoin", "gala", "enjincoin", "illuvium", "gods-unchained",
-  "stepn", "magic", "treasure", "raydium", "orca", "marinade-staked-sol",
-  "jito-governance-token", "tensor", "parcl", "kamino", "drift-protocol", "marginfi",
-  "wormhole", "layerzero", "starknet", "zksync", "scroll", "base-protocol"
+  "BTC-USD", "ETH-USD", "USDT-USD", "BNB-USD", "SOL-USD", "XRP-USD", "USDC-USD",
+  "ADA-USD", "DOGE-USD", "AVAX-USD", "TRX-USD", "LINK-USD", "DOT-USD", "MATIC-USD",
+  "SHIB-USD", "LTC-USD", "BCH-USD", "UNI-USD", "XLM-USD", "NEAR-USD", "ATOM-USD",
+  "XMR-USD", "ETC-USD", "APT-USD", "ARB-USD", "OP-USD", "FIL-USD", "VET-USD",
+  "HBAR-USD", "INJ-USD", "AAVE-USD", "GRT-USD", "ALGO-USD", "FTM-USD", "SAND-USD",
+  "MANA-USD", "AXS-USD", "THETA-USD", "XTZ-USD", "EOS-USD", "FLOW-USD", "CHZ-USD",
+  "CRV-USD", "LDO-USD", "MKR-USD", "SNX-USD", "COMP-USD", "SUSHI-USD", "YFI-USD",
+  "BAL-USD", "1INCH-USD", "ENS-USD", "LRC-USD", "IMX-USD", "FET-USD", "RNDR-USD",
+  "OCEAN-USD", "AGIX-USD", "TAO-USD", "WLD-USD", "SEI-USD", "SUI-USD", "TIA-USD",
+  "PYTH-USD", "JUP-USD", "BONK-USD", "PEPE-USD", "FLOKI-USD", "GALA-USD", "ENJ-USD",
+  "ILV-USD", "GODS-USD", "GMT-USD", "MAGIC-USD", "RAY-USD", "ORCA-USD", "MNDE-USD",
+  "JTO-USD", "TNSR-USD", "WH-USD", "ZRO-USD", "STRK-USD", "ZK-USD", "KAS-USD"
 ];
 
 // =============================================================================
@@ -499,47 +496,45 @@ async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
   }
 }
 
-// CoinGecko - Get market data for crypto
-async function fetchCoinGeckoData(coinId: string): Promise<OHLCV[] | null> {
+// Yahoo Finance - Get market data for crypto (same method as equities)
+async function fetchCryptoData(symbol: string): Promise<OHLCV[] | null> {
   try {
-    // CoinGecko OHLC endpoint - 180 days
-    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=180`;
+    // Yahoo Finance chart API - 6 months of daily data
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=6mo`;
     
     const res = await fetch(url, {
       headers: {
-        'Accept': 'application/json'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
     
     if (!res.ok) return null;
     
     const data = await res.json();
+    const result = data.chart?.result?.[0];
     
-    if (!Array.isArray(data) || data.length === 0) return null;
+    if (!result?.timestamp || !result?.indicators?.quote?.[0]) return null;
     
-    // CoinGecko returns [timestamp, open, high, low, close] - 4 candles per day
-    // Group by day and take the last candle
-    const dailyMap = new Map<string, OHLCV>();
+    const timestamps = result.timestamp;
+    const quote = result.indicators.quote[0];
     
-    for (const candle of data) {
-      const [ts, open, high, low, close] = candle;
-      const date = new Date(ts).toISOString().split('T')[0];
-      
-      const existing = dailyMap.get(date);
-      if (!existing) {
-        dailyMap.set(date, { date, open, high, low, close, volume: 0 });
-      } else {
-        // Update to use daily high/low/close
-        existing.high = Math.max(existing.high, high);
-        existing.low = Math.min(existing.low, low);
-        existing.close = close; // Last close of the day
+    const ohlcv: OHLCV[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (quote.close[i] != null) {
+        ohlcv.push({
+          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+          open: quote.open[i] || quote.close[i],
+          high: quote.high[i] || quote.close[i],
+          low: quote.low[i] || quote.close[i],
+          close: quote.close[i],
+          volume: quote.volume[i] || 0
+        });
       }
     }
     
-    const ohlcv = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     return ohlcv.length > 50 ? ohlcv : null;
   } catch (e) {
-    console.error(`[CoinGecko] Error fetching ${coinId}:`, e);
+    console.error(`[Yahoo Crypto] Error fetching ${symbol}:`, e);
     return null;
   }
 }
@@ -662,32 +657,32 @@ export async function POST(req: NextRequest) {
   }
   
   // ==========================================================================
-  // SCAN CRYPTO (CoinGecko)
+  // SCAN CRYPTO (Yahoo Finance)
   // ==========================================================================
   console.log(`[scan-universe] Scanning ${CRYPTO_UNIVERSE.length} cryptocurrencies...`);
   
-  // CoinGecko has stricter rate limits - process slowly
-  const CRYPTO_BATCH_SIZE = 5;
-  const CRYPTO_DELAY = 2500; // 2.5s between batches (to stay under 30/min)
+  // Yahoo Finance can handle more requests per minute
+  const CRYPTO_BATCH_SIZE = 10;
+  const CRYPTO_DELAY = 1000; // 1s between batches
   
   for (let i = 0; i < CRYPTO_UNIVERSE.length; i += CRYPTO_BATCH_SIZE) {
     const batch = CRYPTO_UNIVERSE.slice(i, i + CRYPTO_BATCH_SIZE);
     
-    const batchPromises = batch.map(async (coinId) => {
+    const batchPromises = batch.map(async (symbol) => {
       try {
-        const ohlcv = await fetchCoinGeckoData(coinId);
+        const ohlcv = await fetchCryptoData(symbol);
         if (!ohlcv) {
-          errors.push(`${coinId}: No data`);
+          errors.push(`${symbol}: No data`);
           return null;
         }
-        const result = analyzeAsset(coinId, ohlcv);
+        const result = analyzeAsset(symbol, ohlcv);
         if (result) {
-          // Convert coinId back to ticker symbol for display
-          result.symbol = coinId.toUpperCase().replace(/-/g, '');
+          // Convert Yahoo format (BTC-USD) to display format (BTC)
+          result.symbol = symbol.replace("-USD", "");
         }
         return result;
       } catch (e: any) {
-        errors.push(`${coinId}: ${e.message}`);
+        errors.push(`${symbol}: ${e.message}`);
         return null;
       }
     });

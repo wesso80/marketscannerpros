@@ -64,19 +64,43 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Fetch crypto price using Alpha Vantage DIGITAL_CURRENCY_DAILY
- * Falls back to CoinGecko free API if no API key
+ * Fetch crypto price using Yahoo Finance (free, no API key required)
+ * Falls back to Alpha Vantage if Yahoo Finance fails
  */
 async function getCryptoPrice(symbol: string, market: string): Promise<number | null> {
-  // Try Alpha Vantage first if API key exists
+  // Try Yahoo Finance first (free, no API key required)
+  try {
+    // Yahoo Finance uses format: BTC-USD, ETH-USD, etc.
+    const yahooSymbol = `${symbol}-${market}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`;
+    
+    const res = await fetch(url, { 
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      const result = data.chart?.result?.[0];
+      const meta = result?.meta;
+      
+      if (meta?.regularMarketPrice) {
+        return meta.regularMarketPrice;
+      }
+    }
+  } catch (err) {
+    console.warn("Yahoo Finance crypto fetch failed:", err);
+  }
+
+  // Fallback to Alpha Vantage if API key exists
   if (ALPHA_VANTAGE_API_KEY) {
     try {
-      // Use DIGITAL_CURRENCY_DAILY to get latest close price
       const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url, { cache: 'no-store' }); // Always fresh
+      const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
 
-      // Get the most recent day's closing price
       const timeSeries = data["Time Series (Digital Currency Daily)"];
       if (timeSeries) {
         const latestDate = Object.keys(timeSeries)[0];
@@ -87,60 +111,6 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
     } catch (err) {
       console.warn("Alpha Vantage crypto fetch failed:", err);
     }
-  }
-
-  // Fallback to CoinGecko free API (no key required)
-  try {
-    // Map common symbols to CoinGecko IDs
-    const idMap: Record<string, string> = {
-      BTC: "bitcoin",
-      ETH: "ethereum",
-      XRP: "ripple",
-      ADA: "cardano",
-      SOL: "solana",
-      DOGE: "dogecoin",
-      DOT: "polkadot",
-      MATIC: "matic-network",
-      AVAX: "avalanche-2",
-      LINK: "chainlink",
-      FET: "fetch-ai",
-      BNB: "binancecoin",
-      SHIB: "shiba-inu",
-      LTC: "litecoin",
-      UNI: "uniswap",
-      ATOM: "cosmos",
-      XLM: "stellar",
-      NEAR: "near",
-      APT: "aptos",
-      ARB: "arbitrum",
-      OP: "optimism",
-      INJ: "injective-protocol",
-      STX: "blockstack",
-      ICP: "internet-computer",
-      FIL: "filecoin",
-      RENDER: "render-token",
-      IMX: "immutable-x",
-      SUI: "sui",
-      SEI: "sei-network",
-      TIA: "celestia",
-      PEPE: "pepe",
-      WIF: "dogwifcoin",
-      JUP: "jupiter-exchange-solana",
-      HBAR: "hedera-hashgraph",
-      KAS: "kaspa",
-    };
-
-    const coinId = idMap[symbol] || symbol.toLowerCase();
-    const marketLower = market.toLowerCase();
-
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=${marketLower}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
-
-    const price = data[coinId]?.[marketLower];
-    if (price) return parseFloat(price);
-  } catch (err) {
-    console.warn("CoinGecko fallback failed:", err);
   }
 
   return null;

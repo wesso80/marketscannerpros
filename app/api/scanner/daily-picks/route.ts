@@ -114,9 +114,9 @@ export async function GET(req: NextRequest) {
         bottomEquity: bottomPicks.equity[0] || null,
         bottomCrypto: bottomPicks.crypto[0] || null
       },
-      // Powered by attribution (required by CoinGecko TOS)
+      // Powered by attribution
       attribution: {
-        crypto: "Powered by CoinGecko"
+        crypto: "Powered by Yahoo Finance"
       }
     });
 
