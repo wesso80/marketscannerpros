@@ -1,49 +1,48 @@
 import { Resend } from "resend";
 
-let connectionSettings: any;
+// Direct API key from environment (for Render/Vercel)
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "alerts@marketscannerpros.app";
 
-async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+let resendClient: Resend | null = null;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+function getResendClient(): Resend | null {
+  if (!RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not set - email notifications disabled");
+    return null;
   }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
+  if (!resendClient) {
+    resendClient = new Resend(RESEND_API_KEY);
   }
-  return {apiKey: connectionSettings.settings.api_key, fromEmail: connectionSettings.settings.from_email};
-}
-
-async function getResendClient() {
-  const { apiKey, fromEmail } = await getCredentials();
-  return {
-    client: new Resend(apiKey),
-    fromEmail: fromEmail || "onboarding@resend.dev"
-  };
+  return resendClient;
 }
 
 export async function sendAlertEmail({
   to, subject, html,
 }: { to: string; subject: string; html: string }) {
-  const { client, fromEmail } = await getResendClient();
+  const client = getResendClient();
+  if (!client) {
+    console.log(`[Email Skipped] No Resend client - would send to ${to}: ${subject}`);
+    return null;
+  }
 
-  const { data, error } = await client.emails.send({ from: fromEmail, to, subject, html });
-  if (error) throw new Error(error.message || "Resend send failed");
-  return data?.id ?? null;
+  try {
+    const { data, error } = await client.emails.send({ 
+      from: FROM_EMAIL, 
+      to, 
+      subject, 
+      html 
+    });
+    
+    if (error) {
+      console.error("Resend error:", error);
+      throw new Error(error.message || "Resend send failed");
+    }
+    
+    console.log(`📧 Email sent to ${to}: ${subject}`);
+    return data?.id ?? null;
+  } catch (err) {
+    console.error("Email send failed:", err);
+    throw err;
+  }
 }

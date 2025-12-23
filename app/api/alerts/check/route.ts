@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { sendAlertEmail } from '@/lib/email';
 
 /**
  * Alert Price Checker
@@ -164,6 +165,16 @@ function checkCondition(alert: Alert, currentPrice: number): boolean {
 async function triggerAlert(alert: Alert, triggerPrice: number) {
   const conditionMet = formatConditionMet(alert, triggerPrice);
   
+  // Get user email for notifications
+  let userEmail: string | null = null;
+  if (alert.notify_email) {
+    const userResult = await q<{ email: string }>(
+      `SELECT email FROM user_subscriptions WHERE workspace_id = $1`,
+      [alert.workspace_id]
+    );
+    userEmail = userResult[0]?.email || null;
+  }
+  
   // Record in history
   await q(
     `INSERT INTO alert_history (
@@ -178,7 +189,7 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
       alert.symbol,
       alert.condition_type,
       alert.condition_value,
-      true, // We'll mark as sent even if delivery fails for now
+      !!userEmail, // Mark as sent only if we have email
       alert.notify_email && alert.notify_push ? 'both' : alert.notify_email ? 'email' : 'push',
     ]
   );
@@ -210,10 +221,60 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
     [alert.workspace_id]
   );
 
-  // TODO: Send actual notifications
-  // - Push notification via web push or service like OneSignal
-  // - Email via SendGrid/Resend
-  console.log(`🔔 Alert triggered: ${alert.name} - ${conditionMet}`);
+  // Send email notification
+  if (alert.notify_email && userEmail) {
+    try {
+      const formattedPrice = triggerPrice >= 1 ? triggerPrice.toFixed(2) : triggerPrice.toFixed(6);
+      await sendAlertEmail({
+        to: userEmail,
+        subject: `🔔 Price Alert: ${alert.symbol} - ${alert.name || conditionMet}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #0f172a; color: #fff;">
+            <h1 style="color: #10b981; margin-bottom: 20px;">🔔 Price Alert Triggered</h1>
+            
+            <div style="background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h2 style="color: #fff; margin: 0 0 10px 0; font-size: 24px;">${alert.symbol}</h2>
+              <p style="color: #94a3b8; margin: 0 0 15px 0;">${alert.name || 'Price Alert'}</p>
+              
+              <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div>
+                  <span style="color: #64748b; font-size: 12px;">CURRENT PRICE</span>
+                  <p style="color: #10b981; font-size: 28px; font-weight: bold; margin: 5px 0;">$${formattedPrice}</p>
+                </div>
+                <div>
+                  <span style="color: #64748b; font-size: 12px;">TARGET</span>
+                  <p style="color: #fff; font-size: 28px; font-weight: bold; margin: 5px 0;">$${alert.condition_value}</p>
+                </div>
+              </div>
+              
+              <p style="color: #fbbf24; margin-top: 15px; font-size: 14px;">
+                ${conditionMet}
+              </p>
+            </div>
+            
+            <a href="https://marketscannerpros.app/tools/alerts" 
+               style="display: inline-block; background: #10b981; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+              View All Alerts →
+            </a>
+            
+            <p style="color: #64748b; font-size: 12px; margin-top: 30px;">
+              ${alert.is_recurring ? '🔄 This is a recurring alert and will trigger again.' : 'This alert has been automatically deactivated.'}
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;" />
+            <p style="color: #64748b; font-size: 11px;">
+              MarketScanner Pros • <a href="https://marketscannerpros.app/tools/alerts" style="color: #64748b;">Manage Alerts</a>
+            </p>
+          </div>
+        `,
+      });
+      console.log(`📧 Alert email sent to ${userEmail}: ${alert.symbol}`);
+    } catch (emailError) {
+      console.error(`Failed to send alert email:`, emailError);
+    }
+  }
+
+  console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
 }
 
 function formatConditionMet(alert: Alert, price: number): string {
