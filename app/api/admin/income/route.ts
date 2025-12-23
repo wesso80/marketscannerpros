@@ -19,12 +19,47 @@ const SUBSCRIPTION_PRICES = {
 // Monthly fixed costs (estimate)
 const FIXED_COSTS = {
   render: 25.00,        // Render hosting
-  github: 4.00,         // GitHub Pro ($4/mo for private repos, actions, etc)
+  github: 4.00,         // GitHub Pro (will be overwritten by API if available)
   vercel_db: 0,         // Neon free tier
   domain: 1.50,         // ~$18/year = $1.50/month
-  alpha_vantage: 0,     // Free tier
+  alpha_vantage: 49.99, // Alpha Vantage Premium
   stripe_base: 0,       // No monthly fee
 };
+
+// Fetch GitHub billing if token available
+async function getGitHubBilling(): Promise<number | null> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return null;
+  
+  try {
+    // Get authenticated user's billing for actions
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+    
+    if (!res.ok) return null;
+    
+    const user = await res.json();
+    
+    // For personal accounts, try to get billing info
+    // Note: GitHub API doesn't expose subscription costs directly
+    // This would need to be set manually or use GitHub's billing API for orgs
+    
+    // Check if user has pro plan
+    if (user.plan?.name === 'pro') {
+      return 4.00; // GitHub Pro is $4/month
+    } else if (user.plan?.name === 'team') {
+      return 4.00; // Per user for team
+    }
+    
+    return 0; // Free tier
+  } catch {
+    return null;
+  }
+}
 
 // Stripe fee per transaction: 2.9% + $0.30
 const STRIPE_PERCENTAGE = 0.029;
@@ -104,8 +139,15 @@ export async function GET(req: NextRequest) {
       (parseInt(aiUsage.prompt_tokens) / 1_000_000) * 2.50 +
       (parseInt(aiUsage.completion_tokens) / 1_000_000) * 10.00;
 
+    // Try to get GitHub billing from API
+    const githubBilling = await getGitHubBilling();
+    const fixedCostsWithGitHub = {
+      ...FIXED_COSTS,
+      github: githubBilling ?? FIXED_COSTS.github,
+    };
+
     // Calculate total fixed costs
-    const totalFixedCosts = Object.values(FIXED_COSTS).reduce((a, b) => a + b, 0);
+    const totalFixedCosts = Object.values(fixedCostsWithGitHub).reduce((a, b) => a + b, 0);
 
     // Total costs
     const totalCosts = totalFixedCosts + aiCost + stripeFees;
@@ -164,7 +206,7 @@ export async function GET(req: NextRequest) {
         churnThisMonth: parseInt(churnThisMonthRows[0]?.count || '0'),
       },
       costs: {
-        fixed: FIXED_COSTS,
+        fixed: fixedCostsWithGitHub,
         totalFixed: totalFixedCosts,
         ai: aiCost,
         stripe: stripeFees,
