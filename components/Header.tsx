@@ -122,7 +122,6 @@ export default function Header() {
 
   const resourceItems: DropdownItem[] = [
     { href: '/guide', label: 'Trading Guides', icon: '📚' },
-    { href: '/tradingview-scripts', label: 'TradingView Scripts', icon: '📜' },
     { href: '/blog', label: 'Blog', icon: '✍️' },
     { href: '/partners', label: 'Partners', icon: '🤝' },
   ];
