@@ -105,6 +105,7 @@ function AlertsContent() {
             <li><strong className="text-indigo-300">OI Divergence:</strong> Smart money accumulation/distribution</li>
           </ul>
         </div>
+      </div>
 
       {/* Feature Cards */}
       <div className="mt-6 grid md:grid-cols-3 gap-4">
