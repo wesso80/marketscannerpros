@@ -277,28 +277,30 @@ If information is missing, say so explicitly instead of guessing.
     }
 
     // NEW: Inject derivatives context if crypto-related query
-    const isCryptoQuery = context?.symbol?.includes('BTC') || 
-                          context?.symbol?.includes('ETH') || 
+    const cryptoKeywords = ['btc', 'eth', 'bitcoin', 'ethereum', 'crypto', 'sol', 'xrp', 'doge', 'bnb', 'ada', 'avax', 'link', 'matic', 'ltc'];
+    const queryLower = query.toLowerCase();
+    const symbolLower = (context?.symbol || '').toLowerCase();
+    
+    const isCryptoQuery = cryptoKeywords.some(kw => queryLower.includes(kw) || symbolLower.includes(kw)) ||
                           context?.symbol?.includes('USDT') ||
-                          query.toLowerCase().includes('bitcoin') ||
-                          query.toLowerCase().includes('crypto') ||
-                          query.toLowerCase().includes('btc') ||
-                          query.toLowerCase().includes('eth');
+                          context?.symbol?.includes('-USD');
     
     if (isCryptoQuery) {
       try {
-        // Fetch derivatives data in parallel
-        const baseUrl = req.headers.get('host')?.includes('localhost') 
-          ? 'http://localhost:3000' 
-          : `https://${req.headers.get('host')}`;
+        // Determine base URL for internal API calls
+        const host = req.headers.get('host') || 'localhost:5000';
+        const protocol = host.includes('localhost') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${host}`;
         
-        const [oiRes, lsRes, fundingRes] = await Promise.all([
-          fetch(`${baseUrl}/api/open-interest`).then(r => r.json()).catch(() => null),
-          fetch(`${baseUrl}/api/long-short-ratio`).then(r => r.json()).catch(() => null),
-          fetch(`${baseUrl}/api/funding-rates`).then(r => r.json()).catch(() => null),
+        // Fetch all derivatives data in parallel
+        const [oiRes, lsRes, fundingRes, fearGreedRes] = await Promise.all([
+          fetch(`${baseUrl}/api/open-interest`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+          fetch(`${baseUrl}/api/long-short-ratio`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+          fetch(`${baseUrl}/api/funding-rates`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+          fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
         ]);
 
-        let derivativesContext = '\nDERIVATIVES MARKET DATA (Current Binance Futures):\n';
+        let derivativesContext = '\n📊 DERIVATIVES & SENTIMENT DATA (Live from Binance Futures):\n';
         
         if (oiRes && oiRes.total) {
           derivativesContext += `
@@ -324,7 +326,7 @@ LONG/SHORT RATIO:
 
         if (fundingRes && fundingRes.average) {
           derivativesContext += `
-FUNDING RATES:
+💰 FUNDING RATES:
 - Average Funding: ${fundingRes.average.fundingRatePercent}%
 - Annualized: ${fundingRes.average.annualized}%
 - Sentiment: ${fundingRes.average.sentiment}
@@ -332,13 +334,50 @@ FUNDING RATES:
 `;
         }
 
-        if (oiRes?.total || lsRes?.average || fundingRes?.average) {
+        // Add Fear & Greed Index
+        if (fearGreedRes && fearGreedRes.current) {
+          const fgValue = fearGreedRes.current.value;
+          derivativesContext += `
+😱 CRYPTO FEAR & GREED INDEX:
+- Score: ${fgValue}/100
+- Classification: ${fearGreedRes.current.classification}
+- Trend: ${fgValue < 25 ? '🔴 Extreme Fear (contrarian bullish)' : 
+           fgValue < 45 ? '🟠 Fear' : 
+           fgValue < 55 ? '🟡 Neutral' : 
+           fgValue < 75 ? '🟢 Greed' : '🔴 Extreme Greed (contrarian bearish)'}
+`;
+        }
+
+        if (oiRes?.total || lsRes?.average || fundingRes?.average || fearGreedRes?.data) {
           messages.push({
             role: "system",
             content: derivativesContext + `
-Use this derivatives data to enhance your analysis. 
-Identify if derivatives confirm or diverge from price action.
-Flag extreme readings (OI change >5%, L/S ratio >1.5 or <0.7, funding >0.05% or <-0.05%).
+
+🎯 DERIVATIVES INTERPRETATION GUIDE:
+Use this data to enhance your analysis:
+
+1. OPEN INTEREST SIGNALS:
+   - OI ↑ + Price ↑ = Strong bullish (new money entering longs)
+   - OI ↑ + Price ↓ = Strong bearish (new shorts opening)
+   - OI ↓ + Price ↑ = Weak rally (short covering)
+   - OI ↓ + Price ↓ = Capitulation (long liquidations)
+   - OI change >5% in 24h = High conviction move
+
+2. LONG/SHORT RATIO:
+   - L/S > 1.5 = Crowded longs (risk of squeeze down)
+   - L/S < 0.7 = Crowded shorts (risk of squeeze up)
+   - Extreme readings often precede reversals
+
+3. FUNDING RATES:
+   - Funding > 0.05% = Overleveraged longs (bearish signal)
+   - Funding < -0.05% = Overleveraged shorts (bullish signal)
+   - Neutral funding = Balanced market
+
+4. FEAR & GREED:
+   - <25 = Extreme Fear (historically good buying opportunity)
+   - >75 = Extreme Greed (historically good time to take profits)
+
+Always mention which derivatives signals support or contradict your analysis.
             `.trim(),
           });
         }
