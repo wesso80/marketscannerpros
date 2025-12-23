@@ -133,6 +133,10 @@ export async function isSubscribedToPush(): Promise<boolean> {
   if (!isPushSupported()) return false;
   
   try {
+    // Check if service worker is registered first
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    if (registrations.length === 0) return false;
+    
     const registration = await navigator.serviceWorker.ready;
     const subscription = await registration.pushManager.getSubscription();
     return subscription !== null;
