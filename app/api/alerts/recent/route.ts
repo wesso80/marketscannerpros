@@ -23,9 +23,9 @@ export async function GET(req: NextRequest) {
       SELECT 
         h.id,
         a.symbol,
-        a.condition,
-        a.target_price,
-        h.triggered_price,
+        a.condition_type,
+        a.condition_value,
+        h.trigger_price AS triggered_price,
         h.triggered_at
       FROM alert_history h
       JOIN alerts a ON h.alert_id = a.id
