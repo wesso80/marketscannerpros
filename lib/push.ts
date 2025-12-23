@@ -3,8 +3,7 @@
  * Handles Web Push API integration for real-time alerts
  */
 
-// VAPID public key - generate with: npx web-push generate-vapid-keys
-// Store private key in VAPID_PRIVATE_KEY env var
+// VAPID public key - NEXT_PUBLIC_ vars are inlined at build time
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
 export interface PushSubscriptionData {
@@ -76,6 +75,7 @@ export async function subscribeToPush(): Promise<PushSubscriptionData | null> {
     
     if (!subscription) {
       // Create new subscription
+      console.log('[Push] VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.substring(0, 30)}...` : 'NOT SET');
       if (!VAPID_PUBLIC_KEY) {
         console.warn('[Push] VAPID public key not configured');
         return null;
