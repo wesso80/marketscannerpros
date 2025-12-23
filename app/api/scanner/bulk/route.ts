@@ -394,6 +394,74 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]) {
 }
 
 // =============================================================================
+// BINANCE DERIVATIVES DATA (OI, FUNDING, L/S RATIO)
+// =============================================================================
+
+interface DerivativesData {
+  openInterest: number;        // OI in USD
+  openInterestCoin: number;    // OI in native coin
+  oiChange24h?: number;        // 24h OI change %
+  fundingRate?: number;        // Current funding rate
+  longShortRatio?: number;     // L/S ratio
+}
+
+async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
+  try {
+    // Convert BTC -> BTCUSDT for Binance
+    const binanceSymbol = `${symbol}USDT`;
+    
+    const [oiRes, fundingRes, lsRes] = await Promise.all([
+      // Open Interest
+      fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${binanceSymbol}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null),
+      // Funding Rate
+      fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${binanceSymbol}&limit=1`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null),
+      // Long/Short Ratio
+      fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${binanceSymbol}&period=1h&limit=1`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null)
+    ]);
+    
+    let openInterestCoin = 0;
+    let fundingRate: number | undefined;
+    let longShortRatio: number | undefined;
+    
+    if (oiRes?.ok) {
+      const oi = await oiRes.json();
+      openInterestCoin = parseFloat(oi.openInterest || '0');
+    }
+    
+    if (fundingRes?.ok) {
+      const funding = await fundingRes.json();
+      if (funding?.[0]?.fundingRate) {
+        fundingRate = parseFloat(funding[0].fundingRate) * 100; // Convert to %
+      }
+    }
+    
+    if (lsRes?.ok) {
+      const ls = await lsRes.json();
+      if (ls?.[0]?.longShortRatio) {
+        longShortRatio = parseFloat(ls[0].longShortRatio);
+      }
+    }
+    
+    if (openInterestCoin === 0) return null;
+    
+    return {
+      openInterest: 0, // Will calculate with price
+      openInterestCoin,
+      fundingRate,
+      longShortRatio
+    };
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
 // MAIN HANDLER
 // =============================================================================
 
@@ -413,6 +481,18 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
     
     console.log(`[bulk-scan] Scanning ${universe.length} ${type}...`);
+    
+    // For crypto, pre-fetch all derivatives data in parallel
+    const derivativesMap = new Map<string, DerivativesData>();
+    if (type === 'crypto') {
+      const derivSymbols = CRYPTO_UNIVERSE.map(s => s.replace(/-USD$/, ''));
+      const derivPromises = derivSymbols.map(async (symbol) => {
+        const data = await fetchCryptoDerivatives(symbol);
+        if (data) derivativesMap.set(symbol, data);
+      });
+      await Promise.all(derivPromises);
+      console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins`);
+    }
     
     // Process in parallel batches - Yahoo Finance for both equity and crypto
     const BATCH_SIZE = 10;
@@ -434,7 +514,19 @@ export async function POST(req: NextRequest) {
           const result = analyzeAsset(id, ohlcv);
           if (result && type === 'crypto') {
             // Clean up crypto symbol: "BTC-USD" -> "BTC"
-            result.symbol = id.replace(/-USD$/, '');
+            const cleanSymbol = id.replace(/-USD$/, '');
+            result.symbol = cleanSymbol;
+            
+            // Add derivatives data
+            const derivData = derivativesMap.get(cleanSymbol);
+            if (derivData && result.indicators?.price) {
+              result.derivatives = {
+                openInterest: derivData.openInterestCoin * result.indicators.price,
+                openInterestCoin: derivData.openInterestCoin,
+                fundingRate: derivData.fundingRate,
+                longShortRatio: derivData.longShortRatio
+              };
+            }
           }
           return result;
         } catch (e: any) {

@@ -758,6 +758,54 @@ function ScannerContent() {
                         </span>
                       )}
                     </div>
+                    
+                    {/* Derivatives data for crypto */}
+                    {bulkScanResults.type === 'crypto' && pick.derivatives && (
+                      <div style={{ 
+                        display: "flex", 
+                        gap: "10px", 
+                        marginTop: "8px",
+                        paddingTop: "8px",
+                        borderTop: "1px solid rgba(148,163,184,0.1)",
+                        fontSize: "10px",
+                        color: "#64748b",
+                        flexWrap: "wrap"
+                      }}>
+                        {pick.derivatives.openInterest > 0 && (
+                          <span title="Open Interest">
+                            📊 OI: <span style={{ color: "#3b82f6" }}>
+                              ${pick.derivatives.openInterest >= 1e9 
+                                ? (pick.derivatives.openInterest / 1e9).toFixed(2) + 'B'
+                                : pick.derivatives.openInterest >= 1e6 
+                                  ? (pick.derivatives.openInterest / 1e6).toFixed(1) + 'M'
+                                  : pick.derivatives.openInterest.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </span>
+                          </span>
+                        )}
+                        {pick.derivatives.fundingRate !== undefined && (
+                          <span title="Funding Rate (8h)">
+                            💰 FR: <span style={{ 
+                              color: pick.derivatives.fundingRate > 0.05 ? '#ef4444' 
+                                : pick.derivatives.fundingRate < -0.05 ? '#10b981' 
+                                : '#94a3b8' 
+                            }}>
+                              {pick.derivatives.fundingRate >= 0 ? '+' : ''}{pick.derivatives.fundingRate.toFixed(4)}%
+                            </span>
+                          </span>
+                        )}
+                        {pick.derivatives.longShortRatio && (
+                          <span title="Long/Short Ratio">
+                            ⚖️ L/S: <span style={{ 
+                              color: pick.derivatives.longShortRatio > 1.5 ? '#10b981' 
+                                : pick.derivatives.longShortRatio < 0.67 ? '#ef4444' 
+                                : '#94a3b8' 
+                            }}>
+                              {pick.derivatives.longShortRatio.toFixed(2)}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
