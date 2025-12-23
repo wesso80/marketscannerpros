@@ -129,10 +129,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch crypto data' }, { status: 500 });
   }
 }
-    });
-    
-  } catch (error) {
-    console.error('Error fetching crypto data:', error);
-    return NextResponse.json({ error: 'Failed to fetch crypto data' }, { status: 500 });
-  }
-}
