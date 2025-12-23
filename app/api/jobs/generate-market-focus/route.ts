@@ -108,9 +108,19 @@ async function generateExplanation(c: Candidate): Promise<string> {
   }
 }
 
+// Accept both GET (for cron-job.org) and POST
+export async function GET(req: Request) {
+  return runMarketFocusJob(req);
+}
+
 export async function POST(req: Request) {
+  return runMarketFocusJob(req);
+}
+
+async function runMarketFocusJob(req: Request) {
+  // Optional secret check - only enforced if CRON_SECRET is set
   const secret = req.headers.get("x-cron-secret");
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

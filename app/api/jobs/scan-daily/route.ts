@@ -493,18 +493,33 @@ async function scanForex(symbol: string, apiKey: string): Promise<any | null> {
   }
 }
 
+// Accept both GET (for cron-job.org) and POST
+export async function GET(req: NextRequest) {
+  return runDailyScan(req);
+}
+
 export async function POST(req: NextRequest) {
+  return runDailyScan(req);
+}
+
+async function runDailyScan(req: NextRequest) {
   try {
-    // Verify cron secret or admin
-    const authHeader = req.headers.get("authorization");
+    // Optional secret check - via header or bearer token
     const cronSecret = process.env.CRON_SECRET;
+    const headerSecret = req.headers.get("x-cron-secret");
+    const authHeader = req.headers.get("authorization");
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Check if admin call
-      const { searchParams } = new URL(req.url);
-      const adminKey = searchParams.get("key");
-      if (adminKey !== process.env.ADMIN_SECRET && adminKey !== process.env.ADMIN_API_KEY) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (cronSecret) {
+      const validHeader = headerSecret === cronSecret;
+      const validBearer = authHeader === `Bearer ${cronSecret}`;
+      
+      if (!validHeader && !validBearer) {
+        // Check if admin call
+        const { searchParams } = new URL(req.url);
+        const adminKey = searchParams.get("key");
+        if (adminKey !== process.env.ADMIN_SECRET && adminKey !== process.env.ADMIN_API_KEY) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
       }
     }
 
