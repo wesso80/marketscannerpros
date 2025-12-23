@@ -7,7 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import SentimentWidget from "@/components/SentimentWidget";
+import CustomFearGreedGauge from "@/components/CustomFearGreedGauge";
 import OpenInterestWidget from "@/components/OpenInterestWidget";
 import DerivativesWidget from "@/components/DerivativesWidget";
 import AlertsWidget from "@/components/AlertsWidget";
@@ -463,9 +463,9 @@ function ScannerContent() {
           </div>
         </div>
 
-        {/* Market Sentiment - Fear & Greed Index (Crypto + Stocks) */}
+        {/* Market Sentiment - Custom Fear & Greed Index (Crypto + Stocks) */}
         <div style={{ marginBottom: "0.75rem" }}>
-          <SentimentWidget showDetails={true} />
+          <CustomFearGreedGauge />
         </div>
 
         {/* Open Interest Widget */}
