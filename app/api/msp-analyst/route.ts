@@ -427,13 +427,23 @@ Always mention which derivatives signals support or contradict your analysis.
     }
 
     const text = response.choices[0]?.message?.content ?? "";
+    const usage = response.usage;
 
-    // Track usage in database
+    // Track usage in database (including tokens for cost tracking)
     try {
       await q(
-        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
-        VALUES ($1, $2, $3, $4, NOW())`,
-        [workspaceId, query.substring(0, 500), text.length, tier]
+        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        [
+          workspaceId, 
+          query.substring(0, 500), 
+          text.length, 
+          tier,
+          usage?.prompt_tokens || 0,
+          usage?.completion_tokens || 0,
+          usage?.total_tokens || 0,
+          'gpt-4o-mini'
+        ]
       );
     } catch (dbErr) {
       logger.error('Error tracking AI usage', { error: dbErr, workspaceId });
