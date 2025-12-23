@@ -419,6 +419,45 @@ export default function AlertsWidget({
       {/* Create Alert Form */}
       {showCreate && (
         <div className="p-4 bg-slate-900/50 border-b border-slate-700">
+          {/* Quick Template Dropdown */}
+          <div className="mb-4">
+            <label className="text-xs text-slate-400 block mb-1">⚡ Quick Template</label>
+            <select
+              onChange={e => {
+                const templates: Record<string, any> = {
+                  '': {},
+                  'btc_dip': { symbol: 'BTC', conditionType: 'price_below', conditionValue: '90000', name: 'BTC under $90K', assetType: 'crypto' },
+                  'btc_ath': { symbol: 'BTC', conditionType: 'price_above', conditionValue: '110000', name: 'BTC new ATH zone', assetType: 'crypto' },
+                  'eth_dip': { symbol: 'ETH', conditionType: 'price_below', conditionValue: '3000', name: 'ETH under $3K', assetType: 'crypto' },
+                  'sol_breakout': { symbol: 'SOL', conditionType: 'price_above', conditionValue: '250', name: 'SOL breakout', assetType: 'crypto' },
+                  'spy_correction': { symbol: 'SPY', conditionType: 'percent_change_down', conditionValue: '2', name: 'SPY 2% drop', assetType: 'equity' },
+                  'spy_rally': { symbol: 'SPY', conditionType: 'percent_change_up', conditionValue: '1.5', name: 'SPY rally day', assetType: 'equity' },
+                  'nvda_dip': { symbol: 'NVDA', conditionType: 'price_below', conditionValue: '130', name: 'NVDA dip buy', assetType: 'equity' },
+                  'aapl_breakout': { symbol: 'AAPL', conditionType: 'price_above', conditionValue: '260', name: 'AAPL breakout', assetType: 'equity' },
+                };
+                const t = templates[e.target.value];
+                if (t && Object.keys(t).length > 0) {
+                  setNewAlert(prev => ({ ...prev, ...t }));
+                }
+              }}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
+            >
+              <option value="">-- Select a template or create custom --</option>
+              <optgroup label="🪙 Crypto">
+                <option value="btc_dip">BTC Dip Alert ($90K)</option>
+                <option value="btc_ath">BTC ATH Zone ($110K)</option>
+                <option value="eth_dip">ETH Dip Alert ($3K)</option>
+                <option value="sol_breakout">SOL Breakout ($250)</option>
+              </optgroup>
+              <optgroup label="📈 Stocks">
+                <option value="spy_correction">SPY Correction (2% drop)</option>
+                <option value="spy_rally">SPY Rally Day (1.5% up)</option>
+                <option value="nvda_dip">NVDA Dip Buy ($130)</option>
+                <option value="aapl_breakout">AAPL Breakout ($260)</option>
+              </optgroup>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
             <input
               type="text"
@@ -582,6 +621,55 @@ export default function AlertsWidget({
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xl">🧠</span>
                       <h4 className="font-semibold text-white">New Smart Alert</h4>
+                    </div>
+
+                    {/* Quick Smart Alert Templates */}
+                    <div className="mb-4">
+                      <label className="text-xs text-slate-400 block mb-1">⚡ Quick Template</label>
+                      <select
+                        onChange={e => {
+                          const templates: Record<string, any> = {
+                            '': {},
+                            'btc_oi_surge': { symbol: 'BTC', conditionType: 'oi_surge', conditionValue: '5', name: 'BTC OI Spike', cooldownMinutes: 60 },
+                            'eth_oi_surge': { symbol: 'ETH', conditionType: 'oi_surge', conditionValue: '5', name: 'ETH OI Spike', cooldownMinutes: 60 },
+                            'market_oi_surge': { symbol: '', conditionType: 'oi_surge', conditionValue: '3', name: 'Market OI Surge', cooldownMinutes: 240 },
+                            'btc_funding_long': { symbol: 'BTC', conditionType: 'funding_extreme_pos', conditionValue: '0.05', name: 'BTC Overleveraged Longs', cooldownMinutes: 240 },
+                            'btc_funding_short': { symbol: 'BTC', conditionType: 'funding_extreme_neg', conditionValue: '0.05', name: 'BTC Overleveraged Shorts', cooldownMinutes: 240 },
+                            'crowded_longs': { symbol: '', conditionType: 'ls_ratio_high', conditionValue: '1.5', name: 'Crowded Longs Warning', cooldownMinutes: 240 },
+                            'crowded_shorts': { symbol: '', conditionType: 'ls_ratio_low', conditionValue: '0.7', name: 'Crowded Shorts Warning', cooldownMinutes: 240 },
+                            'extreme_fear': { symbol: '', conditionType: 'fear_extreme', conditionValue: '25', name: 'Extreme Fear Buy Signal', cooldownMinutes: 1440 },
+                            'extreme_greed': { symbol: '', conditionType: 'greed_extreme', conditionValue: '75', name: 'Extreme Greed Sell Signal', cooldownMinutes: 1440 },
+                            'bull_divergence': { symbol: 'BTC', conditionType: 'oi_divergence_bull', conditionValue: '3', name: 'Bullish OI Divergence', cooldownMinutes: 240 },
+                            'bear_divergence': { symbol: 'BTC', conditionType: 'oi_divergence_bear', conditionValue: '3', name: 'Bearish OI Divergence', cooldownMinutes: 240 },
+                          };
+                          const t = templates[e.target.value];
+                          if (t && Object.keys(t).length > 0) {
+                            setNewSmartAlert(prev => ({ ...prev, ...t }));
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
+                      >
+                        <option value="">-- Select a template or create custom --</option>
+                        <optgroup label="📊 Open Interest">
+                          <option value="btc_oi_surge">BTC OI Spike (5% surge)</option>
+                          <option value="eth_oi_surge">ETH OI Spike (5% surge)</option>
+                          <option value="market_oi_surge">Market-Wide OI Surge</option>
+                          <option value="bull_divergence">Bullish OI Divergence</option>
+                          <option value="bear_divergence">Bearish OI Divergence</option>
+                        </optgroup>
+                        <optgroup label="💰 Funding Rates">
+                          <option value="btc_funding_long">BTC Overleveraged Longs</option>
+                          <option value="btc_funding_short">BTC Overleveraged Shorts</option>
+                        </optgroup>
+                        <optgroup label="⚖️ Long/Short Ratio">
+                          <option value="crowded_longs">Crowded Longs Warning</option>
+                          <option value="crowded_shorts">Crowded Shorts Warning</option>
+                        </optgroup>
+                        <optgroup label="😱 Fear & Greed">
+                          <option value="extreme_fear">Extreme Fear (Buy Signal)</option>
+                          <option value="extreme_greed">Extreme Greed (Sell Signal)</option>
+                        </optgroup>
+                      </select>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 mb-3">
