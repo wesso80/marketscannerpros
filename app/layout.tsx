@@ -5,7 +5,6 @@ import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 import Header from "../components/Header";
 import { validateEnv } from "@/lib/env";
-import { Analytics } from "@vercel/analytics/react";
 import { Suspense } from "react";
 
 // Validate environment variables on the server. In Vercel/production we require
@@ -72,7 +71,6 @@ export default function RootLayout({
         <Suspense>
           <AnalyticsLoader />
         </Suspense>
-        <Analytics />
         <BackToTop />
       </body>
     </html>

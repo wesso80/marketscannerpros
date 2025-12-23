@@ -193,7 +193,8 @@ export default function AlertsWidget({
     }
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | null | undefined) => {
+    if (price == null || typeof price !== 'number' || isNaN(price)) return '—';
     if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
     if (price >= 1) return price.toFixed(2);
     return price.toFixed(6);
