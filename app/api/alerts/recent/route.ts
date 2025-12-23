@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
       SELECT 
         h.id,
         a.symbol,
-        a.condition_type,
-        a.condition_value,
+        a.condition_type AS condition,
+        a.condition_value AS target_price,
         h.trigger_price AS triggered_price,
         h.triggered_at
       FROM alert_history h
       JOIN alerts a ON h.alert_id = a.id
-      WHERE a.workspace_id = $1
+      WHERE h.workspace_id = $1
         AND h.triggered_at > $2
         AND h.acknowledged_at IS NULL
       ORDER BY h.triggered_at DESC

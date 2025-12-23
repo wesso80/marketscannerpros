@@ -91,10 +91,11 @@ export default function AlertToast() {
 
   const formatCondition = (condition: string) => {
     switch (condition) {
-      case 'above': return '↑ Above';
-      case 'below': return '↓ Below';
-      case 'percent_up': return '📈 Up %';
-      case 'percent_down': return '📉 Down %';
+      case 'price_above': return '↑ Above';
+      case 'price_below': return '↓ Below';
+      case 'percent_change_up': return '📈 Up %';
+      case 'percent_change_down': return '📉 Down %';
+      case 'volume_spike': return '📊 Volume';
       default: return condition;
     }
   };
