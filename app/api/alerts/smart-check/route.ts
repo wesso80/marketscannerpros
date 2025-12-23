@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
+import { sendPushToUser } from '@/lib/pushServer';
 
 /**
  * Smart Alerts Checker
@@ -22,6 +23,7 @@ interface SmartAlert {
   condition_value: number;
   is_recurring: boolean;
   notify_email: boolean;
+  notify_push: boolean;
   name: string;
   cooldown_minutes: number;
   triggered_at: string | null;
@@ -67,7 +69,7 @@ async function checkSmartAlerts(req: NextRequest) {
     // Get all active smart alerts
     const alerts = await q<SmartAlert>(`
       SELECT id, workspace_id, symbol, condition_type, condition_value,
-             is_recurring, notify_email, name, cooldown_minutes, triggered_at
+             is_recurring, notify_email, notify_push, name, cooldown_minutes, triggered_at
       FROM alerts 
       WHERE is_active = true 
         AND is_smart_alert = true
@@ -400,6 +402,26 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
       });
     } catch (emailErr) {
       console.error('Failed to send smart alert email:', emailErr);
+    }
+  }
+
+  // Send push notification
+  if (alert.notify_push && result.message) {
+    try {
+      await sendPushToUser(alert.workspace_id, {
+        title: `🎯 ${alert.name || 'Smart Alert'}`,
+        body: result.message,
+        tag: `smart-alert-${alert.condition_type}`,
+        data: {
+          url: '/tools/scanner',
+          type: 'smart_alert',
+          alertId: alert.id,
+          symbol: alert.symbol
+        }
+      });
+      console.log(`🔔 Push sent for smart alert: ${alert.name || alert.condition_type}`);
+    } catch (pushErr) {
+      console.error('Failed to send smart alert push:', pushErr);
     }
   }
 }

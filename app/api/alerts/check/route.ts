@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
+import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 
 /**
  * Alert Price Checker
@@ -271,6 +272,29 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
       console.log(`📧 Alert email sent to ${userEmail}: ${alert.symbol}`);
     } catch (emailError) {
       console.error(`Failed to send alert email:`, emailError);
+    }
+  }
+
+  // Send push notification
+  if (alert.notify_push) {
+    try {
+      const formattedPrice = triggerPrice >= 1 ? triggerPrice.toFixed(2) : triggerPrice.toFixed(6);
+      const condition = alert.condition_type === 'price_above' ? 'crossed above' : 'dropped below';
+      
+      await sendPushToUser(alert.workspace_id, {
+        title: `📊 ${alert.symbol} Alert`,
+        body: `${alert.symbol} ${condition} $${alert.condition_value} (now $${formattedPrice})`,
+        tag: `price-alert-${alert.symbol}`,
+        data: {
+          url: '/tools/scanner',
+          type: 'price_alert',
+          symbol: alert.symbol,
+          alertId: alert.id
+        }
+      });
+      console.log(`🔔 Push notification sent for: ${alert.symbol}`);
+    } catch (pushError) {
+      console.error(`Failed to send push notification:`, pushError);
     }
   }
 

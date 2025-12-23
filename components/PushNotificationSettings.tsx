@@ -84,8 +84,23 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
     }
   };
 
-  const handleTest = () => {
-    sendTestNotification();
+  const handleTest = async () => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.error || 'Failed to send test');
+      }
+    } catch (err: any) {
+      // Fallback to local notification
+      sendTestNotification();
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!supported) {
