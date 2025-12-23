@@ -90,6 +90,80 @@ const ECONOMIC_EVENTS_2025: EconomicEvent[] = [
   { date: '2025-12-10', time: '08:30', event: 'CPI (YoY) (Nov)', country: 'US', impact: 'high', category: 'inflation' },
   { date: '2025-12-17', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
   { date: '2025-12-23', time: '08:30', event: 'GDP (Q3 Final)', country: 'US', impact: 'medium', category: 'gdp' },
+  
+  // ========== 2026 ==========
+  
+  // January 2026
+  { date: '2026-01-02', time: '08:30', event: 'ISM Manufacturing PMI', country: 'US', impact: 'high', category: 'manufacturing' },
+  { date: '2026-01-10', time: '08:30', event: 'Non-Farm Payrolls (Dec)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-01-10', time: '08:30', event: 'Unemployment Rate (Dec)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-01-14', time: '08:30', event: 'CPI (YoY) (Dec)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-01-14', time: '08:30', event: 'Core CPI (YoY) (Dec)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-01-16', time: '08:30', event: 'Retail Sales (Dec)', country: 'US', impact: 'medium', category: 'consumer' },
+  { date: '2026-01-28', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-01-29', time: '08:30', event: 'GDP (Q4 Advance)', country: 'US', impact: 'high', category: 'gdp' },
+  
+  // February 2026
+  { date: '2026-02-06', time: '08:30', event: 'Non-Farm Payrolls (Jan)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-02-06', time: '08:30', event: 'Unemployment Rate (Jan)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-02-11', time: '08:30', event: 'CPI (YoY) (Jan)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-02-11', time: '08:30', event: 'Core CPI (YoY) (Jan)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-02-13', time: '08:30', event: 'Retail Sales (Jan)', country: 'US', impact: 'medium', category: 'consumer' },
+  { date: '2026-02-26', time: '08:30', event: 'GDP (Q4 Second Estimate)', country: 'US', impact: 'medium', category: 'gdp' },
+  
+  // March 2026
+  { date: '2026-03-06', time: '08:30', event: 'Non-Farm Payrolls (Feb)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-03-11', time: '08:30', event: 'CPI (YoY) (Feb)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-03-18', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-03-26', time: '08:30', event: 'GDP (Q4 Final)', country: 'US', impact: 'medium', category: 'gdp' },
+  
+  // April 2026
+  { date: '2026-04-03', time: '08:30', event: 'Non-Farm Payrolls (Mar)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-04-10', time: '08:30', event: 'CPI (YoY) (Mar)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-04-29', time: '08:30', event: 'GDP (Q1 Advance)', country: 'US', impact: 'high', category: 'gdp' },
+  
+  // May 2026
+  { date: '2026-05-01', time: '08:30', event: 'Non-Farm Payrolls (Apr)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-05-06', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-05-12', time: '08:30', event: 'CPI (YoY) (Apr)', country: 'US', impact: 'high', category: 'inflation' },
+  
+  // June 2026
+  { date: '2026-06-05', time: '08:30', event: 'Non-Farm Payrolls (May)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-06-10', time: '08:30', event: 'CPI (YoY) (May)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-06-17', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-06-25', time: '08:30', event: 'GDP (Q1 Final)', country: 'US', impact: 'medium', category: 'gdp' },
+  
+  // July 2026
+  { date: '2026-07-02', time: '08:30', event: 'Non-Farm Payrolls (Jun)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-07-14', time: '08:30', event: 'CPI (YoY) (Jun)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-07-29', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-07-30', time: '08:30', event: 'GDP (Q2 Advance)', country: 'US', impact: 'high', category: 'gdp' },
+  
+  // August 2026
+  { date: '2026-08-07', time: '08:30', event: 'Non-Farm Payrolls (Jul)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-08-12', time: '08:30', event: 'CPI (YoY) (Jul)', country: 'US', impact: 'high', category: 'inflation' },
+  
+  // September 2026
+  { date: '2026-09-04', time: '08:30', event: 'Non-Farm Payrolls (Aug)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-09-11', time: '08:30', event: 'CPI (YoY) (Aug)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-09-16', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-09-24', time: '08:30', event: 'GDP (Q2 Final)', country: 'US', impact: 'medium', category: 'gdp' },
+  
+  // October 2026
+  { date: '2026-10-02', time: '08:30', event: 'Non-Farm Payrolls (Sep)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-10-13', time: '08:30', event: 'CPI (YoY) (Sep)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-10-29', time: '08:30', event: 'GDP (Q3 Advance)', country: 'US', impact: 'high', category: 'gdp' },
+  
+  // November 2026
+  { date: '2026-11-04', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-11-06', time: '08:30', event: 'Non-Farm Payrolls (Oct)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-11-12', time: '08:30', event: 'CPI (YoY) (Oct)', country: 'US', impact: 'high', category: 'inflation' },
+  
+  // December 2026
+  { date: '2026-12-04', time: '08:30', event: 'Non-Farm Payrolls (Nov)', country: 'US', impact: 'high', category: 'employment' },
+  { date: '2026-12-10', time: '08:30', event: 'CPI (YoY) (Nov)', country: 'US', impact: 'high', category: 'inflation' },
+  { date: '2026-12-16', time: '14:00', event: 'FOMC Rate Decision', country: 'US', impact: 'high', category: 'central_bank' },
+  { date: '2026-12-23', time: '08:30', event: 'GDP (Q3 Final)', country: 'US', impact: 'medium', category: 'gdp' },
 ];
 
 interface EconomicEvent {
