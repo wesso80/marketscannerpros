@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 
 // Helper to safely run a query and return empty on error
-async function safeQuery(query: Promise<any>, defaultValue: any = { rows: [] }) {
+async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
   try {
-    return await query;
+    return await queryFn();
   } catch (e) {
     console.warn("Query failed:", e);
     return defaultValue;
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       recentQuestions,
     ] = await Promise.all([
       // Daily usage for last 30 days (Australia/Sydney timezone)
-      safeQuery(sql`SELECT 
+      safeQuery(() => q(`SELECT 
             DATE(created_at AT TIME ZONE 'Australia/Sydney') as date, 
             COUNT(*) as questions,
             COUNT(DISTINCT workspace_id) as unique_users,
@@ -35,20 +35,20 @@ export async function GET(req: NextRequest) {
           FROM ai_usage 
           WHERE created_at > NOW() - INTERVAL '30 days'
           GROUP BY DATE(created_at AT TIME ZONE 'Australia/Sydney') 
-          ORDER BY date DESC`),
+          ORDER BY date DESC`)),
       
       // Breakdown by tier (today in Australia/Sydney timezone)
-      safeQuery(sql`SELECT 
+      safeQuery(() => q(`SELECT 
             tier, 
             COUNT(*) as questions,
             COUNT(DISTINCT workspace_id) as unique_users,
             AVG(response_length)::int as avg_tokens
           FROM ai_usage 
           WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date
-          GROUP BY tier`),
+          GROUP BY tier`)),
       
       // Top users (all time)
-      safeQuery(sql`SELECT 
+      safeQuery(() => q(`SELECT 
             workspace_id, 
             tier,
             COUNT(*) as total_questions,
@@ -56,10 +56,10 @@ export async function GET(req: NextRequest) {
           FROM ai_usage 
           GROUP BY workspace_id, tier
           ORDER BY total_questions DESC
-          LIMIT 20`),
+          LIMIT 20`)),
       
       // Recent questions (last 50)
-      safeQuery(sql`SELECT 
+      safeQuery(() => q(`SELECT 
             id,
             workspace_id,
             tier,
@@ -68,14 +68,14 @@ export async function GET(req: NextRequest) {
             created_at
           FROM ai_usage 
           ORDER BY created_at DESC
-          LIMIT 50`),
+          LIMIT 50`)),
     ]);
 
     return NextResponse.json({
-      dailyStats: dailyStats.rows || [],
-      tierBreakdown: tierBreakdown.rows || [],
-      topUsers: topUsers.rows || [],
-      recentQuestions: recentQuestions.rows || [],
+      dailyStats: dailyStats || [],
+      tierBreakdown: tierBreakdown || [],
+      topUsers: topUsers || [],
+      recentQuestions: recentQuestions || [],
     });
   } catch (error: any) {
     console.error("Admin AI usage error:", error);

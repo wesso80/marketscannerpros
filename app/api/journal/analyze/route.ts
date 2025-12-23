@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getSessionFromCookie } from "@/lib/auth";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -68,13 +68,14 @@ export async function POST(req: NextRequest) {
       const dailyLimit = tier === "pro" ? 50 : 5;
       const today = new Date().toISOString().split('T')[0];
       
-      const usageResult = await sql`
-        SELECT COUNT(*) as count FROM ai_usage 
-        WHERE workspace_id = ${workspaceId} 
-        AND DATE(created_at) = ${today}
-      `;
+      const usageResult = await q(
+        `SELECT COUNT(*) as count FROM ai_usage 
+        WHERE workspace_id = $1 
+        AND DATE(created_at) = $2`,
+        [workspaceId, today]
+      );
       
-      const currentUsage = parseInt(usageResult.rows[0]?.count || "0");
+      const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
           error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for unlimited.' : 'Upgrade to Pro Trader for unlimited AI access.'}`,
@@ -111,10 +112,11 @@ export async function POST(req: NextRequest) {
     // Log AI usage
     if (workspaceId !== "free-mode") {
       try {
-        await sql`
-          INSERT INTO ai_usage (workspace_id, query_type, tokens_used)
-          VALUES (${workspaceId}, 'journal_analysis', ${completion.usage?.total_tokens || 0})
-        `;
+        await q(
+          `INSERT INTO ai_usage (workspace_id, query_type, tokens_used)
+          VALUES ($1, 'journal_analysis', $2)`,
+          [workspaceId, completion.usage?.total_tokens || 0]
+        );
       } catch (e) {
         logger.error("Failed to log AI usage", e);
       }

@@ -30,7 +30,19 @@ interface AlertPayload {
   notifyEmail?: boolean;
   notifyPush?: boolean;
   expiresAt?: string;
+  // Smart alert fields
+  isSmartAlert?: boolean;
+  cooldownMinutes?: number;
 }
+
+// Smart alert condition types (Pro Trader only)
+const SMART_ALERT_TYPES = [
+  'oi_surge', 'oi_drop',
+  'funding_extreme_pos', 'funding_extreme_neg',
+  'ls_ratio_high', 'ls_ratio_low',
+  'fear_extreme', 'greed_extreme',
+  'oi_divergence_bull', 'oi_divergence_bear',
+];
 
 // GET - List all alerts
 export async function GET(req: NextRequest) {
@@ -43,12 +55,14 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const activeOnly = url.searchParams.get('active') === 'true';
     const symbol = url.searchParams.get('symbol');
+    const smartOnly = url.searchParams.get('smart') === 'true';
     
     let query = `
       SELECT 
         id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
         name, notes, is_active, is_recurring, notify_email, notify_push,
-        triggered_at, trigger_count, last_price, created_at, updated_at, expires_at
+        triggered_at, trigger_count, last_price, created_at, updated_at, expires_at,
+        is_smart_alert, smart_alert_context, last_derivative_value, cooldown_minutes
       FROM alerts
       WHERE workspace_id = $1
     `;
@@ -63,6 +77,10 @@ export async function GET(req: NextRequest) {
       query += ` AND symbol = $${paramIndex}`;
       params.push(symbol.toUpperCase());
       paramIndex++;
+    }
+
+    if (smartOnly) {
+      query += ` AND is_smart_alert = true`;
     }
 
     query += ` ORDER BY created_at DESC`;
@@ -112,8 +130,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check quota
+    // Check if this is a smart alert
+    const isSmartAlert = SMART_ALERT_TYPES.includes(body.conditionType) || body.isSmartAlert;
+    
+    // Smart alerts require Pro Trader
     const tier = session.tier || 'free';
+    if (isSmartAlert && tier !== 'pro_trader') {
+      return NextResponse.json(
+        { 
+          error: 'Smart alerts require Pro Trader',
+          message: 'Upgrade to Pro Trader to create AI-powered smart alerts.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Check quota
     const maxAlerts = ALERT_LIMITS[tier as keyof typeof ALERT_LIMITS] || 3;
     
     const activeResult = await q(
@@ -138,8 +170,9 @@ export async function POST(req: NextRequest) {
     const result = await q(
       `INSERT INTO alerts (
         workspace_id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
-        name, notes, is_recurring, notify_email, notify_push, expires_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        name, notes, is_recurring, notify_email, notify_push, expires_at,
+        is_smart_alert, cooldown_minutes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
         session.workspaceId,
@@ -148,12 +181,14 @@ export async function POST(req: NextRequest) {
         body.conditionType,
         body.conditionValue,
         body.conditionTimeframe || null,
-        body.name || `${body.symbol} ${body.conditionType.replace('_', ' ')} ${body.conditionValue}`,
+        body.name || `${body.symbol} ${body.conditionType.replace(/_/g, ' ')} ${body.conditionValue}`,
         body.notes || null,
-        body.isRecurring ?? false,
-        body.notifyEmail ?? false,
+        body.isRecurring ?? (isSmartAlert ? true : false), // Smart alerts default to recurring
+        body.notifyEmail ?? true,
         body.notifyPush ?? true,
         body.expiresAt ? new Date(body.expiresAt) : null,
+        isSmartAlert,
+        body.cooldownMinutes || (isSmartAlert ? 60 : null), // Default 1hr cooldown for smart alerts
       ]
     );
 
@@ -169,6 +204,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       alert: result[0],
+      isSmartAlert,
       quota: {
         used: activeCount + 1,
         max: maxAlerts,

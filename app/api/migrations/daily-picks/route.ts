@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Create the daily_picks table
-    await sql`
+    await q(`
       CREATE TABLE IF NOT EXISTS daily_picks (
         id SERIAL PRIMARY KEY,
         asset_class VARCHAR(20) NOT NULL,
@@ -36,12 +36,12 @@ export async function GET(req: NextRequest) {
         created_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(asset_class, symbol, scan_date)
       )
-    `;
+    `);
 
     // Create indexes
-    await sql`CREATE INDEX IF NOT EXISTS idx_daily_picks_date ON daily_picks(scan_date DESC)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_daily_picks_class_date ON daily_picks(asset_class, scan_date DESC)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_daily_picks_score ON daily_picks(scan_date, asset_class, score DESC)`;
+    await q(`CREATE INDEX IF NOT EXISTS idx_daily_picks_date ON daily_picks(scan_date DESC)`);
+    await q(`CREATE INDEX IF NOT EXISTS idx_daily_picks_class_date ON daily_picks(asset_class, scan_date DESC)`);
+    await q(`CREATE INDEX IF NOT EXISTS idx_daily_picks_score ON daily_picks(scan_date, asset_class, score DESC)`);
 
     return NextResponse.json({ 
       success: true, 

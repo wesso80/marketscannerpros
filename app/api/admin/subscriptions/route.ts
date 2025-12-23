@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     // Try to get subscriptions with the updated schema
     let result;
     try {
-      result = await sql`
+      result = await q(`
         SELECT 
           id,
           workspace_id,
@@ -29,12 +29,12 @@ export async function GET(req: NextRequest) {
         FROM user_subscriptions
         ORDER BY updated_at DESC
         LIMIT 100
-      `;
+      `);
     } catch (selectError: any) {
       // If select fails, check if it's a column issue
       console.warn("Select failed:", selectError.message);
       // Try with minimal columns
-      result = await sql`
+      result = await q(`
         SELECT 
           id,
           workspace_id,
@@ -44,10 +44,10 @@ export async function GET(req: NextRequest) {
         FROM user_subscriptions
         ORDER BY created_at DESC
         LIMIT 100
-      `;
+      `);
     }
 
-    return NextResponse.json({ subscriptions: result.rows });
+    return NextResponse.json({ subscriptions: result });
   } catch (error: any) {
     console.error("Admin subscriptions error:", error);
     // Return empty array instead of error if table doesn't exist

@@ -31,7 +31,7 @@ import OpenAI from "openai";
 import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
 import { SCANNER_EXPLAINER_RULES, getScannerExplainerContext } from "@/lib/prompts/scannerExplainerRules";
 import { getSessionFromCookie } from "@/lib/auth";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { analystRequestSchema } from "../../../lib/validation";
 import { ZodError } from "zod";
@@ -143,12 +143,13 @@ export async function POST(req: NextRequest) {
       try {
         const today = new Date().toISOString().split('T')[0];
         // Use text comparison for workspace_id (supports both UUID and anon_xxx formats)
-        const usageResult = await sql`
-          SELECT COUNT(*) as count FROM ai_usage 
-          WHERE workspace_id = ${workspaceId} AND DATE(created_at) = ${today}
-        `;
+        const usageResult = await q(
+          `SELECT COUNT(*) as count FROM ai_usage 
+          WHERE workspace_id = $1 AND DATE(created_at) = $2`,
+          [workspaceId, today]
+        );
         
-        const usageCount = parseInt(usageResult.rows[0]?.count || '0');
+        const usageCount = parseInt(usageResult[0]?.count || '0');
         
         if (usageCount >= dailyLimit) {
           logger.warn('AI usage limit exceeded', {
@@ -429,10 +430,11 @@ Always mention which derivatives signals support or contradict your analysis.
 
     // Track usage in database
     try {
-      await sql`
-        INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
-        VALUES (${workspaceId}, ${query.substring(0, 500)}, ${text.length}, ${tier}, NOW())
-      `;
+      await q(
+        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
+        VALUES ($1, $2, $3, $4, NOW())`,
+        [workspaceId, query.substring(0, 500), text.length, tier]
+      );
     } catch (dbErr) {
       logger.error('Error tracking AI usage', { error: dbErr, workspaceId });
       // Don't fail the request if tracking fails

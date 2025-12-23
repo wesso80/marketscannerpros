@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { q } from "@/lib/db";
 
 // Helper to safely run a query and return empty on error
-async function safeQuery(query: Promise<any>, defaultValue: any = { rows: [] }) {
+async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
   try {
-    return await query;
+    return await queryFn();
   } catch (e) {
     console.warn("Query failed:", e);
     return defaultValue;
@@ -32,59 +32,59 @@ export async function GET(req: NextRequest) {
       topAiUsers,
     ] = await Promise.all([
       // Total users (from user_subscriptions)
-      safeQuery(sql`SELECT COUNT(*) as count FROM user_subscriptions`),
+      safeQuery(() => q(`SELECT COUNT(*) as count FROM user_subscriptions`)),
       
       // Active subscriptions by tier
-      safeQuery(sql`SELECT tier, COUNT(*) as count FROM user_subscriptions 
-          WHERE status IN ('active', 'trialing') GROUP BY tier`),
+      safeQuery(() => q(`SELECT tier, COUNT(*) as count FROM user_subscriptions 
+          WHERE status IN ('active', 'trialing') GROUP BY tier`)),
       
       // AI usage today (Australia/Sydney timezone)
-      safeQuery(sql`SELECT COUNT(*) as count, COUNT(DISTINCT workspace_id) as unique_users 
-          FROM ai_usage WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date`),
+      safeQuery(() => q(`SELECT COUNT(*) as count, COUNT(DISTINCT workspace_id) as unique_users 
+          FROM ai_usage WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date`)),
       
       // AI usage last 7 days
-      safeQuery(sql`SELECT DATE(created_at) as date, COUNT(*) as count 
+      safeQuery(() => q(`SELECT DATE(created_at) as date, COUNT(*) as count 
           FROM ai_usage 
           WHERE created_at > NOW() - INTERVAL '7 days'
-          GROUP BY DATE(created_at) ORDER BY date DESC`),
+          GROUP BY DATE(created_at) ORDER BY date DESC`)),
       
       // Active trials (from user_subscriptions with trialing status)
-      safeQuery(sql`SELECT COUNT(*) as count FROM user_subscriptions WHERE status = 'trialing'`),
+      safeQuery(() => q(`SELECT COUNT(*) as count FROM user_subscriptions WHERE status = 'trialing'`)),
       
       // Pending delete requests
-      safeQuery(sql`SELECT COUNT(*) as count FROM delete_requests WHERE status = 'pending'`),
+      safeQuery(() => q(`SELECT COUNT(*) as count FROM delete_requests WHERE status = 'pending'`)),
       
       // Recent signups (last 7 days)
-      safeQuery(sql`SELECT DATE(created_at) as date, COUNT(*) as count 
+      safeQuery(() => q(`SELECT DATE(created_at) as date, COUNT(*) as count 
           FROM workspaces 
           WHERE created_at > NOW() - INTERVAL '7 days'
-          GROUP BY DATE(created_at) ORDER BY date DESC`),
+          GROUP BY DATE(created_at) ORDER BY date DESC`)),
       
       // Top AI users today (Australia/Sydney timezone)
-      safeQuery(sql`SELECT workspace_id, tier, COUNT(*) as questions 
+      safeQuery(() => q(`SELECT workspace_id, tier, COUNT(*) as questions 
           FROM ai_usage 
           WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date
           GROUP BY workspace_id, tier
-          ORDER BY questions DESC LIMIT 10`),
+          ORDER BY questions DESC LIMIT 10`)),
     ]);
 
     return NextResponse.json({
       overview: {
-        totalWorkspaces: totalWorkspaces.rows[0]?.count || 0,
-        subscriptionsByTier: activeSubscriptions.rows || [],
-        activeTrials: activeTrials.rows[0]?.count || 0,
-        pendingDeleteRequests: deleteRequests.rows[0]?.count || 0,
+        totalWorkspaces: totalWorkspaces[0]?.count || 0,
+        subscriptionsByTier: activeSubscriptions || [],
+        activeTrials: activeTrials[0]?.count || 0,
+        pendingDeleteRequests: deleteRequests[0]?.count || 0,
       },
       aiUsage: {
         today: {
-          totalQuestions: aiUsageToday.rows[0]?.count || 0,
-          uniqueUsers: aiUsageToday.rows[0]?.unique_users || 0,
+          totalQuestions: aiUsageToday[0]?.count || 0,
+          uniqueUsers: aiUsageToday[0]?.unique_users || 0,
         },
-        last7Days: aiUsageWeek.rows || [],
-        topUsersToday: topAiUsers.rows || [],
+        last7Days: aiUsageWeek || [],
+        topUsersToday: topAiUsers || [],
       },
       signups: {
-        last7Days: recentSignups.rows || [],
+        last7Days: recentSignups || [],
       },
     });
   } catch (error: any) {
