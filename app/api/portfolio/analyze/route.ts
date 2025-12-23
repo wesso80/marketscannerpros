@@ -120,9 +120,9 @@ export async function POST(req: NextRequest) {
     if (workspaceId !== "free-mode") {
       try {
         await q(
-          `INSERT INTO ai_usage (workspace_id, query_type, tokens_used)
-          VALUES ($1, 'portfolio_analysis', $2)`,
-          [workspaceId, completion.usage?.total_tokens || 0]
+          `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
+          VALUES ($1, $2, $3, $4, NOW())`,
+          [workspaceId, 'Portfolio Analysis', analysis.length, tier]
         );
       } catch (e) {
         logger.error("Failed to log AI usage", e);
