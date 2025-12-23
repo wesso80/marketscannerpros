@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     notes TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
     is_recurring BOOLEAN NOT NULL DEFAULT false, -- Re-arm after trigger
-    notify_email BOOLEAN NOT NULL DEFAULT false,
+    notify_email BOOLEAN NOT NULL DEFAULT true,
     notify_push BOOLEAN NOT NULL DEFAULT true,
     
     -- Status tracking
