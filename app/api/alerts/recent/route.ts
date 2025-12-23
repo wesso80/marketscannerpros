@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       ? new Date(since).toISOString()
       : new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    // Get recently triggered alerts that haven't been dismissed
+    // Get recently triggered, unacknowledged alerts
     const alerts = await q(`
       SELECT 
         h.id,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       JOIN alerts a ON h.alert_id = a.id
       WHERE a.workspace_id = $1
         AND h.triggered_at > $2
-        AND h.notified = true
+        AND h.acknowledged_at IS NULL
       ORDER BY h.triggered_at DESC
       LIMIT 5
     `, [session.workspaceId, sinceTime]);
