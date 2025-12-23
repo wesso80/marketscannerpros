@@ -38,6 +38,7 @@
     "zod": "^4.2.0"
   },
   "devDependencies": {
+    "@types/web-push": "^3.6.4",
     "postcss-scss": "^4.0.9",
     "stylelint": "^16.26.1",
     "stylelint-config-standard": "^39.0.1",

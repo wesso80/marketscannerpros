@@ -35,8 +35,64 @@ function AlertsContent() {
       {/* Alerts Widget */}
       <AlertsWidget />
 
-      {/* Feature Explanation */}
-      <div className="mt-8 grid md:grid-cols-3 gap-4">
+      {/* How It Works */}
+      <div className="mt-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-xl p-6 border border-slate-700">
+        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+          <span>📖</span> How Alerts Work
+        </h3>
+        <div className="space-y-4 text-sm text-slate-300">
+          <div className="flex gap-3">
+            <span className="text-emerald-400 font-bold">1.</span>
+            <p><strong>Set your target</strong> — Choose a symbol, condition (above/below/% change), and price level</p>
+          </div>
+          <div className="flex gap-3">
+            <span className="text-emerald-400 font-bold">2.</span>
+            <p><strong>We monitor 24/7</strong> — Our system checks prices every 5 minutes against your alerts</p>
+          </div>
+          <div className="flex gap-3">
+            <span className="text-emerald-400 font-bold">3.</span>
+            <p><strong>Get notified instantly</strong> — When conditions are met, you receive push notifications and/or email</p>
+          </div>
+          <div className="flex gap-3">
+            <span className="text-emerald-400 font-bold">4.</span>
+            <p><strong>Take action</strong> — Click the alert to jump straight to the scanner with that symbol loaded</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Alert Types Explainer */}
+      <div className="mt-6 grid md:grid-cols-2 gap-4">
+        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+            <span>💰</span> Price Alerts
+            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">All Tiers</span>
+          </h4>
+          <ul className="space-y-2 text-sm text-slate-400">
+            <li><strong className="text-slate-300">Price Above:</strong> Triggers when price exceeds your target (breakout alerts)</li>
+            <li><strong className="text-slate-300">Price Below:</strong> Triggers when price drops below target (dip buying)</li>
+            <li><strong className="text-slate-300">% Change Up:</strong> Triggers on X% gain (momentum alerts)</li>
+            <li><strong className="text-slate-300">% Change Down:</strong> Triggers on X% drop (stop loss alerts)</li>
+            <li><strong className="text-slate-300">Volume Spike:</strong> Triggers on unusual volume (activity alerts)</li>
+          </ul>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-xl p-5 border border-purple-500/30">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+            <span>🧠</span> Smart Alerts
+            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">Pro Trader</span>
+          </h4>
+          <ul className="space-y-2 text-sm text-slate-400">
+            <li><strong className="text-purple-300">OI Surge/Drop:</strong> Open Interest spikes or crashes (liquidation events)</li>
+            <li><strong className="text-purple-300">Funding Extremes:</strong> Overleveraged longs or shorts (squeeze setups)</li>
+            <li><strong className="text-purple-300">L/S Ratio:</strong> Crowded trades warning (reversal signals)</li>
+            <li><strong className="text-purple-300">Fear & Greed:</strong> Extreme sentiment (contrarian opportunities)</li>
+            <li><strong className="text-purple-300">OI Divergence:</strong> Smart money accumulation/distribution</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Feature Cards */}
+      <div className="mt-6 grid md:grid-cols-3 gap-4">
         <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
           <div className="text-2xl mb-2">⚡</div>
           <h3 className="font-semibold text-white mb-2">Instant Notifications</h3>
