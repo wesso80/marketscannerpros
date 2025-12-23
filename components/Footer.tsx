@@ -37,6 +37,7 @@ export default function Footer() {
       
       <div className="container" style={{display:"flex",gap:"1.5rem",padding:"1rem 0",opacity:.85,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
         <Link href="/blog">Blog</Link>
+        <Link href="/guide">Guide</Link>
         <Link href="/disclaimer">Disclaimer</Link>
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
