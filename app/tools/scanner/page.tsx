@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import CustomFearGreedGauge from "@/components/CustomFearGreedGauge";
+import FearGreedHistory from "@/components/FearGreedHistory";
 import OpenInterestWidget from "@/components/OpenInterestWidget";
 import DerivativesWidget from "@/components/DerivativesWidget";
 import AlertsWidget from "@/components/AlertsWidget";
@@ -466,6 +467,11 @@ function ScannerContent() {
         {/* Market Sentiment - Custom Fear & Greed Index (Crypto + Stocks) */}
         <div style={{ marginBottom: "0.75rem" }}>
           <CustomFearGreedGauge />
+        </div>
+
+        {/* Fear & Greed Historical Chart */}
+        <div style={{ marginBottom: "0.75rem" }}>
+          <FearGreedHistory days={7} height={180} showLegend={false} />
         </div>
 
         {/* Open Interest Widget */}
