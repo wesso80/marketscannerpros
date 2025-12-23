@@ -116,6 +116,7 @@ export default function Header() {
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
     { href: '/tools/company-overview', label: 'Company Overview', icon: '🏢' },
+    { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📅' },
     { href: '/tools/news', label: 'Market News', icon: '📰' },
   ];
 

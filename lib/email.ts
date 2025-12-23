@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 // Direct API key from environment (for Render/Vercel)
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "alerts@marketscannerpros.app";
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
 
 let resendClient: Resend | null = null;
 
