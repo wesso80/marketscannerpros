@@ -193,11 +193,13 @@ export default function AlertsWidget({
     }
   };
 
-  const formatPrice = (price: number | null | undefined) => {
-    if (price == null || typeof price !== 'number' || isNaN(price)) return '—';
-    if (price >= 1000) return price.toLocaleString('en-US', { maximumFractionDigits: 2 });
-    if (price >= 1) return price.toFixed(2);
-    return price.toFixed(6);
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (price == null) return '—';
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(num)) return '—';
+    if (num >= 1000) return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (num >= 1) return num.toFixed(2);
+    return num.toFixed(6);
   };
 
   if (loading) {
