@@ -159,7 +159,7 @@ export default function CryptoHeatmap() {
               Crypto Heat Map
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Top cryptocurrencies by market cap • 24h change
+              Top cryptocurrencies by market cap • 24h change • <span className="text-amber-400">Data updates every 60s</span>
             </p>
           </div>
           
@@ -200,7 +200,7 @@ export default function CryptoHeatmap() {
           return (
             <div
               key={item.crypto.symbol}
-              className="absolute transition-all duration-200 cursor-pointer border border-slate-900/50 overflow-hidden"
+              className="absolute transition-all duration-200 cursor-pointer border border-slate-900/50 group"
               style={{
                 left: `${item.x}%`,
                 top: `${item.y}%`,
@@ -213,46 +213,51 @@ export default function CryptoHeatmap() {
               onMouseEnter={() => setHoveredCrypto(item.crypto.symbol)}
               onMouseLeave={() => setHoveredCrypto(null)}
             >
-              <div className="h-full flex flex-col items-center justify-center p-2 text-center">
-                <span className="text-white font-bold text-base md:text-lg drop-shadow-lg">
+              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+                <span className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-lg">
                   {item.crypto.symbol}
                 </span>
                 <span className="text-white/80 text-xs drop-shadow truncate max-w-full">
                   {item.crypto.name}
                 </span>
-                <span className={`text-lg md:text-xl font-bold drop-shadow-lg mt-1 ${
-                  item.crypto.changePercent >= 0 ? 'text-white' : 'text-white'
-                }`}>
+                <span className="text-base sm:text-lg md:text-xl font-bold drop-shadow-lg mt-1 text-white">
                   {item.crypto.changePercent >= 0 ? '+' : ''}{item.crypto.changePercent.toFixed(2)}%
                 </span>
                 {item.crypto.price > 0 && (
-                  <span className="text-white/70 text-xs mt-1 drop-shadow">
+                  <span className="text-white/70 text-xs mt-1 drop-shadow truncate max-w-full">
                     {formatPrice(item.crypto.price)}
                   </span>
                 )}
               </div>
               
-              {/* Hover tooltip */}
+              {/* Hover tooltip - positioned to float above */}
               {isHovered && (
-                <div className="absolute inset-x-0 bottom-0 bg-black/90 p-2 text-xs space-y-1">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[160px] z-50">
+                  <div className="font-semibold text-white mb-2 text-center">{item.crypto.name}</div>
                   {item.crypto.price > 0 && (
-                    <div className="flex justify-between text-white/80">
+                    <div className="flex justify-between text-white/80 gap-4">
                       <span>Price:</span>
-                      <span>{formatPrice(item.crypto.price)}</span>
+                      <span className="font-medium text-white">{formatPrice(item.crypto.price)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-white/80">
+                  <div className="flex justify-between text-white/80 gap-4 mt-1">
                     <span>24h Change:</span>
-                    <span className={item.crypto.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                    <span className={`font-medium ${item.crypto.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {item.crypto.changePercent >= 0 ? '+' : ''}{item.crypto.changePercent.toFixed(2)}%
                     </span>
                   </div>
                   {item.crypto.marketCap && (
-                    <div className="flex justify-between text-white/80">
+                    <div className="flex justify-between text-white/80 gap-4 mt-1">
                       <span>Market Cap:</span>
-                      <span>{formatMarketCap(item.crypto.marketCap)}</span>
+                      <span className="font-medium text-white">{formatMarketCap(item.crypto.marketCap)}</span>
                     </div>
                   )}
+                  <div className="flex justify-between text-white/80 gap-4 mt-1">
+                    <span>Weight:</span>
+                    <span className="font-medium text-white">{item.crypto.weight}%</span>
+                  </div>
+                  {/* Arrow */}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-900"></div>
                 </div>
               )}
             </div>
@@ -299,11 +304,16 @@ export default function CryptoHeatmap() {
           </div>
         </div>
 
-        {lastUpdate && (
-          <p className="text-xs text-slate-500 mt-2">
-            Last updated: {new Date(lastUpdate).toLocaleTimeString()}
-          </p>
-        )}
+        <div className="flex items-center justify-between mt-2">
+          {lastUpdate && (
+            <p className="text-xs text-slate-500">
+              Last updated: {new Date(lastUpdate).toLocaleTimeString()}
+            </p>
+          )}
+          <span className="text-xs text-slate-500">
+            Data by Yahoo Finance
+          </span>
+        </div>
       </div>
     </div>
   );

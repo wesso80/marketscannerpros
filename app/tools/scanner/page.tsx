@@ -687,6 +687,20 @@ function ScannerContent() {
                         <div style={{ color: "#f1f5f9", fontSize: "18px", fontWeight: "700" }}>
                           {pick.symbol}
                         </div>
+                        {pick.indicators?.price && (
+                          <div style={{ 
+                            color: "#94a3b8",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            marginTop: "2px"
+                          }}>
+                            ${pick.indicators.price < 1 
+                              ? pick.indicators.price.toFixed(6) 
+                              : pick.indicators.price < 100 
+                                ? pick.indicators.price.toFixed(2) 
+                                : pick.indicators.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </div>
+                        )}
                         <div style={{ 
                           color: pick.direction === 'bullish' ? '#10b981' : pick.direction === 'bearish' ? '#ef4444' : '#94a3b8',
                           fontSize: "12px",

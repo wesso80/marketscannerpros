@@ -187,25 +187,27 @@ export default function SectorHeatmap() {
               S&P 500 Sector Map
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Click sectors for details • Size = market weight
+              Hover for details • Size = market weight • <span className="text-amber-400">Data updates every 60s</span>
             </p>
           </div>
           
           {/* Time Frame Selector */}
-          <div className="flex items-center gap-1 bg-slate-900/50 rounded-lg p-1">
-            {timeFrameOptions.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setTimeFrame(opt.value)}
-                className={`px-2 py-1 text-xs rounded transition-all ${
-                  timeFrame === opt.value
-                    ? 'bg-emerald-500 text-white font-medium'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1 bg-slate-900/50 rounded-lg p-1">
+              {timeFrameOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setTimeFrame(opt.value)}
+                  className={`px-2 py-1 text-xs rounded transition-all ${
+                    timeFrame === opt.value
+                      ? 'bg-emerald-500 text-white font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -219,7 +221,7 @@ export default function SectorHeatmap() {
           return (
             <div
               key={item.sector.symbol}
-              className="absolute transition-all duration-200 cursor-pointer border border-slate-900/50 overflow-hidden"
+              className="absolute transition-all duration-200 cursor-pointer border border-slate-900/50 group"
               style={{
                 left: `${item.x}%`,
                 top: `${item.y}%`,
@@ -232,33 +234,40 @@ export default function SectorHeatmap() {
               onMouseEnter={() => setHoveredSector(item.sector.symbol)}
               onMouseLeave={() => setHoveredSector(null)}
             >
-              <div className="h-full flex flex-col items-center justify-center p-2 text-center">
-                <span className="text-white font-bold text-sm md:text-base drop-shadow-lg">
+              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+                <span className="text-white font-bold text-xs sm:text-sm md:text-base drop-shadow-lg truncate max-w-full">
                   {item.sector.name}
                 </span>
-                <span className={`text-lg md:text-xl font-bold drop-shadow-lg ${
-                  change >= 0 ? 'text-white' : 'text-white'
-                }`}>
+                <span className="text-base sm:text-lg md:text-xl font-bold drop-shadow-lg text-white">
                   {change >= 0 ? '+' : ''}{change.toFixed(2)}%
                 </span>
-                <span className="text-white/70 text-xs mt-1 drop-shadow">
+                <span className="text-white/70 text-xs drop-shadow">
                   {item.sector.symbol}
                 </span>
               </div>
               
-              {/* Hover tooltip */}
+              {/* Hover tooltip - positioned to float above */}
               {isHovered && (
-                <div className="absolute inset-x-0 bottom-0 bg-black/80 p-2 text-xs">
-                  <div className="flex justify-between text-white/80">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[140px] z-50">
+                  <div className="font-semibold text-white mb-2 text-center">{item.sector.name}</div>
+                  <div className="flex justify-between text-white/80 gap-4">
                     <span>Weight:</span>
-                    <span>{item.sector.weight}%</span>
+                    <span className="font-medium text-white">{item.sector.weight}%</span>
+                  </div>
+                  <div className="flex justify-between text-white/80 gap-4 mt-1">
+                    <span>Change:</span>
+                    <span className={`font-medium ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                    </span>
                   </div>
                   {item.sector.price && (
-                    <div className="flex justify-between text-white/80">
+                    <div className="flex justify-between text-white/80 gap-4 mt-1">
                       <span>Price:</span>
-                      <span>${item.sector.price.toFixed(2)}</span>
+                      <span className="font-medium text-white">${item.sector.price.toFixed(2)}</span>
                     </div>
                   )}
+                  {/* Arrow */}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-900"></div>
                 </div>
               )}
             </div>
