@@ -118,9 +118,9 @@ export default function Home() {
             {/* Left: Hero Text */}
             <div style={{ flex: 1, minWidth: 320, textAlign: 'left', maxWidth: 600 }}>
               <div style={{ marginBottom: 24 }}>
-                <img src="/logos/msp.logo.png" alt="MarketScanner Pro" style={{ width: 48, height: 48, marginBottom: 12 }} />
+                <img src="/logos/msp-logo.png" alt="MarketScannerPros" style={{ width: 64, height: 64, marginBottom: 12, objectFit: 'contain' }} />
                 <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 8, lineHeight: 1.2, color: '#f9fafb' }}>
-                  MarketScanner Pro
+                  MarketScannerPros
                 </h1>
                 <p style={{ fontSize: 16, color: '#22c55e', fontWeight: 500, marginBottom: 0 }}>
                   Phase-Based Market Intelligence

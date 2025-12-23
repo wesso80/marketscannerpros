@@ -2,7 +2,7 @@
 
 const testimonials = [
   {
-    quote: "I spotted XRP's squeeze 3 hours early thanks to MarketScanner Pro. Game changer for my trading.",
+    quote: "I spotted XRP's squeeze 3 hours early thanks to MarketScannerPros. Game changer for my trading.",
     author: "Beta user",
     handle: "@crypto_trader"
   },

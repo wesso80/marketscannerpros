@@ -130,8 +130,9 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/70 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-xl font-semibold tracking-tight text-emerald-300 flex-shrink-0 mr-6">
-          MarketScannerPros
+        <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-emerald-300 flex-shrink-0 mr-6">
+          <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
+          <span>MarketScannerPros</span>
         </Link>
 
         {/* Desktop Navigation with Dropdowns */}

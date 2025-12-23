@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
           role: "system",
           content: `
 Scanner Origin Context:
-This query originated from the MarketScanner Pro scanner.
+This query originated from the MarketScannerPros scanner.
 - Signal Type: ${scanner.signal ?? "N/A"}
 - Direction: ${scanner.direction ?? "N/A"}
 - Signal Score: ${scanner.score ?? "N/A"}

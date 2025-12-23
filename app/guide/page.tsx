@@ -152,7 +152,7 @@ export default function UserGuide() {
             <span style={{ color: '#bbf7d0' }}>Complete guide</span>
             <span>Everything you need to know</span>
           </div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 12 }}>MarketScanner Pro — User Guide</h1>
+          <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 12 }}>MarketScannerPros — User Guide</h1>
           <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 550, margin: '0 auto' }}>
             Everything you need to scan markets, track performance, and optimize your trading strategy.
           </p>

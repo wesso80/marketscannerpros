@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import WatchlistWidget from '@/components/WatchlistWidget';
 
 export const metadata: Metadata = {
-  title: 'Watchlists | MarketScanner Pro',
+  title: 'Watchlists | MarketScannerPros',
   description: 'Create custom watchlists to track your favorite stocks, crypto, forex, and commodities. Organize symbols into multiple lists for easy monitoring.',
 };
 
