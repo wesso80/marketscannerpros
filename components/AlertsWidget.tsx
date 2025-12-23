@@ -69,6 +69,7 @@ export default function AlertsWidget({
     conditionValue: '',
     name: '',
     isRecurring: false,
+    notifyEmail: true,  // Enable email notifications by default
   });
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
@@ -148,6 +149,7 @@ export default function AlertsWidget({
           conditionValue: '',
           name: '',
           isRecurring: false,
+          notifyEmail: true,  // Keep email enabled by default
         });
         fetchAlerts();
       }
