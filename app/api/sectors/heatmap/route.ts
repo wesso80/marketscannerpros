@@ -30,125 +30,140 @@ const SECTOR_WEIGHTS: Record<string, number> = {
   XLB: 3,    // Materials
 };
 
+interface SectorData {
+  symbol: string;
+  name: string;
+  price?: number;
+  change?: number;
+  changePercent: number;
+  weight: number;
+  color: string;
+}
+
 // GET /api/sectors/heatmap - Get sector performance data
 export async function GET(req: NextRequest) {
   try {
     const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
     
-    // Try Alpha Vantage sector performance endpoint
-    if (apiKey) {
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    }
+    
+    // Try Alpha Vantage sector performance endpoint first
+    try {
+      const res = await fetch(
+        `https://www.alphavantage.co/query?function=SECTOR&apikey=${apiKey}`
+      );
+      const data = await res.json();
+      
+      if (data['Rank A: Real-Time Performance']) {
+        const realtime = data['Rank A: Real-Time Performance'];
+        const daily = data['Rank B: 1 Day Performance'] || {};
+        const weekly = data['Rank C: 5 Day Performance'] || {};
+        const monthly = data['Rank D: 1 Month Performance'] || {};
+        const quarterly = data['Rank E: 3 Month Performance'] || {};
+        const ytd = data['Rank F: Year-to-Date (YTD) Performance'] || {};
+        const yearly = data['Rank G: 1 Year Performance'] || {};
+        
+        const sectors = [
+          { name: 'Technology', key: 'Information Technology' },
+          { name: 'Financials', key: 'Financials' },
+          { name: 'Healthcare', key: 'Health Care' },
+          { name: 'Energy', key: 'Energy' },
+          { name: 'Consumer Discretionary', key: 'Consumer Discretionary' },
+          { name: 'Consumer Staples', key: 'Consumer Staples' },
+          { name: 'Industrials', key: 'Industrials' },
+          { name: 'Materials', key: 'Materials' },
+          { name: 'Utilities', key: 'Utilities' },
+          { name: 'Real Estate', key: 'Real Estate' },
+          { name: 'Communication Services', key: 'Communication Services' },
+        ];
+        
+        const parsePercent = (str: string) => {
+          if (!str) return 0;
+          return parseFloat(str.replace('%', '')) || 0;
+        };
+        
+        const sectorData = sectors.map((sector, idx) => {
+          const etf = SECTOR_ETFS.find(e => e.name === sector.name) || SECTOR_ETFS[idx];
+          
+          return {
+            symbol: etf.symbol,
+            name: sector.name,
+            changePercent: parsePercent(realtime[sector.key]),
+            daily: parsePercent(daily[sector.key]),
+            weekly: parsePercent(weekly[sector.key]),
+            monthly: parsePercent(monthly[sector.key]),
+            quarterly: parsePercent(quarterly[sector.key]),
+            ytd: parsePercent(ytd[sector.key]),
+            yearly: parsePercent(yearly[sector.key]),
+            weight: SECTOR_WEIGHTS[etf.symbol] || 5,
+            color: etf.color,
+          };
+        });
+        
+        return NextResponse.json({
+          sectors: sectorData,
+          timestamp: new Date().toISOString(),
+          source: 'alpha_vantage_sector'
+        });
+      }
+      
+      // Log if rate limited (shouldn't happen with premium)
+      if (data['Information'] || data['Note']) {
+        console.log('Alpha Vantage response:', data['Information'] || data['Note']);
+      }
+    } catch (err) {
+      console.error('Alpha Vantage SECTOR endpoint error:', err);
+    }
+    
+    // Fallback: Fetch individual ETF quotes (premium tier can handle this)
+    console.log('Using ETF quotes fallback...');
+    const sectorPromises = SECTOR_ETFS.map(async (etf) => {
       try {
         const res = await fetch(
-          `https://www.alphavantage.co/query?function=SECTOR&apikey=${apiKey}`,
-          { next: { revalidate: 300 } } // Cache for 5 minutes
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etf.symbol}&apikey=${apiKey}`
         );
         const data = await res.json();
         
-        // Check for rate limit or error
-        if (data['Information'] || data['Note']) {
-          console.log('Alpha Vantage rate limited, using fallback');
-        } else if (data['Rank A: Real-Time Performance']) {
-          const realtime = data['Rank A: Real-Time Performance'];
-          const daily = data['Rank B: 1 Day Performance'] || {};
-          const weekly = data['Rank C: 5 Day Performance'] || {};
-          const monthly = data['Rank D: 1 Month Performance'] || {};
-          const quarterly = data['Rank E: 3 Month Performance'] || {};
-          const ytd = data['Rank F: Year-to-Date (YTD) Performance'] || {};
-          const yearly = data['Rank G: 1 Year Performance'] || {};
-          
-          const sectors = [
-            { name: 'Technology', key: 'Information Technology' },
-            { name: 'Financials', key: 'Financials' },
-            { name: 'Healthcare', key: 'Health Care' },
-            { name: 'Energy', key: 'Energy' },
-            { name: 'Consumer Discretionary', key: 'Consumer Discretionary' },
-            { name: 'Consumer Staples', key: 'Consumer Staples' },
-            { name: 'Industrials', key: 'Industrials' },
-            { name: 'Materials', key: 'Materials' },
-            { name: 'Utilities', key: 'Utilities' },
-            { name: 'Real Estate', key: 'Real Estate' },
-            { name: 'Communication Services', key: 'Communication Services' },
-          ];
-          
-          const parsePercent = (str: string) => {
-            if (!str) return 0;
-            return parseFloat(str.replace('%', '')) || 0;
+        if (data['Global Quote'] && data['Global Quote']['05. price']) {
+          const quote = data['Global Quote'];
+          return {
+            symbol: etf.symbol,
+            name: etf.name,
+            price: parseFloat(quote['05. price'] || '0'),
+            change: parseFloat(quote['09. change'] || '0'),
+            changePercent: parseFloat(quote['10. change percent']?.replace('%', '') || '0'),
+            weight: SECTOR_WEIGHTS[etf.symbol] || 5,
+            color: etf.color,
           };
-          
-          const sectorData = sectors.map((sector, idx) => {
-            const etf = SECTOR_ETFS.find(e => e.name === sector.name) || SECTOR_ETFS[idx];
-            
-            return {
-              symbol: etf.symbol,
-              name: sector.name,
-              changePercent: parsePercent(realtime[sector.key]),
-              daily: parsePercent(daily[sector.key]),
-              weekly: parsePercent(weekly[sector.key]),
-              monthly: parsePercent(monthly[sector.key]),
-              quarterly: parsePercent(quarterly[sector.key]),
-              ytd: parsePercent(ytd[sector.key]),
-              yearly: parsePercent(yearly[sector.key]),
-              weight: SECTOR_WEIGHTS[etf.symbol] || 5,
-              color: etf.color,
-            };
-          });
-          
-          return NextResponse.json({
-            sectors: sectorData,
-            timestamp: new Date().toISOString(),
-            source: 'alpha_vantage_sector'
-          });
         }
+        return null;
       } catch (err) {
-        console.error('Alpha Vantage sector API error:', err);
+        console.error(`Error fetching ${etf.symbol}:`, err);
+        return null;
       }
+    });
+    
+    const results = await Promise.all(sectorPromises);
+    const validSectors = results.filter(Boolean) as SectorData[];
+    
+    if (validSectors.length > 0) {
+      return NextResponse.json({
+        sectors: validSectors,
+        timestamp: new Date().toISOString(),
+        source: 'alpha_vantage_etf'
+      });
     }
     
-    // Fallback: Return realistic mock data based on typical market movements
-    // This ensures the heatmap always displays
-    const mockSectors = SECTOR_ETFS.map(etf => {
-      // Generate semi-realistic changes based on sector characteristics
-      const baseChange = (Math.random() - 0.48) * 3; // Slight upward bias
-      const volatilityFactor = etf.symbol === 'XLK' || etf.symbol === 'XLY' ? 1.5 : 
-                               etf.symbol === 'XLU' || etf.symbol === 'XLP' ? 0.6 : 1;
-      
-      return {
-        symbol: etf.symbol,
-        name: etf.name,
-        changePercent: baseChange * volatilityFactor,
-        daily: baseChange * volatilityFactor,
-        weekly: baseChange * volatilityFactor * 2.5,
-        monthly: baseChange * volatilityFactor * 5,
-        quarterly: (Math.random() - 0.4) * 15,
-        ytd: (Math.random() - 0.3) * 25,
-        yearly: (Math.random() - 0.3) * 30,
-        weight: SECTOR_WEIGHTS[etf.symbol] || 5,
-        color: etf.color,
-      };
-    });
-    
-    return NextResponse.json({
-      sectors: mockSectors,
-      timestamp: new Date().toISOString(),
-      source: 'demo'
-    });
+    // This shouldn't happen with premium, but just in case
+    return NextResponse.json({ 
+      error: 'No sector data available',
+      message: 'Alpha Vantage API returned no data'
+    }, { status: 503 });
     
   } catch (error) {
     console.error('Error fetching sector data:', error);
-    
-    // Even on error, return demo data so UI always works
-    const fallbackSectors = SECTOR_ETFS.map(etf => ({
-      symbol: etf.symbol,
-      name: etf.name,
-      changePercent: (Math.random() - 0.5) * 4,
-      weight: SECTOR_WEIGHTS[etf.symbol] || 5,
-      color: etf.color,
-    }));
-    
-    return NextResponse.json({
-      sectors: fallbackSectors,
-      timestamp: new Date().toISOString(),
-      source: 'fallback'
-    });
+    return NextResponse.json({ error: 'Failed to fetch sector data' }, { status: 500 });
   }
 }
