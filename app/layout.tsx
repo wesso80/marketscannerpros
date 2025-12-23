@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 import Header from "../components/Header";
+import AlertToast from "../components/AlertToast";
 import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
         <main>{children}</main>
         <Footer />
         <CookieBanner />
+        <AlertToast />
         <Suspense>
           <AnalyticsLoader />
         </Suspense>
