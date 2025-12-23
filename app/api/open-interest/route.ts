@@ -127,8 +127,11 @@ export async function GET(req: NextRequest) {
       throw new Error('No OI data received');
     }
 
-    // Fetch historical OI for 24h change calculation
-    const historicalOI = await fetchHistoricalOI(controller);
+    // Fetch historical OI for 24h change calculation (new controller since the previous one may have timed out)
+    const histController = new AbortController();
+    const histTimeout = setTimeout(() => histController.abort(), 10000);
+    const historicalOI = await fetchHistoricalOI(histController);
+    clearTimeout(histTimeout);
     
     // Calculate 24h change for coins that have historical data
     oiData.forEach(coin => {
