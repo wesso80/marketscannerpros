@@ -610,16 +610,3 @@ async function runDailyScan(req: NextRequest) {
     }, { status: 500 });
   }
 }
-
-// Also support GET for manual trigger with admin key
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const adminKey = searchParams.get("key");
-  
-  if (adminKey !== process.env.ADMIN_SECRET && adminKey !== process.env.ADMIN_API_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  
-  // Forward to POST handler
-  return POST(req);
-}
