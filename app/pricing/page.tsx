@@ -78,7 +78,9 @@ export default function PricingPage() {
   const proTraderFeatures = [
     { text: "Everything in Pro", highlight: false },
     { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
-    { text: "📈 Full backtesting engine", highlight: false },
+    { text: "� AI + Derivatives Intelligence", highlight: true },
+    { text: "🧠 Smart Alerts (AI-triggered)", highlight: true },
+    { text: "�📈 Full backtesting engine", highlight: false },
     { text: "Real Alpha Vantage market data", highlight: false },
     { text: "TradingView script access", highlight: false },
     { text: "Advanced strategy testing", highlight: false },
@@ -92,7 +94,7 @@ export default function PricingPage() {
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
-      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds 200 AI questions/day, real Alpha Vantage backtesting with actual market data, TradingView script access, and advanced indicators - essential tools for serious technical traders."
+      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds 200 AI questions/day, AI-powered derivatives intelligence (Open Interest, Long/Short Ratios, Funding Rates, Fear & Greed Index), Smart Alerts that trigger on market anomalies, real Alpha Vantage backtesting, and TradingView scripts - essential tools for serious technical traders."
     },
     {
       q: "How do I upgrade?",
