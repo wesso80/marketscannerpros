@@ -7,9 +7,10 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import FearGreedGauge from "@/components/FearGreedGauge";
+import SentimentWidget from "@/components/SentimentWidget";
 import OpenInterestWidget from "@/components/OpenInterestWidget";
 import DerivativesWidget from "@/components/DerivativesWidget";
+import AlertsWidget from "@/components/AlertsWidget";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -462,9 +463,9 @@ function ScannerContent() {
           </div>
         </div>
 
-        {/* Market Sentiment - Fear & Greed Index */}
+        {/* Market Sentiment - Fear & Greed Index (Crypto + Stocks) */}
         <div style={{ marginBottom: "0.75rem" }}>
-          <FearGreedGauge compact />
+          <SentimentWidget showDetails={true} />
         </div>
 
         {/* Open Interest Widget */}
@@ -473,8 +474,13 @@ function ScannerContent() {
         </div>
 
         {/* Derivatives Data - L/S Ratio & Funding */}
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "0.75rem" }}>
           <DerivativesWidget compact />
+        </div>
+
+        {/* Price Alerts Widget */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <AlertsWidget compact />
         </div>
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
