@@ -15,10 +15,10 @@ interface PushNotificationSettingsProps {
 }
 
 export default function PushNotificationSettings({ compact = false }: PushNotificationSettingsProps) {
-  const [supported, setSupported] = useState(false);
+  const [supported, setSupported] = useState<boolean | null>(null); // null = checking
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const [subscribed, setSubscribed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -26,15 +26,19 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
   }, []);
 
   const checkStatus = async () => {
-    setLoading(true);
-    setSupported(isPushSupported());
-    setPermission(getNotificationPermission());
-    
-    if (isPushSupported()) {
-      const isSubbed = await isSubscribedToPush();
-      setSubscribed(isSubbed);
+    try {
+      const isSupported = isPushSupported();
+      setSupported(isSupported);
+      setPermission(getNotificationPermission());
+      
+      if (isSupported) {
+        const isSubbed = await isSubscribedToPush();
+        setSubscribed(isSubbed);
+      }
+    } catch (err) {
+      console.error('[Push] checkStatus error:', err);
+      setSupported(false);
     }
-    setLoading(false);
   };
 
   const handleSubscribe = async () => {
@@ -102,6 +106,18 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
       setLoading(false);
     }
   };
+
+  // Still checking support
+  if (supported === null) {
+    return (
+      <div className={`p-4 rounded-lg bg-slate-800/50 border border-slate-700 ${compact ? 'text-sm' : ''}`}>
+        <div className="flex items-center gap-2 text-slate-400">
+          <span>🔔</span>
+          <span>Checking notification support...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!supported) {
     return (
