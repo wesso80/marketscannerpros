@@ -362,7 +362,20 @@ async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
   } catch { return null; }
 }
 
-function analyzeAsset(symbol: string, ohlcv: OHLCV[]) {
+function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
+  symbol: string;
+  score: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  signals: { bullish: number; bearish: number; neutral: number };
+  indicators: Indicators;
+  change24h: number;
+  derivatives?: {
+    openInterest: number;
+    openInterestCoin: number;
+    fundingRate?: number;
+    longShortRatio?: number;
+  };
+} | null {
   if (!ohlcv || ohlcv.length < 50) return null;
   
   const closes = ohlcv.map(d => d.close);
