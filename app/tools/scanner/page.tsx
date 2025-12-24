@@ -256,11 +256,22 @@ function TradingViewChart({
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              interaction: { intersect: false, mode: 'index', axis: 'x' },
               plugins: {
                 legend: {
                   display: true,
                   position: 'top',
                   labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                  titleColor: '#F1F5F9',
+                  bodyColor: '#CBD5E1',
+                  borderColor: 'rgba(139, 92, 246, 0.3)',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (ctx: any) => `RSI: ${ctx.parsed.y?.toFixed(1)}`
+                  }
                 },
               },
               scales: {
@@ -349,11 +360,25 @@ function TradingViewChart({
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              interaction: { intersect: false, mode: 'index', axis: 'x' },
               plugins: {
                 legend: {
                   display: true,
                   position: 'top',
                   labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                  titleColor: '#F1F5F9',
+                  bodyColor: '#CBD5E1',
+                  borderColor: 'rgba(59, 130, 246, 0.3)',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (ctx: any) => {
+                      const val = ctx.parsed.y?.toFixed(4);
+                      return `${ctx.dataset.label}: ${val}`;
+                    }
+                  }
                 },
               },
               scales: {
