@@ -36,6 +36,7 @@ import { logger } from "@/lib/logger";
 import { analystRequestSchema } from "../../../lib/validation";
 import { ZodError } from "zod";
 import { runMigrations } from "@/lib/migrations";
+import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -49,6 +50,19 @@ function getOpenAIClient() {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 10 requests per minute per IP (prevents spam, separate from daily DB limits)
+  const ip = getClientIP(req);
+  const rateCheck = aiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return new Response(
+      JSON.stringify({ 
+        error: "Too many requests. Please slow down.", 
+        retryAfter: rateCheck.retryAfter 
+      }),
+      { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+    );
+  }
+
   // Ensure migrations are run
   if (!migrationsChecked) {
     migrationsChecked = true;

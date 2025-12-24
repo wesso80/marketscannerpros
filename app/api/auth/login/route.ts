@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signToken } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
@@ -109,6 +110,16 @@ function corsHeaders(origin: string | null) {
   return headers;
 }
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 login attempts per minute per IP
+  const ip = getClientIP(req);
+  const rateCheck = loginLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later.", retryAfter: rateCheck.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+    );
+  }
+
   try {
     const { email } = await req.json();
     if (!email || !email.includes("@")) {
