@@ -38,6 +38,12 @@ interface ScanResult {
   aroon_down?: number;
   obv?: number;
   lastCandleTime?: string;
+  chartData?: {
+    candles: { t: string; o: number; h: number; l: number; c: number }[];
+    ema200: number[];
+    rsi: number[];
+    macd: { macd: number; signal: number; hist: number }[];
+  };
   fetchedAt?: string;
 }
 
@@ -85,115 +91,327 @@ const QUICK_PICKS: Record<AssetType, string[]> = {
   forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"],
 };
 
-// Chart.js Component - MIT Licensed, Free for Commercial Use
-function TradingViewChart({ symbol, interval, price }: { symbol: string; interval: string; price?: number }) {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const chartRef = React.useRef<any>(null);
+// Enhanced Chart Component with Real Data + Indicators
+interface ChartData {
+  candles: { t: string; o: number; h: number; l: number; c: number }[];
+  ema200: number[];
+  rsi: number[];
+  macd: { macd: number; signal: number; hist: number }[];
+}
+
+function TradingViewChart({ 
+  symbol, 
+  interval, 
+  price,
+  chartData 
+}: { 
+  symbol: string; 
+  interval: string; 
+  price?: number;
+  chartData?: ChartData;
+}) {
+  const priceCanvasRef = React.useRef<HTMLCanvasElement>(null);
+  const rsiCanvasRef = React.useRef<HTMLCanvasElement>(null);
+  const macdCanvasRef = React.useRef<HTMLCanvasElement>(null);
+  const priceChartRef = React.useRef<any>(null);
+  const rsiChartRef = React.useRef<any>(null);
+  const macdChartRef = React.useRef<any>(null);
 
   React.useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!priceCanvasRef.current) return;
 
-    const initChart = async () => {
+    const initCharts = async () => {
       try {
         const ChartJsModule = await import('chart.js');
         const { Chart: ChartLib, registerables } = ChartJsModule;
-        // Financial plugin auto-registers on import
-        await import('chartjs-chart-financial');
-        
-        // Register all Chart.js components
         ChartLib.register(...registerables);
 
-        if (chartRef.current) {
-          chartRef.current.destroy();
+        // Destroy existing charts
+        if (priceChartRef.current) priceChartRef.current.destroy();
+        if (rsiChartRef.current) rsiChartRef.current.destroy();
+        if (macdChartRef.current) macdChartRef.current.destroy();
+
+        // Use real data if available, otherwise generate placeholder
+        let labels: string[];
+        let closes: number[];
+        let ema200Data: (number | null)[];
+        let rsiData: number[];
+        let macdHist: number[];
+        let macdLine: number[];
+        let signalLine: number[];
+
+        if (chartData && chartData.candles.length > 0) {
+          // Real data from API
+          labels = chartData.candles.map(c => {
+            const d = new Date(c.t);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          });
+          closes = chartData.candles.map(c => c.c);
+          ema200Data = chartData.ema200.map(v => Number.isFinite(v) ? v : null);
+          rsiData = chartData.rsi.map(v => Number.isFinite(v) ? v : 50);
+          macdHist = chartData.macd.map(m => Number.isFinite(m.hist) ? m.hist : 0);
+          macdLine = chartData.macd.map(m => Number.isFinite(m.macd) ? m.macd : 0);
+          signalLine = chartData.macd.map(m => Number.isFinite(m.signal) ? m.signal : 0);
+        } else {
+          // Placeholder data
+          const basePrice = price || 45000;
+          const now = new Date();
+          labels = Array.from({ length: 20 }, (_, i) => {
+            const d = new Date(now);
+            d.setDate(d.getDate() - (19 - i));
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          });
+          closes = Array.from({ length: 20 }, (_, i) => basePrice * (1 + (Math.random() - 0.5) * 0.02));
+          ema200Data = closes.map(c => c * 0.98);
+          rsiData = Array.from({ length: 20 }, () => 40 + Math.random() * 30);
+          macdHist = Array.from({ length: 20 }, () => (Math.random() - 0.5) * 100);
+          macdLine = Array.from({ length: 20 }, (_, i) => (i - 10) * 5);
+          signalLine = macdLine.map(v => v * 0.9);
         }
 
-        const basePrice = price || 45000;
-        const drift = [0.995, 0.998, 1.000, 1.002, 1.004, 1.003, 1.005, 1.006, 1.004, 1.003];
-        const now = new Date();
-        const ohlcData = drift.map((d, idx) => {
-          const daysAgo = drift.length - 1 - idx;
-          const date = new Date(now);
-          date.setDate(date.getDate() - daysAgo);
-          const close = basePrice * d;
-          const high = close * 1.003;
-          const low = close * 0.997;
-          const open = (high + low) / 2;
-          return { x: date, o: open, h: high, l: low, c: close };
-        });
-
-        const ctx = canvasRef.current?.getContext('2d');
-        if (!ctx) return;
-
-        chartRef.current = new ChartLib(ctx, {
-          type: 'line',
-          data: {
-            labels: ohlcData.map(d => d.x.toLocaleDateString()),
-            datasets: [
-              {
-                label: `${symbol} - ${interval}`,
-                data: ohlcData.map(d => d.c),
-                borderColor: '#10B981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                tension: 0.4,
-                fill: true,
+        // === PRICE CHART with EMA200 ===
+        const priceCtx = priceCanvasRef.current?.getContext('2d');
+        if (priceCtx) {
+          priceChartRef.current = new ChartLib(priceCtx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: `${symbol} Price`,
+                  data: closes,
+                  borderColor: '#10B981',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  fill: true,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
+                },
+                {
+                  label: 'EMA 200',
+                  data: ema200Data,
+                  borderColor: '#F59E0B',
+                  borderWidth: 1.5,
+                  borderDash: [5, 5],
+                  tension: 0.1,
+                  fill: false,
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { intersect: false, mode: 'index' },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  labels: { color: '#94A3B8', font: { size: 11 }, boxWidth: 12 },
+                },
+                tooltip: {
+                  backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                  titleColor: '#F1F5F9',
+                  bodyColor: '#CBD5E1',
+                  borderColor: 'rgba(16, 185, 129, 0.3)',
+                  borderWidth: 1,
+                },
               },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-              legend: {
-                labels: {
-                  color: '#94A3B8',
-                  font: { size: 12 },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                  ticks: { color: '#64748B', font: { size: 10 }, maxRotation: 0 },
+                },
+                y: {
+                  position: 'right',
+                  grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                  ticks: { color: '#64748B', font: { size: 10 } },
                 },
               },
             },
-            scales: {
-              x: {
-                grid: {
-                  color: 'rgba(148, 163, 184, 0.1)',
+          });
+        }
+
+        // === RSI CHART ===
+        const rsiCtx = rsiCanvasRef.current?.getContext('2d');
+        if (rsiCtx) {
+          rsiChartRef.current = new ChartLib(rsiCtx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'RSI (14)',
+                  data: rsiData,
+                  borderColor: '#8B5CF6',
+                  backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                  borderWidth: 1.5,
+                  tension: 0.1,
+                  fill: true,
+                  pointRadius: 0,
                 },
-                ticks: {
-                  color: '#64748B',
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
                 },
               },
-              y: {
-                grid: {
-                  color: 'rgba(148, 163, 184, 0.1)',
+              scales: {
+                x: {
+                  display: false,
                 },
-                ticks: {
-                  color: '#64748B',
+                y: {
+                  position: 'right',
+                  min: 0,
+                  max: 100,
+                  grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                  ticks: { 
+                    color: '#64748B', 
+                    font: { size: 9 },
+                    stepSize: 30,
+                    callback: (v) => v === 70 ? '70' : v === 30 ? '30' : ''
+                  },
                 },
               },
             },
-          },
-        });
+            plugins: [{
+              id: 'rsiLines',
+              beforeDraw: (chart: any) => {
+                const { ctx, chartArea, scales } = chart;
+                if (!chartArea) return;
+                ctx.save();
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.setLineDash([4, 4]);
+                // Overbought line (70)
+                const y70 = scales.y.getPixelForValue(70);
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y70);
+                ctx.lineTo(chartArea.right, y70);
+                ctx.stroke();
+                // Oversold line (30)
+                ctx.strokeStyle = 'rgba(34, 197, 94, 0.4)';
+                const y30 = scales.y.getPixelForValue(30);
+                ctx.beginPath();
+                ctx.moveTo(chartArea.left, y30);
+                ctx.lineTo(chartArea.right, y30);
+                ctx.stroke();
+                ctx.restore();
+              }
+            }],
+          });
+        }
+
+        // === MACD CHART ===
+        const macdCtx = macdCanvasRef.current?.getContext('2d');
+        if (macdCtx) {
+          macdChartRef.current = new ChartLib(macdCtx, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                {
+                  type: 'bar' as const,
+                  label: 'Histogram',
+                  data: macdHist,
+                  backgroundColor: macdHist.map(v => v >= 0 ? 'rgba(34, 197, 94, 0.6)' : 'rgba(239, 68, 68, 0.6)'),
+                  borderWidth: 0,
+                  barPercentage: 0.8,
+                },
+                {
+                  type: 'line' as const,
+                  label: 'MACD',
+                  data: macdLine,
+                  borderColor: '#3B82F6',
+                  borderWidth: 1.5,
+                  tension: 0.1,
+                  pointRadius: 0,
+                  fill: false,
+                },
+                {
+                  type: 'line' as const,
+                  label: 'Signal',
+                  data: signalLine,
+                  borderColor: '#F97316',
+                  borderWidth: 1.5,
+                  tension: 0.1,
+                  pointRadius: 0,
+                  fill: false,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'top',
+                  labels: { color: '#94A3B8', font: { size: 10 }, boxWidth: 10 },
+                },
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                  ticks: { color: '#64748B', font: { size: 9 }, maxRotation: 0 },
+                },
+                y: {
+                  position: 'right',
+                  grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                  ticks: { color: '#64748B', font: { size: 9 } },
+                },
+              },
+            },
+          });
+        }
+
       } catch (error) {
         console.warn('Chart initialization error:', error);
       }
     };
 
-    initChart();
+    initCharts();
 
     return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-      }
+      if (priceChartRef.current) priceChartRef.current.destroy();
+      if (rsiChartRef.current) rsiChartRef.current.destroy();
+      if (macdChartRef.current) macdChartRef.current.destroy();
     };
-  }, [symbol, interval, price]);
+  }, [symbol, interval, price, chartData]);
 
   return (
-    <canvas 
-      ref={canvasRef}
-      style={{ 
-        width: '100%',
-        height: '400px',
-        background: '#1e293b',
-        borderRadius: '8px',
-      }}
-    />
+    <div style={{ background: '#1e293b', borderRadius: '8px', padding: '12px' }}>
+      {/* Price + EMA200 Chart */}
+      <div style={{ height: '280px', marginBottom: '8px' }}>
+        <canvas ref={priceCanvasRef} />
+      </div>
+      
+      {/* RSI Chart */}
+      <div style={{ height: '80px', marginBottom: '8px', borderTop: '1px solid rgba(148, 163, 184, 0.2)', paddingTop: '8px' }}>
+        <canvas ref={rsiCanvasRef} />
+      </div>
+      
+      {/* MACD Chart */}
+      <div style={{ height: '100px', borderTop: '1px solid rgba(148, 163, 184, 0.2)', paddingTop: '8px' }}>
+        <canvas ref={macdCanvasRef} />
+      </div>
+      
+      {/* Data source indicator */}
+      <div style={{ 
+        textAlign: 'right', 
+        fontSize: '10px', 
+        color: chartData ? '#10B981' : '#64748B',
+        marginTop: '4px'
+      }}>
+        {chartData ? '● Live Data' : '○ Placeholder Data'}
+      </div>
+    </div>
   );
 }
 
@@ -1348,7 +1566,12 @@ function ScannerContent() {
 
             {/* TradingView Chart */}
             <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-              <TradingViewChart symbol={result.symbol.replace("-USD", "")} interval={timeframe} price={result.price} />
+              <TradingViewChart 
+                symbol={result.symbol.replace("-USD", "")} 
+                interval={timeframe} 
+                price={result.price} 
+                chartData={result.chartData}
+              />
             </div>
 
             {/* Score Explanation */}

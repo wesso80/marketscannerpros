@@ -75,6 +75,13 @@ interface ScanResult {
   aroon_down?: number;
   obv?: number;
   lastCandleTime?: string;
+  // Chart data for visualization
+  chartData?: {
+    candles: { t: string; o: number; h: number; l: number; c: number }[];
+    ema200: number[];
+    rsi: number[];
+    macd: { macd: number; signal: number; hist: number }[];
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -565,6 +572,24 @@ export async function POST(req: NextRequest) {
           const obvCurrent = obvArr[last];
           const obvPrev = obvArr[last - 1];
           
+          // Prepare chart data (last 50 candles for visualization)
+          const chartLength = Math.min(50, candles.length);
+          const chartStart = candles.length - chartLength;
+          const chartCandles = candles.slice(chartStart).map(c => ({
+            t: c.t,
+            o: c.open,
+            h: c.high,
+            l: c.low,
+            c: c.close
+          }));
+          const chartEma200 = emaArr.slice(chartStart);
+          const chartRsi = rsiArr.slice(chartStart);
+          const chartMacd = macObj.macdLine.slice(chartStart).map((m, i) => ({
+            macd: m,
+            signal: macObj.signalLine[chartStart + i],
+            hist: macObj.hist[chartStart + i]
+          }));
+          
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-${market}`,
@@ -586,6 +611,12 @@ export async function POST(req: NextRequest) {
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
+            chartData: {
+              candles: chartCandles,
+              ema200: chartEma200,
+              rsi: chartRsi,
+              macd: chartMacd
+            }
           };
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
@@ -781,6 +812,24 @@ export async function POST(req: NextRequest) {
           const obvCurrent = obvArr[last];
           const obvPrev = obvArr[last - 1];
           
+          // Prepare chart data (last 50 candles for visualization)
+          const chartLength = Math.min(50, candles.length);
+          const chartStart = candles.length - chartLength;
+          const chartCandles = candles.slice(chartStart).map(c => ({
+            t: c.t,
+            o: c.open,
+            h: c.high,
+            l: c.low,
+            c: c.close
+          }));
+          const chartEma200 = emaArr.slice(chartStart);
+          const chartRsi = rsiArr.slice(chartStart);
+          const chartMacd = macObj.macdLine.slice(chartStart).map((m, i) => ({
+            macd: m,
+            signal: macObj.signalLine[chartStart + i],
+            hist: macObj.hist[chartStart + i]
+          }));
+          
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
@@ -802,6 +851,12 @@ export async function POST(req: NextRequest) {
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
+            chartData: {
+              candles: chartCandles,
+              ema200: chartEma200,
+              rsi: chartRsi,
+              macd: chartMacd
+            }
           };
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         }
