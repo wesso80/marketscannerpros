@@ -64,11 +64,76 @@ export async function GET(req: NextRequest) {
 }
 
 /**
+ * Mapping of crypto symbols to CoinGecko IDs for tokens where Yahoo Finance
+ * returns the wrong token (e.g., JUP returns a different "Jupiter USD" token)
+ */
+const COINGECKO_ID_MAP: Record<string, string> = {
+  'JUP': 'jupiter-exchange-solana',  // Jupiter DEX on Solana (not "Jupiter USD")
+  'XCN': 'chain-2',                   // Onyxcoin (not "Cryptonite USD")
+  'RENDER': 'render-token',           // Render Token
+  'RNDR': 'render-token',             // Render Token (alternate symbol)
+  'KAS': 'kaspa',                     // Kaspa
+  'FET': 'fetch-ai',                  // Fetch.AI
+  'TIA': 'celestia',                  // Celestia
+  'SEI': 'sei-network',               // Sei Network
+  'SUI': 'sui',                       // Sui
+  'INJ': 'injective-protocol',        // Injective
+  'ARB': 'arbitrum',                  // Arbitrum
+  'OP': 'optimism',                   // Optimism
+  'BLUR': 'blur',                     // Blur
+  'PENDLE': 'pendle',                 // Pendle
+  'PYTH': 'pyth-network',             // Pyth Network
+  'BONK': 'bonk',                     // Bonk
+  'WIF': 'dogwifcoin',                // dogwifhat
+  'PEPE': 'pepe',                     // Pepe
+  'FLOKI': 'floki',                   // Floki
+};
+
+/**
+ * Fetch price from CoinGecko for specific tokens that Yahoo gets wrong
+ */
+async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
+  const geckoId = COINGECKO_ID_MAP[symbol.toUpperCase()];
+  if (!geckoId) return null;
+  
+  try {
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`;
+    const res = await fetch(url, { 
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data[geckoId]?.usd) {
+        return data[geckoId].usd;
+      }
+    }
+  } catch (err) {
+    console.warn(`CoinGecko fetch failed for ${symbol}:`, err);
+  }
+  
+  return null;
+}
+
+/**
  * Fetch crypto price using Yahoo Finance (free, no API key required)
- * Falls back to Alpha Vantage if Yahoo Finance fails
+ * Uses CoinGecko for specific tokens where Yahoo returns wrong data
+ * Falls back to Alpha Vantage if both fail
  */
 async function getCryptoPrice(symbol: string, market: string): Promise<number | null> {
-  // Try Yahoo Finance first (free, no API key required)
+  // For tokens where Yahoo Finance returns wrong data, use CoinGecko first
+  if (COINGECKO_ID_MAP[symbol.toUpperCase()]) {
+    const geckoPrice = await getCoinGeckoPrice(symbol);
+    if (geckoPrice !== null) {
+      return geckoPrice;
+    }
+    // Fall through to try other sources if CoinGecko fails
+  }
+
+  // Try Yahoo Finance (free, no API key required)
   try {
     // Yahoo Finance uses format: BTC-USD, ETH-USD, etc.
     const yahooSymbol = `${symbol}-${market}`;
