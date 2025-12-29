@@ -367,7 +367,6 @@ async function fetchYahooData(symbol: string, timeframe: string = '1d'): Promise
         });
       }
     }
-    const config = INTERVAL_CONFIG[timeframe] || INTERVAL_CONFIG['1d'];
     return ohlcv.length >= config.minBars ? ohlcv : null;
   } catch { return null; }
 }
