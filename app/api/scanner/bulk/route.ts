@@ -330,11 +330,20 @@ function computeScore(indicators: Indicators): {
 // DATA FETCHERS
 // =============================================================================
 
-async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
+// Yahoo Finance interval mapping
+const INTERVAL_CONFIG: Record<string, { interval: string; rangeDays: number; minBars: number }> = {
+  '15m': { interval: '15m', rangeDays: 7, minBars: 50 },     // 7 days of 15min data
+  '30m': { interval: '30m', rangeDays: 14, minBars: 50 },    // 14 days of 30min data
+  '1h': { interval: '60m', rangeDays: 30, minBars: 50 },     // 30 days of 1h data
+  '1d': { interval: '1d', rangeDays: 180, minBars: 50 }      // 180 days of daily data
+};
+
+async function fetchYahooData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
   try {
-    const period1 = Math.floor(Date.now() / 1000) - (180 * 24 * 60 * 60);
+    const config = INTERVAL_CONFIG[timeframe] || INTERVAL_CONFIG['1d'];
+    const period1 = Math.floor(Date.now() / 1000) - (config.rangeDays * 24 * 60 * 60);
     const period2 = Math.floor(Date.now() / 1000);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${config.interval}`;
     
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
@@ -352,13 +361,14 @@ async function fetchYahooData(symbol: string): Promise<OHLCV[] | null> {
     for (let i = 0; i < timestamp.length; i++) {
       if (quote.open[i] && quote.high[i] && quote.low[i] && quote.close[i]) {
         ohlcv.push({
-          date: new Date(timestamp[i] * 1000).toISOString().split('T')[0],
+          date: new Date(timestamp[i] * 1000).toISOString(),
           open: quote.open[i], high: quote.high[i], low: quote.low[i],
           close: quote.close[i], volume: quote.volume[i] || 0
         });
       }
     }
-    return ohlcv.length > 50 ? ohlcv : null;
+    const config = INTERVAL_CONFIG[timeframe] || INTERVAL_CONFIG['1d'];
+    return ohlcv.length >= config.minBars ? ohlcv : null;
   } catch { return null; }
 }
 
@@ -483,17 +493,20 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const { type } = body; // 'equity' or 'crypto'
+    const { type, timeframe = '1d' } = body; // 'equity' or 'crypto', timeframe: '15m', '30m', '1h', '1d'
     
     if (!type || !['equity', 'crypto'].includes(type)) {
       return NextResponse.json({ error: "Type must be 'equity' or 'crypto'" }, { status: 400 });
     }
     
+    const validTimeframes = ['15m', '30m', '1h', '1d'];
+    const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
+    
     const universe = type === 'equity' ? EQUITY_UNIVERSE : CRYPTO_UNIVERSE;
     const results: any[] = [];
     const errors: string[] = [];
     
-    console.log(`[bulk-scan] Scanning ${universe.length} ${type}...`);
+    console.log(`[bulk-scan] Scanning ${universe.length} ${type} on ${selectedTimeframe} timeframe...`);
     
     // For crypto, pre-fetch all derivatives data in parallel
     const derivativesMap = new Map<string, DerivativesData>();
@@ -517,7 +530,7 @@ export async function POST(req: NextRequest) {
       const batchPromises = batch.map(async (id) => {
         try {
           // Both equity and crypto use Yahoo Finance
-          const ohlcv = await fetchYahooData(id);
+          const ohlcv = await fetchYahooData(id, selectedTimeframe);
           
           if (!ohlcv) {
             errors.push(`${id}: No data`);
@@ -573,6 +586,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       type,
+      timeframe: selectedTimeframe,
       scanned: results.length,
       duration: `${duration}s`,
       topPicks,

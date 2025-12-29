@@ -459,8 +459,10 @@ function ScannerContent() {
   // Bulk scan state
   const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
   const [bulkScanLoading, setBulkScanLoading] = useState(false);
+  const [bulkScanTimeframe, setBulkScanTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
+    timeframe: string;
     topPicks: any[];
     scanned: number;
     duration: string;
@@ -478,7 +480,7 @@ function ScannerContent() {
       const res = await fetch('/api/scanner/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type })
+        body: JSON.stringify({ type, timeframe: bulkScanTimeframe })
       });
       
       const data = await res.json();
@@ -486,6 +488,7 @@ function ScannerContent() {
       if (data.success) {
         setBulkScanResults({
           type: data.type,
+          timeframe: data.timeframe,
           topPicks: data.topPicks,
           scanned: data.scanned,
           duration: data.duration
@@ -783,6 +786,54 @@ function ScannerContent() {
             </p>
           </div>
 
+          {/* Timeframe Toggle */}
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "12px", 
+            marginBottom: "16px",
+            flexWrap: "wrap"
+          }}>
+            <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "600" }}>Timeframe:</span>
+            <div style={{ 
+              display: "flex", 
+              gap: "6px",
+              background: "rgba(30,41,59,0.6)",
+              padding: "4px",
+              borderRadius: "8px"
+            }}>
+              {(['15m', '30m', '1h', '1d'] as const).map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setBulkScanTimeframe(tf)}
+                  disabled={bulkScanLoading}
+                  style={{
+                    padding: "8px 16px",
+                    background: bulkScanTimeframe === tf 
+                      ? "linear-gradient(135deg, #10b981, #059669)" 
+                      : "transparent",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: bulkScanTimeframe === tf ? "#fff" : "#94a3b8",
+                    fontSize: "14px",
+                    fontWeight: bulkScanTimeframe === tf ? "700" : "500",
+                    cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                    transition: "all 0.2s ease",
+                    opacity: bulkScanLoading ? 0.5 : 1
+                  }}
+                >
+                  {tf === '1d' ? 'Daily' : tf}
+                </button>
+              ))}
+            </div>
+            <span style={{ color: "#64748b", fontSize: "12px" }}>
+              {bulkScanTimeframe === '15m' && '~7 days of data'}
+              {bulkScanTimeframe === '30m' && '~14 days of data'}
+              {bulkScanTimeframe === '1h' && '~30 days of data'}
+              {bulkScanTimeframe === '1d' && '~6 months of data'}
+            </span>
+          </div>
+
           {/* Scan Buttons */}
           <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
             <button
@@ -887,7 +938,7 @@ function ScannerContent() {
                 borderBottom: "1px solid rgba(148,163,184,0.2)"
               }}>
                 <h4 style={{ color: "#f1f5f9", fontSize: "16px", fontWeight: "600", margin: 0 }}>
-                  🏆 Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} Right Now
+                  🏆 Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
                 </h4>
                 <span style={{ color: "#64748b", fontSize: "12px" }}>
                   {bulkScanResults.scanned} scanned • {bulkScanResults.duration}
