@@ -45,6 +45,13 @@ interface ScanResult {
     macd: { macd: number; signal: number; hist: number }[];
   };
   fetchedAt?: string;
+  // Derivatives data for crypto (OI, Funding Rate, L/S)
+  derivatives?: {
+    openInterest: number;
+    openInterestCoin: number;
+    fundingRate?: number;
+    longShortRatio?: number;
+  };
 }
 
 // Top 500+ cryptocurrencies from Alpha Vantage
@@ -2044,6 +2051,86 @@ function ScannerContent() {
                   </div>
                   <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
                     Volume Flow
+                  </div>
+                </div>
+              )}
+
+              {/* Open Interest - Crypto Only */}
+              {result.derivatives?.openInterest !== undefined && result.derivatives.openInterest > 0 && (
+                <div style={{
+                  background: "rgba(30, 41, 59, 0.5)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                }}>
+                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
+                    📊 OPEN INTEREST
+                  </div>
+                  <div style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "600",
+                    color: "#3b82f6",
+                  }}>
+                    ${result.derivatives.openInterest >= 1e9 
+                      ? (result.derivatives.openInterest / 1e9).toFixed(2) + 'B'
+                      : result.derivatives.openInterest >= 1e6 
+                        ? (result.derivatives.openInterest / 1e6).toFixed(1) + 'M'
+                        : result.derivatives.openInterest.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
+                    Futures OI
+                  </div>
+                </div>
+              )}
+
+              {/* Funding Rate - Crypto Only */}
+              {result.derivatives?.fundingRate !== undefined && (
+                <div style={{
+                  background: "rgba(30, 41, 59, 0.5)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: `1px solid ${result.derivatives.fundingRate > 0.05 ? 'rgba(239, 68, 68, 0.3)' : result.derivatives.fundingRate < -0.05 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`,
+                }}>
+                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
+                    💰 FUNDING RATE
+                  </div>
+                  <div style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "600",
+                    color: result.derivatives.fundingRate > 0.05 ? '#ef4444' 
+                      : result.derivatives.fundingRate < -0.05 ? '#10b981' 
+                      : '#94a3b8',
+                  }}>
+                    {result.derivatives.fundingRate >= 0 ? '+' : ''}{result.derivatives.fundingRate.toFixed(4)}%
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
+                    {result.derivatives.fundingRate > 0.05 ? 'Longs Paying' : result.derivatives.fundingRate < -0.05 ? 'Shorts Paying' : '8h Rate'}
+                  </div>
+                </div>
+              )}
+
+              {/* Long/Short Ratio - Crypto Only */}
+              {result.derivatives?.longShortRatio !== undefined && (
+                <div style={{
+                  background: "rgba(30, 41, 59, 0.5)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: `1px solid ${result.derivatives.longShortRatio > 1.5 ? 'rgba(16, 185, 129, 0.3)' : result.derivatives.longShortRatio < 0.67 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`,
+                }}>
+                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
+                    ⚖️ LONG/SHORT
+                  </div>
+                  <div style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "600",
+                    color: result.derivatives.longShortRatio > 1.5 ? '#10b981' 
+                      : result.derivatives.longShortRatio < 0.67 ? '#ef4444' 
+                      : '#94a3b8',
+                  }}>
+                    {result.derivatives.longShortRatio.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
+                    {result.derivatives.longShortRatio > 1.5 ? 'Long Bias' : result.derivatives.longShortRatio < 0.67 ? 'Short Bias' : 'L/S Ratio'}
                   </div>
                 </div>
               )}

@@ -51,6 +51,14 @@ interface ScanRequest {
   symbols?: string[];
 }
 
+// Derivatives data interface for crypto
+interface DerivativesData {
+  openInterest: number;        // OI in USD
+  openInterestCoin: number;    // OI in native coin
+  fundingRate?: number;        // Current funding rate as percentage
+  longShortRatio?: number;     // L/S ratio
+}
+
 interface ScanResult {
   symbol: string;
   score: number;
@@ -82,6 +90,66 @@ interface ScanResult {
     rsi: number[];
     macd: { macd: number; signal: number; hist: number }[];
   };
+  // Derivatives data for crypto (OI, Funding Rate, L/S)
+  derivatives?: DerivativesData;
+}
+
+// Fetch derivatives data from Binance Futures API
+async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
+  try {
+    // Convert BTC -> BTCUSDT for Binance
+    const binanceSymbol = `${symbol}USDT`;
+    
+    const [oiRes, fundingRes, lsRes] = await Promise.all([
+      // Open Interest
+      fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${binanceSymbol}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null),
+      // Funding Rate
+      fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${binanceSymbol}&limit=1`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null),
+      // Long/Short Ratio
+      fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${binanceSymbol}&period=1h&limit=1`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      }).catch(() => null)
+    ]);
+    
+    let openInterestCoin = 0;
+    let fundingRate: number | undefined;
+    let longShortRatio: number | undefined;
+    
+    if (oiRes?.ok) {
+      const oi = await oiRes.json();
+      openInterestCoin = parseFloat(oi.openInterest || '0');
+    }
+    
+    if (fundingRes?.ok) {
+      const funding = await fundingRes.json();
+      if (funding?.[0]?.fundingRate) {
+        fundingRate = parseFloat(funding[0].fundingRate) * 100; // Convert to %
+      }
+    }
+    
+    if (lsRes?.ok) {
+      const ls = await lsRes.json();
+      if (ls?.[0]?.longShortRatio) {
+        longShortRatio = parseFloat(ls[0].longShortRatio);
+      }
+    }
+    
+    if (openInterestCoin === 0) return null;
+    
+    return {
+      openInterest: 0, // Will calculate with price
+      openInterestCoin,
+      fundingRate,
+      longShortRatio
+    };
+  } catch (err) {
+    console.warn('[scanner] Failed to fetch derivatives for', symbol, err);
+    return null;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -618,6 +686,25 @@ export async function POST(req: NextRequest) {
               macd: chartMacd
             }
           };
+          
+          // Fetch derivatives data for crypto (OI, Funding Rate, L/S ratio)
+          if (type === 'crypto') {
+            try {
+              const derivData = await fetchCryptoDerivatives(baseSym);
+              if (derivData) {
+                // Calculate OI in USD using current price
+                item.derivatives = {
+                  openInterest: derivData.openInterestCoin * price,
+                  openInterestCoin: derivData.openInterestCoin,
+                  fundingRate: derivData.fundingRate,
+                  longShortRatio: derivData.longShortRatio
+                };
+              }
+            } catch (derivErr) {
+              console.warn('[scanner] Derivatives fetch failed for', baseSym, derivErr);
+            }
+          }
+          
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
