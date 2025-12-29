@@ -365,6 +365,80 @@ function calculateBollingerBands(prices: number[], period: number = 20, stdDev: 
   return bands;
 }
 
+// Calculate Stochastic Oscillator
+function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number = 14, dPeriod: number = 3): { k: number[], d: number[] } {
+  const k: number[] = [];
+  const d: number[] = [];
+  
+  for (let i = kPeriod - 1; i < closes.length; i++) {
+    const highSlice = highs.slice(i - kPeriod + 1, i + 1);
+    const lowSlice = lows.slice(i - kPeriod + 1, i + 1);
+    const highestHigh = Math.max(...highSlice);
+    const lowestLow = Math.min(...lowSlice);
+    
+    if (highestHigh - lowestLow > 0) {
+      k[i] = ((closes[i] - lowestLow) / (highestHigh - lowestLow)) * 100;
+    } else {
+      k[i] = 50;
+    }
+  }
+  
+  // Calculate %D (SMA of %K)
+  for (let i = kPeriod - 1 + dPeriod - 1; i < closes.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < dPeriod; j++) {
+      sum += k[i - j] || 0;
+    }
+    d[i] = sum / dPeriod;
+  }
+  
+  return { k, d };
+}
+
+// Calculate CCI (Commodity Channel Index)
+function calculateCCI(highs: number[], lows: number[], closes: number[], period: number = 20): number[] {
+  const cci: number[] = [];
+  const tp: number[] = [];
+  
+  // Calculate Typical Price
+  for (let i = 0; i < closes.length; i++) {
+    tp[i] = (highs[i] + lows[i] + closes[i]) / 3;
+  }
+  
+  for (let i = period - 1; i < closes.length; i++) {
+    const tpSlice = tp.slice(i - period + 1, i + 1);
+    const sma = tpSlice.reduce((a, b) => a + b, 0) / period;
+    
+    // Mean deviation
+    const meanDev = tpSlice.reduce((sum, val) => sum + Math.abs(val - sma), 0) / period;
+    
+    if (meanDev > 0) {
+      cci[i] = (tp[i] - sma) / (0.015 * meanDev);
+    } else {
+      cci[i] = 0;
+    }
+  }
+  
+  return cci;
+}
+
+// Calculate OBV (On Balance Volume)
+function calculateOBV(closes: number[], volumes: number[]): number[] {
+  const obv: number[] = [0];
+  
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i - 1]) {
+      obv[i] = obv[i - 1] + volumes[i];
+    } else if (closes[i] < closes[i - 1]) {
+      obv[i] = obv[i - 1] - volumes[i];
+    } else {
+      obv[i] = obv[i - 1];
+    }
+  }
+  
+  return obv;
+}
+
 // Run backtest based on strategy using real price data and indicators
 function runStrategy(
   strategy: string,
@@ -436,6 +510,29 @@ function runStrategy(
   
   if (strategy.includes('bbands') || strategy.includes('bb') || strategy === 'multi_bb_stoch') {
     bbands = calculateBollingerBands(closes, 20, 2);
+  }
+  
+  // Stochastic indicator
+  let stochData: { k: number[], d: number[] } | null = null;
+  if (strategy.includes('stoch') || strategy === 'multi_bb_stoch') {
+    stochData = calculateStochastic(highs, lows, closes, 14, 3);
+  }
+  
+  // CCI indicator
+  let cci: number[] = [];
+  if (strategy.includes('cci')) {
+    cci = calculateCCI(highs, lows, closes, 20);
+  }
+  
+  // OBV indicator
+  let obv: number[] = [];
+  if (strategy.includes('obv')) {
+    obv = calculateOBV(closes, volumes);
+  }
+  
+  // ADX for adx_trend strategy
+  if (strategy === 'adx_trend' && !adxData) {
+    adxData = calculateADX(highs, lows, closes, 14);
   }
   
   // Strategy execution logic
@@ -623,6 +720,152 @@ function runStrategy(
         if (!position && macd[i-1] <= signal[i-1] && macd[i] > signal[i] && macd[i] > 0) {
           position = { entry: close, entryDate: date, entryIdx: i };
         } else if (position && ((macd[i-1] >= signal[i-1] && macd[i] < signal[i]) || macd[i] < 0)) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          const returnDollars = (close - position.entry) * shares;
+          const returnPercent = ((close - position.entry) / position.entry) * 100;
+          
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: date,
+            symbol,
+            side: 'LONG',
+            entry: position.entry,
+            exit: close,
+            return: returnDollars,
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Stochastic Oversold Strategy
+    if (strategy === 'stoch_oversold' && stochData) {
+      const { k, d } = stochData;
+      if (k[i] !== undefined && d[i] !== undefined && k[i-1] !== undefined) {
+        // Entry: %K crosses above %D when both are below 20 (oversold)
+        if (!position && k[i-1] < d[i-1] && k[i] > d[i] && k[i] < 25) {
+          position = { entry: close, entryDate: date, entryIdx: i };
+        // Exit: %K crosses below %D when both are above 80 (overbought)
+        } else if (position && k[i] > 80) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          const returnDollars = (close - position.entry) * shares;
+          const returnPercent = ((close - position.entry) / position.entry) * 100;
+          
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: date,
+            symbol,
+            side: 'LONG',
+            entry: position.entry,
+            exit: close,
+            return: returnDollars,
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // ADX Trend Strategy
+    if (strategy === 'adx_trend' && adxData) {
+      const { adx, diPlus, diMinus } = adxData;
+      if (adx[i] !== undefined && diPlus[i] !== undefined && diMinus[i] !== undefined) {
+        // Entry: ADX > 25 (strong trend) and +DI crosses above -DI
+        if (!position && adx[i] > 25 && diPlus[i] > diMinus[i] && diPlus[i-1] <= diMinus[i-1]) {
+          position = { entry: close, entryDate: date, entryIdx: i };
+        // Exit: ADX < 20 (weak trend) or -DI crosses above +DI
+        } else if (position && (adx[i] < 20 || (diMinus[i] > diPlus[i] && diMinus[i-1] <= diPlus[i-1]))) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          const returnDollars = (close - position.entry) * shares;
+          const returnPercent = ((close - position.entry) / position.entry) * 100;
+          
+          trades.push({
+            entryDate: position.entryDate,
+            exitDate: date,
+            symbol,
+            side: 'LONG',
+            entry: position.entry,
+            exit: close,
+            return: returnDollars,
+            returnPercent,
+            holdingPeriodDays: i - position.entryIdx + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // CCI Reversal Strategy
+    if (strategy === 'cci_reversal' && cci[i] !== undefined && cci[i-1] !== undefined) {
+      // Entry: CCI crosses above -100 (oversold recovery)
+      if (!position && cci[i-1] <= -100 && cci[i] > -100) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      // Exit: CCI crosses above +100 (overbought) or falls back below -100
+      } else if (position && (cci[i] > 100 || cci[i] < -100)) {
+        const shares = (initialCapital * 0.95) / position.entry;
+        const returnDollars = (close - position.entry) * shares;
+        const returnPercent = ((close - position.entry) / position.entry) * 100;
+        
+        trades.push({
+          entryDate: position.entryDate,
+          exitDate: date,
+          symbol,
+          side: 'LONG',
+          entry: position.entry,
+          exit: close,
+          return: returnDollars,
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
+        });
+        position = null;
+      }
+    }
+    
+    // OBV Volume Confirmation Strategy
+    if (strategy === 'obv_volume' && obv[i] !== undefined && i >= 21) {
+      // Calculate OBV SMA for trend confirmation
+      const obvSlice = obv.slice(i - 20, i + 1);
+      const obvSMA = obvSlice.reduce((a, b) => a + b, 0) / 21;
+      
+      // Entry: OBV crosses above its 21-period SMA (buying pressure)
+      const obvAboveSMA = obv[i] > obvSMA;
+      const obvBelowSMAPrev = obv[i-1] <= (obv.slice(i - 21, i).reduce((a, b) => a + b, 0) / 21);
+      
+      if (!position && obvAboveSMA && obvBelowSMAPrev && close > closes[i-1]) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      // Exit: OBV crosses below its SMA
+      } else if (position && obv[i] < obvSMA) {
+        const shares = (initialCapital * 0.95) / position.entry;
+        const returnDollars = (close - position.entry) * shares;
+        const returnPercent = ((close - position.entry) / position.entry) * 100;
+        
+        trades.push({
+          entryDate: position.entryDate,
+          exitDate: date,
+          symbol,
+          side: 'LONG',
+          entry: position.entry,
+          exit: close,
+          return: returnDollars,
+          returnPercent,
+          holdingPeriodDays: i - position.entryIdx + 1
+        });
+        position = null;
+      }
+    }
+    
+    // Multi: BB + Stochastic Strategy
+    if (strategy === 'multi_bb_stoch' && bbands && stochData) {
+      const { k, d } = stochData;
+      if (bbands.lower[i] && bbands.upper[i] && k[i] !== undefined) {
+        // Entry: Price at lower BB AND Stochastic oversold (%K < 25)
+        if (!position && close <= bbands.lower[i] && k[i] < 25) {
+          position = { entry: close, entryDate: date, entryIdx: i };
+        // Exit: Price at upper BB OR Stochastic overbought (%K > 75)
+        } else if (position && (close >= bbands.upper[i] || k[i] > 80)) {
           const shares = (initialCapital * 0.95) / position.entry;
           const returnDollars = (close - position.entry) * shares;
           const returnPercent = ((close - position.entry) / position.entry) * 100;
