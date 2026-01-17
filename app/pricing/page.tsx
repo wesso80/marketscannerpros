@@ -132,50 +132,6 @@ export default function PricingPage() {
         }
       `}</style>
       <div style={{ maxWidth: 1000, padding: '48px 20px 60px', margin: '0 auto' }}>
-        {/* Holiday Sale Banner */}
-        <div style={{
-          marginBottom: 32,
-          padding: '20px 24px',
-          borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(34,197,94,0.15) 50%, rgba(239,68,68,0.15) 100%)',
-          border: '2px solid rgba(34,197,94,0.4)',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Decorative snowflakes */}
-          <div style={{ position: 'absolute', top: 10, left: 20, fontSize: 20, opacity: 0.6 }}>❄️</div>
-          <div style={{ position: 'absolute', top: 15, right: 25, fontSize: 16, opacity: 0.5 }}>❄️</div>
-          <div style={{ position: 'absolute', bottom: 10, left: '30%', fontSize: 14, opacity: 0.4 }}>❄️</div>
-          <div style={{ position: 'absolute', bottom: 8, right: '35%', fontSize: 18, opacity: 0.5 }}>❄️</div>
-          
-          <div style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: 8, 
-            marginBottom: 8,
-            padding: '6px 16px',
-            background: 'linear-gradient(135deg, #ef4444, #22c55e)',
-            borderRadius: 999,
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 12,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            🎄 Holiday Sale 🎁
-          </div>
-          <p style={{ margin: 0, color: '#f9fafb', fontSize: 22, fontWeight: 700 }}>
-            25% OFF for 2025! 
-          </p>
-          <p style={{ margin: '8px 0 0 0', color: '#bbf7d0', fontSize: 15, fontWeight: 500 }}>
-            Ring in the New Year with massive savings — ends January 7th, 2026
-          </p>
-          <p style={{ margin: '6px 0 0 0', color: '#9ca3af', fontSize: 13 }}>
-            Use code <span style={{ color: '#fbbf24', fontWeight: 700, background: 'rgba(251,191,36,0.2)', padding: '2px 8px', borderRadius: 4 }}>NEWYEAR25</span> at checkout
-          </p>
-        </div>
-
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{
@@ -284,28 +240,13 @@ export default function PricingPage() {
               filter: 'blur(1px)'
             }} aria-hidden="true"></div>
             
-            <div style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              fontSize: 10,
-              padding: '5px 12px',
-              borderRadius: 999,
-              background: 'linear-gradient(135deg, #ef4444, #22c55e)',
-              color: '#fff',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              animation: 'pulse 2s infinite'
-            }}>🎄 25% OFF</div>
-            
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 20, color: '#6b7280', textDecoration: 'line-through' }}>$9.99</span>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$7.49</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$9.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ textDecoration: 'line-through' }}>$99.99</span> <span style={{ color: '#22c55e', fontWeight: 600 }}>$74.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%!)</span>
+              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$99.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -364,28 +305,13 @@ export default function PricingPage() {
             position: 'relative',
             overflow: 'hidden'
           }}>
-            <div style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              fontSize: 10,
-              padding: '5px 12px',
-              borderRadius: 999,
-              background: 'linear-gradient(135deg, #ef4444, #22c55e)',
-              color: '#fff',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              animation: 'pulse 2s infinite'
-            }}>🎄 25% OFF</div>
-            
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 20, color: '#6b7280', textDecoration: 'line-through' }}>$19.99</span>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$14.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$19.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ textDecoration: 'line-through' }}>$199.99</span> <span style={{ color: '#60a5fa', fontWeight: 600 }}>$149.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%!)</span>
+              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$199.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>

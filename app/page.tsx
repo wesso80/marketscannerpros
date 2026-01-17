@@ -75,24 +75,15 @@ export default function Home() {
           gap: 12,
           flexWrap: 'wrap'
         }}>
-          <span>🎄</span>
-          <span>End of Year Sale — <strong>25% OFF</strong> all plans!</span>
-          <span style={{ 
-            background: 'rgba(0,0,0,0.3)', 
-            padding: '4px 12px', 
-            borderRadius: 999, 
-            fontSize: 13 
-          }}>
-            Code: <strong>NEWYEAR25</strong>
-          </span>
+          <span>🚀</span>
+          <span>AI-Powered Market Scanning — <strong>500+ Assets</strong></span>
           <Link href="/pricing" style={{ 
             color: '#fef08a', 
             textDecoration: 'underline', 
             fontWeight: 700 
           }}>
-            Claim Offer →
+            View Plans →
           </Link>
-          <span>🎁</span>
         </p>
       </div>
 
@@ -462,27 +453,13 @@ export default function Home() {
                 filter: 'blur(1px)'
               }} aria-hidden="true"></div>
               
-              <div style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                fontSize: 10,
-                padding: '4px 10px',
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, #ef4444, #22c55e)',
-                color: '#fff',
-                fontWeight: 600,
-                textTransform: 'uppercase'
-              }}>🎄 25% OFF</div>
-              
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 18, color: '#6b7280', textDecoration: 'line-through' }}>$9.99</span>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$7.49</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$9.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ textDecoration: 'line-through' }}>$99.99</span> <span style={{ color: '#22c55e' }}>$74.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%)</span>
+                or <span style={{ color: '#22c55e' }}>$99.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
@@ -546,27 +523,13 @@ export default function Home() {
               position: 'relative',
               overflow: 'hidden'
             }}>
-              <div style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                fontSize: 10,
-                padding: '4px 10px',
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, #ef4444, #22c55e)',
-                color: '#fff',
-                fontWeight: 600,
-                textTransform: 'uppercase'
-              }}>🎄 25% OFF</div>
-              
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 18, color: '#6b7280', textDecoration: 'line-through' }}>$19.99</span>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$14.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$19.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ textDecoration: 'line-through' }}>$199.99</span> <span style={{ color: '#60a5fa' }}>$149.99/year</span> <span style={{ color: '#fbbf24' }}>(save 37%)</span>
+                or <span style={{ color: '#60a5fa' }}>$199.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>

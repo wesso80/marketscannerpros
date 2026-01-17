@@ -60,13 +60,10 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
           marginBottom: "24px",
         }}>
           <div style={{ color: "#22c55e", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
-            🎄 Holiday Sale - 25% OFF
+            Unlock {requiredTier === "pro_trader" ? "Pro Trader" : "Pro"}
           </div>
           <div style={{ color: "#86efac", fontSize: "24px", fontWeight: "700" }}>
             {price}<span style={{ fontSize: "14px", fontWeight: "400" }}>/month</span>
-          </div>
-          <div style={{ color: "#6b7280", fontSize: "12px", marginTop: "4px" }}>
-            Use code <strong style={{ color: "#fbbf24" }}>NEWYEAR25</strong> at checkout
           </div>
         </div>
 

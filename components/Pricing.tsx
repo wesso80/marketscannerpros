@@ -45,14 +45,13 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
           {/* Pro (Most Popular) */}
           <div className={`${baseCard} border-emerald-500/40 ring-1 ring-emerald-500/30`}>
             <div className="mb-2">
-              <span className="rounded-full bg-gradient-to-r from-red-500 to-emerald-500 px-2 py-1 text-xs text-white font-bold">
-                🎄 25% OFF
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-1 text-xs text-emerald-400 font-bold">
+                Most Popular
               </span>
             </div>
             <h3 className="text-xl font-semibold">Pro</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-neutral-500 line-through text-lg mr-2">$9.99</span>
-              <span className="text-emerald-400">$7.49</span>
+              <span className="text-emerald-400">$9.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">
@@ -72,21 +71,20 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               {loading === "pro" ? "Processing…" : "Upgrade to Pro"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
-              Use code NEWYEAR25 • Cancel anytime
+              Cancel anytime
             </p>
           </div>
 
           {/* Full Pro Trader */}
           <div className={baseCard}>
             <div className="mb-2">
-              <span className="rounded-full bg-gradient-to-r from-red-500 to-emerald-500 px-2 py-1 text-xs text-white font-bold">
-                🎄 25% OFF
+              <span className="rounded-full bg-blue-500/20 border border-blue-500/40 px-2 py-1 text-xs text-blue-400 font-bold">
+                Full Access
               </span>
             </div>
             <h3 className="text-xl font-semibold text-blue-400">Pro Trader</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-neutral-500 line-through text-lg mr-2">$19.99</span>
-              <span className="text-blue-400">$14.99</span>
+              <span className="text-blue-400">$19.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">
@@ -104,7 +102,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               {loading === "pro_trader" ? "Processing…" : "Upgrade to Pro Trader"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
-              Use code NEWYEAR25 • Cancel anytime
+              Cancel anytime
             </p>
           </div>
         </div>
