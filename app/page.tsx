@@ -6,7 +6,7 @@ import HowItWorks from "../components/HowItWorks";
 import SocialProof from "../components/SocialProof";
 import ReferralBanner from "../components/ReferralBanner";
 import LiveMarketPulse from "../components/LiveMarketPulse";
-import UrgencyHero from "../components/UrgencyHero";
+import WorkflowHero from "../components/WorkflowHero";
 import InstantDemo from "../components/InstantDemo";
 import Link from "next/link";
 
@@ -87,8 +87,8 @@ export default function Home() {
         </p>
       </div>
 
-      {/* 🚀 WOW FACTOR #1 - Urgency Hero with FOMO counters */}
-      <UrgencyHero />
+      {/* 🚀 NEW: Trading Workflow OS Hero */}
+      <WorkflowHero />
 
       {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{
