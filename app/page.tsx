@@ -41,46 +41,32 @@ export default function Home() {
   const [activeFeature, setActiveFeature] = useState(0);
   return (
     <>
-      {/* Holiday Sale Banner */}
+      {/* Top Announcement Banner */}
       <div style={{
-        background: 'linear-gradient(90deg, #dc2626 0%, #16a34a 50%, #dc2626 100%)',
+        background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        borderBottom: '1px solid rgba(34,197,94,0.3)',
         padding: '12px 20px',
         textAlign: 'center',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)',
-          animation: 'shimmer 2s infinite'
-        }} />
-        <style>{`
-          @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-          }
-        `}</style>
         <p style={{ 
           margin: 0, 
-          color: '#fff', 
-          fontSize: 15, 
-          fontWeight: 600,
+          color: '#e5e7eb', 
+          fontSize: 14, 
+          fontWeight: 500,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 12,
           flexWrap: 'wrap'
         }}>
-          <span>🚀</span>
-          <span>AI-Powered Market Scanning — <strong>500+ Assets</strong></span>
+          <span style={{ color: '#22c55e' }}>✨</span>
+          <span>AI-Powered Market Scanning — <strong style={{ color: '#22c55e' }}>500+ Assets</strong></span>
           <Link href="/pricing" style={{ 
-            color: '#fef08a', 
+            color: '#22c55e', 
             textDecoration: 'underline', 
-            fontWeight: 700 
+            fontWeight: 600 
           }}>
             View Plans →
           </Link>
