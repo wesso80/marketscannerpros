@@ -124,7 +124,8 @@ function PortfolioContent() {
       'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD', 'FLOW', 'ICP',
       'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA', 'CELO',
       'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP',
-      'ARB', 'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS'
+      'ARB', 'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS',
+      'XCN', 'PYTH', 'PENDLE', 'BLUR'
     ];
     
     const upper = symbol.toUpperCase();
@@ -202,20 +203,55 @@ function PortfolioContent() {
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Auto-refresh prices for all positions
+  const refreshAllPrices = async (positionsToUpdate: Position[]) => {
+    if (positionsToUpdate.length === 0) return;
+    
+    const updates: { id: number; price: number }[] = [];
+    
+    for (const position of positionsToUpdate) {
+      const fetched = await fetchAutoPrice(position.symbol);
+      if (fetched !== null && !isNaN(fetched)) {
+        updates.push({ id: position.id, price: fetched });
+      }
+    }
+    
+    if (updates.length > 0) {
+      setPositions(prev => prev.map(p => {
+        const update = updates.find(u => u.id === p.id);
+        if (update) {
+          const pl = p.side === 'LONG' 
+            ? (update.price - p.entryPrice) * p.quantity 
+            : (p.entryPrice - update.price) * p.quantity;
+          const plPercent = ((pl / (p.entryPrice * p.quantity)) * 100);
+          return { ...p, currentPrice: update.price, pl, plPercent };
+        }
+        return p;
+      }));
+    }
+  };
+
   // Load positions from database (with localStorage fallback for migration)
   useEffect(() => {
     setMounted(true);
     
     const loadData = async () => {
+      let loadedPositions: Position[] = [];
+      
       try {
         const res = await fetch('/api/portfolio');
         if (res.ok) {
           const data = await res.json();
           if (data.positions?.length > 0 || data.closedPositions?.length > 0 || data.performanceHistory?.length > 0) {
-            setPositions(data.positions || []);
+            loadedPositions = data.positions || [];
+            setPositions(loadedPositions);
             setClosedPositions(data.closedPositions || []);
             setPerformanceHistory(data.performanceHistory || []);
             setDataLoaded(true);
+            // Auto-refresh prices after loading
+            if (loadedPositions.length > 0) {
+              refreshAllPrices(loadedPositions);
+            }
             return;
           }
         }
@@ -229,7 +265,8 @@ function PortfolioContent() {
       const savedPerformance = localStorage.getItem('portfolio_performance');
       if (saved) {
         try {
-          setPositions(JSON.parse(saved));
+          loadedPositions = JSON.parse(saved);
+          setPositions(loadedPositions);
         } catch (e) {
           console.error('Failed to load positions');
         }
@@ -249,6 +286,10 @@ function PortfolioContent() {
         }
       }
       setDataLoaded(true);
+      // Auto-refresh prices after loading from localStorage
+      if (loadedPositions.length > 0) {
+        refreshAllPrices(loadedPositions);
+      }
     };
     
     loadData();
