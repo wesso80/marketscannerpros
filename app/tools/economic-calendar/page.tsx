@@ -83,7 +83,19 @@ export default function EconomicCalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'high' | 'medium'>('all');
   const [days, setDays] = useState(30);
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+
+  const toggleDate = (date: string) => {
+    setExpandedDates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(date)) {
+        newSet.delete(date);
+      } else {
+        newSet.add(date);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     fetchCalendar();
@@ -247,7 +259,7 @@ export default function EconomicCalendarPage() {
                 const daysUntil = getDaysUntil(date);
                 const isToday = daysUntil === 0;
                 const isTomorrow = daysUntil === 1;
-                const isExpanded = expandedDate === date;
+                const isExpanded = expandedDates.has(date);
                 
                 return (
                   <div
@@ -260,7 +272,7 @@ export default function EconomicCalendarPage() {
                   >
                     {/* Date Header */}
                     <button
-                      onClick={() => setExpandedDate(isExpanded ? null : date)}
+                      onClick={() => toggleDate(date)}
                       className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/20 transition-colors"
                     >
                       <div className="flex items-center gap-3">
