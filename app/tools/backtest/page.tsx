@@ -53,6 +53,7 @@ function BacktestContent() {
   const [endDate, setEndDate] = useState('2024-12-31');
   const [initialCapital, setInitialCapital] = useState('10000');
   const [strategy, setStrategy] = useState('msp_day_trader');
+  const [timeframe, setTimeframe] = useState<'15min' | '30min' | '60min' | 'daily'>('daily');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -72,18 +73,20 @@ function BacktestContent() {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a' }}>
         <ToolsPageHeader
-          badge="STRATEGY LAB"
+          badge="ELITE STRATEGY LAB"
           title="Strategy Backtester"
-          subtitle="Test and iterate trading ideas with historical data."
-          icon="📊"
+          subtitle="Pro Trader exclusive: Test and iterate trading ideas with historical data."
+          icon="🧪"
           backHref="/tools"
         />
-        <UpgradeGate requiredTier="pro_trader" feature="Real Alpha Vantage Backtesting">
+        <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
           <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
-            <li>Test strategies with real market data</li>
-            <li>Multiple strategy types (EMA, MACD, RSI)</li>
-            <li>Full performance metrics & equity curves</li>
-            <li>AI-powered backtest analysis</li>
+            <li>🔥 25+ elite trading strategies (MSP, scalping, swing)</li>
+            <li>⏱️ Multi-timeframe testing (15m, 30m, 1h, daily)</li>
+            <li>📊 Real Alpha Vantage market data</li>
+            <li>📈 Full performance metrics & equity curves</li>
+            <li>🤖 AI-powered backtest analysis</li>
+            <li>💹 Intraday scalping & swing trade strategies</li>
           </ul>
         </UpgradeGate>
       </div>
@@ -106,7 +109,8 @@ function BacktestContent() {
           strategy,
           startDate,
           endDate,
-          initialCapital: parseFloat(initialCapital)
+          initialCapital: parseFloat(initialCapital),
+          timeframe
         })
       });
 
@@ -174,9 +178,9 @@ function BacktestContent() {
       padding: 0
     }}>
       <ToolsPageHeader
-        badge="STRATEGY LAB"
+        badge="ELITE STRATEGY LAB"
         title="Strategy Backtester"
-        subtitle="Test and iterate trading ideas with historical data."
+        subtitle="Pro Trader exclusive: Test 25+ strategies across multiple timeframes with real market data."
         icon="🧪"
         backHref="/tools"
       />
@@ -283,7 +287,7 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                <optgroup label="🔥 MSP Strategies">
+                <optgroup label="🔥 MSP Elite Strategies">
                   <option value="msp_day_trader">MSP Day Trader AIO (Score 5+)</option>
                   <option value="msp_day_trader_strict">MSP Day Trader Strict (Score 6+)</option>
                   <option value="msp_multi_tf">MSP Multi-TF Dashboard (Bias 6+)</option>
@@ -291,31 +295,80 @@ function BacktestContent() {
                   <option value="msp_trend_pullback">MSP Trend Pullback</option>
                   <option value="msp_liquidity_reversal">MSP Liquidity Reversal</option>
                 </optgroup>
+                <optgroup label="⚡ Intraday Scalping">
+                  <option value="scalp_vwap_bounce">VWAP Bounce Scalper</option>
+                  <option value="scalp_orb_15">Opening Range Breakout (15m)</option>
+                  <option value="scalp_momentum_burst">Momentum Burst</option>
+                  <option value="scalp_mean_revert">Mean Reversion Scalp</option>
+                </optgroup>
+                <optgroup label="🎯 Swing Trading">
+                  <option value="swing_pullback_buy">Pullback Buy Setup</option>
+                  <option value="swing_breakout">Breakout Swing</option>
+                  <option value="swing_earnings_drift">Post-Earnings Drift</option>
+                </optgroup>
                 <optgroup label="Moving Averages">
                   <option value="ema_crossover">EMA Crossover (9/21)</option>
                   <option value="sma_crossover">SMA Crossover (50/200)</option>
+                  <option value="triple_ema">Triple EMA Ribbon</option>
                 </optgroup>
                 <optgroup label="Momentum">
                   <option value="rsi_reversal">RSI Mean Reversion</option>
                   <option value="rsi_trend">RSI Trend Following</option>
+                  <option value="rsi_divergence">RSI Divergence</option>
                   <option value="macd_momentum">MACD Momentum</option>
                   <option value="macd_crossover">MACD Signal Crossover</option>
+                  <option value="macd_histogram_reversal">MACD Histogram Reversal</option>
                 </optgroup>
                 <optgroup label="Volatility">
                   <option value="bbands_squeeze">Bollinger Bands Squeeze</option>
                   <option value="bbands_breakout">Bollinger Bands Breakout</option>
+                  <option value="keltner_atr_breakout">Keltner ATR Breakout</option>
                 </optgroup>
-                <optgroup label="Other">
-                  <option value="stoch_oversold">Stochastic Oversold</option>
-                  <option value="adx_trend">ADX Trend Filter</option>
-                  <option value="cci_reversal">CCI Reversal</option>
+                <optgroup label="Volume Analysis">
+                  <option value="volume_breakout">Volume Breakout</option>
                   <option value="obv_volume">OBV Volume Confirmation</option>
+                  <option value="volume_climax_reversal">Volume Climax Reversal</option>
                 </optgroup>
-                <optgroup label="Multi-Indicator">
+                <optgroup label="Trend Filters">
+                  <option value="adx_trend">ADX Trend Filter</option>
+                  <option value="supertrend">SuperTrend Strategy</option>
+                  <option value="ichimoku_cloud">Ichimoku Cloud</option>
+                </optgroup>
+                <optgroup label="Mean Reversion">
+                  <option value="stoch_oversold">Stochastic Oversold</option>
+                  <option value="cci_reversal">CCI Reversal</option>
+                  <option value="williams_r">Williams %R Extremes</option>
+                </optgroup>
+                <optgroup label="Multi-Indicator Confluence">
                   <option value="multi_ema_rsi">Multi: EMA + RSI</option>
                   <option value="multi_macd_adx">Multi: MACD + ADX</option>
                   <option value="multi_bb_stoch">Multi: BB + Stochastic</option>
+                  <option value="multi_confluence_5">5-Indicator Confluence</option>
                 </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                Timeframe
+              </label>
+              <select
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value as '15min' | '30min' | '60min' | 'daily')}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="15min">15 Minutes</option>
+                <option value="30min">30 Minutes</option>
+                <option value="60min">1 Hour</option>
+                <option value="daily">Daily</option>
               </select>
             </div>
 

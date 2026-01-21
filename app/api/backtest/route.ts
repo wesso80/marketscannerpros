@@ -89,12 +89,23 @@ interface PriceData {
 }
 
 // Fetch daily price data from Alpha Vantage (Stocks)
-async function fetchStockPriceData(symbol: string): Promise<PriceData> {
-  const response = await fetch(
-    `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`
-  );
+async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
+  let url: string;
+  let timeSeriesKey: string;
+  
+  if (timeframe === 'daily') {
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    timeSeriesKey = 'Time Series (Daily)';
+  } else {
+    // Intraday timeframes: 15min, 30min, 60min
+    const interval = timeframe; // Already in correct format
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    timeSeriesKey = `Time Series (${interval})`;
+  }
+  
+  const response = await fetch(url);
   const data = await response.json();
-  const timeSeries = data['Time Series (Daily)'];
+  const timeSeries = data[timeSeriesKey];
   
   if (!timeSeries) {
     // Check for error messages
@@ -160,11 +171,12 @@ async function fetchCryptoPriceData(symbol: string, market: string = 'USD'): Pro
 }
 
 // Smart fetch - detects crypto vs stock
-async function fetchPriceData(symbol: string): Promise<PriceData> {
+async function fetchPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
   if (isCryptoSymbol(symbol)) {
+    // Note: Crypto doesn't support intraday via Alpha Vantage free tier
     return fetchCryptoPriceData(symbol);
   } else {
-    return fetchStockPriceData(symbol);
+    return fetchStockPriceData(symbol, timeframe);
   }
 }
 
@@ -446,14 +458,23 @@ function runStrategy(
   initialCapital: number,
   startDate: string,
   endDate: string,
-  symbol: string
+  symbol: string,
+  timeframe: string = 'daily'
 ): StrategyResult {
+  // For intraday, we need to filter differently (datetime format)
+  const isIntraday = timeframe !== 'daily';
+  
   const dates = Object.keys(priceData)
-    .filter(d => d >= startDate && d <= endDate)
+    .filter(d => {
+      const dateOnly = d.split(' ')[0]; // Extract date part for intraday
+      return dateOnly >= startDate && dateOnly <= endDate;
+    })
     .sort();
   
-  if (dates.length < 100) {
-    throw new Error('Insufficient historical data for backtest');
+  // Adjust minimum data requirement based on timeframe
+  const minDataPoints = isIntraday ? 50 : 100;
+  if (dates.length < minDataPoints) {
+    throw new Error(`Insufficient historical data for backtest (need ${minDataPoints}+ bars, got ${dates.length})`);
   }
   
   const closes = dates.map(d => priceData[d].close);
@@ -1098,6 +1119,468 @@ function runStrategy(
         }
       }
     }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // INTRADAY SCALPING STRATEGIES
+    // ═══════════════════════════════════════════════════════════════
+    
+    // VWAP Bounce Scalper - Simple VWAP approximation using typical price
+    if (strategy === 'scalp_vwap_bounce') {
+      // Approximate VWAP using cumulative typical price * volume / cumulative volume
+      const typicalPrice = (highs[i] + lows[i] + close) / 3;
+      let cumTPV = 0, cumVol = 0;
+      for (let j = Math.max(0, i - 20); j <= i; j++) {
+        const tp = (highs[j] + lows[j] + closes[j]) / 3;
+        cumTPV += tp * volumes[j];
+        cumVol += volumes[j];
+      }
+      const vwap = cumVol > 0 ? cumTPV / cumVol : close;
+      
+      // Entry: Price bounces off VWAP (within 0.5% and moving up)
+      const nearVWAP = Math.abs(close - vwap) / vwap < 0.005;
+      const bounceUp = close > closes[i-1] && lows[i] <= vwap * 1.003;
+      
+      if (!position && nearVWAP && bounceUp && rsi[i] > 40 && rsi[i] < 60) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        // Quick scalp: exit at 0.8% gain or 0.5% loss or after 10 bars
+        if (gain >= 0.008 || gain <= -0.005 || barsHeld >= 10) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Opening Range Breakout (15m) - First 15m high/low breakout
+    if (strategy === 'scalp_orb_15') {
+      // Use first few bars as opening range (simulated)
+      const sessionStart = i % 26 === 0; // Approximate new session every 26 bars (6.5hr session / 15min)
+      const orbHigh = Math.max(...highs.slice(Math.max(0, i - 2), i + 1));
+      const orbLow = Math.min(...lows.slice(Math.max(0, i - 2), i + 1));
+      const orbRange = orbHigh - orbLow;
+      
+      // Breakout above ORB high with volume
+      const breakoutUp = close > orbHigh && volumes[i] > (volSMA[i] || 0) * 1.2;
+      
+      if (!position && breakoutUp && i > 3) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const entryPrice = position.entry;
+        const target = entryPrice + orbRange;
+        const stop = entryPrice - orbRange * 0.5;
+        const barsHeld = i - position.entryIdx;
+        
+        if (highs[i] >= target || lows[i] <= stop || barsHeld >= 15) {
+          const exitPrice = highs[i] >= target ? target : (lows[i] <= stop ? stop : close);
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: exitPrice,
+            return: (exitPrice - position.entry) * shares,
+            returnPercent: ((exitPrice - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Momentum Burst - Strong momentum continuation
+    if (strategy === 'scalp_momentum_burst') {
+      const momentumBurst = rsi[i] > 65 && rsi[i] < 80 && 
+        macdData && macdData.histogram[i] > 0 && 
+        macdData.histogram[i] > (macdData.histogram[i-1] || 0) * 1.5 &&
+        volumes[i] > (volSMA[i] || 0) * 1.5;
+      
+      if (!position && momentumBurst) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        const momentumFading = macdData && macdData.histogram[i] < (macdData.histogram[i-1] || 0);
+        
+        if (gain >= 0.015 || gain <= -0.008 || momentumFading || barsHeld >= 8) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Mean Reversion Scalp
+    if (strategy === 'scalp_mean_revert' && bbands) {
+      const oversold = close <= bbands.lower[i] && rsi[i] < 30;
+      
+      if (!position && oversold) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const revertedToMean = close >= bbands.middle[i];
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        
+        if (revertedToMean || gain <= -0.01 || barsHeld >= 12) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // SWING TRADING STRATEGIES
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Pullback Buy Setup
+    if (strategy === 'swing_pullback_buy') {
+      const uptrend = ema21[i] > ema55[i] && close > ema200[i];
+      const pullback = close < ema21[i] && close > ema55[i];
+      const reversing = close > closes[i-1] && rsi[i] > 40;
+      
+      if (!position && uptrend && pullback && reversing) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        const trendBroken = close < ema55[i];
+        
+        if (gain >= 0.08 || gain <= -0.03 || trendBroken || barsHeld >= 30) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Breakout Swing
+    if (strategy === 'swing_breakout') {
+      const resistance = Math.max(...highs.slice(Math.max(0, i - 20), i));
+      const breakout = close > resistance && volumes[i] > (volSMA[i] || 0) * 1.5;
+      const trendConfirm = ema21[i] > ema55[i];
+      
+      if (!position && breakout && trendConfirm) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        const failedBreakout = close < position.entry * 0.97;
+        
+        if (gain >= 0.10 || failedBreakout || barsHeld >= 25) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Post-Earnings Drift (simplified)
+    if (strategy === 'swing_earnings_drift') {
+      // Simulate earnings surprise with volume spike + gap
+      const gap = (priceData[dates[i]].open - closes[i-1]) / closes[i-1];
+      const positiveGap = gap > 0.03;
+      const volumeSpike = volumes[i] > (volSMA[i] || 0) * 3;
+      
+      if (!position && positiveGap && volumeSpike) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        
+        // Hold for drift effect (5-15 days)
+        if (gain >= 0.12 || gain <= -0.05 || barsHeld >= 15) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ADDITIONAL ELITE STRATEGIES
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Triple EMA Ribbon
+    if (strategy === 'triple_ema') {
+      const ribbonBull = ema9[i] > ema21[i] && ema21[i] > ema55[i];
+      const ribbonBullPrev = ema9[i-1] <= ema21[i-1] || ema21[i-1] <= ema55[i-1];
+      
+      if (!position && ribbonBull && ribbonBullPrev) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const ribbonBear = ema9[i] < ema21[i];
+        const barsHeld = i - position.entryIdx;
+        
+        if (ribbonBear) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // SuperTrend Strategy (simplified using ATR)
+    if (strategy === 'supertrend') {
+      const atrMultiplier = 3;
+      const upperBand = (highs[i] + lows[i]) / 2 + atrMultiplier * (atr[i] || close * 0.02);
+      const lowerBand = (highs[i] + lows[i]) / 2 - atrMultiplier * (atr[i] || close * 0.02);
+      const superTrendBull = close > lowerBand;
+      const superTrendBullPrev = closes[i-1] <= ((highs[i-1] + lows[i-1]) / 2 - atrMultiplier * (atr[i-1] || closes[i-1] * 0.02));
+      
+      if (!position && superTrendBull && superTrendBullPrev) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const superTrendBear = close < lowerBand;
+        const barsHeld = i - position.entryIdx;
+        
+        if (superTrendBear) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Volume Breakout
+    if (strategy === 'volume_breakout') {
+      const priceBreakout = close > Math.max(...highs.slice(Math.max(0, i - 10), i));
+      const volumeBreakout = volumes[i] > (volSMA[i] || 0) * 2;
+      
+      if (!position && priceBreakout && volumeBreakout) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const volumeDry = volumes[i] < (volSMA[i] || 0) * 0.5;
+        const barsHeld = i - position.entryIdx;
+        
+        if (gain >= 0.06 || gain <= -0.025 || volumeDry || barsHeld >= 15) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Volume Climax Reversal
+    if (strategy === 'volume_climax_reversal') {
+      const climaxVolume = volumes[i] > (volSMA[i] || 0) * 3;
+      const bearishCandle = close < priceData[dates[i]].open;
+      const longWick = (highs[i] - Math.max(close, priceData[dates[i]].open)) > Math.abs(close - priceData[dates[i]].open) * 2;
+      const potentialReversal = climaxVolume && bearishCandle && longWick && rsi[i] < 35;
+      
+      if (!position && potentialReversal) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        
+        if (gain >= 0.05 || gain <= -0.03 || barsHeld >= 10) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Williams %R Extremes
+    if (strategy === 'williams_r') {
+      // Calculate Williams %R
+      const period = 14;
+      const highestHigh = Math.max(...highs.slice(Math.max(0, i - period + 1), i + 1));
+      const lowestLow = Math.min(...lows.slice(Math.max(0, i - period + 1), i + 1));
+      const williamsR = ((highestHigh - close) / (highestHigh - lowestLow)) * -100;
+      
+      // Oversold bounce
+      if (!position && williamsR < -80 && close > closes[i-1]) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const williamsROverbought = williamsR > -20;
+        const barsHeld = i - position.entryIdx;
+        
+        if (williamsROverbought || barsHeld >= 15) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // MACD Histogram Reversal
+    if (strategy === 'macd_histogram_reversal' && macdData) {
+      const { histogram } = macdData;
+      const histReversalUp = histogram[i] > histogram[i-1] && histogram[i-1] < histogram[i-2] && histogram[i] < 0;
+      
+      if (!position && histReversalUp) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const histCrossedZero = histogram[i] > 0 && histogram[i-1] <= 0;
+        const histPeaked = histogram[i] < histogram[i-1] && histogram[i] > 0;
+        const barsHeld = i - position.entryIdx;
+        
+        if (histPeaked || barsHeld >= 20) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // RSI Divergence (simplified)
+    if (strategy === 'rsi_divergence') {
+      // Bullish divergence: price makes lower low, RSI makes higher low
+      const priceLowerLow = lows[i] < Math.min(...lows.slice(Math.max(0, i - 10), i));
+      const rsiHigherLow = rsi[i] > Math.min(...rsi.slice(Math.max(0, i - 10), i).filter(r => r !== undefined));
+      const bullishDivergence = priceLowerLow && rsiHigherLow && rsi[i] < 40;
+      
+      if (!position && bullishDivergence) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const gain = (close - position.entry) / position.entry;
+        const barsHeld = i - position.entryIdx;
+        
+        if (rsi[i] > 65 || gain <= -0.03 || barsHeld >= 15) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: gain * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // Keltner ATR Breakout
+    if (strategy === 'keltner_atr_breakout') {
+      const keltnerMid = ema21[i];
+      const keltnerUpper = keltnerMid + 2 * (atr[i] || close * 0.02);
+      const keltnerLower = keltnerMid - 2 * (atr[i] || close * 0.02);
+      const breakoutUp = close > keltnerUpper && closes[i-1] <= (ema21[i-1] + 2 * (atr[i-1] || closes[i-1] * 0.02));
+      
+      if (!position && breakoutUp) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const backInsideChannel = close < ema21[i];
+        const barsHeld = i - position.entryIdx;
+        
+        if (backInsideChannel || barsHeld >= 20) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
+    
+    // 5-Indicator Confluence
+    if (strategy === 'multi_confluence_5' && macdData && bbands && adxData) {
+      const emaBull = ema9[i] > ema21[i];
+      const rsiBull = rsi[i] > 50 && rsi[i] < 70;
+      const macdBull = macdData.histogram[i] > 0;
+      const aboveBBMid = close > bbands.middle[i];
+      const adxStrong = adxData.adx[i] > 25 && adxData.diPlus[i] > adxData.diMinus[i];
+      
+      const confluenceScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
+      
+      if (!position && confluenceScore >= 4) {
+        position = { entry: close, entryDate: date, entryIdx: i };
+      } else if (position) {
+        const exitScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
+        const barsHeld = i - position.entryIdx;
+        
+        if (exitScore <= 2 || barsHeld >= 25) {
+          const shares = (initialCapital * 0.95) / position.entry;
+          trades.push({
+            entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
+            entry: position.entry, exit: close,
+            return: (close - position.entry) * shares,
+            returnPercent: ((close - position.entry) / position.entry) * 100,
+            holdingPeriodDays: barsHeld + 1
+          });
+          position = null;
+        }
+      }
+    }
   }
   
   return { trades, dates, closes };
@@ -1109,10 +1592,13 @@ export async function POST(req: NextRequest) {
     const json = await req.json();
     const body: BacktestRequest = backtestRequestSchema.parse(json);
     
-    const { symbol, strategy, startDate, endDate, initialCapital } = body;
+    const { symbol, strategy, startDate, endDate, initialCapital, timeframe = 'daily' } = body;
 
     const isCrypto = isCryptoSymbol(symbol);
     const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
+    
+    // Crypto only supports daily timeframe via Alpha Vantage
+    const effectiveTimeframe = isCrypto ? 'daily' : timeframe;
     
     logger.info('Backtest request started', { 
       symbol: normalizedSymbol, 
@@ -1120,16 +1606,17 @@ export async function POST(req: NextRequest) {
       startDate, 
       endDate, 
       initialCapital,
+      timeframe: effectiveTimeframe,
       assetType: isCrypto ? 'crypto' : 'stock'
     });
 
     // Fetch real historical price data from Alpha Vantage
-    logger.debug(`Fetching ${isCrypto ? 'crypto' : 'stock'} price data for ${normalizedSymbol}...`);
-    const priceData = await fetchPriceData(normalizedSymbol);
-    logger.debug(`Fetched ${Object.keys(priceData).length} days of price data`);
+    logger.debug(`Fetching ${isCrypto ? 'crypto' : 'stock'} price data for ${normalizedSymbol} (${effectiveTimeframe})...`);
+    const priceData = await fetchPriceData(normalizedSymbol, effectiveTimeframe);
+    logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
 
     // Run backtest with real indicators
-    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, normalizedSymbol);
+    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, normalizedSymbol, effectiveTimeframe);
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
 
     if (trades.length === 0) {

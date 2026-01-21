@@ -81,16 +81,20 @@ export const scannerRequestSchema = z.object({
 export type ScannerRequest = z.infer<typeof scannerRequestSchema>;
 
 // Backtest Request
+export const backtestTimeframeSchema = z.enum(["15min", "30min", "60min", "daily"]);
+
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,
   strategy: z.string().min(1),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   initialCapital: z.number().positive().max(10000000),
+  timeframe: backtestTimeframeSchema.optional().default("daily"),
   riskPercent: z.number().min(0.1).max(10).optional(),
 });
 
 export type BacktestRequest = z.infer<typeof backtestRequestSchema>;
+export type BacktestTimeframe = z.infer<typeof backtestTimeframeSchema>;
 
 // Portfolio Position
 export const positionSchema = z.object({
