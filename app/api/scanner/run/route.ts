@@ -4,7 +4,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
-// Alpha Vantage API for technical indicators (web-only)
+// Scanner API - Binance for crypto (free), Yahoo for stocks
+// v2.1 - USDT dominance support, fixed timeframe mapping
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
