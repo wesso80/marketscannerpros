@@ -266,7 +266,7 @@ async function fetchCryptoPriceDataAlphaVantage(symbol: string, market: string =
     // Fallback: Try daily if intraday fails
     if (timeframe !== 'daily') {
       logger.warn(`Intraday not available for ${cleanSymbol}, falling back to daily`);
-      return fetchCryptoPriceData(symbol, market, 'daily');
+      return fetchCryptoPriceDataAlphaVantage(symbol, market, 'daily');
     }
     throw new Error(`Failed to fetch crypto price data for ${cleanSymbol}. Make sure it's a valid cryptocurrency symbol.`);
   }
