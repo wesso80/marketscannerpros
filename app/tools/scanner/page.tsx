@@ -12,6 +12,7 @@ import FearGreedHistory from "@/components/FearGreedHistory";
 import OpenInterestWidget from "@/components/OpenInterestWidget";
 import DerivativesWidget from "@/components/DerivativesWidget";
 import AlertsWidget from "@/components/AlertsWidget";
+import DominanceWidget from "@/components/DominanceWidget";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -717,6 +718,11 @@ function ScannerContent() {
           </div>
         </div>
 
+        {/* Market Dominance - BTC, ETH, Stablecoins */}
+        <div style={{ marginBottom: "0.75rem" }}>
+          <DominanceWidget />
+        </div>
+
         {/* Market Sentiment - Custom Fear & Greed Index (Crypto + Stocks) */}
         <div style={{ marginBottom: "0.75rem" }}>
           <CustomFearGreedGauge />
@@ -1118,7 +1124,7 @@ function ScannerContent() {
               </div>
               
               <p style={{ color: "#64748b", fontSize: "11px", marginTop: "16px", textAlign: "center" }}>
-                Click any result to deep dive with full analysis below • Data: Yahoo Finance
+                Click any result to deep dive with full analysis below • Data: {bulkScanType === 'crypto' ? 'Binance' : 'Yahoo Finance'}
               </p>
             </div>
           )}

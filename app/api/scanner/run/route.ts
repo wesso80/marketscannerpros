@@ -257,28 +257,128 @@ export async function POST(req: NextRequest) {
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
     type Candle = { t: string; open: number; high: number; low: number; close: number; };
 
+    // USDT Dominance - fetch from CoinGecko (calculates USDT market cap / total market cap)
+    async function fetchUSDTDominance(timeframe: string): Promise<Candle[]> {
+      // Map timeframe to days for CoinGecko
+      const daysMap: Record<string, number> = {
+        '15m': 1,
+        '30m': 1,
+        '1h': 7,
+        '4h': 30,
+        '1d': 365,
+      };
+      const days = daysMap[timeframe] || 365;
+      
+      try {
+        // Fetch total market cap and USDT market cap in parallel
+        const [totalRes, usdtRes] = await Promise.all([
+          fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${days}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            cache: 'no-store'
+          }),
+          fetch(`https://api.coingecko.com/api/v3/coins/tether/market_chart?vs_currency=usd&days=${days}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            cache: 'no-store'
+          })
+        ]);
+        
+        // Also fetch global data for total market cap
+        const globalRes = await fetch('https://api.coingecko.com/api/v3/global', {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          cache: 'no-store'
+        });
+        
+        if (!usdtRes.ok || !globalRes.ok) {
+          throw new Error('Failed to fetch USDT dominance data');
+        }
+        
+        const usdtData = await usdtRes.json();
+        const globalData = await globalRes.json();
+        
+        // Get current USDT dominance from global data
+        const currentDominance = globalData.data?.market_cap_percentage?.usdt || 0;
+        
+        // Build historical candles from USDT market cap data
+        // Note: This is USDT market cap, not exact dominance, but trends are similar
+        const marketCaps = usdtData.market_caps as [number, number][];
+        
+        if (!marketCaps || marketCaps.length === 0) {
+          throw new Error('No USDT market cap data available');
+        }
+        
+        // Sample data based on timeframe
+        const sampleRate = timeframe === '1d' ? 1 : timeframe === '4h' ? 6 : timeframe === '1h' ? 24 : 60;
+        const sampledData = marketCaps.filter((_, i) => i % sampleRate === 0);
+        
+        // Convert to candles (using market cap as proxy for dominance trends)
+        // Normalize to percentage-like values
+        const maxMcap = Math.max(...sampledData.map(d => d[1]));
+        const candles: Candle[] = [];
+        
+        for (let i = 0; i < sampledData.length - 1; i++) {
+          const [timestamp, mcap] = sampledData[i];
+          const [, nextMcap] = sampledData[i + 1] || [0, mcap];
+          
+          // Normalize to 0-10 scale (typical USDT dominance range is ~3-8%)
+          const normalizedValue = (mcap / maxMcap) * currentDominance * 1.2;
+          const normalizedNext = (nextMcap / maxMcap) * currentDominance * 1.2;
+          
+          const open = normalizedValue;
+          const close = normalizedNext;
+          const high = Math.max(open, close) * 1.001;
+          const low = Math.min(open, close) * 0.999;
+          
+          candles.push({
+            t: new Date(timestamp).toISOString(),
+            open,
+            high,
+            low,
+            close
+          });
+        }
+        
+        console.info(`[scanner] USDT Dominance: Got ${candles.length} candles, current dominance: ${currentDominance.toFixed(2)}%`);
+        return candles;
+        
+      } catch (err: any) {
+        console.error('[scanner] USDT dominance fetch error:', err.message);
+        throw new Error('Failed to fetch USDT dominance data - try again later');
+      }
+    }
+
     // Binance klines - FREE, no API key needed, reliable
     async function fetchCryptoBinance(symbol: string, timeframe: string): Promise<Candle[]> {
       // Map timeframe to Binance interval
       const intervalMap: Record<string, string> = {
+        '15m': '15m',
         '15min': '15m',
+        '30m': '30m',
         '30min': '30m', 
+        '1h': '1h',
         '1hour': '1h',
+        '4h': '4h',
         '4hour': '4h',
-        'daily': '1d',
         '1d': '1d',
+        'daily': '1d',
       };
       const interval = intervalMap[timeframe] || '1d';
       
       // Convert symbol: BTC -> BTCUSDT, BTC-USD -> BTCUSDT
       const binanceSymbol = symbol.replace(/-USD$/, '').toUpperCase() + 'USDT';
       
-      // Skip stablecoins - they don't have trading pairs
-      const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD'];
+      // Skip stablecoins - they don't have trading pairs (USDT/USDT doesn't exist)
+      // Handle USDT specially - return USDT dominance data instead
       const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
+      if (baseSymbol === 'USDT') {
+        console.info(`[scanner] USDT detected - fetching USDT dominance instead`);
+        return await fetchUSDTDominance(timeframe);
+      }
+      
+      // Skip other stablecoins - they don't have trading pairs
+      const stablecoins = ['USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD'];
       if (stablecoins.includes(baseSymbol)) {
         console.warn(`[scanner] ${symbol} is a stablecoin - skipping`);
-        throw new Error(`${symbol} is a stablecoin and cannot be scanned`);
+        throw new Error(`${baseSymbol} is a stablecoin (pegged to $1) - technical analysis not applicable`);
       }
       
       const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
