@@ -704,37 +704,20 @@ export default function AlertsWidget({
 
                     {/* Quick Smart Alert Templates */}
                     <div className="mb-4">
-                      <label className="text-xs text-slate-400 block mb-1">⚡ Quick Template</label>
+                      <label className="text-xs text-slate-400 block mb-1">⚡ Quick Template (or create custom below)</label>
                       <select
                         onChange={e => {
                           const templates: Record<string, any> = {
                             '': {},
+                            // Custom Strategy Alert - starts with strategy type selected
+                            'custom_strategy': { symbol: '', conditionType: 'strategy_buy_signal', conditionValue: '0', name: '', cooldownMinutes: 60, strategy: 'ema_crossover', timeframe: 'daily' },
                             // Scanner Signal Alerts
                             'btc_buy_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'BTC Buy Signal', cooldownMinutes: 60 },
                             'btc_sell_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'BTC Sell Signal', cooldownMinutes: 60 },
-                            'eth_buy_signal': { symbol: 'ETHUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'ETH Buy Signal', cooldownMinutes: 60 },
-                            'eth_sell_signal': { symbol: 'ETHUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'ETH Sell Signal', cooldownMinutes: 60 },
-                            'btc_bullish_flip': { symbol: 'BTCUSDT', conditionType: 'scanner_bullish_flip', conditionValue: '50', name: 'BTC Bullish Flip', cooldownMinutes: 120 },
-                            'btc_bearish_flip': { symbol: 'BTCUSDT', conditionType: 'scanner_bearish_flip', conditionValue: '50', name: 'BTC Bearish Flip', cooldownMinutes: 120 },
-                            // Strategy Alerts
-                            'btc_ema_buy': { symbol: 'BTC', conditionType: 'strategy_buy_signal', conditionValue: '0', name: 'BTC EMA Crossover Buy', cooldownMinutes: 240, strategy: 'ema_crossover', timeframe: 'daily' },
-                            'btc_ema_sell': { symbol: 'BTC', conditionType: 'strategy_sell_signal', conditionValue: '0', name: 'BTC EMA Crossover Sell', cooldownMinutes: 240, strategy: 'ema_crossover', timeframe: 'daily' },
-                            'btc_msp_entry': { symbol: 'BTC', conditionType: 'strategy_entry', conditionValue: '0', name: 'BTC MSP Day Trader Entry', cooldownMinutes: 60, strategy: 'msp_day_trader_v3', timeframe: '15min' },
-                            'eth_msp_entry': { symbol: 'ETH', conditionType: 'strategy_entry', conditionValue: '0', name: 'ETH MSP Day Trader Entry', cooldownMinutes: 60, strategy: 'msp_day_trader_v3', timeframe: '15min' },
-                            'btc_scalp_entry': { symbol: 'BTC', conditionType: 'strategy_entry', conditionValue: '0', name: 'BTC Scalp Entry (5m)', cooldownMinutes: 30, strategy: 'scalp_momentum_burst', timeframe: '5min' },
-                            'btc_swing_entry': { symbol: 'BTC', conditionType: 'strategy_entry', conditionValue: '0', name: 'BTC Swing Pullback', cooldownMinutes: 1440, strategy: 'swing_pullback_buy', timeframe: 'daily' },
                             // Open Interest Alerts
                             'btc_oi_surge': { symbol: 'BTC', conditionType: 'oi_surge', conditionValue: '5', name: 'BTC OI Spike', cooldownMinutes: 60 },
-                            'eth_oi_surge': { symbol: 'ETH', conditionType: 'oi_surge', conditionValue: '5', name: 'ETH OI Spike', cooldownMinutes: 60 },
-                            'market_oi_surge': { symbol: '', conditionType: 'oi_surge', conditionValue: '3', name: 'Market OI Surge', cooldownMinutes: 240 },
-                            'btc_funding_long': { symbol: 'BTC', conditionType: 'funding_extreme_pos', conditionValue: '0.05', name: 'BTC Overleveraged Longs', cooldownMinutes: 240 },
-                            'btc_funding_short': { symbol: 'BTC', conditionType: 'funding_extreme_neg', conditionValue: '0.05', name: 'BTC Overleveraged Shorts', cooldownMinutes: 240 },
-                            'crowded_longs': { symbol: '', conditionType: 'ls_ratio_high', conditionValue: '1.5', name: 'Crowded Longs Warning', cooldownMinutes: 240 },
-                            'crowded_shorts': { symbol: '', conditionType: 'ls_ratio_low', conditionValue: '0.7', name: 'Crowded Shorts Warning', cooldownMinutes: 240 },
                             'extreme_fear': { symbol: '', conditionType: 'fear_extreme', conditionValue: '25', name: 'Extreme Fear Buy Signal', cooldownMinutes: 1440 },
                             'extreme_greed': { symbol: '', conditionType: 'greed_extreme', conditionValue: '75', name: 'Extreme Greed Sell Signal', cooldownMinutes: 1440 },
-                            'bull_divergence': { symbol: 'BTC', conditionType: 'oi_divergence_bull', conditionValue: '3', name: 'Bullish OI Divergence', cooldownMinutes: 240 },
-                            'bear_divergence': { symbol: 'BTC', conditionType: 'oi_divergence_bear', conditionValue: '3', name: 'Bearish OI Divergence', cooldownMinutes: 240 },
                           };
                           const t = templates[e.target.value];
                           if (t && Object.keys(t).length > 0) {
@@ -744,39 +727,16 @@ export default function AlertsWidget({
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
                       >
                         <option value="">-- Select a template or create custom --</option>
-                        <optgroup label="📊 Strategy Alerts (Backtest)">
-                          <option value="btc_ema_buy">BTC EMA Crossover Buy</option>
-                          <option value="btc_ema_sell">BTC EMA Crossover Sell</option>
-                          <option value="btc_msp_entry">BTC MSP Day Trader Entry (15m)</option>
-                          <option value="eth_msp_entry">ETH MSP Day Trader Entry (15m)</option>
-                          <option value="btc_scalp_entry">BTC Momentum Scalp (5m)</option>
-                          <option value="btc_swing_entry">BTC Swing Pullback (Daily)</option>
+                        <optgroup label="📊 Strategy Alerts (Pick Any Ticker!)">
+                          <option value="custom_strategy">🎯 Custom Strategy Alert (Any Ticker + Strategy)</option>
                         </optgroup>
-                        <optgroup label="🎯 Scanner Signals (Buy/Sell)">
-                          <option value="btc_buy_signal">BTC Buy Signal (Score 65+)</option>
-                          <option value="btc_sell_signal">BTC Sell Signal (Score 35-)</option>
-                          <option value="eth_buy_signal">ETH Buy Signal (Score 65+)</option>
-                          <option value="eth_sell_signal">ETH Sell Signal (Score 35-)</option>
-                          <option value="btc_bullish_flip">BTC Bullish Flip</option>
-                          <option value="btc_bearish_flip">BTC Bearish Flip</option>
+                        <optgroup label="🎯 Scanner Signals">
+                          <option value="btc_buy_signal">BTC Scanner Buy Signal</option>
+                          <option value="btc_sell_signal">BTC Scanner Sell Signal</option>
                         </optgroup>
-                        <optgroup label="📊 Open Interest">
-                          <option value="btc_oi_surge">BTC OI Spike (5% surge)</option>
-                          <option value="eth_oi_surge">ETH OI Spike (5% surge)</option>
-                          <option value="market_oi_surge">Market-Wide OI Surge</option>
-                          <option value="bull_divergence">Bullish OI Divergence</option>
-                          <option value="bear_divergence">Bearish OI Divergence</option>
-                        </optgroup>
-                        <optgroup label="💰 Funding Rates">
-                          <option value="btc_funding_long">BTC Overleveraged Longs</option>
-                          <option value="btc_funding_short">BTC Overleveraged Shorts</option>
-                        </optgroup>
-                        <optgroup label="⚖️ Long/Short Ratio">
-                          <option value="crowded_longs">Crowded Longs Warning</option>
-                          <option value="crowded_shorts">Crowded Shorts Warning</option>
-                        </optgroup>
-                        <optgroup label="😱 Fear & Greed">
-                          <option value="extreme_fear">Extreme Fear (Buy Signal)</option>
+                        <optgroup label="📊 Market Sentiment">
+                          <option value="btc_oi_surge">BTC OI Spike</option>
+                          <option value="extreme_fear">Extreme Fear (Buy Opportunity)</option>
                           <option value="extreme_greed">Extreme Greed (Sell Signal)</option>
                         </optgroup>
                       </select>
@@ -874,62 +834,91 @@ export default function AlertsWidget({
                       </div>
                     </div>
 
-                    {/* Strategy-specific options */}
+                    {/* Strategy-specific options - show ticker + strategy + timeframe */}
                     {newSmartAlert.conditionType?.startsWith('strategy_') && (
-                      <div className="grid grid-cols-2 gap-3 mb-3 p-3 bg-slate-800/50 rounded-lg border border-emerald-500/20">
-                        <div>
-                          <label className="text-xs text-emerald-400 block mb-1">📊 Strategy</label>
-                          <select
-                            value={(newSmartAlert as any).strategy || 'ema_crossover'}
-                            onChange={e => setNewSmartAlert(prev => ({ ...prev, strategy: e.target.value } as any))}
-                            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
-                          >
-                            <optgroup label="🔥 MSP Elite">
-                              <option value="msp_day_trader">MSP Day Trader</option>
-                              <option value="msp_day_trader_v3">Day Trader v3 Optimized</option>
-                              <option value="msp_day_trader_v3_aggressive">Day Trader v3 Aggressive</option>
-                              <option value="msp_trend_pullback">MSP Trend Pullback</option>
-                            </optgroup>
-                            <optgroup label="⚡ Scalping">
-                              <option value="scalp_vwap_bounce">VWAP Bounce</option>
-                              <option value="scalp_orb_15">Opening Range Breakout</option>
-                              <option value="scalp_momentum_burst">Momentum Burst</option>
-                              <option value="scalp_mean_revert">Mean Reversion</option>
-                            </optgroup>
-                            <optgroup label="🎯 Swing">
-                              <option value="swing_pullback_buy">Pullback Buy</option>
-                              <option value="swing_breakout">Breakout Swing</option>
-                            </optgroup>
-                            <optgroup label="Moving Averages">
-                              <option value="ema_crossover">EMA Crossover (9/21)</option>
-                              <option value="sma_crossover">SMA Crossover (50/200)</option>
-                              <option value="triple_ema">Triple EMA Ribbon</option>
-                            </optgroup>
-                            <optgroup label="Momentum">
-                              <option value="rsi_reversal">RSI Mean Reversion</option>
-                              <option value="macd_crossover">MACD Crossover</option>
-                            </optgroup>
-                            <optgroup label="Multi-Indicator">
-                              <option value="multi_ema_rsi">EMA + RSI</option>
-                              <option value="multi_macd_adx">MACD + ADX</option>
-                              <option value="multi_confluence_5">5-Indicator Confluence</option>
-                            </optgroup>
-                          </select>
+                      <div className="mb-3 p-3 bg-slate-800/50 rounded-lg border border-emerald-500/20">
+                        <p className="text-xs text-emerald-400 mb-2">📊 Configure your strategy alert:</p>
+                        
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                          <div>
+                            <label className="text-xs text-white block mb-1">🎯 Ticker *</label>
+                            <input
+                              type="text"
+                              placeholder="BTC, AAPL, TSLA..."
+                              value={newSmartAlert.symbol}
+                              onChange={e => setNewSmartAlert(prev => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
+                              className="w-full px-3 py-2 bg-slate-900 border border-emerald-500/50 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-white block mb-1">📈 Strategy</label>
+                            <select
+                              value={(newSmartAlert as any).strategy || 'ema_crossover'}
+                              onChange={e => setNewSmartAlert(prev => ({ ...prev, strategy: e.target.value } as any))}
+                              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
+                            >
+                              <optgroup label="🔥 MSP Elite">
+                                <option value="msp_day_trader">MSP Day Trader</option>
+                                <option value="msp_day_trader_v3">Day Trader v3 Optimized</option>
+                                <option value="msp_day_trader_v3_aggressive">Day Trader v3 Aggressive</option>
+                                <option value="msp_trend_pullback">MSP Trend Pullback</option>
+                                <option value="msp_liquidity_reversal">Liquidity Reversal</option>
+                              </optgroup>
+                              <optgroup label="⚡ Scalping">
+                                <option value="scalp_vwap_bounce">VWAP Bounce</option>
+                                <option value="scalp_orb_15">Opening Range Breakout</option>
+                                <option value="scalp_momentum_burst">Momentum Burst</option>
+                                <option value="scalp_mean_revert">Mean Reversion</option>
+                              </optgroup>
+                              <optgroup label="🎯 Swing">
+                                <option value="swing_pullback_buy">Pullback Buy</option>
+                                <option value="swing_breakout">Breakout Swing</option>
+                                <option value="swing_earnings_drift">Post-Earnings Drift</option>
+                              </optgroup>
+                              <optgroup label="Moving Averages">
+                                <option value="ema_crossover">EMA Crossover (9/21)</option>
+                                <option value="sma_crossover">SMA Crossover (50/200)</option>
+                                <option value="triple_ema">Triple EMA Ribbon</option>
+                              </optgroup>
+                              <optgroup label="Momentum">
+                                <option value="rsi_reversal">RSI Mean Reversion</option>
+                                <option value="rsi_trend">RSI Trend Following</option>
+                                <option value="macd_crossover">MACD Crossover</option>
+                                <option value="macd_momentum">MACD Momentum</option>
+                              </optgroup>
+                              <optgroup label="Volatility">
+                                <option value="bbands_squeeze">Bollinger Squeeze</option>
+                                <option value="bbands_breakout">Bollinger Breakout</option>
+                                <option value="supertrend">SuperTrend</option>
+                              </optgroup>
+                              <optgroup label="Multi-Indicator">
+                                <option value="multi_ema_rsi">EMA + RSI</option>
+                                <option value="multi_macd_adx">MACD + ADX</option>
+                                <option value="multi_bb_stoch">BB + Stochastic</option>
+                                <option value="multi_confluence_5">5-Indicator Confluence</option>
+                              </optgroup>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-white block mb-1">⏱️ Timeframe</label>
+                            <select
+                              value={(newSmartAlert as any).timeframe || 'daily'}
+                              onChange={e => setNewSmartAlert(prev => ({ ...prev, timeframe: e.target.value } as any))}
+                              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
+                            >
+                              <option value="1min">1 Minute</option>
+                              <option value="5min">5 Minutes</option>
+                              <option value="15min">15 Minutes</option>
+                              <option value="30min">30 Minutes</option>
+                              <option value="60min">1 Hour</option>
+                              <option value="daily">Daily</option>
+                            </select>
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-emerald-400 block mb-1">⏱️ Timeframe</label>
-                          <select
-                            value={(newSmartAlert as any).timeframe || 'daily'}
-                            onChange={e => setNewSmartAlert(prev => ({ ...prev, timeframe: e.target.value } as any))}
-                            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
-                          >
-                            <option value="5min">5 Minutes</option>
-                            <option value="15min">15 Minutes</option>
-                            <option value="30min">30 Minutes</option>
-                            <option value="60min">1 Hour</option>
-                            <option value="daily">Daily</option>
-                          </select>
-                        </div>
+                        
+                        <p className="text-xs text-slate-500">
+                          💡 Crypto uses Binance data • Stocks use Alpha Vantage • Check every 15 min
+                        </p>
                       </div>
                     )}
 
