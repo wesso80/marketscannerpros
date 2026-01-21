@@ -235,6 +235,13 @@ export default function AlertsWidget({
       case 'greed_extreme': return '🤑 Extreme Greed';
       case 'oi_divergence_bull': return '🐂 Bull Divergence';
       case 'oi_divergence_bear': return '🐻 Bear Divergence';
+      // Scanner signal alerts
+      case 'scanner_buy_signal': return '🟢 Buy Signal';
+      case 'scanner_sell_signal': return '🔴 Sell Signal';
+      case 'scanner_score_above': return '📈 Score Above';
+      case 'scanner_score_below': return '📉 Score Below';
+      case 'scanner_bullish_flip': return '🐂 Bullish Flip';
+      case 'scanner_bearish_flip': return '🐻 Bearish Flip';
       default: return type;
     }
   };
@@ -251,6 +258,13 @@ export default function AlertsWidget({
       case 'greed_extreme': return 'Fear & Greed above threshold (consider taking profits)';
       case 'oi_divergence_bull': return 'OI rising while price down (smart money accumulating)';
       case 'oi_divergence_bear': return 'OI falling while price up (distribution/deleveraging)';
+      // Scanner signal descriptions
+      case 'scanner_buy_signal': return 'Scanner detects bullish setup with score above threshold (BUY signal)';
+      case 'scanner_sell_signal': return 'Scanner detects bearish setup with score below threshold (SELL signal)';
+      case 'scanner_score_above': return 'Scanner score rises above threshold (momentum building)';
+      case 'scanner_score_below': return 'Scanner score drops below threshold (momentum fading)';
+      case 'scanner_bullish_flip': return 'Direction flips from bearish/neutral to bullish (trend change)';
+      case 'scanner_bearish_flip': return 'Direction flips from bullish/neutral to bearish (trend change)';
       default: return '';
     }
   };
@@ -267,6 +281,13 @@ export default function AlertsWidget({
       case 'greed_extreme': return '75'; // F&G > 75
       case 'oi_divergence_bull': return '3'; // 3% OI increase
       case 'oi_divergence_bear': return '3'; // 3% OI decrease
+      // Scanner signal defaults
+      case 'scanner_buy_signal': return '65'; // Score >= 65 = buy
+      case 'scanner_sell_signal': return '35'; // Score <= 35 = sell
+      case 'scanner_score_above': return '70'; // Score threshold
+      case 'scanner_score_below': return '30'; // Score threshold
+      case 'scanner_bullish_flip': return '0'; // No threshold needed
+      case 'scanner_bearish_flip': return '0'; // No threshold needed
       default: return '5';
     }
   };
@@ -658,6 +679,14 @@ export default function AlertsWidget({
                         onChange={e => {
                           const templates: Record<string, any> = {
                             '': {},
+                            // Scanner Signal Alerts
+                            'btc_buy_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'BTC Buy Signal', cooldownMinutes: 60 },
+                            'btc_sell_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'BTC Sell Signal', cooldownMinutes: 60 },
+                            'eth_buy_signal': { symbol: 'ETHUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'ETH Buy Signal', cooldownMinutes: 60 },
+                            'eth_sell_signal': { symbol: 'ETHUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'ETH Sell Signal', cooldownMinutes: 60 },
+                            'btc_bullish_flip': { symbol: 'BTCUSDT', conditionType: 'scanner_bullish_flip', conditionValue: '50', name: 'BTC Bullish Flip', cooldownMinutes: 120 },
+                            'btc_bearish_flip': { symbol: 'BTCUSDT', conditionType: 'scanner_bearish_flip', conditionValue: '50', name: 'BTC Bearish Flip', cooldownMinutes: 120 },
+                            // Open Interest Alerts
                             'btc_oi_surge': { symbol: 'BTC', conditionType: 'oi_surge', conditionValue: '5', name: 'BTC OI Spike', cooldownMinutes: 60 },
                             'eth_oi_surge': { symbol: 'ETH', conditionType: 'oi_surge', conditionValue: '5', name: 'ETH OI Spike', cooldownMinutes: 60 },
                             'market_oi_surge': { symbol: '', conditionType: 'oi_surge', conditionValue: '3', name: 'Market OI Surge', cooldownMinutes: 240 },
@@ -678,6 +707,14 @@ export default function AlertsWidget({
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
                       >
                         <option value="">-- Select a template or create custom --</option>
+                        <optgroup label="🎯 Scanner Signals (Buy/Sell)">
+                          <option value="btc_buy_signal">BTC Buy Signal (Score 65+)</option>
+                          <option value="btc_sell_signal">BTC Sell Signal (Score 35-)</option>
+                          <option value="eth_buy_signal">ETH Buy Signal (Score 65+)</option>
+                          <option value="eth_sell_signal">ETH Sell Signal (Score 35-)</option>
+                          <option value="btc_bullish_flip">BTC Bullish Flip</option>
+                          <option value="btc_bearish_flip">BTC Bearish Flip</option>
+                        </optgroup>
                         <optgroup label="📊 Open Interest">
                           <option value="btc_oi_surge">BTC OI Spike (5% surge)</option>
                           <option value="eth_oi_surge">ETH OI Spike (5% surge)</option>
@@ -715,6 +752,14 @@ export default function AlertsWidget({
                           }}
                           className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
                         >
+                          <optgroup label="🎯 Scanner Signals">
+                            <option value="scanner_buy_signal">🟢 Buy Signal (Score Above)</option>
+                            <option value="scanner_sell_signal">🔴 Sell Signal (Score Below)</option>
+                            <option value="scanner_bullish_flip">🐂 Bullish Flip (Direction Change)</option>
+                            <option value="scanner_bearish_flip">🐻 Bearish Flip (Direction Change)</option>
+                            <option value="scanner_score_above">📈 Score Above Threshold</option>
+                            <option value="scanner_score_below">📉 Score Below Threshold</option>
+                          </optgroup>
                           <optgroup label="Open Interest">
                             <option value="oi_surge">📈 OI Surge</option>
                             <option value="oi_drop">📉 OI Drop</option>

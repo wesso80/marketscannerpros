@@ -67,6 +67,10 @@ const SMART_ALERT_TYPES = [
   'ls_ratio_high', 'ls_ratio_low',
   'fear_extreme', 'greed_extreme',
   'oi_divergence_bull', 'oi_divergence_bear',
+  // Scanner signal alerts - trigger on buy/sell signals
+  'scanner_buy_signal', 'scanner_sell_signal',
+  'scanner_score_above', 'scanner_score_below',
+  'scanner_bullish_flip', 'scanner_bearish_flip',
 ];
 
 // GET - List all alerts
