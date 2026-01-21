@@ -257,6 +257,67 @@ export async function POST(req: NextRequest) {
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
     type Candle = { t: string; open: number; high: number; low: number; close: number; };
 
+    // Binance klines - FREE, no API key needed, reliable
+    async function fetchCryptoBinance(symbol: string, timeframe: string): Promise<Candle[]> {
+      // Map timeframe to Binance interval
+      const intervalMap: Record<string, string> = {
+        '15min': '15m',
+        '30min': '30m', 
+        '1hour': '1h',
+        '4hour': '4h',
+        'daily': '1d',
+        '1d': '1d',
+      };
+      const interval = intervalMap[timeframe] || '1d';
+      
+      // Convert symbol: BTC -> BTCUSDT, BTC-USD -> BTCUSDT
+      const binanceSymbol = symbol.replace(/-USD$/, '').toUpperCase() + 'USDT';
+      
+      // Skip stablecoins - they don't have trading pairs
+      const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD'];
+      const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
+      if (stablecoins.includes(baseSymbol)) {
+        console.warn(`[scanner] ${symbol} is a stablecoin - skipping`);
+        throw new Error(`${symbol} is a stablecoin and cannot be scanned`);
+      }
+      
+      const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
+      console.info(`[scanner] Fetching Binance: ${binanceSymbol} ${interval}`);
+      
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          cache: 'no-store'
+        });
+        
+        if (!res.ok) {
+          console.error(`[scanner] Binance error ${res.status} for ${binanceSymbol}`);
+          throw new Error(`Binance API error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error(`No data from Binance for ${binanceSymbol}`);
+        }
+        
+        const candles: Candle[] = data.map((k: any[]) => ({
+          t: new Date(k[0]).toISOString(),
+          open: parseFloat(k[1]),
+          high: parseFloat(k[2]),
+          low: parseFloat(k[3]),
+          close: parseFloat(k[4]),
+        })).filter((c: Candle) => Number.isFinite(c.close));
+        
+        console.info(`[scanner] Binance ${binanceSymbol}: ${candles.length} candles`);
+        return candles;
+      } catch (err: any) {
+        console.error(`[scanner] Binance fetch failed for ${binanceSymbol}:`, err.message);
+        throw err;
+      }
+    }
+
+    // Legacy Alpha Vantage fallback (rarely used)
     async function fetchCryptoDaily(symbol: string, market = "USD"): Promise<Candle[]> {
       const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(symbol)}&market=${market}&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `CRYPTO_DAILY ${symbol}`);
@@ -606,7 +667,17 @@ export async function POST(req: NextRequest) {
         if (type === "crypto") {
           const market = "USD";
           const baseSym = sym;
-          const candles = avInterval === "daily" ? await fetchCryptoDaily(baseSym, market) : await fetchCryptoIntraday(baseSym, market, avInterval);
+          
+          // Use Binance for crypto (free, reliable, supports all timeframes)
+          let candles: Candle[];
+          try {
+            candles = await fetchCryptoBinance(baseSym, timeframe);
+          } catch (binanceErr: any) {
+            // If Binance fails (e.g., stablecoin), return clear error
+            errors.push(`${baseSym}: ${binanceErr.message}`);
+            continue;
+          }
+          
           if (!candles.length) throw new Error("No crypto candles returned");
           
           // Log the latest candle time for debugging

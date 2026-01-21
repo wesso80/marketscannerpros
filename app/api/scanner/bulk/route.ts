@@ -3,7 +3,8 @@
  * 
  * @route POST /api/scanner/bulk
  * @description Scans top stocks or crypto to find best opportunities
- *              Uses Yahoo Finance for both (free, no API key needed)
+ *              - Crypto: Binance API (free, no key, fast, 100 coins)
+ *              - Equity: Yahoo Finance (free, no key)
  * 
  * No auth required - rate limited by normal request throttling
  */
@@ -38,16 +39,23 @@ const EQUITY_UNIVERSE = [
   "DIS", "PYPL", "ADBE", "NOW", "INTU"
 ];
 
-// Yahoo Finance crypto symbols (free, no API key, no commercial restrictions)
+// Binance crypto symbols - Top 100 by market cap/volume (USDT pairs)
 const CRYPTO_UNIVERSE = [
-  "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
-  "ADA-USD", "DOGE-USD", "AVAX-USD", "LINK-USD", "DOT-USD",
-  "MATIC-USD", "SHIB-USD", "LTC-USD", "BCH-USD", "UNI-USD",
-  "XLM-USD", "NEAR-USD", "ATOM-USD", "XMR-USD", "ETC-USD",
-  "APT-USD", "ARB-USD", "OP-USD", "FIL-USD", "VET-USD",
-  "HBAR-USD", "INJ-USD", "AAVE-USD", "GRT-USD", "ALGO-USD",
-  "FTM-USD", "SAND-USD", "MANA-USD", "AXS-USD", "MKR-USD",
-  "RNDR-USD", "FET-USD", "SUI-USD", "SEI-USD", "TIA-USD"
+  // Top 20 by market cap
+  "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "LINK", "DOT",
+  "MATIC", "SHIB", "LTC", "BCH", "UNI", "XLM", "NEAR", "ATOM", "ETC", "APT",
+  // 21-40
+  "ARB", "OP", "FIL", "VET", "HBAR", "INJ", "AAVE", "GRT", "ALGO", "FTM",
+  "SAND", "MANA", "AXS", "MKR", "RNDR", "FET", "SUI", "SEI", "TIA", "IMX",
+  // 41-60
+  "RUNE", "THETA", "STX", "EGLD", "FLOW", "KAVA", "NEO", "XTZ", "EOS", "CFX",
+  "GALA", "ROSE", "ZIL", "1INCH", "COMP", "SNX", "ENJ", "CRV", "LDO", "RPL",
+  // 61-80
+  "BLUR", "PENDLE", "JUP", "WLD", "STRK", "ONDO", "PYTH", "JTO", "BONK", "WIF",
+  "PEPE", "FLOKI", "ORDI", "SATS", "TRX", "TON", "KAS", "KLAY", "MINA", "ZEC",
+  // 81-100
+  "DASH", "XMR", "BAT", "ZRX", "ANKR", "STORJ", "CELO", "ONE", "ICX", "QTUM",
+  "ONT", "WAVES", "IOTA", "SC", "RVN", "BTT", "HOT", "CELR", "DENT", "CHZ"
 ];
 
 // =============================================================================
@@ -330,13 +338,59 @@ function computeScore(indicators: Indicators): {
 // DATA FETCHERS
 // =============================================================================
 
-// Yahoo Finance interval mapping
+// Yahoo Finance interval mapping (for equities)
 const INTERVAL_CONFIG: Record<string, { interval: string; rangeDays: number; minBars: number }> = {
   '15m': { interval: '15m', rangeDays: 7, minBars: 50 },     // 7 days of 15min data
   '30m': { interval: '30m', rangeDays: 14, minBars: 50 },    // 14 days of 30min data
   '1h': { interval: '60m', rangeDays: 30, minBars: 50 },     // 30 days of 1h data
   '1d': { interval: '1d', rangeDays: 180, minBars: 50 }      // 180 days of daily data
 };
+
+// Binance interval mapping (for crypto)
+const BINANCE_INTERVAL_MAP: Record<string, string> = {
+  '15m': '15m',
+  '30m': '30m', 
+  '1h': '1h',
+  '4h': '4h',
+  '1d': '1d'
+};
+
+// Fetch crypto OHLCV data from Binance (fast, free, no API key)
+async function fetchBinanceData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+  try {
+    const interval = BINANCE_INTERVAL_MAP[timeframe] || '1d';
+    const binanceSymbol = `${symbol.toUpperCase()}USDT`;
+    
+    // Skip stablecoins
+    const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
+    if (stablecoins.includes(symbol.toUpperCase())) return null;
+    
+    const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
+    
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      cache: 'no-store'
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length < 50) return null;
+    
+    const ohlcv: OHLCV[] = data.map((k: any[]) => ({
+      date: new Date(k[0]).toISOString(),
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
+      volume: parseFloat(k[5])
+    })).filter((c: OHLCV) => Number.isFinite(c.close));
+    
+    return ohlcv.length >= 50 ? ohlcv : null;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchYahooData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
   try {
@@ -510,8 +564,7 @@ export async function POST(req: NextRequest) {
     // For crypto, pre-fetch all derivatives data in parallel
     const derivativesMap = new Map<string, DerivativesData>();
     if (type === 'crypto') {
-      const derivSymbols = CRYPTO_UNIVERSE.map(s => s.replace(/-USD$/, ''));
-      const derivPromises = derivSymbols.map(async (symbol) => {
+      const derivPromises = CRYPTO_UNIVERSE.map(async (symbol) => {
         const data = await fetchCryptoDerivatives(symbol);
         if (data) derivativesMap.set(symbol, data);
       });
@@ -519,17 +572,21 @@ export async function POST(req: NextRequest) {
       console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins`);
     }
     
-    // Process in parallel batches - Yahoo Finance for both equity and crypto
-    const BATCH_SIZE = 10;
-    const DELAY = 100; // Yahoo Finance has generous rate limits
+    // Process in parallel batches
+    // Crypto: Binance (very fast, 20 per batch)
+    // Equity: Yahoo Finance (slower, 10 per batch)
+    const BATCH_SIZE = type === 'crypto' ? 20 : 10;
+    const DELAY = type === 'crypto' ? 50 : 100;
     
     for (let i = 0; i < universe.length; i += BATCH_SIZE) {
       const batch = universe.slice(i, i + BATCH_SIZE);
       
       const batchPromises = batch.map(async (id) => {
         try {
-          // Both equity and crypto use Yahoo Finance
-          const ohlcv = await fetchYahooData(id, selectedTimeframe);
+          // Crypto uses Binance, Equity uses Yahoo Finance
+          const ohlcv = type === 'crypto' 
+            ? await fetchBinanceData(id, selectedTimeframe)
+            : await fetchYahooData(id, selectedTimeframe);
           
           if (!ohlcv) {
             errors.push(`${id}: No data`);
@@ -538,12 +595,8 @@ export async function POST(req: NextRequest) {
           
           const result = analyzeAsset(id, ohlcv);
           if (result && type === 'crypto') {
-            // Clean up crypto symbol: "BTC-USD" -> "BTC"
-            const cleanSymbol = id.replace(/-USD$/, '');
-            result.symbol = cleanSymbol;
-            
             // Add derivatives data
-            const derivData = derivativesMap.get(cleanSymbol);
+            const derivData = derivativesMap.get(id);
             if (derivData && result.indicators?.price) {
               result.derivatives = {
                 openInterest: derivData.openInterestCoin * result.indicators.price,
