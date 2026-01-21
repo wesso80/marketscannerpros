@@ -81,7 +81,7 @@ export const scannerRequestSchema = z.object({
 export type ScannerRequest = z.infer<typeof scannerRequestSchema>;
 
 // Backtest Request
-export const backtestTimeframeSchema = z.enum(["15min", "30min", "60min", "daily"]);
+export const backtestTimeframeSchema = z.enum(["1min", "5min", "15min", "30min", "60min", "daily"]);
 
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,

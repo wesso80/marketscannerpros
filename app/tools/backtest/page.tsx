@@ -53,7 +53,7 @@ function BacktestContent() {
   const [endDate, setEndDate] = useState('2024-12-31');
   const [initialCapital, setInitialCapital] = useState('10000');
   const [strategy, setStrategy] = useState('msp_day_trader');
-  const [timeframe, setTimeframe] = useState<'15min' | '30min' | '60min' | 'daily'>('daily');
+  const [timeframe, setTimeframe] = useState<'1min' | '5min' | '15min' | '30min' | '60min' | 'daily'>('daily');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -354,7 +354,7 @@ function BacktestContent() {
               </label>
               <select
                 value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value as '15min' | '30min' | '60min' | 'daily')}
+                onChange={(e) => setTimeframe(e.target.value as '1min' | '5min' | '15min' | '30min' | '60min' | 'daily')}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -365,10 +365,18 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                <option value="15min">15 Minutes</option>
-                <option value="30min">30 Minutes</option>
-                <option value="60min">1 Hour</option>
-                <option value="daily">Daily</option>
+                <optgroup label="⚡ Scalping">
+                  <option value="1min">1 Minute</option>
+                  <option value="5min">5 Minutes</option>
+                </optgroup>
+                <optgroup label="📈 Intraday">
+                  <option value="15min">15 Minutes</option>
+                  <option value="30min">30 Minutes</option>
+                  <option value="60min">1 Hour</option>
+                </optgroup>
+                <optgroup label="📊 Swing">
+                  <option value="daily">Daily</option>
+                </optgroup>
               </select>
             </div>
 

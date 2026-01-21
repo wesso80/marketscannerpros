@@ -133,15 +133,26 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
 }
 
 // Fetch daily price data from Alpha Vantage (Crypto)
-async function fetchCryptoPriceData(symbol: string, market: string = 'USD'): Promise<PriceData> {
+async function fetchCryptoPriceData(symbol: string, market: string = 'USD', timeframe: string = 'daily'): Promise<PriceData> {
   const cleanSymbol = normalizeSymbol(symbol);
-  logger.info(`Fetching crypto data for ${cleanSymbol}/${market}`);
+  logger.info(`Fetching crypto data for ${cleanSymbol}/${market} (${timeframe})`);
   
-  const response = await fetch(
-    `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cleanSymbol}&market=${market}&apikey=${ALPHA_VANTAGE_KEY}`
-  );
+  let url: string;
+  let timeSeriesKey: string;
+  
+  if (timeframe === 'daily') {
+    url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cleanSymbol}&market=${market}&apikey=${ALPHA_VANTAGE_KEY}`;
+    timeSeriesKey = 'Time Series (Digital Currency Daily)';
+  } else {
+    // Intraday crypto: 1min, 5min, 15min, 30min, 60min
+    const interval = timeframe;
+    url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${cleanSymbol}&market=${market}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    timeSeriesKey = `Time Series Crypto (${interval})`;
+  }
+  
+  const response = await fetch(url);
   const data = await response.json();
-  const timeSeries = data['Time Series (Digital Currency Daily)'];
+  const timeSeries = data[timeSeriesKey];
   
   if (!timeSeries) {
     // Check for error messages
@@ -151,30 +162,44 @@ async function fetchCryptoPriceData(symbol: string, market: string = 'USD'): Pro
     if (data['Note']) {
       throw new Error(`API rate limit exceeded. Please try again in a minute.`);
     }
+    // Fallback: Try daily if intraday fails
+    if (timeframe !== 'daily') {
+      logger.warn(`Intraday not available for ${cleanSymbol}, falling back to daily`);
+      return fetchCryptoPriceData(symbol, market, 'daily');
+    }
     throw new Error(`Failed to fetch crypto price data for ${cleanSymbol}. Make sure it's a valid cryptocurrency symbol.`);
   }
 
   const priceData: PriceData = {};
   for (const [date, values] of Object.entries(timeSeries)) {
-    // Crypto data has different field names (with USD suffix)
-    priceData[date] = {
-      open: parseFloat((values as any)['1a. open (USD)'] ?? (values as any)['1. open']),
-      high: parseFloat((values as any)['2a. high (USD)'] ?? (values as any)['2. high']),
-      low: parseFloat((values as any)['3a. low (USD)'] ?? (values as any)['3. low']),
-      close: parseFloat((values as any)['4a. close (USD)'] ?? (values as any)['4. close']),
-      volume: parseFloat((values as any)['5. volume'] ?? 0)
-    };
+    // Crypto daily has different field names (with USD suffix), intraday uses standard fields
+    if (timeframe === 'daily') {
+      priceData[date] = {
+        open: parseFloat((values as any)['1a. open (USD)'] ?? (values as any)['1. open']),
+        high: parseFloat((values as any)['2a. high (USD)'] ?? (values as any)['2. high']),
+        low: parseFloat((values as any)['3a. low (USD)'] ?? (values as any)['3. low']),
+        close: parseFloat((values as any)['4a. close (USD)'] ?? (values as any)['4. close']),
+        volume: parseFloat((values as any)['5. volume'] ?? 0)
+      };
+    } else {
+      priceData[date] = {
+        open: parseFloat((values as any)['1. open']),
+        high: parseFloat((values as any)['2. high']),
+        low: parseFloat((values as any)['3. low']),
+        close: parseFloat((values as any)['4. close']),
+        volume: parseFloat((values as any)['5. volume'] ?? 0)
+      };
+    }
   }
   
-  logger.info(`Fetched ${Object.keys(priceData).length} days of crypto data for ${cleanSymbol}`);
+  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol}`);
   return priceData;
 }
 
-// Smart fetch - detects crypto vs stock
+// Smart fetch - detects crypto vs stock and supports intraday for both
 async function fetchPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
   if (isCryptoSymbol(symbol)) {
-    // Note: Crypto doesn't support intraday via Alpha Vantage free tier
-    return fetchCryptoPriceData(symbol);
+    return fetchCryptoPriceData(symbol, 'USD', timeframe);
   } else {
     return fetchStockPriceData(symbol, timeframe);
   }
