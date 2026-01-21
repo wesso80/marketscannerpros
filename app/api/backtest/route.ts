@@ -642,15 +642,20 @@ function runStrategy(
   let atr: number[] = [];
   let volSMA: number[] = [];
   
-  // MSP strategies need all indicators
+  // Strategy type detection
   const isMSP = strategy.startsWith('msp_');
+  const isScalp = strategy.startsWith('scalp_');
+  const isSwing = strategy.startsWith('swing_');
+  const needsFullIndicators = isMSP || isScalp || isSwing || strategy === 'supertrend' || strategy === 'multi_confluence_5';
   
-  if (strategy.includes('ema') || strategy === 'multi_ema_rsi' || isMSP) {
+  // EMA calculations - needed by many strategies
+  if (strategy.includes('ema') || strategy === 'multi_ema_rsi' || needsFullIndicators) {
     ema9 = calculateEMA(closes, 9);
     ema21 = calculateEMA(closes, 21);
   }
   
-  if (isMSP) {
+  // Extended EMAs for MSP/Swing/Scalp strategies
+  if (needsFullIndicators) {
     ema55 = calculateEMA(closes, 55);
     // For intraday with limited data, use shorter EMA period as proxy
     const emaPeriod = closes.length >= 200 ? 200 : Math.max(55, Math.floor(closes.length * 0.6));
@@ -665,15 +670,15 @@ function runStrategy(
     sma200 = calculateSMA(closes, 200);
   }
   
-  if (strategy.includes('rsi') || strategy === 'multi_ema_rsi' || isMSP) {
+  if (strategy.includes('rsi') || strategy === 'multi_ema_rsi' || needsFullIndicators) {
     rsi = calculateRSI(closes, 14);
   }
   
-  if (strategy.includes('macd') || strategy === 'multi_macd_adx' || isMSP) {
+  if (strategy.includes('macd') || strategy === 'multi_macd_adx' || needsFullIndicators) {
     macdData = calculateMACD(closes);
   }
   
-  if (strategy.includes('bbands') || strategy.includes('bb') || strategy === 'multi_bb_stoch') {
+  if (strategy.includes('bbands') || strategy.includes('bb') || strategy === 'multi_bb_stoch' || isScalp) {
     bbands = calculateBollingerBands(closes, 20, 2);
   }
   
@@ -701,9 +706,17 @@ function runStrategy(
   }
   
   // Determine start index based on strategy requirements
-  // MSP strategies need 200 EMA, others need less
-  const uses200EMA = isMSP || strategy === 'sma_crossover' || strategy.includes('200');
-  const startIdx = uses200EMA ? Math.min(200, Math.floor(dates.length * 0.4)) : 55;
+  // Scalp strategies can start earlier, MSP/Swing need more warmup
+  let startIdx: number;
+  if (isScalp) {
+    startIdx = 25; // Scalping needs minimal warmup
+  } else if (isMSP || isSwing) {
+    startIdx = Math.min(60, Math.floor(dates.length * 0.2)); // Reduced from 200/40%
+  } else if (strategy === 'sma_crossover' || strategy.includes('200')) {
+    startIdx = Math.min(200, Math.floor(dates.length * 0.4));
+  } else {
+    startIdx = 30;
+  }
   
   // Strategy execution logic
   for (let i = startIdx; i < dates.length - 1; i++) {
