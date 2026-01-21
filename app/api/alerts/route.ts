@@ -71,6 +71,9 @@ const SMART_ALERT_TYPES = [
   'scanner_buy_signal', 'scanner_sell_signal',
   'scanner_score_above', 'scanner_score_below',
   'scanner_bullish_flip', 'scanner_bearish_flip',
+  // Backtest strategy alerts - trigger on strategy signals
+  'strategy_buy_signal', 'strategy_sell_signal',
+  'strategy_entry', 'strategy_exit',
 ];
 
 // GET - List all alerts
@@ -285,8 +288,8 @@ export async function POST(req: NextRequest) {
       `INSERT INTO alerts (
         workspace_id, symbol, asset_type, condition_type, condition_value, condition_timeframe,
         name, notes, is_recurring, notify_email, notify_push, expires_at,
-        is_smart_alert, cooldown_minutes, is_multi_condition, condition_logic
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        is_smart_alert, cooldown_minutes, is_multi_condition, condition_logic, smart_alert_context
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         session.workspaceId,
@@ -305,6 +308,7 @@ export async function POST(req: NextRequest) {
         body.cooldownMinutes || (isSmartAlert ? 60 : null),
         isMultiCondition,
         body.conditionLogic || 'AND',
+        (body as any).smartAlertContext ? JSON.stringify((body as any).smartAlertContext) : null,
       ]
     );
 
