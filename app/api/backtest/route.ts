@@ -1758,8 +1758,8 @@ export async function POST(req: NextRequest) {
     const isCrypto = isCryptoSymbol(symbol);
     const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
     
-    // Crypto only supports daily timeframe via Alpha Vantage
-    const effectiveTimeframe = isCrypto ? 'daily' : timeframe;
+    // All timeframes now supported for crypto via Binance API
+    const effectiveTimeframe = timeframe;
     
     logger.info('Backtest request started', { 
       symbol: normalizedSymbol, 
