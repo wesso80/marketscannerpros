@@ -1,16 +1,31 @@
 // MarketScanner Pros Service Worker
 // Handles push notifications and caching
 
-const CACHE_NAME = 'msp-v1';
+const CACHE_NAME = 'msp-v2';
 
 self.addEventListener('install', () => {
   console.log('[SW] Installing service worker');
+  // Clear old caches on install
+  caches.keys().then(names => {
+    names.forEach(name => {
+      if (name !== CACHE_NAME) {
+        caches.delete(name);
+      }
+    });
+  });
   self.skipWaiting();
 });
 
-self.addEventListener('activate', () => {
+self.addEventListener('activate', (event) => {
   console.log('[SW] Service worker activated');
-  self.clients.claim();
+  // Clear all old caches on activate
+  event.waitUntil(
+    caches.keys().then(names => {
+      return Promise.all(
+        names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 // Handle push notifications

@@ -49,20 +49,26 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  */
 export async function subscribeToPush(): Promise<PushSubscriptionData | null> {
   if (!isPushSupported()) {
-    console.warn('Push notifications not supported');
+    console.warn('[Push] Push notifications not supported in this browser');
     return null;
   }
   
+  console.log('[Push] Starting subscription process...');
+  console.log('[Push] Current permission:', Notification.permission);
+  
   if (Notification.permission !== 'granted') {
+    console.log('[Push] Requesting permission...');
     const permission = await requestNotificationPermission();
+    console.log('[Push] Permission result:', permission);
     if (permission !== 'granted') {
-      console.warn('Notification permission denied');
+      console.warn('[Push] Notification permission denied by user');
       return null;
     }
   }
   
   try {
     // Register service worker
+    console.log('[Push] Registering service worker...');
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/'
     });
@@ -72,12 +78,13 @@ export async function subscribeToPush(): Promise<PushSubscriptionData | null> {
     
     // Check for existing subscription
     let subscription = await registration.pushManager.getSubscription();
+    console.log('[Push] Existing subscription:', subscription ? 'found' : 'none');
     
     if (!subscription) {
       // Create new subscription
-      console.log('[Push] VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.substring(0, 30)}...` : 'NOT SET');
+      console.log('[Push] VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.substring(0, 20)}...` : '❌ NOT SET - redeploy needed!');
       if (!VAPID_PUBLIC_KEY) {
-        console.warn('[Push] VAPID public key not configured');
+        console.error('[Push] VAPID public key not configured - need to redeploy after setting NEXT_PUBLIC_VAPID_PUBLIC_KEY');
         return null;
       }
       

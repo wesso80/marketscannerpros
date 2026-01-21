@@ -39,7 +39,11 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[push] Error saving subscription:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message,
+      detail: error.code || 'unknown',
+      hint: 'Check database connection and workspace_id format'
+    }, { status: 500 });
   }
 }
 

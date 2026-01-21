@@ -48,13 +48,15 @@ async function checkAlerts(req: NextRequest) {
   }
 
   try {
-    // Get all active alerts
+    // Get all active alerts (exclude smart alerts - they have their own check routes)
     const alerts = await q<Alert>(`
       SELECT id, workspace_id, symbol, asset_type, condition_type, 
              condition_value, is_recurring, notify_email, notify_push, name
       FROM alerts 
       WHERE is_active = true 
         AND (expires_at IS NULL OR expires_at > NOW())
+        AND (is_smart_alert = false OR is_smart_alert IS NULL)
+        AND condition_type IN ('price_above', 'price_below', 'percent_change_up', 'percent_change_down')
     `);
 
     if (alerts.length === 0) {
