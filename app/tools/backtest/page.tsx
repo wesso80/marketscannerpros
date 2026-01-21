@@ -290,6 +290,8 @@ function BacktestContent() {
                 <optgroup label="🔥 MSP Elite Strategies">
                   <option value="msp_day_trader">MSP Day Trader AIO (Score 5+)</option>
                   <option value="msp_day_trader_strict">MSP Day Trader Strict (Score 6+)</option>
+                  <option value="msp_day_trader_v3">📈 Day Trader v3 Optimized (More Trades)</option>
+                  <option value="msp_day_trader_v3_aggressive">🚀 Day Trader v3 Aggressive (Max Trades)</option>
                   <option value="msp_multi_tf">MSP Multi-TF Dashboard (Bias 6+)</option>
                   <option value="msp_multi_tf_strict">MSP Multi-TF Strict (Bias 8+)</option>
                   <option value="msp_trend_pullback">MSP Trend Pullback</option>
@@ -378,6 +380,11 @@ function BacktestContent() {
                   <option value="daily">Daily</option>
                 </optgroup>
               </select>
+              {timeframe !== 'daily' && (
+                <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+                  ✓ Crypto uses Binance data (full historical intraday)
+                </p>
+              )}
             </div>
 
             <div>

@@ -132,8 +132,109 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
   return priceData;
 }
 
-// Fetch daily price data from Alpha Vantage (Crypto)
-async function fetchCryptoPriceData(symbol: string, market: string = 'USD', timeframe: string = 'daily'): Promise<PriceData> {
+// Fetch crypto price data from Binance (FREE, no API key, excellent historical data)
+async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = 'daily', startDate: string, endDate: string): Promise<PriceData> {
+  const cleanSymbol = normalizeSymbol(symbol);
+  const binanceSymbol = `${cleanSymbol}USDT`;
+  
+  // Map timeframe to Binance interval
+  const intervalMap: Record<string, string> = {
+    '1min': '1m',
+    '5min': '5m', 
+    '15min': '15m',
+    '30min': '30m',
+    '60min': '1h',
+    'daily': '1d'
+  };
+  const interval = intervalMap[timeframe] || '1d';
+  
+  // Calculate timestamps
+  const startTime = new Date(startDate).getTime();
+  const endTime = new Date(endDate).getTime() + 86400000; // Add 1 day to include end date
+  
+  logger.info(`Fetching ${cleanSymbol} from Binance (${interval}) ${startDate} to ${endDate}`);
+  
+  // Binance returns max 1000 candles per request, so we may need multiple requests
+  const allCandles: any[] = [];
+  let currentStart = startTime;
+  const limit = 1000;
+  
+  while (currentStart < endTime) {
+    const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&startTime=${currentStart}&endTime=${endTime}&limit=${limit}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      // Try with USD pair instead of USDT
+      const altUrl = `https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}USD&interval=${interval}&startTime=${currentStart}&endTime=${endTime}&limit=${limit}`;
+      const altResponse = await fetch(altUrl);
+      
+      if (!altResponse.ok) {
+        throw new Error(`Binance API error for ${cleanSymbol}: Symbol not found. Try major pairs like BTC, ETH, XRP, SOL.`);
+      }
+      
+      const altData = await altResponse.json();
+      allCandles.push(...altData);
+      break;
+    }
+    
+    const data = await response.json();
+    
+    if (data.code) {
+      throw new Error(`Binance API error: ${data.msg}`);
+    }
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      break;
+    }
+    
+    allCandles.push(...data);
+    
+    // Move start time to after last candle
+    const lastCandle = data[data.length - 1];
+    currentStart = lastCandle[0] + 1;
+    
+    // If we got less than limit, we've reached the end
+    if (data.length < limit) {
+      break;
+    }
+  }
+  
+  if (allCandles.length === 0) {
+    throw new Error(`No data found for ${cleanSymbol} on Binance. Symbol may not be listed.`);
+  }
+  
+  // Convert Binance klines to our format
+  // Kline format: [openTime, open, high, low, close, volume, closeTime, ...]
+  const priceData: PriceData = {};
+  for (const candle of allCandles) {
+    const timestamp = candle[0];
+    const date = new Date(timestamp);
+    
+    // Format date based on timeframe
+    let dateKey: string;
+    if (timeframe === 'daily') {
+      dateKey = date.toISOString().split('T')[0];
+    } else {
+      // For intraday, use full datetime
+      dateKey = date.toISOString().replace('T', ' ').slice(0, 19);
+    }
+    
+    priceData[dateKey] = {
+      open: parseFloat(candle[1]),
+      high: parseFloat(candle[2]),
+      low: parseFloat(candle[3]),
+      close: parseFloat(candle[4]),
+      volume: parseFloat(candle[5])
+    };
+  }
+  
+  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars from Binance for ${cleanSymbol}`);
+  return priceData;
+}
+
+// Fetch daily price data from Alpha Vantage (Crypto) - FALLBACK
+async function fetchCryptoPriceDataAlphaVantage(symbol: string, market: string = 'USD', timeframe: string = 'daily'): Promise<PriceData> {
   const cleanSymbol = normalizeSymbol(symbol);
   logger.info(`Fetching crypto data for ${cleanSymbol}/${market} (${timeframe})`);
   
@@ -196,10 +297,22 @@ async function fetchCryptoPriceData(symbol: string, market: string = 'USD', time
   return priceData;
 }
 
+// Smart crypto fetch - tries Binance first (better data), falls back to Alpha Vantage
+async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate: string, endDate: string): Promise<PriceData> {
+  try {
+    // Try Binance first - better historical data for all timeframes
+    return await fetchCryptoPriceDataBinance(symbol, timeframe, startDate, endDate);
+  } catch (binanceError) {
+    logger.warn(`Binance failed for ${symbol}, trying Alpha Vantage: ${binanceError}`);
+    // Fallback to Alpha Vantage
+    return await fetchCryptoPriceDataAlphaVantage(symbol, 'USD', timeframe);
+  }
+}
+
 // Smart fetch - detects crypto vs stock and supports intraday for both
-async function fetchPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
+async function fetchPriceData(symbol: string, timeframe: string = 'daily', startDate: string = '', endDate: string = ''): Promise<PriceData> {
   if (isCryptoSymbol(symbol)) {
-    return fetchCryptoPriceData(symbol, 'USD', timeframe);
+    return fetchCryptoPriceData(symbol, timeframe, startDate, endDate);
   } else {
     return fetchStockPriceData(symbol, timeframe);
   }
@@ -486,20 +599,24 @@ function runStrategy(
   symbol: string,
   timeframe: string = 'daily'
 ): StrategyResult {
-  // For intraday, we need to filter differently (datetime format)
   const isIntraday = timeframe !== 'daily';
   
-  const dates = Object.keys(priceData)
-    .filter(d => {
-      const dateOnly = d.split(' ')[0]; // Extract date part for intraday
-      return dateOnly >= startDate && dateOnly <= endDate;
-    })
-    .sort();
+  // Get all available dates and filter by date range
+  const allDates = Object.keys(priceData).sort();
   
-  // Adjust minimum data requirement based on timeframe
+  // Filter dates by range (works for both daily YYYY-MM-DD and intraday YYYY-MM-DD HH:MM:SS)
+  const dates = allDates.filter(d => {
+    const dateOnly = d.split(' ')[0]; // Extract date part for comparison
+    return dateOnly >= startDate && dateOnly <= endDate;
+  });
+  
+  logger.info(`Backtest data: ${dates.length} bars from ${dates[0] || 'N/A'} to ${dates[dates.length - 1] || 'N/A'}`);
+  
+  // Minimum data requirements
   const minDataPoints = isIntraday ? 50 : 100;
   if (dates.length < minDataPoints) {
-    throw new Error(`Insufficient historical data for backtest (need ${minDataPoints}+ bars, got ${dates.length})`);
+    const tfLabel = isIntraday ? `${timeframe} bars` : 'days';
+    throw new Error(`Insufficient data for ${symbol}. Got ${dates.length} ${tfLabel}, need at least ${minDataPoints}. Try adjusting date range.`);
   }
   
   const closes = dates.map(d => priceData[d].close);
@@ -535,7 +652,9 @@ function runStrategy(
   
   if (isMSP) {
     ema55 = calculateEMA(closes, 55);
-    ema200 = calculateEMA(closes, 200);
+    // For intraday with limited data, use shorter EMA period as proxy
+    const emaPeriod = closes.length >= 200 ? 200 : Math.max(55, Math.floor(closes.length * 0.6));
+    ema200 = calculateEMA(closes, emaPeriod);
     adxData = calculateADX(highs, lows, closes, 14);
     atr = calculateATR(highs, lows, closes, 14);
     volSMA = calculateSMA(volumes, 20);
@@ -581,8 +700,13 @@ function runStrategy(
     adxData = calculateADX(highs, lows, closes, 14);
   }
   
+  // Determine start index based on strategy requirements
+  // MSP strategies need 200 EMA, others need less
+  const uses200EMA = isMSP || strategy === 'sma_crossover' || strategy.includes('200');
+  const startIdx = uses200EMA ? Math.min(200, Math.floor(dates.length * 0.4)) : 55;
+  
   // Strategy execution logic
-  for (let i = 200; i < dates.length - 1; i++) {
+  for (let i = startIdx; i < dates.length - 1; i++) {
     const date = dates[i];
     const close = closes[i];
     
@@ -1023,7 +1147,7 @@ function runStrategy(
     // MSP DAY TRADER STRATEGIES
     // ═══════════════════════════════════════════════════════════════
     
-    if ((strategy === 'msp_day_trader' || strategy === 'msp_day_trader_strict' || strategy === 'msp_trend_pullback' || strategy === 'msp_liquidity_reversal') && adxData && macdData) {
+    if ((strategy === 'msp_day_trader' || strategy === 'msp_day_trader_strict' || strategy === 'msp_day_trader_v3' || strategy === 'msp_day_trader_v3_aggressive' || strategy === 'msp_trend_pullback' || strategy === 'msp_liquidity_reversal') && adxData && macdData) {
       const { adx, diPlus, diMinus } = adxData;
       const { macd, signal, histogram } = macdData;
       const minScore = strategy === 'msp_day_trader_strict' ? 6 : 5;
@@ -1085,6 +1209,8 @@ function runStrategy(
       // Specific strategy variants
       const isTrendPullback = strategy === 'msp_trend_pullback';
       const isLiquidityReversal = strategy === 'msp_liquidity_reversal';
+      const isDayTraderV3 = strategy === 'msp_day_trader_v3';
+      const isDayTraderV3Aggressive = strategy === 'msp_day_trader_v3_aggressive';
       
       // Entry conditions
       let longSignal = false;
@@ -1096,6 +1222,16 @@ function runStrategy(
       } else if (isLiquidityReversal) {
         longSignal = sweepLow && momBull && htfBull && scoreBull >= 4;
         shortSignal = sweepHigh && momBear && htfBear && scoreBear >= 4;
+      } else if (isDayTraderV3) {
+        // Day Trader v3 Optimized - More trades, relaxed conditions
+        // Only requires score >= 3 and EMA alignment (no ADX requirement)
+        longSignal = scoreBull >= 3 && bullTrend;
+        shortSignal = scoreBear >= 3 && bearTrend;
+      } else if (isDayTraderV3Aggressive) {
+        // Day Trader v3 Aggressive - Maximum trades, minimal filters
+        // Only requires score >= 2 OR momentum confirmation
+        longSignal = scoreBull >= 2 || (momBull && bullTrend);
+        shortSignal = scoreBear >= 2 || (momBear && bearTrend);
       } else {
         // Default MSP Day Trader
         longSignal = scoreBull >= minScore && htfBull && strongTrend;
@@ -1635,9 +1771,9 @@ export async function POST(req: NextRequest) {
       assetType: isCrypto ? 'crypto' : 'stock'
     });
 
-    // Fetch real historical price data from Alpha Vantage
-    logger.debug(`Fetching ${isCrypto ? 'crypto' : 'stock'} price data for ${normalizedSymbol} (${effectiveTimeframe})...`);
-    const priceData = await fetchPriceData(normalizedSymbol, effectiveTimeframe);
+    // Fetch real historical price data
+    logger.debug(`Fetching ${isCrypto ? 'crypto (Binance)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${effectiveTimeframe})...`);
+    const priceData = await fetchPriceData(normalizedSymbol, effectiveTimeframe, startDate, endDate);
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
 
     // Run backtest with real indicators
