@@ -252,6 +252,7 @@ export default function NewsSentimentPage() {
     }
 
     setLoading(true);
+    setAIAnalysisLoading(true);
     setError("");
     setArticles([]);
     setNewsAIAnalysis(null);
@@ -272,6 +273,7 @@ export default function NewsSentimentPage() {
       setError("Network error - please try again");
     } finally {
       setLoading(false);
+      setAIAnalysisLoading(false);
     }
   };
 
@@ -552,7 +554,7 @@ export default function NewsSentimentPage() {
         )}
 
         {/* AI News Analysis Panel */}
-        {newsAIAnalysis && (
+        {(newsAIAnalysis || aiAnalysisLoading) && (
           <div style={{ 
             background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(30,41,59,0.8))",
             borderRadius: "16px",
@@ -577,14 +579,46 @@ export default function NewsSentimentPage() {
               }}>🤖</span>
               AI News Analysis for {tickers.toUpperCase()}
             </h3>
-            <div style={{ 
-              color: "#E2E8F0", 
-              fontSize: "0.95rem", 
-              lineHeight: "1.8",
-              whiteSpace: "pre-wrap"
-            }}>
-              {newsAIAnalysis}
-            </div>
+            {aiAnalysisLoading && !newsAIAnalysis ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem" }}>
+                <div style={{ 
+                  width: "24px", 
+                  height: "24px", 
+                  border: "3px solid rgba(245,158,11,0.3)", 
+                  borderTop: "3px solid #F59E0B",
+                  borderRadius: "50%",
+                  animation: "spin 1s linear infinite"
+                }} />
+                <span style={{ color: "#94A3B8" }}>Analyzing {articles.length} articles with AI...</span>
+                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : (
+              <div style={{ 
+                color: "#E2E8F0", 
+                fontSize: "0.95rem", 
+                lineHeight: "1.8",
+                whiteSpace: "pre-wrap"
+              }}>
+                {newsAIAnalysis}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Show prompt to search if no analysis yet */}
+        {!newsAIAnalysis && !aiAnalysisLoading && articles.length === 0 && !loading && (
+          <div style={{ 
+            background: "linear-gradient(145deg, rgba(30,41,59,0.5), rgba(15,23,42,0.8))",
+            borderRadius: "16px",
+            border: "1px dashed rgba(245,158,11,0.3)",
+            padding: "2rem",
+            marginBottom: "1.5rem",
+            textAlign: "center"
+          }}>
+            <span style={{ fontSize: "2rem", marginBottom: "0.5rem", display: "block" }}>🤖📰</span>
+            <p style={{ color: "#94A3B8", margin: 0 }}>
+              Search for a ticker to see AI-powered news analysis
+            </p>
           </div>
         )}
 
