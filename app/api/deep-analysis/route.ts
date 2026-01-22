@@ -24,17 +24,23 @@ function getThisWeekFriday(): number {
 // Fetch options chain from Yahoo Finance
 async function fetchOptionsData(symbol: string) {
   try {
-    // First, get available expiry dates from Yahoo
+    // Use Yahoo Finance v7 options API with proper headers
     const baseUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}`;
     
-    const baseRes = await fetch(baseUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    // Yahoo requires these headers to avoid 401
+    const yahooHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json,text/html,application/xhtml+xml',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Connection': 'keep-alive',
+      'Cache-Control': 'no-cache',
+    };
+    
+    const baseRes = await fetch(baseUrl, { headers: yahooHeaders });
     
     if (!baseRes.ok) {
-      console.log('Options base fetch failed:', baseRes.status);
+      console.log('Options base fetch failed:', baseRes.status, await baseRes.text().catch(() => ''));
       return null;
     }
     
@@ -82,11 +88,7 @@ async function fetchOptionsData(symbol: string) {
     if (baseChain.options?.[0]?.expirationDate !== bestExpiry) {
       // Fetch the specific expiry
       const expiryUrl = `${baseUrl}?date=${bestExpiry}`;
-      const expiryRes = await fetch(expiryUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
+      const expiryRes = await fetch(expiryUrl, { headers: yahooHeaders });
       
       if (expiryRes.ok) {
         const expiryData = await expiryRes.json();
