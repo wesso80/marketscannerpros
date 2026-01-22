@@ -21,20 +21,75 @@ function getThisWeekFriday(): number {
   return Math.floor(friday.getTime() / 1000);
 }
 
+// Yahoo Finance crumb cache
+let yahooCrumb: string | null = null;
+let yahooCookies: string | null = null;
+let crumbExpiry = 0;
+
+// Get Yahoo crumb and cookies for authenticated API access
+async function getYahooCrumb(): Promise<{ crumb: string; cookies: string } | null> {
+  // Return cached crumb if still valid (cache for 1 hour)
+  if (yahooCrumb && yahooCookies && Date.now() < crumbExpiry) {
+    return { crumb: yahooCrumb, cookies: yahooCookies };
+  }
+  
+  try {
+    // Step 1: Hit Yahoo to get cookies
+    const initRes = await fetch('https://fc.yahoo.com', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    });
+    
+    // Extract cookies from response
+    const setCookies = initRes.headers.get('set-cookie') || '';
+    const cookies = setCookies.split(',').map(c => c.split(';')[0].trim()).filter(c => c).join('; ');
+    
+    // Step 2: Get crumb using cookies
+    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Cookie': cookies,
+      }
+    });
+    
+    if (!crumbRes.ok) {
+      console.log('Failed to get Yahoo crumb:', crumbRes.status);
+      return null;
+    }
+    
+    const crumb = await crumbRes.text();
+    
+    // Cache the crumb for 1 hour
+    yahooCrumb = crumb;
+    yahooCookies = cookies;
+    crumbExpiry = Date.now() + 3600000;
+    
+    console.log('Got Yahoo crumb successfully');
+    return { crumb, cookies };
+  } catch (err) {
+    console.error('Yahoo crumb fetch error:', err);
+    return null;
+  }
+}
+
 // Fetch options chain from Yahoo Finance
 async function fetchOptionsData(symbol: string) {
   try {
-    // Use Yahoo Finance v7 options API with proper headers
-    const baseUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}`;
+    // Get crumb for authenticated access
+    const auth = await getYahooCrumb();
+    if (!auth) {
+      console.log('Could not get Yahoo authentication');
+      return null;
+    }
     
-    // Yahoo requires these headers to avoid 401
+    // Use Yahoo Finance v7 options API with crumb
+    const baseUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?crumb=${encodeURIComponent(auth.crumb)}`;
+    
     const yahooHeaders = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json,text/html,application/xhtml+xml',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Connection': 'keep-alive',
-      'Cache-Control': 'no-cache',
+      'Accept': 'application/json',
+      'Cookie': auth.cookies,
     };
     
     const baseRes = await fetch(baseUrl, { headers: yahooHeaders });
@@ -86,8 +141,8 @@ async function fetchOptionsData(symbol: string) {
     const quote = baseChain.quote;
     
     if (baseChain.options?.[0]?.expirationDate !== bestExpiry) {
-      // Fetch the specific expiry
-      const expiryUrl = `${baseUrl}?date=${bestExpiry}`;
+      // Fetch the specific expiry with crumb
+      const expiryUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?date=${bestExpiry}&crumb=${encodeURIComponent(auth.crumb)}`;
       const expiryRes = await fetch(expiryUrl, { headers: yahooHeaders });
       
       if (expiryRes.ok) {
