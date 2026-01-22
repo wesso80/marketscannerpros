@@ -167,7 +167,7 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       const macdValues = macdData['Technical Analysis: MACD'];
       const smaValues = smaData['Technical Analysis: SMA'];
       
-      const latestRsi = rsiValues ? parseFloat(Object.values(rsiValues)[0] as any)?.RSI || null : null;
+      const latestRsi = rsiValues ? parseFloat((Object.values(rsiValues)[0] as any)?.RSI) || null : null;
       const latestMacd = macdValues ? Object.values(macdValues)[0] as any : null;
       const latestSma = smaValues ? parseFloat((Object.values(smaValues)[0] as any)?.SMA) || null : null;
       
