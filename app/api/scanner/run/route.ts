@@ -5,7 +5,8 @@ export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
 // Scanner API - Binance for crypto (free), Yahoo for stocks
-// v2.1 - USDT dominance support, fixed timeframe mapping
+// v2.3 - USDT dominance support, fixed timeframe mapping - 2025-01-22
+const SCANNER_VERSION = 'v2.3';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -154,6 +155,7 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
 }
 
 export async function POST(req: NextRequest) {
+  console.info(`[scanner] VERSION: ${SCANNER_VERSION} - USDT dominance enabled`);
   try {
     const body = (await req.json()) as ScanRequest;
     const { type, timeframe, minScore, symbols } = body;
