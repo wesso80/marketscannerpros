@@ -79,6 +79,12 @@ interface AnalystData {
   error?: string;
 }
 
+// Helper to parse date string as local date (avoid timezone issues)
+function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+
 // Helper to categorize earnings by time period
 function categorizeEarnings(earnings: EarningsEvent[]): {
   today: EarningsEvent[];
@@ -105,7 +111,7 @@ function categorizeEarnings(earnings: EarningsEvent[]): {
   };
   
   earnings.forEach(event => {
-    const eventDate = new Date(event.reportDate);
+    const eventDate = parseLocalDate(event.reportDate);
     if (eventDate.toDateString() === today.toDateString()) {
       result.today.push(event);
     } else if (eventDate.toDateString() === tomorrow.toDateString()) {
@@ -124,14 +130,15 @@ function categorizeEarnings(earnings: EarningsEvent[]): {
 
 // Format relative date
 function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  date.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
-  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
+  if (diffDays < 7 && diffDays > 0) return date.toLocaleDateString('en-US', { weekday: 'long' });
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -260,6 +267,7 @@ export default function NewsSentimentPage() {
 
   // Fetch analyst data for a selected stock
   const fetchAnalystData = async (event: EarningsEvent) => {
+    console.log('📊 Fetching analyst data for:', event.symbol);
     setSelectedEarning(event);
     setAnalystLoading(true);
     setAnalystData(null);
@@ -267,6 +275,7 @@ export default function NewsSentimentPage() {
     try {
       const response = await fetch(`/api/analyst-ratings?symbol=${event.symbol}`);
       const result = await response.json();
+      console.log('📊 Analyst API response:', result);
       
       if (result.success) {
         setAnalystData(result.data);
@@ -288,13 +297,14 @@ export default function NewsSentimentPage() {
           hold: 0,
           sell: 0,
           strongSell: 0,
-          description: 'Unable to fetch company data.',
+          description: result.error || 'Unable to fetch company data.',
           week52High: null,
           week52Low: null,
           error: result.error
         });
       }
     } catch (err) {
+      console.error('📊 Analyst API error:', err);
       setAnalystData({
         symbol: event.symbol,
         name: event.name,
@@ -876,12 +886,13 @@ export default function NewsSentimentPage() {
                                   {event.name}
                                 </span>
                               </div>
-                              <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
-                                Fiscal Period: {event.fiscalDateEnding}
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
+                                <span>Fiscal Period: {event.fiscalDateEnding}</span>
+                                <span style={{ color: "#3B82F6", fontSize: "0.7rem" }}>• Click for analyst ratings</span>
                               </div>
                             </div>
                             
-                            {/* EPS Estimate */}
+                            {/* EPS Estimate + Click indicator */}
                             <div style={{ textAlign: "right", minWidth: "80px" }}>
                               <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>EPS Est.</div>
                               <div style={{ 
@@ -891,6 +902,7 @@ export default function NewsSentimentPage() {
                               }}>
                                 {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
                               </div>
+                              <div style={{ fontSize: "1rem", marginTop: "0.25rem" }}>→</div>
                             </div>
                           </div>
                         );
