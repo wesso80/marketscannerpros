@@ -158,48 +158,47 @@ async function fetchOptionsData(symbol: string) {
     
     const calls = options.calls || [];
     const puts = options.puts || [];
-    const currentPrice = quote?.regularMarketPrice || 0;
     
-    // Debug: Log sample option data to see structure
-    if (calls.length > 0) {
-      console.log(`Sample call option for ${symbol}:`, JSON.stringify(calls[0]).slice(0, 500));
+    // Get current price from quote, or calculate from underlying price in options chain
+    let currentPrice = quote?.regularMarketPrice || baseChain.quote?.regularMarketPrice || 0;
+    
+    // If no price from quote, estimate from ATM options
+    if (!currentPrice && calls.length > 0 && puts.length > 0) {
+      // Find where calls and puts cross (ATM strike)
+      const allStrikes = [...new Set([...calls.map((c: any) => c.strike), ...puts.map((p: any) => p.strike)])].sort((a, b) => a - b);
+      currentPrice = allStrikes[Math.floor(allStrikes.length / 2)] || 0;
     }
     
-    console.log(`Options for ${symbol}: ${calls.length} calls, ${puts.length} puts, price: ${currentPrice}, expiry: ${expiryDate.toDateString()}`);
+    console.log(`${symbol} OPTIONS DEBUG - Price: $${currentPrice}, Calls: ${calls.length}, Puts: ${puts.length}`);
     
-    // Filter to strikes within reasonable range of current price (+/- 30%)
-    const minStrike = currentPrice * 0.7;
-    const maxStrike = currentPrice * 1.3;
+    // Log a few options with highest OI to see what data looks like
+    const callsByOI = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    const putsByOI = [...puts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
     
-    const relevantCalls = calls.filter((c: any) => c.strike >= minStrike && c.strike <= maxStrike);
-    const relevantPuts = puts.filter((p: any) => p.strike >= minStrike && p.strike <= maxStrike);
+    console.log(`${symbol} TOP 5 CALLS by OI (ALL strikes):`, callsByOI.slice(0, 5).map((c: any) => `$${c.strike}=${c.openInterest || 0}`).join(', '));
+    console.log(`${symbol} TOP 5 PUTS by OI (ALL strikes):`, putsByOI.slice(0, 5).map((p: any) => `$${p.strike}=${p.openInterest || 0}`).join(', '));
     
-    console.log(`Filtered to ${relevantCalls.length} calls and ${relevantPuts.length} puts near price $${currentPrice.toFixed(2)}`);
-    
-    // Sort by open interest to find highest OI strikes
-    const sortedCalls = [...relevantCalls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-    const sortedPuts = [...relevantPuts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-    
-    // Get THE single highest OI call and put for the week
-    const highestOICall = sortedCalls.length > 0 ? {
-      strike: sortedCalls[0].strike,
-      openInterest: sortedCalls[0].openInterest || 0,
-      volume: sortedCalls[0].volume || 0,
-      impliedVolatility: sortedCalls[0].impliedVolatility || 0,
-      lastPrice: sortedCalls[0].lastPrice || 0
+    // Find highest OI call and put from ALL options (not filtered)
+    // This ensures we get the actual highest OI regardless of strike position
+    const highestOICall = callsByOI.length > 0 && callsByOI[0].openInterest > 0 ? {
+      strike: callsByOI[0].strike,
+      openInterest: callsByOI[0].openInterest || 0,
+      volume: callsByOI[0].volume || 0,
+      impliedVolatility: callsByOI[0].impliedVolatility || 0,
+      lastPrice: callsByOI[0].lastPrice || 0
     } : null;
     
-    const highestOIPut = sortedPuts.length > 0 ? {
-      strike: sortedPuts[0].strike,
-      openInterest: sortedPuts[0].openInterest || 0,
-      volume: sortedPuts[0].volume || 0,
-      impliedVolatility: sortedPuts[0].impliedVolatility || 0,
-      lastPrice: sortedPuts[0].lastPrice || 0
+    const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? {
+      strike: putsByOI[0].strike,
+      openInterest: putsByOI[0].openInterest || 0,
+      volume: putsByOI[0].volume || 0,
+      impliedVolatility: putsByOI[0].impliedVolatility || 0,
+      lastPrice: putsByOI[0].lastPrice || 0
     } : null;
     
-    console.log(`${symbol} highest OI - Call: $${highestOICall?.strike} (${highestOICall?.openInterest} OI), Put: $${highestOIPut?.strike} (${highestOIPut?.openInterest} OI)`);
+    console.log(`${symbol} SELECTED - Call: $${highestOICall?.strike} (${highestOICall?.openInterest} OI), Put: $${highestOIPut?.strike} (${highestOIPut?.openInterest} OI)`);
     
-    // Calculate total call and put OI (from all strikes, not just filtered)
+    // Calculate total call and put OI (from all strikes)
     const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
     const totalPutOI = puts.reduce((sum: number, p: any) => sum + (p.openInterest || 0), 0);
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
@@ -209,8 +208,8 @@ async function fetchOptionsData(symbol: string) {
     // Calculate max pain (strike where most options expire worthless)
     const maxPain = calculateMaxPain(calls, puts, currentPrice);
     
-    // Find key support/resistance levels from options
-    const keyLevels = findKeyOptionsLevels(relevantCalls, relevantPuts, currentPrice);
+    // Find key support/resistance levels from all options
+    const keyLevels = findKeyOptionsLevels(calls, puts, currentPrice);
     
     return {
       expiryDate: expiryDate.toISOString().split('T')[0],
@@ -743,7 +742,7 @@ async function generateAIAnalysis(data: any) {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',  // Premium model for Golden Egg deep analysis
         messages: [
           {
             role: 'system',
