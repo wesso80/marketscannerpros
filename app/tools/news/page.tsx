@@ -37,6 +37,82 @@ interface EarningsEvent {
   currency: string;
 }
 
+interface EarningsResult {
+  symbol: string;
+  name: string;
+  reportedDate: string;
+  reportedEPS: number | null;
+  estimatedEPS: number | null;
+  surprise: number | null;
+  surprisePercentage: number | null;
+  beat: boolean;
+  history: Array<{
+    fiscalDateEnding: string;
+    reportedDate: string;
+    reportedEPS: number | null;
+    estimatedEPS: number | null;
+    surprisePercentage: number | null;
+  }>;
+}
+
+// Helper to categorize earnings by time period
+function categorizeEarnings(earnings: EarningsEvent[]): {
+  today: EarningsEvent[];
+  tomorrow: EarningsEvent[];
+  thisWeek: EarningsEvent[];
+  nextWeek: EarningsEvent[];
+  later: EarningsEvent[];
+} {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay())); // Sunday
+  const endOfNextWeek = new Date(endOfWeek);
+  endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
+  
+  const result = {
+    today: [] as EarningsEvent[],
+    tomorrow: [] as EarningsEvent[],
+    thisWeek: [] as EarningsEvent[],
+    nextWeek: [] as EarningsEvent[],
+    later: [] as EarningsEvent[],
+  };
+  
+  earnings.forEach(event => {
+    const eventDate = new Date(event.reportDate);
+    if (eventDate.toDateString() === today.toDateString()) {
+      result.today.push(event);
+    } else if (eventDate.toDateString() === tomorrow.toDateString()) {
+      result.tomorrow.push(event);
+    } else if (eventDate < endOfWeek) {
+      result.thisWeek.push(event);
+    } else if (eventDate < endOfNextWeek) {
+      result.nextWeek.push(event);
+    } else {
+      result.later.push(event);
+    }
+  });
+  
+  return result;
+}
+
+// Format relative date
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+type EarningsFilter = 'all' | 'today' | 'tomorrow' | 'thisWeek' | 'nextWeek';
+
 type TabType = "news" | "earnings";
 
 export default function NewsSentimentPage() {
@@ -58,6 +134,26 @@ export default function NewsSentimentPage() {
   const [earningsLoading, setEarningsLoading] = useState(false);
   const [earnings, setEarnings] = useState<EarningsEvent[]>([]);
   const [earningsError, setEarningsError] = useState("");
+  const [earningsFilter, setEarningsFilter] = useState<EarningsFilter>('all');
+  const [earningsResults, setEarningsResults] = useState<EarningsResult[]>([]);
+  const [earningsAIAnalysis, setEarningsAIAnalysis] = useState<string | null>(null);
+  const [showRecentResults, setShowRecentResults] = useState(true);
+  
+  // Categorize earnings by time period
+  const categorizedEarnings = categorizeEarnings(earnings);
+  
+  // Filter earnings based on selected filter
+  const getFilteredEarnings = (): EarningsEvent[] => {
+    switch (earningsFilter) {
+      case 'today': return categorizedEarnings.today;
+      case 'tomorrow': return categorizedEarnings.tomorrow;
+      case 'thisWeek': return [...categorizedEarnings.today, ...categorizedEarnings.tomorrow, ...categorizedEarnings.thisWeek];
+      case 'nextWeek': return categorizedEarnings.nextWeek;
+      default: return earnings;
+    }
+  };
+  
+  const filteredEarnings = getFilteredEarnings();
 
   const handleSearch = async () => {
     if (!tickers.trim()) {
@@ -89,16 +185,25 @@ export default function NewsSentimentPage() {
     setEarningsLoading(true);
     setEarningsError("");
     setEarnings([]);
+    setEarningsResults([]);
+    setEarningsAIAnalysis(null);
 
     try {
       const symbol = earningsSymbol.trim() || undefined;
-      const response = await fetch(`/api/earnings-calendar?symbol=${symbol || ""}&horizon=${earningsHorizon}`);
+      // Fetch earnings calendar + recent results with AI analysis
+      const response = await fetch(`/api/earnings-calendar?symbol=${symbol || ""}&horizon=${earningsHorizon}&includeResults=true&includeAI=true`);
       const result = await response.json();
 
       if (!result.success) {
         setEarningsError(result.error || "Failed to fetch earnings data");
       } else {
         setEarnings(result.earnings);
+        if (result.recentResults) {
+          setEarningsResults(result.recentResults);
+        }
+        if (result.aiAnalysis) {
+          setEarningsAIAnalysis(result.aiAnalysis);
+        }
       }
     } catch (err) {
       setEarningsError("Network error - please try again");
@@ -396,88 +501,347 @@ export default function NewsSentimentPage() {
           </>
         )}
 
-        {/* Earnings Tab */}
+        {/* Earnings Tab - Revamped UI */}
         {activeTab === "earnings" && (
           <>
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
-                    Symbol (optional - leave blank for all)
+            {/* Search Controls */}
+            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end" }}>
+                <div style={{ flex: "1", minWidth: "150px" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94A3B8", marginBottom: "0.4rem" }}>
+                    Symbol (optional)
                   </label>
                   <input
                     type="text"
                     value={earningsSymbol}
                     onChange={(e) => setEarningsSymbol(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleEarningsSearch()}
-                    placeholder="AAPL"
-                    style={{ width: "100%", padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff" }}
+                    placeholder="AAPL, MSFT..."
+                    style={{ width: "100%", padding: "0.6rem 0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff", fontSize: "0.9rem" }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.875rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
-                    Time Horizon
+                <div style={{ minWidth: "120px" }}>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#94A3B8", marginBottom: "0.4rem" }}>
+                    Horizon
                   </label>
                   <select 
                     value={earningsHorizon} 
                     onChange={(e) => setEarningsHorizon(e.target.value)}
-                    style={{ padding: "0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff", minWidth: "120px" }}
+                    style={{ padding: "0.6rem 0.75rem", background: "rgba(30, 41, 59, 0.8)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", color: "#fff", fontSize: "0.9rem" }}
                   >
                     <option value="3month">3 Months</option>
                     <option value="6month">6 Months</option>
                     <option value="12month">12 Months</option>
                   </select>
                 </div>
-                <div style={{ display: "flex", alignItems: "flex-end" }}>
-                  <button
-                    onClick={handleEarningsSearch}
-                    disabled={earningsLoading}
-                    style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: earningsLoading ? "not-allowed" : "pointer", opacity: earningsLoading ? 0.6 : 1 }}
-                  >
-                    {earningsLoading ? "Loading..." : "Search"}
-                  </button>
-                </div>
+                <button
+                  onClick={handleEarningsSearch}
+                  disabled={earningsLoading}
+                  style={{ padding: "0.6rem 1.5rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: earningsLoading ? "not-allowed" : "pointer", opacity: earningsLoading ? 0.6 : 1, fontSize: "0.9rem" }}
+                >
+                  {earningsLoading ? "⏳ Loading..." : "🔍 Search"}
+                </button>
               </div>
             </div>
 
             {earningsError && (
-              <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
+              <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "1.5rem" }}>
                 {earningsError}
               </div>
             )}
 
             {earnings.length > 0 && (
-              <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
-                <h2 style={{ color: "#10B981", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "10px", fontSize: "15px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  <span style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
-                  {earnings.length} Upcoming Earnings
-                </h2>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "2px solid rgba(16, 185, 129, 0.3)" }}>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Symbol</th>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Company</th>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Report Date</th>
-                        <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8" }}>Fiscal Period</th>
-                        <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>EPS Estimate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {earnings.map((event, idx) => (
-                        <tr key={idx} style={{ borderBottom: "1px solid rgba(16, 185, 129, 0.1)" }}>
-                          <td style={{ padding: "1rem", color: "#10B981", fontWeight: "bold" }}>{event.symbol}</td>
-                          <td style={{ padding: "1rem", color: "#fff" }}>{event.name}</td>
-                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{event.reportDate}</td>
-                          <td style={{ padding: "1rem", color: "#94A3B8" }}>{event.fiscalDateEnding}</td>
-                          <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                            {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <>
+                {/* Quick Stats Bar */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                  <div style={{ background: categorizedEarnings.today.length > 0 ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.today.length > 0 ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: categorizedEarnings.today.length > 0 ? "#10B981" : "#64748B" }}>{categorizedEarnings.today.length}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Today</div>
+                  </div>
+                  <div style={{ background: categorizedEarnings.tomorrow.length > 0 ? "linear-gradient(145deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05))" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.tomorrow.length > 0 ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: categorizedEarnings.tomorrow.length > 0 ? "#F59E0B" : "#64748B" }}>{categorizedEarnings.tomorrow.length}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tomorrow</div>
+                  </div>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#3B82F6" }}>{categorizedEarnings.thisWeek.length + categorizedEarnings.today.length + categorizedEarnings.tomorrow.length}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>This Week</div>
+                  </div>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#8B5CF6" }}>{categorizedEarnings.nextWeek.length}</div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Next Week</div>
+                  </div>
                 </div>
+
+                {/* Filter Tabs */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.5rem" }}>
+                  {[
+                    { key: 'all', label: `📋 All (${earnings.length})` },
+                    { key: 'today', label: `🔴 Today (${categorizedEarnings.today.length})` },
+                    { key: 'tomorrow', label: `🟡 Tomorrow (${categorizedEarnings.tomorrow.length})` },
+                    { key: 'thisWeek', label: `📅 This Week (${categorizedEarnings.today.length + categorizedEarnings.tomorrow.length + categorizedEarnings.thisWeek.length})` },
+                    { key: 'nextWeek', label: `📆 Next Week (${categorizedEarnings.nextWeek.length})` },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setEarningsFilter(key as EarningsFilter)}
+                      style={{
+                        padding: "0.5rem 1rem",
+                        background: earningsFilter === key ? "rgba(16, 185, 129, 0.2)" : "rgba(30, 41, 59, 0.5)",
+                        border: earningsFilter === key ? "1px solid #10B981" : "1px solid rgba(51,65,85,0.5)",
+                        borderRadius: "8px",
+                        color: earningsFilter === key ? "#10B981" : "#94A3B8",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        fontSize: "0.85rem",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Earnings Cards - Grouped by Date */}
+                <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                    <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+                      <span style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
+                      {filteredEarnings.length} Earnings Reports
+                    </h2>
+                    <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
+                      {earningsFilter !== 'all' && `Filtered from ${earnings.length} total`}
+                    </span>
+                  </div>
+                  
+                  {filteredEarnings.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "3rem", color: "#64748B" }}>
+                      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
+                      <p>No earnings scheduled for this period</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gap: "0.75rem" }}>
+                      {filteredEarnings.map((event, idx) => {
+                        const isToday = formatRelativeDate(event.reportDate) === "Today";
+                        const isTomorrow = formatRelativeDate(event.reportDate) === "Tomorrow";
+                        
+                        return (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              display: "grid",
+                              gridTemplateColumns: "auto 1fr auto",
+                              gap: "1rem",
+                              alignItems: "center",
+                              padding: "1rem",
+                              background: isToday ? "rgba(16,185,129,0.1)" : isTomorrow ? "rgba(245,158,11,0.05)" : "rgba(30,41,59,0.3)",
+                              borderRadius: "10px",
+                              border: isToday ? "1px solid rgba(16,185,129,0.3)" : isTomorrow ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(51,65,85,0.3)",
+                            }}
+                          >
+                            {/* Date Badge */}
+                            <div style={{ 
+                              minWidth: "70px", 
+                              textAlign: "center", 
+                              padding: "0.5rem",
+                              background: isToday ? "rgba(16,185,129,0.2)" : isTomorrow ? "rgba(245,158,11,0.15)" : "rgba(51,65,85,0.5)",
+                              borderRadius: "8px"
+                            }}>
+                              <div style={{ fontSize: "0.7rem", color: isToday ? "#10B981" : isTomorrow ? "#F59E0B" : "#94A3B8", textTransform: "uppercase", fontWeight: "600" }}>
+                                {formatRelativeDate(event.reportDate)}
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                                {new Date(event.reportDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </div>
+                            </div>
+                            
+                            {/* Company Info */}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                <span style={{ 
+                                  fontWeight: "bold", 
+                                  color: "#10B981",
+                                  fontSize: "1rem",
+                                  background: "rgba(16,185,129,0.1)",
+                                  padding: "0.2rem 0.5rem",
+                                  borderRadius: "4px"
+                                }}>
+                                  {event.symbol}
+                                </span>
+                                <span style={{ color: "#fff", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {event.name}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
+                                Fiscal Period: {event.fiscalDateEnding}
+                              </div>
+                            </div>
+                            
+                            {/* EPS Estimate */}
+                            <div style={{ textAlign: "right", minWidth: "80px" }}>
+                              <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>EPS Est.</div>
+                              <div style={{ 
+                                fontSize: "1.1rem", 
+                                fontWeight: "bold", 
+                                color: event.estimate !== null ? (event.estimate >= 0 ? "#10B981" : "#EF4444") : "#64748B" 
+                              }}>
+                                {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* AI Analysis Section */}
+                {earningsAIAnalysis && (
+                  <div style={{ 
+                    marginTop: "1.5rem",
+                    background: "linear-gradient(145deg, rgba(139,92,246,0.1), rgba(30,41,59,0.5))", 
+                    borderRadius: "16px", 
+                    border: "1px solid rgba(139,92,246,0.3)", 
+                    padding: "1.5rem", 
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
+                  }}>
+                    <h2 style={{ color: "#8B5CF6", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+                      <span style={{ background: "linear-gradient(135deg, #8B5CF6, #7C3AED)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>🤖</span>
+                      AI Earnings Insights
+                    </h2>
+                    <div style={{ color: "#E2E8F0", fontSize: "0.95rem", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>
+                      {earningsAIAnalysis}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Earnings Results (Beat/Miss) */}
+                {earningsResults.length > 0 && (
+                  <div style={{ 
+                    marginTop: "1.5rem",
+                    background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", 
+                    borderRadius: "16px", 
+                    border: "1px solid rgba(51,65,85,0.8)", 
+                    padding: "1.5rem", 
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                      <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
+                        <span style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📊</span>
+                        Recent Earnings Results
+                      </h2>
+                      <button
+                        onClick={() => setShowRecentResults(!showRecentResults)}
+                        style={{ background: "rgba(51,65,85,0.5)", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "6px", padding: "0.4rem 0.8rem", color: "#94A3B8", fontSize: "0.75rem", cursor: "pointer" }}
+                      >
+                        {showRecentResults ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    
+                    {showRecentResults && (
+                      <div style={{ display: "grid", gap: "0.75rem" }}>
+                        {earningsResults.map((result, idx) => (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              display: "grid",
+                              gridTemplateColumns: "auto 1fr auto auto",
+                              gap: "1rem",
+                              alignItems: "center",
+                              padding: "1rem",
+                              background: result.beat ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
+                              borderRadius: "10px",
+                              border: result.beat ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(239,68,68,0.25)",
+                            }}
+                          >
+                            {/* Beat/Miss Badge */}
+                            <div style={{ 
+                              minWidth: "70px", 
+                              textAlign: "center", 
+                              padding: "0.5rem",
+                              background: result.beat ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)",
+                              borderRadius: "8px"
+                            }}>
+                              <div style={{ 
+                                fontSize: "1.2rem", 
+                                marginBottom: "0.2rem"
+                              }}>
+                                {result.beat ? "✅" : "❌"}
+                              </div>
+                              <div style={{ 
+                                fontSize: "0.7rem", 
+                                color: result.beat ? "#10B981" : "#EF4444", 
+                                fontWeight: "700",
+                                textTransform: "uppercase"
+                              }}>
+                                {result.beat ? "BEAT" : "MISS"}
+                              </div>
+                            </div>
+                            
+                            {/* Company Info */}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                <span style={{ 
+                                  fontWeight: "bold", 
+                                  color: result.beat ? "#10B981" : "#EF4444",
+                                  fontSize: "1rem",
+                                  background: result.beat ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+                                  padding: "0.2rem 0.5rem",
+                                  borderRadius: "4px"
+                                }}>
+                                  {result.symbol}
+                                </span>
+                                <span style={{ color: "#fff", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {result.name}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
+                                Reported: {new Date(result.reportedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </div>
+                            </div>
+                            
+                            {/* EPS Numbers */}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Actual</div>
+                              <div style={{ fontSize: "1rem", fontWeight: "bold", color: result.reportedEPS !== null && result.reportedEPS >= 0 ? "#10B981" : "#EF4444" }}>
+                                {result.reportedEPS !== null ? `$${result.reportedEPS.toFixed(2)}` : "N/A"}
+                              </div>
+                              <div style={{ fontSize: "0.65rem", color: "#64748B", marginTop: "0.25rem" }}>Est: {result.estimatedEPS !== null ? `$${result.estimatedEPS.toFixed(2)}` : "N/A"}</div>
+                            </div>
+                            
+                            {/* Surprise Percentage */}
+                            <div style={{ 
+                              textAlign: "center", 
+                              minWidth: "70px",
+                              padding: "0.5rem",
+                              background: result.surprisePercentage !== null && result.surprisePercentage >= 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                              borderRadius: "8px"
+                            }}>
+                              <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Surprise</div>
+                              <div style={{ 
+                                fontSize: "1.1rem", 
+                                fontWeight: "bold", 
+                                color: result.surprisePercentage !== null && result.surprisePercentage >= 0 ? "#10B981" : "#EF4444"
+                              }}>
+                                {result.surprisePercentage !== null ? `${result.surprisePercentage >= 0 ? "+" : ""}${result.surprisePercentage.toFixed(1)}%` : "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Empty State */}
+            {!earningsLoading && earnings.length === 0 && !earningsError && (
+              <div style={{ textAlign: "center", padding: "4rem 2rem", background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.5)" }}>
+                <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>📅</div>
+                <h3 style={{ color: "#fff", marginBottom: "0.5rem" }}>Search for Upcoming Earnings</h3>
+                <p style={{ color: "#64748B", maxWidth: "400px", margin: "0 auto" }}>
+                  Enter a symbol to find specific earnings, or leave blank and click Search to see all upcoming reports
+                </p>
               </div>
             )}
           </>
