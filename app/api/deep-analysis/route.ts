@@ -160,11 +160,20 @@ async function fetchOptionsData(symbol: string) {
     const puts = options.puts || [];
     const currentPrice = quote?.regularMarketPrice || 0;
     
+    // Debug: Log sample option data to see structure
+    if (calls.length > 0) {
+      console.log(`Sample call option for ${symbol}:`, JSON.stringify(calls[0]).slice(0, 500));
+    }
+    
     console.log(`Options for ${symbol}: ${calls.length} calls, ${puts.length} puts, price: ${currentPrice}, expiry: ${expiryDate.toDateString()}`);
     
     // Sort by open interest to find highest OI strikes
     const sortedCalls = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
     const sortedPuts = [...puts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    
+    // Debug: Log top OI values
+    console.log(`Top call OI for ${symbol}:`, sortedCalls.slice(0, 3).map((c: any) => `$${c.strike}: ${c.openInterest}`).join(', '));
+    console.log(`Top put OI for ${symbol}:`, sortedPuts.slice(0, 3).map((p: any) => `$${p.strike}: ${p.openInterest}`).join(', '));
     
     // Get top 3 calls and puts by OI
     const topCalls = sortedCalls.slice(0, 3).map((c: any) => ({
@@ -189,6 +198,8 @@ async function fetchOptionsData(symbol: string) {
     const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
     const totalPutOI = puts.reduce((sum: number, p: any) => sum + (p.openInterest || 0), 0);
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
+    
+    console.log(`${symbol} total OI - Calls: ${totalCallOI}, Puts: ${totalPutOI}, P/C: ${putCallRatio.toFixed(2)}`);
     
     // Calculate max pain (strike where most options expire worthless)
     const maxPain = calculateMaxPain(calls, puts, currentPrice);
