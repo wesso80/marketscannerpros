@@ -30,6 +30,10 @@ interface Indicators {
   volumeRatio?: number;
   priceVsSma20?: number;
   priceVsSma50?: number;
+  bbUpper?: number;
+  bbMiddle?: number;
+  bbLower?: number;
+  adx?: number;
 }
 
 interface Company {
@@ -83,6 +87,8 @@ interface Signals {
   signal: string;
   score: number;
   reasons: string[];
+  bullishCount?: number;
+  bearishCount?: number;
 }
 
 interface EarningsQuarter {
@@ -393,8 +399,115 @@ export default function DeepAnalysisPage() {
                   {result.signals.signal}
                 </div>
                 <div style={{ marginTop: "0.75rem", color: "#94A3B8", fontSize: "0.9rem" }}>
-                  Score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} • {result.signals.reasons.length} signals detected
+                  Score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} • {result.signals.bullishCount || 0} bullish / {result.signals.bearishCount || 0} bearish signals
                 </div>
+              </div>
+            </div>
+            
+            {/* Key Takeaways Section */}
+            <div style={{ 
+              background: "linear-gradient(145deg, rgba(245,158,11,0.15), rgba(30,41,59,0.9))",
+              borderRadius: "16px",
+              border: "1px solid rgba(245,158,11,0.4)",
+              padding: "1.5rem"
+            }}>
+              <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>⚡</span>
+                Quick Summary
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+                {/* Technical Stance */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                  <span style={{ fontSize: "1.5rem" }}>📊</span>
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Technical Stance</div>
+                    <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
+                      {result.indicators?.rsi !== null && result.indicators?.rsi !== undefined
+                        ? (result.indicators.rsi < 30 ? 'Oversold' : result.indicators.rsi > 70 ? 'Overbought' : result.indicators.rsi < 45 ? 'Bearish Bias' : result.indicators.rsi > 55 ? 'Bullish Bias' : 'Neutral')
+                        : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Price Position */}
+                {result.company?.week52Low && result.company?.week52High && result.price?.price && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>📍</span>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>52W Position</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
+                        {(() => {
+                          const pos = ((result.price.price - result.company.week52Low) / (result.company.week52High - result.company.week52Low)) * 100;
+                          if (pos > 90) return 'Near Highs';
+                          if (pos > 70) return 'Upper Range';
+                          if (pos > 30) return 'Mid Range';
+                          if (pos > 10) return 'Lower Range';
+                          return 'Near Lows';
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Analyst View */}
+                {result.company?.targetPrice && result.price?.price && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>🎯</span>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Analyst Target</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "600", color: result.company.targetPrice > result.price.price ? "#10B981" : "#EF4444" }}>
+                        {((result.company.targetPrice - result.price.price) / result.price.price * 100).toFixed(0)}% {result.company.targetPrice > result.price.price ? 'Upside' : 'Downside'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Trend Strength */}
+                {result.indicators?.adx !== undefined && result.indicators?.adx !== null && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>📈</span>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Trend Strength</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "600", color: result.indicators.adx > 25 ? "#10B981" : "#F59E0B" }}>
+                        {result.indicators.adx > 50 ? 'Very Strong' : result.indicators.adx > 25 ? 'Trending' : 'Weak/Ranging'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Crypto Fear/Greed */}
+                {result.cryptoData?.fearGreed && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>{result.cryptoData.fearGreed.value < 40 ? '😨' : result.cryptoData.fearGreed.value > 60 ? '🤑' : '😐'}</span>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Market Sentiment</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
+                        {result.cryptoData.fearGreed.classification} ({result.cryptoData.fearGreed.value})
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* News Sentiment */}
+                {result.news && result.news.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
+                    <span style={{ fontSize: "1.5rem" }}>📰</span>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>News Sentiment</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
+                        {(() => {
+                          const positive = result.news.filter((n: any) => n.sentiment === 'Bullish').length;
+                          const negative = result.news.filter((n: any) => n.sentiment === 'Bearish').length;
+                          if (positive > negative * 2) return 'Very Positive';
+                          if (positive > negative) return 'Positive';
+                          if (negative > positive * 2) return 'Very Negative';
+                          if (negative > positive) return 'Negative';
+                          return 'Mixed';
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -482,6 +595,55 @@ export default function DeepAnalysisPage() {
                           ${result.indicators.atr.toFixed(2)}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "#64748B" }}>Volatility</div>
+                      </div>
+                    )}
+                    
+                    {/* ADX */}
+                    {result.indicators.adx !== undefined && result.indicators.adx !== null && (
+                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>ADX (14)</div>
+                        <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: result.indicators.adx > 25 ? "#10B981" : "#94A3B8" }}>
+                          {result.indicators.adx.toFixed(1)}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748B" }}>
+                          {result.indicators.adx > 50 ? 'Strong Trend' : result.indicators.adx > 25 ? 'Trending' : 'Ranging'}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Bollinger Band Position */}
+                    {result.indicators.bbUpper && result.indicators.bbLower && result.indicators.bbMiddle && (
+                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center", gridColumn: "span 2" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.5rem" }}>Bollinger Bands</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem" }}>
+                          <span style={{ color: "#EF4444" }}>${result.indicators.bbLower.toFixed(2)}</span>
+                          <span style={{ color: "#64748B" }}>${result.indicators.bbMiddle.toFixed(2)}</span>
+                          <span style={{ color: "#10B981" }}>${result.indicators.bbUpper.toFixed(2)}</span>
+                        </div>
+                        <div style={{ 
+                          height: "8px", 
+                          background: "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", 
+                          borderRadius: "4px", 
+                          marginTop: "0.5rem",
+                          position: "relative"
+                        }}>
+                          {result.price?.price && (
+                            <div style={{
+                              position: "absolute",
+                              left: `${Math.min(100, Math.max(0, ((result.price.price - result.indicators.bbLower) / (result.indicators.bbUpper - result.indicators.bbLower)) * 100))}%`,
+                              top: "-4px",
+                              transform: "translateX(-50%)",
+                              width: "16px",
+                              height: "16px",
+                              background: "#fff",
+                              borderRadius: "50%",
+                              border: "2px solid #0F172A"
+                            }} />
+                          )}
+                        </div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.5rem" }}>
+                          Lower • Middle • Upper
+                        </div>
                       </div>
                     )}
                   </div>
@@ -584,13 +746,52 @@ export default function DeepAnalysisPage() {
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Target Price</div>
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#3B82F6" }}>${result.company.targetPrice?.toFixed(2) || 'N/A'}</div>
+                        {result.company.targetPrice && result.price?.price && (
+                          <div style={{ fontSize: "0.7rem", color: result.company.targetPrice > result.price.price ? "#10B981" : "#EF4444" }}>
+                            {((result.company.targetPrice - result.price.price) / result.price.price * 100) > 0 ? '+' : ''}
+                            {((result.company.targetPrice - result.price.price) / result.price.price * 100).toFixed(1)}% {result.company.targetPrice > result.price.price ? 'upside' : 'downside'}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>52W Range</div>
-                        <div style={{ fontSize: "0.8rem", fontWeight: "600", color: "#fff" }}>
-                          ${result.company.week52Low?.toFixed(0)} - ${result.company.week52High?.toFixed(0)}
-                        </div>
+                      
+                      {/* 52-Week Range Visual Bar */}
+                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center", gridColumn: "span 2" }}>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.5rem" }}>52-Week Position</div>
+                        {result.company.week52Low && result.company.week52High && result.price?.price && (
+                          <>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: "0.25rem" }}>
+                              <span style={{ color: "#EF4444" }}>Low: ${result.company.week52Low.toFixed(0)}</span>
+                              <span style={{ color: "#F59E0B", fontWeight: "bold" }}>
+                                {(((result.price.price - result.company.week52Low) / (result.company.week52High - result.company.week52Low)) * 100).toFixed(0)}%
+                              </span>
+                              <span style={{ color: "#10B981" }}>High: ${result.company.week52High.toFixed(0)}</span>
+                            </div>
+                            <div style={{ 
+                              height: "10px", 
+                              background: "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", 
+                              borderRadius: "5px",
+                              position: "relative"
+                            }}>
+                              <div style={{
+                                position: "absolute",
+                                left: `${Math.min(100, Math.max(0, ((result.price.price - result.company.week52Low) / (result.company.week52High - result.company.week52Low)) * 100))}%`,
+                                top: "-3px",
+                                transform: "translateX(-50%)",
+                                width: "16px",
+                                height: "16px",
+                                background: "#fff",
+                                borderRadius: "50%",
+                                border: "3px solid #0F172A",
+                                boxShadow: "0 0 8px rgba(245,158,11,0.5)"
+                              }} />
+                            </div>
+                            <div style={{ fontSize: "0.7rem", color: "#94A3B8", marginTop: "0.5rem" }}>
+                              Current: ${result.price.price.toFixed(2)}
+                            </div>
+                          </>
+                        )}
                       </div>
+                      
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Div Yield</div>
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#8B5CF6" }}>

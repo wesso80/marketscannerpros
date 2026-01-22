@@ -152,7 +152,8 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
         priceVsSma50: sma50 ? ((closes[closes.length - 1] - sma50) / sma50) * 100 : null,
       };
     } else {
-      // Use Alpha Vantage for stocks
+      // Use Alpha Vantage for stocks - fetch in batches to avoid rate limits
+      // Batch 1: Core indicators
       const [rsiRes, macdRes, smaRes] = await Promise.all([
         fetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
         fetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
@@ -163,13 +164,26 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       const macdData = await macdRes.json();
       const smaData = await smaRes.json();
       
+      // Batch 2: Additional indicators (Bollinger Bands, ADX)
+      const [bbandsRes, adxRes] = await Promise.all([
+        fetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
+        fetch(`https://www.alphavantage.co/query?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${ALPHA_VANTAGE_API_KEY}`)
+      ]);
+      
+      const bbandsData = await bbandsRes.json();
+      const adxData = await adxRes.json();
+      
       const rsiValues = rsiData['Technical Analysis: RSI'];
       const macdValues = macdData['Technical Analysis: MACD'];
       const smaValues = smaData['Technical Analysis: SMA'];
+      const bbandsValues = bbandsData['Technical Analysis: BBANDS'];
+      const adxValues = adxData['Technical Analysis: ADX'];
       
       const latestRsi = rsiValues ? parseFloat((Object.values(rsiValues)[0] as any)?.RSI) || null : null;
       const latestMacd = macdValues ? Object.values(macdValues)[0] as any : null;
       const latestSma = smaValues ? parseFloat((Object.values(smaValues)[0] as any)?.SMA) || null : null;
+      const latestBbands = bbandsValues ? Object.values(bbandsValues)[0] as any : null;
+      const latestAdx = adxValues ? parseFloat((Object.values(adxValues)[0] as any)?.ADX) || null : null;
       
       return {
         rsi: latestRsi,
@@ -177,6 +191,10 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
         macdSignal: latestMacd?.MACD_Signal ? parseFloat(latestMacd.MACD_Signal) : null,
         macdHist: latestMacd?.MACD_Hist ? parseFloat(latestMacd.MACD_Hist) : null,
         sma20: latestSma,
+        bbUpper: latestBbands?.['Real Upper Band'] ? parseFloat(latestBbands['Real Upper Band']) : null,
+        bbMiddle: latestBbands?.['Real Middle Band'] ? parseFloat(latestBbands['Real Middle Band']) : null,
+        bbLower: latestBbands?.['Real Lower Band'] ? parseFloat(latestBbands['Real Lower Band']) : null,
+        adx: latestAdx,
       };
     }
   } catch (err) {
@@ -611,7 +629,7 @@ function calculateATR(highs: number[], lows: number[], closes: number[], period:
 }
 
 // Generate trading signals
-function generateSignals(data: any): { signal: string; score: number; reasons: string[] } {
+function generateSignals(data: any): { signal: string; score: number; reasons: string[]; bullishCount: number; bearishCount: number } {
   const reasons: string[] = [];
   let bullish = 0;
   let bearish = 0;
@@ -619,49 +637,123 @@ function generateSignals(data: any): { signal: string; score: number; reasons: s
   if (data.indicators) {
     const ind = data.indicators;
     
-    // RSI signals
+    // RSI signals - always show RSI status
     if (ind.rsi !== null && ind.rsi !== undefined) {
-      if (ind.rsi < 30) { bullish += 2; reasons.push('RSI oversold (<30)'); }
-      else if (ind.rsi < 40) { bullish += 1; reasons.push('RSI approaching oversold'); }
-      else if (ind.rsi > 70) { bearish += 2; reasons.push('RSI overbought (>70)'); }
-      else if (ind.rsi > 60) { bearish += 1; reasons.push('RSI elevated'); }
+      if (ind.rsi < 30) { bullish += 2; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Oversold (bullish reversal potential)`); }
+      else if (ind.rsi < 40) { bullish += 1; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Approaching oversold`); }
+      else if (ind.rsi > 70) { bearish += 2; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Overbought (bearish reversal potential)`); }
+      else if (ind.rsi > 60) { bearish += 1; reasons.push(`RSI ${ind.rsi.toFixed(1)} - Elevated`); }
+      else if (ind.rsi >= 45 && ind.rsi <= 55) { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Neutral zone (consolidating)`); }
+      else if (ind.rsi > 55) { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Slightly bullish momentum`); }
+      else { reasons.push(`RSI ${ind.rsi.toFixed(1)} - Slightly bearish momentum`); }
     }
     
     // MACD signals
     if (ind.macd !== null && ind.macd !== undefined) {
-      if (ind.macd > 0) { bullish += 1; reasons.push('MACD positive'); }
-      else { bearish += 1; reasons.push('MACD negative'); }
+      const macdHist = ind.macdHist;
+      if (ind.macd > 0 && macdHist && macdHist > 0) { bullish += 2; reasons.push('MACD bullish crossover confirmed'); }
+      else if (ind.macd > 0) { bullish += 1; reasons.push('MACD positive (bullish momentum)'); }
+      else if (ind.macd < 0 && macdHist && macdHist < 0) { bearish += 2; reasons.push('MACD bearish crossover confirmed'); }
+      else { bearish += 1; reasons.push('MACD negative (bearish momentum)'); }
     }
     
-    // Price vs SMA
+    // Price vs SMA - always show relative position
     if (ind.priceVsSma20 !== null && ind.priceVsSma20 !== undefined) {
-      if (ind.priceVsSma20 > 5) { bullish += 1; reasons.push('Price above SMA20'); }
-      else if (ind.priceVsSma20 < -5) { bearish += 1; reasons.push('Price below SMA20'); }
+      const pct = ind.priceVsSma20;
+      if (pct > 10) { bullish += 2; reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Strong uptrend`); }
+      else if (pct > 5) { bullish += 1; reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Uptrend`); }
+      else if (pct > 0) { reasons.push(`Price ${pct.toFixed(1)}% above SMA20 - Mild uptrend`); }
+      else if (pct < -10) { bearish += 2; reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Strong downtrend`); }
+      else if (pct < -5) { bearish += 1; reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Downtrend`); }
+      else { reasons.push(`Price ${Math.abs(pct).toFixed(1)}% below SMA20 - Mild downtrend`); }
+    }
+    
+    // Bollinger Bands signals
+    if (ind.bbUpper && ind.bbLower && ind.bbMiddle && data.price?.price) {
+      const price = data.price.price;
+      const bandWidth = ((ind.bbUpper - ind.bbLower) / ind.bbMiddle) * 100;
+      
+      if (price >= ind.bbUpper) { bearish += 1; reasons.push(`Price at upper Bollinger Band - Overbought`); }
+      else if (price <= ind.bbLower) { bullish += 1; reasons.push(`Price at lower Bollinger Band - Oversold`); }
+      else if (price > ind.bbMiddle) { reasons.push(`Price above BB middle - Bullish bias`); }
+      else { reasons.push(`Price below BB middle - Bearish bias`); }
+      
+      if (bandWidth < 10) { reasons.push(`Tight Bollinger Bands (${bandWidth.toFixed(1)}%) - Breakout imminent`); }
+      else if (bandWidth > 30) { reasons.push(`Wide Bollinger Bands (${bandWidth.toFixed(1)}%) - High volatility`); }
+    }
+    
+    // ADX trend strength
+    if (ind.adx !== null && ind.adx !== undefined) {
+      if (ind.adx > 50) { reasons.push(`ADX ${ind.adx.toFixed(0)} - Very strong trend`); }
+      else if (ind.adx > 25) { reasons.push(`ADX ${ind.adx.toFixed(0)} - Trending market`); }
+      else { reasons.push(`ADX ${ind.adx.toFixed(0)} - Weak/no trend (ranging)`); }
     }
     
     // Volume
     if (ind.volumeRatio !== null && ind.volumeRatio !== undefined) {
-      if (ind.volumeRatio > 1.5) { reasons.push('High volume activity'); }
+      if (ind.volumeRatio > 2) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - Very high activity`); }
+      else if (ind.volumeRatio > 1.5) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - High activity`); }
+      else if (ind.volumeRatio < 0.5) { reasons.push(`Volume ${ind.volumeRatio.toFixed(1)}x average - Low activity`); }
     }
     
     // Stochastic
     if (ind.stochK !== null && ind.stochK !== undefined) {
-      if (ind.stochK < 20) { bullish += 1; reasons.push('Stochastic oversold'); }
-      else if (ind.stochK > 80) { bearish += 1; reasons.push('Stochastic overbought'); }
+      if (ind.stochK < 20) { bullish += 1; reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Oversold zone`); }
+      else if (ind.stochK > 80) { bearish += 1; reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Overbought zone`); }
+      else if (ind.stochK > ind.stochD) { reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Bullish crossover`); }
+      else if (ind.stochK < ind.stochD) { reasons.push(`Stochastic ${ind.stochK.toFixed(0)} - Bearish crossover`); }
+    }
+    
+    // ATR volatility context
+    if (ind.atr !== null && ind.atr !== undefined && data.price?.price) {
+      const atrPercent = (ind.atr / data.price.price) * 100;
+      if (atrPercent > 5) { reasons.push(`High volatility (${atrPercent.toFixed(1)}% ATR)`); }
+      else if (atrPercent < 1) { reasons.push(`Low volatility (${atrPercent.toFixed(1)}% ATR)`); }
     }
   }
   
   // Price momentum
   if (data.price?.changePercent !== null && data.price?.changePercent !== undefined) {
-    if (data.price.changePercent > 5) { bullish += 1; reasons.push('Strong upward momentum'); }
-    else if (data.price.changePercent < -5) { bearish += 1; reasons.push('Strong downward momentum'); }
+    const pct = data.price.changePercent;
+    if (pct > 5) { bullish += 1; reasons.push(`Strong upward momentum (+${pct.toFixed(1)}% today)`); }
+    else if (pct > 2) { reasons.push(`Positive momentum (+${pct.toFixed(1)}% today)`); }
+    else if (pct < -5) { bearish += 1; reasons.push(`Strong downward momentum (${pct.toFixed(1)}% today)`); }
+    else if (pct < -2) { reasons.push(`Negative momentum (${pct.toFixed(1)}% today)`); }
   }
   
   // Crypto fear/greed
   if (data.cryptoData?.fearGreed) {
     const fg = data.cryptoData.fearGreed.value;
-    if (fg < 25) { bullish += 1; reasons.push('Extreme Fear (contrarian bullish)'); }
-    else if (fg > 75) { bearish += 1; reasons.push('Extreme Greed (contrarian bearish)'); }
+    if (fg < 25) { bullish += 1; reasons.push(`Extreme Fear index (${fg}) - Contrarian bullish`); }
+    else if (fg < 40) { reasons.push(`Fear index (${fg}) - Market cautious`); }
+    else if (fg > 75) { bearish += 1; reasons.push(`Extreme Greed index (${fg}) - Contrarian bearish`); }
+    else if (fg > 60) { reasons.push(`Greed index (${fg}) - Market optimistic`); }
+  }
+  
+  // 52-week position (stocks)
+  if (data.company && data.price?.price) {
+    const price = data.price.price;
+    const low52 = data.company.week52Low;
+    const high52 = data.company.week52High;
+    
+    if (low52 && high52 && high52 > low52) {
+      const range = high52 - low52;
+      const position = ((price - low52) / range) * 100;
+      
+      if (position > 95) { bearish += 1; reasons.push(`Near 52W high (${position.toFixed(0)}% of range) - Resistance ahead`); }
+      else if (position > 80) { reasons.push(`Strong 52W position (${position.toFixed(0)}% of range)`); }
+      else if (position < 10) { bullish += 1; reasons.push(`Near 52W low (${position.toFixed(0)}% of range) - Potential support`); }
+      else if (position < 25) { reasons.push(`Weak 52W position (${position.toFixed(0)}% of range)`); }
+    }
+    
+    // Price vs analyst target
+    if (data.company.targetPrice && price) {
+      const upside = ((data.company.targetPrice - price) / price) * 100;
+      if (upside > 30) { bullish += 1; reasons.push(`${upside.toFixed(0)}% upside to analyst target ($${data.company.targetPrice.toFixed(0)})`); }
+      else if (upside > 15) { reasons.push(`${upside.toFixed(0)}% upside to analyst target ($${data.company.targetPrice.toFixed(0)})`); }
+      else if (upside < -10) { bearish += 1; reasons.push(`${Math.abs(upside).toFixed(0)}% above analyst target ($${data.company.targetPrice.toFixed(0)})`); }
+      else if (upside < 0) { reasons.push(`${Math.abs(upside).toFixed(0)}% above analyst target - Fairly valued`); }
+    }
   }
   
   // Analyst consensus (stocks)
@@ -670,19 +762,22 @@ function generateSignals(data: any): { signal: string; score: number; reasons: s
                           (data.company.hold || 0) + (data.company.sell || 0) + (data.company.strongSell || 0);
     if (totalAnalysts > 0) {
       const buyPercent = ((data.company.strongBuy || 0) + (data.company.buy || 0)) / totalAnalysts;
-      if (buyPercent > 0.7) { bullish += 1; reasons.push('Strong analyst buy consensus'); }
-      else if (buyPercent < 0.3) { bearish += 1; reasons.push('Analyst sell consensus'); }
+      if (buyPercent > 0.7) { bullish += 1; reasons.push(`${(buyPercent*100).toFixed(0)}% analyst buy consensus (${totalAnalysts} analysts)`); }
+      else if (buyPercent > 0.5) { reasons.push(`${(buyPercent*100).toFixed(0)}% analyst buy ratings (${totalAnalysts} analysts)`); }
+      else if (buyPercent < 0.3) { bearish += 1; reasons.push(`Only ${(buyPercent*100).toFixed(0)}% buy ratings - Analyst caution`); }
     }
   }
   
   const score = bullish - bearish;
   let signal = 'NEUTRAL';
-  if (score >= 3) signal = 'STRONG BUY';
-  else if (score >= 1) signal = 'BUY';
-  else if (score <= -3) signal = 'STRONG SELL';
-  else if (score <= -1) signal = 'SELL';
+  if (score >= 4) signal = 'STRONG BUY';
+  else if (score >= 2) signal = 'BUY';
+  else if (score >= 1) signal = 'LEAN BULLISH';
+  else if (score <= -4) signal = 'STRONG SELL';
+  else if (score <= -2) signal = 'SELL';
+  else if (score <= -1) signal = 'LEAN BEARISH';
   
-  return { signal, score, reasons };
+  return { signal, score, reasons, bullishCount: bullish, bearishCount: bearish };
 }
 
 export async function GET(request: NextRequest) {
