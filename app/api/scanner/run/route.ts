@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
 // Scanner API - Binance for crypto (free), Yahoo for stocks
-// v2.4 - USDT dominance check FIRST in fetchCryptoBinance
-const SCANNER_VERSION = 'v2.4';
+// v2.5 - Fixed USDT symbol being stripped to empty string
+const SCANNER_VERSION = 'v2.5';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -190,8 +190,13 @@ export async function POST(req: NextRequest) {
     // Alpha Vantage crypto symbols use format like BTC (just the base coin, remove -USD or USD suffix)
     if (type === "crypto") {
       symbolsToScan = symbolsToScan.map(s => {
+        // Special case: USDT itself should stay as USDT (for dominance tracking)
+        const upper = s.toUpperCase();
+        if (upper === 'USDT' || upper === 'USDC') {
+          return upper;
+        }
         // Remove -USD, USD, -USDT, USDT suffixes; keep just the base symbol
-        return s.replace(/[-]?(USD|USDT)$/i, "");
+        return s.replace(/[-]?(USD|USDT)$/i, "").toUpperCase();
       });
     }
     // Commodity symbols unsupported in this endpoint (no intraday); ignore mapping
