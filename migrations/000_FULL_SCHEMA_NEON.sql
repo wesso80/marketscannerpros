@@ -370,7 +370,71 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_workspace ON push_subscriptions(workspace_id);
 
 -- ============================================
--- 12. HELPER FUNCTIONS & TRIGGERS
+-- 12. EARNINGS CALENDAR
+-- ============================================
+CREATE TABLE IF NOT EXISTS earnings_calendar (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    company_name VARCHAR(255),
+    report_date DATE NOT NULL,
+    fiscal_quarter VARCHAR(10),
+    fiscal_year INTEGER,
+    report_time VARCHAR(20), -- 'BMO' (before market open), 'AMC' (after market close), 'TNS' (time not specified)
+    
+    -- Estimates
+    eps_estimate DECIMAL(10, 4),
+    revenue_estimate DECIMAL(20, 2),
+    
+    -- Actual results (filled after earnings reported)
+    eps_actual DECIMAL(10, 4),
+    revenue_actual DECIMAL(20, 2),
+    eps_surprise DECIMAL(10, 4),
+    eps_surprise_percent DECIMAL(10, 4),
+    revenue_surprise DECIMAL(20, 2),
+    revenue_surprise_percent DECIMAL(10, 4),
+    
+    -- Beat/miss tracking
+    beat_eps BOOLEAN,
+    beat_revenue BOOLEAN,
+    
+    -- Market cap ranking
+    market_cap DECIMAL(20, 2),
+    market_cap_rank VARCHAR(20), -- 'top_10', 'top_25', 'top_100', null
+    
+    -- Metadata
+    currency VARCHAR(10) DEFAULT 'USD',
+    data_source VARCHAR(50) DEFAULT 'alpha_vantage',
+    is_confirmed BOOLEAN DEFAULT false,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(symbol, report_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_earnings_date ON earnings_calendar(report_date);
+CREATE INDEX IF NOT EXISTS idx_earnings_symbol ON earnings_calendar(symbol);
+CREATE INDEX IF NOT EXISTS idx_earnings_upcoming ON earnings_calendar(report_date) WHERE report_date >= CURRENT_DATE;
+CREATE INDEX IF NOT EXISTS idx_earnings_market_cap ON earnings_calendar(market_cap_rank, report_date) WHERE market_cap_rank IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_earnings_beat ON earnings_calendar(beat_eps, report_date DESC);
+
+-- User earnings watchlist (track specific earnings they're interested in)
+CREATE TABLE IF NOT EXISTS earnings_watchlist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workspace_id UUID NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    report_date DATE NOT NULL,
+    notes TEXT,
+    alert_enabled BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(workspace_id, symbol, report_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_earnings_watchlist_workspace ON earnings_watchlist(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_earnings_watchlist_date ON earnings_watchlist(report_date);
+
+-- ============================================
+-- 13. HELPER FUNCTIONS & TRIGGERS
 -- ============================================
 
 -- Auto-update updated_at function
@@ -396,7 +460,7 @@ CREATE TRIGGER watchlists_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
--- 13. HELPFUL VIEWS
+-- 14. HELPFUL VIEWS
 -- ============================================
 
 CREATE OR REPLACE VIEW active_alerts_summary AS
@@ -409,6 +473,56 @@ SELECT
     COUNT(*) FILTER (WHERE asset_type = 'equity') as stock_alerts
 FROM alerts
 GROUP BY workspace_id;
+
+-- Upcoming earnings view (next 14 days)
+CREATE OR REPLACE VIEW upcoming_earnings AS
+SELECT 
+    symbol,
+    company_name,
+    report_date,
+    report_time,
+    fiscal_quarter,
+    fiscal_year,
+    eps_estimate,
+    revenue_estimate,
+    market_cap,
+    market_cap_rank,
+    CASE 
+        WHEN report_date = CURRENT_DATE THEN 'today'
+        WHEN report_date = CURRENT_DATE + 1 THEN 'tomorrow'
+        WHEN report_date <= CURRENT_DATE + 7 THEN 'this_week'
+        ELSE 'next_week'
+    END as time_category
+FROM earnings_calendar
+WHERE report_date >= CURRENT_DATE 
+  AND report_date <= CURRENT_DATE + 14
+ORDER BY report_date, 
+         CASE report_time 
+             WHEN 'BMO' THEN 1 
+             WHEN 'AMC' THEN 2 
+             ELSE 3 
+         END;
+
+-- Recent earnings results view (last 30 days)
+CREATE OR REPLACE VIEW recent_earnings_results AS
+SELECT 
+    symbol,
+    company_name,
+    report_date,
+    eps_estimate,
+    eps_actual,
+    eps_surprise_percent,
+    beat_eps,
+    revenue_estimate,
+    revenue_actual,
+    revenue_surprise_percent,
+    beat_revenue,
+    market_cap_rank
+FROM earnings_calendar
+WHERE report_date < CURRENT_DATE 
+  AND report_date >= CURRENT_DATE - 30
+  AND eps_actual IS NOT NULL
+ORDER BY report_date DESC;
 
 -- ============================================
 -- DONE! Database schema is ready.
