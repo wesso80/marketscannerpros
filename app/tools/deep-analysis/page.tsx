@@ -169,7 +169,7 @@ export default function DeepAnalysisPage() {
   if (!canAccessBacktest(tier)) {
     return (
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-        <ToolsPageHeader />
+        <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-powered comprehensive market analysis" icon="🥚" />
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem" }}>
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
@@ -205,7 +205,7 @@ export default function DeepAnalysisPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-      <ToolsPageHeader />
+      <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-powered comprehensive market analysis" icon="🥚" />
       
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem 1rem" }}>
         {/* Hero Header */}
