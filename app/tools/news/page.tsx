@@ -177,6 +177,8 @@ export default function NewsSentimentPage() {
   const [error, setError] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [expandedArticle, setExpandedArticle] = useState<number | null>(null);
+  const [newsAIAnalysis, setNewsAIAnalysis] = useState<string | null>(null);
+  const [aiAnalysisLoading, setAIAnalysisLoading] = useState(false);
 
   // Earnings state
   const [earningsSymbol, setEarningsSymbol] = useState("");
@@ -252,15 +254,19 @@ export default function NewsSentimentPage() {
     setLoading(true);
     setError("");
     setArticles([]);
+    setNewsAIAnalysis(null);
 
     try {
-      const response = await fetch(`/api/news-sentiment?tickers=${tickers.toUpperCase()}&limit=${limit}`);
+      const response = await fetch(`/api/news-sentiment?tickers=${tickers.toUpperCase()}&limit=${limit}&includeAI=true`);
       const result = await response.json();
 
       if (!result.success) {
         setError(result.error || "Failed to fetch news data");
       } else {
         setArticles(result.articles);
+        if (result.aiAnalysis) {
+          setNewsAIAnalysis(result.aiAnalysis);
+        }
       }
     } catch (err) {
       setError("Network error - please try again");
@@ -542,6 +548,43 @@ export default function NewsSentimentPage() {
         {error && (
           <div style={{ padding: "1rem", background: "rgba(239, 68, 68, 0.2)", border: "1px solid #EF4444", borderRadius: "8px", color: "#EF4444", marginBottom: "2rem" }}>
             {error}
+          </div>
+        )}
+
+        {/* AI News Analysis Panel */}
+        {newsAIAnalysis && (
+          <div style={{ 
+            background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(30,41,59,0.8))",
+            borderRadius: "16px",
+            border: "2px solid rgba(245,158,11,0.3)",
+            padding: "1.5rem",
+            marginBottom: "1.5rem"
+          }}>
+            <h3 style={{ 
+              color: "#F59E0B", 
+              fontSize: "1.1rem", 
+              fontWeight: "600", 
+              marginBottom: "1rem", 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "0.5rem" 
+            }}>
+              <span style={{ 
+                background: "linear-gradient(135deg, #F59E0B, #D97706)", 
+                borderRadius: "8px", 
+                padding: "6px 8px",
+                fontSize: "1rem"
+              }}>🤖</span>
+              AI News Analysis for {tickers.toUpperCase()}
+            </h3>
+            <div style={{ 
+              color: "#E2E8F0", 
+              fontSize: "0.95rem", 
+              lineHeight: "1.8",
+              whiteSpace: "pre-wrap"
+            }}>
+              {newsAIAnalysis}
+            </div>
           </div>
         )}
 
