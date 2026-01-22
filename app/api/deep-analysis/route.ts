@@ -180,31 +180,24 @@ async function fetchOptionsData(symbol: string) {
     const sortedCalls = [...relevantCalls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
     const sortedPuts = [...relevantPuts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
     
-    // Debug: Log top OI values
-    console.log(`Top call OI for ${symbol}:`, sortedCalls.slice(0, 3).map((c: any) => `$${c.strike}: ${c.openInterest}`).join(', '));
-    console.log(`Top put OI for ${symbol}:`, sortedPuts.slice(0, 3).map((p: any) => `$${p.strike}: ${p.openInterest}`).join(', '));
+    // Get THE single highest OI call and put for the week
+    const highestOICall = sortedCalls.length > 0 ? {
+      strike: sortedCalls[0].strike,
+      openInterest: sortedCalls[0].openInterest || 0,
+      volume: sortedCalls[0].volume || 0,
+      impliedVolatility: sortedCalls[0].impliedVolatility || 0,
+      lastPrice: sortedCalls[0].lastPrice || 0
+    } : null;
     
-    // Get top 3 calls by OI (above current price for resistance)
-    const callsAbovePrice = sortedCalls.filter((c: any) => c.strike > currentPrice);
-    const topCalls = (callsAbovePrice.length >= 3 ? callsAbovePrice : sortedCalls).slice(0, 3).map((c: any) => ({
-      strike: c.strike,
-      openInterest: c.openInterest || 0,
-      volume: c.volume || 0,
-      impliedVolatility: c.impliedVolatility || 0,
-      lastPrice: c.lastPrice || 0,
-      inTheMoney: c.inTheMoney || false
-    }));
+    const highestOIPut = sortedPuts.length > 0 ? {
+      strike: sortedPuts[0].strike,
+      openInterest: sortedPuts[0].openInterest || 0,
+      volume: sortedPuts[0].volume || 0,
+      impliedVolatility: sortedPuts[0].impliedVolatility || 0,
+      lastPrice: sortedPuts[0].lastPrice || 0
+    } : null;
     
-    // Get top 3 puts by OI (below current price for support)
-    const putsBelowPrice = sortedPuts.filter((p: any) => p.strike < currentPrice);
-    const topPuts = (putsBelowPrice.length >= 3 ? putsBelowPrice : sortedPuts).slice(0, 3).map((p: any) => ({
-      strike: p.strike,
-      openInterest: p.openInterest || 0,
-      volume: p.volume || 0,
-      impliedVolatility: p.impliedVolatility || 0,
-      lastPrice: p.lastPrice || 0,
-      inTheMoney: p.inTheMoney || false
-    }));
+    console.log(`${symbol} highest OI - Call: $${highestOICall?.strike} (${highestOICall?.openInterest} OI), Put: $${highestOIPut?.strike} (${highestOIPut?.openInterest} OI)`);
     
     // Calculate total call and put OI (from all strikes, not just filtered)
     const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
@@ -223,8 +216,8 @@ async function fetchOptionsData(symbol: string) {
       expiryDate: expiryDate.toISOString().split('T')[0],
       expiryFormatted: expiryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
       currentPrice,
-      topCalls,
-      topPuts,
+      highestOICall,
+      highestOIPut,
       totalCallOI,
       totalPutOI,
       putCallRatio,

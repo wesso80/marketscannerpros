@@ -120,15 +120,14 @@ interface OptionsStrike {
   volume: number;
   impliedVolatility: number;
   lastPrice: number;
-  inTheMoney: boolean;
 }
 
 interface OptionsData {
   expiryDate: string;
   expiryFormatted: string;
   currentPrice: number;
-  topCalls: OptionsStrike[];
-  topPuts: OptionsStrike[];
+  highestOICall: OptionsStrike | null;
+  highestOIPut: OptionsStrike | null;
   totalCallOI: number;
   totalPutOI: number;
   putCallRatio: number;
@@ -958,51 +957,55 @@ export default function DeepAnalysisPage() {
                   </div>
                 </div>
 
-                {/* Top Calls */}
-                {result.optionsData.topCalls && result.optionsData.topCalls.length > 0 && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#10B981", marginBottom: "0.5rem", textTransform: "uppercase", fontWeight: "600" }}>
-                      🟢 Top Call Strikes by Open Interest
+                {/* Highest OI Call & Put - The main info */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "1fr 1fr", 
+                  gap: "1rem",
+                  marginBottom: "1rem"
+                }}>
+                  {/* Highest OI Call */}
+                  {result.optionsData.highestOICall && (
+                    <div style={{ 
+                      background: "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))",
+                      border: "2px solid rgba(16,185,129,0.4)",
+                      borderRadius: "12px", 
+                      padding: "1rem",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.25rem" }}>
+                        🟢 Highest OI CALL
+                      </div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#10B981" }}>
+                        ${result.optionsData.highestOICall.strike}
+                      </div>
+                      <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
+                        {(result.optionsData.highestOICall.openInterest).toLocaleString()} OI
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {result.optionsData.topCalls.map((call, idx) => (
-                        <div key={idx} style={{ 
-                          background: "rgba(16,185,129,0.1)", 
-                          border: "1px solid rgba(16,185,129,0.3)",
-                          borderRadius: "8px", 
-                          padding: "0.5rem 0.75rem",
-                          minWidth: "90px"
-                        }}>
-                          <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#10B981" }}>${call.strike}</div>
-                          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{(call.openInterest / 1000).toFixed(1)}K OI</div>
-                        </div>
-                      ))}
+                  )}
+                  
+                  {/* Highest OI Put */}
+                  {result.optionsData.highestOIPut && (
+                    <div style={{ 
+                      background: "linear-gradient(145deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05))",
+                      border: "2px solid rgba(239,68,68,0.4)",
+                      borderRadius: "12px", 
+                      padding: "1rem",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.25rem" }}>
+                        🔴 Highest OI PUT
+                      </div>
+                      <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#EF4444" }}>
+                        ${result.optionsData.highestOIPut.strike}
+                      </div>
+                      <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
+                        {(result.optionsData.highestOIPut.openInterest).toLocaleString()} OI
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Top Puts */}
-                {result.optionsData.topPuts && result.optionsData.topPuts.length > 0 && (
-                  <div style={{ marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#EF4444", marginBottom: "0.5rem", textTransform: "uppercase", fontWeight: "600" }}>
-                      🔴 Top Put Strikes by Open Interest
-                    </div>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                      {result.optionsData.topPuts.map((put, idx) => (
-                        <div key={idx} style={{ 
-                          background: "rgba(239,68,68,0.1)", 
-                          border: "1px solid rgba(239,68,68,0.3)",
-                          borderRadius: "8px", 
-                          padding: "0.5rem 0.75rem",
-                          minWidth: "90px"
-                        }}>
-                          <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#EF4444" }}>${put.strike}</div>
-                          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{(put.openInterest / 1000).toFixed(1)}K OI</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Key Levels */}
                 {result.optionsData.keyLevels && (result.optionsData.keyLevels.support.length > 0 || result.optionsData.keyLevels.resistance.length > 0) && (
