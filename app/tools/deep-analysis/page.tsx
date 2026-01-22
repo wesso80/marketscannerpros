@@ -114,6 +114,29 @@ interface EarningsData {
   annualEPS: { fiscalYear: string; eps: number | null }[];
 }
 
+interface OptionsStrike {
+  strike: number;
+  openInterest: number;
+  volume: number;
+  impliedVolatility: number;
+  lastPrice: number;
+  inTheMoney: boolean;
+}
+
+interface OptionsData {
+  expiryDate: string;
+  expiryFormatted: string;
+  currentPrice: number;
+  topCalls: OptionsStrike[];
+  topPuts: OptionsStrike[];
+  totalCallOI: number;
+  totalPutOI: number;
+  putCallRatio: number;
+  maxPain: number;
+  keyLevels: { support: number[]; resistance: number[] };
+  sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+}
+
 interface AnalysisResult {
   success: boolean;
   symbol: string;
@@ -126,6 +149,7 @@ interface AnalysisResult {
   news: NewsItem[] | null;
   cryptoData: CryptoData | null;
   earnings: EarningsData | null;
+  optionsData: OptionsData | null;
   signals: Signals;
   aiAnalysis: string | null;
   error?: string;

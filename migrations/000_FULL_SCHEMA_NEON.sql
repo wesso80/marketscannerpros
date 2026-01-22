@@ -21,6 +21,44 @@ CREATE INDEX IF NOT EXISTS idx_workspaces_stripe ON workspaces(stripe_customer_i
 CREATE INDEX IF NOT EXISTS idx_workspaces_email ON workspaces(email);
 
 -- ============================================
+-- 1b. OPTIONS DATA CACHE (Weekly Expiry OI)
+-- ============================================
+CREATE TABLE IF NOT EXISTS options_cache (
+    id SERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    expiry_date DATE NOT NULL,
+    current_price DECIMAL(18, 4),
+    
+    -- Top calls by open interest (JSON array)
+    top_calls JSONB,
+    -- Top puts by open interest (JSON array)
+    top_puts JSONB,
+    
+    -- Aggregate metrics
+    total_call_oi BIGINT,
+    total_put_oi BIGINT,
+    put_call_ratio DECIMAL(10, 4),
+    max_pain DECIMAL(18, 4),
+    
+    -- Key levels
+    key_support_levels DECIMAL(18, 4)[],
+    key_resistance_levels DECIMAL(18, 4)[],
+    
+    -- Sentiment derived from P/C ratio
+    sentiment VARCHAR(20) CHECK (sentiment IN ('Bullish', 'Bearish', 'Neutral')),
+    
+    -- Cache metadata
+    fetched_at TIMESTAMPTZ DEFAULT NOW(),
+    data_source VARCHAR(50) DEFAULT 'yahoo_finance',
+    
+    UNIQUE(symbol, expiry_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_options_cache_symbol ON options_cache(symbol);
+CREATE INDEX IF NOT EXISTS idx_options_cache_expiry ON options_cache(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_options_cache_fetched ON options_cache(fetched_at DESC);
+
+-- ============================================
 -- 2. USER SUBSCRIPTIONS
 -- ============================================
 CREATE TABLE IF NOT EXISTS user_subscriptions (

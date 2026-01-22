@@ -3,6 +3,165 @@ import { NextRequest, NextResponse } from "next/server";
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "UI755FUUAM6FRRI9";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Get the next Friday (weekly options expiry)
+function getNextFridayExpiry(): { date: Date; timestamp: number } {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // Next Friday
+  const nextFriday = new Date(now);
+  nextFriday.setDate(now.getDate() + daysUntilFriday);
+  nextFriday.setHours(16, 0, 0, 0); // Market close
+  
+  // Yahoo uses Unix timestamps for expiry dates
+  return {
+    date: nextFriday,
+    timestamp: Math.floor(nextFriday.getTime() / 1000)
+  };
+}
+
+// Fetch options chain from Yahoo Finance
+async function fetchOptionsData(symbol: string) {
+  try {
+    const { date: expiryDate, timestamp } = getNextFridayExpiry();
+    
+    // Yahoo Finance options endpoint
+    const url = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?date=${timestamp}`;
+    
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    const optionChain = data.optionChain?.result?.[0];
+    
+    if (!optionChain) return null;
+    
+    const quote = optionChain.quote;
+    const options = optionChain.options?.[0];
+    
+    if (!options) return null;
+    
+    const calls = options.calls || [];
+    const puts = options.puts || [];
+    const currentPrice = quote?.regularMarketPrice || 0;
+    
+    // Sort by open interest to find highest OI strikes
+    const sortedCalls = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    const sortedPuts = [...puts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    
+    // Get top 3 calls and puts by OI
+    const topCalls = sortedCalls.slice(0, 3).map((c: any) => ({
+      strike: c.strike,
+      openInterest: c.openInterest || 0,
+      volume: c.volume || 0,
+      impliedVolatility: c.impliedVolatility || 0,
+      lastPrice: c.lastPrice || 0,
+      inTheMoney: c.inTheMoney || false
+    }));
+    
+    const topPuts = sortedPuts.slice(0, 3).map((p: any) => ({
+      strike: p.strike,
+      openInterest: p.openInterest || 0,
+      volume: p.volume || 0,
+      impliedVolatility: p.impliedVolatility || 0,
+      lastPrice: p.lastPrice || 0,
+      inTheMoney: p.inTheMoney || false
+    }));
+    
+    // Calculate total call and put OI
+    const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
+    const totalPutOI = puts.reduce((sum: number, p: any) => sum + (p.openInterest || 0), 0);
+    const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
+    
+    // Calculate max pain (strike where most options expire worthless)
+    const maxPain = calculateMaxPain(calls, puts, currentPrice);
+    
+    // Find key support/resistance levels from options
+    const keyLevels = findKeyOptionsLevels(calls, puts, currentPrice);
+    
+    return {
+      expiryDate: expiryDate.toISOString().split('T')[0],
+      expiryFormatted: expiryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      currentPrice,
+      topCalls,
+      topPuts,
+      totalCallOI,
+      totalPutOI,
+      putCallRatio,
+      maxPain,
+      keyLevels,
+      sentiment: putCallRatio > 1.2 ? 'Bearish' : putCallRatio < 0.8 ? 'Bullish' : 'Neutral'
+    };
+  } catch (err) {
+    console.error('Options fetch error:', err);
+    return null;
+  }
+}
+
+// Calculate Max Pain (price where most options expire worthless)
+function calculateMaxPain(calls: any[], puts: any[], currentPrice: number): number {
+  if (!calls.length && !puts.length) return currentPrice;
+  
+  // Get all unique strikes
+  const allStrikes = [...new Set([
+    ...calls.map((c: any) => c.strike),
+    ...puts.map((p: any) => p.strike)
+  ])].sort((a, b) => a - b);
+  
+  let minPain = Infinity;
+  let maxPainStrike = currentPrice;
+  
+  for (const testPrice of allStrikes) {
+    let totalPain = 0;
+    
+    // Call pain: if price < strike, call is worthless, no pain
+    // If price > strike, pain = (price - strike) * OI * 100
+    for (const call of calls) {
+      if (testPrice > call.strike) {
+        totalPain += (testPrice - call.strike) * (call.openInterest || 0) * 100;
+      }
+    }
+    
+    // Put pain: if price > strike, put is worthless, no pain
+    // If price < strike, pain = (strike - price) * OI * 100
+    for (const put of puts) {
+      if (testPrice < put.strike) {
+        totalPain += (put.strike - testPrice) * (put.openInterest || 0) * 100;
+      }
+    }
+    
+    if (totalPain < minPain) {
+      minPain = totalPain;
+      maxPainStrike = testPrice;
+    }
+  }
+  
+  return maxPainStrike;
+}
+
+// Find key support/resistance levels from high OI strikes
+function findKeyOptionsLevels(calls: any[], puts: any[], currentPrice: number): { support: number[]; resistance: number[] } {
+  // High OI puts below current price = support
+  // High OI calls above current price = resistance
+  
+  const sortedPuts = [...puts]
+    .filter((p: any) => p.strike < currentPrice && p.openInterest > 0)
+    .sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+  
+  const sortedCalls = [...calls]
+    .filter((c: any) => c.strike > currentPrice && c.openInterest > 0)
+    .sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+  
+  return {
+    support: sortedPuts.slice(0, 3).map((p: any) => p.strike),
+    resistance: sortedCalls.slice(0, 3).map((c: any) => c.strike)
+  };
+}
+
 // Detect asset type from symbol
 function detectAssetType(symbol: string): 'crypto' | 'forex' | 'commodity' | 'stock' {
   const s = symbol.toUpperCase();
@@ -768,6 +927,34 @@ function generateSignals(data: any): { signal: string; score: number; reasons: s
     }
   }
   
+  // Options flow signals
+  if (data.optionsData) {
+    const opts = data.optionsData;
+    
+    // Put/Call ratio sentiment
+    if (opts.putCallRatio < 0.7) { 
+      bullish += 1; 
+      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Call heavy (bullish)`); 
+    } else if (opts.putCallRatio > 1.3) { 
+      bearish += 1; 
+      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Put heavy (bearish)`); 
+    } else {
+      reasons.push(`Options P/C ratio ${opts.putCallRatio.toFixed(2)} - Neutral positioning`);
+    }
+    
+    // Max pain vs current price
+    if (opts.maxPain && opts.currentPrice) {
+      const distFromMaxPain = ((opts.maxPain - opts.currentPrice) / opts.currentPrice) * 100;
+      if (Math.abs(distFromMaxPain) > 5) {
+        if (distFromMaxPain > 0) {
+          reasons.push(`Max pain $${opts.maxPain.toFixed(0)} is ${distFromMaxPain.toFixed(1)}% above - Potential magnet`);
+        } else {
+          reasons.push(`Max pain $${opts.maxPain.toFixed(0)} is ${Math.abs(distFromMaxPain).toFixed(1)}% below - Potential drag`);
+        }
+      }
+    }
+  }
+  
   const score = bullish - bearish;
   let signal = 'NEUTRAL';
   if (score >= 4) signal = 'STRONG BUY';
@@ -794,13 +981,14 @@ export async function GET(request: NextRequest) {
     const assetType = detectAssetType(symbol);
     
     // Fetch all data in parallel
-    const [price, indicators, company, news, cryptoData, earnings] = await Promise.all([
+    const [price, indicators, company, news, cryptoData, earnings, optionsData] = await Promise.all([
       fetchPriceData(symbol, assetType),
       fetchTechnicalIndicators(symbol, assetType),
       assetType === 'stock' ? fetchCompanyOverview(symbol) : null,
       fetchNewsSentiment(symbol, assetType),
       assetType === 'crypto' ? fetchCryptoData(symbol) : null,
       assetType === 'stock' ? fetchEarningsData(symbol) : null,
+      assetType === 'stock' ? fetchOptionsData(symbol) : null,
     ]);
     
     if (!price) {
@@ -818,7 +1006,8 @@ export async function GET(request: NextRequest) {
       company,
       news,
       cryptoData,
-      earnings
+      earnings,
+      optionsData
     };
     
     // Generate signals
@@ -841,6 +1030,7 @@ export async function GET(request: NextRequest) {
       news,
       cryptoData,
       earnings,
+      optionsData,
       signals,
       aiAnalysis
     });
