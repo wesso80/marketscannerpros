@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
 // Scanner API - Binance for crypto (free), Yahoo for stocks
-// v2.3 - USDT dominance support, fixed timeframe mapping - 2025-01-22
-const SCANNER_VERSION = 'v2.3';
+// v2.4 - USDT dominance check FIRST in fetchCryptoBinance
+const SCANNER_VERSION = 'v2.4';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -350,7 +350,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Binance klines - FREE, no API key needed, reliable
+    // v2.4 - USDT dominance check BEFORE Binance call
     async function fetchCryptoBinance(symbol: string, timeframe: string): Promise<Candle[]> {
+      console.info(`[scanner v2.4] fetchCryptoBinance called with symbol=${symbol}, timeframe=${timeframe}`);
+      
+      // FIRST: Check for USDT and handle specially
+      const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
+      if (baseSymbol === 'USDT') {
+        console.info(`[scanner v2.4] USDT detected - returning dominance data`);
+        return await fetchUSDTDominance(timeframe);
+      }
+      
       // Map timeframe to Binance interval
       const intervalMap: Record<string, string> = {
         '15m': '15m',
@@ -367,25 +377,17 @@ export async function POST(req: NextRequest) {
       const interval = intervalMap[timeframe] || '1d';
       
       // Convert symbol: BTC -> BTCUSDT, BTC-USD -> BTCUSDT
-      const binanceSymbol = symbol.replace(/-USD$/, '').toUpperCase() + 'USDT';
-      
-      // Skip stablecoins - they don't have trading pairs (USDT/USDT doesn't exist)
-      // Handle USDT specially - return USDT dominance data instead
-      const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
-      if (baseSymbol === 'USDT') {
-        console.info(`[scanner] USDT detected - fetching USDT dominance instead`);
-        return await fetchUSDTDominance(timeframe);
-      }
+      const binanceSymbol = baseSymbol + 'USDT';
       
       // Skip other stablecoins - they don't have trading pairs
       const stablecoins = ['USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD'];
       if (stablecoins.includes(baseSymbol)) {
-        console.warn(`[scanner] ${symbol} is a stablecoin - skipping`);
+        console.warn(`[scanner v2.4] ${baseSymbol} is a stablecoin - skipping`);
         throw new Error(`${baseSymbol} is a stablecoin (pegged to $1) - technical analysis not applicable`);
       }
       
       const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
-      console.info(`[scanner] Fetching Binance: ${binanceSymbol} ${interval}`);
+      console.info(`[scanner v2.4] Fetching Binance: ${binanceSymbol} ${interval}`);
       
       try {
         const res = await fetch(url, {
@@ -394,7 +396,7 @@ export async function POST(req: NextRequest) {
         });
         
         if (!res.ok) {
-          console.error(`[scanner] Binance error ${res.status} for ${binanceSymbol}`);
+          console.error(`[scanner v2.4] Binance error ${res.status} for ${binanceSymbol}`);
           throw new Error(`Binance API error: ${res.status}`);
         }
         
