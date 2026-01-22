@@ -889,6 +889,148 @@ export default function DeepAnalysisPage() {
               </div>
             )}
 
+            {/* Options Flow (for stocks) */}
+            {result.optionsData && (
+              <div style={{ 
+                background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
+                borderRadius: "16px",
+                border: "1px solid rgba(168,85,247,0.3)",
+                padding: "1.5rem"
+              }}>
+                <h3 style={{ color: "#A855F7", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
+                  Options Flow (Weekly Expiry)
+                </h3>
+                
+                {/* Expiry & Sentiment Header */}
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  padding: "0.75rem 1rem",
+                  background: "rgba(168,85,247,0.1)",
+                  borderRadius: "10px",
+                  marginBottom: "1rem"
+                }}>
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Expiry Date</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#A855F7" }}>{result.optionsData.expiryFormatted}</div>
+                  </div>
+                  <div style={{ 
+                    padding: "0.5rem 1rem", 
+                    borderRadius: "20px",
+                    background: result.optionsData.sentiment === 'Bullish' ? "rgba(16,185,129,0.2)" : 
+                               result.optionsData.sentiment === 'Bearish' ? "rgba(239,68,68,0.2)" : "rgba(100,116,139,0.2)",
+                    border: `1px solid ${result.optionsData.sentiment === 'Bullish' ? "#10B981" : 
+                            result.optionsData.sentiment === 'Bearish' ? "#EF4444" : "#64748B"}`,
+                    color: result.optionsData.sentiment === 'Bullish' ? "#10B981" : 
+                           result.optionsData.sentiment === 'Bearish' ? "#EF4444" : "#94A3B8",
+                    fontWeight: "600",
+                    fontSize: "0.85rem"
+                  }}>
+                    {result.optionsData.sentiment === 'Bullish' ? '🟢' : result.optionsData.sentiment === 'Bearish' ? '🔴' : '⚪'} {result.optionsData.sentiment}
+                  </div>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Put/Call Ratio</div>
+                    <div style={{ 
+                      fontSize: "1.1rem", 
+                      fontWeight: "bold", 
+                      color: result.optionsData.putCallRatio < 0.7 ? "#10B981" : result.optionsData.putCallRatio > 1.3 ? "#EF4444" : "#F59E0B" 
+                    }}>
+                      {result.optionsData.putCallRatio.toFixed(2)}
+                    </div>
+                  </div>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Max Pain</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#A855F7" }}>${result.optionsData.maxPain.toFixed(0)}</div>
+                  </div>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Total Call OI</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#10B981" }}>{(result.optionsData.totalCallOI / 1000).toFixed(0)}K</div>
+                  </div>
+                  <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Total Put OI</div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#EF4444" }}>{(result.optionsData.totalPutOI / 1000).toFixed(0)}K</div>
+                  </div>
+                </div>
+
+                {/* Top Calls */}
+                {result.optionsData.topCalls && result.optionsData.topCalls.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#10B981", marginBottom: "0.5rem", textTransform: "uppercase", fontWeight: "600" }}>
+                      🟢 Top Call Strikes by Open Interest
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      {result.optionsData.topCalls.map((call, idx) => (
+                        <div key={idx} style={{ 
+                          background: "rgba(16,185,129,0.1)", 
+                          border: "1px solid rgba(16,185,129,0.3)",
+                          borderRadius: "8px", 
+                          padding: "0.5rem 0.75rem",
+                          minWidth: "90px"
+                        }}>
+                          <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#10B981" }}>${call.strike}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{(call.openInterest / 1000).toFixed(1)}K OI</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Puts */}
+                {result.optionsData.topPuts && result.optionsData.topPuts.length > 0 && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#EF4444", marginBottom: "0.5rem", textTransform: "uppercase", fontWeight: "600" }}>
+                      🔴 Top Put Strikes by Open Interest
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      {result.optionsData.topPuts.map((put, idx) => (
+                        <div key={idx} style={{ 
+                          background: "rgba(239,68,68,0.1)", 
+                          border: "1px solid rgba(239,68,68,0.3)",
+                          borderRadius: "8px", 
+                          padding: "0.5rem 0.75rem",
+                          minWidth: "90px"
+                        }}>
+                          <div style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#EF4444" }}>${put.strike}</div>
+                          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>{(put.openInterest / 1000).toFixed(1)}K OI</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Levels */}
+                {result.optionsData.keyLevels && (result.optionsData.keyLevels.support.length > 0 || result.optionsData.keyLevels.resistance.length > 0) && (
+                  <div style={{ 
+                    background: "rgba(30,41,59,0.5)", 
+                    borderRadius: "10px", 
+                    padding: "0.75rem",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#10B981", marginBottom: "0.25rem", textTransform: "uppercase" }}>Support Levels</div>
+                      <div style={{ fontSize: "0.9rem", color: "#fff" }}>
+                        {result.optionsData.keyLevels.support.slice(0, 3).map(s => `$${s.toFixed(0)}`).join(' | ') || 'N/A'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#EF4444", marginBottom: "0.25rem", textTransform: "uppercase" }}>Resistance Levels</div>
+                      <div style={{ fontSize: "0.9rem", color: "#fff" }}>
+                        {result.optionsData.keyLevels.resistance.slice(0, 3).map(r => `$${r.toFixed(0)}`).join(' | ') || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Earnings Data (for stocks) */}
             {result.earnings && (
               <div style={{ 
