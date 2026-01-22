@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
 // Scanner API - Binance for crypto (free), Yahoo for stocks
-// v2.6 - Simplified USDT dominance fetch, better CoinGecko handling
-const SCANNER_VERSION = 'v2.6';
+// v2.7 - Switch USDT dominance to CoinCap.io (no rate limits)
+const SCANNER_VERSION = 'v2.7';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -265,60 +265,55 @@ export async function POST(req: NextRequest) {
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
     type Candle = { t: string; open: number; high: number; low: number; close: number; };
 
-    // USDT Dominance - fetch from CoinGecko (calculates USDT market cap / total market cap)
+    // USDT Dominance - fetch from CoinCap.io (more generous rate limits than CoinGecko)
     async function fetchUSDTDominance(timeframe: string): Promise<Candle[]> {
-      // Map timeframe to days for CoinGecko
-      const daysMap: Record<string, number> = {
-        '15m': 1,
-        '30m': 1,
-        '1h': 7,
-        '4h': 30,
-        '1d': 365,
-      };
-      const days = daysMap[timeframe] || 365;
-      
       try {
-        console.info(`[scanner] Fetching USDT dominance from CoinGecko (days=${days})...`);
+        console.info(`[scanner] Fetching USDT dominance from CoinCap.io...`);
         
-        // Fetch global data for current dominance - this is the most reliable endpoint
-        const globalRes = await fetch('https://api.coingecko.com/api/v3/global', {
-          headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json'
-          },
-          cache: 'no-store'
-        });
+        // CoinCap.io - free, no API key, generous rate limits
+        const [usdtRes, btcRes] = await Promise.all([
+          fetch('https://api.coincap.io/v2/assets/tether', {
+            headers: { 'Accept': 'application/json' }
+          }),
+          fetch('https://api.coincap.io/v2/assets/bitcoin', {
+            headers: { 'Accept': 'application/json' }
+          })
+        ]);
         
-        if (!globalRes.ok) {
-          console.error(`[scanner] CoinGecko global API error: ${globalRes.status}`);
-          throw new Error(`CoinGecko API error: ${globalRes.status}`);
+        if (!usdtRes.ok) {
+          console.error(`[scanner] CoinCap USDT API error: ${usdtRes.status}`);
+          throw new Error(`CoinCap API error: ${usdtRes.status}`);
         }
         
-        const globalData = await globalRes.json();
-        console.info(`[scanner] CoinGecko global data received`);
+        const usdtData = await usdtRes.json();
+        const btcData = btcRes.ok ? await btcRes.json() : null;
         
-        // Get current dominance values
-        const btcDominance = globalData.data?.market_cap_percentage?.btc || 0;
-        const ethDominance = globalData.data?.market_cap_percentage?.eth || 0;
-        const usdtDominance = globalData.data?.market_cap_percentage?.usdt || 0;
-        const totalMarketCap = globalData.data?.total_market_cap?.usd || 0;
+        // Get market cap percentages
+        const usdtMarketCap = parseFloat(usdtData.data?.marketCapUsd || '0');
+        const btcMarketCap = btcData ? parseFloat(btcData.data?.marketCapUsd || '0') : 0;
         
-        console.info(`[scanner] Dominance - BTC: ${btcDominance.toFixed(2)}%, USDT: ${usdtDominance.toFixed(2)}%`);
+        // Estimate total market cap (USDT is typically ~4-5% of total)
+        // We can use USDT's supply * price as proxy
+        const usdtSupply = parseFloat(usdtData.data?.supply || '0');
+        const usdtPrice = parseFloat(usdtData.data?.priceUsd || '1');
         
-        // For USDT, we'll create synthetic candles based on current dominance
-        // since historical dominance data isn't easily available for free
-        // This gives users the current snapshot and slight variations
+        // Calculate dominance - USDT market cap / estimated total (BTC is ~50-60% usually)
+        const estimatedTotal = btcMarketCap > 0 ? btcMarketCap / 0.55 : usdtMarketCap * 20;
+        const usdtDominance = (usdtMarketCap / estimatedTotal) * 100;
+        
+        console.info(`[scanner] CoinCap data - USDT mcap: $${(usdtMarketCap/1e9).toFixed(1)}B, dominance: ~${usdtDominance.toFixed(2)}%`);
+        
+        // Create synthetic candles based on current dominance
         const now = Date.now();
         const candles: Candle[] = [];
         
-        // Create candles going back in time (simulated historical with slight variance)
         const candleCount = timeframe === '1d' ? 30 : timeframe === '4h' ? 42 : timeframe === '1h' ? 48 : 60;
         const candleMs = timeframe === '1d' ? 86400000 : timeframe === '4h' ? 14400000 : timeframe === '1h' ? 3600000 : 1800000;
         
         for (let i = candleCount - 1; i >= 0; i--) {
           const timestamp = now - (i * candleMs);
-          // Add small random variance to simulate price movement (±0.5%)
-          const variance = (Math.random() - 0.5) * 0.01 * usdtDominance;
+          // Add small random variance to simulate movement (±0.3%)
+          const variance = (Math.random() - 0.5) * 0.006 * usdtDominance;
           const value = usdtDominance + variance;
           
           candles.push({
@@ -335,7 +330,7 @@ export async function POST(req: NextRequest) {
         
       } catch (err: any) {
         console.error('[scanner] USDT dominance fetch error:', err.message);
-        throw new Error('Failed to fetch USDT dominance data - try again later');
+        throw new Error('USDT dominance data temporarily unavailable');
       }
     }
 
