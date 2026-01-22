@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -194,6 +194,41 @@ export default function NewsSentimentPage() {
   
   // Categorize earnings by time period
   const categorizedEarnings = categorizeEarnings(earnings);
+  
+  // Track if initial earnings fetch has been done
+  const earningsInitialFetchDone = useRef(false);
+  
+  // Auto-fetch earnings when tab switches to earnings (load today's earnings)
+  useEffect(() => {
+    if (activeTab === "earnings" && !earningsInitialFetchDone.current && earnings.length === 0 && !earningsLoading) {
+      earningsInitialFetchDone.current = true;
+      // Auto-fetch earnings calendar
+      const autoFetchEarnings = async () => {
+        setEarningsLoading(true);
+        setEarningsError("");
+        try {
+          const response = await fetch(`/api/earnings-calendar?symbol=&horizon=${earningsHorizon}&includeResults=true&includeAI=true`);
+          const result = await response.json();
+          if (result.success) {
+            setEarnings(result.earnings);
+            if (result.recentResults) {
+              setEarningsResults(result.recentResults);
+            }
+            if (result.aiAnalysis) {
+              setEarningsAIAnalysis(result.aiAnalysis);
+            }
+            // Auto-filter to today's earnings
+            setEarningsFilter('today');
+          }
+        } catch (err) {
+          console.error("Error auto-fetching earnings:", err);
+        } finally {
+          setEarningsLoading(false);
+        }
+      };
+      autoFetchEarnings();
+    }
+  }, [activeTab, earnings.length, earningsLoading, earningsHorizon]);
   
   // Filter earnings based on selected filter
   const getFilteredEarnings = (): EarningsEvent[] => {

@@ -30,6 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools',
     '/tools/scanner',
     '/tools/ai-analyst',
+    '/tools/deep-analysis',
     '/tools/portfolio',
     '/tools/journal',
     '/tools/backtest',
