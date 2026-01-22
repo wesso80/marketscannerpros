@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -815,246 +815,239 @@ export default function NewsSentimentPage() {
                         const isSelected = selectedEarning?.symbol === event.symbol && selectedEarning?.reportDate === event.reportDate;
                         
                         return (
-                          <div 
-                            key={idx}
-                            onClick={() => fetchAnalystData(event)}
-                            style={{ 
-                              display: "grid",
-                              gridTemplateColumns: "auto 1fr auto",
-                              gap: "1rem",
-                              alignItems: "center",
-                              padding: "1rem",
-                              background: isSelected ? "rgba(59,130,246,0.15)" : isToday ? "rgba(16,185,129,0.1)" : isTomorrow ? "rgba(245,158,11,0.05)" : "rgba(30,41,59,0.3)",
-                              borderRadius: "10px",
-                              border: isSelected ? "2px solid #3B82F6" : isToday ? "1px solid rgba(16,185,129,0.3)" : isTomorrow ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(51,65,85,0.3)",
-                              cursor: "pointer",
-                              transition: "all 0.2s ease",
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
-                          >
-                            {/* Date Badge */}
-                            <div style={{ 
-                              minWidth: "70px", 
-                              textAlign: "center", 
-                              padding: "0.5rem",
-                              background: isToday ? "rgba(16,185,129,0.2)" : isTomorrow ? "rgba(245,158,11,0.15)" : "rgba(51,65,85,0.5)",
-                              borderRadius: "8px"
-                            }}>
-                              <div style={{ fontSize: "0.7rem", color: isToday ? "#10B981" : isTomorrow ? "#F59E0B" : "#94A3B8", textTransform: "uppercase", fontWeight: "600" }}>
-                                {formatRelativeDate(event.reportDate)}
-                              </div>
-                              <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                                {new Date(event.reportDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </div>
-                            </div>
-                            
-                            {/* Company Info */}
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <span style={{ 
-                                  fontWeight: "bold", 
-                                  color: "#10B981",
-                                  fontSize: "1rem",
-                                  background: "rgba(16,185,129,0.1)",
-                                  padding: "0.2rem 0.5rem",
-                                  borderRadius: "4px"
-                                }}>
-                                  {event.symbol}
-                                </span>
-                                {(() => {
-                                  const mcRank = getMarketCapRank(event.symbol);
-                                  if (mcRank.rank) {
-                                    return (
-                                      <span style={{
-                                        fontSize: "0.65rem",
-                                        fontWeight: "700",
-                                        color: mcRank.color,
-                                        background: mcRank.bgColor,
-                                        padding: "0.15rem 0.4rem",
-                                        borderRadius: "4px",
-                                        border: `1px solid ${mcRank.color}40`,
-                                        letterSpacing: "0.02em"
-                                      }}>
-                                        {mcRank.label}
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                                <span style={{ color: "#fff", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                  {event.name}
-                                </span>
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
-                                <span>Fiscal Period: {event.fiscalDateEnding}</span>
-                                <span style={{ color: "#3B82F6", fontSize: "0.7rem" }}>• Click for analyst ratings</span>
-                              </div>
-                            </div>
-                            
-                            {/* EPS Estimate + Click indicator */}
-                            <div style={{ textAlign: "right", minWidth: "80px" }}>
-                              <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>EPS Est.</div>
+                          <React.Fragment key={idx}>
+                            {/* Earnings Card */}
+                            <div 
+                              onClick={() => fetchAnalystData(event)}
+                              style={{ 
+                                display: "grid",
+                                gridTemplateColumns: "auto 1fr auto",
+                                gap: "1rem",
+                                alignItems: "center",
+                                padding: "1rem",
+                                background: isSelected ? "rgba(59,130,246,0.15)" : isToday ? "rgba(16,185,129,0.1)" : isTomorrow ? "rgba(245,158,11,0.05)" : "rgba(30,41,59,0.3)",
+                                borderRadius: isSelected ? "10px 10px 0 0" : "10px",
+                                border: isSelected ? "2px solid #3B82F6" : isToday ? "1px solid rgba(16,185,129,0.3)" : isTomorrow ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(51,65,85,0.3)",
+                                borderBottom: isSelected ? "none" : undefined,
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                              }}
+                              onMouseEnter={(e) => !isSelected && (e.currentTarget.style.transform = 'translateX(4px)')}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
+                            >
+                              {/* Date Badge */}
                               <div style={{ 
-                                fontSize: "1.1rem", 
-                                fontWeight: "bold", 
-                                color: event.estimate !== null ? (event.estimate >= 0 ? "#10B981" : "#EF4444") : "#64748B" 
+                                minWidth: "70px", 
+                                textAlign: "center", 
+                                padding: "0.5rem",
+                                background: isToday ? "rgba(16,185,129,0.2)" : isTomorrow ? "rgba(245,158,11,0.15)" : "rgba(51,65,85,0.5)",
+                                borderRadius: "8px"
                               }}>
-                                {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
+                                <div style={{ fontSize: "0.7rem", color: isToday ? "#10B981" : isTomorrow ? "#F59E0B" : "#94A3B8", textTransform: "uppercase", fontWeight: "600" }}>
+                                  {formatRelativeDate(event.reportDate)}
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                                  {new Date(event.reportDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </div>
                               </div>
-                              <div style={{ fontSize: "1rem", marginTop: "0.25rem" }}>→</div>
+                              
+                              {/* Company Info */}
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                  <span style={{ 
+                                    fontWeight: "bold", 
+                                    color: "#10B981",
+                                    fontSize: "1rem",
+                                    background: "rgba(16,185,129,0.1)",
+                                    padding: "0.2rem 0.5rem",
+                                    borderRadius: "4px"
+                                  }}>
+                                    {event.symbol}
+                                  </span>
+                                  {(() => {
+                                    const mcRank = getMarketCapRank(event.symbol);
+                                    if (mcRank.rank) {
+                                      return (
+                                        <span style={{
+                                          fontSize: "0.65rem",
+                                          fontWeight: "700",
+                                          color: mcRank.color,
+                                          background: mcRank.bgColor,
+                                          padding: "0.15rem 0.4rem",
+                                          borderRadius: "4px",
+                                          border: `1px solid ${mcRank.color}40`,
+                                          letterSpacing: "0.02em"
+                                        }}>
+                                          {mcRank.label}
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  <span style={{ color: "#fff", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    {event.name}
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
+                                  <span>Fiscal Period: {event.fiscalDateEnding}</span>
+                                  <span style={{ color: "#3B82F6", fontSize: "0.7rem" }}>• Click for analyst ratings</span>
+                                </div>
+                              </div>
+                              
+                              {/* EPS Estimate + Click indicator */}
+                              <div style={{ textAlign: "right", minWidth: "80px" }}>
+                                <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>EPS Est.</div>
+                                <div style={{ 
+                                  fontSize: "1.1rem", 
+                                  fontWeight: "bold", 
+                                  color: event.estimate !== null ? (event.estimate >= 0 ? "#10B981" : "#EF4444") : "#64748B" 
+                                }}>
+                                  {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
+                                </div>
+                                <div style={{ fontSize: "1rem", marginTop: "0.25rem", color: isSelected ? "#3B82F6" : "#64748B" }}>
+                                  {isSelected ? "▼" : "→"}
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                            
+                            {/* Inline Analyst Panel - Shows directly under the clicked card */}
+                            {isSelected && (
+                              <div style={{ 
+                                background: "linear-gradient(145deg, rgba(59,130,246,0.1), rgba(30,41,59,0.5))", 
+                                borderRadius: "0 0 10px 10px",
+                                border: "2px solid #3B82F6",
+                                borderTop: "1px dashed rgba(59,130,246,0.3)",
+                                padding: "1.25rem",
+                                marginTop: "-0.75rem"
+                              }}>
+                                {analystLoading ? (
+                                  <div style={{ textAlign: "center", padding: "1.5rem", color: "#64748B" }}>
+                                    <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>⏳</div>
+                                    <p>Loading analyst data...</p>
+                                  </div>
+                                ) : analystData ? (
+                                  <div style={{ display: "grid", gap: "1rem" }}>
+                                    {/* Company Header */}
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
+                                      <div style={{ flex: 1, minWidth: "180px" }}>
+                                        <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#fff", marginBottom: "0.2rem" }}>
+                                          {analystData.name}
+                                        </div>
+                                        <div style={{ fontSize: "0.8rem", color: "#64748B" }}>
+                                          {analystData.sector} • {analystData.industry}
+                                        </div>
+                                      </div>
+                                      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                        <div style={{ 
+                                          padding: "0.5rem 1rem", 
+                                          borderRadius: "8px",
+                                          background: analystData.analystRating.includes('Buy') ? "rgba(16,185,129,0.15)" : analystData.analystRating.includes('Sell') ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)",
+                                          border: `1px solid ${analystData.analystRating.includes('Buy') ? "rgba(16,185,129,0.4)" : analystData.analystRating.includes('Sell') ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.4)"}`
+                                        }}>
+                                          <div style={{ fontSize: "0.6rem", color: "#94A3B8", textTransform: "uppercase" }}>Consensus</div>
+                                          <div style={{ 
+                                            fontSize: "0.95rem", 
+                                            fontWeight: "bold", 
+                                            color: analystData.analystRating.includes('Buy') ? "#10B981" : analystData.analystRating.includes('Sell') ? "#EF4444" : "#F59E0B"
+                                          }}>
+                                            {analystData.analystRating}
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setSelectedEarning(null); setAnalystData(null); }}
+                                          style={{ background: "rgba(51,65,85,0.5)", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "6px", padding: "0.5rem", color: "#94A3B8", fontSize: "0.9rem", cursor: "pointer", lineHeight: 1 }}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Key Metrics Grid - Compact */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(85px, 1fr))", gap: "0.5rem" }}>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>Market Cap</div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#fff" }}>{analystData.marketCap}</div>
+                                      </div>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>P/E</div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#fff" }}>{analystData.peRatio?.toFixed(1) || 'N/A'}</div>
+                                      </div>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>EPS</div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: analystData.eps && analystData.eps >= 0 ? "#10B981" : "#EF4444" }}>
+                                          {analystData.eps ? `$${analystData.eps.toFixed(2)}` : 'N/A'}
+                                        </div>
+                                      </div>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>Target</div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3B82F6" }}>
+                                          {analystData.targetPrice ? `$${analystData.targetPrice.toFixed(0)}` : 'N/A'}
+                                        </div>
+                                      </div>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>52W Range</div>
+                                        <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#fff" }}>
+                                          ${analystData.week52Low?.toFixed(0) || '?'}-${analystData.week52High?.toFixed(0) || '?'}
+                                        </div>
+                                      </div>
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
+                                        <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>Div %</div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#8B5CF6" }}>
+                                          {analystData.dividendYield ? `${analystData.dividendYield.toFixed(2)}%` : 'N/A'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Analyst Ratings Bar - Compact */}
+                                    {(analystData.strongBuy + analystData.buy + analystData.hold + analystData.sell + analystData.strongSell) > 0 && (
+                                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.75rem" }}>
+                                        <div style={{ fontSize: "0.7rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
+                                          Analyst Breakdown ({analystData.strongBuy + analystData.buy + analystData.hold + analystData.sell + analystData.strongSell} analysts)
+                                        </div>
+                                        <div style={{ display: "flex", gap: "2px", height: "20px", borderRadius: "4px", overflow: "hidden" }}>
+                                          {analystData.strongBuy > 0 && (
+                                            <div style={{ flex: analystData.strongBuy, background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "600", color: "#fff" }}>
+                                              {analystData.strongBuy}
+                                            </div>
+                                          )}
+                                          {analystData.buy > 0 && (
+                                            <div style={{ flex: analystData.buy, background: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "600", color: "#fff" }}>
+                                              {analystData.buy}
+                                            </div>
+                                          )}
+                                          {analystData.hold > 0 && (
+                                            <div style={{ flex: analystData.hold, background: "#F59E0B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "600", color: "#fff" }}>
+                                              {analystData.hold}
+                                            </div>
+                                          )}
+                                          {analystData.sell > 0 && (
+                                            <div style={{ flex: analystData.sell, background: "#F87171", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "600", color: "#fff" }}>
+                                              {analystData.sell}
+                                            </div>
+                                          )}
+                                          {analystData.strongSell > 0 && (
+                                            <div style={{ flex: analystData.strongSell, background: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "600", color: "#fff" }}>
+                                              {analystData.strongSell}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.35rem", fontSize: "0.6rem" }}>
+                                          <span style={{ color: "#10B981" }}>Buy</span>
+                                          <span style={{ color: "#F59E0B" }}>Hold</span>
+                                          <span style={{ color: "#EF4444" }}>Sell</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+                          </React.Fragment>
                         );
                       })}
                     </div>
                   )}
                 </div>
-
-                {/* Analyst Panel - Shows when a stock is selected */}
-                {(selectedEarning || analystLoading) && (
-                  <div style={{ 
-                    marginTop: "1.5rem",
-                    background: "linear-gradient(145deg, rgba(59,130,246,0.1), rgba(30,41,59,0.5))", 
-                    borderRadius: "16px", 
-                    border: "1px solid rgba(59,130,246,0.4)", 
-                    padding: "1.5rem", 
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                      <h2 style={{ color: "#3B82F6", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
-                        <span style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📈</span>
-                        Analyst Ratings - {selectedEarning?.symbol}
-                      </h2>
-                      <button
-                        onClick={() => { setSelectedEarning(null); setAnalystData(null); }}
-                        style={{ background: "rgba(51,65,85,0.5)", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "6px", padding: "0.4rem 0.8rem", color: "#94A3B8", fontSize: "0.75rem", cursor: "pointer" }}
-                      >
-                        ✕ Close
-                      </button>
-                    </div>
-                    
-                    {analystLoading ? (
-                      <div style={{ textAlign: "center", padding: "2rem", color: "#64748B" }}>
-                        <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>⏳</div>
-                        <p>Loading analyst data...</p>
-                      </div>
-                    ) : analystData ? (
-                      <div style={{ display: "grid", gap: "1.5rem" }}>
-                        {/* Company Header */}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "center" }}>
-                          <div style={{ flex: 1, minWidth: "200px" }}>
-                            <div style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#fff", marginBottom: "0.25rem" }}>
-                              {analystData.name}
-                            </div>
-                            <div style={{ fontSize: "0.85rem", color: "#64748B" }}>
-                              {analystData.sector} • {analystData.industry}
-                            </div>
-                          </div>
-                          <div style={{ 
-                            padding: "0.75rem 1.25rem", 
-                            borderRadius: "10px",
-                            background: analystData.analystRating.includes('Buy') ? "rgba(16,185,129,0.15)" : analystData.analystRating.includes('Sell') ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)",
-                            border: `1px solid ${analystData.analystRating.includes('Buy') ? "rgba(16,185,129,0.4)" : analystData.analystRating.includes('Sell') ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.4)"}`
-                          }}>
-                            <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase", marginBottom: "0.25rem" }}>Consensus</div>
-                            <div style={{ 
-                              fontSize: "1.1rem", 
-                              fontWeight: "bold", 
-                              color: analystData.analystRating.includes('Buy') ? "#10B981" : analystData.analystRating.includes('Sell') ? "#EF4444" : "#F59E0B"
-                            }}>
-                              {analystData.analystRating}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Key Metrics Grid */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.75rem" }}>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Market Cap</div>
-                            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>{analystData.marketCap}</div>
-                          </div>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>P/E Ratio</div>
-                            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>{analystData.peRatio?.toFixed(1) || 'N/A'}</div>
-                          </div>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>EPS</div>
-                            <div style={{ fontSize: "1rem", fontWeight: "bold", color: analystData.eps && analystData.eps >= 0 ? "#10B981" : "#EF4444" }}>
-                              {analystData.eps ? `$${analystData.eps.toFixed(2)}` : 'N/A'}
-                            </div>
-                          </div>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Target Price</div>
-                            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#3B82F6" }}>
-                              {analystData.targetPrice ? `$${analystData.targetPrice.toFixed(2)}` : 'N/A'}
-                            </div>
-                          </div>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Div Yield</div>
-                            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#8B5CF6" }}>
-                              {analystData.dividendYield ? `${analystData.dividendYield.toFixed(2)}%` : 'N/A'}
-                            </div>
-                          </div>
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>52W Range</div>
-                            <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#fff" }}>
-                              ${analystData.week52Low?.toFixed(0) || '?'} - ${analystData.week52High?.toFixed(0) || '?'}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Analyst Ratings Breakdown */}
-                        {(analystData.strongBuy + analystData.buy + analystData.hold + analystData.sell + analystData.strongSell) > 0 && (
-                          <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem" }}>
-                            <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", marginBottom: "0.75rem", fontWeight: "600" }}>
-                              Analyst Breakdown ({analystData.strongBuy + analystData.buy + analystData.hold + analystData.sell + analystData.strongSell} analysts)
-                            </div>
-                            <div style={{ display: "flex", gap: "0.5rem", height: "24px", borderRadius: "6px", overflow: "hidden" }}>
-                              {analystData.strongBuy > 0 && (
-                                <div style={{ flex: analystData.strongBuy, background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "600", color: "#fff" }}>
-                                  {analystData.strongBuy}
-                                </div>
-                              )}
-                              {analystData.buy > 0 && (
-                                <div style={{ flex: analystData.buy, background: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "600", color: "#fff" }}>
-                                  {analystData.buy}
-                                </div>
-                              )}
-                              {analystData.hold > 0 && (
-                                <div style={{ flex: analystData.hold, background: "#F59E0B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "600", color: "#fff" }}>
-                                  {analystData.hold}
-                                </div>
-                              )}
-                              {analystData.sell > 0 && (
-                                <div style={{ flex: analystData.sell, background: "#F87171", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "600", color: "#fff" }}>
-                                  {analystData.sell}
-                                </div>
-                              )}
-                              {analystData.strongSell > 0 && (
-                                <div style={{ flex: analystData.strongSell, background: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: "600", color: "#fff" }}>
-                                  {analystData.strongSell}
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.5rem", fontSize: "0.7rem" }}>
-                              <span style={{ color: "#10B981" }}>Strong Buy / Buy</span>
-                              <span style={{ color: "#F59E0B" }}>Hold</span>
-                              <span style={{ color: "#EF4444" }}>Sell / Strong Sell</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Description */}
-                        {analystData.description && analystData.description !== 'No description available.' && (
-                          <div style={{ fontSize: "0.85rem", color: "#94A3B8", lineHeight: "1.6", borderTop: "1px solid rgba(51,65,85,0.5)", paddingTop: "1rem" }}>
-                            {analystData.description.slice(0, 400)}{analystData.description.length > 400 ? '...' : ''}
-                          </div>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
 
                 {/* AI Analysis Section */}
                 {earningsAIAnalysis && (

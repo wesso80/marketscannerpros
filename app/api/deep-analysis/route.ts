@@ -287,6 +287,71 @@ async function fetchCryptoData(symbol: string) {
   }
 }
 
+// Fetch earnings data for stocks
+async function fetchEarningsData(symbol: string) {
+  try {
+    const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (!data.annualEarnings && !data.quarterlyEarnings) {
+      return null;
+    }
+    
+    // Get upcoming and recent earnings
+    const quarterly = data.quarterlyEarnings || [];
+    const annual = data.annualEarnings || [];
+    
+    // Find the next upcoming report (estimated dates)
+    const now = new Date();
+    const upcoming = quarterly.find((e: any) => {
+      const reportDate = new Date(e.reportedDate || e.fiscalDateEnding);
+      return reportDate > now;
+    });
+    
+    // Get most recent 4 quarters for history
+    const recentQuarters = quarterly.slice(0, 4).map((q: any) => ({
+      fiscalDateEnding: q.fiscalDateEnding,
+      reportedDate: q.reportedDate,
+      reportedEPS: parseFloat(q.reportedEPS) || null,
+      estimatedEPS: parseFloat(q.estimatedEPS) || null,
+      surprise: q.reportedEPS && q.estimatedEPS 
+        ? parseFloat(q.reportedEPS) - parseFloat(q.estimatedEPS) 
+        : null,
+      surprisePercent: q.surprisePercentage ? parseFloat(q.surprisePercentage) : null,
+      beat: q.reportedEPS && q.estimatedEPS 
+        ? parseFloat(q.reportedEPS) > parseFloat(q.estimatedEPS) 
+        : null
+    }));
+    
+    // Calculate beat rate
+    const beatsCount = recentQuarters.filter((q: any) => q.beat === true).length;
+    const beatRate = recentQuarters.length > 0 ? (beatsCount / recentQuarters.length) * 100 : null;
+    
+    // Get last reported
+    const lastReported = recentQuarters[0];
+    
+    return {
+      nextEarningsDate: upcoming?.fiscalDateEnding || null,
+      lastReportedDate: lastReported?.reportedDate || null,
+      lastReportedEPS: lastReported?.reportedEPS || null,
+      lastEstimatedEPS: lastReported?.estimatedEPS || null,
+      lastSurprise: lastReported?.surprise || null,
+      lastSurprisePercent: lastReported?.surprisePercent || null,
+      lastBeat: lastReported?.beat || null,
+      beatRate,
+      recentQuarters,
+      annualEPS: annual.slice(0, 3).map((a: any) => ({
+        fiscalYear: a.fiscalDateEnding?.split('-')[0],
+        eps: parseFloat(a.reportedEPS) || null
+      }))
+    };
+  } catch (err) {
+    console.error('Earnings fetch error:', err);
+    return null;
+  }
+}
+
 // Generate AI analysis
 async function generateAIAnalysis(data: any) {
   if (!OPENAI_API_KEY) return null;
@@ -370,6 +435,21 @@ function buildAnalysisPrompt(data: any): string {
     prompt += `- Fear & Greed: ${data.cryptoData.fearGreed.value} (${data.cryptoData.fearGreed.classification})\n`;
     if (data.cryptoData.marketData?.marketCapRank) {
       prompt += `- Market Cap Rank: #${data.cryptoData.marketData.marketCapRank}\n`;
+    }
+    prompt += '\n';
+  }
+  
+  if (data.earnings) {
+    prompt += `EARNINGS DATA:\n`;
+    if (data.earnings.nextEarningsDate) {
+      prompt += `- Next Earnings: ${data.earnings.nextEarningsDate}\n`;
+    }
+    if (data.earnings.lastReportedEPS !== null) {
+      prompt += `- Last EPS: $${data.earnings.lastReportedEPS?.toFixed(2)} (Est: $${data.earnings.lastEstimatedEPS?.toFixed(2)})\n`;
+      prompt += `- Last Surprise: ${data.earnings.lastBeat ? '✅ BEAT' : '❌ MISS'} by ${data.earnings.lastSurprisePercent?.toFixed(1)}%\n`;
+    }
+    if (data.earnings.beatRate !== null) {
+      prompt += `- Beat Rate (last 4Q): ${data.earnings.beatRate.toFixed(0)}%\n`;
     }
     prompt += '\n';
   }
@@ -525,12 +605,13 @@ export async function GET(request: NextRequest) {
     const assetType = detectAssetType(symbol);
     
     // Fetch all data in parallel
-    const [price, indicators, company, news, cryptoData] = await Promise.all([
+    const [price, indicators, company, news, cryptoData, earnings] = await Promise.all([
       fetchPriceData(symbol, assetType),
       fetchTechnicalIndicators(symbol, assetType),
       assetType === 'stock' ? fetchCompanyOverview(symbol) : null,
       fetchNewsSentiment(symbol),
       assetType === 'crypto' ? fetchCryptoData(symbol) : null,
+      assetType === 'stock' ? fetchEarningsData(symbol) : null,
     ]);
     
     if (!price) {
@@ -547,7 +628,8 @@ export async function GET(request: NextRequest) {
       indicators,
       company,
       news,
-      cryptoData
+      cryptoData,
+      earnings
     };
     
     // Generate signals
@@ -569,6 +651,7 @@ export async function GET(request: NextRequest) {
       company,
       news,
       cryptoData,
+      earnings,
       signals,
       aiAnalysis
     });

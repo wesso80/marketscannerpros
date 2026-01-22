@@ -85,6 +85,29 @@ interface Signals {
   reasons: string[];
 }
 
+interface EarningsQuarter {
+  fiscalDateEnding: string;
+  reportedDate: string;
+  reportedEPS: number | null;
+  estimatedEPS: number | null;
+  surprise: number | null;
+  surprisePercent: number | null;
+  beat: boolean | null;
+}
+
+interface EarningsData {
+  nextEarningsDate: string | null;
+  lastReportedDate: string | null;
+  lastReportedEPS: number | null;
+  lastEstimatedEPS: number | null;
+  lastSurprise: number | null;
+  lastSurprisePercent: number | null;
+  lastBeat: boolean | null;
+  beatRate: number | null;
+  recentQuarters: EarningsQuarter[];
+  annualEPS: { fiscalYear: string; eps: number | null }[];
+}
+
 interface AnalysisResult {
   success: boolean;
   symbol: string;
@@ -96,6 +119,7 @@ interface AnalysisResult {
   company: Company | null;
   news: NewsItem[] | null;
   cryptoData: CryptoData | null;
+  earnings: EarningsData | null;
   signals: Signals;
   aiAnalysis: string | null;
   error?: string;
@@ -615,6 +639,117 @@ export default function DeepAnalysisPage() {
                       {result.company.hold > 0 && <div style={{ flex: result.company.hold, background: "#F59E0B" }} />}
                       {result.company.sell > 0 && <div style={{ flex: result.company.sell, background: "#F87171" }} />}
                       {result.company.strongSell > 0 && <div style={{ flex: result.company.strongSell, background: "#DC2626" }} />}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Earnings Data (for stocks) */}
+            {result.earnings && (
+              <div style={{ 
+                background: "linear-gradient(145deg, rgba(245,158,11,0.08), rgba(30,41,59,0.5))",
+                borderRadius: "16px",
+                border: "1px solid rgba(245,158,11,0.3)",
+                padding: "1.5rem"
+              }}>
+                <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>📅</span>
+                  Earnings Report
+                </h3>
+                
+                {/* Next Earnings Date */}
+                {result.earnings.nextEarningsDate && (
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "1rem", 
+                    padding: "1rem",
+                    background: "rgba(245,158,11,0.1)",
+                    borderRadius: "10px",
+                    marginBottom: "1rem"
+                  }}>
+                    <div style={{ fontSize: "2rem" }}>📆</div>
+                    <div>
+                      <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Next Earnings Report</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#F59E0B" }}>
+                        {new Date(result.earnings.nextEarningsDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Last Report Summary */}
+                {result.earnings.lastReportedEPS !== null && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Last Report</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.75rem" }}>
+                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Reported EPS</div>
+                        <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: result.earnings.lastReportedEPS >= 0 ? "#10B981" : "#EF4444" }}>
+                          ${result.earnings.lastReportedEPS?.toFixed(2)}
+                        </div>
+                      </div>
+                      <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Estimated EPS</div>
+                        <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#94A3B8" }}>
+                          ${result.earnings.lastEstimatedEPS?.toFixed(2)}
+                        </div>
+                      </div>
+                      <div style={{ 
+                        background: result.earnings.lastBeat ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", 
+                        borderRadius: "10px", 
+                        padding: "0.75rem", 
+                        textAlign: "center",
+                        border: `1px solid ${result.earnings.lastBeat ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`
+                      }}>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Result</div>
+                        <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: result.earnings.lastBeat ? "#10B981" : "#EF4444" }}>
+                          {result.earnings.lastBeat ? "✅ BEAT" : "❌ MISS"}
+                        </div>
+                        {result.earnings.lastSurprisePercent !== null && (
+                          <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>
+                            {result.earnings.lastSurprisePercent > 0 ? '+' : ''}{result.earnings.lastSurprisePercent.toFixed(1)}%
+                          </div>
+                        )}
+                      </div>
+                      {result.earnings.beatRate !== null && (
+                        <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
+                          <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Beat Rate (4Q)</div>
+                          <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: result.earnings.beatRate >= 75 ? "#10B981" : result.earnings.beatRate >= 50 ? "#F59E0B" : "#EF4444" }}>
+                            {result.earnings.beatRate.toFixed(0)}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Recent Quarters History */}
+                {result.earnings.recentQuarters && result.earnings.recentQuarters.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Recent Quarters</div>
+                    <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
+                      {result.earnings.recentQuarters.map((q, idx) => (
+                        <div key={idx} style={{ 
+                          minWidth: "100px",
+                          background: "rgba(30,41,59,0.5)", 
+                          borderRadius: "8px", 
+                          padding: "0.5rem",
+                          textAlign: "center",
+                          borderTop: `3px solid ${q.beat ? "#10B981" : q.beat === false ? "#EF4444" : "#64748B"}`
+                        }}>
+                          <div style={{ fontSize: "0.65rem", color: "#64748B" }}>
+                            {q.fiscalDateEnding?.split('-').slice(0, 2).join('-')}
+                          </div>
+                          <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#fff" }}>
+                            ${q.reportedEPS?.toFixed(2) || 'N/A'}
+                          </div>
+                          <div style={{ fontSize: "0.65rem", color: q.beat ? "#10B981" : q.beat === false ? "#EF4444" : "#64748B" }}>
+                            {q.beat ? "Beat" : q.beat === false ? "Miss" : "—"}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
