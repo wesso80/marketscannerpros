@@ -218,8 +218,14 @@ async function fetchCompanyOverview(symbol: string) {
 }
 
 // Fetch news sentiment
-async function fetchNewsSentiment(symbol: string) {
+async function fetchNewsSentiment(symbol: string, assetType: string) {
   try {
+    if (assetType === 'crypto') {
+      // Use CryptoCompare for crypto news
+      return await fetchCryptoNews(symbol);
+    }
+    
+    // Use Alpha Vantage for stocks
     const res = await fetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol}&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`);
     const data = await res.json();
     
@@ -235,6 +241,71 @@ async function fetchNewsSentiment(symbol: string) {
       publishedAt: article.time_published
     }));
   } catch (err) {
+    return null;
+  }
+}
+
+// Fetch crypto news from multiple sources
+async function fetchCryptoNews(symbol: string) {
+  const cleanSymbol = symbol.toUpperCase().replace('USDT', '').replace('USD', '');
+  
+  try {
+    // Try CryptoCompare News API (free, no key required for basic)
+    const ccRes = await fetch(`https://min-api.cryptocompare.com/data/v2/news/?categories=${cleanSymbol}&excludeCategories=Sponsored`);
+    const ccData = await ccRes.json();
+    
+    if (ccData.Data && ccData.Data.length > 0) {
+      return ccData.Data.slice(0, 5).map((article: any) => {
+        // Simple sentiment analysis based on keywords
+        const text = (article.title + ' ' + article.body).toLowerCase();
+        let sentiment = 'Neutral';
+        let sentimentScore = 0;
+        
+        const bullishWords = ['bullish', 'surge', 'rally', 'soar', 'gain', 'rise', 'up', 'high', 'record', 'breakout', 'buy', 'positive', 'growth'];
+        const bearishWords = ['bearish', 'crash', 'drop', 'fall', 'plunge', 'decline', 'down', 'low', 'sell', 'negative', 'fear', 'dump', 'loss'];
+        
+        let bullCount = bullishWords.filter(w => text.includes(w)).length;
+        let bearCount = bearishWords.filter(w => text.includes(w)).length;
+        
+        if (bullCount > bearCount + 1) {
+          sentiment = 'Bullish';
+          sentimentScore = Math.min(0.5, bullCount * 0.1);
+        } else if (bearCount > bullCount + 1) {
+          sentiment = 'Bearish';
+          sentimentScore = Math.max(-0.5, -bearCount * 0.1);
+        }
+        
+        return {
+          title: article.title,
+          summary: article.body?.slice(0, 200) || '',
+          source: article.source_info?.name || article.source || 'CryptoCompare',
+          sentiment,
+          sentimentScore,
+          url: article.url || article.guid,
+          publishedAt: new Date(article.published_on * 1000).toISOString()
+        };
+      });
+    }
+    
+    // Fallback: Try Alpha Vantage with crypto topic
+    const avRes = await fetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=blockchain,cryptocurrency&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`);
+    const avData = await avRes.json();
+    
+    if (avData.feed) {
+      return avData.feed.slice(0, 5).map((article: any) => ({
+        title: article.title,
+        summary: article.summary,
+        source: article.source,
+        sentiment: article.overall_sentiment_label,
+        sentimentScore: parseFloat(article.overall_sentiment_score),
+        url: article.url,
+        publishedAt: article.time_published
+      }));
+    }
+    
+    return null;
+  } catch (err) {
+    console.error('Crypto news fetch error:', err);
     return null;
   }
 }
@@ -370,21 +441,33 @@ async function generateAIAnalysis(data: any) {
         messages: [
           {
             role: 'system',
-            content: `You are an elite financial analyst providing a comprehensive analysis. Be direct, data-driven, and actionable. Format with sections using emojis:
-📊 PRICE ACTION - Current price context and key levels
-📈 TECHNICAL SIGNALS - Indicator readings and what they suggest
-🎯 KEY LEVELS - Support/resistance and targets
-⚠️ RISK FACTORS - What could go wrong
-💡 VERDICT - Clear buy/hold/sell stance with reasoning
+            content: `You are the Golden Egg Analyst - an elite financial analyst providing comprehensive, actionable analysis by synthesizing ALL available data including price action, technicals, fundamentals, news sentiment, and market conditions.
 
-Keep it concise but comprehensive. Max 400 words.`
+Your analysis MUST consider and integrate:
+- Price action and momentum (current price, 24h change, volume)
+- Technical indicators (RSI, MACD, moving averages, stochastics)
+- Company fundamentals (if stock: P/E, EPS, analyst targets, sector)
+- News sentiment (summarize the overall sentiment from recent news)
+- Market conditions (Fear & Greed for crypto, analyst consensus for stocks)
+- Upcoming catalysts (earnings dates, significant events from news)
+
+Format your analysis with these sections:
+📊 MARKET CONTEXT - Big picture: what's driving this asset right now?
+📈 TECHNICAL OUTLOOK - Indicator confluence and what the charts are saying
+📰 SENTIMENT ANALYSIS - What the news flow and market sentiment suggest
+🎯 KEY LEVELS - Critical support/resistance and price targets
+⚠️ RISK FACTORS - What could invalidate this thesis?
+💡 GOLDEN EGG VERDICT - Clear BUY/HOLD/SELL with confidence level (High/Medium/Low) and 1-2 sentence reasoning
+
+Be bold with your verdict. Traders want clear direction, not wishy-washy analysis.
+Max 500 words. Be concise but comprehensive.`
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        max_tokens: 600,
+        max_tokens: 800,
         temperature: 0.7
       })
     });
@@ -455,14 +538,25 @@ function buildAnalysisPrompt(data: any): string {
   }
   
   if (data.news?.length > 0) {
-    prompt += `RECENT NEWS SENTIMENT:\n`;
-    data.news.slice(0, 3).forEach((n: any) => {
-      prompt += `- ${n.sentiment}: "${n.title.slice(0, 60)}..."\n`;
+    prompt += `RECENT NEWS & SENTIMENT:\n`;
+    // Calculate overall sentiment
+    const sentiments = data.news.map((n: any) => n.sentiment?.toLowerCase() || 'neutral');
+    const bullishCount = sentiments.filter((s: string) => s.includes('bullish')).length;
+    const bearishCount = sentiments.filter((s: string) => s.includes('bearish')).length;
+    const neutralCount = sentiments.filter((s: string) => !s.includes('bullish') && !s.includes('bearish')).length;
+    
+    prompt += `- Overall Sentiment: ${bullishCount} Bullish, ${bearishCount} Bearish, ${neutralCount} Neutral\n`;
+    prompt += `- Headlines:\n`;
+    data.news.slice(0, 5).forEach((n: any, i: number) => {
+      prompt += `  ${i+1}. [${n.sentiment || 'Neutral'}] "${n.title}" (${n.source})\n`;
+      if (n.summary) {
+        prompt += `     Summary: ${n.summary.slice(0, 100)}...\n`;
+      }
     });
     prompt += '\n';
   }
   
-  prompt += `Provide a comprehensive analysis with clear trading signals and risk assessment.`;
+  prompt += `Based on ALL the data above, provide a comprehensive Golden Egg analysis with a clear, actionable verdict.`;
   
   return prompt;
 }
@@ -609,7 +703,7 @@ export async function GET(request: NextRequest) {
       fetchPriceData(symbol, assetType),
       fetchTechnicalIndicators(symbol, assetType),
       assetType === 'stock' ? fetchCompanyOverview(symbol) : null,
-      fetchNewsSentiment(symbol),
+      fetchNewsSentiment(symbol, assetType),
       assetType === 'crypto' ? fetchCryptoData(symbol) : null,
       assetType === 'stock' ? fetchEarningsData(symbol) : null,
     ]);

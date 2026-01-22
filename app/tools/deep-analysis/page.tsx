@@ -541,6 +541,25 @@ export default function DeepAnalysisPage() {
                   {result.company ? 'Company Overview' : 'Market Data'}
                 </h3>
                 
+                {/* Company Name & Description */}
+                {result.company && (
+                  <div style={{ marginBottom: "1rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                      <span style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#fff" }}>{result.company.name}</span>
+                      <span style={{ fontSize: "0.75rem", color: "#64748B", padding: "2px 8px", background: "rgba(30,41,59,0.5)", borderRadius: "4px" }}>
+                        {result.company.industry || result.company.sector}
+                      </span>
+                    </div>
+                    {result.company.description && (
+                      <p style={{ fontSize: "0.85rem", color: "#94A3B8", lineHeight: "1.5", margin: 0 }}>
+                        {result.company.description.length > 300 
+                          ? result.company.description.slice(0, 300) + '...' 
+                          : result.company.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
                   {result.company && (
                     <>
@@ -769,7 +788,7 @@ export default function DeepAnalysisPage() {
                   Latest News & Sentiment
                 </h3>
                 
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                   {result.news.map((item, idx) => (
                     <a 
                       key={idx}
@@ -778,35 +797,56 @@ export default function DeepAnalysisPage() {
                       rel="noopener noreferrer"
                       style={{ 
                         display: "block",
-                        padding: "0.75rem",
+                        padding: "1rem",
                         background: "rgba(30,41,59,0.5)",
-                        borderRadius: "8px",
+                        borderRadius: "10px",
                         textDecoration: "none",
-                        borderLeft: `3px solid ${getSentimentColor(item.sentiment)}`
+                        borderLeft: `4px solid ${getSentimentColor(item.sentiment)}`,
+                        transition: "background 0.2s"
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.5rem" }}>
                         <div style={{ flex: 1 }}>
-                          <div style={{ color: "#E2E8F0", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.25rem" }}>
-                            {item.title.slice(0, 100)}{item.title.length > 100 ? '...' : ''}
+                          <div style={{ color: "#E2E8F0", fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem", lineHeight: "1.4" }}>
+                            {item.title}
                           </div>
-                          <div style={{ color: "#64748B", fontSize: "0.75rem" }}>
-                            {item.source}
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#64748B", fontSize: "0.75rem" }}>
+                            <span style={{ fontWeight: "500" }}>{item.source}</span>
+                            {item.publishedAt && (
+                              <>
+                                <span>•</span>
+                                <span>{new Date(item.publishedAt.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6')).toLocaleDateString()}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <span style={{ 
-                          padding: "0.25rem 0.5rem", 
-                          borderRadius: "4px", 
+                          padding: "0.25rem 0.75rem", 
+                          borderRadius: "6px", 
                           background: `${getSentimentColor(item.sentiment)}20`,
                           color: getSentimentColor(item.sentiment),
                           fontSize: "0.7rem",
-                          fontWeight: "600",
+                          fontWeight: "700",
                           textTransform: "uppercase",
                           whiteSpace: "nowrap"
                         }}>
                           {item.sentiment}
                         </span>
                       </div>
+                      {item.summary && (
+                        <p style={{ 
+                          color: "#94A3B8", 
+                          fontSize: "0.85rem", 
+                          lineHeight: "1.5", 
+                          margin: 0,
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const
+                        }}>
+                          {item.summary.slice(0, 200)}{item.summary.length > 200 ? '...' : ''}
+                        </p>
+                      )}
                     </a>
                   ))}
                 </div>
