@@ -3,51 +3,107 @@ import { NextRequest, NextResponse } from "next/server";
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "UI755FUUAM6FRRI9";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Get the next Friday (weekly options expiry)
-function getNextFridayExpiry(): { date: Date; timestamp: number } {
+// Get the Friday of the current week (or next week if past Friday)
+function getThisWeekFriday(): number {
   const now = new Date();
-  const dayOfWeek = now.getDay();
-  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // Next Friday
-  const nextFriday = new Date(now);
-  nextFriday.setDate(now.getDate() + daysUntilFriday);
-  nextFriday.setHours(16, 0, 0, 0); // Market close
+  const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 5 = Friday
+  let daysUntilFriday = 5 - dayOfWeek;
   
-  // Yahoo uses Unix timestamps for expiry dates
-  return {
-    date: nextFriday,
-    timestamp: Math.floor(nextFriday.getTime() / 1000)
-  };
+  // If it's Friday after market close or Saturday/Sunday, get next Friday
+  if (daysUntilFriday < 0 || (daysUntilFriday === 0 && now.getUTCHours() >= 21)) {
+    daysUntilFriday += 7;
+  }
+  
+  const friday = new Date(now);
+  friday.setUTCDate(friday.getUTCDate() + daysUntilFriday);
+  friday.setUTCHours(0, 0, 0, 0);
+  
+  return Math.floor(friday.getTime() / 1000);
 }
 
 // Fetch options chain from Yahoo Finance
 async function fetchOptionsData(symbol: string) {
   try {
-    const { date: expiryDate, timestamp } = getNextFridayExpiry();
+    // First, get available expiry dates from Yahoo
+    const baseUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}`;
     
-    // Yahoo Finance options endpoint
-    const url = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?date=${timestamp}`;
-    
-    const res = await fetch(url, {
+    const baseRes = await fetch(baseUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
     
-    if (!res.ok) return null;
+    if (!baseRes.ok) {
+      console.log('Options base fetch failed:', baseRes.status);
+      return null;
+    }
     
-    const data = await res.json();
-    const optionChain = data.optionChain?.result?.[0];
+    const baseData = await baseRes.json();
+    const baseChain = baseData.optionChain?.result?.[0];
     
-    if (!optionChain) return null;
+    if (!baseChain) {
+      console.log('No option chain found for', symbol);
+      return null;
+    }
     
-    const quote = optionChain.quote;
-    const options = optionChain.options?.[0];
+    // Get available expiry dates
+    const expirationDates: number[] = baseChain.expirationDates || [];
+    if (expirationDates.length === 0) {
+      console.log('No expiration dates available for', symbol);
+      return null;
+    }
     
-    if (!options) return null;
+    // Find the expiry that's closest to this week's Friday
+    const targetFriday = getThisWeekFriday();
+    let bestExpiry = expirationDates[0];
+    let minDiff = Math.abs(expirationDates[0] - targetFriday);
+    
+    for (const exp of expirationDates) {
+      const diff = Math.abs(exp - targetFriday);
+      // Only consider expiries within 7 days of target Friday
+      if (diff < minDiff && diff <= 7 * 24 * 60 * 60) {
+        minDiff = diff;
+        bestExpiry = exp;
+      }
+    }
+    
+    // If the best expiry is more than 7 days away, just use the nearest available
+    if (minDiff > 7 * 24 * 60 * 60) {
+      bestExpiry = expirationDates[0];
+    }
+    
+    const expiryDate = new Date(bestExpiry * 1000);
+    console.log(`${symbol} - Target Friday: ${new Date(targetFriday * 1000).toDateString()}, Using expiry: ${expiryDate.toDateString()}`);
+    
+    // If we need a different expiry than what was returned, fetch it
+    let options = baseChain.options?.[0];
+    const quote = baseChain.quote;
+    
+    if (baseChain.options?.[0]?.expirationDate !== bestExpiry) {
+      // Fetch the specific expiry
+      const expiryUrl = `${baseUrl}?date=${bestExpiry}`;
+      const expiryRes = await fetch(expiryUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      
+      if (expiryRes.ok) {
+        const expiryData = await expiryRes.json();
+        options = expiryData.optionChain?.result?.[0]?.options?.[0] || options;
+      }
+    }
+    
+    if (!options) {
+      console.log('No options data in response for', symbol);
+      return null;
+    }
     
     const calls = options.calls || [];
     const puts = options.puts || [];
     const currentPrice = quote?.regularMarketPrice || 0;
+    
+    console.log(`Options for ${symbol}: ${calls.length} calls, ${puts.length} puts, price: ${currentPrice}, expiry: ${expiryDate.toDateString()}`);
     
     // Sort by open interest to find highest OI strikes
     const sortedCalls = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
@@ -94,7 +150,7 @@ async function fetchOptionsData(symbol: string) {
       putCallRatio,
       maxPain,
       keyLevels,
-      sentiment: putCallRatio > 1.2 ? 'Bearish' : putCallRatio < 0.8 ? 'Bullish' : 'Neutral'
+      sentiment: putCallRatio > 1.2 ? 'Bearish' as const : putCallRatio < 0.8 ? 'Bullish' as const : 'Neutral' as const
     };
   } catch (err) {
     console.error('Options fetch error:', err);
