@@ -167,16 +167,26 @@ async function fetchOptionsData(symbol: string) {
     
     console.log(`Options for ${symbol}: ${calls.length} calls, ${puts.length} puts, price: ${currentPrice}, expiry: ${expiryDate.toDateString()}`);
     
+    // Filter to strikes within reasonable range of current price (+/- 30%)
+    const minStrike = currentPrice * 0.7;
+    const maxStrike = currentPrice * 1.3;
+    
+    const relevantCalls = calls.filter((c: any) => c.strike >= minStrike && c.strike <= maxStrike);
+    const relevantPuts = puts.filter((p: any) => p.strike >= minStrike && p.strike <= maxStrike);
+    
+    console.log(`Filtered to ${relevantCalls.length} calls and ${relevantPuts.length} puts near price $${currentPrice.toFixed(2)}`);
+    
     // Sort by open interest to find highest OI strikes
-    const sortedCalls = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-    const sortedPuts = [...puts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    const sortedCalls = [...relevantCalls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
+    const sortedPuts = [...relevantPuts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
     
     // Debug: Log top OI values
     console.log(`Top call OI for ${symbol}:`, sortedCalls.slice(0, 3).map((c: any) => `$${c.strike}: ${c.openInterest}`).join(', '));
     console.log(`Top put OI for ${symbol}:`, sortedPuts.slice(0, 3).map((p: any) => `$${p.strike}: ${p.openInterest}`).join(', '));
     
-    // Get top 3 calls and puts by OI
-    const topCalls = sortedCalls.slice(0, 3).map((c: any) => ({
+    // Get top 3 calls by OI (above current price for resistance)
+    const callsAbovePrice = sortedCalls.filter((c: any) => c.strike > currentPrice);
+    const topCalls = (callsAbovePrice.length >= 3 ? callsAbovePrice : sortedCalls).slice(0, 3).map((c: any) => ({
       strike: c.strike,
       openInterest: c.openInterest || 0,
       volume: c.volume || 0,
@@ -185,7 +195,9 @@ async function fetchOptionsData(symbol: string) {
       inTheMoney: c.inTheMoney || false
     }));
     
-    const topPuts = sortedPuts.slice(0, 3).map((p: any) => ({
+    // Get top 3 puts by OI (below current price for support)
+    const putsBelowPrice = sortedPuts.filter((p: any) => p.strike < currentPrice);
+    const topPuts = (putsBelowPrice.length >= 3 ? putsBelowPrice : sortedPuts).slice(0, 3).map((p: any) => ({
       strike: p.strike,
       openInterest: p.openInterest || 0,
       volume: p.volume || 0,
@@ -194,7 +206,7 @@ async function fetchOptionsData(symbol: string) {
       inTheMoney: p.inTheMoney || false
     }));
     
-    // Calculate total call and put OI
+    // Calculate total call and put OI (from all strikes, not just filtered)
     const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
     const totalPutOI = puts.reduce((sum: number, p: any) => sum + (p.openInterest || 0), 0);
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
@@ -205,7 +217,7 @@ async function fetchOptionsData(symbol: string) {
     const maxPain = calculateMaxPain(calls, puts, currentPrice);
     
     // Find key support/resistance levels from options
-    const keyLevels = findKeyOptionsLevels(calls, puts, currentPrice);
+    const keyLevels = findKeyOptionsLevels(relevantCalls, relevantPuts, currentPrice);
     
     return {
       expiryDate: expiryDate.toISOString().split('T')[0],
