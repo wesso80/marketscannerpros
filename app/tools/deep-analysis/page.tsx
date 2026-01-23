@@ -239,9 +239,9 @@ export default function DeepAnalysisPage() {
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem 1rem" }}>
         {/* Hero Header */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>🥚</div>
+          <div style={{ fontSize: "clamp(2.5rem, 8vw, 4rem)", marginBottom: "0.5rem" }}>🥚</div>
           <h1 style={{ 
-            fontSize: "2.5rem", 
+            fontSize: "clamp(1.5rem, 6vw, 2.5rem)", 
             fontWeight: "bold", 
             background: "linear-gradient(135deg, #F59E0B, #FBBF24, #F59E0B)",
             WebkitBackgroundClip: "text",
@@ -250,7 +250,7 @@ export default function DeepAnalysisPage() {
           }}>
             The Golden Egg
           </h1>
-          <p style={{ color: "#94A3B8", fontSize: "1.1rem" }}>
+          <p style={{ color: "#94A3B8", fontSize: "clamp(0.9rem, 3vw, 1.1rem)" }}>
             Complete market analysis • Any asset • One search
           </p>
         </div>
@@ -264,22 +264,22 @@ export default function DeepAnalysisPage() {
           marginBottom: "2rem",
           boxShadow: "0 8px 32px rgba(245,158,11,0.1)"
         }}>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <input
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyPress={(e) => e.key === "Enter" && handleAnalyze()}
-              placeholder="Enter any symbol: AAPL, BTC, EURUSD, GOLD..."
+              placeholder="Enter symbol: AAPL, BTC, EURUSD..."
               style={{
                 flex: 1,
-                minWidth: "250px",
-                padding: "1rem 1.5rem",
+                minWidth: "200px",
+                padding: "0.875rem 1.25rem",
                 borderRadius: "12px",
                 border: "2px solid rgba(245,158,11,0.3)",
                 background: "rgba(15,23,42,0.8)",
                 color: "#fff",
-                fontSize: "1.2rem",
+                fontSize: "1rem",
                 outline: "none"
               }}
             />
@@ -287,17 +287,18 @@ export default function DeepAnalysisPage() {
               onClick={handleAnalyze}
               disabled={loading}
               style={{
-                padding: "1rem 2.5rem",
+                padding: "0.875rem 1.5rem",
                 borderRadius: "12px",
                 border: "none",
                 background: loading ? "rgba(245,158,11,0.5)" : "linear-gradient(135deg, #F59E0B, #D97706)",
                 color: "#000",
-                fontSize: "1.1rem",
+                fontSize: "1rem",
                 fontWeight: "bold",
                 cursor: loading ? "wait" : "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem"
+                gap: "0.5rem",
+                flexShrink: 0
               }}
             >
               {loading ? (
@@ -366,12 +367,12 @@ export default function DeepAnalysisPage() {
               padding: "2rem",
               textAlign: "center"
             }}>
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "3rem" }}>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                <span style={{ fontSize: "clamp(2rem, 6vw, 3rem)" }}>
                   {result.assetType === 'crypto' ? '₿' : result.assetType === 'forex' ? '💱' : '📈'}
                 </span>
                 <div>
-                  <h2 style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#fff", margin: 0 }}>
+                  <h2 style={{ fontSize: "clamp(1.5rem, 6vw, 2.5rem)", fontWeight: "bold", color: "#fff", margin: 0 }}>
                     {result.symbol}
                   </h2>
                   <span style={{ 
@@ -386,10 +387,11 @@ export default function DeepAnalysisPage() {
               </div>
               
               <div style={{ 
-                fontSize: "3rem", 
+                fontSize: "clamp(1.8rem, 8vw, 3rem)", 
                 fontWeight: "bold", 
                 color: result.price.changePercent >= 0 ? "#10B981" : "#EF4444",
-                marginBottom: "0.5rem"
+                marginBottom: "0.5rem",
+                wordBreak: "break-word"
               }}>
                 ${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}
               </div>
@@ -412,12 +414,12 @@ export default function DeepAnalysisPage() {
               <div style={{ marginTop: "1.5rem" }}>
                 <div style={{
                   display: "inline-block",
-                  padding: "1rem 2rem",
+                  padding: "0.75rem 1.5rem",
                   borderRadius: "12px",
                   background: getSignalColor(result.signals.signal),
                   color: "#000",
                   fontWeight: "bold",
-                  fontSize: "1.5rem"
+                  fontSize: "clamp(1.1rem, 4vw, 1.5rem)"
                 }}>
                   {result.signals.signal}
                 </div>
@@ -438,7 +440,7 @@ export default function DeepAnalysisPage() {
                 <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>⚡</span>
                 Quick Summary
               </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "0.75rem" }}>
                 {/* Technical Stance */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
                   <span style={{ fontSize: "1.5rem" }}>📊</span>
@@ -535,7 +537,7 @@ export default function DeepAnalysisPage() {
             </div>
 
             {/* Two Column Layout */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))", gap: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "1.5rem" }}>
               
               {/* Technical Indicators */}
               {result.indicators && (
@@ -550,7 +552,7 @@ export default function DeepAnalysisPage() {
                     Technical Indicators
                   </h3>
                   
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(45%, 130px), 1fr))", gap: "0.75rem" }}>
                     {/* RSI */}
                     <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center" }}>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>RSI (14)</div>
@@ -745,7 +747,7 @@ export default function DeepAnalysisPage() {
                   </div>
                 )}
                 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(45%, 100px), 1fr))", gap: "0.75rem" }}>
                   {result.company && (
                     <>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
@@ -932,7 +934,7 @@ export default function DeepAnalysisPage() {
                 </div>
 
                 {/* Key Metrics Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(45%, 90px), 1fr))", gap: "0.5rem", marginBottom: "1rem" }}>
                   <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                     <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Put/Call Ratio</div>
                     <div style={{ 
@@ -960,7 +962,7 @@ export default function DeepAnalysisPage() {
                 {/* Highest OI Call & Put - The main info */}
                 <div style={{ 
                   display: "grid", 
-                  gridTemplateColumns: "1fr 1fr", 
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", 
                   gap: "1rem",
                   marginBottom: "1rem"
                 }}>
@@ -1014,8 +1016,8 @@ export default function DeepAnalysisPage() {
                     borderRadius: "10px", 
                     padding: "0.75rem",
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "1rem"
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: "0.75rem"
                   }}>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#10B981", marginBottom: "0.25rem", textTransform: "uppercase" }}>Support Levels</div>
@@ -1072,7 +1074,7 @@ export default function DeepAnalysisPage() {
                 {result.earnings.lastReportedEPS !== null && (
                   <div style={{ marginBottom: "1rem" }}>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Last Report</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.75rem" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(45%, 90px), 1fr))", gap: "0.5rem" }}>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Reported EPS</div>
                         <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: result.earnings.lastReportedEPS >= 0 ? "#10B981" : "#EF4444" }}>
@@ -1250,8 +1252,11 @@ export default function DeepAnalysisPage() {
             {/* Footer Meta */}
             <div style={{ 
               display: "flex", 
+              flexDirection: "row",
+              flexWrap: "wrap",
               justifyContent: "space-between", 
               alignItems: "center",
+              gap: "0.5rem",
               padding: "1rem",
               background: "rgba(30,41,59,0.3)",
               borderRadius: "8px",
