@@ -129,8 +129,8 @@ async function fetchOptionsData(symbol: string) {
     const ivRank = maxIV > minIV ? ((avgIV - minIV) / (maxIV - minIV)) * 100 : 50;
     
     // Calculate total volume and Volume/OI ratio for unusual activity detection
-    const totalCallVolume = formattedCalls.reduce((sum, c) => sum + c.volume, 0);
-    const totalPutVolume = formattedPuts.reduce((sum, p) => sum + p.volume, 0);
+    const totalCallVolume = formattedCalls.reduce((sum: number, c) => sum + c.volume, 0);
+    const totalPutVolume = formattedPuts.reduce((sum: number, p) => sum + p.volume, 0);
     const totalVolume = totalCallVolume + totalPutVolume;
     
     // Sort by OI to find highest
