@@ -99,17 +99,39 @@ async function fetchOptionsData(symbol: string) {
     
     console.log(`${symbol} - Using expiry: ${bestExpiry}, Calls: ${callsFiltered.length}, Puts: ${putsFiltered.length}`);
     
-    // Convert Alpha Vantage format to our internal format
+    // Convert Alpha Vantage format to our internal format (including Greeks)
     const formatOption = (opt: any) => ({
       strike: parseFloat(opt.strike),
       openInterest: parseInt(opt.open_interest || '0', 10),
       volume: parseInt(opt.volume || '0', 10),
       impliedVolatility: parseFloat(opt.implied_volatility || '0'),
-      lastPrice: parseFloat(opt.last_price || opt.mark || '0')
+      lastPrice: parseFloat(opt.last_price || opt.mark || '0'),
+      // Greeks from Alpha Vantage
+      delta: parseFloat(opt.delta || '0'),
+      gamma: parseFloat(opt.gamma || '0'),
+      theta: parseFloat(opt.theta || '0'),
+      vega: parseFloat(opt.vega || '0'),
+      rho: parseFloat(opt.rho || '0')
     });
     
     const formattedCalls = callsFiltered.map(formatOption);
     const formattedPuts = putsFiltered.map(formatOption);
+    
+    // Calculate IV statistics across all options
+    const allIVs = [...formattedCalls, ...formattedPuts]
+      .map(o => o.impliedVolatility)
+      .filter(iv => iv > 0 && iv < 5); // Filter reasonable IVs (0-500%)
+    
+    const avgIV = allIVs.length > 0 ? allIVs.reduce((a, b) => a + b, 0) / allIVs.length : 0;
+    const minIV = allIVs.length > 0 ? Math.min(...allIVs) : 0;
+    const maxIV = allIVs.length > 0 ? Math.max(...allIVs) : 0;
+    // IV Rank: where current IV sits in its range (simplified - ideally use 52-week data)
+    const ivRank = maxIV > minIV ? ((avgIV - minIV) / (maxIV - minIV)) * 100 : 50;
+    
+    // Calculate total volume and Volume/OI ratio for unusual activity detection
+    const totalCallVolume = formattedCalls.reduce((sum, c) => sum + c.volume, 0);
+    const totalPutVolume = formattedPuts.reduce((sum, p) => sum + p.volume, 0);
+    const totalVolume = totalCallVolume + totalPutVolume;
     
     // Sort by OI to find highest
     const callsByOI = [...formattedCalls].sort((a, b) => b.openInterest - a.openInterest);
@@ -124,9 +146,18 @@ async function fetchOptionsData(symbol: string) {
     // Calculate totals
     const totalCallOI = formattedCalls.reduce((sum, c) => sum + c.openInterest, 0);
     const totalPutOI = formattedPuts.reduce((sum, p) => sum + p.openInterest, 0);
+    const totalOI = totalCallOI + totalPutOI;
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
     
-    console.log(`${symbol} total OI - Calls: ${totalCallOI}, Puts: ${totalPutOI}, P/C: ${putCallRatio.toFixed(2)}`);
+    // Volume/OI ratio - values > 1 indicate unusual activity
+    const volumeOIRatio = totalOI > 0 ? totalVolume / totalOI : 0;
+    const callVolumeOIRatio = totalCallOI > 0 ? totalCallVolume / totalCallOI : 0;
+    const putVolumeOIRatio = totalPutOI > 0 ? totalPutVolume / totalPutOI : 0;
+    
+    // Detect unusual activity (Volume/OI > 0.5 is notable, > 1 is very unusual)
+    const unusualActivity = volumeOIRatio > 1 ? 'Very High' : volumeOIRatio > 0.5 ? 'Elevated' : 'Normal';
+    
+    console.log(`${symbol} total OI - Calls: ${totalCallOI}, Puts: ${totalPutOI}, P/C: ${putCallRatio.toFixed(2)}, Vol/OI: ${volumeOIRatio.toFixed(2)}`);
     
     // Calculate max pain
     const maxPain = calculateMaxPain(formattedCalls, formattedPuts, currentPrice);
@@ -144,9 +175,17 @@ async function fetchOptionsData(symbol: string) {
       highestOIPut,
       totalCallOI,
       totalPutOI,
+      totalVolume,
       putCallRatio,
       maxPain,
       keyLevels,
+      // New fields
+      avgIV: avgIV * 100, // Convert to percentage
+      ivRank,
+      volumeOIRatio,
+      callVolumeOIRatio,
+      putVolumeOIRatio,
+      unusualActivity,
       sentiment: putCallRatio > 1.2 ? 'Bearish' as const : putCallRatio < 0.8 ? 'Bullish' as const : 'Neutral' as const
     };
   } catch (err) {
@@ -385,15 +424,17 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
     } else {
       // Use Alpha Vantage for stocks - fetch in batches to avoid rate limits
       // Batch 1: Core indicators
-      const [rsiRes, macdRes, smaRes] = await Promise.all([
+      const [rsiRes, macdRes, smaRes, sma50Res] = await Promise.all([
         fetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
         fetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
-        fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`)
+        fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
+        fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`)
       ]);
       
       const rsiData = await rsiRes.json();
       const macdData = await macdRes.json();
       const smaData = await smaRes.json();
+      const sma50Data = await sma50Res.json();
       
       // Batch 2: Additional indicators (Bollinger Bands, ADX)
       const [bbandsRes, adxRes] = await Promise.all([
@@ -407,12 +448,14 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       const rsiValues = rsiData['Technical Analysis: RSI'];
       const macdValues = macdData['Technical Analysis: MACD'];
       const smaValues = smaData['Technical Analysis: SMA'];
+      const sma50Values = sma50Data['Technical Analysis: SMA'];
       const bbandsValues = bbandsData['Technical Analysis: BBANDS'];
       const adxValues = adxData['Technical Analysis: ADX'];
       
       const latestRsi = rsiValues ? parseFloat((Object.values(rsiValues)[0] as any)?.RSI) || null : null;
       const latestMacd = macdValues ? Object.values(macdValues)[0] as any : null;
       const latestSma = smaValues ? parseFloat((Object.values(smaValues)[0] as any)?.SMA) || null : null;
+      const latestSma50 = sma50Values ? parseFloat((Object.values(sma50Values)[0] as any)?.SMA) || null : null;
       const latestBbands = bbandsValues ? Object.values(bbandsValues)[0] as any : null;
       const latestAdx = adxValues ? parseFloat((Object.values(adxValues)[0] as any)?.ADX) || null : null;
       
@@ -422,6 +465,7 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
         macdSignal: latestMacd?.MACD_Signal ? parseFloat(latestMacd.MACD_Signal) : null,
         macdHist: latestMacd?.MACD_Hist ? parseFloat(latestMacd.MACD_Hist) : null,
         sma20: latestSma,
+        sma50: latestSma50,
         bbUpper: latestBbands?.['Real Upper Band'] ? parseFloat(latestBbands['Real Upper Band']) : null,
         bbMiddle: latestBbands?.['Real Middle Band'] ? parseFloat(latestBbands['Real Middle Band']) : null,
         bbLower: latestBbands?.['Real Lower Band'] ? parseFloat(latestBbands['Real Lower Band']) : null,
