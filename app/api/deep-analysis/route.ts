@@ -21,198 +21,123 @@ function getThisWeekFriday(): number {
   return Math.floor(friday.getTime() / 1000);
 }
 
-// Yahoo Finance crumb cache
-let yahooCrumb: string | null = null;
-let yahooCookies: string | null = null;
-let crumbExpiry = 0;
-
-// Get Yahoo crumb and cookies for authenticated API access
-async function getYahooCrumb(): Promise<{ crumb: string; cookies: string } | null> {
-  // Return cached crumb if still valid (cache for 1 hour)
-  if (yahooCrumb && yahooCookies && Date.now() < crumbExpiry) {
-    return { crumb: yahooCrumb, cookies: yahooCookies };
-  }
-  
-  try {
-    // Step 1: Hit Yahoo to get cookies
-    const initRes = await fetch('https://fc.yahoo.com', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      }
-    });
-    
-    // Extract cookies from response
-    const setCookies = initRes.headers.get('set-cookie') || '';
-    const cookies = setCookies.split(',').map(c => c.split(';')[0].trim()).filter(c => c).join('; ');
-    
-    // Step 2: Get crumb using cookies
-    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Cookie': cookies,
-      }
-    });
-    
-    if (!crumbRes.ok) {
-      console.log('Failed to get Yahoo crumb:', crumbRes.status);
-      return null;
-    }
-    
-    const crumb = await crumbRes.text();
-    
-    // Cache the crumb for 1 hour
-    yahooCrumb = crumb;
-    yahooCookies = cookies;
-    crumbExpiry = Date.now() + 3600000;
-    
-    console.log('Got Yahoo crumb successfully');
-    return { crumb, cookies };
-  } catch (err) {
-    console.error('Yahoo crumb fetch error:', err);
-    return null;
-  }
-}
-
-// Fetch options chain from Yahoo Finance
+// Fetch options chain from Alpha Vantage (legally compliant, already paid for)
 async function fetchOptionsData(symbol: string) {
   try {
-    // Get crumb for authenticated access
-    const auth = await getYahooCrumb();
-    if (!auth) {
-      console.log('Could not get Yahoo authentication');
+    // Get current price first for reference
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const quoteRes = await fetch(quoteUrl);
+    const quoteData = await quoteRes.json();
+    const currentPrice = parseFloat(quoteData['Global Quote']?.['05. price'] || '0');
+    
+    if (!currentPrice) {
+      console.log(`No price data for ${symbol}, skipping options`);
+      return null;
+    }
+
+    // Alpha Vantage REALTIME_OPTIONS endpoint with Greeks
+    const optionsUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    
+    const optionsRes = await fetch(optionsUrl);
+    
+    if (!optionsRes.ok) {
+      console.log('Alpha Vantage options fetch failed:', optionsRes.status);
       return null;
     }
     
-    // Use Yahoo Finance v7 options API with crumb
-    const baseUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?crumb=${encodeURIComponent(auth.crumb)}`;
+    const optionsData = await optionsRes.json();
     
-    const yahooHeaders = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/json',
-      'Cookie': auth.cookies,
-    };
-    
-    const baseRes = await fetch(baseUrl, { headers: yahooHeaders });
-    
-    if (!baseRes.ok) {
-      console.log('Options base fetch failed:', baseRes.status, await baseRes.text().catch(() => ''));
+    // Check for API errors
+    if (optionsData.Note || optionsData.Error || optionsData['Error Message']) {
+      console.log(`Alpha Vantage options error for ${symbol}:`, optionsData.Note || optionsData.Error || optionsData['Error Message']);
       return null;
     }
     
-    const baseData = await baseRes.json();
-    const baseChain = baseData.optionChain?.result?.[0];
+    const rawData = optionsData.data;
     
-    if (!baseChain) {
-      console.log('No option chain found for', symbol);
+    if (!rawData || rawData.length === 0) {
+      console.log(`No options data available for ${symbol}`);
       return null;
     }
     
-    // Get available expiry dates
-    const expirationDates: number[] = baseChain.expirationDates || [];
-    if (expirationDates.length === 0) {
-      console.log('No expiration dates available for', symbol);
+    console.log(`${symbol} - Retrieved ${rawData.length} option contracts from Alpha Vantage`);
+    
+    // Separate calls and puts
+    const calls = rawData.filter((opt: any) => opt.type === 'call');
+    const puts = rawData.filter((opt: any) => opt.type === 'put');
+    
+    if (calls.length === 0 && puts.length === 0) {
+      console.log(`${symbol} - No valid calls or puts found`);
       return null;
     }
     
-    // Find the expiry that's closest to this week's Friday
+    // Find the most common expiry date (weekly options closest to Friday)
+    const expiryMap: Record<string, number> = {};
+    rawData.forEach((opt: any) => {
+      if (opt.expiration) {
+        expiryMap[opt.expiration] = (expiryMap[opt.expiration] || 0) + 1;
+      }
+    });
+    
     const targetFriday = getThisWeekFriday();
-    let bestExpiry = expirationDates[0];
-    let minDiff = Math.abs(expirationDates[0] - targetFriday);
+    const targetDate = new Date(targetFriday * 1000).toISOString().split('T')[0];
     
-    for (const exp of expirationDates) {
-      const diff = Math.abs(exp - targetFriday);
-      // Only consider expiries within 7 days of target Friday
-      if (diff < minDiff && diff <= 7 * 24 * 60 * 60) {
-        minDiff = diff;
-        bestExpiry = exp;
+    // Use the date with most contracts, or closest to target Friday
+    let bestExpiry = Object.keys(expiryMap)[0];
+    let maxContracts = 0;
+    
+    for (const [expiry, count] of Object.entries(expiryMap)) {
+      if (count > maxContracts || (count === maxContracts && Math.abs(new Date(expiry).getTime() - new Date(targetDate).getTime()) < Math.abs(new Date(bestExpiry).getTime() - new Date(targetDate).getTime()))) {
+        bestExpiry = expiry;
+        maxContracts = count;
       }
     }
     
-    // If the best expiry is more than 7 days away, just use the nearest available
-    if (minDiff > 7 * 24 * 60 * 60) {
-      bestExpiry = expirationDates[0];
-    }
+    // Filter to use only the best expiry
+    const callsFiltered = calls.filter((c: any) => c.expiration === bestExpiry);
+    const putsFiltered = puts.filter((p: any) => p.expiration === bestExpiry);
     
-    const expiryDate = new Date(bestExpiry * 1000);
-    console.log(`${symbol} - Target Friday: ${new Date(targetFriday * 1000).toDateString()}, Using expiry: ${expiryDate.toDateString()}`);
+    console.log(`${symbol} - Using expiry: ${bestExpiry}, Calls: ${callsFiltered.length}, Puts: ${putsFiltered.length}`);
     
-    // If we need a different expiry than what was returned, fetch it
-    let options = baseChain.options?.[0];
-    const quote = baseChain.quote;
+    // Convert Alpha Vantage format to our internal format
+    const formatOption = (opt: any) => ({
+      strike: parseFloat(opt.strike),
+      openInterest: parseInt(opt.open_interest || '0', 10),
+      volume: parseInt(opt.volume || '0', 10),
+      impliedVolatility: parseFloat(opt.implied_volatility || '0'),
+      lastPrice: parseFloat(opt.last_price || opt.mark || '0')
+    });
     
-    if (baseChain.options?.[0]?.expirationDate !== bestExpiry) {
-      // Fetch the specific expiry with crumb
-      const expiryUrl = `https://query1.finance.yahoo.com/v7/finance/options/${symbol}?date=${bestExpiry}&crumb=${encodeURIComponent(auth.crumb)}`;
-      const expiryRes = await fetch(expiryUrl, { headers: yahooHeaders });
-      
-      if (expiryRes.ok) {
-        const expiryData = await expiryRes.json();
-        options = expiryData.optionChain?.result?.[0]?.options?.[0] || options;
-      }
-    }
+    const formattedCalls = callsFiltered.map(formatOption);
+    const formattedPuts = putsFiltered.map(formatOption);
     
-    if (!options) {
-      console.log('No options data in response for', symbol);
-      return null;
-    }
+    // Sort by OI to find highest
+    const callsByOI = [...formattedCalls].sort((a, b) => b.openInterest - a.openInterest);
+    const putsByOI = [...formattedPuts].sort((a, b) => b.openInterest - a.openInterest);
     
-    const calls = options.calls || [];
-    const puts = options.puts || [];
+    console.log(`${symbol} TOP 5 CALLS by OI:`, callsByOI.slice(0, 5).map(c => `$${c.strike}=${c.openInterest}`).join(', '));
+    console.log(`${symbol} TOP 5 PUTS by OI:`, putsByOI.slice(0, 5).map(p => `$${p.strike}=${p.openInterest}`).join(', '));
     
-    // Get current price from quote, or calculate from underlying price in options chain
-    let currentPrice = quote?.regularMarketPrice || baseChain.quote?.regularMarketPrice || 0;
+    const highestOICall = callsByOI.length > 0 && callsByOI[0].openInterest > 0 ? callsByOI[0] : null;
+    const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? putsByOI[0] : null;
     
-    // If no price from quote, estimate from ATM options
-    if (!currentPrice && calls.length > 0 && puts.length > 0) {
-      // Find where calls and puts cross (ATM strike)
-      const allStrikes = [...new Set([...calls.map((c: any) => c.strike), ...puts.map((p: any) => p.strike)])].sort((a, b) => a - b);
-      currentPrice = allStrikes[Math.floor(allStrikes.length / 2)] || 0;
-    }
-    
-    console.log(`${symbol} OPTIONS DEBUG - Price: $${currentPrice}, Calls: ${calls.length}, Puts: ${puts.length}`);
-    
-    // Log a few options with highest OI to see what data looks like
-    const callsByOI = [...calls].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-    const putsByOI = [...puts].sort((a: any, b: any) => (b.openInterest || 0) - (a.openInterest || 0));
-    
-    console.log(`${symbol} TOP 5 CALLS by OI (ALL strikes):`, callsByOI.slice(0, 5).map((c: any) => `$${c.strike}=${c.openInterest || 0}`).join(', '));
-    console.log(`${symbol} TOP 5 PUTS by OI (ALL strikes):`, putsByOI.slice(0, 5).map((p: any) => `$${p.strike}=${p.openInterest || 0}`).join(', '));
-    
-    // Find highest OI call and put from ALL options (not filtered)
-    // This ensures we get the actual highest OI regardless of strike position
-    const highestOICall = callsByOI.length > 0 && callsByOI[0].openInterest > 0 ? {
-      strike: callsByOI[0].strike,
-      openInterest: callsByOI[0].openInterest || 0,
-      volume: callsByOI[0].volume || 0,
-      impliedVolatility: callsByOI[0].impliedVolatility || 0,
-      lastPrice: callsByOI[0].lastPrice || 0
-    } : null;
-    
-    const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? {
-      strike: putsByOI[0].strike,
-      openInterest: putsByOI[0].openInterest || 0,
-      volume: putsByOI[0].volume || 0,
-      impliedVolatility: putsByOI[0].impliedVolatility || 0,
-      lastPrice: putsByOI[0].lastPrice || 0
-    } : null;
-    
-    console.log(`${symbol} SELECTED - Call: $${highestOICall?.strike} (${highestOICall?.openInterest} OI), Put: $${highestOIPut?.strike} (${highestOIPut?.openInterest} OI)`);
-    
-    // Calculate total call and put OI (from all strikes)
-    const totalCallOI = calls.reduce((sum: number, c: any) => sum + (c.openInterest || 0), 0);
-    const totalPutOI = puts.reduce((sum: number, p: any) => sum + (p.openInterest || 0), 0);
+    // Calculate totals
+    const totalCallOI = formattedCalls.reduce((sum, c) => sum + c.openInterest, 0);
+    const totalPutOI = formattedPuts.reduce((sum, p) => sum + p.openInterest, 0);
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
     
     console.log(`${symbol} total OI - Calls: ${totalCallOI}, Puts: ${totalPutOI}, P/C: ${putCallRatio.toFixed(2)}`);
     
-    // Calculate max pain (strike where most options expire worthless)
-    const maxPain = calculateMaxPain(calls, puts, currentPrice);
+    // Calculate max pain
+    const maxPain = calculateMaxPain(formattedCalls, formattedPuts, currentPrice);
     
-    // Find key support/resistance levels from all options
-    const keyLevels = findKeyOptionsLevels(calls, puts, currentPrice);
+    // Find key levels
+    const keyLevels = findKeyOptionsLevels(formattedCalls, formattedPuts, currentPrice);
+    
+    const expiryDate = new Date(bestExpiry);
     
     return {
-      expiryDate: expiryDate.toISOString().split('T')[0],
+      expiryDate: bestExpiry,
       expiryFormatted: expiryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
       currentPrice,
       highestOICall,
@@ -225,7 +150,7 @@ async function fetchOptionsData(symbol: string) {
       sentiment: putCallRatio > 1.2 ? 'Bearish' as const : putCallRatio < 0.8 ? 'Bullish' as const : 'Neutral' as const
     };
   } catch (err) {
-    console.error('Options fetch error:', err);
+    console.error('Alpha Vantage options fetch error:', err);
     return null;
   }
 }
