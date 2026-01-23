@@ -122,7 +122,7 @@ async function fetchOptionsData(symbol: string) {
       .map(o => o.impliedVolatility)
       .filter(iv => iv > 0 && iv < 5); // Filter reasonable IVs (0-500%)
     
-    const avgIV = allIVs.length > 0 ? allIVs.reduce((a, b) => a + b, 0) / allIVs.length : 0;
+    const avgIV = allIVs.length > 0 ? allIVs.reduce((a: number, b: number) => a + b, 0) / allIVs.length : 0;
     const minIV = allIVs.length > 0 ? Math.min(...allIVs) : 0;
     const maxIV = allIVs.length > 0 ? Math.max(...allIVs) : 0;
     // IV Rank: where current IV sits in its range (simplified - ideally use 52-week data)
@@ -144,8 +144,8 @@ async function fetchOptionsData(symbol: string) {
     const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? putsByOI[0] : null;
     
     // Calculate totals
-    const totalCallOI = formattedCalls.reduce((sum, c) => sum + c.openInterest, 0);
-    const totalPutOI = formattedPuts.reduce((sum, p) => sum + p.openInterest, 0);
+    const totalCallOI = formattedCalls.reduce((sum: number, c: { openInterest: number }) => sum + c.openInterest, 0);
+    const totalPutOI = formattedPuts.reduce((sum: number, p: { openInterest: number }) => sum + p.openInterest, 0);
     const totalOI = totalCallOI + totalPutOI;
     const putCallRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
     
@@ -857,7 +857,7 @@ function buildAnalysisPrompt(data: any): string {
 // Helper functions for technical indicators
 function calculateEMA(data: number[], period: number): number {
   const k = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  let ema = data.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
   for (let i = period; i < data.length; i++) {
     ema = data[i] * k + ema * (1 - k);
   }
@@ -900,7 +900,7 @@ function calculateATR(highs: number[], lows: number[], closes: number[], period:
     );
     trs.push(tr);
   }
-  return trs.slice(-period).reduce((a, b) => a + b, 0) / period;
+  return trs.slice(-period).reduce((a: number, b: number) => a + b, 0) / period;
 }
 
 // Generate trading signals
