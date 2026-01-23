@@ -294,8 +294,27 @@ function findKeyOptionsLevels(calls: any[], puts: any[], currentPrice: number): 
 function detectAssetType(symbol: string): 'crypto' | 'forex' | 'commodity' | 'stock' {
   const s = symbol.toUpperCase();
   
-  // Crypto patterns
-  const cryptoSymbols = ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'MATIC', 'LINK', 'AVAX', 'SHIB', 'LTC', 'UNI', 'ATOM', 'XLM', 'ALGO', 'VET', 'FIL', 'AAVE', 'EOS', 'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX', 'YFI', 'SUSHI', 'CRV', 'BAT', 'ZRX', 'ENJ', 'MANA', 'SAND', 'AXS', 'GALA', 'APE', 'GMT', 'OP', 'ARB', 'SUI', 'SEI', 'TIA', 'JUP', 'WIF', 'PEPE', 'BONK', 'FLOKI'];
+  // Comprehensive crypto list - top 150+ by market cap on major exchanges
+  const cryptoSymbols = [
+    // Top 50
+    'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'TRX', 'AVAX', 'LINK', 'DOT',
+    'MATIC', 'SHIB', 'LTC', 'BCH', 'NEAR', 'UNI', 'ATOM', 'XLM', 'ICP', 'HBAR',
+    'FIL', 'VET', 'IMX', 'APT', 'GRT', 'INJ', 'OP', 'THETA', 'FTM', 'RUNE',
+    'LDO', 'ALGO', 'XMR', 'AAVE', 'MKR', 'STX', 'EGLD', 'FLOW', 'AXS', 'SAND',
+    'EOS', 'XTZ', 'NEO', 'KAVA', 'CFX', 'MINA', 'SNX', 'CRV', 'DYDX', 'BLUR',
+    // 51-100
+    'AR', 'SUI', 'SEI', 'TIA', 'JUP', 'WIF', 'PEPE', 'BONK', 'FLOKI', 'MEME',
+    'ORDI', 'SATS', '1000SATS', 'PYTH', 'STRK', 'WLD', 'FET', 'RNDR', 'AGIX', 'OCEAN',
+    'TAO', 'ROSE', 'ZIL', 'IOTA', 'ZEC', 'DASH', 'BAT', 'ZRX', 'ENJ', 'MANA',
+    'GALA', 'APE', 'GMT', 'ARB', 'MAGIC', 'GMX', 'COMP', 'YFI', 'SUSHI', '1INCH',
+    'LRC', 'MASK', 'SKL', 'ENS', 'ANKR', 'STORJ', 'CELO', 'CHZ', 'HOT', 'ONE',
+    // 101-150+
+    'QTUM', 'ZEN', 'IOST', 'ICX', 'ONT', 'RVN', 'WAVES', 'AUDIO', 'BAND', 'CELR',
+    'CTSI', 'DENT', 'DGB', 'FLUX', 'GLMR', 'JASMY', 'JOE', 'KDA', 'KSM', 'LINA',
+    'LOOM', 'MTL', 'NKN', 'NTRN', 'OGN', 'OMG', 'PAXG', 'PEOPLE', 'PERP', 'POLS',
+    'POND', 'QNT', 'REEF', 'RSR', 'RLC', 'SC', 'SFP', 'SLP', 'SNT', 'SXP',
+    'T', 'TWT', 'UMA', 'UNFI', 'VGX', 'VOXEL', 'WIN', 'WOO', 'XEC', 'XEM', 'XVS', 'YGG'
+  ];
   if (cryptoSymbols.includes(s) || s.endsWith('USDT') || s.endsWith('USD') && cryptoSymbols.some(c => s.startsWith(c))) {
     return 'crypto';
   }
