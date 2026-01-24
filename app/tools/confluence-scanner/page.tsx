@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 interface Mid50Level {
   tf: string;
@@ -53,11 +55,37 @@ interface FullForecast {
 }
 
 export default function AIConfluenceScanner() {
+  const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [forecast, setForecast] = useState<FullForecast | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'forecast' | 'learn' | 'quick'>('forecast');
+
+  // Pro Trader feature gate
+  if (!canAccessBacktest(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
+          <span style={{ 
+            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", 
+            padding: "4px 12px", 
+            borderRadius: "999px", 
+            fontSize: "11px", 
+            fontWeight: "600",
+            color: "#fff"
+          }}>PRO TRADER</span>
+          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
+            🔮 AI Confluence Scanner
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Full History Learning + Decompression Timing Analysis</p>
+        </header>
+        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
+          <UpgradeGate requiredTier="pro_trader" feature="AI Confluence Scanner" />
+        </main>
+      </div>
+    );
+  }
 
   const handleScan = async () => {
     if (!symbol.trim()) {

@@ -10,7 +10,7 @@ interface UpgradeGateProps {
 
 export default function UpgradeGate({ requiredTier, feature, children }: UpgradeGateProps) {
   const tierName = requiredTier === "pro_trader" ? "Pro Trader" : "Pro";
-  const price = requiredTier === "pro_trader" ? "$14.99" : "$7.49";
+  const price = requiredTier === "pro_trader" ? "$19.99" : "$9.99";
   
   return (
     <div style={{

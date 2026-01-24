@@ -26,6 +26,18 @@ const assetColors: Record<string, { bg: string; border: string; accent: string }
   Commodity: { bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.3)', accent: '#34d399' },
 };
 
+function getRelativeDate(dateStr: string): { text: string; isStale: boolean } {
+  const pickDate = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((today.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return { text: 'Today', isStale: false };
+  if (diffDays === 1) return { text: 'Yesterday', isStale: false };
+  if (diffDays <= 7) return { text: `${diffDays} days ago`, isStale: true };
+  return { text: dateStr, isStale: true };
+}
+
 export default function DailyAIMarketFocus() {
   const [data, setData] = useState<MarketFocusData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +115,8 @@ export default function DailyAIMarketFocus() {
 
   if (!data || !data.picks) return null;
 
+  const dateInfo = getRelativeDate(data.date);
+
   return (
     <section style={{
       background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
@@ -117,10 +131,22 @@ export default function DailyAIMarketFocus() {
           <h2 style={{ color: '#a78bfa', fontSize: 26, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
             <span>🎯</span> Today's AI Market Focus
           </h2>
-          <p style={{ color: '#64748b', fontSize: 13, margin: '6px 0 0 0' }}>
-            Generated: {data.date} • AI-curated picks across asset classes
+          <p style={{ color: dateInfo.isStale ? '#f59e0b' : '#64748b', fontSize: 13, margin: '6px 0 0 0' }}>
+            {dateInfo.isStale ? `⚠️ Generated ${dateInfo.text}` : `Generated: ${dateInfo.text}`} • AI-curated picks across asset classes
           </p>
         </div>
+        {dateInfo.isStale && data.status !== 'empty' && (
+          <span style={{
+            padding: '6px 14px',
+            background: 'rgba(245, 158, 11, 0.15)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            borderRadius: 20,
+            fontSize: 12,
+            color: '#fbbf24',
+          }}>
+            Needs Refresh
+          </span>
+        )}
         {data.status === 'empty' && (
           <span style={{
             padding: '6px 14px',
