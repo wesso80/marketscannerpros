@@ -11,6 +11,7 @@ interface HierarchicalResult {
   modeLabel: string;
   primaryTF: string;
   currentPrice: number;
+  isLivePrice: boolean;
   includedTFs: string[];
   decompression: {
     decompressions: { tf: string; isDecompressing: boolean; minsToClose: number; mid50Level: number; pullDirection: string; pullStrength: number; distanceToMid50: number }[];
@@ -360,8 +361,20 @@ export default function AIConfluenceScanner() {
                       {hierarchicalResult.modeLabel}
                     </span>
                   </div>
-                  <div style={{ color: '#94A3B8' }}>
-                    Current: ${hierarchicalResult.currentPrice.toFixed(2)} • Primary TF: {hierarchicalResult.primaryTF}
+                  <div style={{ color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      background: hierarchicalResult.isLivePrice ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      color: hierarchicalResult.isLivePrice ? '#10B981' : '#F59E0B',
+                    }}>
+                      {hierarchicalResult.isLivePrice ? '🟢 LIVE' : '⏱️ Delayed'}
+                    </span>
+                    ${hierarchicalResult.currentPrice.toFixed(2)} • Primary TF: {hierarchicalResult.primaryTF}
                   </div>
                   <div style={{ color: '#64748B', fontSize: '0.85rem', marginTop: '0.25rem' }}>
                     Scanning: {hierarchicalResult.includedTFs.join(', ')}

@@ -275,6 +275,7 @@ export interface HierarchicalScanResult {
   modeLabel: string;
   primaryTF: string;
   currentPrice: number;
+  isLivePrice: boolean;  // True if fetched from real-time quote, false if from last bar
   
   // All TFs included in this scan
   includedTFs: string[];
@@ -337,6 +338,39 @@ export class ConfluenceLearningAgent {
   // ═══════════════════════════════════════════════════════════════════════════
   // DATA FETCHING
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Fetch LIVE real-time price using GLOBAL_QUOTE or Crypto Exchange Rate
+   */
+  async fetchLivePrice(symbol: string): Promise<number | null> {
+    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    
+    try {
+      if (isCrypto) {
+        const base = symbol.replace('USD', '').replace('USDT', '');
+        const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${base}&to_currency=USD&apikey=${ALPHA_VANTAGE_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data['Realtime Currency Exchange Rate']) {
+          const rate = data['Realtime Currency Exchange Rate']['5. Exchange Rate'];
+          return parseFloat(rate);
+        }
+      } else {
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data['Global Quote'] && data['Global Quote']['05. price']) {
+          return parseFloat(data['Global Quote']['05. price']);
+        }
+      }
+    } catch (err) {
+      console.warn('Live price fetch failed:', err);
+    }
+    
+    return null;
+  }
 
   async fetchHistoricalData(symbol: string, interval: string = '30min'): Promise<OHLCV[]> {
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
@@ -651,15 +685,20 @@ export class ConfluenceLearningAgent {
     const modeConfig = SCAN_MODES.find(m => m.mode === scanMode);
     if (!modeConfig) throw new Error(`Unknown scan mode: ${scanMode}`);
     
-    // Get price data
+    // Get historical price data for analysis
     const baseBars = await this.fetchHistoricalData(symbol, '30min');
     if (!baseBars || baseBars.length === 0) {
       throw new Error(`No price data for ${symbol}`);
     }
     
-    const currentPrice = baseBars[baseBars.length - 1].close;
+    // Fetch LIVE real-time price (fallback to last bar close if unavailable)
+    const livePrice = await this.fetchLivePrice(symbol);
+    const currentPrice = livePrice ?? baseBars[baseBars.length - 1].close;
+    const isLivePrice = livePrice !== null;
     const currentTime = Date.now();
     const atr = this.calculateATR(baseBars);
+    
+    console.log(`📊 ${symbol} Live Price: $${currentPrice.toFixed(2)} ${isLivePrice ? '(real-time)' : '(from last bar)'}`);
     
     // Filter TFs to only those <= maxTFMinutes for this scan mode
     const includedTFConfigs = TIMEFRAMES.filter(tf => tf.minutes <= modeConfig.maxTFMinutes);
@@ -828,6 +867,7 @@ export class ConfluenceLearningAgent {
       modeLabel: modeConfig.label,
       primaryTF: modeConfig.primaryTF,
       currentPrice,
+      isLivePrice,
       includedTFs,
       decompression,
       mid50Levels,
