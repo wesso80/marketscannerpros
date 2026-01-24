@@ -30,6 +30,10 @@ export async function GET(req: NextRequest) {
       deleteRequests,
       recentSignups,
       topAiUsers,
+      // Learning Machine stats
+      learningStats,
+      recentPredictions,
+      learningTotals,
     ] = await Promise.all([
       // Total users (from user_subscriptions)
       safeQuery(() => q(`SELECT COUNT(*) as count FROM user_subscriptions`)),
@@ -66,6 +70,25 @@ export async function GET(req: NextRequest) {
           WHERE DATE(created_at AT TIME ZONE 'Australia/Sydney') = (NOW() AT TIME ZONE 'Australia/Sydney')::date
           GROUP BY workspace_id, tier
           ORDER BY questions DESC LIMIT 10`)),
+
+      // Learning Machine: per-symbol stats
+      safeQuery(() => q(`SELECT symbol, total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins, last_updated
+          FROM learning_stats ORDER BY total_predictions DESC LIMIT 20`)),
+
+      // Learning Machine: recent predictions with outcomes
+      safeQuery(() => q(`SELECT p.symbol, p.prediction_direction, p.confidence, p.current_price, p.created_at, p.status,
+          o.move_pct, o.hit_target, o.hit_stop, o.direction as outcome_direction
+          FROM learning_predictions p
+          LEFT JOIN learning_outcomes o ON o.prediction_id = p.id
+          ORDER BY p.created_at DESC LIMIT 30`)),
+
+      // Learning Machine: totals
+      safeQuery(() => q(`SELECT 
+          (SELECT COUNT(*) FROM learning_predictions) as total_predictions,
+          (SELECT COUNT(*) FROM learning_predictions WHERE status = 'pending') as pending,
+          (SELECT COUNT(*) FROM learning_predictions WHERE status = 'processed') as processed,
+          (SELECT COUNT(*) FROM learning_outcomes WHERE hit_target = true) as wins,
+          (SELECT COUNT(*) FROM learning_outcomes WHERE hit_stop = true) as stops`)),
     ]);
 
     return NextResponse.json({
@@ -85,6 +108,11 @@ export async function GET(req: NextRequest) {
       },
       signups: {
         last7Days: recentSignups || [],
+      },
+      learning: {
+        totals: learningTotals[0] || { total_predictions: 0, pending: 0, processed: 0, wins: 0, stops: 0 },
+        stats: learningStats || [],
+        recentPredictions: recentPredictions || [],
       },
     });
   } catch (error: any) {

@@ -17,6 +17,11 @@ interface Stats {
   signups: {
     last7Days: { date: string; count: number }[];
   };
+  learning: {
+    totals: { total_predictions: number; pending: number; processed: number; wins: number; stops: number };
+    stats: { symbol: string; total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number; last_updated: string }[];
+    recentPredictions: { symbol: string; prediction_direction: string; confidence: number; current_price: number; created_at: string; status: string; move_pct: number | null; hit_target: boolean | null; hit_stop: boolean | null; outcome_direction: string | null }[];
+  };
 }
 
 export default function AdminOverviewPage() {
@@ -337,6 +342,148 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           ) : (
             <p style={{ color: "#6B7280" }}>No AI usage today</p>
           )}
+        </div>
+      </div>
+
+      {/* Learning Machine Section */}
+      <div style={{ marginTop: "2rem" }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1rem" }}>
+          🧠 Learning Machine Data
+        </h2>
+
+        {/* Learning Totals */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div style={statBoxStyle}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#A855F7" }}>
+              {stats?.learning?.totals?.total_predictions || 0}
+            </div>
+            <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Total Predictions</div>
+          </div>
+          <div style={statBoxStyle}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#FBBF24" }}>
+              {stats?.learning?.totals?.pending || 0}
+            </div>
+            <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Pending</div>
+          </div>
+          <div style={statBoxStyle}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#10B981" }}>
+              {stats?.learning?.totals?.processed || 0}
+            </div>
+            <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Processed</div>
+          </div>
+          <div style={statBoxStyle}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#22C55E" }}>
+              {stats?.learning?.totals?.wins || 0}
+            </div>
+            <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Wins (Hit Target)</div>
+          </div>
+          <div style={statBoxStyle}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#EF4444" }}>
+              {stats?.learning?.totals?.stops || 0}
+            </div>
+            <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Stops (Hit Stop)</div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          {/* Per-Symbol Stats */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+              📊 Symbol Win Rates
+            </h3>
+            {stats?.learning?.stats?.length ? (
+              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                <table style={{ width: "100%", fontSize: "0.85rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <th style={{ textAlign: "left", padding: "0.5rem", color: "#9CA3AF" }}>Symbol</th>
+                      <th style={{ textAlign: "right", padding: "0.5rem", color: "#9CA3AF" }}>Predictions</th>
+                      <th style={{ textAlign: "right", padding: "0.5rem", color: "#9CA3AF" }}>Win Rate</th>
+                      <th style={{ textAlign: "right", padding: "0.5rem", color: "#9CA3AF" }}>Avg Move</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.learning.stats.map((s) => (
+                      <tr key={s.symbol} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <td style={{ padding: "0.5rem", color: "#E5E7EB", fontWeight: 600 }}>{s.symbol}</td>
+                        <td style={{ padding: "0.5rem", textAlign: "right", color: "#9CA3AF" }}>{s.total_predictions}</td>
+                        <td style={{ 
+                          padding: "0.5rem", 
+                          textAlign: "right", 
+                          color: Number(s.win_rate) >= 50 ? "#10B981" : "#EF4444",
+                          fontWeight: 600
+                        }}>
+                          {Number(s.win_rate).toFixed(1)}%
+                        </td>
+                        <td style={{ padding: "0.5rem", textAlign: "right", color: "#3B82F6" }}>
+                          {Number(s.avg_move_pct).toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ color: "#6B7280" }}>No learning data yet. Run the migration first.</p>
+            )}
+          </div>
+
+          {/* Recent Predictions */}
+          <div style={cardStyle}>
+            <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+              🔮 Recent Predictions
+            </h3>
+            {stats?.learning?.recentPredictions?.length ? (
+              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                <table style={{ width: "100%", fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                      <th style={{ textAlign: "left", padding: "0.4rem", color: "#9CA3AF" }}>Symbol</th>
+                      <th style={{ textAlign: "center", padding: "0.4rem", color: "#9CA3AF" }}>Direction</th>
+                      <th style={{ textAlign: "right", padding: "0.4rem", color: "#9CA3AF" }}>Conf</th>
+                      <th style={{ textAlign: "center", padding: "0.4rem", color: "#9CA3AF" }}>Outcome</th>
+                      <th style={{ textAlign: "right", padding: "0.4rem", color: "#9CA3AF" }}>Move</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.learning.recentPredictions.map((p, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <td style={{ padding: "0.4rem", color: "#E5E7EB", fontWeight: 500 }}>{p.symbol}</td>
+                        <td style={{ 
+                          padding: "0.4rem", 
+                          textAlign: "center",
+                          color: p.prediction_direction === "bullish" ? "#10B981" : p.prediction_direction === "bearish" ? "#EF4444" : "#9CA3AF"
+                        }}>
+                          {p.prediction_direction === "bullish" ? "🟢" : p.prediction_direction === "bearish" ? "🔴" : "⚪"}
+                        </td>
+                        <td style={{ padding: "0.4rem", textAlign: "right", color: "#FBBF24" }}>{p.confidence}%</td>
+                        <td style={{ padding: "0.4rem", textAlign: "center" }}>
+                          {p.status === "pending" ? (
+                            <span style={{ color: "#FBBF24" }}>⏳</span>
+                          ) : p.hit_target ? (
+                            <span style={{ color: "#10B981" }}>✅</span>
+                          ) : p.hit_stop ? (
+                            <span style={{ color: "#EF4444" }}>❌</span>
+                          ) : (
+                            <span style={{ color: "#9CA3AF" }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ 
+                          padding: "0.4rem", 
+                          textAlign: "right",
+                          color: p.move_pct ? (Number(p.move_pct) >= 0 ? "#10B981" : "#EF4444") : "#6B7280"
+                        }}>
+                          {p.move_pct ? `${Number(p.move_pct) >= 0 ? "+" : ""}${Number(p.move_pct).toFixed(2)}%` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p style={{ color: "#6B7280" }}>No predictions yet. Run the migration first.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
