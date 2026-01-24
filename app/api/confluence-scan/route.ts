@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { confluenceLearningAgent } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
+import { q } from '@/lib/db';
 
 export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
@@ -105,6 +106,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         // Legacy: Full AI-powered forecast (old agent)
         result = await confluenceAgent.scan(normalizedSymbol);
         break;
+    }
+
+    // Log prediction for learning machine (forecast only)
+    if (process.env.DATABASE_URL && mode === 'forecast' && result?.prediction && result?.currentState) {
+      try {
+        await q(
+          `INSERT INTO learning_predictions (
+            symbol, asset_type, mode, current_price,
+            prediction_direction, confidence, expected_decomp_mins,
+            target_price, stop_loss,
+            stack, active_tfs, hot_zone, hot_zone_tfs, clusters, mid50_levels
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+          [
+            normalizedSymbol,
+            normalizedSymbol.includes('USD') ? 'crypto' : 'stock',
+            mode,
+            result.currentPrice || 0,
+            result.prediction.direction || 'neutral',
+            Math.round(result.prediction.confidence || 0),
+            Math.round(result.prediction.expectedDecompMins || 0),
+            result.prediction.targetPrice || null,
+            result.prediction.stopLoss || null,
+            result.currentState.stack || 0,
+            JSON.stringify(result.currentState.activeTFs || []),
+            !!result.currentState.isHotZone,
+            JSON.stringify(result.currentState.hotZoneTFs || []),
+            result.currentState.clusters || 0,
+            JSON.stringify(result.currentState.mid50Levels || [])
+          ]
+        );
+      } catch (dbErr) {
+        console.error('Learning prediction log failed:', dbErr);
+      }
     }
 
     // Cache the result

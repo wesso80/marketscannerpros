@@ -53,7 +53,6 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 5,
 };
-import { APP_URL } from 'lib/appUrl';
 import AppUrlFixer from "@/components/AppUrlFixer";
 
 export default function RootLayout({

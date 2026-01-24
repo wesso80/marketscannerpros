@@ -77,6 +77,25 @@ export default function AdminOverviewPage() {
         📊 Dashboard Overview
       </h1>
 
+      {/* Learning Machine Migration */}
+      <div style={{
+        background: "rgba(15, 23, 42, 0.8)",
+        border: "1px solid rgba(59, 130, 246, 0.3)",
+        borderRadius: "1rem",
+        padding: "1.25rem",
+        marginBottom: "1.5rem"
+      }}>
+        <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
+          🧠 Learning Machine — Neon Migration
+        </h2>
+        <p style={{ color: "#9CA3AF", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
+          Run the SQL below in your Neon PostgreSQL console to enable prediction logging + learning outcomes.
+        </p>
+        <p style={{ color: "#93C5FD", fontSize: "0.9rem" }}>
+          Migration file: [migrations/015_learning_machine.sql](migrations/015_learning_machine.sql)
+        </p>
+      </div>
+
       {/* Key metrics */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         <div style={statBoxStyle}>

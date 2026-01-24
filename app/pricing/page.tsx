@@ -78,9 +78,9 @@ export default function PricingPage() {
   const proTraderFeatures = [
     { text: "Everything in Pro", highlight: false },
     { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
-    { text: "� AI + Derivatives Intelligence", highlight: true },
     { text: "🧠 Smart Alerts (AI-triggered)", highlight: true },
-    { text: "�📈 Full backtesting engine", highlight: false },
+    { text: "🤖 AI + Derivatives Intelligence", highlight: true },
+    { text: "📈 Full backtesting engine", highlight: false },
     { text: "Real Alpha Vantage market data", highlight: false },
     { text: "TradingView script access", highlight: false },
     { text: "Advanced strategy testing", highlight: false },
@@ -153,6 +153,20 @@ export default function PricingPage() {
           <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 450, margin: '0 auto' }}>
             Start free. Upgrade when you're ready for advanced features.
           </p>
+        </div>
+
+        {/* Live Alerts Callout */}
+        <div style={{
+          background: 'rgba(34,197,94,0.08)',
+          border: '1px solid rgba(34,197,94,0.3)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          color: '#A7F3D0',
+          fontSize: 14,
+          textAlign: 'center',
+          marginBottom: 28
+        }}>
+          🔔 Live Alerts + Learning Engine are included in Pro Trader for real-time signal improvements.
         </div>
 
         {/* Pricing Cards */}

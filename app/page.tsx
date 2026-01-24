@@ -221,6 +221,39 @@ export default function Home() {
 
       </section>
 
+      {/* How It Works Stepper */}
+      <section style={{
+        width: '100%',
+        background: 'linear-gradient(180deg, #0b1220 0%, #0f172a 100%)',
+        color: '#f9fafb',
+        borderBottom: '1px solid #1f2933',
+        padding: '40px 0'
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>How It Works</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14 }}>Scan → Explain → Act with confidence</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 1</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Scan</div>
+              <div style={{ color: '#cbd5e1', fontSize: 14 }}>Multi‑timeframe sweeps find active confluence windows.</div>
+            </div>
+            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 2</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Explain</div>
+              <div style={{ color: '#cbd5e1', fontSize: 14 }}>AI Analyst translates signals into clear market context.</div>
+            </div>
+            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 3</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Act</div>
+              <div style={{ color: '#cbd5e1', fontSize: 14 }}>Targets, timing, and alerts help you plan the trade.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 🚀 WOW FACTOR #2 - Try Before Signup Interactive Demo */}
       <InstantDemo />
 

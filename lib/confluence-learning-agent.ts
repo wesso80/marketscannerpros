@@ -10,6 +10,7 @@
  */
 
 import OpenAI from 'openai';
+import { q } from '@/lib/db';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -193,6 +194,25 @@ export class ConfluenceLearningAgent {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
+  }
+
+  private async getLearningStats(symbol: string): Promise<{
+    total_predictions: number;
+    win_rate: number;
+    avg_move_pct: number;
+    avg_time_to_move_mins: number;
+  } | null> {
+    if (!process.env.DATABASE_URL) return null;
+    try {
+      const rows = await q<{ total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number }>(
+        'SELECT total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins FROM learning_stats WHERE symbol = $1',
+        [symbol]
+      );
+      return rows[0] || null;
+    } catch (err) {
+      console.warn('Learning stats fetch failed:', err);
+      return null;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -811,7 +831,7 @@ export class ConfluenceLearningAgent {
     }
     
     // Build prediction using learned patterns
-    const prediction = this.buildPrediction(learning, {
+    let prediction = this.buildPrediction(learning, {
       stack,
       isHotZone,
       clusters,
@@ -819,6 +839,17 @@ export class ConfluenceLearningAgent {
       currentPrice,
       atr,
     });
+
+    // Apply live learning stats if available
+    const liveStats = await this.getLearningStats(symbol);
+    if (liveStats) {
+      const blendedConfidence = Math.round((prediction.confidence + liveStats.win_rate) / 2);
+      prediction = {
+        ...prediction,
+        confidence: Math.min(90, Math.max(10, blendedConfidence)),
+        expectedDecompMins: Math.round(Math.max(1, liveStats.avg_time_to_move_mins || prediction.expectedDecompMins)),
+      };
+    }
     
     // Get AI analysis
     const aiAnalysis = await this.getAIAnalysis(symbol, learning, {
@@ -853,11 +884,11 @@ export class ConfluenceLearningAgent {
       prediction,
       historical: {
         similarEvents: learning.totalEvents,
-        winRate: prediction.direction === 'bullish' 
+        winRate: liveStats?.win_rate ?? (prediction.direction === 'bullish' 
           ? (learning.stackOutcomes.get(stack)?.upPct || 50)
-          : (learning.stackOutcomes.get(stack)?.downPct || 50),
-        avgMoveAfterSimilar: Math.abs(learning.stackOutcomes.get(stack)?.avgMagnitude || 0.5),
-        avgDecompMins: Math.round(Math.abs(learning.tfDecompressionStats.get('60')?.avgDecompMins || 30)),
+          : (learning.stackOutcomes.get(stack)?.downPct || 50)),
+        avgMoveAfterSimilar: liveStats?.avg_move_pct ?? Math.abs(learning.stackOutcomes.get(stack)?.avgMagnitude || 0.5),
+        avgDecompMins: liveStats?.avg_time_to_move_mins ?? Math.round(Math.abs(learning.tfDecompressionStats.get('60')?.avgDecompMins || 30)),
         typicalMid50Reaction: this.getTypicalMid50Reaction(learning),
       },
       aiAnalysis,
