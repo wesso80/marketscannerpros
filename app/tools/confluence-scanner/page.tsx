@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
 
 interface Mid50Level {
   tf: string;
@@ -419,6 +420,17 @@ export default function AIConfluenceScanner() {
               {s}
             </button>
           ))}
+        </div>
+
+        {/* 🔮 Time Confluence Engine - Elite Feature */}
+        <div style={{ marginBottom: '2rem' }}>
+          <TimeConfluenceWidget 
+            showMacro={true}
+            showMicro={true}
+            showTWAP={true}
+            showCalendar={true}
+            compact={false}
+          />
         </div>
 
         {/* Error Display */}

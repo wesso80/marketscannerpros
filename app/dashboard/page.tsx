@@ -7,6 +7,7 @@ import PortalButton from '@/components/PortalButton';
 import DashboardInner from './DashboardInner';
 import DailyAIMarketFocus from '@/components/DailyAIMarketFocus';
 import FearGreedHistory from '@/components/FearGreedHistory';
+import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,11 @@ export default function DashboardPage(){
         <SessionBadge/>
       </div>
       <Suspense fallback={null}><DashboardInner/></Suspense>
+      
+      {/* Time Confluence Quick Status */}
+      <div className="my-4">
+        <TimeConfluenceWidget compact={true} />
+      </div>
       
       {/* Fear & Greed Historical Chart */}
       <div className="my-6 max-w-2xl">
