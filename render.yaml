@@ -82,3 +82,18 @@ services:
           property: url
       - key: CRON_SECRET
         sync: false
+
+  - type: cron
+    name: learning-outcomes
+    runtime: node
+    schedule: "*/15 * * * *"  # Every 15 minutes - process learning machine predictions
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/jobs/learning-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          name: marketscannerpros
+          type: web
+          property: url
+      - key: CRON_SECRET
+        sync: false

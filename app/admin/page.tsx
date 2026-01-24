@@ -28,6 +28,8 @@ export default function AdminOverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [processingLearning, setProcessingLearning] = useState(false);
+  const [learningResult, setLearningResult] = useState<{ ok: boolean; processed: number; errors: string[] } | null>(null);
 
   const learningMigrationSql = `-- Learning Machine tables
 -- Run this migration in your Neon PostgreSQL console
@@ -116,6 +118,22 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
       setError("Network error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processLearningOutcomes = async () => {
+    setProcessingLearning(true);
+    setLearningResult(null);
+    try {
+      const res = await fetch("/api/jobs/learning-outcomes", { method: "POST" });
+      const data = await res.json();
+      setLearningResult(data);
+      // Refresh stats after processing
+      fetchStats();
+    } catch (err) {
+      setLearningResult({ ok: false, processed: 0, errors: ["Network error"] });
+    } finally {
+      setProcessingLearning(false);
     }
   };
 
@@ -347,9 +365,39 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
       {/* Learning Machine Section */}
       <div style={{ marginTop: "2rem" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1rem" }}>
-          🧠 Learning Machine Data
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E5E7EB" }}>
+            🧠 Learning Machine Data
+          </h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            {learningResult && (
+              <span style={{ 
+                color: learningResult.ok ? "#22C55E" : "#EF4444", 
+                fontSize: "0.85rem" 
+              }}>
+                {learningResult.ok 
+                  ? `✓ Processed ${learningResult.processed} predictions` 
+                  : `✗ ${learningResult.errors.join(", ")}`}
+              </span>
+            )}
+            <button
+              onClick={processLearningOutcomes}
+              disabled={processingLearning}
+              style={{
+                background: processingLearning ? "rgba(107,114,128,0.3)" : "rgba(16,185,129,0.2)",
+                border: "1px solid rgba(16,185,129,0.4)",
+                color: processingLearning ? "#9CA3AF" : "#10B981",
+                padding: "8px 16px",
+                borderRadius: 8,
+                fontSize: "0.9rem",
+                cursor: processingLearning ? "not-allowed" : "pointer",
+                fontWeight: 600
+              }}
+            >
+              {processingLearning ? "⏳ Processing..." : "⚡ Process Now"}
+            </button>
+          </div>
+        </div>
 
         {/* Learning Totals */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
