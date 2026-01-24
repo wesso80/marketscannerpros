@@ -405,6 +405,28 @@ export class ConfluenceLearningAgent {
   // FULL HISTORY SCAN - Learn from every confluence event
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Get default learning for symbols with no data
+  private getDefaultLearning(symbol: string): SymbolLearning {
+    return {
+      symbol,
+      lastUpdated: Date.now(),
+      totalEvents: 0,
+      tfDecompressionStats: new Map(),
+      stackOutcomes: new Map(),
+      hotZoneStats: {
+        count: 0,
+        upPct: 50,
+        downPct: 50,
+        avgMagnitude: 0.5,
+        avgDecompMins: 30,
+      },
+      clusterStats: {
+        withCluster: { count: 0, upPct: 50, avgMag: 0.5 },
+        withoutCluster: { count: 0, upPct: 50, avgMag: 0.5 },
+      },
+    };
+  }
+
   async scanFullHistory(symbol: string): Promise<{
     events: ConfluenceEvent[];
     learning: SymbolLearning;
@@ -412,8 +434,22 @@ export class ConfluenceLearningAgent {
     console.log(`🔍 Scanning full history for ${symbol}...`);
     
     const baseBars = await this.fetchHistoricalData(symbol, '30min');
+    
+    // Handle empty or insufficient data gracefully
+    if (!baseBars || baseBars.length === 0) {
+      console.log(`⚠️ No data returned for ${symbol}`);
+      return {
+        events: [],
+        learning: this.getDefaultLearning(symbol),
+      };
+    }
+    
     if (baseBars.length < 200) {
-      throw new Error(`Insufficient data for ${symbol}: only ${baseBars.length} bars`);
+      console.log(`⚠️ Insufficient data for ${symbol}: only ${baseBars.length} bars, need 200+`);
+      return {
+        events: [],
+        learning: this.getDefaultLearning(symbol),
+      };
     }
     
     console.log(`📊 Loaded ${baseBars.length} 30-min bars`);
@@ -687,6 +723,12 @@ export class ConfluenceLearningAgent {
     
     // Get current data
     const baseBars = await this.fetchHistoricalData(symbol, '30min');
+    
+    // Handle empty data gracefully
+    if (!baseBars || baseBars.length === 0) {
+      throw new Error(`No price data available for ${symbol}. Please check the symbol or try again later.`);
+    }
+    
     const currentPrice = baseBars[baseBars.length - 1].close;
     const currentTime = Date.now();
     const atr = this.calculateATR(baseBars);
@@ -814,8 +856,8 @@ export class ConfluenceLearningAgent {
         winRate: prediction.direction === 'bullish' 
           ? (learning.stackOutcomes.get(stack)?.upPct || 50)
           : (learning.stackOutcomes.get(stack)?.downPct || 50),
-        avgMoveAfterSimilar: learning.stackOutcomes.get(stack)?.avgMagnitude || 0,
-        avgDecompMins: learning.tfDecompressionStats.get('60')?.avgDecompMins || 30,
+        avgMoveAfterSimilar: Math.abs(learning.stackOutcomes.get(stack)?.avgMagnitude || 0.5),
+        avgDecompMins: Math.round(Math.abs(learning.tfDecompressionStats.get('60')?.avgDecompMins || 30)),
         typicalMid50Reaction: this.getTypicalMid50Reaction(learning),
       },
       aiAnalysis,
@@ -890,7 +932,13 @@ export class ConfluenceLearningAgent {
       : currentPrice + (atr * 1.5);
     
     // Time horizon based on decompression timing
-    const decompMins = learning.tfDecompressionStats.get('60')?.avgDecompMins || 30;
+    // Ensure decompMins is a valid positive number
+    let decompMins = learning.tfDecompressionStats.get('60')?.avgDecompMins;
+    if (!decompMins || decompMins < 0 || !isFinite(decompMins)) {
+      decompMins = 30; // Default fallback
+    }
+    decompMins = Math.round(Math.abs(decompMins)); // Ensure positive integer
+    
     const timeHorizon = decompMins < 30 ? '1h' : decompMins < 60 ? '2h' : decompMins < 120 ? '4h' : '8h';
     
     return {
