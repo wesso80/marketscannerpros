@@ -5,71 +5,6 @@ import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
 
-interface Mid50Level {
-  tf: string;
-  level: number;
-  distance: number;
-}
-
-interface Prediction {
-  direction: 'bullish' | 'bearish' | 'neutral';
-  confidence: number;
-  expectedDecompMins: number;
-  targetPrice: number;
-  stopLoss: number;
-  timeHorizon: string;
-  reasoning: string;
-}
-
-interface DecompTF {
-  tf: string;
-  minsToClose: number;
-  mid50Level: number;
-  pullDirection: 'up' | 'down' | 'none';
-}
-
-interface Decompression {
-  activeCount: number;
-  netPullDirection: 'bullish' | 'bearish' | 'neutral';
-  pullBias: number;
-  activeTFs: DecompTF[];
-}
-
-interface FullForecast {
-  symbol: string;
-  timestamp: number;
-  currentPrice: number;
-  
-  currentState: {
-    stack: number;
-    activeTFs: string[];
-    isHotZone: boolean;
-    hotZoneTFs: string[];
-    clusters: number;
-    mid50Levels: Mid50Level[];
-    nearestMid50: Mid50Level | null;
-    decompression?: Decompression;
-  };
-  
-  upcoming: {
-    nextConfluenceIn: number;
-    upcomingTFCloses: { tf: string; minsAway: number }[];
-    nextHotZoneIn: number | null;
-  };
-  
-  prediction: Prediction;
-  
-  historical: {
-    similarEvents: number;
-    winRate: number;
-    avgMoveAfterSimilar: number;
-    avgDecompMins: number;
-    typicalMid50Reaction: string;
-  };
-  
-  aiAnalysis: string;
-}
-
 // Hierarchical Scan Result type
 interface HierarchicalResult {
   mode: string;
@@ -99,27 +34,26 @@ interface HierarchicalResult {
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
-const SCAN_MODE_OPTIONS: { value: ScanModeType; label: string; description: string }[] = [
-  { value: 'scalping', label: '⚡ Scalping (5-15m)', description: 'Micro TF decompression' },
-  { value: 'intraday_30m', label: '📊 30min Scan', description: '30m + micro TFs' },
-  { value: 'intraday_1h', label: '📊 1 Hour Scan', description: '1H + all below' },
-  { value: 'intraday_4h', label: '📊 4 Hour Scan', description: '4H + all below' },
-  { value: 'swing_1d', label: '📅 Daily Scan', description: '1D + intraday' },
-  { value: 'swing_3d', label: '📅 3-Day Scan', description: '3D + daily' },
-  { value: 'swing_1w', label: '📅 Weekly Scan', description: '1W + daily' },
-  { value: 'macro_monthly', label: '🏛️ Monthly Macro', description: 'Monthly + weekly' },
-  { value: 'macro_yearly', label: '🏛️ Yearly Macro', description: 'Year + quarterly' },
+// Simple timeframe options - user picks what candle they're trading
+const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; tf: string }[] = [
+  { value: 'scalping', label: '5m / 10m / 15m', tf: '15m' },
+  { value: 'intraday_30m', label: '30 Minute', tf: '30m' },
+  { value: 'intraday_1h', label: '1 Hour', tf: '1H' },
+  { value: 'intraday_4h', label: '4 Hour', tf: '4H' },
+  { value: 'swing_1d', label: 'Daily', tf: '1D' },
+  { value: 'swing_3d', label: '3 Day', tf: '3D' },
+  { value: 'swing_1w', label: 'Weekly', tf: '1W' },
+  { value: 'macro_monthly', label: 'Monthly', tf: '1M' },
+  { value: 'macro_yearly', label: 'Yearly', tf: '1Y' },
 ];
 
 export default function AIConfluenceScanner() {
   const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forecast, setForecast] = useState<FullForecast | null>(null);
   const [hierarchicalResult, setHierarchicalResult] = useState<HierarchicalResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'forecast' | 'learn' | 'quick' | 'hierarchical'>('hierarchical');
-  const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
+  const [selectedTF, setSelectedTF] = useState<ScanModeType>('intraday_1h');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isCached, setIsCached] = useState(false);
 
@@ -156,18 +90,18 @@ export default function AIConfluenceScanner() {
 
     setLoading(true);
     setError(null);
-    setForecast(null);
     setHierarchicalResult(null);
     setIsCached(false);
 
     try {
+      // Always use hierarchical mode - backend does all the work
       const response = await fetch('/api/confluence-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           symbol: symbol.trim(), 
-          mode, 
-          scanMode: mode === 'hierarchical' ? scanMode : undefined,
+          mode: 'hierarchical', 
+          scanMode: selectedTF,
           forceRefresh 
         }),
       });
@@ -177,138 +111,9 @@ export default function AIConfluenceScanner() {
       if (!data.success) {
         setError(data.error || 'Scan failed');
       } else {
-        // Track if cached
         setIsCached(!!data.cached);
         setLastUpdated(new Date());
-        
-        // Handle different response formats based on mode
-        const result = data.data;
-        
-        // Handle hierarchical scan result
-        if (mode === 'hierarchical') {
-          setHierarchicalResult(result as HierarchicalResult);
-          return;
-        }
-        
-        // For 'learn' mode, we get { events, learning } structure
-        if (mode === 'learn') {
-          // Convert learn response to display format
-          const learning = result.learning || result;
-          setForecast({
-            symbol: symbol.trim(),
-            timestamp: Date.now(),
-            currentPrice: 0,
-            currentState: {
-              stack: 0,
-              activeTFs: [],
-              isHotZone: false,
-              hotZoneTFs: [],
-              clusters: 0,
-              mid50Levels: [],
-              nearestMid50: null,
-            },
-            upcoming: {
-              nextConfluenceIn: 0,
-              upcomingTFCloses: [],
-              nextHotZoneIn: null,
-            },
-            prediction: {
-              direction: 'neutral',
-              confidence: 0,
-              expectedDecompMins: learning?.hotZoneStats?.avgDecompMins || 30,
-              targetPrice: 0,
-              stopLoss: 0,
-              timeHorizon: '—',
-              reasoning: `Deep learning complete! Analyzed ${result.events?.length || 0} historical confluence events.`,
-            },
-            historical: {
-              similarEvents: learning?.totalEvents || result.events?.length || 0,
-              winRate: learning?.hotZoneStats?.upPct || 50,
-              avgMoveAfterSimilar: learning?.hotZoneStats?.avgMagnitude || 0,
-              avgDecompMins: learning?.hotZoneStats?.avgDecompMins || 30,
-              typicalMid50Reaction: 'Learning data stored',
-            },
-            aiAnalysis: `✅ Deep learning complete for ${symbol}!\n\nAnalyzed ${result.events?.length || 0} confluence events from historical data.\n\nNow run a "Forecast" scan to get AI predictions based on this learned data.`,
-          });
-        } else if (mode === 'quick') {
-          // Quick mode returns simpler structure
-          setForecast({
-            symbol: symbol.trim(),
-            timestamp: Date.now(),
-            currentPrice: result.price || 0,
-            currentState: {
-              stack: result.stack || 0,
-              activeTFs: result.activeTFs || [],
-              isHotZone: result.isHotZone || false,
-              hotZoneTFs: result.hotZoneTFs || [],
-              clusters: result.clusters || 0,
-              mid50Levels: result.mid50Levels || [],
-              nearestMid50: result.mid50Levels?.[0] || null,
-            },
-            upcoming: {
-              nextConfluenceIn: 0,
-              upcomingTFCloses: result.upcomingTFCloses || [],
-              nextHotZoneIn: null,
-            },
-            prediction: {
-              direction: result.stack >= 5 ? 'bullish' : 'neutral',
-              confidence: result.isHighConfluence ? 70 : 40,
-              expectedDecompMins: 15,
-              targetPrice: 0,
-              stopLoss: 0,
-              timeHorizon: '1h',
-              reasoning: result.isHighConfluence 
-                ? `High confluence detected! Stack: ${result.stack}`
-                : `Low confluence. Stack: ${result.stack}`,
-            },
-            historical: {
-              similarEvents: 0,
-              winRate: 50,
-              avgMoveAfterSimilar: 0,
-              avgDecompMins: 15,
-              typicalMid50Reaction: 'Use Deep Learn for historical analysis',
-            },
-            aiAnalysis: result.isHighConfluence 
-              ? `⚡ Quick Check: HIGH CONFLUENCE\n\nStack: ${result.stack} active windows\nHot Zone: ${result.isHotZone ? 'YES 🔥' : 'No'}\n\nConsider running a full "Forecast" scan for AI analysis.`
-              : `Quick Check: Standard confluence\n\nStack: ${result.stack} active windows\n\nNo immediate trading signals.`,
-          });
-        } else {
-          // Forecast mode - full response, add null safety
-          setForecast({
-            ...result,
-            currentState: result.currentState || {
-              stack: 0,
-              activeTFs: [],
-              isHotZone: false,
-              hotZoneTFs: [],
-              clusters: 0,
-              mid50Levels: [],
-              nearestMid50: null,
-            },
-            upcoming: result.upcoming || {
-              nextConfluenceIn: 0,
-              upcomingTFCloses: [],
-              nextHotZoneIn: null,
-            },
-            prediction: result.prediction || {
-              direction: 'neutral',
-              confidence: 0,
-              expectedDecompMins: 30,
-              targetPrice: 0,
-              stopLoss: 0,
-              timeHorizon: '—',
-              reasoning: 'No prediction available',
-            },
-            historical: result.historical || {
-              similarEvents: 0,
-              winRate: 50,
-              avgMoveAfterSimilar: 0,
-              avgDecompMins: 30,
-              typicalMid50Reaction: 'unknown',
-            },
-            aiAnalysis: result.aiAnalysis || 'No AI analysis available',
-          });
-        }
+        setHierarchicalResult(data.data as HierarchicalResult);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
@@ -353,78 +158,72 @@ export default function AIConfluenceScanner() {
             WebkitTextFillColor: 'transparent',
             marginBottom: '0.5rem'
           }}>
-            🔮 AI Confluence Scanner v2
+            🔮 Time Confluence Scanner
           </h1>
           <p style={{ color: '#94A3B8' }}>
-            Full History Learning + Decompression Timing Analysis
+            Select your trading timeframe • Get probability direction based on all decompressing candles
           </p>
         </div>
 
-        {/* Search Bar */}
+        {/* Simple UI: Symbol + Timeframe + Scan */}
         <div style={{ 
           display: 'flex', 
-          gap: '1rem', 
+          gap: '0.75rem', 
           justifyContent: 'center',
           flexWrap: 'wrap',
-          marginBottom: '2rem'
+          marginBottom: '1.5rem'
         }}>
           <input
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="Enter symbol (e.g., AAPL, BTCUSD, SPY)"
+            placeholder="Symbol (SPY, AAPL, BTCUSD)"
             style={{
-              padding: '0.75rem 1.5rem',
-              fontSize: '1.1rem',
+              padding: '0.75rem 1.25rem',
+              fontSize: '1rem',
               background: 'rgba(30,41,59,0.8)',
               border: '2px solid rgba(168,85,247,0.3)',
               borderRadius: '12px',
               color: 'white',
-              width: '300px',
+              width: '220px',
               outline: 'none',
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
           />
           
+          {/* Timeframe Selector - the ONLY choice user needs to make */}
           <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as 'forecast' | 'learn' | 'quick' | 'hierarchical')}
+            value={selectedTF}
+            onChange={(e) => setSelectedTF(e.target.value as ScanModeType)}
             style={{
               padding: '0.75rem 1rem',
               background: 'rgba(30,41,59,0.8)',
-              border: '2px solid rgba(168,85,247,0.3)',
+              border: '2px solid rgba(245,158,11,0.5)',
               borderRadius: '12px',
               color: 'white',
               cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
             }}
           >
-            <option value="hierarchical">📊 Hierarchical Scan (NEW!)</option>
-            <option value="forecast">🔮 AI Forecast</option>
-            <option value="learn">📚 Deep Learn (Slow)</option>
-            <option value="quick">⚡ Quick Check</option>
+            <optgroup label="Scalping">
+              <option value="scalping">5m / 10m / 15m</option>
+            </optgroup>
+            <optgroup label="Intraday">
+              <option value="intraday_30m">30 Minute</option>
+              <option value="intraday_1h">1 Hour</option>
+              <option value="intraday_4h">4 Hour</option>
+            </optgroup>
+            <optgroup label="Swing">
+              <option value="swing_1d">Daily</option>
+              <option value="swing_3d">3 Day</option>
+              <option value="swing_1w">Weekly</option>
+            </optgroup>
+            <optgroup label="Macro">
+              <option value="macro_monthly">Monthly</option>
+              <option value="macro_yearly">Yearly</option>
+            </optgroup>
           </select>
-
-          {/* Scan Mode Dropdown - only for hierarchical */}
-          {mode === 'hierarchical' && (
-            <select
-              value={scanMode}
-              onChange={(e) => setScanMode(e.target.value as ScanModeType)}
-              style={{
-                padding: '0.75rem 1rem',
-                background: 'rgba(30,41,59,0.8)',
-                border: '2px solid rgba(245,158,11,0.5)',
-                borderRadius: '12px',
-                color: 'white',
-                cursor: 'pointer',
-              }}
-            >
-              {SCAN_MODE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          )}
 
           <button
             onClick={() => handleScan()}
@@ -446,15 +245,15 @@ export default function AIConfluenceScanner() {
             {loading ? (
               <>
                 <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                {mode === 'learn' ? 'Learning from history...' : 'Scanning...'}
+                Analyzing decompressions...
               </>
             ) : (
-              <>🔍 Scan</>
+              <>🎯 Scan</>
             )}
           </button>
 
-          {/* Force Refresh Button - show when there's a forecast or hierarchical result */}
-          {(forecast || hierarchicalResult) && !loading && (
+          {/* Refresh Button */}
+          {hierarchicalResult && !loading && (
             <button
               onClick={() => handleScan(true)}
               style={{
@@ -466,34 +265,16 @@ export default function AIConfluenceScanner() {
                 color: '#3B82F6',
                 fontWeight: '500',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
               }}
-              title="Force refresh with latest market data"
+              title="Force refresh"
             >
-              🔄 Refresh
+              🔄
             </button>
           )}
         </div>
 
-        {/* Cache Status Indicator */}
-        {(forecast || hierarchicalResult) && lastUpdated && (
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <span style={{
-              fontSize: '0.8rem',
-              color: isCached ? '#FBBF24' : '#10B981',
-              background: isCached ? 'rgba(251,191,36,0.1)' : 'rgba(16,185,129,0.1)',
-              padding: '0.3rem 0.8rem',
-              borderRadius: '6px',
-            }}>
-              {isCached ? '📦 Cached data' : '✨ Fresh data'} • Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          </div>
-        )}
-
         {/* Quick Picks */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <span style={{ color: '#64748B', marginRight: '0.5rem' }}>Quick picks:</span>
           {['AAPL', 'BTCUSD', 'SPY', 'TSLA', 'ETHUSD', 'NVDA', 'GOOGL'].map((s) => (
             <button
@@ -808,404 +589,20 @@ export default function AIConfluenceScanner() {
           </div>
         )}
 
-        {/* Results */}
-        {forecast && (
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
-            {/* Main Prediction Card */}
-            <div style={{
-              background: `linear-gradient(145deg, ${
-                forecast.prediction.direction === 'bullish' ? 'rgba(16,185,129,0.15)' :
-                forecast.prediction.direction === 'bearish' ? 'rgba(239,68,68,0.15)' :
-                'rgba(100,116,139,0.15)'
-              }, rgba(30,41,59,0.8))`,
-              border: `2px solid ${directionColor(forecast.prediction.direction)}`,
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    {forecast.symbol}
-                  </h2>
-                  <div style={{ color: '#94A3B8' }}>
-                    Current: ${(forecast.currentPrice || 0).toFixed(4)}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 'bold',
-                    color: directionColor(forecast.prediction?.direction || 'neutral'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    {directionEmoji(forecast.prediction?.direction || 'neutral')}
-                    {(forecast.prediction?.direction || 'NEUTRAL').toUpperCase()}
-                  </div>
-                  <div style={{ 
-                    fontSize: '1.2rem',
-                    color: (forecast.prediction?.confidence || 0) >= 70 ? '#10B981' : 
-                           (forecast.prediction?.confidence || 0) >= 50 ? '#F59E0B' : '#EF4444'
-                  }}>
-                    {forecast.prediction?.confidence || 0}% Confidence
-                  </div>
-                </div>
-              </div>
-
-              {/* Key Metrics */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                gap: '1rem',
-                marginTop: '1.5rem',
-                padding: '1rem',
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: '12px'
-              }}>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Target</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#10B981' }}>
-                    ${(forecast.prediction?.targetPrice || 0).toFixed(4)}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Stop Loss</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#EF4444' }}>
-                    ${(forecast.prediction?.stopLoss || 0).toFixed(4)}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Time Horizon</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#A855F7' }}>
-                    {forecast.prediction?.timeHorizon || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>
-                    ⏱️ Decompression In
-                  </div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#F59E0B' }}>
-                    ~{forecast.prediction?.expectedDecompMins || 0} mins
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Win Rate</div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#3B82F6' }}>
-                    {(forecast.historical?.winRate || 0).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(168,85,247,0.1)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '0.8rem', color: '#A855F7', marginBottom: '0.25rem' }}>Reasoning</div>
-                <div style={{ color: '#E2E8F0' }}>{forecast.prediction?.reasoning || 'No reasoning available'}</div>
-              </div>
-            </div>
-
-            {/* Two-column layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
-              
-              {/* Confluence State Card */}
-              <div style={{
-                background: 'rgba(30,41,59,0.8)',
-                border: '1px solid rgba(168,85,247,0.3)',
-                borderRadius: '16px',
-                padding: '1.5rem',
-              }}>
-                <h3 style={{ color: '#A855F7', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  📊 Current Confluence State
-                </h3>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 
-                      (forecast.currentState?.stack || 0) >= 7 ? '#EF4444' :
-                      (forecast.currentState?.stack || 0) >= 5 ? '#F59E0B' :
-                      (forecast.currentState?.stack || 0) >= 3 ? '#10B981' : '#64748B'
-                    }}>
-                      {forecast.currentState?.stack || 0}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>STACK</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: (forecast.currentState?.clusters || 0) > 0 ? '#10B981' : '#64748B' }}>
-                      {forecast.currentState?.clusters || 0}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>CLUSTERS</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: forecast.currentState?.isHotZone ? '#F59E0B' : '#64748B' }}>
-                      {forecast.currentState?.isHotZone ? '🔥 YES' : '—'}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>HOT ZONE</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3B82F6' }}>
-                      {forecast.historical?.similarEvents || 0}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>LEARNED EVENTS</div>
-                  </div>
-                </div>
-
-                {/* Active TFs */}
-                {(forecast.currentState?.activeTFs?.length || 0) > 0 && (
-                  <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Active Windows</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {(forecast.currentState?.activeTFs || []).map((tf, i) => (
-                        <span key={i} style={{
-                          background: tf.includes('pre') ? 'rgba(245,158,11,0.3)' : 'rgba(168,85,247,0.3)',
-                          padding: '0.3rem 0.6rem',
-                          borderRadius: '6px',
-                          fontSize: '0.85rem',
-                          color: tf.includes('pre') ? '#F59E0B' : '#A855F7',
-                        }}>
-                          {tf}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 50% Levels */}
-                {(forecast.currentState?.mid50Levels?.length || 0) > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                      Nearest 50% Levels ({forecast.historical?.typicalMid50Reaction || 'unknown'})
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {(forecast.currentState?.mid50Levels || []).slice(0, 5).map((level, i) => (
-                        <div key={i} style={{
-                          background: Math.abs(level?.distance || 0) < 0.25 ? 'rgba(245,158,11,0.3)' : 'rgba(100,116,139,0.2)',
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: '8px',
-                          fontSize: '0.85rem',
-                        }}>
-                          <span style={{ color: '#A855F7', fontWeight: 'bold' }}>{level?.tf || '?'}</span>
-                          <span style={{ color: '#64748B' }}> @ </span>
-                          <span style={{ color: '#E2E8F0' }}>${(level?.level || 0).toFixed(2)}</span>
-                          <span style={{ 
-                            color: (level?.distance || 0) > 0 ? '#10B981' : '#EF4444',
-                            marginLeft: '0.25rem' 
-                          }}>
-                            ({(level?.distance || 0) > 0 ? '+' : ''}{(level?.distance || 0).toFixed(2)}%)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Decompression Pull Analysis */}
-                {forecast.currentState?.decompression && forecast.currentState.decompression.activeCount > 0 && (
-                  <div style={{ 
-                    marginTop: '1rem', 
-                    padding: '1rem', 
-                    background: 'rgba(245,158,11,0.1)', 
-                    border: '1px solid rgba(245,158,11,0.3)',
-                    borderRadius: '10px' 
-                  }}>
-                    <div style={{ 
-                      fontSize: '0.9rem', 
-                      color: '#F59E0B', 
-                      marginBottom: '0.75rem',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      🔄 DECOMPRESSION ACTIVE
-                      <span style={{
-                        background: forecast.currentState.decompression.netPullDirection === 'bullish' 
-                          ? 'rgba(16,185,129,0.3)' 
-                          : forecast.currentState.decompression.netPullDirection === 'bearish'
-                          ? 'rgba(239,68,68,0.3)'
-                          : 'rgba(100,116,139,0.3)',
-                        color: forecast.currentState.decompression.netPullDirection === 'bullish' 
-                          ? '#10B981' 
-                          : forecast.currentState.decompression.netPullDirection === 'bearish'
-                          ? '#EF4444'
-                          : '#64748B',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                      }}>
-                        {forecast.currentState.decompression.netPullDirection.toUpperCase()} PULL
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                      {forecast.currentState.decompression.activeCount} TFs pulling price toward their 50% levels
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {forecast.currentState.decompression.activeTFs.map((d, i) => (
-                        <div key={i} style={{
-                          background: d.pullDirection === 'up' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                          padding: '0.4rem 0.6rem',
-                          borderRadius: '6px',
-                          fontSize: '0.8rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.3rem'
-                        }}>
-                          <span style={{ color: '#A855F7', fontWeight: 'bold' }}>{d.tf}</span>
-                          <span style={{ color: d.pullDirection === 'up' ? '#10B981' : '#EF4444' }}>
-                            {d.pullDirection === 'up' ? '↑' : '↓'}
-                          </span>
-                          <span style={{ color: '#64748B' }}>${d.mid50Level.toFixed(2)}</span>
-                          <span style={{ color: '#94A3B8', fontSize: '0.7rem' }}>({d.minsToClose}m)</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Upcoming Events Card */}
-              <div style={{
-                background: 'rgba(30,41,59,0.8)',
-                border: '1px solid rgba(59,130,246,0.3)',
-                borderRadius: '16px',
-                padding: '1.5rem',
-              }}>
-                <h3 style={{ color: '#3B82F6', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  ⏰ Upcoming TF Closes
-                </h3>
-
-                {(forecast.upcoming?.nextConfluenceIn || 0) > 0 && (
-                  <div style={{ 
-                    background: 'rgba(168,85,247,0.2)', 
-                    padding: '1rem', 
-                    borderRadius: '10px', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#A855F7' }}>Next High Confluence (Stack ≥5)</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#E2E8F0' }}>
-                      ~{formatMins(forecast.upcoming?.nextConfluenceIn || 0)}
-                    </div>
-                  </div>
-                )}
-
-                {forecast.upcoming?.nextHotZoneIn && (
-                  <div style={{ 
-                    background: 'rgba(245,158,11,0.2)', 
-                    padding: '1rem', 
-                    borderRadius: '10px', 
-                    marginBottom: '1rem',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#F59E0B' }}>🔥 Hot Zone Approaching</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#E2E8F0' }}>
-                      ~{formatMins(forecast.upcoming?.nextHotZoneIn || 0)}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>TF Close Schedule</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {(forecast.upcoming?.upcomingTFCloses || []).slice(0, 6).map((tf, i) => (
-                    <div key={i} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      background: (tf?.minsAway || 999) <= 5 ? 'rgba(239,68,68,0.2)' : 
-                                  (tf?.minsAway || 999) <= 15 ? 'rgba(245,158,11,0.2)' : 'rgba(0,0,0,0.2)',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '8px',
-                    }}>
-                      <span style={{ fontWeight: 'bold', color: '#E2E8F0' }}>{tf?.tf || '?'}</span>
-                      <span style={{ 
-                        color: (tf?.minsAway || 999) <= 5 ? '#EF4444' : 
-                               (tf?.minsAway || 999) <= 15 ? '#F59E0B' : '#94A3B8'
-                      }}>
-                        {formatMins(tf?.minsAway || 0)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Decompression Stats */}
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                    📈 Learned Decompression Timing
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Time to Move</div>
-                      <div style={{ fontWeight: 'bold', color: '#F59E0B' }}>
-                        ~{forecast.historical?.avgDecompMins || 0} mins
-                      </div>
-                    </div>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Move Size</div>
-                      <div style={{ fontWeight: 'bold', color: '#10B981' }}>
-                        {(forecast.historical?.avgMoveAfterSimilar || 0).toFixed(2)}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Analysis */}
-            <div style={{
-              background: 'rgba(30,41,59,0.8)',
-              border: '1px solid rgba(59,130,246,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ color: '#3B82F6', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                🤖 AI Analysis (Powered by GPT-4)
-              </h3>
-              <div style={{ 
-                whiteSpace: 'pre-wrap', 
-                color: '#E2E8F0',
-                lineHeight: '1.6',
-                fontSize: '0.95rem'
-              }}>
-                {forecast.aiAnalysis}
-              </div>
-            </div>
-
-            {/* Legend / How It Works */}
-            <div style={{
-              background: 'rgba(30,41,59,0.6)',
-              border: '1px solid rgba(100,116,139,0.3)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-            }}>
-              <h4 style={{ color: '#94A3B8', marginBottom: '0.75rem' }}>📖 How This Works</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.85rem', color: '#64748B' }}>
-                <div>
-                  <strong style={{ color: '#A855F7' }}>Stack</strong>: Number of active confluence windows (post-close + pre-close anticipatory)
-                </div>
-                <div>
-                  <strong style={{ color: '#F59E0B' }}>Decompression</strong>: When price starts moving after TF closes (learned from history)
-                </div>
-                <div>
-                  <strong style={{ color: '#10B981' }}>50% Levels</strong>: Prior bar midpoints act as dynamic S/R
-                </div>
-                <div>
-                  <strong style={{ color: '#EF4444' }}>Hot Zone</strong>: 3+ TFs closing within 5 mins = high volatility
-                </div>
-              </div>
-            </div>
-
-            {/* Disclaimer */}
-            <div style={{
-              background: 'rgba(245,158,11,0.1)',
-              border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: '12px',
-              padding: '1rem',
-              fontSize: '0.8rem',
-              color: '#F59E0B',
-              textAlign: 'center'
-            }}>
-              ⚠️ This is AI-generated analysis for educational purposes only. Not financial advice. 
-              Past performance does not guarantee future results. Always do your own research and consult a financial advisor.
-            </div>
-          </div>
-        )}
+        {/* Disclaimer */}
+        <div style={{
+          background: 'rgba(245,158,11,0.1)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: '12px',
+          padding: '1rem',
+          fontSize: '0.8rem',
+          color: '#F59E0B',
+          textAlign: 'center',
+          marginTop: '2rem',
+        }}>
+          ⚠️ This is AI-generated analysis for educational purposes only. Not financial advice. 
+          Past performance does not guarantee future results. Always do your own research and consult a financial advisor.
+        </div>
       </div>
 
       <style jsx>{`
