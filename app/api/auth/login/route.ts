@@ -170,9 +170,9 @@ export async function POST(req: NextRequest) {
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
-      
-      const origin = req.headers.get("origin");
-      const headers = corsHeaders(origin);
+    
+      const originHeader = req.headers.get("origin");
+      const headers = corsHeaders(originHeader);
       for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
       return res;
     }
@@ -241,8 +241,8 @@ export async function POST(req: NextRequest) {
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
-    const origin = req.headers.get("origin");
-    const headers = corsHeaders(origin);
+    const originHeader = req.headers.get("origin");
+    const headers = corsHeaders(originHeader);
     for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
     return res;
   } catch (err) {
