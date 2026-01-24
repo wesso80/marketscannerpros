@@ -360,7 +360,7 @@ export default function AIConfluenceScanner() {
           </button>
 
           {/* Force Refresh Button - shows when data is cached */}
-          {result && isCached && !loading && (
+          {forecast && isCached && !loading && (
             <button
               onClick={() => handleScan(true)}
               style={{
@@ -384,7 +384,7 @@ export default function AIConfluenceScanner() {
         </div>
 
         {/* Cache Status Indicator */}
-        {result && lastUpdated && (
+        {forecast && lastUpdated && (
           <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
             <span style={{
               fontSize: '0.8rem',

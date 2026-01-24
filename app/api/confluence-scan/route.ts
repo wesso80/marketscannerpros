@@ -32,8 +32,8 @@ interface ScanResponse {
 
 // Simple in-memory cache (in production use Redis)
 const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes for quick/state-only modes
-const FORECAST_CACHE_TTL = 3 * 60 * 1000; // 3 minutes for forecasts (data changes frequently)
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes for quick/state-only modes
+const FORECAST_CACHE_TTL = 60 * 60 * 1000; // 1 hour for forecasts (use refresh button for fresh data)
 
 function getCached(key: string, ttl: number = CACHE_TTL): { data: any; age: number } | null {
   const cached = cache.get(key);
