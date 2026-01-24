@@ -359,17 +359,17 @@ export default function AIConfluenceScanner() {
             )}
           </button>
 
-          {/* Force Refresh Button - shows when data is cached */}
-          {forecast && isCached && !loading && (
+          {/* Force Refresh Button - always show when there's a forecast */}
+          {forecast && !loading && (
             <button
               onClick={() => handleScan(true)}
               style={{
                 padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
-                background: 'rgba(251,191,36,0.2)',
-                border: '1px solid rgba(251,191,36,0.5)',
+                background: 'rgba(59,130,246,0.2)',
+                border: '1px solid rgba(59,130,246,0.5)',
                 borderRadius: '12px',
-                color: '#FBBF24',
+                color: '#3B82F6',
                 fontWeight: '500',
                 cursor: 'pointer',
                 display: 'flex',
