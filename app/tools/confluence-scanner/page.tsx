@@ -2,45 +2,62 @@
 
 import { useState } from "react";
 
-interface ConfluenceState {
-  timestamp: number;
-  price: number;
-  stack: number;
-  activeTFs: string[];
-  mid50Levels: { tf: string; level: number; distance: number }[];
-  clusters: { tf1: string; tf2: string; level: number }[];
-  isHotZone: boolean;
-  hotZoneTFs: string[];
+interface Mid50Level {
+  tf: string;
+  level: number;
+  distance: number;
 }
 
 interface Prediction {
   direction: 'bullish' | 'bearish' | 'neutral';
   confidence: number;
+  expectedDecompMins: number;
   targetPrice: number;
   stopLoss: number;
   timeHorizon: string;
   reasoning: string;
 }
 
-interface Forecast {
+interface FullForecast {
   symbol: string;
   timestamp: number;
-  currentState: ConfluenceState;
-  prediction: Prediction;
-  historicalSimilar: {
-    count: number;
-    winRate: number;
-    avgMove: number;
+  currentPrice: number;
+  
+  currentState: {
+    stack: number;
+    activeTFs: string[];
+    isHotZone: boolean;
+    hotZoneTFs: string[];
+    clusters: number;
+    mid50Levels: Mid50Level[];
+    nearestMid50: Mid50Level | null;
   };
+  
+  upcoming: {
+    nextConfluenceIn: number;
+    upcomingTFCloses: { tf: string; minsAway: number }[];
+    nextHotZoneIn: number | null;
+  };
+  
+  prediction: Prediction;
+  
+  historical: {
+    similarEvents: number;
+    winRate: number;
+    avgMoveAfterSimilar: number;
+    avgDecompMins: number;
+    typicalMid50Reaction: string;
+  };
+  
   aiAnalysis: string;
 }
 
 export default function AIConfluenceScanner() {
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [forecast, setForecast] = useState<FullForecast | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'full' | 'quick' | 'state-only'>('full');
+  const [mode, setMode] = useState<'forecast' | 'learn' | 'quick'>('forecast');
 
   const handleScan = async () => {
     if (!symbol.trim()) {
@@ -85,6 +102,12 @@ export default function AIConfluenceScanner() {
     return '⚪';
   };
 
+  const formatMins = (mins: number) => {
+    if (mins < 60) return `${mins}m`;
+    if (mins < 1440) return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    return `${Math.floor(mins / 1440)}d`;
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -92,7 +115,7 @@ export default function AIConfluenceScanner() {
       padding: '2rem',
       color: 'white'
     }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ 
@@ -103,10 +126,10 @@ export default function AIConfluenceScanner() {
             WebkitTextFillColor: 'transparent',
             marginBottom: '0.5rem'
           }}>
-            🔮 AI Confluence Scanner
+            🔮 AI Confluence Scanner v2
           </h1>
           <p style={{ color: '#94A3B8' }}>
-            Multi-Timeframe Confluence Analysis + GPT-4 Forecasting
+            Full History Learning + Decompression Timing Analysis
           </p>
         </div>
 
@@ -138,7 +161,7 @@ export default function AIConfluenceScanner() {
           
           <select
             value={mode}
-            onChange={(e) => setMode(e.target.value as any)}
+            onChange={(e) => setMode(e.target.value as 'forecast' | 'learn' | 'quick')}
             style={{
               padding: '0.75rem 1rem',
               background: 'rgba(30,41,59,0.8)',
@@ -148,9 +171,9 @@ export default function AIConfluenceScanner() {
               cursor: 'pointer',
             }}
           >
-            <option value="full">Full AI Analysis</option>
-            <option value="quick">Quick Check</option>
-            <option value="state-only">State Only</option>
+            <option value="forecast">🔮 AI Forecast (Recommended)</option>
+            <option value="learn">📚 Deep Learn (Slow, Builds Profile)</option>
+            <option value="quick">⚡ Quick Check</option>
           </select>
 
           <button
@@ -173,7 +196,7 @@ export default function AIConfluenceScanner() {
             {loading ? (
               <>
                 <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                Scanning...
+                {mode === 'learn' ? 'Learning from history...' : 'Scanning...'}
               </>
             ) : (
               <>🔍 Scan</>
@@ -184,7 +207,7 @@ export default function AIConfluenceScanner() {
         {/* Quick Picks */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <span style={{ color: '#64748B', marginRight: '0.5rem' }}>Quick picks:</span>
-          {['AAPL', 'BTCUSD', 'SPY', 'TSLA', 'ETHUSD', 'NVDA'].map((s) => (
+          {['AAPL', 'BTCUSD', 'SPY', 'TSLA', 'ETHUSD', 'NVDA', 'GOOGL'].map((s) => (
             <button
               key={s}
               onClick={() => { setSymbol(s); }}
@@ -238,7 +261,7 @@ export default function AIConfluenceScanner() {
                     {forecast.symbol}
                   </h2>
                   <div style={{ color: '#94A3B8' }}>
-                    Current: ${forecast.currentState.price.toFixed(4)}
+                    Current: ${forecast.currentPrice.toFixed(4)}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -263,10 +286,10 @@ export default function AIConfluenceScanner() {
                 </div>
               </div>
 
-              {/* Targets */}
+              {/* Key Metrics */}
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                 gap: '1rem',
                 marginTop: '1.5rem',
                 padding: '1rem',
@@ -292,9 +315,17 @@ export default function AIConfluenceScanner() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Historical Win Rate</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>
+                    ⏱️ Decompression In
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#F59E0B' }}>
+                    ~{forecast.prediction.expectedDecompMins} mins
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Win Rate</div>
                   <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#3B82F6' }}>
-                    {forecast.historicalSimilar.winRate.toFixed(1)}%
+                    {forecast.historical.winRate.toFixed(1)}%
                   </div>
                 </div>
               </div>
@@ -305,74 +336,185 @@ export default function AIConfluenceScanner() {
               </div>
             </div>
 
-            {/* Confluence State Card */}
-            <div style={{
-              background: 'rgba(30,41,59,0.8)',
-              border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ color: '#A855F7', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                📊 Confluence State
-              </h3>
+            {/* Two-column layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+              
+              {/* Confluence State Card */}
+              <div style={{
+                background: 'rgba(30,41,59,0.8)',
+                border: '1px solid rgba(168,85,247,0.3)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <h3 style={{ color: '#A855F7', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  📊 Current Confluence State
+                </h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 
-                    forecast.currentState.stack >= 7 ? '#EF4444' :
-                    forecast.currentState.stack >= 5 ? '#F59E0B' :
-                    forecast.currentState.stack >= 3 ? '#10B981' : '#64748B'
-                  }}>
-                    {forecast.currentState.stack}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 
+                      forecast.currentState.stack >= 7 ? '#EF4444' :
+                      forecast.currentState.stack >= 5 ? '#F59E0B' :
+                      forecast.currentState.stack >= 3 ? '#10B981' : '#64748B'
+                    }}>
+                      {forecast.currentState.stack}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>STACK</div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>STACK</div>
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: forecast.currentState.clusters.length > 0 ? '#10B981' : '#64748B' }}>
-                    {forecast.currentState.clusters.length}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: forecast.currentState.clusters > 0 ? '#10B981' : '#64748B' }}>
+                      {forecast.currentState.clusters}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>CLUSTERS</div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>CLUSTERS</div>
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: forecast.currentState.isHotZone ? '#F59E0B' : '#64748B' }}>
-                    {forecast.currentState.isHotZone ? '🔥' : '—'}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: forecast.currentState.isHotZone ? '#F59E0B' : '#64748B' }}>
+                      {forecast.currentState.isHotZone ? '🔥 YES' : '—'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>HOT ZONE</div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>HOT ZONE</div>
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3B82F6' }}>
-                    {forecast.historicalSimilar.count}
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3B82F6' }}>
+                      {forecast.historical.similarEvents}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>LEARNED EVENTS</div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>SIMILAR PATTERNS</div>
                 </div>
+
+                {/* Active TFs */}
+                {forecast.currentState.activeTFs.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Active Windows</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {forecast.currentState.activeTFs.map((tf, i) => (
+                        <span key={i} style={{
+                          background: tf.includes('pre') ? 'rgba(245,158,11,0.3)' : 'rgba(168,85,247,0.3)',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          color: tf.includes('pre') ? '#F59E0B' : '#A855F7',
+                        }}>
+                          {tf}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 50% Levels */}
+                {forecast.currentState.mid50Levels && forecast.currentState.mid50Levels.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
+                      Nearest 50% Levels ({forecast.historical.typicalMid50Reaction})
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {forecast.currentState.mid50Levels.slice(0, 5).map((level, i) => (
+                        <div key={i} style={{
+                          background: Math.abs(level.distance) < 0.25 ? 'rgba(245,158,11,0.3)' : 'rgba(100,116,139,0.2)',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                        }}>
+                          <span style={{ color: '#A855F7', fontWeight: 'bold' }}>{level.tf}</span>
+                          <span style={{ color: '#64748B' }}> @ </span>
+                          <span style={{ color: '#E2E8F0' }}>${level.level.toFixed(2)}</span>
+                          <span style={{ 
+                            color: level.distance > 0 ? '#10B981' : '#EF4444',
+                            marginLeft: '0.25rem' 
+                          }}>
+                            ({level.distance > 0 ? '+' : ''}{level.distance.toFixed(2)}%)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* 50% Levels */}
-              {forecast.currentState.mid50Levels.length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Nearest 50% Levels</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {forecast.currentState.mid50Levels.slice(0, 6).map((level, i) => (
-                      <div key={i} style={{
-                        background: Math.abs(level.distance) < 0.25 ? 'rgba(245,158,11,0.3)' : 'rgba(100,116,139,0.2)',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
+              {/* Upcoming Events Card */}
+              <div style={{
+                background: 'rgba(30,41,59,0.8)',
+                border: '1px solid rgba(59,130,246,0.3)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <h3 style={{ color: '#3B82F6', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⏰ Upcoming TF Closes
+                </h3>
+
+                {forecast.upcoming.nextConfluenceIn > 0 && (
+                  <div style={{ 
+                    background: 'rgba(168,85,247,0.2)', 
+                    padding: '1rem', 
+                    borderRadius: '10px', 
+                    marginBottom: '1rem',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#A855F7' }}>Next High Confluence (Stack ≥5)</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#E2E8F0' }}>
+                      ~{formatMins(forecast.upcoming.nextConfluenceIn)}
+                    </div>
+                  </div>
+                )}
+
+                {forecast.upcoming.nextHotZoneIn && (
+                  <div style={{ 
+                    background: 'rgba(245,158,11,0.2)', 
+                    padding: '1rem', 
+                    borderRadius: '10px', 
+                    marginBottom: '1rem',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#F59E0B' }}>🔥 Hot Zone Approaching</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#E2E8F0' }}>
+                      ~{formatMins(forecast.upcoming.nextHotZoneIn)}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>TF Close Schedule</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {forecast.upcoming.upcomingTFCloses.slice(0, 6).map((tf, i) => (
+                    <div key={i} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      background: tf.minsAway <= 5 ? 'rgba(239,68,68,0.2)' : 
+                                  tf.minsAway <= 15 ? 'rgba(245,158,11,0.2)' : 'rgba(0,0,0,0.2)',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '8px',
+                    }}>
+                      <span style={{ fontWeight: 'bold', color: '#E2E8F0' }}>{tf.tf}</span>
+                      <span style={{ 
+                        color: tf.minsAway <= 5 ? '#EF4444' : 
+                               tf.minsAway <= 15 ? '#F59E0B' : '#94A3B8'
                       }}>
-                        <span style={{ color: '#A855F7', fontWeight: 'bold' }}>{level.tf}</span>
-                        <span style={{ color: '#64748B' }}> @ </span>
-                        <span style={{ color: '#E2E8F0' }}>${level.level.toFixed(2)}</span>
-                        <span style={{ 
-                          color: level.distance > 0 ? '#10B981' : '#EF4444',
-                          marginLeft: '0.25rem' 
-                        }}>
-                          ({level.distance > 0 ? '+' : ''}{level.distance.toFixed(2)}%)
-                        </span>
+                        {formatMins(tf.minsAway)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Decompression Stats */}
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
+                    📈 Learned Decompression Timing
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Time to Move</div>
+                      <div style={{ fontWeight: 'bold', color: '#F59E0B' }}>
+                        ~{forecast.historical.avgDecompMins} mins
                       </div>
-                    ))}
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Avg Move Size</div>
+                      <div style={{ fontWeight: 'bold', color: '#10B981' }}>
+                        {forecast.historical.avgMoveAfterSimilar.toFixed(2)}%
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* AI Analysis */}
@@ -383,7 +525,7 @@ export default function AIConfluenceScanner() {
               padding: '1.5rem',
             }}>
               <h3 style={{ color: '#3B82F6', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                🤖 AI Analysis
+                🤖 AI Analysis (Powered by GPT-4)
               </h3>
               <div style={{ 
                 whiteSpace: 'pre-wrap', 
@@ -392,6 +534,30 @@ export default function AIConfluenceScanner() {
                 fontSize: '0.95rem'
               }}>
                 {forecast.aiAnalysis}
+              </div>
+            </div>
+
+            {/* Legend / How It Works */}
+            <div style={{
+              background: 'rgba(30,41,59,0.6)',
+              border: '1px solid rgba(100,116,139,0.3)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+            }}>
+              <h4 style={{ color: '#94A3B8', marginBottom: '0.75rem' }}>📖 How This Works</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.85rem', color: '#64748B' }}>
+                <div>
+                  <strong style={{ color: '#A855F7' }}>Stack</strong>: Number of active confluence windows (post-close + pre-close anticipatory)
+                </div>
+                <div>
+                  <strong style={{ color: '#F59E0B' }}>Decompression</strong>: When price starts moving after TF closes (learned from history)
+                </div>
+                <div>
+                  <strong style={{ color: '#10B981' }}>50% Levels</strong>: Prior bar midpoints act as dynamic S/R
+                </div>
+                <div>
+                  <strong style={{ color: '#EF4444' }}>Hot Zone</strong>: 3+ TFs closing within 5 mins = high volatility
+                </div>
               </div>
             </div>
 

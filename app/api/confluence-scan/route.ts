@@ -1,32 +1,40 @@
 /**
- * AI Confluence Forecast API Endpoint
- * Scans any symbol using Time Confluence Windows + GPT-4 for market forecasting
+ * AI Confluence Forecast API Endpoint v2
+ * 
+ * NEW FEATURES:
+ * - Full history scanning with LEARNING
+ * - Decompression timing analysis (when does price start moving)
+ * - Per-symbol pattern memory
+ * - Predicts upcoming confluence windows
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { confluenceLearningAgent } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 
-export const maxDuration = 60; // Allow up to 60 seconds for analysis
+export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
 interface ScanRequest {
   symbol: string;
-  mode?: 'full' | 'quick' | 'state-only';
+  mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast';
 }
 
 interface ScanResponse {
   success: boolean;
-  data?: Forecast | ConfluenceState | { isHigh: boolean; stack: number; hasCluster: boolean; isHotZone: boolean };
+  data?: any;
   error?: string;
   cached?: boolean;
+  mode?: string;
 }
 
 // Simple in-memory cache (in production use Redis)
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const LEARNING_CACHE_TTL = 60 * 60 * 1000; // 1 hour for learned patterns
 
-function getCached(key: string): any | null {
+function getCached(key: string, ttl: number = CACHE_TTL): any | null {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+  if (cached && Date.now() - cached.timestamp < ttl) {
     return cached.data;
   }
   cache.delete(key);
@@ -40,7 +48,7 @@ function setCache(key: string, data: any): void {
 export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse>> {
   try {
     const body: ScanRequest = await request.json();
-    const { symbol, mode = 'full' } = body;
+    const { symbol, mode = 'forecast' } = body;
 
     if (!symbol || typeof symbol !== 'string') {
       return NextResponse.json({ 
@@ -53,19 +61,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     const normalizedSymbol = symbol.toUpperCase().trim();
     const cacheKey = `${normalizedSymbol}-${mode}`;
 
-    // Check cache
-    const cachedData = getCached(cacheKey);
-    if (cachedData) {
-      return NextResponse.json({
-        success: true,
-        data: cachedData,
-        cached: true,
-      });
+    // Check cache (except for learn mode which should always refresh)
+    if (mode !== 'learn') {
+      const cachedData = getCached(cacheKey, mode === 'forecast' ? LEARNING_CACHE_TTL : CACHE_TTL);
+      if (cachedData) {
+        return NextResponse.json({
+          success: true,
+          data: cachedData,
+          cached: true,
+          mode,
+        });
+      }
     }
 
     let result: any;
 
     switch (mode) {
+      case 'learn':
+        // Full history scan with learning - builds symbol profile
+        console.log(`📚 Learning mode for ${normalizedSymbol}...`);
+        result = await confluenceLearningAgent.scanFullHistory(normalizedSymbol);
+        setCache(`${normalizedSymbol}-learning`, result.learning);
+        break;
+
+      case 'forecast':
+        // AI forecast with learned patterns + decompression timing
+        console.log(`🔮 Forecast mode for ${normalizedSymbol}...`);
+        result = await confluenceLearningAgent.generateForecast(normalizedSymbol);
+        break;
+
       case 'quick':
         // Quick check for high confluence (no AI, fast)
         result = await confluenceAgent.isHighConfluence(normalizedSymbol);
@@ -78,7 +102,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
       case 'full':
       default:
-        // Full AI-powered forecast
+        // Legacy: Full AI-powered forecast (old agent)
         result = await confluenceAgent.scan(normalizedSymbol);
         break;
     }
