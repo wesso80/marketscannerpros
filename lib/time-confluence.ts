@@ -43,6 +43,58 @@ const MACRO_TIMEFRAMES = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
+// DECOMPRESSION WINDOWS
+// When candles START decompressing toward their 50% level before close
+// Once triggered, decompression is active until the candle closes
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Minutes before close when decompression STARTS (once triggered, active until close)
+const DECOMPRESSION_START: Record<string, number> = {
+  // Micro timeframes - same formula pattern
+  '5m': 1,           // ~1 min before close
+  '10m': 1.5,        // ~1.5 mins before close
+  '15m': 2,          // ~2 mins before close
+  '30m': 4,          // ~4-5 mins before close
+  
+  // Intraday - minutes before close when decompression begins
+  '1H': 9,           // Starts decompressing 7-9 mins before close
+  '2H': 12,          // Starts ~12 mins before close
+  '3H': 15,          // Starts ~15 mins before close
+  '4H': 12,          // Starts 9-12 mins before close
+  '6H': 20,          // Starts 15-20 mins before close
+  '8H': 20,          // Starts 15-20 mins before close
+  
+  // Daily - each day adds 1 hour (in minutes)
+  '1D': 60,          // 1 hour before close
+  '2D': 120,         // 2 hours before close
+  '3D': 180,         // 3 hours before close
+  '4D': 240,         // 4 hours before close
+  '5D': 300,         // 5 hours before close
+  
+  // Weekly
+  '1W': 390,         // 6.5 hours before close (6.5 * 60)
+  '2W': 780,         // 13 hours before close (biweekly)
+  
+  // Monthly
+  '1M': 1560,        // 26 hours before close
+  
+  // Long-term (in minutes, but represents days)
+  '6M': 9360,        // 6.5 trading days * 24 * 60 (simplified)
+  '1Y': 18720,       // 13 trading days
+  '2Y': 37440,       // 26 trading days
+  '4Y': 74880,       // 52 trading days
+  '8Y': 149760,      // 104 trading days
+};
+
+export interface DecompressionStatus {
+  timeframe: string;
+  isDecompressing: boolean;
+  minutesToClose: number;
+  startedDecompressingAt: number; // minutes before close when it started
+  phase: 'not_started' | 'active' | 'imminent'; // imminent = last 25% of window
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -77,6 +129,10 @@ export interface TimeConfluenceState {
   nowClosing: string[];
   nowConfluenceScore: number;
   nowImpact: 'low' | 'medium' | 'high' | 'extreme';
+  
+  // DECOMPRESSION - what's actively decompressing toward 50%
+  decompressing: DecompressionStatus[];
+  decompressionCount: number;
   
   // Next major confluence
   nextMajor: TimeConfluence | null;
@@ -222,6 +278,112 @@ function getFibonacciCandlesClosing(minutesSinceOpen: number): string[] {
   }
   
   return closing;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DECOMPRESSION DETECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calculate minutes until a specific timeframe candle closes
+ */
+function getMinutesToClose(date: Date, timeframe: string): number {
+  const et = toET(date);
+  const totalMins = et.getHours() * 60 + et.getMinutes();
+  const marketCloseMins = NYSE_CLOSE_HOUR * 60; // 4:00 PM = 960 mins
+  const minutesSinceOpen = getMinutesSinceOpen(date);
+  
+  // Intraday timeframes
+  switch (timeframe) {
+    case '1H': {
+      const nextHourClose = Math.ceil(minutesSinceOpen / 60) * 60;
+      return Math.max(0, nextHourClose - minutesSinceOpen);
+    }
+    case '2H': {
+      const next2HClose = Math.ceil(minutesSinceOpen / 120) * 120;
+      return Math.max(0, next2HClose - minutesSinceOpen);
+    }
+    case '3H': {
+      const next3HClose = Math.ceil(minutesSinceOpen / 180) * 180;
+      return Math.max(0, next3HClose - minutesSinceOpen);
+    }
+    case '4H': {
+      const next4HClose = Math.ceil(minutesSinceOpen / 240) * 240;
+      return Math.max(0, next4HClose - minutesSinceOpen);
+    }
+    case '6H': {
+      const next6HClose = Math.ceil(minutesSinceOpen / 360) * 360;
+      return Math.max(0, next6HClose - minutesSinceOpen);
+    }
+    case '8H': {
+      // 8H closes at market close
+      return Math.max(0, 390 - minutesSinceOpen);
+    }
+    case '1D': {
+      // Daily closes at 4 PM
+      return Math.max(0, marketCloseMins - totalMins);
+    }
+    // For multi-day, weekly, monthly - would need calendar logic
+    // Simplified: return large number if not applicable today
+    default:
+      return 99999;
+  }
+}
+
+/**
+ * Get all timeframes currently in decompression phase
+ */
+export function getDecompressionStatus(date: Date): DecompressionStatus[] {
+  const results: DecompressionStatus[] = [];
+  
+  // Check each intraday timeframe
+  const intradayTFs = ['1H', '2H', '3H', '4H', '6H', '8H', '1D'];
+  
+  for (const tf of intradayTFs) {
+    const startMins = DECOMPRESSION_START[tf];
+    if (!startMins) continue;
+    
+    const minsToClose = getMinutesToClose(date, tf);
+    
+    // Skip if too far from close or already closed
+    if (minsToClose > startMins || minsToClose <= 0) {
+      continue;
+    }
+    
+    // This timeframe is decompressing!
+    const phase = minsToClose <= startMins * 0.25 ? 'imminent' : 'active';
+    
+    results.push({
+      timeframe: tf,
+      isDecompressing: true,
+      minutesToClose: minsToClose,
+      startedDecompressingAt: startMins,
+      phase,
+    });
+  }
+  
+  return results;
+}
+
+/**
+ * Get human-readable decompression summary
+ */
+export function getDecompressionSummary(statuses: DecompressionStatus[]): string {
+  if (statuses.length === 0) return 'No active decompression';
+  
+  const imminent = statuses.filter(s => s.phase === 'imminent');
+  const active = statuses.filter(s => s.phase === 'active');
+  
+  const parts: string[] = [];
+  
+  if (imminent.length > 0) {
+    parts.push(`🔴 IMMINENT: ${imminent.map(s => `${s.timeframe} (${s.minutesToClose}m)`).join(', ')}`);
+  }
+  if (active.length > 0) {
+    parts.push(`🟡 ACTIVE: ${active.map(s => `${s.timeframe} (${s.minutesToClose}m)`).join(', ')}`);
+  }
+  
+  return parts.join(' | ');
 }
 
 /**
@@ -533,6 +695,9 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
   // Get current intraday confluence
   const now = getIntradayConfluence(date);
   
+  // Get decompression status - which TFs are decompressing toward 50%
+  const decompressing = marketOpen ? getDecompressionStatus(date) : [];
+  
   // Get next major intraday
   const { confluence: nextMajor, minutesAway: minutesToNextMajor } = getNextMajorConfluence(date);
   
@@ -553,6 +718,10 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
     nowClosing: now.closingCandles,
     nowConfluenceScore: now.confluenceScore,
     nowImpact: now.impactLevel,
+    
+    // Decompression tracking
+    decompressing,
+    decompressionCount: decompressing.length,
     
     nextMajor,
     minutesToNextMajor,

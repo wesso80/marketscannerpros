@@ -32,6 +32,7 @@ interface TimeframeConfig {
   postCloseWindow: number;  // Minutes after close to watch
   preCloseStart?: number;   // Minutes before close (anticipatory)
   preCloseEnd?: number;
+  decompStart?: number;     // Minutes before close when decompression starts (candles gravitate to 50%)
 }
 
 interface DecompressionEvent {
@@ -138,6 +139,13 @@ interface FullForecast {
     clusters: number;
     mid50Levels: { tf: string; level: number; distance: number }[];
     nearestMid50: { tf: string; level: number; distance: number } | null;
+    // Decompression pull analysis
+    decompression?: {
+      activeCount: number;
+      netPullDirection: 'bullish' | 'bearish' | 'neutral';
+      pullBias: number;
+      activeTFs: { tf: string; minsToClose: number; mid50Level: number; pullDirection: 'up' | 'down' | 'none' }[];
+    };
   };
   
   // Upcoming events
@@ -168,19 +176,130 @@ interface FullForecast {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const TIMEFRAMES: TimeframeConfig[] = [
-  { tf: '30',  label: '30m', minutes: 30,  postCloseWindow: 10 },
-  { tf: '60',  label: '1h',  minutes: 60,  postCloseWindow: 15 },
-  { tf: '120', label: '2h',  minutes: 120, postCloseWindow: 20 },
-  { tf: '180', label: '3h',  minutes: 180, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20 },
-  { tf: '240', label: '4h',  minutes: 240, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20 },
-  { tf: '360', label: '6h',  minutes: 360, postCloseWindow: 30, preCloseStart: 30, preCloseEnd: 25 },
-  { tf: '480', label: '8h',  minutes: 480, postCloseWindow: 35, preCloseStart: 35, preCloseEnd: 30 },
-  { tf: 'D',   label: '1D',  minutes: 1440, postCloseWindow: 60 },
+  // Micro/Scalping
+  { tf: '5',   label: '5m',  minutes: 5,   postCloseWindow: 3,  decompStart: 1 },
+  { tf: '10',  label: '10m', minutes: 10,  postCloseWindow: 5,  decompStart: 1.5 },
+  { tf: '15',  label: '15m', minutes: 15,  postCloseWindow: 7,  decompStart: 2 },
+  // Intraday
+  { tf: '30',  label: '30m', minutes: 30,  postCloseWindow: 10, decompStart: 4 },
+  { tf: '60',  label: '1h',  minutes: 60,  postCloseWindow: 15, decompStart: 9 },
+  { tf: '120', label: '2h',  minutes: 120, postCloseWindow: 20, decompStart: 12 },
+  { tf: '180', label: '3h',  minutes: 180, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20, decompStart: 15 },
+  { tf: '240', label: '4h',  minutes: 240, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20, decompStart: 12 },
+  { tf: '360', label: '6h',  minutes: 360, postCloseWindow: 30, preCloseStart: 30, preCloseEnd: 25, decompStart: 20 },
+  { tf: '480', label: '8h',  minutes: 480, postCloseWindow: 35, preCloseStart: 35, preCloseEnd: 30, decompStart: 20 },
+  // Daily/Swing
+  { tf: 'D',   label: '1D',  minutes: 1440, postCloseWindow: 60, decompStart: 60 },
+  { tf: '2D',  label: '2D',  minutes: 2880, postCloseWindow: 90, decompStart: 120 },
+  { tf: '3D',  label: '3D',  minutes: 4320, postCloseWindow: 120, decompStart: 180 },
+  { tf: 'W',   label: '1W',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
+  // Macro
+  { tf: '2W',  label: '2W',  minutes: 20160, postCloseWindow: 480, decompStart: 780 },
+  { tf: 'M',   label: '1M',  minutes: 43200, postCloseWindow: 720, decompStart: 1560 },
+  { tf: '3M',  label: '3M',  minutes: 129600, postCloseWindow: 1440, decompStart: 4680 },
+  { tf: 'Y',   label: '1Y',  minutes: 525600, postCloseWindow: 2880, decompStart: 18720 },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCAN MODES - Hierarchical scanning with all TFs below
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ScanMode = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
+
+interface ScanModeConfig {
+  mode: ScanMode;
+  label: string;
+  description: string;
+  primaryTF: string;           // The main timeframe for this scan
+  maxTFMinutes: number;        // Include all TFs up to this size
+  minConfluence: number;       // Minimum TFs for signal
+}
+
+const SCAN_MODES: ScanModeConfig[] = [
+  // Scalping - 5m, 10m, 15m scans (include all micro TFs)
+  { mode: 'scalping', label: '⚡ Scalping (5-15m)', description: 'Micro TF decompression for quick trades', primaryTF: '15m', maxTFMinutes: 15, minConfluence: 2 },
+  
+  // Intraday - 30m, 1H, 4H scans (include scalping + intraday)
+  { mode: 'intraday_30m', label: '📊 30min Scan', description: '30m + all micro TFs', primaryTF: '30m', maxTFMinutes: 30, minConfluence: 3 },
+  { mode: 'intraday_1h', label: '📊 1 Hour Scan', description: '1H + all TFs below', primaryTF: '1h', maxTFMinutes: 60, minConfluence: 3 },
+  { mode: 'intraday_4h', label: '📊 4 Hour Scan', description: '4H + all TFs below', primaryTF: '4h', maxTFMinutes: 240, minConfluence: 4 },
+  
+  // Swing - 1D, 3D, 1W scans (include intraday + daily)
+  { mode: 'swing_1d', label: '📅 Daily Scan', description: '1D + all intraday TFs', primaryTF: '1D', maxTFMinutes: 1440, minConfluence: 5 },
+  { mode: 'swing_3d', label: '📅 3-Day Scan', description: '3D + daily + intraday', primaryTF: '3D', maxTFMinutes: 4320, minConfluence: 5 },
+  { mode: 'swing_1w', label: '📅 Weekly Scan', description: '1W + all daily TFs', primaryTF: '1W', maxTFMinutes: 10080, minConfluence: 6 },
+  
+  // Macro - Monthly, Quarterly, Yearly
+  { mode: 'macro_monthly', label: '🏛️ Monthly Macro', description: 'Monthly + weekly + daily', primaryTF: '1M', maxTFMinutes: 43200, minConfluence: 6 },
+  { mode: 'macro_yearly', label: '🏛️ Yearly Macro', description: 'Yearly + quarterly + monthly', primaryTF: '1Y', maxTFMinutes: 525600, minConfluence: 7 },
+];
+
+export function getScanModes(): ScanModeConfig[] {
+  return SCAN_MODES;
+}
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DECOMPRESSION PULL ANALYSIS
+// When candles decompress toward their 50% level, they "pull" price
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface DecompressionPull {
+  tf: string;
+  isDecompressing: boolean;
+  minsToClose: number;
+  mid50Level: number;
+  pullDirection: 'up' | 'down' | 'none';  // Is 50% above or below current price?
+  pullStrength: number;                    // 1-10 based on proximity to close and TF weight
+  distanceToMid50: number;                 // % distance
+}
+
+interface DecompressionAnalysis {
+  decompressions: DecompressionPull[];
+  activeCount: number;
+  netPullDirection: 'bullish' | 'bearish' | 'neutral';
+  netPullStrength: number;                 // Aggregate pull strength
+  pullBias: number;                        // -100 to +100 (negative=bearish, positive=bullish)
+  reasoning: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HIERARCHICAL SCAN RESULT
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface HierarchicalScanResult {
+  mode: ScanMode;
+  modeLabel: string;
+  primaryTF: string;
+  currentPrice: number;
+  
+  // All TFs included in this scan
+  includedTFs: string[];
+  
+  // Decompression analysis for included TFs only
+  decompression: DecompressionAnalysis;
+  
+  // 50% levels for included TFs
+  mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[];
+  
+  // Clustered 50% levels (within ATR)
+  clusters: { levels: number[]; tfs: string[]; avgLevel: number }[];
+  
+  // Prediction
+  prediction: {
+    direction: 'bullish' | 'bearish' | 'neutral';
+    confidence: number;
+    reasoning: string;
+    targetLevel: number;        // Nearest clustered 50% or strongest pull
+    expectedMoveTime: string;   // When we expect the move
+  };
+  
+  // Signal quality
+  signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN AGENT CLASS
@@ -419,6 +538,309 @@ export class ConfluenceLearningAgent {
       magnitude > 0.3 ? 'up' : magnitude < -0.3 ? 'down' : 'sideways';
     
     return { direction, magnitude };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DECOMPRESSION PULL CALCULATION
+  // Scans all TFs closing today, checks which are decompressing,
+  // and calculates which direction price is being "pulled" toward 50% levels
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number): DecompressionAnalysis {
+    const decompressions: DecompressionPull[] = [];
+    
+    for (const tfConfig of TIMEFRAMES) {
+      const tfMs = tfConfig.minutes * 60 * 1000;
+      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
+      const periodEnd = periodStart + tfMs;
+      const timeToClose = periodEnd - currentTime;
+      const minsToClose = Math.floor(timeToClose / 60000);
+      
+      // Get resampled bars for this TF
+      const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
+      if (tfBars.length < 2) continue;
+      
+      // Get prior candle's 50% level
+      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
+      const distanceToMid50 = ((currentPrice - mid50Level) / mid50Level) * 100;
+      
+      // Check if this TF is in decompression window
+      const decompStart = tfConfig.decompStart || 0;
+      const isDecompressing = decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
+      
+      // Calculate pull direction (is 50% above or below current price?)
+      let pullDirection: 'up' | 'down' | 'none' = 'none';
+      if (isDecompressing) {
+        pullDirection = mid50Level > currentPrice ? 'up' : mid50Level < currentPrice ? 'down' : 'none';
+      }
+      
+      // Calculate pull strength (1-10)
+      // Factors: proximity to close, TF weight (larger TFs have more pull), distance to 50%
+      let pullStrength = 0;
+      if (isDecompressing) {
+        // Closer to close = stronger pull (linear ramp)
+        const closenessScore = (decompStart - minsToClose) / decompStart * 5; // 0-5
+        
+        // Larger TFs have more weight
+        const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5; // 5m=0, 1h=1.8, 4h=2.8, 1D=4
+        
+        // Closer 50% level = stronger pull (inverse of distance)
+        const distanceScore = Math.max(0, 2 - Math.abs(distanceToMid50) * 2); // 2 if close, 0 if >1% away
+        
+        pullStrength = Math.min(10, closenessScore + tfWeight + distanceScore);
+      }
+      
+      decompressions.push({
+        tf: tfConfig.label,
+        isDecompressing,
+        minsToClose,
+        mid50Level,
+        pullDirection,
+        pullStrength,
+        distanceToMid50,
+      });
+    }
+    
+    // Calculate net pull
+    const activeDecomps = decompressions.filter(d => d.isDecompressing);
+    const activeCount = activeDecomps.length;
+    
+    let bullishPull = 0;
+    let bearishPull = 0;
+    const pullReasons: string[] = [];
+    
+    for (const d of activeDecomps) {
+      if (d.pullDirection === 'up') {
+        bullishPull += d.pullStrength;
+        pullReasons.push(`${d.tf} pulling UP to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m to close)`);
+      } else if (d.pullDirection === 'down') {
+        bearishPull += d.pullStrength;
+        pullReasons.push(`${d.tf} pulling DOWN to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m to close)`);
+      }
+    }
+    
+    const netPullStrength = bullishPull + bearishPull;
+    const pullBias = netPullStrength > 0 ? ((bullishPull - bearishPull) / netPullStrength) * 100 : 0;
+    
+    let netPullDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (pullBias > 20) {
+      netPullDirection = 'bullish';
+    } else if (pullBias < -20) {
+      netPullDirection = 'bearish';
+    }
+    
+    const reasoning = activeCount > 0 
+      ? `${activeCount} TFs decompressing: ${pullReasons.join(', ')}`
+      : 'No active decompressions - wait for TFs to enter decompression window';
+    
+    return {
+      decompressions,
+      activeCount,
+      netPullDirection,
+      netPullStrength,
+      pullBias,
+      reasoning,
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HIERARCHICAL SCAN - Scan with all TFs below the selected mode
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async scanHierarchical(symbol: string, scanMode: ScanMode): Promise<HierarchicalScanResult> {
+    const modeConfig = SCAN_MODES.find(m => m.mode === scanMode);
+    if (!modeConfig) throw new Error(`Unknown scan mode: ${scanMode}`);
+    
+    // Get price data
+    const baseBars = await this.fetchHistoricalData(symbol, '30min');
+    if (!baseBars || baseBars.length === 0) {
+      throw new Error(`No price data for ${symbol}`);
+    }
+    
+    const currentPrice = baseBars[baseBars.length - 1].close;
+    const currentTime = Date.now();
+    const atr = this.calculateATR(baseBars);
+    
+    // Filter TFs to only those <= maxTFMinutes for this scan mode
+    const includedTFConfigs = TIMEFRAMES.filter(tf => tf.minutes <= modeConfig.maxTFMinutes);
+    const includedTFs = includedTFConfigs.map(tf => tf.label);
+    
+    // Analyze decompression for included TFs only
+    const allDecomps: DecompressionPull[] = [];
+    const mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[] = [];
+    
+    for (const tfConfig of includedTFConfigs) {
+      const tfMs = tfConfig.minutes * 60 * 1000;
+      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
+      const periodEnd = periodStart + tfMs;
+      const timeToClose = periodEnd - currentTime;
+      const minsToClose = Math.floor(timeToClose / 60000);
+      
+      // Resample for 50% level
+      const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
+      if (tfBars.length < 2) continue;
+      
+      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
+      const distanceToMid50 = ((currentPrice - mid50Level) / mid50Level) * 100;
+      
+      // Check decompression
+      const decompStart = tfConfig.decompStart || 0;
+      const isDecompressing = decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
+      
+      let pullDirection: 'up' | 'down' | 'none' = 'none';
+      let pullStrength = 0;
+      
+      if (isDecompressing) {
+        pullDirection = mid50Level > currentPrice ? 'up' : mid50Level < currentPrice ? 'down' : 'none';
+        const closenessScore = (decompStart - minsToClose) / decompStart * 5;
+        const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5;
+        const distanceScore = Math.max(0, 2 - Math.abs(distanceToMid50) * 2);
+        pullStrength = Math.min(10, closenessScore + tfWeight + distanceScore);
+      }
+      
+      allDecomps.push({
+        tf: tfConfig.label,
+        isDecompressing,
+        minsToClose,
+        mid50Level,
+        pullDirection,
+        pullStrength,
+        distanceToMid50,
+      });
+      
+      mid50Levels.push({
+        tf: tfConfig.label,
+        level: mid50Level,
+        distance: distanceToMid50,
+        isDecompressing,
+      });
+    }
+    
+    // Calculate decompression analysis
+    const activeDecomps = allDecomps.filter(d => d.isDecompressing);
+    let bullishPull = 0;
+    let bearishPull = 0;
+    const pullReasons: string[] = [];
+    
+    for (const d of activeDecomps) {
+      if (d.pullDirection === 'up') {
+        bullishPull += d.pullStrength;
+        pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
+      } else if (d.pullDirection === 'down') {
+        bearishPull += d.pullStrength;
+        pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
+      }
+    }
+    
+    const netPullStrength = bullishPull + bearishPull;
+    const pullBias = netPullStrength > 0 ? ((bullishPull - bearishPull) / netPullStrength) * 100 : 0;
+    let netPullDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (pullBias > 20) netPullDirection = 'bullish';
+    else if (pullBias < -20) netPullDirection = 'bearish';
+    
+    const decompression: DecompressionAnalysis = {
+      decompressions: allDecomps,
+      activeCount: activeDecomps.length,
+      netPullDirection,
+      netPullStrength,
+      pullBias,
+      reasoning: activeDecomps.length > 0 
+        ? `${activeDecomps.length} TFs decompressing: ${pullReasons.join(', ')}`
+        : 'No active decompressions',
+    };
+    
+    // Find clusters (50% levels within ATR of each other)
+    const clusters: { levels: number[]; tfs: string[]; avgLevel: number }[] = [];
+    const usedLevels = new Set<number>();
+    
+    for (let i = 0; i < mid50Levels.length; i++) {
+      if (usedLevels.has(mid50Levels[i].level)) continue;
+      
+      const cluster = { levels: [mid50Levels[i].level], tfs: [mid50Levels[i].tf], avgLevel: mid50Levels[i].level };
+      usedLevels.add(mid50Levels[i].level);
+      
+      for (let j = i + 1; j < mid50Levels.length; j++) {
+        if (Math.abs(mid50Levels[i].level - mid50Levels[j].level) <= atr) {
+          cluster.levels.push(mid50Levels[j].level);
+          cluster.tfs.push(mid50Levels[j].tf);
+          usedLevels.add(mid50Levels[j].level);
+        }
+      }
+      
+      if (cluster.levels.length >= 2) {
+        cluster.avgLevel = cluster.levels.reduce((a, b) => a + b, 0) / cluster.levels.length;
+        clusters.push(cluster);
+      }
+    }
+    
+    // Build prediction
+    let direction: 'bullish' | 'bearish' | 'neutral' = netPullDirection;
+    let confidence = Math.min(90, 40 + activeDecomps.length * 10 + clusters.length * 5);
+    let targetLevel = currentPrice;
+    
+    // Find target: nearest cluster or strongest decompressing 50%
+    if (clusters.length > 0) {
+      // Sort clusters by proximity to price
+      clusters.sort((a, b) => Math.abs(a.avgLevel - currentPrice) - Math.abs(b.avgLevel - currentPrice));
+      targetLevel = clusters[0].avgLevel;
+    } else if (activeDecomps.length > 0) {
+      // Use strongest decompressing TF's 50%
+      const strongest = activeDecomps.sort((a, b) => b.pullStrength - a.pullStrength)[0];
+      targetLevel = strongest.mid50Level;
+    }
+    
+    // Adjust direction based on target
+    if (targetLevel > currentPrice * 1.001) direction = 'bullish';
+    else if (targetLevel < currentPrice * 0.999) direction = 'bearish';
+    
+    // Determine signal strength
+    let signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal' = 'no_signal';
+    if (activeDecomps.length >= modeConfig.minConfluence && clusters.length >= 1) {
+      signalStrength = 'strong';
+    } else if (activeDecomps.length >= modeConfig.minConfluence - 1) {
+      signalStrength = 'moderate';
+    } else if (activeDecomps.length >= 1) {
+      signalStrength = 'weak';
+    }
+    
+    // Build reasoning
+    const reasoningParts: string[] = [];
+    if (activeDecomps.length > 0) {
+      reasoningParts.push(`${activeDecomps.length} TFs decompressing toward 50%`);
+    }
+    if (clusters.length > 0) {
+      reasoningParts.push(`${clusters.length} 50% cluster(s) detected`);
+    }
+    if (netPullDirection !== 'neutral') {
+      reasoningParts.push(`Net pull ${netPullDirection} (bias: ${pullBias.toFixed(0)}%)`);
+    }
+    
+    // Expected move time based on nearest close
+    const nearestClose = allDecomps
+      .filter(d => d.isDecompressing)
+      .sort((a, b) => a.minsToClose - b.minsToClose)[0];
+    const expectedMoveTime = nearestClose 
+      ? `${nearestClose.minsToClose}m (${nearestClose.tf} close)`
+      : 'Wait for decompression';
+    
+    return {
+      mode: scanMode,
+      modeLabel: modeConfig.label,
+      primaryTF: modeConfig.primaryTF,
+      currentPrice,
+      includedTFs,
+      decompression,
+      mid50Levels,
+      clusters,
+      prediction: {
+        direction,
+        confidence,
+        reasoning: reasoningParts.join(' | ') || 'No confluence detected',
+        targetLevel,
+        expectedMoveTime,
+      },
+      signalStrength,
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -830,7 +1252,14 @@ export class ConfluenceLearningAgent {
       }
     }
     
-    // Build prediction using learned patterns
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DECOMPRESSION PULL ANALYSIS - The core prediction driver
+    // Scan all TFs for active decompression windows and calculate pull direction
+    // ═══════════════════════════════════════════════════════════════════════════
+    const decompPull = this.analyzeDecompressionPull(baseBars, currentPrice, currentTime);
+    console.log(`🔄 Decompression Analysis: ${decompPull.activeCount} TFs active, pull=${decompPull.netPullDirection} (bias: ${decompPull.pullBias.toFixed(1)})`);
+    
+    // Build prediction using learned patterns + decompression pull
     let prediction = this.buildPrediction(learning, {
       stack,
       isHotZone,
@@ -838,6 +1267,7 @@ export class ConfluenceLearningAgent {
       nearestMid50Distance: mid50Levels[0]?.distance || 0,
       currentPrice,
       atr,
+      decompPull, // Pass decompression analysis to prediction builder
     });
 
     // Apply live learning stats if available
@@ -875,6 +1305,20 @@ export class ConfluenceLearningAgent {
         clusters,
         mid50Levels,
         nearestMid50: mid50Levels[0] || null,
+        // Include decompression pull analysis
+        decompression: decompPull.activeCount > 0 ? {
+          activeCount: decompPull.activeCount,
+          netPullDirection: decompPull.netPullDirection,
+          pullBias: decompPull.pullBias,
+          activeTFs: decompPull.decompressions
+            .filter(d => d.isDecompressing)
+            .map(d => ({
+              tf: d.tf,
+              minsToClose: d.minsToClose,
+              mid50Level: d.mid50Level,
+              pullDirection: d.pullDirection,
+            })),
+        } : undefined,
       },
       upcoming: {
         nextConfluenceIn,
@@ -904,9 +1348,10 @@ export class ConfluenceLearningAgent {
       nearestMid50Distance: number;
       currentPrice: number;
       atr: number;
+      decompPull?: DecompressionAnalysis;
     }
   ): Prediction {
-    const { stack, isHotZone, clusters, nearestMid50Distance, currentPrice, atr } = context;
+    const { stack, isHotZone, clusters, nearestMid50Distance, currentPrice, atr, decompPull } = context;
     
     // Get stack-based bias
     const stackStats = learning.stackOutcomes.get(Math.min(stack, 9));
@@ -914,6 +1359,28 @@ export class ConfluenceLearningAgent {
     let downBias = stackStats?.downPct || 50;
     let avgMag = stackStats?.avgMagnitude || 0.5;
     let avgDecompBars = stackStats?.avgBarsToMove || 4;
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DECOMPRESSION PULL - Primary direction indicator
+    // When TFs are actively decompressing, they pull price toward their 50% levels
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (decompPull && decompPull.activeCount > 0) {
+      // Weight decompression heavily - it's the time-based edge
+      const pullWeight = Math.min(30, decompPull.activeCount * 5 + decompPull.netPullStrength);
+      
+      if (decompPull.netPullDirection === 'bullish') {
+        upBias += pullWeight;
+        console.log(`🔼 Bullish decompression pull: +${pullWeight}% to upBias (now ${upBias}%)`);
+      } else if (decompPull.netPullDirection === 'bearish') {
+        downBias += pullWeight;
+        console.log(`🔽 Bearish decompression pull: +${pullWeight}% to downBias (now ${downBias}%)`);
+      }
+      
+      // Increase magnitude expectation when multiple TFs decompressing
+      if (decompPull.activeCount >= 3) {
+        avgMag *= 1.3;
+      }
+    }
     
     // Adjust for hot zone
     if (isHotZone) {
@@ -938,11 +1405,20 @@ export class ConfluenceLearningAgent {
       avgMag *= 1.2;
     }
     
-    // Determine direction
+    // Determine direction - decompression pull is the primary driver
     let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
     let confidence = 50;
     
-    if (upBias > downBias + 10) {
+    // If we have active decompressions, use that as primary signal
+    if (decompPull && decompPull.activeCount >= 2) {
+      if (decompPull.netPullDirection === 'bullish') {
+        direction = 'bullish';
+        confidence = Math.min(85, 50 + decompPull.pullBias * 0.3);
+      } else if (decompPull.netPullDirection === 'bearish') {
+        direction = 'bearish';
+        confidence = Math.min(85, 50 - decompPull.pullBias * 0.3);
+      }
+    } else if (upBias > downBias + 10) {
       direction = 'bullish';
       confidence = Math.min(85, upBias);
     } else if (downBias > upBias + 10) {
@@ -985,11 +1461,25 @@ export class ConfluenceLearningAgent {
 
   private buildReasoning(
     learning: SymbolLearning,
-    context: { stack: number; isHotZone: boolean; clusters: number; nearestMid50Distance: number },
+    context: { stack: number; isHotZone: boolean; clusters: number; nearestMid50Distance: number; decompPull?: DecompressionAnalysis },
     direction: string,
     confidence: number
   ): string {
     const parts: string[] = [];
+    
+    // Decompression is the primary driver - show it first
+    if (context.decompPull && context.decompPull.activeCount > 0) {
+      const activeDecomps = context.decompPull.decompressions.filter(d => d.isDecompressing);
+      const tfs = activeDecomps.map(d => d.tf).join(', ');
+      parts.push(`🔄 ${context.decompPull.activeCount} TFs decompressing (${tfs}) → ${context.decompPull.netPullDirection.toUpperCase()} pull`);
+      
+      // Show which 50% levels are pulling price
+      const pulls = activeDecomps.filter(d => d.pullDirection !== 'none').slice(0, 3);
+      for (const p of pulls) {
+        const arrow = p.pullDirection === 'up' ? '↑' : '↓';
+        parts.push(`${p.tf} ${arrow} ${p.mid50Level.toFixed(2)} (${p.minsToClose}m to close)`);
+      }
+    }
     
     if (context.stack >= 5) {
       parts.push(`Stack of ${context.stack} active time windows`);

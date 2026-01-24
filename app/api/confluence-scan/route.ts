@@ -1,15 +1,16 @@
 /**
- * AI Confluence Forecast API Endpoint v2
+ * AI Confluence Forecast API Endpoint v3
  * 
  * NEW FEATURES:
  * - Full history scanning with LEARNING
  * - Decompression timing analysis (when does price start moving)
  * - Per-symbol pattern memory
  * - Predicts upcoming confluence windows
+ * - HIERARCHICAL SCANNING (scalping, intraday, swing, macro)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { confluenceLearningAgent } from '@/lib/confluence-learning-agent';
+import { confluenceLearningAgent, getScanModes, type ScanMode } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 import { q } from '@/lib/db';
 
@@ -17,7 +18,8 @@ export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
 interface ScanRequest {
   symbol: string;
-  mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast';
+  mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast' | 'hierarchical';
+  scanMode?: ScanMode;  // For hierarchical scans
   forceRefresh?: boolean;
 }
 
@@ -92,6 +94,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         // AI forecast with learned patterns + decompression timing
         console.log(`🔮 Forecast mode for ${normalizedSymbol}...`);
         result = await confluenceLearningAgent.generateForecast(normalizedSymbol);
+        break;
+
+      case 'hierarchical':
+        // Hierarchical scan with selected mode (scalping, intraday, swing, macro)
+        const scanMode = (body as any).scanMode || 'intraday_1h';
+        console.log(`📊 Hierarchical ${scanMode} scan for ${normalizedSymbol}...`);
+        result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode);
         break;
 
       case 'quick':
