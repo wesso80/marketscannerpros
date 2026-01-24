@@ -18,6 +18,7 @@ export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 interface ScanRequest {
   symbol: string;
   mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast';
+  forceRefresh?: boolean;
 }
 
 interface ScanResponse {
@@ -25,18 +26,19 @@ interface ScanResponse {
   data?: any;
   error?: string;
   cached?: boolean;
+  cacheAgeMs?: number;
   mode?: string;
 }
 
 // Simple in-memory cache (in production use Redis)
 const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const LEARNING_CACHE_TTL = 60 * 60 * 1000; // 1 hour for learned patterns
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes for quick/state-only modes
+const FORECAST_CACHE_TTL = 3 * 60 * 1000; // 3 minutes for forecasts (data changes frequently)
 
-function getCached(key: string, ttl: number = CACHE_TTL): any | null {
+function getCached(key: string, ttl: number = CACHE_TTL): { data: any; age: number } | null {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < ttl) {
-    return cached.data;
+    return { data: cached.data, age: Date.now() - cached.timestamp };
   }
   cache.delete(key);
   return null;
@@ -49,7 +51,7 @@ function setCache(key: string, data: any): void {
 export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse>> {
   try {
     const body: ScanRequest = await request.json();
-    const { symbol, mode = 'forecast' } = body;
+    const { symbol, mode = 'forecast', forceRefresh = false } = body;
 
     if (!symbol || typeof symbol !== 'string') {
       return NextResponse.json({ 
@@ -62,14 +64,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     const normalizedSymbol = symbol.toUpperCase().trim();
     const cacheKey = `${normalizedSymbol}-${mode}`;
 
-    // Check cache (except for learn mode which should always refresh)
-    if (mode !== 'learn') {
-      const cachedData = getCached(cacheKey, mode === 'forecast' ? LEARNING_CACHE_TTL : CACHE_TTL);
-      if (cachedData) {
+    // Check cache (except for learn mode or force refresh)
+    if (mode !== 'learn' && !forceRefresh) {
+      const cached = getCached(cacheKey, mode === 'forecast' ? FORECAST_CACHE_TTL : CACHE_TTL);
+      if (cached) {
         return NextResponse.json({
           success: true,
-          data: cachedData,
+          data: cached.data,
           cached: true,
+          cacheAgeMs: cached.age,
           mode,
         });
       }

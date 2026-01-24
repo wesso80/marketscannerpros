@@ -61,6 +61,8 @@ export default function AIConfluenceScanner() {
   const [forecast, setForecast] = useState<FullForecast | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'forecast' | 'learn' | 'quick'>('forecast');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isCached, setIsCached] = useState(false);
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
@@ -87,7 +89,7 @@ export default function AIConfluenceScanner() {
     );
   }
 
-  const handleScan = async () => {
+  const handleScan = async (forceRefresh = false) => {
     if (!symbol.trim()) {
       setError("Please enter a symbol");
       return;
@@ -96,12 +98,13 @@ export default function AIConfluenceScanner() {
     setLoading(true);
     setError(null);
     setForecast(null);
+    setIsCached(false);
 
     try {
       const response = await fetch('/api/confluence-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol: symbol.trim(), mode }),
+        body: JSON.stringify({ symbol: symbol.trim(), mode, forceRefresh }),
       });
 
       const data = await response.json();
@@ -109,6 +112,10 @@ export default function AIConfluenceScanner() {
       if (!data.success) {
         setError(data.error || 'Scan failed');
       } else {
+        // Track if cached
+        setIsCached(!!data.cached);
+        setLastUpdated(new Date());
+        
         // Handle different response formats based on mode
         const result = data.data;
         
@@ -326,7 +333,7 @@ export default function AIConfluenceScanner() {
           </select>
 
           <button
-            onClick={handleScan}
+            onClick={() => handleScan()}
             disabled={loading}
             style={{
               padding: '0.75rem 2rem',
@@ -351,7 +358,45 @@ export default function AIConfluenceScanner() {
               <>🔍 Scan</>
             )}
           </button>
+
+          {/* Force Refresh Button - shows when data is cached */}
+          {result && isCached && !loading && (
+            <button
+              onClick={() => handleScan(true)}
+              style={{
+                padding: '0.75rem 1rem',
+                fontSize: '0.9rem',
+                background: 'rgba(251,191,36,0.2)',
+                border: '1px solid rgba(251,191,36,0.5)',
+                borderRadius: '12px',
+                color: '#FBBF24',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+              title="Force refresh with latest market data"
+            >
+              🔄 Refresh
+            </button>
+          )}
         </div>
+
+        {/* Cache Status Indicator */}
+        {result && lastUpdated && (
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <span style={{
+              fontSize: '0.8rem',
+              color: isCached ? '#FBBF24' : '#10B981',
+              background: isCached ? 'rgba(251,191,36,0.1)' : 'rgba(16,185,129,0.1)',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '6px',
+            }}>
+              {isCached ? '📦 Cached data' : '✨ Fresh data'} • Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          </div>
+        )}
 
         {/* Quick Picks */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
