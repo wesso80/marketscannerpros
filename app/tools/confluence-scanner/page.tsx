@@ -30,6 +30,14 @@ interface HierarchicalResult {
     targetLevel: number;
     expectedMoveTime: string;
   };
+  tradeSetup: {
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    riskRewardRatio: number;
+    riskPercent: number;
+    rewardPercent: number;
+  };
   signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
 }
 
@@ -653,6 +661,116 @@ export default function AIConfluenceScanner() {
                 💡 {hierarchicalResult.prediction.reasoning}
               </div>
             </div>
+
+            {/* 📊 TRADE SETUP CARD */}
+            {hierarchicalResult.tradeSetup && hierarchicalResult.prediction.direction !== 'neutral' && (
+              <div style={{
+                background: hierarchicalResult.prediction.direction === 'bullish' 
+                  ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(30,41,59,0.95))'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(30,41,59,0.95))',
+                border: `2px solid ${hierarchicalResult.prediction.direction === 'bullish' ? '#10B981' : '#EF4444'}`,
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: hierarchicalResult.prediction.direction === 'bullish' ? '#10B981' : '#EF4444', fontSize: '1.2rem' }}>
+                    📊 Suggested Trade Setup (2.5 R:R)
+                  </h3>
+                  <span style={{
+                    background: 'rgba(168,85,247,0.2)',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    color: '#A855F7',
+                    fontWeight: 600,
+                  }}>
+                    Swing Stop
+                  </span>
+                </div>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1rem',
+                }}>
+                  {/* Entry */}
+                  <div style={{
+                    background: 'rgba(59,130,246,0.15)',
+                    border: '1px solid rgba(59,130,246,0.4)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Entry Price
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#3B82F6', fontFamily: 'monospace' }}>
+                      ${formatPrice(hierarchicalResult.tradeSetup.entryPrice)}
+                    </div>
+                  </div>
+                  
+                  {/* Stop Loss */}
+                  <div style={{
+                    background: 'rgba(239,68,68,0.15)',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      🛑 Stop Loss
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#EF4444', fontFamily: 'monospace' }}>
+                      ${formatPrice(hierarchicalResult.tradeSetup.stopLoss)}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#F87171' }}>
+                      -{hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}%
+                    </div>
+                  </div>
+                  
+                  {/* Take Profit */}
+                  <div style={{
+                    background: 'rgba(16,185,129,0.15)',
+                    border: '1px solid rgba(16,185,129,0.4)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      🎯 Take Profit
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#10B981', fontFamily: 'monospace' }}>
+                      ${formatPrice(hierarchicalResult.tradeSetup.takeProfit)}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#34D399' }}>
+                      +{hierarchicalResult.tradeSetup.rewardPercent.toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+                
+                {/* R:R Visual */}
+                <div style={{
+                  marginTop: '1rem',
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '8px',
+                  padding: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '1rem',
+                }}>
+                  <span style={{ color: '#EF4444', fontSize: '0.9rem' }}>
+                    Risk: {hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}%
+                  </span>
+                  <span style={{ fontSize: '1.2rem', color: '#F59E0B', fontWeight: 'bold' }}>
+                    ⚖️ {hierarchicalResult.tradeSetup.riskRewardRatio}:1 R:R
+                  </span>
+                  <span style={{ color: '#10B981', fontSize: '0.9rem' }}>
+                    Reward: {hierarchicalResult.tradeSetup.rewardPercent.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Decompression Analysis Card */}
             <div style={{

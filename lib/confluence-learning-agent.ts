@@ -298,6 +298,16 @@ export interface HierarchicalScanResult {
     expectedMoveTime: string;   // When we expect the move
   };
   
+  // Trade Setup (based on strategy settings: Swing stop, 2.5 R:R target)
+  tradeSetup: {
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    riskRewardRatio: number;
+    riskPercent: number;        // % risk from entry to stop
+    rewardPercent: number;      // % reward from entry to target
+  };
+  
   // Signal quality
   signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
 }
@@ -862,6 +872,53 @@ export class ConfluenceLearningAgent {
       ? `${nearestClose.minsToClose}m (${nearestClose.tf} close)`
       : 'Wait for decompression';
     
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TRADE SETUP CALCULATION (Swing Stop + 2.5 R:R)
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Calculate swing high/low from recent bars for stop loss
+    const swingLookback = 5;
+    const recentBars = baseBars.slice(-swingLookback);
+    const swingLow = Math.min(...recentBars.map(b => b.low));
+    const swingHigh = Math.max(...recentBars.map(b => b.high));
+    
+    // Entry is current price
+    const entryPrice = currentPrice;
+    
+    // Stop loss based on swing (direction-dependent)
+    let stopLoss: number;
+    let takeProfit: number;
+    const rrRatio = 2.5;  // From strategy settings
+    
+    if (direction === 'bullish') {
+      // Long: stop below swing low
+      stopLoss = swingLow;
+      const risk = entryPrice - stopLoss;
+      takeProfit = entryPrice + (risk * rrRatio);
+    } else if (direction === 'bearish') {
+      // Short: stop above swing high
+      stopLoss = swingHigh;
+      const risk = stopLoss - entryPrice;
+      takeProfit = entryPrice - (risk * rrRatio);
+    } else {
+      // Neutral: use ATR-based default
+      const atrStop = atr * 2;
+      stopLoss = entryPrice - atrStop;
+      takeProfit = entryPrice + (atrStop * rrRatio);
+    }
+    
+    const riskPercent = Math.abs((entryPrice - stopLoss) / entryPrice) * 100;
+    const rewardPercent = Math.abs((takeProfit - entryPrice) / entryPrice) * 100;
+    
+    const tradeSetup = {
+      entryPrice,
+      stopLoss,
+      takeProfit,
+      riskRewardRatio: rrRatio,
+      riskPercent,
+      rewardPercent,
+    };
+    
     return {
       mode: scanMode,
       modeLabel: modeConfig.label,
@@ -879,6 +936,7 @@ export class ConfluenceLearningAgent {
         targetLevel,
         expectedMoveTime,
       },
+      tradeSetup,
       signalStrength,
     };
   }
