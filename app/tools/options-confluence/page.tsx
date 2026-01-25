@@ -301,7 +301,7 @@ export default function OptionsConfluenceScanner() {
 
           {result && (
             <button
-              onClick={() => handleScan(true)}
+              onClick={() => handleScan()}
               disabled={loading}
               style={{
                 padding: '0.75rem 1rem',
