@@ -101,7 +101,7 @@ const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; desc: string }[] 
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function OptionsConfluenceScanner() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<OptionsSetup | null>(null);
@@ -131,6 +131,129 @@ export default function OptionsConfluenceScanner() {
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
           <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
         </main>
+      </div>
+    );
+  }
+
+  // Coming Soon gate for non-admins (options data requires commercial license)
+  if (!isAdmin) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
+        padding: '2rem',
+        color: 'white'
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <span style={{ 
+              background: "linear-gradient(135deg, #10B981, #3B82F6)", 
+              padding: "4px 12px", 
+              borderRadius: "999px", 
+              fontSize: "11px", 
+              fontWeight: "600",
+              color: "#fff",
+              display: 'inline-block',
+              marginBottom: '1rem'
+            }}>PRO TRADER</span>
+            <h1 style={{ 
+              fontSize: '2.5rem', 
+              fontWeight: 'bold',
+              background: 'linear-gradient(135deg, #10B981, #3B82F6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              marginBottom: '0.5rem'
+            }}>
+              🎯 Options Confluence Scanner
+            </h1>
+            <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto' }}>
+              Get intelligent strike & expiration recommendations based on Time Confluence analysis.
+            </p>
+          </div>
+
+          <div style={{ 
+            background: 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(30,41,59,0.5))',
+            borderRadius: '24px',
+            border: '1px solid rgba(16,185,129,0.3)',
+            padding: '4rem 2rem',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🚀</div>
+            <h2 style={{ 
+              fontSize: '2rem', 
+              fontWeight: 'bold',
+              background: 'linear-gradient(135deg, #10B981, #3B82F6, #10B981)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              marginBottom: '1rem'
+            }}>
+              Coming Soon
+            </h2>
+            <p style={{ 
+              color: '#94A3B8', 
+              fontSize: '1.1rem',
+              maxWidth: '500px',
+              margin: '0 auto 2rem',
+              lineHeight: '1.6'
+            }}>
+              We&apos;re upgrading our options data infrastructure to bring you even better real-time analysis with Greeks, IV tracking, and unusual activity detection.
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              marginBottom: '2rem'
+            }}>
+              {["Strike Recommendations", "Expiration Analysis", "Greeks Integration", "Max Pain Levels", "Open Interest Flow", "IV Rank & Percentile", "Unusual Activity Alerts", "Time Confluence Signals"].map((feature) => (
+                <span key={feature} style={{
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(16,185,129,0.15)',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                  borderRadius: '20px',
+                  fontSize: '0.85rem',
+                  color: '#10B981'
+                }}>
+                  {feature}
+                </span>
+              ))}
+            </div>
+            <a href="/tools" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              background: 'linear-gradient(135deg, #10B981, #059669)',
+              color: '#fff',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              fontWeight: '600',
+              fontSize: '0.95rem'
+            }}>
+              ← Back to Tools
+            </a>
+          </div>
+
+          <div style={{
+            marginTop: '2rem',
+            padding: '1.5rem',
+            background: 'rgba(59,130,246,0.1)',
+            border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '1rem'
+          }}>
+            <span style={{ fontSize: '1.5rem' }}>💡</span>
+            <div>
+              <h4 style={{ color: '#3B82F6', marginBottom: '0.5rem', fontWeight: '600' }}>In the meantime...</h4>
+              <p style={{ color: '#94A3B8', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                You can still use the <strong style={{ color: '#F59E0B' }}>Golden Egg Deep Analysis</strong> for comprehensive technical analysis, 
+                AI insights, news sentiment, and earnings data. Options flow data will be added there too once available.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -223,150 +346,6 @@ export default function OptionsConfluenceScanner() {
     }
   };
 
-  // OPTIONS DATA TEMPORARILY UNAVAILABLE - Coming Soon
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
-      padding: '2rem',
-      color: 'white'
-    }}>
-      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ 
-            fontSize: '2.5rem', 
-            fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #10B981, #3B82F6)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '0.5rem'
-          }}>
-            🎯 Options Confluence Scanner
-          </h1>
-          <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto' }}>
-            Get intelligent strike & expiration recommendations based on Time Confluence analysis.
-          </p>
-        </div>
-
-        {/* Coming Soon Card */}
-        <div style={{ 
-          background: 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(30,41,59,0.5))',
-          borderRadius: '24px',
-          border: '1px solid rgba(16,185,129,0.3)',
-          padding: '4rem 2rem',
-          textAlign: 'center'
-        }}>
-          <div style={{ 
-            fontSize: '5rem', 
-            marginBottom: '1.5rem',
-          }}>
-            🚀
-          </div>
-          
-          <h2 style={{ 
-            fontSize: '2rem', 
-            fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #10B981, #3B82F6, #10B981)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '1rem'
-          }}>
-            Coming Soon
-          </h2>
-          
-          <p style={{ 
-            color: '#94A3B8', 
-            fontSize: '1.1rem',
-            maxWidth: '500px',
-            margin: '0 auto 2rem',
-            lineHeight: '1.6'
-          }}>
-            We&apos;re upgrading our options data infrastructure to bring you even better real-time analysis with Greeks, IV tracking, and unusual activity detection.
-          </p>
-
-          {/* Feature Tags */}
-          <div style={{
-            display: 'flex',
-            gap: '0.75rem',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            marginBottom: '2rem'
-          }}>
-            {[
-              "Strike Recommendations",
-              "Expiration Analysis", 
-              "Greeks Integration",
-              "Max Pain Levels",
-              "Open Interest Flow",
-              "IV Rank & Percentile",
-              "Unusual Activity Alerts",
-              "Time Confluence Signals"
-            ].map((feature) => (
-              <span 
-                key={feature}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(16,185,129,0.15)',
-                  border: '1px solid rgba(16,185,129,0.3)',
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
-                  color: '#10B981'
-                }}
-              >
-                {feature}
-              </span>
-            ))}
-          </div>
-
-          {/* Back Button */}
-          <a 
-            href="/tools"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              background: 'linear-gradient(135deg, #10B981, #059669)',
-              color: '#fff',
-              borderRadius: '12px',
-              textDecoration: 'none',
-              fontWeight: '600',
-              fontSize: '0.95rem',
-              transition: 'transform 0.2s'
-            }}
-          >
-            ← Back to Tools
-          </a>
-        </div>
-
-        {/* Info Card */}
-        <div style={{
-          marginTop: '2rem',
-          padding: '1.5rem',
-          background: 'rgba(59,130,246,0.1)',
-          border: '1px solid rgba(59,130,246,0.3)',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '1rem'
-        }}>
-          <span style={{ fontSize: '1.5rem' }}>💡</span>
-          <div>
-            <h4 style={{ color: '#3B82F6', marginBottom: '0.5rem', fontWeight: '600' }}>
-              In the meantime...
-            </h4>
-            <p style={{ color: '#94A3B8', fontSize: '0.9rem', lineHeight: '1.5' }}>
-              You can still use the <strong style={{ color: '#F59E0B' }}>Golden Egg Deep Analysis</strong> for comprehensive technical analysis, 
-              AI insights, news sentiment, and earnings data. Options flow data will be added there too once available.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  /* ORIGINAL SCANNER CODE - Temporarily disabled pending options data provider
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -1208,5 +1187,4 @@ export default function OptionsConfluenceScanner() {
       </div>
     </div>
   );
-  END OF ORIGINAL SCANNER CODE */
 }

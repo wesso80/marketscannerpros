@@ -202,7 +202,7 @@ function getRSIColor(rsi: number | undefined): string {
 }
 
 export default function DeepAnalysisPage() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -919,8 +919,52 @@ export default function DeepAnalysisPage() {
               </div>
             )}
 
-            {/* Options Flow - Coming Soon */}
-            {result.assetType === 'stock' && (
+            {/* Options Flow - Show data for admins, Coming Soon for others */}
+            {result.assetType === 'stock' && (isAdmin && result.optionsData ? (
+              <div style={{ 
+                background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
+                borderRadius: "16px",
+                border: "1px solid rgba(168,85,247,0.3)",
+                padding: "1.5rem"
+              }}>
+                <h3 style={{ color: "#A855F7", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
+                  Options Flow (Weekly Expiry)
+                  <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>ADMIN PREVIEW</span>
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
+                  <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
+                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Put/Call Ratio</div>
+                    <div style={{ color: result.optionsData.putCallRatio > 1 ? "#EF4444" : "#10B981", fontSize: "1.25rem", fontWeight: "bold" }}>
+                      {result.optionsData.putCallRatio?.toFixed(2) || "N/A"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
+                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Max Pain</div>
+                    <div style={{ color: "#F59E0B", fontSize: "1.25rem", fontWeight: "bold" }}>
+                      ${result.optionsData.maxPain?.toFixed(2) || "N/A"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
+                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Avg IV</div>
+                    <div style={{ color: "#3B82F6", fontSize: "1.25rem", fontWeight: "bold" }}>
+                      {result.optionsData.avgIV ? `${(result.optionsData.avgIV * 100).toFixed(1)}%` : "N/A"}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
+                    <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Sentiment</div>
+                    <div style={{ color: result.optionsData.sentiment === 'Bullish' ? "#10B981" : result.optionsData.sentiment === 'Bearish' ? "#EF4444" : "#F59E0B", fontSize: "1rem", fontWeight: "bold" }}>
+                      {result.optionsData.sentiment || "N/A"}
+                    </div>
+                  </div>
+                </div>
+                {result.optionsData.unusualActivity && result.optionsData.unusualActivity !== 'Normal' && (
+                  <div style={{ marginTop: "1rem", padding: "0.75rem", background: "rgba(245,158,11,0.1)", borderRadius: "8px", fontSize: "0.85rem", color: "#F59E0B" }}>
+                    ⚠️ Unusual Activity: {result.optionsData.unusualActivity}
+                  </div>
+                )}
+              </div>
+            ) : (
               <div style={{ 
                 background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
                 borderRadius: "16px",
@@ -993,7 +1037,7 @@ export default function DeepAnalysisPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ))}
 
             {/* Earnings Data (for stocks) */}
             {result.earnings && (

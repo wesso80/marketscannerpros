@@ -8,12 +8,16 @@ interface TierInfo {
   tier: UserTier;
   isLoading: boolean;
   isLoggedIn: boolean;
+  isAdmin: boolean;
+  email: string | null;
 }
 
 export function useUserTier(): TierInfo {
   const [tier, setTier] = useState<UserTier>("anonymous");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkTier() {
@@ -26,13 +30,19 @@ export function useUserTier(): TierInfo {
           const data = await res.json();
           setTier(data.tier || "free");
           setIsLoggedIn(true);
+          setIsAdmin(data.isAdmin || false);
+          setEmail(data.email || null);
         } else {
           setTier("anonymous");
           setIsLoggedIn(false);
+          setIsAdmin(false);
+          setEmail(null);
         }
       } catch {
         setTier("anonymous");
         setIsLoggedIn(false);
+        setIsAdmin(false);
+        setEmail(null);
       } finally {
         setIsLoading(false);
       }
@@ -41,7 +51,7 @@ export function useUserTier(): TierInfo {
     checkTier();
   }, []);
 
-  return { tier, isLoading, isLoggedIn };
+  return { tier, isLoading, isLoggedIn, isAdmin, email };
 }
 
 // Feature access helpers
