@@ -82,13 +82,13 @@ export interface OptionsSetup {
 }
 
 export interface OpenInterestData {
-  callOI: number;
-  putOI: number;
+  totalCallOI: number;
+  totalPutOI: number;
   pcRatio: number;              // Put/Call ratio
   sentiment: 'bullish' | 'bearish' | 'neutral';
+  sentimentReason: string;
   maxPainStrike: number | null;
-  highOIStrikes: { strike: number; callOI: number; putOI: number }[];
-  analysis: string;
+  highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put' }[];
 }
 
 export interface GreeksAdvice {
@@ -268,19 +268,27 @@ async function fetchOptionsChain(symbol: string): Promise<{
       return null;
     }
     
-    const options = data['data'] || data['optionChain'] || [];
+    // Alpha Vantage returns data in 'data' array
+    const options = data['data'] || [];
     if (!Array.isArray(options) || options.length === 0) {
-      console.warn('No options data returned');
+      console.warn('No options data returned. Keys:', Object.keys(data));
       return null;
+    }
+    
+    // Log first contract to debug field names
+    if (options.length > 0) {
+      console.log('📊 Sample contract fields:', Object.keys(options[0]));
     }
     
     const calls: AVOptionContract[] = [];
     const puts: AVOptionContract[] = [];
     
     for (const contract of options) {
-      if (contract.type?.toLowerCase() === 'call') {
+      // Alpha Vantage uses 'type' field with values 'call' or 'put'
+      const contractType = contract.type?.toLowerCase();
+      if (contractType === 'call') {
         calls.push(contract);
-      } else if (contract.type?.toLowerCase() === 'put') {
+      } else if (contractType === 'put') {
         puts.push(contract);
       }
     }
@@ -292,7 +300,6 @@ async function fetchOptionsChain(symbol: string): Promise<{
     return null;
   }
 }
-
 function analyzeOpenInterest(
   calls: AVOptionContract[],
   puts: AVOptionContract[],
@@ -305,49 +312,60 @@ function analyzeOpenInterest(
   const strikeOI: Map<number, { callOI: number; putOI: number }> = new Map();
   
   for (const call of calls) {
-    const oi = parseInt(call.open_interest || '0', 10);
-    const strike = parseFloat(call.strike);
-    totalCallOI += oi;
+    // Alpha Vantage may use 'open_interest' or 'openInterest'
+    const oiValue = call.open_interest || (call as unknown as Record<string, string>).openInterest || '0';
+    const oi = parseInt(String(oiValue), 10) || 0;
+    const strikeValue = call.strike || '0';
+    const strike = parseFloat(String(strikeValue)) || 0;
     
-    if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
-    strikeOI.get(strike)!.callOI += oi;
+    if (strike > 0) {
+      totalCallOI += oi;
+      if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
+      strikeOI.get(strike)!.callOI += oi;
+    }
   }
   
   for (const put of puts) {
-    const oi = parseInt(put.open_interest || '0', 10);
-    const strike = parseFloat(put.strike);
-    totalPutOI += oi;
+    const oiValue = put.open_interest || (put as unknown as Record<string, string>).openInterest || '0';
+    const oi = parseInt(String(oiValue), 10) || 0;
+    const strikeValue = put.strike || '0';
+    const strike = parseFloat(String(strikeValue)) || 0;
     
-    if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
-    strikeOI.get(strike)!.putOI += oi;
+    if (strike > 0) {
+      totalPutOI += oi;
+      if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
+      strikeOI.get(strike)!.putOI += oi;
+    }
   }
   
   // Put/Call ratio
-  const pcRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
+  const pcRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 1.0;
   
   // Sentiment based on P/C ratio
   // < 0.7 = bullish (more calls), > 1.0 = bearish (more puts), between = neutral
   let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  if (pcRatio < 0.7) sentiment = 'bullish';
-  else if (pcRatio > 1.0) sentiment = 'bearish';
+  let sentimentReason = 'P/C ratio in neutral range';
+  
+  if (pcRatio < 0.7) {
+    sentiment = 'bullish';
+    sentimentReason = `P/C ${pcRatio.toFixed(2)} = heavy call buying`;
+  } else if (pcRatio > 1.0) {
+    sentiment = 'bearish';
+    sentimentReason = `P/C ${pcRatio.toFixed(2)} = heavy put buying`;
+  }
   
   // Find max pain strike (where most options expire worthless)
-  // Max pain = strike where (call_pain + put_pain) is minimized for option buyers
   let maxPainStrike: number | null = null;
   let minPain = Infinity;
   
-  for (const [strike, oi] of strikeOI.entries()) {
-    // Pain for calls: sum of (current_price - strike) * call_OI for all strikes below current
-    // Pain for puts: sum of (strike - current_price) * put_OI for all strikes above current
+  for (const [strike] of strikeOI.entries()) {
     let pain = 0;
     
     for (const [s, data] of strikeOI.entries()) {
       if (s < strike) {
-        // These calls are ITM at this strike price
         pain += (strike - s) * data.callOI;
       }
       if (s > strike) {
-        // These puts are ITM at this strike price
         pain += (s - strike) * data.putOI;
       }
     }
@@ -358,48 +376,33 @@ function analyzeOpenInterest(
     }
   }
   
-  // Find high OI strikes (potential support/resistance)
-  const highOIStrikes = Array.from(strikeOI.entries())
-    .map(([strike, data]) => ({ strike, callOI: data.callOI, putOI: data.putOI, totalOI: data.callOI + data.putOI }))
-    .sort((a, b) => b.totalOI - a.totalOI)
-    .slice(0, 5)
-    .map(({ strike, callOI, putOI }) => ({ strike, callOI, putOI }));
+  // Find high OI strikes - return as flat list with type
+  const highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put' }[] = [];
   
-  // Build analysis text
-  const analysisPoints: string[] = [];
-  
-  if (pcRatio < 0.7) {
-    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = bullish (heavy call buying)`);
-  } else if (pcRatio > 1.0) {
-    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = bearish (heavy put buying)`);
-  } else {
-    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = neutral`);
-  }
-  
-  if (maxPainStrike) {
-    const maxPainDist = ((maxPainStrike - currentPrice) / currentPrice) * 100;
-    if (maxPainDist > 1) {
-      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (${maxPainDist.toFixed(1)}% above)`);
-    } else if (maxPainDist < -1) {
-      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (${Math.abs(maxPainDist).toFixed(1)}% below)`);
-    } else {
-      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (near current price)`);
+  // Add top call strikes by OI
+  for (const [strike, data] of strikeOI.entries()) {
+    if (data.callOI > 0) {
+      highOIStrikes.push({ strike, openInterest: data.callOI, type: 'call' });
+    }
+    if (data.putOI > 0) {
+      highOIStrikes.push({ strike, openInterest: data.putOI, type: 'put' });
     }
   }
   
-  if (highOIStrikes.length > 0) {
-    const topStrike = highOIStrikes[0];
-    analysisPoints.push(`Highest OI at $${topStrike.strike.toFixed(0)} (${topStrike.callOI.toLocaleString()}C/${topStrike.putOI.toLocaleString()}P)`);
-  }
+  // Sort by OI and take top 10
+  highOIStrikes.sort((a, b) => b.openInterest - a.openInterest);
+  const topStrikes = highOIStrikes.slice(0, 10);
+  
+  console.log(`📊 O/I Summary: Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}`);
   
   return {
-    callOI: totalCallOI,
-    putOI: totalPutOI,
+    totalCallOI,
+    totalPutOI,
     pcRatio,
     sentiment,
+    sentimentReason,
     maxPainStrike,
-    highOIStrikes,
-    analysis: analysisPoints.join('. '),
+    highOIStrikes: topStrikes,
   };
 }
 
