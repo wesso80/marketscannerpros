@@ -721,10 +721,20 @@ export class ConfluenceLearningAgent {
     // Detect if this is likely a stock (not crypto) - crypto symbols contain USD
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
     
-    // Check if US market is likely closed (weekend check - simplified)
+    // Check if US market is closed (weekend + after hours)
     const now = new Date();
     const utcDay = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
-    const isWeekend = !isCrypto && (utcDay === 0 || utcDay === 6);
+    const utcHour = now.getUTCHours();
+    
+    // Convert UTC to ET (Eastern Time) - simplified: EST = UTC-5
+    // Note: This doesn't account for DST but is close enough
+    const etHour = (utcHour - 5 + 24) % 24;
+    
+    // US Market regular hours: 9:30 AM - 4:00 PM ET
+    // We consider market "open" from 9:00 AM - 4:30 PM ET (with buffer)
+    const isWeekend = utcDay === 0 || utcDay === 6;
+    const isAfterHours = etHour < 9 || etHour >= 17;  // Before 9 AM or after 5 PM ET
+    const isMarketClosed = !isCrypto && (isWeekend || isAfterHours);
     
     for (const tfConfig of includedTFConfigs) {
       const tfMs = tfConfig.minutes * 60 * 1000;
@@ -746,10 +756,10 @@ export class ConfluenceLearningAgent {
       
       // Check decompression (only valid during live trading)
       const decompStart = tfConfig.decompStart || 0;
-      const isTimingDecomp = !isWeekend && decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
+      const isTimingDecomp = !isMarketClosed && decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
       
-      // For weekend/closed: treat TFs with price near 50% as "active" (proximity-based)
-      const isProximityActive = isWeekend && Math.abs(distanceToMid50) <= 1.5;  // Within 1.5% of 50%
+      // For market closed: treat TFs with price near 50% as "active" (proximity-based)
+      const isProximityActive = isMarketClosed && Math.abs(distanceToMid50) <= 1.5;  // Within 1.5% of 50%
       const isDecompressing = isTimingDecomp || isProximityActive;
       
       let pullDirection: 'up' | 'down' | 'none' = 'none';
@@ -758,8 +768,8 @@ export class ConfluenceLearningAgent {
       if (isDecompressing) {
         pullDirection = mid50Level > currentPrice ? 'up' : mid50Level < currentPrice ? 'down' : 'none';
         
-        if (isWeekend) {
-          // Weekend: use proximity-based strength + TF weight
+        if (isMarketClosed) {
+          // Market closed: use proximity-based strength + TF weight
           const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5;
           pullStrength = Math.min(10, proximityStrength + tfWeight);
         } else {
@@ -774,7 +784,7 @@ export class ConfluenceLearningAgent {
       allDecomps.push({
         tf: tfConfig.label,
         isDecompressing,
-        minsToClose: isWeekend ? -1 : minsToClose,  // -1 indicates market closed
+        minsToClose: isMarketClosed ? -1 : minsToClose,  // -1 indicates market closed
         mid50Level,
         pullDirection,
         pullStrength,
@@ -813,15 +823,16 @@ export class ConfluenceLearningAgent {
     
     // Build reasoning text
     let reasoningText = '';
+    const closedReason = isWeekend ? 'weekend' : 'after hours';
     if (activeDecomps.length > 0) {
-      if (isWeekend) {
-        reasoningText = `${activeDecomps.length} TFs near 50% levels (market closed): ${pullReasons.join(', ')}`;
+      if (isMarketClosed) {
+        reasoningText = `${activeDecomps.length} TFs near 50% levels (${closedReason}): ${pullReasons.join(', ')}`;
       } else {
         reasoningText = `${activeDecomps.length} TFs decompressing: ${pullReasons.join(', ')}`;
       }
     } else {
-      reasoningText = isWeekend 
-        ? 'Market closed - no TFs near 50% levels (wait for Monday open)'
+      reasoningText = isMarketClosed 
+        ? `Market closed (${closedReason}) - no TFs near 50% levels`
         : 'No active decompressions';
     }
     
