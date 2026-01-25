@@ -18,6 +18,18 @@ async function getEmailFromWorkspace(workspaceId: string): Promise<string | null
   }
 }
 
+// Extract email from cid if it's a trial user (format: "trial_email@example.com")
+function extractEmailFromCid(cid: string): string | null {
+  if (cid.startsWith('trial_')) {
+    return cid.substring(6); // Remove "trial_" prefix
+  }
+  // Check if cid itself looks like an email
+  if (cid.includes('@')) {
+    return cid;
+  }
+  return null;
+}
+
 export async function GET() {
   const session = await getSessionFromCookie();
   
@@ -31,8 +43,15 @@ export async function GET() {
     });
   }
 
-  // Get email from database to check admin status
-  const email = await getEmailFromWorkspace(session.workspaceId);
+  // Try to get email from multiple sources
+  let email = await getEmailFromWorkspace(session.workspaceId);
+  
+  // Fallback: extract email from cid (for trial users)
+  if (!email && session.cid) {
+    email = extractEmailFromCid(session.cid);
+  }
+  
+  // Check if user is admin
   const isAdmin = email ? ADMIN_EMAILS.includes(email.toLowerCase()) : false;
 
   return NextResponse.json({ 
