@@ -148,6 +148,67 @@ export default function AIConfluenceScanner() {
     return price.toFixed(6); // For small coins like SHIB
   };
 
+  // Get current time info for key trading times
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  const utcMin = now.getUTCMinutes();
+  const estHour = (utcHour - 5 + 24) % 24; // EST offset
+  
+  // Key institutional trading times (in EST)
+  const TRADING_WINDOWS = [
+    { name: 'Opening Range', start: 9.5, end: 10, desc: 'First 30min high volatility' },
+    { name: 'Pre-Open', start: 10, end: 10.5, desc: 'Post-open momentum' },
+    { name: 'AM Session', start: 11.5, end: 12, desc: 'European close overlap' },
+    { name: 'Lunch Lull', start: 12, end: 14, desc: 'Low volume - avoid' },
+    { name: 'Power Hour Setup', start: 14.5, end: 15, desc: 'Preparing for close' },
+    { name: 'Power Hour', start: 15, end: 16, desc: 'High volatility close' },
+  ];
+
+  const currentHourDecimal = estHour + (utcMin / 60);
+  const activeWindow = TRADING_WINDOWS.find(w => currentHourDecimal >= w.start && currentHourDecimal < w.end);
+  const isLunchLull = currentHourDecimal >= 12 && currentHourDecimal < 14;
+  const isPowerHour = currentHourDecimal >= 15 && currentHourDecimal < 16;
+  const isOpeningRange = currentHourDecimal >= 9.5 && currentHourDecimal < 10;
+
+  // Extreme conditions detection
+  const getExtremeConditions = () => {
+    if (!hierarchicalResult) return null;
+    const conditions: { type: 'extreme' | 'warning' | 'opportunity'; label: string; desc: string }[] = [];
+    
+    // High confluence stack (8+)
+    const activeDecompCount = hierarchicalResult.decompression.activeCount;
+    if (activeDecompCount >= 5) {
+      conditions.push({ type: 'extreme', label: '🔥 MEGA CONFLUENCE', desc: `${activeDecompCount} TFs decompressing simultaneously!` });
+    } else if (activeDecompCount >= 3) {
+      conditions.push({ type: 'opportunity', label: '✨ STRONG CONFLUENCE', desc: `${activeDecompCount} TFs decompressing` });
+    }
+    
+    // Strong directional bias (>80%)
+    const bias = Math.abs(hierarchicalResult.decompression.pullBias);
+    if (bias >= 85) {
+      const dir = hierarchicalResult.decompression.netPullDirection;
+      conditions.push({ type: 'extreme', label: dir === 'bullish' ? '🚀 EXTREME BULLISH' : '💥 EXTREME BEARISH', desc: `${bias.toFixed(0)}% pull bias!` });
+    } else if (bias >= 70) {
+      conditions.push({ type: 'opportunity', label: '📊 Strong Bias', desc: `${bias.toFixed(0)}% directional pull` });
+    }
+    
+    // 50% Level Cluster (multiple TFs at same level)
+    if (hierarchicalResult.clusters.length >= 2) {
+      conditions.push({ type: 'extreme', label: '🎯 CLUSTER MAGNET', desc: `${hierarchicalResult.clusters.length} price clusters detected!` });
+    } else if (hierarchicalResult.clusters.length === 1 && hierarchicalResult.clusters[0].tfs.length >= 3) {
+      conditions.push({ type: 'opportunity', label: '🧲 Price Magnet', desc: `${hierarchicalResult.clusters[0].tfs.length} TFs converging` });
+    }
+    
+    // High confidence prediction
+    if (hierarchicalResult.prediction.confidence >= 85) {
+      conditions.push({ type: 'opportunity', label: '💎 HIGH CONFIDENCE', desc: `${hierarchicalResult.prediction.confidence}% prediction confidence` });
+    }
+    
+    return conditions.length > 0 ? conditions : null;
+  };
+
+  const extremeConditions = hierarchicalResult ? getExtremeConditions() : null;
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -303,6 +364,128 @@ export default function AIConfluenceScanner() {
             </button>
           ))}
         </div>
+
+        {/* ⏰ Institutional Time Windows */}
+        <div style={{
+          background: activeWindow 
+            ? (isPowerHour ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' 
+               : isOpeningRange ? 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))'
+               : isLunchLull ? 'rgba(100,116,139,0.15)'
+               : 'rgba(59,130,246,0.15)')
+            : 'rgba(30,41,59,0.6)',
+          border: activeWindow
+            ? (isPowerHour ? '2px solid #EF4444' 
+               : isOpeningRange ? '2px solid #10B981'
+               : isLunchLull ? '1px solid #64748B'
+               : '1px solid #3B82F6')
+            : '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '1rem 1.5rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}>
+          <div>
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: '#94A3B8', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              marginBottom: '0.25rem'
+            }}>
+              ⏰ Institutional Time Windows
+            </div>
+            {activeWindow ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ 
+                  fontSize: '1.3rem', 
+                  fontWeight: 'bold',
+                  color: isPowerHour ? '#EF4444' : isOpeningRange ? '#10B981' : isLunchLull ? '#64748B' : '#F59E0B',
+                  animation: (isPowerHour || isOpeningRange) ? 'pulse 2s infinite' : 'none',
+                }}>
+                  {isPowerHour ? '🔥' : isOpeningRange ? '🚀' : isLunchLull ? '😴' : '⚡'} {activeWindow.name}
+                </span>
+                <span style={{ color: '#94A3B8', fontSize: '0.9rem' }}>
+                  {activeWindow.desc}
+                </span>
+              </div>
+            ) : (
+              <div style={{ color: '#64748B', fontSize: '0.95rem' }}>
+                Outside major trading windows • Current: {estHour}:{String(utcMin).padStart(2, '0')} EST
+              </div>
+            )}
+          </div>
+          
+          {/* Time Badges */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {TRADING_WINDOWS.slice(0, 4).map((w) => {
+              const isActive = currentHourDecimal >= w.start && currentHourDecimal < w.end;
+              const isUpcoming = w.start > currentHourDecimal && w.start - currentHourDecimal < 1;
+              return (
+                <span key={w.name} style={{
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: '6px',
+                  fontSize: '0.7rem',
+                  fontWeight: isActive ? 'bold' : 'normal',
+                  background: isActive ? 'rgba(16,185,129,0.3)' : isUpcoming ? 'rgba(245,158,11,0.2)' : 'rgba(0,0,0,0.2)',
+                  color: isActive ? '#10B981' : isUpcoming ? '#F59E0B' : '#64748B',
+                  border: isActive ? '1px solid #10B981' : 'none',
+                }}>
+                  {w.name.split(' ')[0]}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 🚨 EXTREME CONDITIONS ALERT */}
+        {extremeConditions && extremeConditions.length > 0 && (
+          <div style={{
+            background: extremeConditions.some(c => c.type === 'extreme') 
+              ? 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(168,85,247,0.25), rgba(245,158,11,0.25))'
+              : 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))',
+            border: extremeConditions.some(c => c.type === 'extreme') ? '2px solid #EF4444' : '2px solid #10B981',
+            borderRadius: '16px',
+            padding: '1.25rem',
+            marginBottom: '1.5rem',
+            animation: extremeConditions.some(c => c.type === 'extreme') ? 'pulse 1.5s infinite' : 'none',
+          }}>
+            <div style={{ 
+              fontSize: '0.8rem', 
+              color: '#F59E0B', 
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              marginBottom: '0.75rem',
+              fontWeight: 'bold',
+            }}>
+              🚨 {extremeConditions.some(c => c.type === 'extreme') ? 'EXTREME CONDITIONS DETECTED' : 'TRADING OPPORTUNITIES'}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+              {extremeConditions.map((cond, i) => (
+                <div key={i} style={{
+                  padding: '0.5rem 1rem',
+                  background: cond.type === 'extreme' ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.2)',
+                  border: `1px solid ${cond.type === 'extreme' ? '#EF4444' : '#10B981'}`,
+                  borderRadius: '8px',
+                }}>
+                  <div style={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '1rem',
+                    color: cond.type === 'extreme' ? '#F87171' : '#34D399',
+                  }}>
+                    {cond.label}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                    {cond.desc}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 🔮 Time Confluence Engine - Elite Feature */}
         <div style={{ marginBottom: '2rem' }}>
