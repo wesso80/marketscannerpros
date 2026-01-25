@@ -249,10 +249,22 @@ interface AVOptionContract {
 }
 
 // Get this week's Friday for weekly options expiry
+// Get the nearest/current week's Friday for weekly options expiry
 function getThisWeekFriday(): Date {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
-  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // If today is Friday, get next Friday
+  
+  // If today is Friday (5), use today. Otherwise find days until Friday.
+  // For Saturday (6) and Sunday (0), get NEXT Friday
+  let daysUntilFriday: number;
+  if (dayOfWeek === 5) {
+    daysUntilFriday = 0; // Today is Friday
+  } else if (dayOfWeek === 6) {
+    daysUntilFriday = 6; // Saturday -> next Friday
+  } else {
+    daysUntilFriday = (5 - dayOfWeek + 7) % 7; // Sunday-Thursday -> this Friday
+  }
+  
   const friday = new Date(now);
   friday.setDate(now.getDate() + daysUntilFriday);
   friday.setHours(0, 0, 0, 0);
@@ -356,6 +368,30 @@ function analyzeOpenInterest(
   
   const strikeOI: Map<number, { callOI: number; putOI: number }> = new Map();
   
+  // Sanity check: ensure currentPrice is valid
+  if (!currentPrice || currentPrice <= 0) {
+    console.error('❌ Invalid currentPrice for O/I analysis:', currentPrice);
+    return {
+      totalCallOI: 0,
+      totalPutOI: 0,
+      pcRatio: 1.0,
+      sentiment: 'neutral',
+      sentimentReason: 'Unable to analyze - invalid price data',
+      maxPainStrike: null,
+      highOIStrikes: [],
+      expirationDate,
+    };
+  }
+  
+  // Only consider strikes within 30% of current price (tighter range for accuracy)
+  const minStrike = currentPrice * 0.7;
+  const maxStrike = currentPrice * 1.3;
+  
+  console.log(`📊 Filtering strikes to range: $${minStrike.toFixed(2)} - $${maxStrike.toFixed(2)} (current: $${currentPrice})`);
+  
+  // Debug: collect all raw strikes to see what's in the data
+  const allRawStrikes: number[] = [];
+  
   for (const call of calls) {
     // Alpha Vantage may use 'open_interest' or 'openInterest'
     const oiValue = call.open_interest || (call as unknown as Record<string, string>).openInterest || '0';
@@ -363,7 +399,10 @@ function analyzeOpenInterest(
     const strikeValue = call.strike || '0';
     const strike = parseFloat(String(strikeValue)) || 0;
     
-    if (strike > 0) {
+    if (strike > 0) allRawStrikes.push(strike);
+    
+    // Filter to reasonable strike range around current price
+    if (strike > 0 && strike >= minStrike && strike <= maxStrike) {
       totalCallOI += oi;
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.callOI += oi;
@@ -376,12 +415,21 @@ function analyzeOpenInterest(
     const strikeValue = put.strike || '0';
     const strike = parseFloat(String(strikeValue)) || 0;
     
-    if (strike > 0) {
+    if (strike > 0) allRawStrikes.push(strike);
+    
+    // Filter to reasonable strike range around current price
+    if (strike > 0 && strike >= minStrike && strike <= maxStrike) {
       totalPutOI += oi;
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.putOI += oi;
     }
   }
+  
+  // Debug: Show strike range info
+  const uniqueRawStrikes = [...new Set(allRawStrikes)].sort((a, b) => a - b);
+  const filteredStrikes = [...strikeOI.keys()].sort((a, b) => a - b);
+  console.log(`📊 Raw strikes from API: min=$${uniqueRawStrikes[0]?.toFixed(2) || 'N/A'}, max=$${uniqueRawStrikes[uniqueRawStrikes.length - 1]?.toFixed(2) || 'N/A'}, total=${uniqueRawStrikes.length}`);
+  console.log(`📊 Filtered strikes in range: ${filteredStrikes.length} strikes: ${filteredStrikes.slice(0, 10).map(s => '$' + s).join(', ')}${filteredStrikes.length > 10 ? '...' : ''}`);
   
   // Put/Call ratio
   const pcRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 1.0;
@@ -400,24 +448,39 @@ function analyzeOpenInterest(
   }
   
   // Find max pain strike (where most options expire worthless)
+  // Max Pain = strike where total $ value of ITM options is MINIMIZED
+  // For each potential settlement price (strike), calculate total ITM value:
+  //   - Calls are ITM if their strike < settlement price → value = (settlement - callStrike) * callOI
+  //   - Puts are ITM if their strike > settlement price → value = (putStrike - settlement) * putOI
   let maxPainStrike: number | null = null;
   let minPain = Infinity;
   
-  for (const [strike] of strikeOI.entries()) {
-    let pain = 0;
+  for (const [potentialSettlement] of strikeOI.entries()) {
+    let totalPain = 0;
     
-    for (const [s, data] of strikeOI.entries()) {
-      if (s < strike) {
-        pain += (strike - s) * data.callOI;
+    for (const [contractStrike, data] of strikeOI.entries()) {
+      // Calls are ITM when strike < settlement price
+      if (contractStrike < potentialSettlement) {
+        totalPain += (potentialSettlement - contractStrike) * data.callOI * 100; // *100 for contract size
       }
-      if (s > strike) {
-        pain += (s - strike) * data.putOI;
+      // Puts are ITM when strike > settlement price
+      if (contractStrike > potentialSettlement) {
+        totalPain += (contractStrike - potentialSettlement) * data.putOI * 100; // *100 for contract size
       }
     }
     
-    if (pain < minPain) {
-      minPain = pain;
-      maxPainStrike = strike;
+    if (totalPain < minPain) {
+      minPain = totalPain;
+      maxPainStrike = potentialSettlement;
+    }
+  }
+  
+  // Final validation: max pain must be within reasonable range of current price
+  if (maxPainStrike !== null) {
+    const maxPainDistance = Math.abs(maxPainStrike - currentPrice) / currentPrice;
+    if (maxPainDistance > 0.35) {
+      console.warn(`⚠️ Max pain $${maxPainStrike} is ${(maxPainDistance * 100).toFixed(1)}% away from price $${currentPrice} - likely bad data, nullifying`);
+      maxPainStrike = null;
     }
   }
   

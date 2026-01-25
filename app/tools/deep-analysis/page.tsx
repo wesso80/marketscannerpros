@@ -919,257 +919,77 @@ export default function DeepAnalysisPage() {
               </div>
             )}
 
-            {/* Options Flow (for stocks) */}
-            {result.optionsData && (
+            {/* Options Flow - Coming Soon */}
+            {result.assetType === 'stock' && (
               <div style={{ 
                 background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
                 borderRadius: "16px",
                 border: "1px solid rgba(168,85,247,0.3)",
-                padding: "1.5rem"
+                padding: "1.5rem",
+                position: "relative",
+                overflow: "hidden"
               }}>
                 <h3 style={{ color: "#A855F7", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <span style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                   Options Flow (Weekly Expiry)
                 </h3>
                 
-                {/* Main Layout: Sidebar + Table */}
-                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                  
-                  {/* LEFT SIDEBAR - Key Strikes */}
+                {/* Coming Soon Overlay */}
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "3rem 2rem",
+                  textAlign: "center"
+                }}>
                   <div style={{ 
-                    flex: "0 0 auto",
-                    width: "160px",
-                    minWidth: "140px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem"
+                    fontSize: "3rem", 
+                    marginBottom: "1rem",
+                    animation: "pulse 2s ease-in-out infinite"
                   }}>
-                    {/* Highest OI Call */}
-                    {result.optionsData.highestOICall && (
-                      <div style={{ 
-                        background: "linear-gradient(145deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05))",
-                        border: "2px solid rgba(16,185,129,0.5)",
-                        borderRadius: "12px", 
-                        padding: "1rem",
-                        textAlign: "center"
-                      }}>
-                        <div style={{ fontSize: "0.65rem", color: "#94A3B8", textTransform: "uppercase", marginBottom: "0.25rem" }}>
-                          🟢 KEY CALL
-                        </div>
-                        <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#10B981" }}>
-                          ${result.optionsData.highestOICall.strike}
-                        </div>
-                        <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>
-                          {(result.optionsData.highestOICall.openInterest).toLocaleString()} OI
-                        </div>
-                        {result.optionsData.highestOICall.delta !== undefined && (
-                          <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.5rem", borderTop: "1px solid rgba(16,185,129,0.3)", paddingTop: "0.5rem" }}>
-                            Δ {result.optionsData.highestOICall.delta?.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Highest OI Put */}
-                    {result.optionsData.highestOIPut && (
-                      <div style={{ 
-                        background: "linear-gradient(145deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05))",
-                        border: "2px solid rgba(239,68,68,0.5)",
-                        borderRadius: "12px", 
-                        padding: "1rem",
-                        textAlign: "center"
-                      }}>
-                        <div style={{ fontSize: "0.65rem", color: "#94A3B8", textTransform: "uppercase", marginBottom: "0.25rem" }}>
-                          🔴 KEY PUT
-                        </div>
-                        <div style={{ fontSize: "1.8rem", fontWeight: "bold", color: "#EF4444" }}>
-                          ${result.optionsData.highestOIPut.strike}
-                        </div>
-                        <div style={{ fontSize: "0.8rem", color: "#94A3B8" }}>
-                          {(result.optionsData.highestOIPut.openInterest).toLocaleString()} OI
-                        </div>
-                        {result.optionsData.highestOIPut.delta !== undefined && (
-                          <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.5rem", borderTop: "1px solid rgba(239,68,68,0.3)", paddingTop: "0.5rem" }}>
-                            Δ {result.optionsData.highestOIPut.delta?.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    🚀
                   </div>
-                  
-                  {/* RIGHT SIDE - Table Rows */}
-                  <div style={{ flex: 1, minWidth: "280px" }}>
-                    {/* Row 1: Header with Expiry & Sentiment */}
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      alignItems: "center",
-                      padding: "0.6rem 0.75rem",
-                      background: "rgba(168,85,247,0.15)",
-                      borderRadius: "8px 8px 0 0",
-                      borderBottom: "1px solid rgba(168,85,247,0.2)"
-                    }}>
-                      <div style={{ fontSize: "0.9rem", color: "#A855F7", fontWeight: "600" }}>
-                        📅 {result.optionsData.expiryFormatted}
-                      </div>
-                      <div style={{ 
-                        padding: "0.3rem 0.75rem", 
-                        borderRadius: "12px",
-                        background: result.optionsData.sentiment === 'Bullish' ? "rgba(16,185,129,0.3)" : 
-                                   result.optionsData.sentiment === 'Bearish' ? "rgba(239,68,68,0.3)" : "rgba(100,116,139,0.3)",
-                        color: result.optionsData.sentiment === 'Bullish' ? "#10B981" : 
-                               result.optionsData.sentiment === 'Bearish' ? "#EF4444" : "#94A3B8",
-                        fontWeight: "600",
-                        fontSize: "0.75rem"
-                      }}>
-                        {result.optionsData.sentiment}
-                      </div>
-                    </div>
-                    
-                    {/* Row 2: Put/Call Ratio & Max Pain */}
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between",
-                      padding: "0.6rem 0.75rem",
-                      background: "rgba(30,41,59,0.4)",
-                      borderBottom: "1px solid rgba(71,85,105,0.3)"
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ color: "#64748B", fontSize: "0.75rem" }}>P/C Ratio</span>
-                        <span style={{ 
-                          fontWeight: "bold", 
-                          color: result.optionsData.putCallRatio < 0.7 ? "#10B981" : result.optionsData.putCallRatio > 1.3 ? "#EF4444" : "#F59E0B" 
-                        }}>
-                          {result.optionsData.putCallRatio.toFixed(2)}
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ color: "#64748B", fontSize: "0.75rem" }}>Max Pain</span>
-                        <span style={{ fontWeight: "bold", color: "#A855F7" }}>${result.optionsData.maxPain.toFixed(0)}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Row 3: Total OI */}
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between",
-                      padding: "0.6rem 0.75rem",
-                      background: "rgba(30,41,59,0.3)",
-                      borderBottom: "1px solid rgba(71,85,105,0.3)"
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ color: "#64748B", fontSize: "0.75rem" }}>Call OI</span>
-                        <span style={{ fontWeight: "bold", color: "#10B981" }}>{(result.optionsData.totalCallOI / 1000).toFixed(0)}K</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ color: "#64748B", fontSize: "0.75rem" }}>Put OI</span>
-                        <span style={{ fontWeight: "bold", color: "#EF4444" }}>{(result.optionsData.totalPutOI / 1000).toFixed(0)}K</span>
-                      </div>
-                    </div>
-                    
-                    {/* Row 4: IV Rank & Avg IV */}
-                    {(result.optionsData.ivRank !== undefined || result.optionsData.avgIV !== undefined) && (
-                      <div style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between",
-                        padding: "0.6rem 0.75rem",
-                        background: "rgba(30,41,59,0.4)",
-                        borderBottom: "1px solid rgba(71,85,105,0.3)"
-                      }}>
-                        {result.optionsData.ivRank !== undefined && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{ color: "#64748B", fontSize: "0.75rem" }}>IV Rank</span>
-                            <span style={{ 
-                              fontWeight: "bold", 
-                              color: result.optionsData.ivRank > 70 ? "#EF4444" : result.optionsData.ivRank < 30 ? "#10B981" : "#F59E0B" 
-                            }}>
-                              {result.optionsData.ivRank.toFixed(0)}%
-                            </span>
-                          </div>
-                        )}
-                        {result.optionsData.avgIV !== undefined && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{ color: "#64748B", fontSize: "0.75rem" }}>Avg IV</span>
-                            <span style={{ fontWeight: "bold", color: "#A855F7" }}>{result.optionsData.avgIV.toFixed(1)}%</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Row 5: Unusual Activity */}
-                    {result.optionsData.unusualActivity && result.optionsData.unusualActivity !== 'Normal' && (
-                      <div style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "0.6rem 0.75rem",
-                        background: result.optionsData.unusualActivity === 'Very High' ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.1)",
-                        borderBottom: "1px solid rgba(71,85,105,0.3)"
-                      }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontSize: "1rem" }}>🔥</span>
-                          <span style={{ color: result.optionsData.unusualActivity === 'Very High' ? "#F59E0B" : "#3B82F6", fontWeight: "600", fontSize: "0.85rem" }}>
-                            Unusual Activity: {result.optionsData.unusualActivity}
-                          </span>
-                        </div>
-                        <span style={{ color: "#64748B", fontSize: "0.75rem" }}>Vol/OI: {result.optionsData.volumeOIRatio?.toFixed(2)}x</span>
-                      </div>
-                    )}
-                    
-                    {/* Row 6: Support & Resistance */}
-                    {result.optionsData.keyLevels && (result.optionsData.keyLevels.support.length > 0 || result.optionsData.keyLevels.resistance.length > 0) && (
-                      <div style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between",
-                        padding: "0.6rem 0.75rem",
-                        background: "rgba(30,41,59,0.3)",
-                        borderRadius: "0 0 8px 8px"
-                      }}>
-                        <div>
-                          <span style={{ color: "#10B981", fontSize: "0.7rem", textTransform: "uppercase" }}>Support </span>
-                          <span style={{ color: "#fff", fontSize: "0.85rem" }}>
-                            {result.optionsData.keyLevels.support.slice(0, 2).map(s => `$${s.toFixed(0)}`).join(' · ') || 'N/A'}
-                          </span>
-                        </div>
-                        <div>
-                          <span style={{ color: "#EF4444", fontSize: "0.7rem", textTransform: "uppercase" }}>Resist </span>
-                          <span style={{ color: "#fff", fontSize: "0.85rem" }}>
-                            {result.optionsData.keyLevels.resistance.slice(0, 2).map(r => `$${r.toFixed(0)}`).join(' · ') || 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Greeks Row (if available) */}
-                    {(result.optionsData.highestOICall?.gamma !== undefined || result.optionsData.highestOIPut?.gamma !== undefined) && (
-                      <div style={{ 
-                        marginTop: "0.75rem",
-                        padding: "0.6rem 0.75rem",
-                        background: "rgba(168,85,247,0.1)",
-                        borderRadius: "8px",
-                        display: "flex",
-                        justifyContent: "space-around",
-                        flexWrap: "wrap",
-                        gap: "0.5rem"
-                      }}>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: "0.6rem", color: "#64748B" }}>CALL Θ</div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#EF4444" }}>{result.optionsData.highestOICall?.theta?.toFixed(3) || 'N/A'}</div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: "0.6rem", color: "#64748B" }}>CALL Γ</div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#A855F7" }}>{result.optionsData.highestOICall?.gamma?.toFixed(4) || 'N/A'}</div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: "0.6rem", color: "#64748B" }}>PUT Θ</div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#EF4444" }}>{result.optionsData.highestOIPut?.theta?.toFixed(3) || 'N/A'}</div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontSize: "0.6rem", color: "#64748B" }}>PUT Γ</div>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#A855F7" }}>{result.optionsData.highestOIPut?.gamma?.toFixed(4) || 'N/A'}</div>
-                        </div>
-                      </div>
-                    )}
+                  <div style={{ 
+                    fontSize: "1.5rem", 
+                    fontWeight: "bold",
+                    background: "linear-gradient(135deg, #A855F7, #7C3AED, #A855F7)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    marginBottom: "0.5rem"
+                  }}>
+                    Coming Soon
+                  </div>
+                  <p style={{ 
+                    color: "#94A3B8", 
+                    fontSize: "0.9rem",
+                    maxWidth: "400px",
+                    lineHeight: "1.5"
+                  }}>
+                    Real-time options flow data including Put/Call ratios, Max Pain, IV analysis, Greeks, and unusual activity detection.
+                  </p>
+                  <div style={{
+                    marginTop: "1rem",
+                    display: "flex",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                    justifyContent: "center"
+                  }}>
+                    {["Put/Call Ratio", "Max Pain", "Greeks", "IV Rank", "Open Interest"].map((feature) => (
+                      <span 
+                        key={feature}
+                        style={{
+                          padding: "0.4rem 0.8rem",
+                          background: "rgba(168,85,247,0.15)",
+                          border: "1px solid rgba(168,85,247,0.3)",
+                          borderRadius: "20px",
+                          fontSize: "0.75rem",
+                          color: "#A855F7"
+                        }}
+                      >
+                        {feature}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

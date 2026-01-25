@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "UI755FUUAM6FRRI9";
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+
+// NOTE: Premium Alpha Vantage API key required for REALTIME_OPTIONS
+// Free demo keys won't work - ensure ALPHA_VANTAGE_API_KEY is set in .env.local
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Get the Friday of the current week (or next week if past Friday)
@@ -23,6 +26,12 @@ function getThisWeekFriday(): number {
 
 // Fetch options chain from Alpha Vantage (legally compliant, already paid for)
 async function fetchOptionsData(symbol: string) {
+  // REALTIME_OPTIONS requires Premium Alpha Vantage subscription
+  if (!ALPHA_VANTAGE_API_KEY) {
+    console.warn('⚠️ ALPHA_VANTAGE_API_KEY not set - options data unavailable');
+    return null;
+  }
+  
   try {
     // Get current price first for reference
     const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
