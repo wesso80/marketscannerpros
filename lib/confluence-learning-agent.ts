@@ -874,13 +874,28 @@ export class ConfluenceLearningAgent {
     
     // ═══════════════════════════════════════════════════════════════════════════
     // TRADE SETUP CALCULATION (Swing Stop + 2.5 R:R)
+    // Uses RESAMPLED bars for the PRIMARY timeframe to get proper swing levels
     // ═══════════════════════════════════════════════════════════════════════════
     
-    // Calculate swing high/low from recent bars for stop loss
-    const swingLookback = 5;
-    const recentBars = baseBars.slice(-swingLookback);
-    const swingLow = Math.min(...recentBars.map(b => b.low));
-    const swingHigh = Math.max(...recentBars.map(b => b.high));
+    // Get primary TF minutes from mode config
+    const primaryTFConfig = includedTFConfigs.find(tf => 
+      tf.label.toLowerCase() === modeConfig.primaryTF.toLowerCase()
+    ) || includedTFConfigs[includedTFConfigs.length - 1];  // fallback to largest TF
+    
+    // Resample base bars to primary TF for swing calculation
+    const primaryTFBars = this.resampleBars(baseBars, primaryTFConfig.minutes);
+    
+    // Calculate swing high/low from recent PRIMARY TF bars (not base bars)
+    const swingLookback = 5;  // 5 bars of the PRIMARY timeframe
+    const recentPrimaryBars = primaryTFBars.slice(-swingLookback);
+    
+    // Fallback to base bars if not enough resampled bars
+    const swingBars = recentPrimaryBars.length >= 3 ? recentPrimaryBars : baseBars.slice(-swingLookback);
+    
+    const swingLow = Math.min(...swingBars.map(b => b.low));
+    const swingHigh = Math.max(...swingBars.map(b => b.high));
+    
+    console.log(`📊 Trade Setup: Using ${primaryTFConfig.label} bars (${swingBars.length} bars) - Swing Low: ${swingLow.toFixed(2)}, Swing High: ${swingHigh.toFixed(2)}`);
     
     // Entry is current price
     const entryPrice = currentPrice;
