@@ -468,6 +468,98 @@ export default function ToolsPage() {
             </div>
           </section>
 
+          {/* Pro Trader AI Tools Section */}
+          <section style={{ marginTop: 40 }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 560 }}>🔮 Pro Trader AI Tools</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: 'var(--text-muted)' }}>
+              Advanced AI-powered analysis tools for professional traders. Time Confluence, Options Analysis, and more.
+              <span style={{ color: '#A855F7', marginLeft: 8 }}>Pro Trader subscription required.</span>
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 18,
+              marginBottom: 26
+            }}>
+              {/* Time Confluence Scanner */}
+              <Link href="/tools/confluence-scanner" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #1E1B4B, #0F0A1E 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(168,85,247,0.4)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #7C3AED, #A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
+                    <span>🔮</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(168, 85, 247, 0.7)', color: '#A855F7' }}>Pro Trader</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '14px 14px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>Time Confluence Scanner</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Scans multiple timeframes for decompression events — when candles gravitate toward their 50% levels. 
+                      Shows pull direction, confluence stack, and trade setups with entry/stop/target.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)', color: '#C4B5FD' }}>Decompression</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)', color: '#C4B5FD' }}>Multi-TF</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)', color: '#C4B5FD' }}>50% Levels</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: '#A855F7' }}>Time-based confluence</span></span>
+                      <span>Type: AI Scanner</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Options Confluence Scanner */}
+              <Link href="/tools/options-confluence" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #0D3326, #071A12 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(16,185,129,0.4)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
+                    <span>🎯</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Pro Trader</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '14px 14px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600 }}>Options Confluence Scanner</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Get intelligent strike & expiration recommendations based on Time Confluence analysis.
+                      Uses 50% levels for targets, decompression timing for expiration, and Greeks-aware risk assessment.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.5)', color: '#6EE7B7' }}>Strike Selection</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.5)', color: '#6EE7B7' }}>Expiration Logic</span>
+                      <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.5)', color: '#6EE7B7' }}>Greeks-Aware</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: '#10B981' }}>Options trading</span></span>
+                      <span>Type: AI Scanner</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            </div>
+          </section>
+
           {/* Alpha Vantage Premium Tools */}
           <section style={{ marginTop: 40 }}>
             <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 560 }}>Alpha Vantage Premium Tools</h2>
