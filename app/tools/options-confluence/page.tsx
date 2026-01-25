@@ -801,7 +801,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Open Interest Analysis */}
-            {result.openInterestAnalysis && (
+            {result.openInterestAnalysis ? (
               <div style={{
                 background: 'rgba(30,41,59,0.6)',
                 border: '1px solid rgba(139,92,246,0.4)',
@@ -810,15 +810,26 @@ export default function OptionsConfluenceScanner() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
-                  <span style={{ 
-                    background: 'rgba(139,92,246,0.2)', 
-                    padding: '4px 12px', 
-                    borderRadius: '20px', 
-                    fontSize: '0.85rem',
-                    color: '#A78BFA'
-                  }}>
-                    Expiry: {result.openInterestAnalysis.expirationDate}
-                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ 
+                      background: 'rgba(245,158,11,0.2)', 
+                      padding: '4px 8px', 
+                      borderRadius: '12px', 
+                      fontSize: '0.75rem',
+                      color: '#F59E0B'
+                    }}>
+                      📅 EOD Data
+                    </span>
+                    <span style={{ 
+                      background: 'rgba(139,92,246,0.2)', 
+                      padding: '4px 12px', 
+                      borderRadius: '20px', 
+                      fontSize: '0.85rem',
+                      color: '#A78BFA'
+                    }}>
+                      Expiry: {result.openInterestAnalysis.expirationDate}
+                    </span>
+                  </div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
@@ -975,6 +986,54 @@ export default function OptionsConfluenceScanner() {
                       ⚠️ O/I sentiment DIVERGES from confluence — proceed with caution
                     </span>
                   )}
+                </div>
+              </div>
+            ) : (
+              /* No Options Data Available - Show Placeholder */
+              <div style={{
+                background: 'rgba(30,41,59,0.6)',
+                border: '1px solid rgba(139,92,246,0.4)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <span style={{ 
+                    background: 'rgba(245,158,11,0.2)', 
+                    padding: '4px 12px', 
+                    borderRadius: '20px', 
+                    fontSize: '0.85rem',
+                    color: '#F59E0B'
+                  }}>
+                    ⚠️ Data Unavailable
+                  </span>
+                </div>
+                
+                <div style={{
+                  background: 'rgba(245,158,11,0.1)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>�</div>
+                  <div style={{ color: '#F59E0B', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                    Options Data Loading Issue
+                  </div>
+                  <div style={{ color: '#94A3B8', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                    End-of-day options data is temporarily unavailable. This may be due to 
+                    API rate limits, market hours, or the symbol not having options available.
+                  </div>
+                  <div style={{ 
+                    marginTop: '1rem', 
+                    padding: '0.75rem', 
+                    background: 'rgba(16,185,129,0.1)', 
+                    borderRadius: '8px',
+                    color: '#10B981',
+                    fontSize: '0.85rem'
+                  }}>
+                    ✅ Strike & Expiration recommendations still work based on price action confluence!
+                  </div>
                 </div>
               </div>
             )}

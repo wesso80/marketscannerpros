@@ -4,9 +4,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
-// Scanner API - Binance for crypto (free), Yahoo for stocks
-// v2.7 - Switch USDT dominance to CoinCap.io (no rate limits)
-const SCANNER_VERSION = 'v2.7';
+// Scanner API - Binance for crypto (free commercial use)
+// Equity & Forex require commercial data licenses - admin-only testing with Alpha Vantage
+// v2.9 - Removed Finnhub (no free commercial use for individuals)
+const SCANNER_VERSION = 'v2.9';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -201,14 +202,20 @@ export async function POST(req: NextRequest) {
     }
     // Commodity symbols unsupported in this endpoint (no intraday); ignore mapping
 
-    if (!ALPHA_KEY) {
-      return NextResponse.json({
-        success: false,
-        message: "Alpha Vantage API key not configured",
-        results: [],
-        errors: ["Missing ALPHA_VANTAGE_API_KEY"],
-        metadata: { timestamp: new Date().toISOString(), count: 0 }
-      }, { status: 500 });
+    // Check API keys based on market type
+    if (type === "crypto") {
+      // Crypto uses Binance - no key needed
+    } else if (type === "equity" || type === "forex") {
+      // Equity & Forex use Alpha Vantage (admin-only testing, requires commercial license for production)
+      if (!ALPHA_KEY) {
+        return NextResponse.json({
+          success: false,
+          message: "Stock/Forex data requires commercial licensing - Coming Soon",
+          results: [],
+          errors: ["Stock and Forex scanning requires commercial data licensing"],
+          metadata: { timestamp: new Date().toISOString(), count: 0 }
+        }, { status: 503 });
+      }
     }
 
     const intervalMap: Record<string, string> = {
@@ -218,8 +225,10 @@ export async function POST(req: NextRequest) {
       "daily": "daily"
     };
     const avInterval = intervalMap[timeframe] || "daily";
-    console.info("[scanner] Using Alpha Vantage interval:", avInterval, "for timeframe:", timeframe);
+    console.info("[scanner] Using interval:", avInterval, "for timeframe:", timeframe);
 
+    // Note: Equity and Forex use Alpha Vantage (admin-only testing)
+    // Commercial use requires expensive data licensing ($1000+/month)
 
     async function fetchRSI(sym: string) {
       const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
@@ -260,6 +269,51 @@ export async function POST(req: NextRequest) {
       const first = Object.values(ta)[0] as any;
       console.debug("[scanner] ATR", { sym, avInterval, hasTA: !!first });
       return first ? Number(first?.ATR) : NaN;
+    }
+
+    async function fetchADX(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `ADX ${sym}`);
+      const ta = j["Technical Analysis: ADX"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] ADX", { sym, avInterval, hasTA: !!first });
+      return { adx: first ? Number(first?.ADX) : NaN };
+    }
+
+    async function fetchSTOCH(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `STOCH ${sym}`);
+      const ta = j["Technical Analysis: STOCH"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] STOCH", { sym, avInterval, hasTA: !!first });
+      return { k: first ? Number(first?.SlowK) : NaN, d: first ? Number(first?.SlowD) : NaN };
+    }
+
+    async function fetchCCI(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=CCI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=20&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `CCI ${sym}`);
+      const ta = j["Technical Analysis: CCI"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] CCI", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.CCI) : NaN;
+    }
+
+    async function fetchAROON(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=AROON&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=25&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `AROON ${sym}`);
+      const ta = j["Technical Analysis: AROON"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] AROON", { sym, avInterval, hasTA: !!first });
+      return { up: first ? Number(first?.["Aroon Up"]) : NaN, down: first ? Number(first?.["Aroon Down"]) : NaN };
+    }
+
+    async function fetchEquityPrice(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `QUOTE ${sym}`);
+      const quote = j["Global Quote"] || {};
+      const price = Number(quote?.["05. price"]) || NaN;
+      console.debug("[scanner] QUOTE", { sym, price });
+      return { price };
     }
 
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
@@ -976,109 +1030,28 @@ export async function POST(req: NextRequest) {
           };
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
-          // EQUITIES: Use TIME_SERIES_INTRADAY or TIME_SERIES_DAILY
-          const cacheBuster = Date.now();
-          let url: string;
-          let tsKey: string;
+          // EQUITIES: Use Alpha Vantage (admin-only testing - requires commercial license for production)
+          console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval})`);
           
-          if (avInterval === "daily") {
-            url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
-            tsKey = "Time Series (Daily)";
-          } else {
-            url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&apikey=${ALPHA_KEY}&_t=${cacheBuster}`;
-            tsKey = `Time Series (${avInterval})`;
-          }
+          // Use the existing Alpha Vantage helper functions
+          const [rsiVal, macObj, ema200Val, atrVal, adxObj, stochObj, cciVal, aroonObj, priceData] = await Promise.all([
+            fetchRSI(sym),
+            fetchMACD(sym),
+            fetchEMA200(sym),
+            fetchATR(sym),
+            fetchADX(sym),
+            fetchSTOCH(sym),
+            fetchCCI(sym),
+            fetchAROON(sym),
+            fetchEquityPrice(sym)
+          ]);
           
-          console.info(`[scanner] Fetching EQUITY ${sym} (${avInterval})`);
+          const price = priceData.price;
+          const macHist = macObj.hist;
+          const macLine = macObj.macd;
+          const sigLine = macObj.sig;
           
-          const r = await fetch(url, { 
-            next: { revalidate: 0 }, 
-            cache: "no-store",
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-            }
-          });
-          const j = await r.json();
-          
-          // Check for AV errors/rate limits
-          if (j.Note || j.Information) {
-            console.warn(`[scanner] AV rate limit for ${sym}:`, j.Note || j.Information);
-            throw new Error(`Alpha Vantage rate limit: ${(j.Note || j.Information).substring(0, 100)}`);
-          }
-          if (j["Error Message"]) {
-            console.error(`[scanner] AV error for ${sym}:`, j["Error Message"]);
-            throw new Error(`Alpha Vantage error: ${j["Error Message"]}`);
-          }
-          
-          // Find the time series data
-          const possibleKeys = [tsKey, "Time Series (Daily)", `Time Series (${avInterval})`, "Time Series (60min)", "Time Series (30min)"];
-          const foundKey = possibleKeys.find(k => j[k]);
-          if (!foundKey) {
-            console.warn("[scanner] No time series data", { sym, avInterval, keys: Object.keys(j).slice(0, 5) });
-          }
-          
-          const ts = j[foundKey || tsKey] || {};
-          const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
-            t: date as string,
-            open: Number(v["1. open"] ?? NaN),
-            high: Number(v["2. high"] ?? NaN),
-            low: Number(v["3. low"] ?? NaN),
-            close: Number(v["4. close"] ?? NaN),
-          })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
-          
-          if (!candles.length) throw new Error(`No equity candles returned for ${sym}`);
-          
-          // Log the latest candle time
-          const lastCandleTime = candles[candles.length - 1]?.t;
-          console.info(`[scanner] Equity ${sym}: Got ${candles.length} candles, latest: ${lastCandleTime}`);
-          
-          const closes = candles.map(c => c.close);
-          const highs = candles.map(c => c.high);
-          const lows = candles.map(c => c.low);
-          const volumes = new Array(closes.length).fill(1000); // placeholder volume
-          
-          const rsiArr = rsi(closes, 14);
-          const macObj = macd(closes, 12, 26, 9);
-          const emaArr = ema(closes, 200);
-          const atrArr = atr(highs, lows, closes, 14);
-          const adxObj = adx(highs, lows, closes, 14);
-          const stochObj = stochastic(highs, lows, closes, 14, 3);
-          const cciVal = cci(highs, lows, closes, 20);
-          const aroonObj = aroon(highs, lows, 25);
-          const obvArr = obv(closes, volumes);
-          
-          const last = closes.length - 1;
-          const rsiVal = rsiArr[last];
-          const macHist = macObj.hist[last];
-          const macLine = macObj.macdLine[last];
-          const sigLine = macObj.signalLine[last];
-          const ema200Val = emaArr[last];
-          const atrVal = atrArr[last - 1]; // ATR array has length-1 elements
-          const close = closes[last];
-          const price = close;
-          const obvCurrent = obvArr[last];
-          const obvPrev = obvArr[last - 1];
-          
-          // Prepare chart data (last 50 candles for visualization)
-          const chartLength = Math.min(50, candles.length);
-          const chartStart = candles.length - chartLength;
-          const chartCandles = candles.slice(chartStart).map(c => ({
-            t: c.t,
-            o: c.open,
-            h: c.high,
-            l: c.low,
-            c: c.close
-          }));
-          const chartEma200 = emaArr.slice(chartStart);
-          const chartRsi = rsiArr.slice(chartStart);
-          const chartMacd = macObj.macdLine.slice(chartStart).map((m, i) => ({
-            macd: m,
-            signal: macObj.signalLine[chartStart + i],
-            hist: macObj.hist[chartStart + i]
-          }));
-          
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
+          const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, 0, 0);
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
             score: scoreResult.score,
@@ -1097,14 +1070,8 @@ export async function POST(req: NextRequest) {
             cci: cciVal,
             aroon_up: aroonObj.up,
             aroon_down: aroonObj.down,
-            obv: obvArr[last] ?? NaN,
-            lastCandleTime,
-            chartData: {
-              candles: chartCandles,
-              ema200: chartEma200,
-              rsi: chartRsi,
-              macd: chartMacd
-            }
+            obv: NaN,
+            lastCandleTime: new Date().toISOString(),
           };
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         }
@@ -1112,7 +1079,7 @@ export async function POST(req: NextRequest) {
         console.error("[scanner] error for", sym, err);
         const msg = err?.message || "Unknown error";
         const friendly = msg.includes("limit") || msg.includes("premium")
-          ? `${sym}: Alpha Vantage rate limit or premium requirement. Please retry shortly.`
+          ? `${sym}: API rate limit. Please retry shortly.`
           : `${sym}: ${msg}`;
         errors.push(friendly);
       }

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// NOTE: Premium Alpha Vantage API key required for REALTIME_OPTIONS
-// Free demo keys won't work - ensure ALPHA_VANTAGE_API_KEY is set in .env.local
+// NOTE: Using HISTORICAL_OPTIONS (end-of-day data) - available with 75 req/min premium plan
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Get the Friday of the current week (or next week if past Friday)
@@ -26,7 +25,7 @@ function getThisWeekFriday(): number {
 
 // Fetch options chain from Alpha Vantage (legally compliant, already paid for)
 async function fetchOptionsData(symbol: string) {
-  // REALTIME_OPTIONS requires Premium Alpha Vantage subscription
+  // HISTORICAL_OPTIONS - end-of-day data, available with 75 req/min premium plan
   if (!ALPHA_VANTAGE_API_KEY) {
     console.warn('⚠️ ALPHA_VANTAGE_API_KEY not set - options data unavailable');
     return null;
@@ -34,7 +33,7 @@ async function fetchOptionsData(symbol: string) {
   
   try {
     // Get current price first for reference
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_API_KEY}`;
     const quoteRes = await fetch(quoteUrl);
     const quoteData = await quoteRes.json();
     const currentPrice = parseFloat(quoteData['Global Quote']?.['05. price'] || '0');
@@ -44,8 +43,9 @@ async function fetchOptionsData(symbol: string) {
       return null;
     }
 
-    // Alpha Vantage REALTIME_OPTIONS endpoint with Greeks
-    const optionsUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    // Alpha Vantage HISTORICAL_OPTIONS endpoint (end-of-day data)
+    // When date is not specified, returns data from the previous trading session
+    const optionsUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     
     const optionsRes = await fetch(optionsUrl);
     

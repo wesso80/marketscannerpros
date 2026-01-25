@@ -282,21 +282,37 @@ async function fetchOptionsChain(symbol: string): Promise<{
   }
   
   try {
-    const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_KEY}`;
-    console.log(`📊 Fetching options chain for ${symbol}...`);
+    // Use HISTORICAL_OPTIONS (end-of-day data) - available with 75 req/min premium plan
+    // When date is not specified, returns data from the previous trading session
+    const url = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
+    console.log(`📊 Fetching EOD options chain for ${symbol} (historical/delayed)...`);
     
     const response = await fetch(url);
     const data = await response.json();
     
-    if (data['Error Message'] || data['Note']) {
-      console.warn('Options API error:', data['Error Message'] || data['Note']);
+    // Enhanced logging to debug API response
+    console.log(`📊 Options API response status: ${response.status}`);
+    console.log(`📊 Options API response keys: ${Object.keys(data).join(', ')}`);
+    
+    if (data['Error Message']) {
+      console.error('❌ Options API Error Message:', data['Error Message']);
+      return null;
+    }
+    
+    if (data['Note']) {
+      console.warn('⚠️ Options API Note (likely rate limit):', data['Note']);
+      return null;
+    }
+    
+    if (data['Information']) {
+      console.error('❌ Options API Information (likely premium required):', data['Information']);
       return null;
     }
     
     // Alpha Vantage returns data in 'data' array
     const options = data['data'] || [];
     if (!Array.isArray(options) || options.length === 0) {
-      console.warn('No options data returned. Keys:', Object.keys(data));
+      console.warn('⚠️ No options data returned. Full response:', JSON.stringify(data).substring(0, 500));
       return null;
     }
     

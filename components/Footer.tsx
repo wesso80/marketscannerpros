@@ -94,6 +94,13 @@ export default function Footer() {
         </a>
       </div>
       
+      {/* Data Attribution */}
+      <div style={{ textAlign: 'center', padding: '0.5rem 0', opacity: 0.5, fontSize: 11 }}>
+        <span style={{ color: '#9ca3af' }}>
+          Crypto data provided by Binance
+        </span>
+      </div>
+      
       {/* CCPA Do Not Sell Link */}
       <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem', opacity: 0.6, fontSize: 12 }}>
         <Link href="/privacy#ccpa" style={{ color: '#9ca3af' }}>Do Not Sell My Personal Information</Link>

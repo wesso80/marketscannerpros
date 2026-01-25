@@ -889,30 +889,27 @@ function ScannerContent() {
             </button>
             
             <button
-              onClick={() => isAdmin && runBulkScan('equity')}
-              disabled={bulkScanLoading || !isAdmin}
-              title={!isAdmin ? "Coming Soon - Stock data requires commercial licensing" : undefined}
+              onClick={() => runBulkScan('equity')}
+              disabled={bulkScanLoading}
               style={{
                 flex: "1",
                 minWidth: "200px",
                 padding: "16px 24px",
-                background: !isAdmin 
-                  ? "rgba(100,116,139,0.2)"
-                  : (bulkScanLoading && bulkScanType === 'equity' 
+                background: bulkScanLoading && bulkScanType === 'equity' 
                     ? "rgba(16,185,129,0.3)" 
-                    : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))"),
-                border: !isAdmin ? "2px solid #64748b" : "2px solid #10b981",
+                    : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))",
+                border: "2px solid #10b981",
                 borderRadius: "12px",
-                color: !isAdmin ? "#64748b" : "#10b981",
+                color: "#10b981",
                 fontSize: "16px",
                 fontWeight: "700",
-                cursor: (bulkScanLoading || !isAdmin) ? "not-allowed" : "pointer",
+                cursor: bulkScanLoading ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "10px",
                 transition: "all 0.2s ease",
-                opacity: !isAdmin ? 0.6 : (bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1)
+                opacity: bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1
               }}
             >
               {bulkScanLoading && bulkScanType === 'equity' ? (
@@ -923,7 +920,7 @@ function ScannerContent() {
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>📈</span>
-                  Scan Top 10 Stocks {!isAdmin && "🔒"}
+                  Scan Top 10 Stocks
                 </>
               )}
             </button>
@@ -1170,7 +1167,8 @@ function ScannerContent() {
             </label>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {(["crypto", "equity", "forex"] as AssetType[]).map((type) => {
-                // Only allow equity/forex for admins (data licensing)
+                // Equity & Forex require commercial data licenses - admin-only for testing
+                // Only Crypto (Binance) is free for commercial use
                 const isDisabled = (type === "equity" || type === "forex") && !isAdmin;
                 return (
                   <button
@@ -1181,7 +1179,7 @@ function ScannerContent() {
                       setTicker(QUICK_PICKS[type][0]);
                     }}
                     disabled={isDisabled}
-                    title={isDisabled ? "Coming Soon - Stock & Forex data requires commercial licensing" : undefined}
+                    title={isDisabled ? "Coming Soon - Forex data requires commercial licensing" : undefined}
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: "8px",
@@ -1202,7 +1200,7 @@ function ScannerContent() {
             </div>
             {!isAdmin && (
               <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#64748B" }}>
-                📊 Crypto scanning uses free Binance data. Stock & Forex data coming soon.
+                📊 Crypto data provided by Binance. Stocks & Forex coming soon.
               </p>
             )}
           </div>
