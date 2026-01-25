@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { ScanMode } from '@/lib/confluence-learning-agent';
 
-// Cache for options analysis (5 minute TTL)
-const analysisCache = new Map<string, { data: OptionsSetup; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// NOTE: In-memory cache doesn't persist across serverless invocations
+// Each request fetches fresh data (75 calls/min on premium is sufficient)
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { symbol, scanMode = 'intraday_1h', forceRefresh = false } = body;
+    const { symbol, scanMode = 'intraday_1h' } = body;
     
     if (!symbol) {
       return NextResponse.json({
@@ -31,30 +30,17 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Check cache
-    const cacheKey = `${symbol.toUpperCase()}_${scanMode}`;
-    const cached = analysisCache.get(cacheKey);
+    // Always fetch fresh data - serverless doesn't maintain state between requests
+    console.log(`📊 Options scan for ${symbol.toUpperCase()} (${scanMode}) at ${new Date().toISOString()}`);
     
-    if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json({
-        success: true,
-        data: cached.data,
-        cached: true,
-        cacheAge: Math.round((Date.now() - cached.timestamp) / 1000),
-      });
-    }
-    
-    // Perform options analysis
-    console.log(`📊 Options scan for ${symbol.toUpperCase()} (${scanMode})`);
     const analysis = await optionsAnalyzer.analyzeForOptions(symbol.toUpperCase(), scanMode);
     
-    // Cache the result
-    analysisCache.set(cacheKey, { data: analysis, timestamp: Date.now() });
+    console.log(`✅ Options scan complete: ${symbol.toUpperCase()} - ${analysis.direction} signal, Grade: ${analysis.tradeQuality}`);
     
     return NextResponse.json({
       success: true,
       data: analysis,
-      cached: false,
+      timestamp: new Date().toISOString(),
     });
     
   } catch (error) {

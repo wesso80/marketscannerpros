@@ -118,7 +118,7 @@ export default function OptionsConfluenceScanner() {
     );
   }
 
-  const handleScan = async (forceRefresh = false) => {
+  const handleScan = async () => {
     if (!symbol.trim()) {
       setError("Please enter a symbol");
       return;
@@ -136,7 +136,6 @@ export default function OptionsConfluenceScanner() {
         body: JSON.stringify({ 
           symbol: symbol.trim(), 
           scanMode: selectedTF,
-          forceRefresh 
         }),
       });
 
@@ -145,8 +144,7 @@ export default function OptionsConfluenceScanner() {
       if (!data.success) {
         setError(data.error || 'Scan failed');
       } else {
-        setIsCached(!!data.cached);
-        setLastUpdated(new Date());
+        setLastUpdated(data.timestamp ? new Date(data.timestamp) : new Date());
         setResult(data.data as OptionsSetup);
       }
     } catch (err) {
