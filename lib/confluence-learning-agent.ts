@@ -718,6 +718,14 @@ export class ConfluenceLearningAgent {
     const allDecomps: DecompressionPull[] = [];
     const mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[] = [];
     
+    // Detect if this is likely a stock (not crypto) - crypto symbols contain USD
+    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    
+    // Check if US market is likely closed (weekend check - simplified)
+    const now = new Date();
+    const utcDay = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
+    const isWeekend = !isCrypto && (utcDay === 0 || utcDay === 6);
+    
     for (const tfConfig of includedTFConfigs) {
       const tfMs = tfConfig.minutes * 60 * 1000;
       const periodStart = Math.floor(currentTime / tfMs) * tfMs;
@@ -732,25 +740,41 @@ export class ConfluenceLearningAgent {
       const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
       const distanceToMid50 = ((currentPrice - mid50Level) / mid50Level) * 100;
       
-      // Check decompression
+      // For stocks on weekend/closed hours: use PROXIMITY-based analysis instead of timing
+      // Price within 1% of 50% level = strong pull, within 2% = moderate
+      const proximityStrength = Math.max(0, 2 - Math.abs(distanceToMid50)) * 2.5;  // 0-5 score based on proximity
+      
+      // Check decompression (only valid during live trading)
       const decompStart = tfConfig.decompStart || 0;
-      const isDecompressing = decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
+      const isTimingDecomp = !isWeekend && decompStart > 0 && minsToClose <= decompStart && minsToClose > 0;
+      
+      // For weekend/closed: treat TFs with price near 50% as "active" (proximity-based)
+      const isProximityActive = isWeekend && Math.abs(distanceToMid50) <= 1.5;  // Within 1.5% of 50%
+      const isDecompressing = isTimingDecomp || isProximityActive;
       
       let pullDirection: 'up' | 'down' | 'none' = 'none';
       let pullStrength = 0;
       
       if (isDecompressing) {
         pullDirection = mid50Level > currentPrice ? 'up' : mid50Level < currentPrice ? 'down' : 'none';
-        const closenessScore = (decompStart - minsToClose) / decompStart * 5;
-        const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5;
-        const distanceScore = Math.max(0, 2 - Math.abs(distanceToMid50) * 2);
-        pullStrength = Math.min(10, closenessScore + tfWeight + distanceScore);
+        
+        if (isWeekend) {
+          // Weekend: use proximity-based strength + TF weight
+          const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5;
+          pullStrength = Math.min(10, proximityStrength + tfWeight);
+        } else {
+          // Live market: use timing-based strength
+          const closenessScore = (decompStart - minsToClose) / decompStart * 5;
+          const tfWeight = Math.log2(tfConfig.minutes / 5) * 0.5;
+          const distanceScore = Math.max(0, 2 - Math.abs(distanceToMid50) * 2);
+          pullStrength = Math.min(10, closenessScore + tfWeight + distanceScore);
+        }
       }
       
       allDecomps.push({
         tf: tfConfig.label,
         isDecompressing,
-        minsToClose,
+        minsToClose: isWeekend ? -1 : minsToClose,  // -1 indicates market closed
         mid50Level,
         pullDirection,
         pullStrength,
@@ -787,15 +811,27 @@ export class ConfluenceLearningAgent {
     if (pullBias > 20) netPullDirection = 'bullish';
     else if (pullBias < -20) netPullDirection = 'bearish';
     
+    // Build reasoning text
+    let reasoningText = '';
+    if (activeDecomps.length > 0) {
+      if (isWeekend) {
+        reasoningText = `${activeDecomps.length} TFs near 50% levels (market closed): ${pullReasons.join(', ')}`;
+      } else {
+        reasoningText = `${activeDecomps.length} TFs decompressing: ${pullReasons.join(', ')}`;
+      }
+    } else {
+      reasoningText = isWeekend 
+        ? 'Market closed - no TFs near 50% levels (wait for Monday open)'
+        : 'No active decompressions';
+    }
+    
     const decompression: DecompressionAnalysis = {
       decompressions: allDecomps,
       activeCount: activeDecomps.length,
       netPullDirection,
       netPullStrength,
       pullBias,
-      reasoning: activeDecomps.length > 0 
-        ? `${activeDecomps.length} TFs decompressing: ${pullReasons.join(', ')}`
-        : 'No active decompressions',
+      reasoning: reasoningText,
     };
     
     // Find clusters (50% levels within ATR of each other)
