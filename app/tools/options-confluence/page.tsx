@@ -350,14 +350,14 @@ export default function OptionsConfluenceScanner() {
     <div style={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
-      padding: '2rem',
+      padding: 'clamp(1rem, 4vw, 2rem)',
       color: 'white'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <h1 style={{ 
-            fontSize: '2.5rem', 
+            fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', 
             fontWeight: 'bold',
             background: 'linear-gradient(135deg, #10B981, #3B82F6)',
             WebkitBackgroundClip: 'text',
@@ -366,7 +366,7 @@ export default function OptionsConfluenceScanner() {
           }}>
             🎯 Options Confluence Scanner
           </h1>
-          <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto' }}>
+          <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', padding: '0 1rem' }}>
             Get intelligent strike & expiration recommendations based on Time Confluence analysis.
             Uses 50% levels, decompression timing, and Greeks-aware risk assessment.
           </p>
@@ -392,7 +392,9 @@ export default function OptionsConfluenceScanner() {
               border: '2px solid rgba(16,185,129,0.3)',
               borderRadius: '12px',
               color: 'white',
-              width: '200px',
+              minWidth: '150px',
+              flex: '1 1 150px',
+              maxWidth: '250px',
               outline: 'none',
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
@@ -615,7 +617,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* Strike & Expiration Recommendations */}
             {result.direction !== 'neutral' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', gap: '1rem' }}>
                 
                 {/* Strike Recommendation */}
                 <div style={{
@@ -659,7 +661,7 @@ export default function OptionsConfluenceScanner() {
                           {result.primaryStrike.reason}
                         </div>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(45%, 120px), 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
                           <div>
                             <span style={{ color: '#64748B' }}>Est. Delta:</span>
                             <span style={{ color: '#E2E8F0', marginLeft: '6px', fontWeight: 'bold' }}>
@@ -900,7 +902,7 @@ export default function OptionsConfluenceScanner() {
                 {/* O/I Volume Comparison */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(45%, 140px), 1fr))',
                   gap: '1rem',
                   marginBottom: '1rem'
                 }}>
