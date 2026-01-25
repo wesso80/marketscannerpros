@@ -89,6 +89,7 @@ export interface OpenInterestData {
   sentimentReason: string;
   maxPainStrike: number | null;
   highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put' }[];
+  expirationDate: string;       // The expiration date being analyzed
 }
 
 export interface GreeksAdvice {
@@ -247,9 +248,21 @@ interface AVOptionContract {
   rho?: string;
 }
 
+// Get this week's Friday for weekly options expiry
+function getThisWeekFriday(): Date {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // If today is Friday, get next Friday
+  const friday = new Date(now);
+  friday.setDate(now.getDate() + daysUntilFriday);
+  friday.setHours(0, 0, 0, 0);
+  return friday;
+}
+
 async function fetchOptionsChain(symbol: string): Promise<{
   calls: AVOptionContract[];
   puts: AVOptionContract[];
+  selectedExpiry: string;
 } | null> {
   if (!ALPHA_VANTAGE_KEY) {
     console.warn('No Alpha Vantage API key - skipping options chain fetch');
@@ -277,14 +290,45 @@ async function fetchOptionsChain(symbol: string): Promise<{
     
     // Log first contract to debug field names
     if (options.length > 0) {
-      console.log('📊 Sample contract fields:', Object.keys(options[0]));
+      console.log('📊 Sample contract:', JSON.stringify(options[0], null, 2));
     }
     
+    // Find the best expiration date (closest to this Friday)
+    const targetFriday = getThisWeekFriday();
+    const targetDateStr = targetFriday.toISOString().split('T')[0];
+    
+    // Collect all unique expiration dates
+    const expiryMap: Record<string, number> = {};
+    for (const opt of options) {
+      if (opt.expiration) {
+        expiryMap[opt.expiration] = (expiryMap[opt.expiration] || 0) + 1;
+      }
+    }
+    
+    // Find expiration closest to target Friday with the most contracts
+    let bestExpiry = Object.keys(expiryMap)[0];
+    let minDiff = Infinity;
+    
+    for (const expiry of Object.keys(expiryMap)) {
+      const expiryDate = new Date(expiry);
+      const diff = Math.abs(expiryDate.getTime() - targetFriday.getTime());
+      // Prefer closer dates, but also consider contract count
+      if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
+        minDiff = diff;
+        bestExpiry = expiry;
+      }
+    }
+    
+    console.log(`📅 Available expirations: ${Object.keys(expiryMap).slice(0, 5).join(', ')}...`);
+    console.log(`📅 Target Friday: ${targetDateStr}, Selected expiry: ${bestExpiry}`);
+    
+    // Filter to only this expiration
     const calls: AVOptionContract[] = [];
     const puts: AVOptionContract[] = [];
     
     for (const contract of options) {
-      // Alpha Vantage uses 'type' field with values 'call' or 'put'
+      if (contract.expiration !== bestExpiry) continue;
+      
       const contractType = contract.type?.toLowerCase();
       if (contractType === 'call') {
         calls.push(contract);
@@ -293,8 +337,8 @@ async function fetchOptionsChain(symbol: string): Promise<{
       }
     }
     
-    console.log(`✅ Fetched ${calls.length} calls, ${puts.length} puts`);
-    return { calls, puts };
+    console.log(`✅ Filtered to ${bestExpiry}: ${calls.length} calls, ${puts.length} puts`);
+    return { calls, puts, selectedExpiry: bestExpiry };
   } catch (err) {
     console.error('Options chain fetch failed:', err);
     return null;
@@ -303,7 +347,8 @@ async function fetchOptionsChain(symbol: string): Promise<{
 function analyzeOpenInterest(
   calls: AVOptionContract[],
   puts: AVOptionContract[],
-  currentPrice: number
+  currentPrice: number,
+  expirationDate: string
 ): OpenInterestData {
   // Calculate total OI
   let totalCallOI = 0;
@@ -393,7 +438,7 @@ function analyzeOpenInterest(
   highOIStrikes.sort((a, b) => b.openInterest - a.openInterest);
   const topStrikes = highOIStrikes.slice(0, 10);
   
-  console.log(`📊 O/I Summary: Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}`);
+  console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}`);
   
   return {
     totalCallOI,
@@ -403,6 +448,7 @@ function analyzeOpenInterest(
     sentimentReason,
     maxPainStrike,
     highOIStrikes: topStrikes,
+    expirationDate,
   };
 }
 
@@ -800,8 +846,8 @@ export class OptionsConfluenceAnalyzer {
       try {
         const optionsChain = await fetchOptionsChain(symbol);
         if (optionsChain) {
-          openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice);
-          console.log(`📊 O/I Analysis: P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
+          openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
+          console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
         }
       } catch (err) {
         console.warn('O/I analysis failed:', err);

@@ -57,6 +57,7 @@ interface OpenInterestAnalysis {
   highOIStrikes: HighOIStrike[];
   sentiment: 'bullish' | 'bearish' | 'neutral';
   sentimentReason: string;
+  expirationDate: string;
 }
 
 interface OptionsSetup {
@@ -684,7 +685,18 @@ export default function OptionsConfluenceScanner() {
                 borderRadius: '16px',
                 padding: '1.5rem',
               }}>
-                <h3 style={{ margin: '0 0 1rem 0', color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <span style={{ 
+                    background: 'rgba(139,92,246,0.2)', 
+                    padding: '4px 12px', 
+                    borderRadius: '20px', 
+                    fontSize: '0.85rem',
+                    color: '#A78BFA'
+                  }}>
+                    Expiry: {result.openInterestAnalysis.expirationDate}
+                  </span>
+                </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   {/* P/C Ratio */}
