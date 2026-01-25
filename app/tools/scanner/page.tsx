@@ -13,6 +13,7 @@ import OpenInterestWidget from "@/components/OpenInterestWidget";
 import DerivativesWidget from "@/components/DerivativesWidget";
 import AlertsWidget from "@/components/AlertsWidget";
 import DominanceWidget from "@/components/DominanceWidget";
+import { useUserTier } from "@/lib/useUserTier";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -450,6 +451,7 @@ function TradingViewChart({
 
 function ScannerContent() {
   const searchParams = useSearchParams();
+  const { isAdmin } = useUserTier();
   const [assetType, setAssetType] = useState<AssetType>("crypto");
   const [ticker, setTicker] = useState<string>("BTC");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
@@ -887,27 +889,30 @@ function ScannerContent() {
             </button>
             
             <button
-              onClick={() => runBulkScan('equity')}
-              disabled={bulkScanLoading}
+              onClick={() => isAdmin && runBulkScan('equity')}
+              disabled={bulkScanLoading || !isAdmin}
+              title={!isAdmin ? "Coming Soon - Stock data requires commercial licensing" : undefined}
               style={{
                 flex: "1",
                 minWidth: "200px",
                 padding: "16px 24px",
-                background: bulkScanLoading && bulkScanType === 'equity' 
-                  ? "rgba(16,185,129,0.3)" 
-                  : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))",
-                border: "2px solid #10b981",
+                background: !isAdmin 
+                  ? "rgba(100,116,139,0.2)"
+                  : (bulkScanLoading && bulkScanType === 'equity' 
+                    ? "rgba(16,185,129,0.3)" 
+                    : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))"),
+                border: !isAdmin ? "2px solid #64748b" : "2px solid #10b981",
                 borderRadius: "12px",
-                color: "#10b981",
+                color: !isAdmin ? "#64748b" : "#10b981",
                 fontSize: "16px",
                 fontWeight: "700",
-                cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                cursor: (bulkScanLoading || !isAdmin) ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "10px",
                 transition: "all 0.2s ease",
-                opacity: bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1
+                opacity: !isAdmin ? 0.6 : (bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1)
               }}
             >
               {bulkScanLoading && bulkScanType === 'equity' ? (
@@ -918,7 +923,7 @@ function ScannerContent() {
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>📈</span>
-                  Scan Top 10 Stocks
+                  Scan Top 10 Stocks {!isAdmin && "🔒"}
                 </>
               )}
             </button>
@@ -1164,28 +1169,42 @@ function ScannerContent() {
               Asset Class
             </label>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {(["crypto", "equity", "forex"] as AssetType[]).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setAssetType(type);
-                    setTicker(QUICK_PICKS[type][0]);
-                  }}
-                  style={{
-                    padding: "0.5rem 1rem",
-                    borderRadius: "8px",
-                    border: assetType === type ? "2px solid #10B981" : "1px solid rgba(16, 185, 129, 0.3)",
-                    background: assetType === type ? "rgba(16, 185, 129, 0.2)" : "transparent",
-                    color: assetType === type ? "#10B981" : "#94A3B8",
-                    fontWeight: assetType === type ? "600" : "500",
-                    cursor: "pointer",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {type === "crypto" ? "₿ Crypto" : type === "equity" ? "📈 Stocks" : "🌍 Forex"}
-                </button>
-              ))}
+              {(["crypto", "equity", "forex"] as AssetType[]).map((type) => {
+                // Only allow equity/forex for admins (data licensing)
+                const isDisabled = (type === "equity" || type === "forex") && !isAdmin;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      setAssetType(type);
+                      setTicker(QUICK_PICKS[type][0]);
+                    }}
+                    disabled={isDisabled}
+                    title={isDisabled ? "Coming Soon - Stock & Forex data requires commercial licensing" : undefined}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      border: assetType === type ? "2px solid #10B981" : "1px solid rgba(16, 185, 129, 0.3)",
+                      background: isDisabled ? "rgba(100, 116, 139, 0.2)" : (assetType === type ? "rgba(16, 185, 129, 0.2)" : "transparent"),
+                      color: isDisabled ? "#64748B" : (assetType === type ? "#10B981" : "#94A3B8"),
+                      fontWeight: assetType === type ? "600" : "500",
+                      cursor: isDisabled ? "not-allowed" : "pointer",
+                      textTransform: "capitalize",
+                      opacity: isDisabled ? 0.6 : 1,
+                    }}
+                  >
+                    {type === "crypto" ? "₿ Crypto" : type === "equity" ? "📈 Stocks" : "🌍 Forex"}
+                    {isDisabled && " 🔒"}
+                  </button>
+                );
+              })}
             </div>
+            {!isAdmin && (
+              <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#64748B" }}>
+                📊 Crypto scanning uses free Binance data. Stock & Forex data coming soon.
+              </p>
+            )}
           </div>
 
           {/* Ticker Input */}

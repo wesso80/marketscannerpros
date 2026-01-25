@@ -53,9 +53,9 @@ export async function POST(req: NextRequest) {
             };
           }
         } else {
-          // Use stock endpoint
+          // Use stock endpoint (15-minute delayed data)
           const res = await fetch(
-            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
+            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${apiKey}`
           );
           const data = await res.json();
           

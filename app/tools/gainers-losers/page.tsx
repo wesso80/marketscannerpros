@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import DataComingSoon from "@/components/DataComingSoon";
 
 interface MarketMover {
   ticker: string;
@@ -119,7 +120,7 @@ type SortField = "ticker" | "price" | "change" | "percent" | "volume";
 type SortDirection = "asc" | "desc";
 
 export default function GainersLosersPage() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -140,8 +141,13 @@ export default function GainersLosersPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAdmin) fetchData();
+  }, [isAdmin]);
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
+  }
 
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);

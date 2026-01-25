@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
 
 
     async function fetchRSI(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `RSI ${sym}`);
       const ta = j["Technical Analysis: RSI"] || {};
       const first = Object.values(ta)[0] as any;
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchMACD(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&series_type=close&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `MACD ${sym}`);
       const ta = j["Technical Analysis: MACD"] || {};
       const first = Object.values(ta)[0] as any;
@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchEMA200(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=EMA&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=200&series_type=close&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=EMA&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=200&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `EMA200 ${sym}`);
       const ta = j["Technical Analysis: EMA"] || {};
       const first = Object.values(ta)[0] as any;
@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchATR(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=delayed&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `ATR ${sym}`);
       const ta = j["Technical Analysis: ATR"] || {};
       const first = Object.values(ta)[0] as any;

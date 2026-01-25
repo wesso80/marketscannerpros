@@ -4,6 +4,7 @@ import { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import DataComingSoon from "@/components/DataComingSoon";
 
 interface CompanyData {
   symbol: string;
@@ -36,11 +37,16 @@ interface CompanyData {
 }
 
 export default function CompanyOverviewPage() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CompanyData | null>(null);
   const [error, setError] = useState("");
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="🏢 Company Overview" description="Comprehensive company fundamentals and financials" />;
+  }
 
   const handleSearch = async () => {
     if (!symbol.trim()) {

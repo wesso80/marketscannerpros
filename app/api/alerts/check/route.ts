@@ -137,7 +137,7 @@ async function fetchPrice(symbol: string, assetType: string): Promise<number | n
       if (!apiKey) return null;
       
       const res = await fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${apiKey}`
       );
       if (!res.ok) return null;
       const data = await res.json();

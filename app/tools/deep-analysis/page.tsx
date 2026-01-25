@@ -4,6 +4,7 @@ import { useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import DataComingSoon from "@/components/DataComingSoon";
 
 interface PriceData {
   price: number;
@@ -218,6 +219,11 @@ export default function DeepAnalysisPage() {
         </main>
       </div>
     );
+  }
+
+  // Data licensing gate - only admins can access stock data for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="🥚 Golden Egg Deep Analysis" description="AI-powered comprehensive market analysis for any stock or crypto" />;
   }
 
   const handleAnalyze = async () => {

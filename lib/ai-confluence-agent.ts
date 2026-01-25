@@ -102,8 +102,8 @@ export class AIConfluenceAgent {
       const [from, to] = symbol.includes('/') ? symbol.split('/') : [symbol.replace('USD', ''), 'USD'];
       url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${from}&market=${to}&interval=${interval}&outputsize=${outputSize}&apikey=${ALPHA_VANTAGE_KEY}`;
     } else {
-      // Stock endpoint
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&apikey=${ALPHA_VANTAGE_KEY}`;
+      // Stock endpoint (15-minute delayed data)
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
     }
 
     const response = await fetch(url);
@@ -142,7 +142,8 @@ export class AIConfluenceAgent {
       const from = symbol.replace('USD', '').replace('USDT', '');
       url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${from}&market=USD&apikey=${ALPHA_VANTAGE_KEY}`;
     } else {
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+      // Use delayed entitlement for stock data (15-minute delayed)
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
     }
 
     const response = await fetch(url);

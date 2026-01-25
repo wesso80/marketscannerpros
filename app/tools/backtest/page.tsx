@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
+import DataComingSoon from '@/components/DataComingSoon';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 
 interface BacktestResult {
@@ -47,7 +48,7 @@ interface EquityPoint {
 }
 
 function BacktestContent() {
-  const { tier, isLoading: tierLoading } = useUserTier();
+  const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState('SPY');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-12-31');
@@ -91,6 +92,11 @@ function BacktestContent() {
         </UpgradeGate>
       </div>
     );
+  }
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="🧪 Strategy Backtester" description="Test and iterate trading ideas with historical data" />;
   }
 
   const runBacktest = async () => {

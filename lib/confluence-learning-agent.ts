@@ -367,7 +367,8 @@ export class ConfluenceLearningAgent {
           return parseFloat(rate);
         }
       } else {
-        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
+        // Use delayed entitlement for stock data (15-minute delayed)
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
         const response = await fetch(url);
         const data = await response.json();
         
@@ -390,7 +391,8 @@ export class ConfluenceLearningAgent {
       const base = symbol.replace('USD', '').replace('USDT', '');
       url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${base}&market=USD&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
     } else {
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+      // Use delayed entitlement for stock data (15-minute delayed)
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
     }
 
     const response = await fetch(url);

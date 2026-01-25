@@ -1,8 +1,17 @@
 'use client';
 
 import SectorHeatmap from '@/components/SectorHeatmap';
+import DataComingSoon from '@/components/DataComingSoon';
+import { useUserTier } from '@/lib/useUserTier';
 
 export default function HeatmapPage() {
+  const { isAdmin } = useUserTier();
+  
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📊 Sector Heat Map" description="Visualize S&P 500 sector performance at a glance" />;
+  }
+  
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       <div className="max-w-7xl mx-auto px-4 py-8">

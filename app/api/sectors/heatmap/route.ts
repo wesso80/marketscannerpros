@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
     const sectorPromises = SECTOR_ETFS.map(async (etf) => {
       try {
         const res = await fetch(
-          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etf.symbol}&apikey=${apiKey}`
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etf.symbol}&entitlement=delayed&apikey=${apiKey}`
         );
         const data = await res.json();
         

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
+import DataComingSoon from "@/components/DataComingSoon";
 
 // Hierarchical Scan Result type
 interface HierarchicalResult {
@@ -57,7 +58,7 @@ const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; tf: string }[] = 
 ];
 
 export default function AIConfluenceScanner() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [hierarchicalResult, setHierarchicalResult] = useState<HierarchicalResult | null>(null);
@@ -89,6 +90,11 @@ export default function AIConfluenceScanner() {
         </main>
       </div>
     );
+  }
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="🔮 AI Confluence Scanner" description="Full History Learning + Decompression Timing Analysis" />;
   }
 
   const handleScan = async (forceRefresh = false) => {
