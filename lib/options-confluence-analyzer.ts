@@ -133,6 +133,8 @@ export interface OptionContract {
 // CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
+const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+
 const DELTA_TARGETS = {
   scalping: { min: 0.65, max: 0.85, label: '0.65-0.85 (high delta for quick moves)' },
   intraday: { min: 0.50, max: 0.70, label: '0.50-0.70 (balanced risk/reward)' },
@@ -217,6 +219,188 @@ export function estimateGreeks(
     : -K * T * Math.exp(-r * T) * normalCDF(-d2) / 100;
   
   return { delta, gamma, theta, vega, rho };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ALPHA VANTAGE OPTIONS CHAIN API
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface AVOptionContract {
+  contractID: string;
+  symbol: string;
+  expiration: string;
+  strike: string;
+  type: string;
+  last: string;
+  mark: string;
+  bid: string;
+  bid_size: string;
+  ask: string;
+  ask_size: string;
+  volume: string;
+  open_interest: string;
+  implied_volatility: string;
+  delta?: string;
+  gamma?: string;
+  theta?: string;
+  vega?: string;
+  rho?: string;
+}
+
+async function fetchOptionsChain(symbol: string): Promise<{
+  calls: AVOptionContract[];
+  puts: AVOptionContract[];
+} | null> {
+  if (!ALPHA_VANTAGE_KEY) {
+    console.warn('No Alpha Vantage API key - skipping options chain fetch');
+    return null;
+  }
+  
+  try {
+    const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_KEY}`;
+    console.log(`📊 Fetching options chain for ${symbol}...`);
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data['Error Message'] || data['Note']) {
+      console.warn('Options API error:', data['Error Message'] || data['Note']);
+      return null;
+    }
+    
+    const options = data['data'] || data['optionChain'] || [];
+    if (!Array.isArray(options) || options.length === 0) {
+      console.warn('No options data returned');
+      return null;
+    }
+    
+    const calls: AVOptionContract[] = [];
+    const puts: AVOptionContract[] = [];
+    
+    for (const contract of options) {
+      if (contract.type?.toLowerCase() === 'call') {
+        calls.push(contract);
+      } else if (contract.type?.toLowerCase() === 'put') {
+        puts.push(contract);
+      }
+    }
+    
+    console.log(`✅ Fetched ${calls.length} calls, ${puts.length} puts`);
+    return { calls, puts };
+  } catch (err) {
+    console.error('Options chain fetch failed:', err);
+    return null;
+  }
+}
+
+function analyzeOpenInterest(
+  calls: AVOptionContract[],
+  puts: AVOptionContract[],
+  currentPrice: number
+): OpenInterestData {
+  // Calculate total OI
+  let totalCallOI = 0;
+  let totalPutOI = 0;
+  
+  const strikeOI: Map<number, { callOI: number; putOI: number }> = new Map();
+  
+  for (const call of calls) {
+    const oi = parseInt(call.open_interest || '0', 10);
+    const strike = parseFloat(call.strike);
+    totalCallOI += oi;
+    
+    if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
+    strikeOI.get(strike)!.callOI += oi;
+  }
+  
+  for (const put of puts) {
+    const oi = parseInt(put.open_interest || '0', 10);
+    const strike = parseFloat(put.strike);
+    totalPutOI += oi;
+    
+    if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
+    strikeOI.get(strike)!.putOI += oi;
+  }
+  
+  // Put/Call ratio
+  const pcRatio = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
+  
+  // Sentiment based on P/C ratio
+  // < 0.7 = bullish (more calls), > 1.0 = bearish (more puts), between = neutral
+  let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (pcRatio < 0.7) sentiment = 'bullish';
+  else if (pcRatio > 1.0) sentiment = 'bearish';
+  
+  // Find max pain strike (where most options expire worthless)
+  // Max pain = strike where (call_pain + put_pain) is minimized for option buyers
+  let maxPainStrike: number | null = null;
+  let minPain = Infinity;
+  
+  for (const [strike, oi] of strikeOI.entries()) {
+    // Pain for calls: sum of (current_price - strike) * call_OI for all strikes below current
+    // Pain for puts: sum of (strike - current_price) * put_OI for all strikes above current
+    let pain = 0;
+    
+    for (const [s, data] of strikeOI.entries()) {
+      if (s < strike) {
+        // These calls are ITM at this strike price
+        pain += (strike - s) * data.callOI;
+      }
+      if (s > strike) {
+        // These puts are ITM at this strike price
+        pain += (s - strike) * data.putOI;
+      }
+    }
+    
+    if (pain < minPain) {
+      minPain = pain;
+      maxPainStrike = strike;
+    }
+  }
+  
+  // Find high OI strikes (potential support/resistance)
+  const highOIStrikes = Array.from(strikeOI.entries())
+    .map(([strike, data]) => ({ strike, callOI: data.callOI, putOI: data.putOI, totalOI: data.callOI + data.putOI }))
+    .sort((a, b) => b.totalOI - a.totalOI)
+    .slice(0, 5)
+    .map(({ strike, callOI, putOI }) => ({ strike, callOI, putOI }));
+  
+  // Build analysis text
+  const analysisPoints: string[] = [];
+  
+  if (pcRatio < 0.7) {
+    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = bullish (heavy call buying)`);
+  } else if (pcRatio > 1.0) {
+    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = bearish (heavy put buying)`);
+  } else {
+    analysisPoints.push(`P/C ratio ${pcRatio.toFixed(2)} = neutral`);
+  }
+  
+  if (maxPainStrike) {
+    const maxPainDist = ((maxPainStrike - currentPrice) / currentPrice) * 100;
+    if (maxPainDist > 1) {
+      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (${maxPainDist.toFixed(1)}% above)`);
+    } else if (maxPainDist < -1) {
+      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (${Math.abs(maxPainDist).toFixed(1)}% below)`);
+    } else {
+      analysisPoints.push(`Max pain at $${maxPainStrike.toFixed(0)} (near current price)`);
+    }
+  }
+  
+  if (highOIStrikes.length > 0) {
+    const topStrike = highOIStrikes[0];
+    analysisPoints.push(`Highest OI at $${topStrike.strike.toFixed(0)} (${topStrike.callOI.toLocaleString()}C/${topStrike.putOI.toLocaleString()}P)`);
+  }
+  
+  return {
+    callOI: totalCallOI,
+    putOI: totalPutOI,
+    pcRatio,
+    sentiment,
+    maxPainStrike,
+    highOIStrikes,
+    analysis: analysisPoints.join('. '),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -359,22 +543,23 @@ function selectExpirationFromConfluence(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRADE QUALITY GRADING
+// TRADE QUALITY GRADING (with O/I integration)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function gradeTradeQuality(
-  confluenceResult: HierarchicalScanResult
+  confluenceResult: HierarchicalScanResult,
+  oiData: OpenInterestData | null = null
 ): { grade: 'A+' | 'A' | 'B' | 'C' | 'F'; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
   
-  // Confluence stack (0-30 points)
+  // Confluence stack (0-25 points)
   const decompCount = confluenceResult.decompression.activeCount;
   if (decompCount >= 5) {
-    score += 30;
+    score += 25;
     reasons.push(`✅ Mega confluence: ${decompCount} TFs decompressing`);
   } else if (decompCount >= 3) {
-    score += 20;
+    score += 18;
     reasons.push(`✅ Strong confluence: ${decompCount} TFs decompressing`);
   } else if (decompCount >= 2) {
     score += 10;
@@ -398,30 +583,61 @@ function gradeTradeQuality(
     reasons.push(`⚠️ Weak/conflicting bias: ${pullBias.toFixed(0)}%`);
   }
   
-  // Cluster magnets (0-20 points)
+  // Cluster magnets (0-15 points)
   if (confluenceResult.clusters.length >= 2) {
-    score += 20;
+    score += 15;
     reasons.push(`✅ Multiple price clusters (${confluenceResult.clusters.length})`);
   } else if (confluenceResult.clusters.length === 1) {
-    score += 12;
+    score += 10;
     reasons.push(`✅ Price cluster detected`);
   } else {
     reasons.push(`📍 No strong price clusters`);
   }
   
-  // Prediction confidence (0-25 points)
+  // Prediction confidence (0-20 points)
   const confidence = confluenceResult.prediction.confidence;
   if (confidence >= 85) {
-    score += 25;
+    score += 20;
     reasons.push(`✅ High confidence prediction: ${confidence}%`);
   } else if (confidence >= 70) {
-    score += 18;
+    score += 15;
     reasons.push(`✅ Good confidence: ${confidence}%`);
   } else if (confidence >= 50) {
-    score += 10;
+    score += 8;
     reasons.push(`⚡ Moderate confidence: ${confidence}%`);
   } else {
     reasons.push(`⚠️ Low confidence: ${confidence}%`);
+  }
+  
+  // O/I Sentiment Alignment (0-15 points) - NEW
+  if (oiData) {
+    const direction = confluenceResult.decompression.netPullDirection;
+    const oiAligned = (direction === 'bullish' && oiData.sentiment === 'bullish') ||
+                      (direction === 'bearish' && oiData.sentiment === 'bearish');
+    const oiConflict = (direction === 'bullish' && oiData.sentiment === 'bearish') ||
+                       (direction === 'bearish' && oiData.sentiment === 'bullish');
+    
+    if (oiAligned) {
+      score += 15;
+      reasons.push(`✅ O/I confirms direction: P/C ratio ${oiData.pcRatio.toFixed(2)}`);
+    } else if (oiConflict) {
+      score -= 5;  // Penalty for conflict
+      reasons.push(`⚠️ O/I conflicts: P/C ratio ${oiData.pcRatio.toFixed(2)} suggests ${oiData.sentiment}`);
+    } else {
+      score += 5;
+      reasons.push(`📊 O/I neutral: P/C ratio ${oiData.pcRatio.toFixed(2)}`);
+    }
+    
+    // Max pain proximity bonus (0-5 points)
+    if (oiData.maxPainStrike) {
+      const maxPainDist = Math.abs((oiData.maxPainStrike - confluenceResult.currentPrice) / confluenceResult.currentPrice) * 100;
+      if (maxPainDist <= 2) {
+        score += 5;
+        reasons.push(`✅ Near max pain: $${oiData.maxPainStrike.toFixed(0)}`);
+      }
+    }
+  } else {
+    reasons.push(`📊 O/I data unavailable`);
   }
   
   // Grade assignment
@@ -573,12 +789,28 @@ export class OptionsConfluenceAnalyzer {
     
     const { currentPrice, decompression, prediction, signalStrength, clusters, mid50Levels } = confluenceResult;
     
+    // Fetch options chain for O/I analysis (stocks only, not crypto)
+    let openInterestAnalysis: OpenInterestData | null = null;
+    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    
+    if (!isCrypto) {
+      try {
+        const optionsChain = await fetchOptionsChain(symbol);
+        if (optionsChain) {
+          openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice);
+          console.log(`📊 O/I Analysis: P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
+        }
+      } catch (err) {
+        console.warn('O/I analysis failed:', err);
+      }
+    }
+    
     // Determine trade direction
     const direction = decompression.netPullDirection;
     const isCallDirection = direction === 'bullish';
     
-    // Grade trade quality
-    const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult);
+    // Grade trade quality (now includes O/I sentiment alignment)
+    const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
     
     // Select strikes based on 50% levels
     const allStrikes = direction !== 'neutral' 
@@ -603,10 +835,15 @@ export class OptionsConfluenceAnalyzer {
       signalStrength
     );
     
-    // Risk management
+    // Risk management (factor in O/I alignment)
     let maxRiskPercent = 2;
-    if (grade === 'A+') maxRiskPercent = 3;
-    else if (grade === 'A') maxRiskPercent = 2.5;
+    const oiAligned = openInterestAnalysis && (
+      (direction === 'bullish' && openInterestAnalysis.sentiment === 'bullish') ||
+      (direction === 'bearish' && openInterestAnalysis.sentiment === 'bearish')
+    );
+    
+    if (grade === 'A+') maxRiskPercent = oiAligned ? 3.5 : 3;
+    else if (grade === 'A') maxRiskPercent = oiAligned ? 3 : 2.5;
     else if (grade === 'B') maxRiskPercent = 2;
     else if (grade === 'C') maxRiskPercent = 1;
     else maxRiskPercent = 0.5;
@@ -635,7 +872,7 @@ export class OptionsConfluenceAnalyzer {
       alternativeStrikes,
       primaryExpiration,
       alternativeExpirations,
-      openInterestAnalysis: null, // TODO: Integrate O/I data source
+      openInterestAnalysis,
       greeksAdvice,
       maxRiskPercent,
       stopLossStrategy,

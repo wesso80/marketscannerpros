@@ -43,6 +43,22 @@ interface EntryTimingAdvice {
   avoidWindows: string[];
 }
 
+interface HighOIStrike {
+  strike: number;
+  openInterest: number;
+  type: 'call' | 'put';
+}
+
+interface OpenInterestAnalysis {
+  totalCallOI: number;
+  totalPutOI: number;
+  pcRatio: number;
+  maxPainStrike: number | null;
+  highOIStrikes: HighOIStrike[];
+  sentiment: 'bullish' | 'bearish' | 'neutral';
+  sentimentReason: string;
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -57,7 +73,7 @@ interface OptionsSetup {
   alternativeStrikes: StrikeRecommendation[];
   primaryExpiration: ExpirationRecommendation | null;
   alternativeExpirations: ExpirationRecommendation[];
-  openInterestAnalysis: null;
+  openInterestAnalysis: OpenInterestAnalysis | null;
   greeksAdvice: GreeksAdvice;
   maxRiskPercent: number;
   stopLossStrategy: string;
@@ -655,6 +671,174 @@ export default function OptionsConfluenceScanner() {
                     <div style={{ color: '#64748B', textAlign: 'center', padding: '2rem' }}>
                       No expiration recommendation available
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Open Interest Analysis */}
+            {result.openInterestAnalysis && (
+              <div style={{
+                background: 'rgba(30,41,59,0.6)',
+                border: '1px solid rgba(139,92,246,0.4)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  {/* P/C Ratio */}
+                  <div style={{
+                    background: 'rgba(139,92,246,0.15)',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>Put/Call Ratio</div>
+                    <div style={{ 
+                      fontSize: '1.75rem', 
+                      fontWeight: 'bold',
+                      color: result.openInterestAnalysis.pcRatio > 1 ? '#EF4444' : result.openInterestAnalysis.pcRatio < 0.7 ? '#10B981' : '#F59E0B'
+                    }}>
+                      {result.openInterestAnalysis.pcRatio.toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                      {result.openInterestAnalysis.pcRatio > 1 ? 'Bearish bias' : result.openInterestAnalysis.pcRatio < 0.7 ? 'Bullish bias' : 'Neutral'}
+                    </div>
+                  </div>
+                  
+                  {/* Max Pain */}
+                  {result.openInterestAnalysis.maxPainStrike && (
+                    <div style={{
+                      background: 'rgba(245,158,11,0.15)',
+                      padding: '1rem',
+                      borderRadius: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>Max Pain Strike</div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#F59E0B' }}>
+                        ${result.openInterestAnalysis.maxPainStrike}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                        {result.openInterestAnalysis.maxPainStrike > result.currentPrice ? 'Above price' : 'Below price'}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* O/I Sentiment */}
+                  <div style={{
+                    background: result.openInterestAnalysis.sentiment === 'bullish' 
+                      ? 'rgba(16,185,129,0.15)' 
+                      : result.openInterestAnalysis.sentiment === 'bearish' 
+                        ? 'rgba(239,68,68,0.15)' 
+                        : 'rgba(100,100,100,0.15)',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>O/I Sentiment</div>
+                    <div style={{ 
+                      fontSize: '1.5rem', 
+                      fontWeight: 'bold',
+                      color: result.openInterestAnalysis.sentiment === 'bullish' ? '#10B981' : result.openInterestAnalysis.sentiment === 'bearish' ? '#EF4444' : '#6B7280'
+                    }}>
+                      {result.openInterestAnalysis.sentiment === 'bullish' ? '🟢 BULLISH' : 
+                       result.openInterestAnalysis.sentiment === 'bearish' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                      {result.openInterestAnalysis.sentimentReason}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* O/I Volume Comparison */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{
+                    background: 'rgba(16,185,129,0.1)',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Call O/I</div>
+                    <div style={{ fontWeight: 'bold', color: '#10B981' }}>
+                      {(result.openInterestAnalysis.totalCallOI / 1000).toFixed(1)}K
+                    </div>
+                  </div>
+                  <div style={{
+                    background: 'rgba(239,68,68,0.1)',
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Put O/I</div>
+                    <div style={{ fontWeight: 'bold', color: '#EF4444' }}>
+                      {(result.openInterestAnalysis.totalPutOI / 1000).toFixed(1)}K
+                    </div>
+                  </div>
+                </div>
+                
+                {/* High O/I Strikes */}
+                {result.openInterestAnalysis.highOIStrikes.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>High Open Interest Strikes:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
+                        <span key={i} style={{
+                          background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                          border: `1px solid ${s.type === 'call' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem'
+                        }}>
+                          <span style={{ fontWeight: 'bold', color: s.type === 'call' ? '#10B981' : '#EF4444' }}>
+                            ${s.strike}
+                          </span>
+                          <span style={{ color: '#94A3B8', marginLeft: '6px' }}>
+                            {(s.openInterest / 1000).toFixed(1)}K {s.type === 'call' ? 'C' : 'P'}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Alignment Check */}
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  background: (result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
+                              (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish')
+                    ? 'rgba(16,185,129,0.15)'
+                    : result.openInterestAnalysis.sentiment === 'neutral' 
+                      ? 'rgba(245,158,11,0.15)'
+                      : 'rgba(239,68,68,0.15)',
+                  border: (result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
+                          (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish')
+                    ? '1px solid rgba(16,185,129,0.3)'
+                    : result.openInterestAnalysis.sentiment === 'neutral'
+                      ? '1px solid rgba(245,158,11,0.3)'
+                      : '1px solid rgba(239,68,68,0.3)',
+                  fontSize: '0.85rem'
+                }}>
+                  {(result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
+                   (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish') ? (
+                    <span style={{ color: '#10B981' }}>
+                      ✅ O/I sentiment CONFIRMS confluence direction — higher confidence trade
+                    </span>
+                  ) : result.openInterestAnalysis.sentiment === 'neutral' ? (
+                    <span style={{ color: '#F59E0B' }}>
+                      ⚠️ O/I sentiment neutral — rely on confluence signals
+                    </span>
+                  ) : (
+                    <span style={{ color: '#EF4444' }}>
+                      ⚠️ O/I sentiment DIVERGES from confluence — proceed with caution
+                    </span>
                   )}
                 </div>
               </div>
