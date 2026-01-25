@@ -141,6 +141,13 @@ export default function AIConfluenceScanner() {
     return `${Math.floor(mins / 1440)}d`;
   };
 
+  // Format price with appropriate precision (4 decimals for crypto)
+  const formatPrice = (price: number) => {
+    if (price >= 1000) return price.toFixed(2);
+    if (price >= 1) return price.toFixed(4);
+    return price.toFixed(6); // For small coins like SHIB
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -361,7 +368,7 @@ export default function AIConfluenceScanner() {
                       {hierarchicalResult.modeLabel}
                     </span>
                   </div>
-                  <div style={{ color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -374,7 +381,16 @@ export default function AIConfluenceScanner() {
                     }}>
                       {hierarchicalResult.isLivePrice ? '🟢 LIVE' : '⏱️ Delayed'}
                     </span>
-                    ${hierarchicalResult.currentPrice.toFixed(2)} • Primary TF: {hierarchicalResult.primaryTF}
+                    <span style={{ 
+                      fontSize: '1.25rem', 
+                      fontWeight: 'bold', 
+                      color: '#F1F5F9',
+                      fontFamily: 'monospace',
+                    }}>
+                      ${formatPrice(hierarchicalResult.currentPrice)}
+                    </span>
+                    <span style={{ color: '#64748B' }}>•</span>
+                    <span style={{ color: '#94A3B8' }}>Primary TF: {hierarchicalResult.primaryTF}</span>
                   </div>
                   <div style={{ color: '#64748B', fontSize: '0.85rem', marginTop: '0.25rem' }}>
                     Scanning: {hierarchicalResult.includedTFs.join(', ')}
@@ -437,8 +453,8 @@ export default function AIConfluenceScanner() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Target</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3B82F6' }}>
-                    ${hierarchicalResult.prediction.targetLevel.toFixed(2)}
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3B82F6', fontFamily: 'monospace' }}>
+                    ${formatPrice(hierarchicalResult.prediction.targetLevel)}
                   </div>
                 </div>
                 <div>
@@ -526,8 +542,8 @@ export default function AIConfluenceScanner() {
                       {d.minsToClose > 0 ? `${d.minsToClose}m to close` : 'Closed'}
                     </div>
                     {d.isDecompressing && (
-                      <div style={{ fontSize: '0.75rem', color: d.pullDirection === 'up' ? '#10B981' : '#EF4444' }}>
-                        → ${d.mid50Level.toFixed(2)}
+                      <div style={{ fontSize: '0.75rem', color: d.pullDirection === 'up' ? '#10B981' : '#EF4444', fontFamily: 'monospace' }}>
+                        → ${formatPrice(d.mid50Level)}
                       </div>
                     )}
                   </div>
@@ -559,8 +575,8 @@ export default function AIConfluenceScanner() {
                       borderRadius: '8px',
                       marginBottom: '0.5rem',
                     }}>
-                      <div style={{ fontWeight: 600 }}>
-                        Cluster @ ${c.avgLevel.toFixed(2)}
+                      <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                        Cluster @ ${formatPrice(c.avgLevel)}
                       </div>
                       <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
                         TFs: {c.tfs.join(', ')}
@@ -587,12 +603,12 @@ export default function AIConfluenceScanner() {
                   }}>
                     <span style={{ fontWeight: 500 }}>{level.tf}</span>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.9rem' }}>${level.level.toFixed(2)}</div>
+                      <div style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>${formatPrice(level.level)}</div>
                       <div style={{ 
                         fontSize: '0.7rem', 
                         color: level.distance > 0 ? '#10B981' : level.distance < 0 ? '#EF4444' : '#64748B'
                       }}>
-                        {level.distance > 0 ? '+' : ''}{level.distance.toFixed(2)}%
+                        {level.distance > 0 ? '+' : ''}{level.distance.toFixed(4)}%
                       </div>
                     </div>
                   </div>
