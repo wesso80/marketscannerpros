@@ -1034,13 +1034,21 @@ export async function POST(req: NextRequest) {
           // EQUITIES: Use Alpha Vantage (admin-only testing - requires commercial license for production)
           console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval})`);
           
-          // Use the existing Alpha Vantage helper functions
-          const [rsiVal, macObj, ema200Val, atrVal, adxObj, stochObj, cciVal, aroonObj, priceData] = await Promise.all([
+          // Alpha Vantage enforces max 5 requests/second - batch with delays
+          // Batch 1: First 5 indicators
+          const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
             fetchRSI(sym),
             fetchMACD(sym),
             fetchEMA200(sym),
             fetchATR(sym),
             fetchADX(sym),
+          ]);
+          
+          // Wait 250ms before second batch to respect rate limit
+          await new Promise(resolve => setTimeout(resolve, 250));
+          
+          // Batch 2: Remaining 4 indicators
+          const [stochObj, cciVal, aroonObj, priceData] = await Promise.all([
             fetchSTOCH(sym),
             fetchCCI(sym),
             fetchAROON(sym),
