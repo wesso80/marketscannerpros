@@ -126,8 +126,10 @@ export async function GET(req: NextRequest) {
         );
         const data = await res.json();
         
-        if (data['Global Quote'] && data['Global Quote']['05. price']) {
-          const quote = data['Global Quote'];
+        // Handle both realtime and delayed response formats
+        const globalQuote = data['Global Quote'] || data['Global Quote - DATA DELAYED BY 15 MINUTES'];
+        if (globalQuote && globalQuote['05. price']) {
+          const quote = globalQuote;
           return {
             symbol: etf.symbol,
             name: etf.name,

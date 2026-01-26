@@ -42,10 +42,14 @@ async function fetchOptionsData(symbol: string) {
     const quoteRes = await fetch(quoteUrl);
     const quoteData = await quoteRes.json();
     console.log(`📊 Quote response:`, JSON.stringify(quoteData).substring(0, 200));
-    const currentPrice = parseFloat(quoteData['Global Quote']?.['05. price'] || '0');
+    
+    // Handle both realtime and delayed response formats
+    // Delayed API returns: "Global Quote - DATA DELAYED BY 15 MINUTES" as key
+    const globalQuote = quoteData['Global Quote'] || quoteData['Global Quote - DATA DELAYED BY 15 MINUTES'];
+    const currentPrice = parseFloat(globalQuote?.['05. price'] || '0');
     
     if (!currentPrice) {
-      console.log(`❌ No price data for ${symbol}, skipping options`);
+      console.log(`❌ No price data for ${symbol}, skipping options. Keys found: ${Object.keys(quoteData).join(', ')}`);
       return null;
     }
     console.log(`✅ Got price for ${symbol}: $${currentPrice}`);

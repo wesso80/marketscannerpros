@@ -141,7 +141,9 @@ async function fetchPrice(symbol: string, assetType: string): Promise<number | n
       );
       if (!res.ok) return null;
       const data = await res.json();
-      const price = data['Global Quote']?.['05. price'];
+      // Handle both realtime and delayed response formats
+      const globalQuote = data['Global Quote'] || data['Global Quote - DATA DELAYED BY 15 MINUTES'];
+      const price = globalQuote?.['05. price'];
       return price ? parseFloat(price) : null;
     }
   } catch {

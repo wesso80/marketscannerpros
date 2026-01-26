@@ -372,8 +372,10 @@ export class ConfluenceLearningAgent {
         const response = await fetch(url);
         const data = await response.json();
         
-        if (data['Global Quote'] && data['Global Quote']['05. price']) {
-          return parseFloat(data['Global Quote']['05. price']);
+        // Handle both realtime and delayed response formats
+        const globalQuote = data['Global Quote'] || data['Global Quote - DATA DELAYED BY 15 MINUTES'];
+        if (globalQuote && globalQuote['05. price']) {
+          return parseFloat(globalQuote['05. price']);
         }
       }
     } catch (err) {

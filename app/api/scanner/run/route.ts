@@ -310,7 +310,8 @@ export async function POST(req: NextRequest) {
     async function fetchEquityPrice(sym: string) {
       const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `QUOTE ${sym}`);
-      const quote = j["Global Quote"] || {};
+      // Handle both realtime and delayed response formats
+      const quote = j["Global Quote"] || j["Global Quote - DATA DELAYED BY 15 MINUTES"] || {};
       const price = Number(quote?.["05. price"]) || NaN;
       console.debug("[scanner] QUOTE", { sym, price });
       return { price };
