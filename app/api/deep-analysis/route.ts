@@ -459,6 +459,9 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       const smaData = await smaRes.json();
       const sma50Data = await sma50Res.json();
       
+      // Wait 300ms before batch 2 to respect Alpha Vantage 5 req/sec limit
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Batch 2: Additional indicators (Bollinger Bands, ADX)
       const [bbandsRes, adxRes] = await Promise.all([
         fetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
@@ -1119,16 +1122,26 @@ export async function GET(request: NextRequest) {
     
     const assetType = detectAssetType(symbol);
     
-    // Fetch all data in parallel
-    const [price, indicators, company, news, cryptoData, earnings, optionsData] = await Promise.all([
+    // Fetch core data in parallel (but NOT options - to avoid rate limit)
+    // Alpha Vantage enforces max 5 requests/second burst limit
+    const [price, indicators, company, news, cryptoData, earnings] = await Promise.all([
       fetchPriceData(symbol, assetType),
       fetchTechnicalIndicators(symbol, assetType),
       assetType === 'stock' ? fetchCompanyOverview(symbol) : null,
       fetchNewsSentiment(symbol, assetType),
       assetType === 'crypto' ? fetchCryptoData(symbol) : null,
       assetType === 'stock' ? fetchEarningsData(symbol) : null,
-      assetType === 'stock' ? fetchOptionsData(symbol) : null,
     ]);
+    
+    // Fetch options data AFTER other fetches to avoid burst rate limit
+    // Wait 1500ms before fetching options to ensure rate limit window fully resets
+    // (Alpha Vantage enforces 5 requests/second and we made ~10 calls above)
+    let optionsData = null;
+    if (assetType === 'stock') {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      optionsData = await fetchOptionsData(symbol);
+      console.log(`📊 Options data fetch complete, result: ${optionsData ? 'SUCCESS' : 'NULL'}`);
+    }
     
     if (!price) {
       return NextResponse.json({ 
