@@ -25,51 +25,61 @@ function getThisWeekFriday(): number {
 
 // Fetch options chain from Alpha Vantage (legally compliant, already paid for)
 async function fetchOptionsData(symbol: string) {
+  console.log(`🔄 fetchOptionsData() called for ${symbol}`);
+  
   // HISTORICAL_OPTIONS - end-of-day data, available with 75 req/min premium plan
   if (!ALPHA_VANTAGE_API_KEY) {
     console.warn('⚠️ ALPHA_VANTAGE_API_KEY not set - options data unavailable');
     return null;
   }
   
+  console.log(`✅ API key exists (length: ${ALPHA_VANTAGE_API_KEY.length})`);
+  
   try {
     // Get current price first for reference
     const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    console.log(`📊 Fetching quote for ${symbol}...`);
     const quoteRes = await fetch(quoteUrl);
     const quoteData = await quoteRes.json();
+    console.log(`📊 Quote response:`, JSON.stringify(quoteData).substring(0, 200));
     const currentPrice = parseFloat(quoteData['Global Quote']?.['05. price'] || '0');
     
     if (!currentPrice) {
-      console.log(`No price data for ${symbol}, skipping options`);
+      console.log(`❌ No price data for ${symbol}, skipping options`);
       return null;
     }
+    console.log(`✅ Got price for ${symbol}: $${currentPrice}`);
 
     // Alpha Vantage HISTORICAL_OPTIONS endpoint (end-of-day data)
     // When date is not specified, returns data from the previous trading session
     const optionsUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     
+    console.log(`📈 Fetching HISTORICAL_OPTIONS for ${symbol}...`);
     const optionsRes = await fetch(optionsUrl);
+    console.log(`📈 Options response status: ${optionsRes.status}`);
     
     if (!optionsRes.ok) {
-      console.log('Alpha Vantage options fetch failed:', optionsRes.status);
+      console.log('❌ Alpha Vantage options fetch failed:', optionsRes.status);
       return null;
     }
     
     const optionsData = await optionsRes.json();
+    console.log(`📈 Options response keys: ${Object.keys(optionsData).join(', ')}`);
     
     // Check for API errors
     if (optionsData.Note || optionsData.Error || optionsData['Error Message']) {
-      console.log(`Alpha Vantage options error for ${symbol}:`, optionsData.Note || optionsData.Error || optionsData['Error Message']);
+      console.log(`❌ Alpha Vantage options error for ${symbol}:`, optionsData.Note || optionsData.Error || optionsData['Error Message']);
       return null;
     }
     
     const rawData = optionsData.data;
     
     if (!rawData || rawData.length === 0) {
-      console.log(`No options data available for ${symbol}`);
+      console.log(`❌ No options data available for ${symbol}`);
       return null;
     }
     
-    console.log(`${symbol} - Retrieved ${rawData.length} option contracts from Alpha Vantage`);
+    console.log(`✅ ${symbol} - Retrieved ${rawData.length} option contracts from Alpha Vantage`);
     
     // Separate calls and puts
     const calls = rawData.filter((opt: any) => opt.type === 'call');
