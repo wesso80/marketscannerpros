@@ -8,7 +8,7 @@ import { ScanMode } from '@/lib/confluence-learning-agent';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { symbol, scanMode = 'intraday_1h' } = body;
+    const { symbol, scanMode = 'intraday_1h', expirationDate } = body;
     
     if (!symbol) {
       return NextResponse.json({
@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Always fetch fresh data - serverless doesn't maintain state between requests
-    console.log(`📊 Options scan for ${symbol.toUpperCase()} (${scanMode}) at ${new Date().toISOString()}`);
+    const expiryInfo = expirationDate ? ` expiry=${expirationDate}` : ' (auto-select expiry)';
+    console.log(`📊 Options scan for ${symbol.toUpperCase()} (${scanMode})${expiryInfo} at ${new Date().toISOString()}`);
     
-    const analysis = await optionsAnalyzer.analyzeForOptions(symbol.toUpperCase(), scanMode);
+    const analysis = await optionsAnalyzer.analyzeForOptions(symbol.toUpperCase(), scanMode, expirationDate);
     
     console.log(`✅ Options scan complete: ${symbol.toUpperCase()} - ${analysis.direction} signal, Grade: ${analysis.tradeQuality}`);
     

@@ -166,6 +166,14 @@ async function fetchOptionsData(symbol: string) {
     const highestOICall = callsByOI.length > 0 && callsByOI[0].openInterest > 0 ? callsByOI[0] : null;
     const highestOIPut = putsByOI.length > 0 && putsByOI[0].openInterest > 0 ? putsByOI[0] : null;
     
+    // Log Greeks for debugging
+    if (highestOICall) {
+      console.log(`${symbol} Highest OI Call Greeks: strike=$${highestOICall.strike}, delta=${highestOICall.delta}, gamma=${highestOICall.gamma}, theta=${highestOICall.theta}, vega=${highestOICall.vega}`);
+    }
+    if (highestOIPut) {
+      console.log(`${symbol} Highest OI Put Greeks: strike=$${highestOIPut.strike}, delta=${highestOIPut.delta}, gamma=${highestOIPut.gamma}, theta=${highestOIPut.theta}, vega=${highestOIPut.vega}`);
+    }
+    
     // Calculate totals
     const totalCallOI = formattedCalls.reduce((sum: number, c: { openInterest: number }) => sum + c.openInterest, 0);
     const totalPutOI = formattedPuts.reduce((sum: number, p: { openInterest: number }) => sum + p.openInterest, 0);

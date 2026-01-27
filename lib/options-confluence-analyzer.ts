@@ -271,7 +271,7 @@ function getThisWeekFriday(): Date {
   return friday;
 }
 
-async function fetchOptionsChain(symbol: string): Promise<{
+async function fetchOptionsChain(symbol: string, targetExpiration?: string): Promise<{
   calls: AVOptionContract[];
   puts: AVOptionContract[];
   selectedExpiry: string;
@@ -285,7 +285,7 @@ async function fetchOptionsChain(symbol: string): Promise<{
     // Use HISTORICAL_OPTIONS (end-of-day data) - available with 75 req/min premium plan
     // When date is not specified, returns data from the previous trading session
     const url = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
-    console.log(`📊 Fetching EOD options chain for ${symbol} (historical/delayed)...`);
+    console.log(`📊 Fetching EOD options chain for ${symbol} (historical/delayed)${targetExpiration ? ` for expiry ${targetExpiration}` : ''}...`);
     
     const response = await fetch(url);
     const data = await response.json();
@@ -321,10 +321,6 @@ async function fetchOptionsChain(symbol: string): Promise<{
       console.log('📊 Sample contract:', JSON.stringify(options[0], null, 2));
     }
     
-    // Find the best expiration date (closest to this Friday)
-    const targetFriday = getThisWeekFriday();
-    const targetDateStr = targetFriday.toISOString().split('T')[0];
-    
     // Collect all unique expiration dates
     const expiryMap: Record<string, number> = {};
     for (const opt of options) {
@@ -333,22 +329,34 @@ async function fetchOptionsChain(symbol: string): Promise<{
       }
     }
     
-    // Find expiration closest to target Friday with the most contracts
-    let bestExpiry = Object.keys(expiryMap)[0];
-    let minDiff = Infinity;
+    // Use user-specified expiration if provided and valid, otherwise auto-select
+    let bestExpiry: string;
     
-    for (const expiry of Object.keys(expiryMap)) {
-      const expiryDate = new Date(expiry);
-      const diff = Math.abs(expiryDate.getTime() - targetFriday.getTime());
-      // Prefer closer dates, but also consider contract count
-      if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
-        minDiff = diff;
-        bestExpiry = expiry;
+    if (targetExpiration && expiryMap[targetExpiration]) {
+      // User specified a valid expiration date
+      bestExpiry = targetExpiration;
+      console.log(`📅 Using user-specified expiration: ${bestExpiry} (${expiryMap[bestExpiry]} contracts)`);
+    } else {
+      // Auto-select: Find expiration closest to this Friday with the most contracts
+      const targetFriday = getThisWeekFriday();
+      const targetDateStr = targetFriday.toISOString().split('T')[0];
+      
+      bestExpiry = Object.keys(expiryMap)[0];
+      let minDiff = Infinity;
+      
+      for (const expiry of Object.keys(expiryMap)) {
+        const expiryDate = new Date(expiry);
+        const diff = Math.abs(expiryDate.getTime() - targetFriday.getTime());
+        // Prefer closer dates, but also consider contract count
+        if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
+          minDiff = diff;
+          bestExpiry = expiry;
+        }
       }
+      
+      console.log(`📅 Available expirations: ${Object.keys(expiryMap).slice(0, 5).join(', ')}...`);
+      console.log(`📅 Target Friday: ${targetDateStr}, Auto-selected expiry: ${bestExpiry}`);
     }
-    
-    console.log(`📅 Available expirations: ${Object.keys(expiryMap).slice(0, 5).join(', ')}...`);
-    console.log(`📅 Target Friday: ${targetDateStr}, Selected expiry: ${bestExpiry}`);
     
     // Filter to only this expiration
     const calls: AVOptionContract[] = [];
@@ -907,10 +915,12 @@ export class OptionsConfluenceAnalyzer {
   
   /**
    * Analyze a symbol for options trading using Time Confluence
+   * @param expirationDate Optional specific expiration date (YYYY-MM-DD) to use instead of auto-selecting
    */
   async analyzeForOptions(
     symbol: string,
-    scanMode: ScanMode
+    scanMode: ScanMode,
+    expirationDate?: string
   ): Promise<OptionsSetup> {
     // Get confluence analysis
     const confluenceResult = await this.confluenceAgent.scanHierarchical(symbol, scanMode);
@@ -923,7 +933,7 @@ export class OptionsConfluenceAnalyzer {
     
     if (!isCrypto) {
       try {
-        const optionsChain = await fetchOptionsChain(symbol);
+        const optionsChain = await fetchOptionsChain(symbol, expirationDate);
         if (optionsChain) {
           openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
           console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);

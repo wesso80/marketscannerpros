@@ -100,6 +100,15 @@ const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; desc: string }[] 
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
+interface ExpirationOption {
+  date: string;
+  label: string;
+  dte: number;
+  calls: number;
+  puts: number;
+  totalOI: number;
+}
+
 export default function OptionsConfluenceScanner() {
   const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
@@ -109,6 +118,12 @@ export default function OptionsConfluenceScanner() {
   const [selectedTF, setSelectedTF] = useState<ScanModeType>('intraday_1h');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isCached, setIsCached] = useState(false);
+  
+  // Expiration date selection
+  const [expirations, setExpirations] = useState<ExpirationOption[]>([]);
+  const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
+  const [loadingExpirations, setLoadingExpirations] = useState(false);
+  const [lastSymbolFetched, setLastSymbolFetched] = useState('');
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
@@ -258,6 +273,29 @@ export default function OptionsConfluenceScanner() {
     );
   }
 
+  // Fetch available expiration dates when symbol changes
+  const fetchExpirations = async (sym: string) => {
+    if (!sym.trim() || sym.trim() === lastSymbolFetched) return;
+    
+    setLoadingExpirations(true);
+    setExpirations([]);
+    setSelectedExpiry(''); // Reset to auto-select
+    
+    try {
+      const response = await fetch(`/api/options/expirations?symbol=${encodeURIComponent(sym.trim())}`);
+      const data = await response.json();
+      
+      if (data.success && data.expirations) {
+        setExpirations(data.expirations);
+        setLastSymbolFetched(sym.trim().toUpperCase());
+      }
+    } catch (err) {
+      console.warn('Failed to fetch expirations:', err);
+    } finally {
+      setLoadingExpirations(false);
+    }
+  };
+
   const handleScan = async () => {
     if (!symbol.trim()) {
       setError("Please enter a symbol");
@@ -276,6 +314,7 @@ export default function OptionsConfluenceScanner() {
         body: JSON.stringify({ 
           symbol: symbol.trim(), 
           scanMode: selectedTF,
+          expirationDate: selectedExpiry || undefined, // Only send if user selected one
         }),
       });
 
@@ -384,6 +423,7 @@ export default function OptionsConfluenceScanner() {
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+            onBlur={() => fetchExpirations(symbol)}
             placeholder="SPY, AAPL, QQQ, TSLA..."
             style={{
               padding: '0.75rem 1.25rem',
@@ -397,7 +437,12 @@ export default function OptionsConfluenceScanner() {
               maxWidth: '250px',
               outline: 'none',
             }}
-            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                fetchExpirations(symbol);
+                handleScan();
+              }
+            }}
           />
           
           <select
@@ -417,6 +462,35 @@ export default function OptionsConfluenceScanner() {
             {TIMEFRAME_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
                 {opt.label} ({opt.desc})
+              </option>
+            ))}
+          </select>
+          
+          {/* Expiration Date Selector */}
+          <select
+            value={selectedExpiry}
+            onChange={(e) => setSelectedExpiry(e.target.value)}
+            disabled={loadingExpirations || expirations.length === 0}
+            style={{
+              padding: '0.75rem 1rem',
+              background: 'rgba(30,41,59,0.8)',
+              border: `2px solid ${expirations.length > 0 ? 'rgba(168,85,247,0.5)' : 'rgba(100,100,100,0.3)'}`,
+              borderRadius: '12px',
+              color: expirations.length > 0 ? 'white' : '#64748B',
+              cursor: expirations.length > 0 ? 'pointer' : 'not-allowed',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              minWidth: '160px',
+            }}
+          >
+            <option value="">
+              {loadingExpirations ? '⏳ Loading...' : 
+               expirations.length === 0 ? '📅 Enter symbol first' : 
+               '📅 Auto-select expiry'}
+            </option>
+            {expirations.map(exp => (
+              <option key={exp.date} value={exp.date}>
+                {exp.label} • {exp.totalOI.toLocaleString()} OI
               </option>
             ))}
           </select>
