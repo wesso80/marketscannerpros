@@ -173,6 +173,9 @@ export interface UnusualActivity {
   }[];
   smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
   alertLevel: 'high' | 'moderate' | 'low' | 'none';
+  // Aggregate premium flow estimates
+  callPremiumTotal: number;
+  putPremiumTotal: number;
 }
 
 export interface ExpectedMove {
@@ -819,16 +822,24 @@ function detectUnusualActivity(
   // Sort by volume/OI ratio (most unusual first)
   unusualStrikes.sort((a, b) => b.volumeOIRatio - a.volumeOIRatio);
   
-  // Determine smart money direction
+  // Determine smart money direction and estimate premium flow
   let bullishWeight = 0;
   let bearishWeight = 0;
+  let callPremiumTotal = 0;
+  let putPremiumTotal = 0;
   
   for (const strike of unusualStrikes) {
     const weight = strike.volumeOIRatio * (strike.volume / 1000);  // Weight by ratio and size
+    // Estimate premium as volume * average premium (rough estimate based on distance from price)
+    const distanceFromPrice = Math.abs(strike.strike - currentPrice);
+    const estimatedPremium = Math.max(0.50, currentPrice * 0.02 - distanceFromPrice * 0.1) * strike.volume;
+    
     if (strike.type === 'call') {
       bullishWeight += weight;
+      callPremiumTotal += estimatedPremium;
     } else {
       bearishWeight += weight;
+      putPremiumTotal += estimatedPremium;
     }
   }
   
@@ -864,6 +875,8 @@ function detectUnusualActivity(
     unusualStrikes: unusualStrikes.slice(0, 5),  // Top 5 most unusual
     smartMoneyDirection,
     alertLevel,
+    callPremiumTotal: Math.round(callPremiumTotal),
+    putPremiumTotal: Math.round(putPremiumTotal),
   };
 }
 
@@ -1051,22 +1064,25 @@ function calculateCompositeScore(
   let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
   if (unusualActivity.hasUnusualActivity) {
-    const callBias = unusualActivity.callPremiumTotal > unusualActivity.putPremiumTotal;
+    const callPremium = unusualActivity.callPremiumTotal || 0;
+    const putPremium = unusualActivity.putPremiumTotal || 0;
+    const callBias = callPremium > putPremium;
     const premiumRatio = callBias 
-      ? unusualActivity.callPremiumTotal / Math.max(unusualActivity.putPremiumTotal, 1)
-      : unusualActivity.putPremiumTotal / Math.max(unusualActivity.callPremiumTotal, 1);
+      ? callPremium / Math.max(putPremium, 1)
+      : putPremium / Math.max(callPremium, 1);
     
     unusualScore = Math.min(100, premiumRatio * 25); // Scale up to 100
     unusualDirection = callBias ? 'bullish' : 'bearish';
     
     if (!callBias) unusualScore = -unusualScore; // Negative for bearish
     
+    const premiumValue = callBias ? callPremium : putPremium;
     components.push({
       name: 'Unusual Activity',
       direction: unusualDirection,
       weight: unusualWeight,
       score: unusualScore,
-      reason: `$${(callBias ? unusualActivity.callPremiumTotal : unusualActivity.putPremiumTotal).toLocaleString()} in ${callBias ? 'call' : 'put'} premium flow`
+      reason: premiumValue > 0 ? `$${premiumValue.toLocaleString()} est. ${callBias ? 'call' : 'put'} premium flow` : `Smart money: ${unusualActivity.smartMoneyDirection}`
     });
     totalWeightedScore += unusualScore * unusualWeight;
     totalWeight += unusualWeight;
