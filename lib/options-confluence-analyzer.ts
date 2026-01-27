@@ -1490,6 +1490,15 @@ function selectStrikesFromConfluence(
   const atmStrike = Math.round(currentPrice);
   const atmGreeks = estimateGreeks(currentPrice, atmStrike, 7, 0.05, 0.25, isCallDirection);
   
+  // Calculate target level with sanity check - must be within 20% of current price
+  let targetLevel = relevantLevels[0]?.level || (isCallDirection ? currentPrice * 1.02 : currentPrice * 0.98);
+  const maxReasonableTarget = currentPrice * 1.20;
+  const minReasonableTarget = currentPrice * 0.80;
+  if (targetLevel > maxReasonableTarget || targetLevel < minReasonableTarget) {
+    console.warn(`⚠️ Target level $${targetLevel} out of range, defaulting to 2% move`);
+    targetLevel = isCallDirection ? currentPrice * 1.02 : currentPrice * 0.98;
+  }
+
   recommendations.push({
     strike: atmStrike,
     type: isCallDirection ? 'call' : 'put',
@@ -1498,7 +1507,7 @@ function selectStrikesFromConfluence(
     moneyness: 'ATM',
     estimatedDelta: atmGreeks.delta,
     confidenceScore: prediction.confidence,
-    targetLevel: relevantLevels[0]?.level || (isCallDirection ? currentPrice * 1.02 : currentPrice * 0.98),
+    targetLevel,
   });
   
   // Secondary: Strike at nearest 50% cluster
@@ -1720,7 +1729,8 @@ function gradeTradeQuality(
 // ═══════════════════════════════════════════════════════════════════════════
 
 function calculateEntryTiming(
-  confluenceResult: HierarchicalScanResult
+  confluenceResult: HierarchicalScanResult,
+  candleCloseConfluence?: CandleCloseConfluence | null
 ): EntryTimingAdvice {
   const now = new Date();
   const hour = now.getHours();
@@ -1747,7 +1757,12 @@ function calculateEntryTiming(
     avoidWindows.push('Currently in lunch lull (12-2pm EST) - lower volume');
   }
   
-  // Determine urgency
+  // Get candle close confluence score (0-100)
+  const candleScore = candleCloseConfluence?.confluenceScore || 0;
+  const hasStrongCandleConfluence = candleScore >= 25;
+  const hasWeakCandleConfluence = candleScore < 15;
+  
+  // Determine urgency - now factors in candle close confluence
   let urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade' = 'wait';
   let reason = '';
   let idealWindow = '';
@@ -1757,10 +1772,24 @@ function calculateEntryTiming(
     urgency = 'no_trade';
     reason = 'No clear directional signal - wait for confluence';
     idealWindow = 'Wait for TFs to align';
-  } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60) {
+  } else if (hasWeakCandleConfluence && decompCount < 3) {
+    // LOW CANDLE CONFLUENCE - suppress urgency even if other signals good
+    urgency = 'wait';
+    reason = `Low candle confluence (${candleScore}%) - wait for multiple TF closes to align`;
+    // Format the best entry window from the object
+    const bestWindow = candleCloseConfluence?.bestEntryWindow;
+    idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Wait for TF alignment';
+    avoidWindows.push(`⚠️ Candle Close Score only ${candleScore}% - higher probability when TFs close together`);
+  } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60 && hasStrongCandleConfluence) {
     urgency = 'immediate';
-    reason = `${decompCount} TFs decompressing with strong bias - prime entry window`;
+    reason = `${decompCount} TFs decompressing + ${candleScore}% candle confluence - prime entry window`;
     idealWindow = nearestClose ? `Before ${nearestClose}m TF close` : 'Now';
+  } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60) {
+    // Good decompression but weak candle confluence - downgrade to within_hour
+    urgency = 'within_hour';
+    reason = `${decompCount} TFs decompressing but candle confluence only ${candleScore}% - wait for better alignment`;
+    const bestWindow = candleCloseConfluence?.bestEntryWindow;
+    idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Within 30 minutes';
   } else if (decompCount >= 2) {
     urgency = 'within_hour';
     reason = 'Good confluence building - enter on slight pullback';
@@ -1907,8 +1936,8 @@ export class OptionsConfluenceAnalyzer {
     const primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
     const alternativeExpirations = allExpirations.slice(1);
     
-    // Entry timing
-    const entryTiming = calculateEntryTiming(confluenceResult);
+    // Entry timing - now factors in candle close confluence score
+    const entryTiming = calculateEntryTiming(confluenceResult, candleCloseConfluence);
     
     // Greeks advice
     const greeksAdvice = generateGreeksAdvice(
@@ -1969,10 +1998,17 @@ export class OptionsConfluenceAnalyzer {
       primaryStrike?.strike
     );
     
-    // Use composite direction instead of just confluence direction
-    const finalDirection = compositeScore.finalDirection === 'bullish' ? 'bullish' 
-      : compositeScore.finalDirection === 'bearish' ? 'bearish' 
-      : direction; // Fall back to confluence if neutral
+    // Use composite direction - if composite says neutral, respect it (don't force a direction)
+    // Only fall back to confluence direction if composite has very low confidence
+    let finalDirection: 'bullish' | 'bearish' | 'neutral';
+    if (compositeScore.confidence >= 50) {
+      finalDirection = compositeScore.finalDirection;
+    } else if (compositeScore.conflicts.length >= 2) {
+      // Too many conflicts - show neutral even if composite picked a direction
+      finalDirection = 'neutral';
+    } else {
+      finalDirection = compositeScore.finalDirection || direction;
+    }
     
     return {
       symbol,

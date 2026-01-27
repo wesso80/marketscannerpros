@@ -707,23 +707,47 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
 
-              {/* Direction Card */}
+              {/* Direction Card - with conflict awareness */}
               <div style={{
                 background: 'rgba(30,41,59,0.6)',
-                border: `2px solid ${result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#6B7280'}`,
+                border: `2px solid ${
+                  (result.compositeScore?.conflicts?.length ?? 0) > 0 ? '#F59E0B' : // Show warning color if conflicts
+                  result.direction === 'bullish' ? '#10B981' : 
+                  result.direction === 'bearish' ? '#EF4444' : '#6B7280'
+                }`,
                 borderRadius: '16px',
                 padding: '1.5rem',
               }}>
                 <h3 style={{ margin: '0 0 0.75rem 0', color: '#E2E8F0', fontSize: '1rem' }}>Direction Signal</h3>
+                
+                {/* Show conflict warning at top if there are conflicts */}
+                {(result.compositeScore?.conflicts?.length ?? 0) > 0 && (
+                  <div style={{
+                    background: 'rgba(245,158,11,0.15)',
+                    border: '1px solid rgba(245,158,11,0.4)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    marginBottom: '0.75rem',
+                    fontSize: '0.75rem',
+                    color: '#FCD34D'
+                  }}>
+                    ⚠️ {result.compositeScore?.conflicts?.length ?? 0} signal conflict(s) detected - see Pro Insights
+                  </div>
+                )}
+                
                 <div style={{ 
                   fontSize: '1.5rem', 
                   fontWeight: 'bold',
-                  color: result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#6B7280',
+                  color: (result.compositeScore?.conflicts?.length ?? 0) > 0 ? '#F59E0B' :
+                         result.direction === 'bullish' ? '#10B981' : 
+                         result.direction === 'bearish' ? '#EF4444' : '#6B7280',
                   marginBottom: '0.5rem'
                 }}>
-                  {result.direction === 'bullish' ? '🟢 BULLISH — BUY CALLS' : 
-                   result.direction === 'bearish' ? '🔴 BEARISH — BUY PUTS' : 
-                   '⚪ NEUTRAL — WAIT'}
+                  {(result.compositeScore?.conflicts?.length ?? 0) > 0 && result.strategyRecommendation?.strategy === 'Iron Condor' 
+                    ? '⚖️ NEUTRAL — IRON CONDOR' 
+                    : result.direction === 'bullish' ? '🟢 BULLISH — BUY CALLS' : 
+                      result.direction === 'bearish' ? '🔴 BEARISH — BUY PUTS' : 
+                      '⚪ NEUTRAL — WAIT'}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>
                   <div>Pull Bias: <span style={{ color: result.pullBias > 0 ? '#10B981' : result.pullBias < 0 ? '#EF4444' : '#6B7280' }}>
@@ -732,6 +756,14 @@ export default function OptionsConfluenceScanner() {
                   <div>Signal Strength: <span style={{ color: result.signalStrength === 'strong' ? '#10B981' : result.signalStrength === 'moderate' ? '#F59E0B' : '#6B7280' }}>
                     {result.signalStrength.toUpperCase()}
                   </span></div>
+                  {result.compositeScore && (
+                    <div>Confidence: <span style={{ 
+                      color: result.compositeScore.confidence >= 70 ? '#10B981' : 
+                             result.compositeScore.confidence >= 50 ? '#F59E0B' : '#EF4444'
+                    }}>
+                      {result.compositeScore.confidence.toFixed(0)}%
+                    </span></div>
+                  )}
                 </div>
               </div>
 
@@ -743,6 +775,22 @@ export default function OptionsConfluenceScanner() {
                 padding: '1.5rem',
               }}>
                 <h3 style={{ margin: '0 0 0.75rem 0', color: '#E2E8F0', fontSize: '1rem' }}>Entry Timing</h3>
+                
+                {/* Low candle confluence warning */}
+                {result.candleCloseConfluence && result.candleCloseConfluence.confluenceScore < 20 && (
+                  <div style={{
+                    background: 'rgba(245,158,11,0.15)',
+                    border: '1px solid rgba(245,158,11,0.4)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    marginBottom: '0.75rem',
+                    fontSize: '0.75rem',
+                    color: '#FCD34D'
+                  }}>
+                    ⚠️ Low candle confluence ({result.candleCloseConfluence.confluenceScore}%) - better entries when TFs close together
+                  </div>
+                )}
+                
                 <div style={{ 
                   fontSize: '1.25rem', 
                   fontWeight: 'bold',
