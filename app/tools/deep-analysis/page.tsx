@@ -969,6 +969,87 @@ export default function DeepAnalysisPage() {
                     ⚠️ Unusual Activity: {result.optionsData.unusualActivity}
                   </div>
                 )}
+                
+                {/* Highest OI Strikes with Greeks */}
+                {(result.optionsData.highestOICall || result.optionsData.highestOIPut) && (
+                  <div style={{ marginTop: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    {/* Highest OI Call */}
+                    {result.optionsData.highestOICall && (
+                      <div style={{ padding: "1rem", background: "rgba(16,185,129,0.1)", borderRadius: "10px", border: "1px solid rgba(16,185,129,0.3)" }}>
+                        <div style={{ color: "#10B981", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          📈 Highest OI Call
+                          <span style={{ background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
+                            ${result.optionsData.highestOICall.strike}
+                          </span>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>OI:</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOICall.openInterest?.toLocaleString()}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>IV:</span>
+                            <span style={{ color: "#CBD5E1" }}>{(result.optionsData.highestOICall.impliedVolatility * 100).toFixed(1)}%</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Δ Delta:</span>
+                            <span style={{ color: "#10B981" }}>{result.optionsData.highestOICall.delta?.toFixed(3) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Γ Gamma:</span>
+                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOICall.gamma?.toFixed(4) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Θ Theta:</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOICall.theta?.toFixed(3) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>ν Vega:</span>
+                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOICall.vega?.toFixed(4) || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Highest OI Put */}
+                    {result.optionsData.highestOIPut && (
+                      <div style={{ padding: "1rem", background: "rgba(239,68,68,0.1)", borderRadius: "10px", border: "1px solid rgba(239,68,68,0.3)" }}>
+                        <div style={{ color: "#EF4444", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          📉 Highest OI Put
+                          <span style={{ background: "rgba(239,68,68,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
+                            ${result.optionsData.highestOIPut.strike}
+                          </span>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>OI:</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOIPut.openInterest?.toLocaleString()}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>IV:</span>
+                            <span style={{ color: "#CBD5E1" }}>{(result.optionsData.highestOIPut.impliedVolatility * 100).toFixed(1)}%</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Δ Delta:</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.delta?.toFixed(3) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Γ Gamma:</span>
+                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOIPut.gamma?.toFixed(4) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Θ Theta:</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.theta?.toFixed(3) || 'N/A'}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>ν Vega:</span>
+                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOIPut.vega?.toFixed(4) || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ 
