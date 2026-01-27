@@ -9,7 +9,8 @@ import { q } from './db';
 // Configure web-push with VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:support@marketscannerpros.app';
+const VAPID_EMAIL_RAW = process.env.VAPID_EMAIL || 'support@marketscannerpros.app';
+const VAPID_EMAIL = VAPID_EMAIL_RAW.startsWith('mailto:') ? VAPID_EMAIL_RAW : `mailto:${VAPID_EMAIL_RAW}`;
 
 let isConfigured = false;
 

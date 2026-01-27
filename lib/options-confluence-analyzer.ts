@@ -79,6 +79,12 @@ export interface OptionsSetup {
   
   // Entry timing
   entryTiming: EntryTimingAdvice;
+  
+  // PRO TRADER FEATURES
+  ivAnalysis: IVAnalysis | null;
+  unusualActivity: UnusualActivity | null;
+  expectedMove: ExpectedMove | null;
+  tradeLevels: TradeLevels | null;
 }
 
 export interface OpenInterestData {
@@ -98,6 +104,54 @@ export interface GreeksAdvice {
   vegaConsideration: string | null;
   gammaAdvice: string | null;
   overallAdvice: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRO TRADER TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface IVAnalysis {
+  currentIV: number;              // Current implied volatility (avg across ATM options)
+  ivRank: number;                 // 0-100: Where is IV vs last 52 weeks
+  ivPercentile: number;           // 0-100: % of days IV was lower
+  ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
+  ivReason: string;
+}
+
+export interface UnusualActivity {
+  hasUnusualActivity: boolean;
+  unusualStrikes: {
+    strike: number;
+    type: 'call' | 'put';
+    volume: number;
+    openInterest: number;
+    volumeOIRatio: number;        // Volume / OI ratio
+    signal: 'bullish' | 'bearish';
+    reason: string;
+  }[];
+  smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  alertLevel: 'high' | 'moderate' | 'low' | 'none';
+}
+
+export interface ExpectedMove {
+  weekly: number;                 // Expected $ move for weekly expiry
+  weeklyPercent: number;          // Expected % move
+  monthly: number;                // Expected $ move for monthly expiry
+  monthlyPercent: number;
+  selectedExpiry: number;         // Expected move for user-selected expiry
+  selectedExpiryPercent: number;
+  calculation: string;            // How it was calculated
+}
+
+export interface TradeLevels {
+  entryZone: { low: number; high: number };
+  stopLoss: number;
+  stopLossPercent: number;
+  target1: { price: number; reason: string; takeProfit: number };  // Take profit %
+  target2: { price: number; reason: string; takeProfit: number } | null;
+  target3: { price: number; reason: string; takeProfit: number } | null;
+  riskRewardRatio: number;
+  reasoning: string;
 }
 
 export interface EntryTimingAdvice {
@@ -567,6 +621,337 @@ function analyzeOpenInterest(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PRO TRADER: IV RANK / PERCENTILE ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function analyzeIV(
+  calls: AVOptionContract[],
+  puts: AVOptionContract[],
+  currentPrice: number
+): IVAnalysis {
+  // Find ATM options (within 2% of current price) for accurate IV reading
+  const atmRange = currentPrice * 0.02;
+  const atmOptions = [...calls, ...puts].filter(opt => {
+    const strike = parseFloat(opt.strike || '0');
+    return Math.abs(strike - currentPrice) <= atmRange;
+  });
+  
+  // Calculate average IV from ATM options
+  let totalIV = 0;
+  let ivCount = 0;
+  for (const opt of atmOptions) {
+    const iv = parseFloat(opt.implied_volatility || '0');
+    if (iv > 0 && iv < 5) {  // Sanity check: IV between 0 and 500%
+      totalIV += iv;
+      ivCount++;
+    }
+  }
+  
+  const currentIV = ivCount > 0 ? totalIV / ivCount : 0.25;  // Default 25% if no data
+  
+  // IV Rank approximation based on typical stock IV ranges
+  // Without historical data, we estimate based on absolute levels
+  // < 15% = very low, 15-25% = low, 25-40% = normal, 40-60% = elevated, > 60% = high
+  let ivRank: number;
+  let ivPercentile: number;
+  
+  if (currentIV < 0.15) {
+    ivRank = 10;
+    ivPercentile = 15;
+  } else if (currentIV < 0.25) {
+    ivRank = 25;
+    ivPercentile = 30;
+  } else if (currentIV < 0.35) {
+    ivRank = 45;
+    ivPercentile = 50;
+  } else if (currentIV < 0.50) {
+    ivRank = 65;
+    ivPercentile = 70;
+  } else if (currentIV < 0.70) {
+    ivRank = 80;
+    ivPercentile = 85;
+  } else {
+    ivRank = 95;
+    ivPercentile = 95;
+  }
+  
+  // Determine signal
+  let ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
+  let ivReason: string;
+  
+  if (ivRank >= 70) {
+    ivSignal = 'sell_premium';
+    ivReason = `IV Rank ${ivRank}% is elevated. Consider credit spreads, iron condors, or selling premium.`;
+  } else if (ivRank <= 30) {
+    ivSignal = 'buy_premium';
+    ivReason = `IV Rank ${ivRank}% is low. Buying options is relatively cheap. Consider long calls/puts or debit spreads.`;
+  } else {
+    ivSignal = 'neutral';
+    ivReason = `IV Rank ${ivRank}% is in normal range. Both buying and selling strategies viable.`;
+  }
+  
+  console.log(`📊 IV Analysis: Current IV=${(currentIV * 100).toFixed(1)}%, Rank=${ivRank}%, Signal=${ivSignal}`);
+  
+  return {
+    currentIV,
+    ivRank,
+    ivPercentile,
+    ivSignal,
+    ivReason,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRO TRADER: UNUSUAL OPTIONS ACTIVITY DETECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function detectUnusualActivity(
+  calls: AVOptionContract[],
+  puts: AVOptionContract[],
+  currentPrice: number
+): UnusualActivity {
+  const unusualStrikes: UnusualActivity['unusualStrikes'] = [];
+  const VOLUME_OI_THRESHOLD = 2.0;  // Volume > 2x Open Interest = unusual
+  const MIN_VOLUME = 500;           // Minimum volume to consider
+  
+  // Check all options for unusual activity
+  const allOptions = [...calls.map(c => ({ ...c, type: 'call' as const })), 
+                      ...puts.map(p => ({ ...p, type: 'put' as const }))];
+  
+  for (const opt of allOptions) {
+    const strike = parseFloat(opt.strike || '0');
+    const volume = parseInt(opt.volume || '0', 10);
+    const openInterest = parseInt(opt.open_interest || '0', 10);
+    
+    // Filter to reasonable strike range (within 15% of price)
+    const distancePercent = Math.abs((strike - currentPrice) / currentPrice);
+    if (distancePercent > 0.15) continue;
+    
+    // Check for unusual volume
+    if (volume >= MIN_VOLUME && openInterest > 0) {
+      const volumeOIRatio = volume / openInterest;
+      
+      if (volumeOIRatio >= VOLUME_OI_THRESHOLD) {
+        const signal = opt.type === 'call' ? 'bullish' : 'bearish';
+        const reason = volumeOIRatio >= 5 
+          ? `🚨 EXTREME: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`
+          : `⚡ High activity: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`;
+        
+        unusualStrikes.push({
+          strike,
+          type: opt.type,
+          volume,
+          openInterest,
+          volumeOIRatio,
+          signal,
+          reason,
+        });
+      }
+    }
+  }
+  
+  // Sort by volume/OI ratio (most unusual first)
+  unusualStrikes.sort((a, b) => b.volumeOIRatio - a.volumeOIRatio);
+  
+  // Determine smart money direction
+  let bullishWeight = 0;
+  let bearishWeight = 0;
+  
+  for (const strike of unusualStrikes) {
+    const weight = strike.volumeOIRatio * (strike.volume / 1000);  // Weight by ratio and size
+    if (strike.type === 'call') {
+      bullishWeight += weight;
+    } else {
+      bearishWeight += weight;
+    }
+  }
+  
+  let smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  if (bullishWeight > bearishWeight * 1.5) {
+    smartMoneyDirection = 'bullish';
+  } else if (bearishWeight > bullishWeight * 1.5) {
+    smartMoneyDirection = 'bearish';
+  } else if (bullishWeight > 0 && bearishWeight > 0) {
+    smartMoneyDirection = 'mixed';
+  } else {
+    smartMoneyDirection = 'neutral';
+  }
+  
+  // Alert level
+  let alertLevel: 'high' | 'moderate' | 'low' | 'none';
+  const maxRatio = unusualStrikes.length > 0 ? unusualStrikes[0].volumeOIRatio : 0;
+  
+  if (maxRatio >= 5) {
+    alertLevel = 'high';
+  } else if (maxRatio >= 3) {
+    alertLevel = 'moderate';
+  } else if (maxRatio >= 2) {
+    alertLevel = 'low';
+  } else {
+    alertLevel = 'none';
+  }
+  
+  console.log(`📊 Unusual Activity: ${unusualStrikes.length} strikes flagged, Alert=${alertLevel}, Smart Money=${smartMoneyDirection}`);
+  
+  return {
+    hasUnusualActivity: unusualStrikes.length > 0,
+    unusualStrikes: unusualStrikes.slice(0, 5),  // Top 5 most unusual
+    smartMoneyDirection,
+    alertLevel,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRO TRADER: EXPECTED MOVE CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function calculateExpectedMove(
+  currentPrice: number,
+  avgIV: number,
+  selectedExpiryDTE: number
+): ExpectedMove {
+  // Expected Move Formula: Stock Price × IV × √(DTE/365)
+  // This is based on 1 standard deviation move (68% probability)
+  
+  const weeklyDTE = 7;
+  const monthlyDTE = 30;
+  
+  const weeklyMove = currentPrice * avgIV * Math.sqrt(weeklyDTE / 365);
+  const weeklyPercent = (weeklyMove / currentPrice) * 100;
+  
+  const monthlyMove = currentPrice * avgIV * Math.sqrt(monthlyDTE / 365);
+  const monthlyPercent = (monthlyMove / currentPrice) * 100;
+  
+  const selectedMove = currentPrice * avgIV * Math.sqrt(selectedExpiryDTE / 365);
+  const selectedPercent = (selectedMove / currentPrice) * 100;
+  
+  console.log(`📊 Expected Move: Weekly ±$${weeklyMove.toFixed(2)} (${weeklyPercent.toFixed(1)}%), Monthly ±$${monthlyMove.toFixed(2)} (${monthlyPercent.toFixed(1)}%)`);
+  
+  return {
+    weekly: weeklyMove,
+    weeklyPercent,
+    monthly: monthlyMove,
+    monthlyPercent,
+    selectedExpiry: selectedMove,
+    selectedExpiryPercent: selectedPercent,
+    calculation: `Price × IV × √(DTE/365) = $${currentPrice.toFixed(2)} × ${(avgIV * 100).toFixed(0)}% × √(${selectedExpiryDTE}/365)`,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRO TRADER: SPECIFIC ENTRY/EXIT LEVELS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function calculateTradeLevels(
+  confluenceResult: HierarchicalScanResult,
+  direction: 'bullish' | 'bearish' | 'neutral',
+  maxPainStrike: number | null
+): TradeLevels | null {
+  if (direction === 'neutral') return null;
+  
+  const { currentPrice, mid50Levels, clusters, decompression } = confluenceResult;
+  const isLong = direction === 'bullish';
+  
+  // Entry Zone: Current price with small buffer based on volatility
+  const entryBuffer = currentPrice * 0.005;  // 0.5% buffer
+  const entryZone = {
+    low: isLong ? currentPrice - entryBuffer : currentPrice,
+    high: isLong ? currentPrice : currentPrice + entryBuffer,
+  };
+  
+  // Stop Loss: Below/above nearest support/resistance or 50% level
+  const opposingLevels = mid50Levels
+    .filter(l => isLong ? l.level < currentPrice : l.level > currentPrice)
+    .sort((a, b) => isLong 
+      ? b.level - a.level  // Closest below for longs
+      : a.level - b.level  // Closest above for shorts
+    );
+  
+  // Find a 50% level as stop reference
+  const stopReference = opposingLevels.length > 0 
+    ? opposingLevels[0].level 
+    : currentPrice * (isLong ? 0.98 : 1.02);
+  
+  // Add buffer beyond the level
+  const stopBuffer = currentPrice * 0.003;  // 0.3% beyond level
+  const stopLoss = isLong 
+    ? stopReference - stopBuffer 
+    : stopReference + stopBuffer;
+  const stopLossPercent = Math.abs((stopLoss - currentPrice) / currentPrice) * 100;
+  
+  // Targets: Based on 50% levels and clusters in direction of trade
+  const targetLevels = mid50Levels
+    .filter(l => isLong ? l.level > currentPrice : l.level < currentPrice)
+    .sort((a, b) => isLong 
+      ? a.level - b.level  // Closest first for longs
+      : b.level - a.level  // Closest first for shorts
+    );
+  
+  // Target 1: Nearest 50% level or cluster
+  const t1Level = targetLevels.length > 0 ? targetLevels[0] : null;
+  const t1Price = t1Level?.level || currentPrice * (isLong ? 1.02 : 0.98);
+  const target1 = {
+    price: t1Price,
+    reason: t1Level ? `${t1Level.tf} 50% level` : 'Default 2% target',
+    takeProfit: 50,  // Take 50% off at first target
+  };
+  
+  // Target 2: Next 50% level or max pain
+  let t2Price = targetLevels.length > 1 ? targetLevels[1].level : null;
+  let t2Reason = targetLevels.length > 1 ? `${targetLevels[1].tf} 50% level` : '';
+  
+  // If max pain is in our direction and beyond T1, use it
+  if (maxPainStrike && ((isLong && maxPainStrike > t1Price) || (!isLong && maxPainStrike < t1Price))) {
+    if (!t2Price || (isLong && maxPainStrike < t2Price) || (!isLong && maxPainStrike > t2Price)) {
+      t2Price = maxPainStrike;
+      t2Reason = 'Max Pain level';
+    }
+  }
+  
+  const target2 = t2Price ? {
+    price: t2Price,
+    reason: t2Reason,
+    takeProfit: 30,  // Take 30% at second target
+  } : null;
+  
+  // Target 3: Extended target from clusters
+  const clusterTarget = clusters.find(c => 
+    isLong ? c.avgLevel > (t2Price || t1Price) : c.avgLevel < (t2Price || t1Price)
+  );
+  
+  const target3 = clusterTarget ? {
+    price: clusterTarget.avgLevel,
+    reason: `${clusterTarget.tfs.join('/')} cluster convergence`,
+    takeProfit: 20,  // Let remaining 20% run to cluster
+  } : null;
+  
+  // Risk/Reward Ratio
+  const risk = Math.abs(currentPrice - stopLoss);
+  const reward = Math.abs(target1.price - currentPrice);
+  const riskRewardRatio = risk > 0 ? reward / risk : 0;
+  
+  // Build reasoning
+  const reasoning = `Entry ${isLong ? 'above' : 'below'} $${entryZone.low.toFixed(2)}-$${entryZone.high.toFixed(2)}. ` +
+    `Stop at $${stopLoss.toFixed(2)} (${stopLossPercent.toFixed(1)}% risk). ` +
+    `Target 1: $${target1.price.toFixed(2)} (take 50%). ` +
+    (target2 ? `Target 2: $${target2.price.toFixed(2)} (take 30%). ` : '') +
+    `R:R = ${riskRewardRatio.toFixed(1)}:1`;
+  
+  console.log(`📊 Trade Levels: Entry $${currentPrice.toFixed(2)}, Stop $${stopLoss.toFixed(2)}, T1 $${target1.price.toFixed(2)}, R:R ${riskRewardRatio.toFixed(1)}:1`);
+  
+  return {
+    entryZone,
+    stopLoss,
+    stopLossPercent,
+    target1,
+    target2,
+    target3,
+    riskRewardRatio,
+    reasoning,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STRIKE SELECTION BASED ON 50% LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -956,6 +1341,9 @@ export class OptionsConfluenceAnalyzer {
     
     // Fetch options chain for O/I analysis (stocks only, not crypto)
     let openInterestAnalysis: OpenInterestData | null = null;
+    let ivAnalysis: IVAnalysis | null = null;
+    let unusualActivity: UnusualActivity | null = null;
+    let expectedMove: ExpectedMove | null = null;
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
     
     if (!isCrypto) {
@@ -964,6 +1352,19 @@ export class OptionsConfluenceAnalyzer {
         if (optionsChain) {
           openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
           console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
+          
+          // PRO TRADER: IV Analysis
+          ivAnalysis = analyzeIV(optionsChain.calls, optionsChain.puts, currentPrice);
+          
+          // PRO TRADER: Unusual Activity Detection
+          unusualActivity = detectUnusualActivity(optionsChain.calls, optionsChain.puts, currentPrice);
+          
+          // PRO TRADER: Expected Move Calculation
+          const avgIV = ivAnalysis.currentIV;
+          const selectedDTE = expirationDate 
+            ? Math.max(1, Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+            : 7;
+          expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedDTE);
         }
       } catch (err) {
         console.warn('O/I analysis failed:', err);
@@ -1021,6 +1422,13 @@ export class OptionsConfluenceAnalyzer {
       ? 'Target 100-150% of premium at nearest 50% level cluster'
       : 'Target 50-80% of premium, take profits early';
     
+    // PRO TRADER: Calculate specific entry/exit levels
+    const tradeLevels = calculateTradeLevels(
+      confluenceResult,
+      direction,
+      openInterestAnalysis?.maxPainStrike || null
+    );
+    
     return {
       symbol,
       currentPrice,
@@ -1043,6 +1451,11 @@ export class OptionsConfluenceAnalyzer {
       stopLossStrategy,
       profitTargetStrategy,
       entryTiming,
+      // PRO TRADER FEATURES
+      ivAnalysis,
+      unusualActivity,
+      expectedMove,
+      tradeLevels,
     };
   }
   

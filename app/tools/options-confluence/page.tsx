@@ -65,6 +65,53 @@ interface OpenInterestAnalysis {
   expirationDate: string;
 }
 
+// PRO TRADER TYPES
+interface IVAnalysis {
+  currentIV: number;
+  ivRank: number;
+  ivPercentile: number;
+  ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
+  ivReason: string;
+}
+
+interface UnusualActivityStrike {
+  strike: number;
+  type: 'call' | 'put';
+  volume: number;
+  openInterest: number;
+  volumeOIRatio: number;
+  signal: 'bullish' | 'bearish';
+  reason: string;
+}
+
+interface UnusualActivity {
+  hasUnusualActivity: boolean;
+  unusualStrikes: UnusualActivityStrike[];
+  smartMoneyDirection: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+  alertLevel: 'high' | 'moderate' | 'low' | 'none';
+}
+
+interface ExpectedMove {
+  weekly: number;
+  weeklyPercent: number;
+  monthly: number;
+  monthlyPercent: number;
+  selectedExpiry: number;
+  selectedExpiryPercent: number;
+  calculation: string;
+}
+
+interface TradeLevels {
+  entryZone: { low: number; high: number };
+  stopLoss: number;
+  stopLossPercent: number;
+  target1: { price: number; reason: string; takeProfit: number };
+  target2: { price: number; reason: string; takeProfit: number } | null;
+  target3: { price: number; reason: string; takeProfit: number } | null;
+  riskRewardRatio: number;
+  reasoning: string;
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -85,6 +132,11 @@ interface OptionsSetup {
   stopLossStrategy: string;
   profitTargetStrategy: string;
   entryTiming: EntryTimingAdvice;
+  // PRO TRADER FEATURES
+  ivAnalysis: IVAnalysis | null;
+  unusualActivity: UnusualActivity | null;
+  expectedMove: ExpectedMove | null;
+  tradeLevels: TradeLevels | null;
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -648,6 +700,246 @@ export default function OptionsConfluenceScanner() {
                     ⚠️ {result.entryTiming.avoidWindows[0]}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* PRO TRADER SECTION */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(59,130,246,0.15) 100%)',
+              border: '2px solid rgba(168,85,247,0.5)',
+              borderRadius: '20px',
+              padding: '1.5rem',
+              marginBottom: '1rem',
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.75rem', 
+                marginBottom: '1.25rem',
+                borderBottom: '1px solid rgba(168,85,247,0.3)',
+                paddingBottom: '0.75rem'
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>🎯</span>
+                <h2 style={{ margin: 0, color: '#E9D5FF', fontSize: '1.25rem' }}>Pro Trader Insights</h2>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                
+                {/* IV Analysis Card */}
+                {result.ivAnalysis && (
+                  <div style={{
+                    background: 'rgba(30,41,59,0.8)',
+                    border: '1px solid rgba(168,85,247,0.3)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                  }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#A855F7', fontSize: '0.9rem' }}>📊 IV Rank / Percentile</h4>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ 
+                          fontSize: '1.75rem', 
+                          fontWeight: 'bold',
+                          color: result.ivAnalysis.ivRank >= 70 ? '#EF4444' : result.ivAnalysis.ivRank <= 30 ? '#10B981' : '#F59E0B'
+                        }}>
+                          {result.ivAnalysis.ivRank}%
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>IV Rank</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#CBD5E1' }}>
+                          {(result.ivAnalysis.currentIV * 100).toFixed(0)}%
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Current IV</div>
+                      </div>
+                    </div>
+                    <div style={{
+                      background: result.ivAnalysis.ivSignal === 'sell_premium' ? 'rgba(239,68,68,0.2)' :
+                                 result.ivAnalysis.ivSignal === 'buy_premium' ? 'rgba(16,185,129,0.2)' :
+                                 'rgba(245,158,11,0.2)',
+                      padding: '0.5rem',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      color: result.ivAnalysis.ivSignal === 'sell_premium' ? '#FCA5A5' :
+                             result.ivAnalysis.ivSignal === 'buy_premium' ? '#6EE7B7' : '#FCD34D'
+                    }}>
+                      {result.ivAnalysis.ivSignal === 'sell_premium' ? '💰 SELL Premium' :
+                       result.ivAnalysis.ivSignal === 'buy_premium' ? '📈 BUY Premium' : '⚖️ Neutral'}
+                      <div style={{ fontSize: '0.65rem', marginTop: '0.25rem', opacity: 0.8 }}>
+                        {result.ivAnalysis.ivReason}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Expected Move Card */}
+                {result.expectedMove && (
+                  <div style={{
+                    background: 'rgba(30,41,59,0.8)',
+                    border: '1px solid rgba(59,130,246,0.3)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                  }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#3B82F6', fontSize: '0.9rem' }}>📏 Expected Move</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Weekly (7 DTE):</span>
+                        <span style={{ fontWeight: 'bold', color: '#3B82F6' }}>
+                          ±${result.expectedMove.weekly.toFixed(2)} ({result.expectedMove.weeklyPercent.toFixed(1)}%)
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Monthly (30 DTE):</span>
+                        <span style={{ fontWeight: 'bold', color: '#60A5FA' }}>
+                          ±${result.expectedMove.monthly.toFixed(2)} ({result.expectedMove.monthlyPercent.toFixed(1)}%)
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                        background: 'rgba(59,130,246,0.2)', padding: '0.5rem', borderRadius: '6px', marginTop: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#93C5FD' }}>Selected Expiry:</span>
+                        <span style={{ fontWeight: 'bold', color: '#93C5FD' }}>
+                          ±${result.expectedMove.selectedExpiry.toFixed(2)} ({result.expectedMove.selectedExpiryPercent.toFixed(1)}%)
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.5rem' }}>
+                      Based on 1 standard deviation (68% probability)
+                    </div>
+                  </div>
+                )}
+
+                {/* Unusual Activity Card */}
+                {result.unusualActivity && (
+                  <div style={{
+                    background: 'rgba(30,41,59,0.8)',
+                    border: `1px solid ${
+                      result.unusualActivity.alertLevel === 'high' ? 'rgba(239,68,68,0.5)' :
+                      result.unusualActivity.alertLevel === 'moderate' ? 'rgba(245,158,11,0.5)' :
+                      'rgba(100,116,139,0.3)'
+                    }`,
+                    borderRadius: '12px',
+                    padding: '1rem',
+                  }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#F59E0B', fontSize: '0.9rem' }}>
+                      🔥 Unusual Activity
+                      {result.unusualActivity.alertLevel === 'high' && (
+                        <span style={{ 
+                          marginLeft: '0.5rem', 
+                          background: 'rgba(239,68,68,0.3)', 
+                          color: '#FCA5A5',
+                          padding: '2px 8px', 
+                          borderRadius: '999px', 
+                          fontSize: '0.65rem' 
+                        }}>
+                          HIGH ALERT
+                        </span>
+                      )}
+                    </h4>
+                    
+                    {result.unusualActivity.hasUnusualActivity ? (
+                      <>
+                        <div style={{ 
+                          fontSize: '0.85rem', 
+                          color: result.unusualActivity.smartMoneyDirection === 'bullish' ? '#10B981' :
+                                 result.unusualActivity.smartMoneyDirection === 'bearish' ? '#EF4444' : '#94A3B8',
+                          marginBottom: '0.5rem'
+                        }}>
+                          Smart Money: {result.unusualActivity.smartMoneyDirection.toUpperCase()}
+                        </div>
+                        <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                          {result.unusualActivity.unusualStrikes.slice(0, 3).map((strike, idx) => (
+                            <div key={idx} style={{
+                              background: strike.type === 'call' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '6px',
+                              marginBottom: '0.4rem',
+                              fontSize: '0.75rem'
+                            }}>
+                              <div style={{ 
+                                fontWeight: 'bold', 
+                                color: strike.type === 'call' ? '#10B981' : '#EF4444' 
+                              }}>
+                                ${strike.strike} {strike.type.toUpperCase()} - {strike.volumeOIRatio.toFixed(1)}x Vol/OI
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: '#94A3B8' }}>
+                                {strike.volume.toLocaleString()} vol / {strike.openInterest.toLocaleString()} OI
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ color: '#64748B', fontSize: '0.8rem' }}>
+                        No unusual options activity detected
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Trade Levels Card */}
+                {result.tradeLevels && (
+                  <div style={{
+                    background: 'rgba(30,41,59,0.8)',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    gridColumn: 'span 1',
+                  }}>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#10B981', fontSize: '0.9rem' }}>
+                      📍 Entry/Exit Levels
+                      <span style={{ 
+                        marginLeft: '0.5rem', 
+                        background: result.tradeLevels.riskRewardRatio >= 2 ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)',
+                        color: result.tradeLevels.riskRewardRatio >= 2 ? '#6EE7B7' : '#FCD34D',
+                        padding: '2px 8px', 
+                        borderRadius: '999px', 
+                        fontSize: '0.65rem' 
+                      }}>
+                        {result.tradeLevels.riskRewardRatio.toFixed(1)}:1 R:R
+                      </span>
+                    </h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#3B82F6' }}>📥 Entry Zone:</span>
+                        <span style={{ color: '#93C5FD', fontWeight: 'bold' }}>
+                          ${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#EF4444' }}>🛑 Stop Loss:</span>
+                        <span style={{ color: '#FCA5A5', fontWeight: 'bold' }}>
+                          ${result.tradeLevels.stopLoss.toFixed(2)} ({result.tradeLevels.stopLossPercent.toFixed(1)}%)
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#10B981' }}>🎯 Target 1 (50%):</span>
+                        <span style={{ color: '#6EE7B7', fontWeight: 'bold' }}>
+                          ${result.tradeLevels.target1.price.toFixed(2)}
+                        </span>
+                      </div>
+                      {result.tradeLevels.target2 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#10B981' }}>🎯 Target 2 (30%):</span>
+                          <span style={{ color: '#6EE7B7' }}>
+                            ${result.tradeLevels.target2.price.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      {result.tradeLevels.target3 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#10B981' }}>🎯 Target 3 (20%):</span>
+                          <span style={{ color: '#6EE7B7' }}>
+                            ${result.tradeLevels.target3.price.toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                      {result.tradeLevels.reasoning}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
 
