@@ -758,6 +758,37 @@ export default function ToolsPage() {
                   </div>
                 </article>
               </Link>
+
+              {/* Crypto Derivatives Dashboard */}
+              <Link href="/tools/crypto-dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F7931A, #10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>₿</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Crypto Derivatives</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Real-time funding rates, open interest, long/short ratios, and liquidation data for crypto futures. Get derivatives-based trading signals.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Crypto Futures</span></span>
+                      <span>Type: Dashboard</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
             </div>
           </section>
 
