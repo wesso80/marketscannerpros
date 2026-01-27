@@ -88,7 +88,7 @@ export interface OpenInterestData {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   sentimentReason: string;
   maxPainStrike: number | null;
-  highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put' }[];
+  highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
   expirationDate: string;       // The expiration date being analyzed
 }
 
@@ -392,6 +392,18 @@ function analyzeOpenInterest(
   
   const strikeOI: Map<number, { callOI: number; putOI: number }> = new Map();
   
+  // Store contracts with Greeks for high OI analysis
+  const contractsWithGreeks: Array<{
+    strike: number;
+    openInterest: number;
+    type: 'call' | 'put';
+    delta?: number;
+    gamma?: number;
+    theta?: number;
+    vega?: number;
+    iv?: number;
+  }> = [];
+  
   // Sanity check: ensure currentPrice is valid
   if (!currentPrice || currentPrice <= 0) {
     console.error('❌ Invalid currentPrice for O/I analysis:', currentPrice);
@@ -430,6 +442,20 @@ function analyzeOpenInterest(
       totalCallOI += oi;
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.callOI += oi;
+      
+      // Capture contract with Greeks for high OI list
+      if (oi > 0) {
+        contractsWithGreeks.push({
+          strike,
+          openInterest: oi,
+          type: 'call',
+          delta: call.delta ? parseFloat(call.delta) : undefined,
+          gamma: call.gamma ? parseFloat(call.gamma) : undefined,
+          theta: call.theta ? parseFloat(call.theta) : undefined,
+          vega: call.vega ? parseFloat(call.vega) : undefined,
+          iv: call.implied_volatility ? parseFloat(call.implied_volatility) : undefined,
+        });
+      }
     }
   }
   
@@ -446,6 +472,20 @@ function analyzeOpenInterest(
       totalPutOI += oi;
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.putOI += oi;
+      
+      // Capture contract with Greeks for high OI list
+      if (oi > 0) {
+        contractsWithGreeks.push({
+          strike,
+          openInterest: oi,
+          type: 'put',
+          delta: put.delta ? parseFloat(put.delta) : undefined,
+          gamma: put.gamma ? parseFloat(put.gamma) : undefined,
+          theta: put.theta ? parseFloat(put.theta) : undefined,
+          vega: put.vega ? parseFloat(put.vega) : undefined,
+          iv: put.implied_volatility ? parseFloat(put.implied_volatility) : undefined,
+        });
+      }
     }
   }
   
@@ -508,22 +548,9 @@ function analyzeOpenInterest(
     }
   }
   
-  // Find high OI strikes - return as flat list with type
-  const highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put' }[] = [];
-  
-  // Add top call strikes by OI
-  for (const [strike, data] of strikeOI.entries()) {
-    if (data.callOI > 0) {
-      highOIStrikes.push({ strike, openInterest: data.callOI, type: 'call' });
-    }
-    if (data.putOI > 0) {
-      highOIStrikes.push({ strike, openInterest: data.putOI, type: 'put' });
-    }
-  }
-  
-  // Sort by OI and take top 10
-  highOIStrikes.sort((a, b) => b.openInterest - a.openInterest);
-  const topStrikes = highOIStrikes.slice(0, 10);
+  // Sort contracts by OI and take top 10 with Greeks
+  contractsWithGreeks.sort((a, b) => b.openInterest - a.openInterest);
+  const topStrikes = contractsWithGreeks.slice(0, 10);
   
   console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}`);
   

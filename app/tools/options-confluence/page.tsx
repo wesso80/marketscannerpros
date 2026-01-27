@@ -47,6 +47,11 @@ interface HighOIStrike {
   strike: number;
   openInterest: number;
   type: 'call' | 'put';
+  delta?: number;
+  gamma?: number;
+  theta?: number;
+  vega?: number;
+  iv?: number;
 }
 
 interface OpenInterestAnalysis {
@@ -1004,27 +1009,72 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                {/* High O/I Strikes */}
+                {/* High O/I Strikes with Greeks */}
                 {result.openInterestAnalysis.highOIStrikes.length > 0 && (
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>High Open Interest Strikes:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
-                        <span key={i} style={{
-                          background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                          border: `1px solid ${s.type === 'call' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`,
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '0.8rem'
-                        }}>
-                          <span style={{ fontWeight: 'bold', color: s.type === 'call' ? '#10B981' : '#EF4444' }}>
-                            ${s.strike}
-                          </span>
-                          <span style={{ color: '#94A3B8', marginLeft: '6px' }}>
-                            {(s.openInterest / 1000).toFixed(1)}K {s.type === 'call' ? 'C' : 'P'}
-                          </span>
-                        </span>
-                      ))}
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem' }}>Top Open Interest Strikes with Greeks:</div>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(100,100,100,0.3)' }}>
+                            <th style={{ textAlign: 'left', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>Strike</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>OI</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>IV</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981', fontWeight: '500' }}>Δ</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7', fontWeight: '500' }}>Γ</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444', fontWeight: '500' }}>Θ</th>
+                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6', fontWeight: '500' }}>ν</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
+                            <tr key={i} style={{ 
+                              borderBottom: '1px solid rgba(100,100,100,0.15)',
+                              background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent'
+                            }}>
+                              <td style={{ padding: '0.5rem' }}>
+                                <span style={{ 
+                                  fontWeight: 'bold', 
+                                  color: s.type === 'call' ? '#10B981' : '#EF4444',
+                                  marginRight: '0.25rem'
+                                }}>
+                                  ${s.strike}
+                                </span>
+                                <span style={{ 
+                                  fontSize: '0.7rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                                  color: s.type === 'call' ? '#10B981' : '#EF4444'
+                                }}>
+                                  {s.type === 'call' ? 'C' : 'P'}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                {(s.openInterest / 1000).toFixed(1)}K
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                {s.iv ? `${(s.iv * 100).toFixed(0)}%` : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981' }}>
+                                {s.delta !== undefined ? s.delta.toFixed(2) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7' }}>
+                                {s.gamma !== undefined ? s.gamma.toFixed(3) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444' }}>
+                                {s.theta !== undefined ? s.theta.toFixed(3) : '-'}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6' }}>
+                                {s.vega !== undefined ? s.vega.toFixed(3) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.5rem', textAlign: 'right' }}>
+                      Δ Delta • Γ Gamma • Θ Theta • ν Vega
                     </div>
                   </div>
                 )}
