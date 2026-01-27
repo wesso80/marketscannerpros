@@ -56,12 +56,6 @@ export default function CryptoDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  
-  // OKX liquidation data - admin-only testing while negotiating commercial licenses
-  // Must be after all hooks to comply with React rules
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📊 Crypto Derivatives Dashboard" description="Real-time funding rates, long/short ratios, open interest, and liquidation data" />;
-  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -114,6 +108,12 @@ export default function CryptoDashboard() {
       if (interval) clearInterval(interval);
     };
   }, [fetchData, autoRefresh]);
+  
+  // OKX liquidation data - admin-only testing while negotiating commercial licenses
+  // Must be after ALL hooks to comply with React rules
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📊 Crypto Derivatives Dashboard" description="Real-time funding rates, long/short ratios, open interest, and liquidation data" />;
+  }
 
   const getMarketBias = (): { bias: string; confidence: number; signals: string[] } => {
     const signals: string[] = [];
