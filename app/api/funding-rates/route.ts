@@ -15,11 +15,15 @@ interface FundingRate {
 }
 
 export async function GET(req: NextRequest) {
+  console.log('[Funding Rates API] Request received');
+  
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
+    console.log('[Funding Rates API] Returning cached data');
     return NextResponse.json(cache.data);
   }
 
   try {
+    console.log('[Funding Rates API] Fetching fresh data from Binance');
     const fundingPromises = SYMBOLS.map(async (symbol): Promise<FundingRate | null> => {
       try {
         const res = await fetch(
@@ -90,10 +94,11 @@ export async function GET(req: NextRequest) {
     };
 
     cache = { data: result, timestamp: Date.now() };
+    console.log(`[Funding Rates API] Returning ${rates.length} funding rates`);
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Funding Rates API error:', error);
+    console.error('[Funding Rates API] Error:', error);
     
     if (cache) {
       return NextResponse.json({ ...cache.data, stale: true });

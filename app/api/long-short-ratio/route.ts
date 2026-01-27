@@ -15,12 +15,16 @@ interface LSRatio {
 }
 
 export async function GET(req: NextRequest) {
+  console.log('[L/S Ratio API] Request received');
+  
   // Check cache
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
+    console.log('[L/S Ratio API] Returning cached data');
     return NextResponse.json(cache.data);
   }
 
   try {
+    console.log('[L/S Ratio API] Fetching fresh data from Binance');
     const ratioPromises = SYMBOLS.map(async (symbol): Promise<LSRatio | null> => {
       try {
         const res = await fetch(
@@ -77,10 +81,11 @@ export async function GET(req: NextRequest) {
     };
 
     cache = { data: result, timestamp: Date.now() };
+    console.log(`[L/S Ratio API] Returning ${ratios.length} ratios`);
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Long/Short Ratio API error:', error);
+    console.error('[L/S Ratio API] Error:', error);
     
     if (cache) {
       return NextResponse.json({ ...cache.data, stale: true });

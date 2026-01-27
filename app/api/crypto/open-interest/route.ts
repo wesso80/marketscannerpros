@@ -14,11 +14,15 @@ interface OpenInterestData {
 }
 
 export async function GET(req: NextRequest) {
+  console.log('[Open Interest API] Request received');
+  
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
+    console.log('[Open Interest API] Returning cached data');
     return NextResponse.json(cache.data);
   }
 
   try {
+    console.log('[Open Interest API] Fetching fresh data from Binance');
     const oiPromises = SYMBOLS.map(async (symbol): Promise<OpenInterestData | null> => {
       try {
         // Get current OI
@@ -114,10 +118,11 @@ export async function GET(req: NextRequest) {
     };
 
     cache = { data: result, timestamp: Date.now() };
+    console.log(`[Open Interest API] Returning ${oiData.length} coins, market signal: ${marketSignal}`);
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Open Interest API error:', error);
+    console.error('[Open Interest API] Error:', error);
     
     if (cache) {
       return NextResponse.json({ ...cache.data, stale: true });

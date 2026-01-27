@@ -1,165 +1,220 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CACHE_DURATION = 60; // 1 minute cache (liquidations are time-sensitive)
+const CACHE_DURATION = 60; // 1 minute cache for real-time data
 let cache: { data: any; timestamp: number } | null = null;
 
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT'];
+// OKX uses different symbol format: BTC-USDT instead of BTCUSDT
+const OKX_SYMBOLS = [
+  { okx: 'BTC-USDT', display: 'BTC' },
+  { okx: 'ETH-USDT', display: 'ETH' },
+  { okx: 'SOL-USDT', display: 'SOL' },
+  { okx: 'XRP-USDT', display: 'XRP' },
+  { okx: 'DOGE-USDT', display: 'DOGE' },
+];
 
-interface LiquidationData {
+interface OKXLiquidation {
+  bkPx: string;      // Bankruptcy price
+  posSide: string;   // long or short
+  side: string;      // buy or sell
+  sz: string;        // Size in contracts
+  ts: string;        // Timestamp
+}
+
+interface CoinLiquidation {
   symbol: string;
-  recentLiquids: number;      // Count of recent liquidations
-  longLiquidValue: number;    // USD value of long liquidations
-  shortLiquidValue: number;   // USD value of short liquidations
+  longLiquidations: number;
+  shortLiquidations: number;
+  totalLiquidations: number;
+  longValue: number;
+  shortValue: number;
+  totalValue: number;
   dominantSide: 'longs' | 'shorts' | 'balanced';
-  intensity: 'low' | 'medium' | 'high' | 'extreme';
+  recentLiqs: Array<{
+    side: string;
+    size: number;
+    price: number;
+    time: string;
+  }>;
 }
 
 export async function GET(req: NextRequest) {
+  console.log('[Liquidations API] Request received - using OKX real data');
+  
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
+    console.log('[Liquidations API] Returning cached data');
     return NextResponse.json(cache.data);
   }
 
   try {
-    // Note: Binance doesn't have a direct liquidation API
-    // We'll use the forceOrders endpoint for recent liquidation data
-    const liqPromises = SYMBOLS.map(async (symbol): Promise<LiquidationData | null> => {
+    console.log('[Liquidations API] Fetching real liquidation data from OKX');
+    
+    const coinResults = await Promise.all(OKX_SYMBOLS.map(async ({ okx, display }): Promise<CoinLiquidation | null> => {
       try {
-        // Get recent force orders (liquidations) - last 1 hour
-        const res = await fetch(
-          `https://fapi.binance.com/fapi/v1/forceOrders?symbol=${symbol}&limit=100`,
+        // OKX public liquidation endpoint - no API key required
+        const response = await fetch(
+          `https://www.okx.com/api/v5/public/liquidation-orders?instType=SWAP&uly=${okx}&state=filled`,
           { headers: { 'Accept': 'application/json' } }
         );
 
-        if (!res.ok) return null;
+        if (!response.ok) {
+          console.log(`[Liquidations API] OKX error for ${okx}: ${response.status}`);
+          return null;
+        }
 
-        const orders = await res.json();
+        const data = await response.json();
         
-        let longLiquidValue = 0;
-        let shortLiquidValue = 0;
-        let recentLiquids = 0;
+        if (data.code !== '0' || !data.data?.[0]?.details) {
+          console.log(`[Liquidations API] No data for ${okx}`);
+          return null;
+        }
+
+        const liquidations: OKXLiquidation[] = data.data[0].details || [];
         
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        
-        for (const order of orders) {
-          if (order.time >= oneHourAgo) {
-            recentLiquids++;
-            const value = parseFloat(order.price) * parseFloat(order.origQty);
-            
-            if (order.side === 'BUY') {
-              // Forced buy = short liquidation
-              shortLiquidValue += value;
-            } else {
-              // Forced sell = long liquidation
-              longLiquidValue += value;
-            }
+        // Aggregate liquidations
+        let longLiqs = 0, shortLiqs = 0;
+        let longValue = 0, shortValue = 0;
+        const recentLiqs: CoinLiquidation['recentLiqs'] = [];
+
+        liquidations.forEach((liq: OKXLiquidation) => {
+          const size = parseFloat(liq.sz);
+          const price = parseFloat(liq.bkPx);
+          const value = size * price;
+          
+          if (liq.posSide === 'long') {
+            longLiqs++;
+            longValue += value;
+          } else {
+            shortLiqs++;
+            shortValue += value;
           }
-        }
 
-        const totalValue = longLiquidValue + shortLiquidValue;
+          // Keep recent 5 liquidations for display
+          if (recentLiqs.length < 5) {
+            recentLiqs.push({
+              side: liq.posSide,
+              size,
+              price,
+              time: new Date(parseInt(liq.ts)).toISOString(),
+            });
+          }
+        });
+
+        const totalLiqs = longLiqs + shortLiqs;
+        const totalVal = longValue + shortValue;
         
-        // Determine dominant side
-        let dominantSide: LiquidationData['dominantSide'];
-        if (longLiquidValue > shortLiquidValue * 1.5) {
-          dominantSide = 'longs';
-        } else if (shortLiquidValue > longLiquidValue * 1.5) {
-          dominantSide = 'shorts';
-        } else {
-          dominantSide = 'balanced';
-        }
-
-        // Determine intensity based on USD value (rough thresholds)
-        let intensity: LiquidationData['intensity'];
-        if (totalValue > 10_000_000) intensity = 'extreme';
-        else if (totalValue > 1_000_000) intensity = 'high';
-        else if (totalValue > 100_000) intensity = 'medium';
-        else intensity = 'low';
+        let dominantSide: CoinLiquidation['dominantSide'] = 'balanced';
+        if (longValue > shortValue * 1.5) dominantSide = 'longs';
+        else if (shortValue > longValue * 1.5) dominantSide = 'shorts';
 
         return {
-          symbol: symbol.replace('USDT', ''),
-          recentLiquids,
-          longLiquidValue,
-          shortLiquidValue,
+          symbol: display,
+          longLiquidations: longLiqs,
+          shortLiquidations: shortLiqs,
+          totalLiquidations: totalLiqs,
+          longValue,
+          shortValue,
+          totalValue: totalVal,
           dominantSide,
-          intensity,
+          recentLiqs,
         };
-      } catch {
+      } catch (err) {
+        console.log(`[Liquidations API] Error fetching ${okx}:`, err);
         return null;
       }
-    });
+    }));
 
-    const results = await Promise.all(liqPromises);
-    const liqData = results.filter((r): r is LiquidationData => r !== null);
+    const validCoins = coinResults.filter((c): c is CoinLiquidation => c !== null);
+    console.log(`[Liquidations API] Got real data for ${validCoins.length} coins`);
 
     // Calculate totals
-    const totalLongLiquids = liqData.reduce((sum, r) => sum + r.longLiquidValue, 0);
-    const totalShortLiquids = liqData.reduce((sum, r) => sum + r.shortLiquidValue, 0);
-    const totalLiquids = totalLongLiquids + totalShortLiquids;
+    const totalLongValue = validCoins.reduce((sum, c) => sum + c.longValue, 0);
+    const totalShortValue = validCoins.reduce((sum, c) => sum + c.shortValue, 0);
+    const totalValue = totalLongValue + totalShortValue;
+    const totalLongLiqs = validCoins.reduce((sum, c) => sum + c.longLiquidations, 0);
+    const totalShortLiqs = validCoins.reduce((sum, c) => sum + c.shortLiquidations, 0);
 
-    // Market liquidation bias
-    let marketBias: 'longs_getting_rekt' | 'shorts_getting_rekt' | 'balanced';
-    if (totalLongLiquids > totalShortLiquids * 1.5) {
-      marketBias = 'longs_getting_rekt';
-    } else if (totalShortLiquids > totalLongLiquids * 1.5) {
-      marketBias = 'shorts_getting_rekt';
+    // Determine market bias
+    let marketBias: 'longs_liquidated' | 'shorts_liquidated' | 'balanced';
+    if (totalLongValue > totalShortValue * 1.3) {
+      marketBias = 'longs_liquidated';
+    } else if (totalShortValue > totalLongValue * 1.3) {
+      marketBias = 'shorts_liquidated';
     } else {
       marketBias = 'balanced';
     }
 
+    // Stress level based on total liquidation value
+    let stressLevel: 'low' | 'moderate' | 'high';
+    if (totalValue > 50000000) stressLevel = 'high';      // >$50M
+    else if (totalValue > 10000000) stressLevel = 'moderate'; // >$10M
+    else stressLevel = 'low';
+
     const result = {
       summary: {
-        totalLiquidations: formatLargeNumber(totalLiquids),
-        longLiquidations: formatLargeNumber(totalLongLiquids),
-        shortLiquidations: formatLargeNumber(totalShortLiquids),
+        dataSource: 'okx-real',
+        totalLiquidations: totalLongLiqs + totalShortLiqs,
+        totalLongLiquidations: totalLongLiqs,
+        totalShortLiquidations: totalShortLiqs,
+        totalValue: Math.round(totalValue),
+        totalLongValue: Math.round(totalLongValue),
+        totalShortValue: Math.round(totalShortValue),
         marketBias,
-        interpretation: marketBias === 'longs_getting_rekt'
-          ? '🔴 Longs getting liquidated - bearish pressure'
-          : marketBias === 'shorts_getting_rekt'
-          ? '🟢 Shorts getting liquidated - bullish pressure'
-          : '⚪ Balanced liquidations',
-        tradingInsight: marketBias === 'longs_getting_rekt'
-          ? 'Wait for liquidation cascade to end before buying'
-          : marketBias === 'shorts_getting_rekt'
-          ? 'Short squeeze in progress - momentum likely continues'
-          : 'No clear liquidation pressure',
+        stressLevel,
+        interpretation: marketBias === 'longs_liquidated'
+          ? `🔴 $${(totalLongValue / 1000000).toFixed(2)}M in longs liquidated - bearish pressure`
+          : marketBias === 'shorts_liquidated'
+          ? `🟢 $${(totalShortValue / 1000000).toFixed(2)}M in shorts liquidated - bullish pressure`
+          : `⚪ $${(totalValue / 1000000).toFixed(2)}M balanced liquidations`,
+        tradingInsight: stressLevel === 'high'
+          ? '⚠️ High liquidation activity - volatile market, reduce leverage'
+          : stressLevel === 'moderate'
+          ? '📊 Moderate liquidations - normal market conditions'
+          : '✅ Low liquidations - calm market',
+        note: 'Real liquidation data from OKX - testing mode',
       },
-      coins: liqData,
-      timeframe: '1 hour',
-      source: 'binance',
+      coins: validCoins.map(c => ({
+        symbol: c.symbol,
+        longLiquidations: c.longLiquidations,
+        shortLiquidations: c.shortLiquidations,
+        totalLiquidations: c.totalLiquidations,
+        longValue: Math.round(c.longValue),
+        shortValue: Math.round(c.shortValue),
+        totalValue: Math.round(c.totalValue),
+        dominantSide: c.dominantSide,
+        recentLiqs: c.recentLiqs,
+      })),
+      timeframe: 'recent',
+      source: 'okx',
       timestamp: new Date().toISOString(),
     };
 
     cache = { data: result, timestamp: Date.now() };
+    console.log('[Liquidations API] Returning fresh OKX data');
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('Liquidations API error:', error);
+    console.error('[Liquidations API] Error:', error);
     
     if (cache) {
       return NextResponse.json({ ...cache.data, stale: true });
     }
     
-    // Return mock data if API fails
     return NextResponse.json({
       summary: {
-        totalLiquidations: '$0',
-        longLiquidations: '$0',
-        shortLiquidations: '$0',
+        dataSource: 'unavailable',
+        totalLiquidations: 0,
+        totalValue: 0,
         marketBias: 'balanced',
-        interpretation: '⚪ No liquidation data available',
-        tradingInsight: 'Unable to fetch liquidation data',
+        stressLevel: 'unknown',
+        interpretation: '⚪ Liquidation data temporarily unavailable',
+        tradingInsight: 'Check back later',
+        note: 'OKX API error - using fallback',
       },
       coins: [],
-      timeframe: '1 hour',
-      source: 'binance',
+      timeframe: 'recent',
+      source: 'okx',
       timestamp: new Date().toISOString(),
       error: 'Data temporarily unavailable',
     });
   }
-}
-
-function formatLargeNumber(num: number): string {
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
-  return `$${num.toFixed(2)}`;
 }

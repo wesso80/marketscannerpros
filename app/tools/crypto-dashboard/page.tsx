@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import DataComingSoon from '@/components/DataComingSoon';
 
 interface FundingRate {
   symbol: string;
@@ -26,10 +27,13 @@ interface OpenInterestCoin {
 
 interface LiquidationCoin {
   symbol: string;
-  longLiquidValue: number;
-  shortLiquidValue: number;
-  dominantSide: string;
-  intensity: string;
+  longLiquidations: number;
+  shortLiquidations: number;
+  totalLiquidations: number;
+  longValue: number;
+  shortValue: number;
+  totalValue: number;
+  dominantSide: 'longs' | 'shorts' | 'balanced';
 }
 
 interface DashboardData {
@@ -41,7 +45,13 @@ interface DashboardData {
 }
 
 export default function CryptoDashboard() {
-  const { tier } = useUserTier();
+  const { tier, isAdmin } = useUserTier();
+  
+  // OKX liquidation data - admin-only testing while negotiating commercial licenses
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📊 Crypto Derivatives Dashboard" description="Real-time funding rates, long/short ratios, open interest, and liquidation data" />;
+  }
+  
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,
     longShort: null,
@@ -141,12 +151,12 @@ export default function CryptoDashboard() {
     }
 
     if (data.liquidations?.summary) {
-      if (data.liquidations.summary.marketBias === 'shorts_getting_rekt') {
+      if (data.liquidations.summary.marketBias === 'shorts_liquidated') {
         bullishScore += 1;
-        signals.push('🟢 Short squeeze in progress');
-      } else if (data.liquidations.summary.marketBias === 'longs_getting_rekt') {
+        signals.push('🟢 Shorts getting liquidated - bullish');
+      } else if (data.liquidations.summary.marketBias === 'longs_liquidated') {
         bearishScore += 1;
-        signals.push('🔴 Long liquidation cascade');
+        signals.push('🔴 Longs getting liquidated - bearish');
       }
     }
 
@@ -390,56 +400,65 @@ export default function CryptoDashboard() {
         {/* Liquidations */}
         <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">💥 Liquidations (1h)</h3>
+            <h3 className="text-lg font-bold">💥 Liquidations (Real Data)</h3>
             {data.liquidations?.summary && (
               <span className={`text-xs px-2 py-1 rounded ${
-                data.liquidations.summary.marketBias === 'shorts_getting_rekt' ? 'bg-green-500/20 text-green-400' :
-                data.liquidations.summary.marketBias === 'longs_getting_rekt' ? 'bg-red-500/20 text-red-400' :
+                data.liquidations.summary.marketBias === 'shorts_liquidated' ? 'bg-green-500/20 text-green-400' :
+                data.liquidations.summary.marketBias === 'longs_liquidated' ? 'bg-red-500/20 text-red-400' :
                 'bg-gray-500/20 text-gray-400'
               }`}>
-                {data.liquidations.summary.totalLiquidations}
+                {data.liquidations.summary.stressLevel} stress
               </span>
             )}
           </div>
           {data.liquidations ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-400">Short Liqs</div>
-                  <div className="text-lg font-bold text-green-400">{data.liquidations.summary.shortLiquidations}</div>
-                </div>
+              <div className="p-3 mb-3 rounded-lg bg-black/30 text-sm">
+                {data.liquidations.summary.interpretation}
+              </div>
+              {/* Totals Row */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-red-500/10 rounded-lg p-3 text-center">
-                  <div className="text-xs text-gray-400">Long Liqs</div>
-                  <div className="text-lg font-bold text-red-400">{data.liquidations.summary.longLiquidations}</div>
+                  <div className="text-red-400 text-lg font-bold">
+                    ${(data.liquidations.summary.totalLongValue / 1000000).toFixed(2)}M
+                  </div>
+                  <div className="text-xs text-gray-400">Longs Liquidated</div>
+                </div>
+                <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                  <div className="text-green-400 text-lg font-bold">
+                    ${(data.liquidations.summary.totalShortValue / 1000000).toFixed(2)}M
+                  </div>
+                  <div className="text-xs text-gray-400">Shorts Liquidated</div>
                 </div>
               </div>
-              {data.liquidations.coins.slice(0, 5).map((coin) => (
+              {data.liquidations.coins.slice(0, 5).map((coin: LiquidationCoin) => (
                 <div key={coin.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{coin.symbol}</span>
                     <span className={`text-xs px-2 py-0.5 rounded ${
-                      coin.intensity === 'extreme' ? 'bg-red-500 text-white' :
-                      coin.intensity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                      coin.dominantSide === 'longs' ? 'bg-red-500/20 text-red-400' :
+                      coin.dominantSide === 'shorts' ? 'bg-green-500/20 text-green-400' :
                       'bg-gray-500/20 text-gray-400'
                     }`}>
-                      {coin.intensity}
+                      {coin.dominantSide === 'longs' ? '🔴 Longs' : coin.dominantSide === 'shorts' ? '🟢 Shorts' : '⚪ Balanced'}
                     </span>
                   </div>
-                  <span className={`text-sm ${
-                    coin.dominantSide === 'longs' ? 'text-red-400' :
-                    coin.dominantSide === 'shorts' ? 'text-green-400' : 'text-gray-400'
-                  }`}>
-                    {coin.dominantSide === 'longs' ? '🔴 Longs' : 
-                     coin.dominantSide === 'shorts' ? '🟢 Shorts' : '⚪ Balanced'}
-                  </span>
+                  <div className="text-right">
+                    <span className="text-sm font-mono text-gray-300">
+                      ${(coin.totalValue / 1000).toFixed(0)}K
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({coin.totalLiquidations} liqs)
+                    </span>
+                  </div>
                 </div>
               ))}
               <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
-                <strong>💡 Trading Insight:</strong> {data.liquidations.summary.tradingInsight}
+                <strong>💡 Source:</strong> {data.liquidations.summary.note || 'Real liquidation data from OKX'}
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">Loading liquidations...</div>
+            <div className="text-center py-8 text-gray-500">Loading liquidation data...</div>
           )}
         </div>
       </div>
@@ -451,10 +470,10 @@ export default function CryptoDashboard() {
           <div className="bg-black/30 rounded-lg p-4">
             <h4 className="text-sm text-gray-400 mb-2">SCALP (1-4h)</h4>
             <div className="text-xl font-bold mb-2">
-              {data.liquidations?.summary.marketBias === 'shorts_getting_rekt' ? '🟢 BULLISH' :
-               data.liquidations?.summary.marketBias === 'longs_getting_rekt' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
+              {data.liquidations?.summary.marketBias === 'shorts_liquidated' ? '🟢 BULLISH' :
+               data.liquidations?.summary.marketBias === 'longs_liquidated' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
             </div>
-            <p className="text-xs text-gray-500">Based on liquidation flow direction</p>
+            <p className="text-xs text-gray-500">Based on real liquidation data</p>
           </div>
           <div className="bg-black/30 rounded-lg p-4">
             <h4 className="text-sm text-gray-400 mb-2">SWING (1-7d)</h4>
