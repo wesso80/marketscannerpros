@@ -481,6 +481,7 @@ function analyzeOpenInterest(
   
   // Debug: collect all raw strikes to see what's in the data
   const allRawStrikes: number[] = [];
+  let debugFirstCall = true;
   
   for (const call of calls) {
     // Alpha Vantage may use 'open_interest' or 'openInterest'
@@ -488,6 +489,13 @@ function analyzeOpenInterest(
     const oi = parseInt(String(oiValue), 10) || 0;
     const strikeValue = call.strike || '0';
     const strike = parseFloat(String(strikeValue)) || 0;
+    
+    // Debug first call contract
+    if (debugFirstCall && calls.length > 0) {
+      console.log(`📊 DEBUG First call contract: strike=${strike}, open_interest field="${call.open_interest}", parsed OI=${oi}`);
+      console.log(`📊 DEBUG Call fields: ${Object.keys(call).join(', ')}`);
+      debugFirstCall = false;
+    }
     
     if (strike > 0) allRawStrikes.push(strike);
     
@@ -497,8 +505,10 @@ function analyzeOpenInterest(
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.callOI += oi;
       
-      // Capture contract with Greeks for high OI list
-      if (oi > 0) {
+      // Capture contract with Greeks - include all ATM/near-ATM contracts even with 0 OI
+      // This ensures we always show Greeks data
+      const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
+      if (oi > 0 || isNearATM) {
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
@@ -527,8 +537,9 @@ function analyzeOpenInterest(
       if (!strikeOI.has(strike)) strikeOI.set(strike, { callOI: 0, putOI: 0 });
       strikeOI.get(strike)!.putOI += oi;
       
-      // Capture contract with Greeks for high OI list
-      if (oi > 0) {
+      // Capture contract with Greeks - include all ATM/near-ATM contracts even with 0 OI
+      const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
+      if (oi > 0 || isNearATM) {
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
@@ -602,11 +613,24 @@ function analyzeOpenInterest(
     }
   }
   
-  // Sort contracts by OI and take top 10 with Greeks
-  contractsWithGreeks.sort((a, b) => b.openInterest - a.openInterest);
+  // Sort contracts: prioritize by OI, but if OI is 0 for all, sort by proximity to ATM
+  const hasAnyOI = contractsWithGreeks.some(c => c.openInterest > 0);
+  
+  if (hasAnyOI) {
+    // Normal sort by OI
+    contractsWithGreeks.sort((a, b) => b.openInterest - a.openInterest);
+  } else {
+    // No OI data - sort by proximity to current price (ATM first)
+    contractsWithGreeks.sort((a, b) => {
+      const distA = Math.abs(a.strike - currentPrice);
+      const distB = Math.abs(b.strike - currentPrice);
+      return distA - distB;
+    });
+  }
+  
   const topStrikes = contractsWithGreeks.slice(0, 10);
   
-  console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}`);
+  console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}, Contracts w/Greeks=${topStrikes.length}`);
   
   return {
     totalCallOI,
