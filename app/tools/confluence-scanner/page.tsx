@@ -57,6 +57,40 @@ const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; tf: string }[] = 
   { value: 'macro_yearly', label: 'Yearly', tf: '1Y' },
 ];
 
+// Holding period / expiry options for trade planning
+const HOLDING_PERIOD_OPTIONS = [
+  // Hours
+  { value: '9h', label: '9 hours', category: 'HOURS', hours: 9 },
+  { value: '12h', label: '12 hours', category: 'HOURS', hours: 12 },
+  { value: '22h', label: '22 hours', category: 'HOURS', hours: 22 },
+  // Days
+  { value: '1d', label: '1 day', category: 'DAYS', hours: 24 },
+  { value: '2d', label: '2 days', category: 'DAYS', hours: 48 },
+  { value: '3d', label: '3 days', category: 'DAYS', hours: 72 },
+  { value: '4d', label: '4 days', category: 'DAYS', hours: 96 },
+  { value: '5d', label: '5 days', category: 'DAYS', hours: 120 },
+  { value: '7d', label: '7 days', category: 'DAYS', hours: 168 },
+  { value: '1w', label: '1 week', category: 'DAYS', hours: 168 },
+  { value: '2w', label: '2 weeks', category: 'DAYS', hours: 336 },
+  { value: '3w', label: '3 weeks', category: 'DAYS', hours: 504 },
+  // Weeks
+  { value: '5w', label: '5 weeks', category: 'WEEKS', hours: 840 },
+  { value: '6w', label: '6 weeks', category: 'WEEKS', hours: 1008 },
+  { value: '7w', label: '7 weeks', category: 'WEEKS', hours: 1176 },
+  { value: '8w', label: '8 weeks', category: 'WEEKS', hours: 1344 },
+  { value: '9w', label: '9 weeks', category: 'WEEKS', hours: 1512 },
+  // Months
+  { value: '1m', label: '1 month', category: 'MONTHS', hours: 730 },
+  { value: '2m', label: '2 months', category: 'MONTHS', hours: 1460 },
+  { value: '3m', label: '3 months', category: 'MONTHS', hours: 2190 },
+  { value: '4m', label: '4 months', category: 'MONTHS', hours: 2920 },
+  { value: '5m', label: '5 months', category: 'MONTHS', hours: 3650 },
+  { value: '6m', label: '6 months', category: 'MONTHS', hours: 4380 },
+  { value: '7m', label: '7 months', category: 'MONTHS', hours: 5110 },
+  { value: '8m', label: '8 months', category: 'MONTHS', hours: 5840 },
+  { value: '12m', label: '12 months', category: 'MONTHS', hours: 8760 },
+];
+
 export default function AIConfluenceScanner() {
   const { tier, isAdmin } = useUserTier();
   const [symbol, setSymbol] = useState("");
@@ -64,8 +98,13 @@ export default function AIConfluenceScanner() {
   const [hierarchicalResult, setHierarchicalResult] = useState<HierarchicalResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedTF, setSelectedTF] = useState<ScanModeType>('intraday_1h');
+  const [holdingPeriod, setHoldingPeriod] = useState<string>('2d');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isCached, setIsCached] = useState(false);
+
+  // Get holding period info for display
+  const selectedHolding = HOLDING_PERIOD_OPTIONS.find(h => h.value === holdingPeriod);
+  const holdingHours = selectedHolding?.hours || 48;
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
@@ -117,6 +156,8 @@ export default function AIConfluenceScanner() {
           symbol: symbol.trim(), 
           mode: 'hierarchical', 
           scanMode: selectedTF,
+          holdingPeriod,
+          holdingHours,
           forceRefresh 
         }),
       });
@@ -308,6 +349,57 @@ export default function AIConfluenceScanner() {
             </optgroup>
           </select>
 
+          {/* Holding Period / Trade Duration Selector */}
+          <select
+            value={holdingPeriod}
+            onChange={(e) => setHoldingPeriod(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              background: 'rgba(30,41,59,0.8)',
+              border: '2px solid rgba(16,185,129,0.5)',
+              borderRadius: '12px',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+            }}
+          >
+            <optgroup label="HOURS">
+              <option value="9h">9 hours</option>
+              <option value="12h">12 hours</option>
+              <option value="22h">22 hours</option>
+            </optgroup>
+            <optgroup label="DAYS">
+              <option value="1d">1 day</option>
+              <option value="2d">2 days</option>
+              <option value="3d">3 days</option>
+              <option value="4d">4 days</option>
+              <option value="5d">5 days</option>
+              <option value="7d">7 days</option>
+              <option value="1w">1 week</option>
+              <option value="2w">2 weeks</option>
+              <option value="3w">3 weeks</option>
+            </optgroup>
+            <optgroup label="WEEKS">
+              <option value="5w">5 weeks</option>
+              <option value="6w">6 weeks</option>
+              <option value="7w">7 weeks</option>
+              <option value="8w">8 weeks</option>
+              <option value="9w">9 weeks</option>
+            </optgroup>
+            <optgroup label="MONTHS">
+              <option value="1m">1 month</option>
+              <option value="2m">2 months</option>
+              <option value="3m">3 months</option>
+              <option value="4m">4 months</option>
+              <option value="5m">5 months</option>
+              <option value="6m">6 months</option>
+              <option value="7m">7 months</option>
+              <option value="8m">8 months</option>
+              <option value="12m">12 months</option>
+            </optgroup>
+          </select>
+
           <button
             onClick={() => handleScan()}
             disabled={loading}
@@ -455,7 +547,107 @@ export default function AIConfluenceScanner() {
           </div>
         </div>
 
-        {/* 🚨 EXTREME CONDITIONS ALERT */}
+        {/* � Trade Window / Holding Period Display */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+          border: '1px solid rgba(16,185,129,0.3)',
+          borderRadius: '12px',
+          padding: '1rem 1.5rem',
+          marginBottom: '1.5rem',
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                color: '#94A3B8', 
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '0.25rem'
+              }}>
+                📊 Trade Window
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#10B981' }}>
+                  {selectedHolding?.label || '2 days'}
+                </span>
+                <span style={{ color: '#64748B', fontSize: '0.9rem' }}>
+                  ({holdingHours} hours trading window)
+                </span>
+              </div>
+            </div>
+            
+            {/* Candle closes in window */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {(() => {
+                // Calculate which candles will close within holding period
+                const closesInWindow: { tf: string; count: number }[] = [];
+                const tfHours: Record<string, number> = {
+                  '5m': 0.083, '10m': 0.167, '15m': 0.25, '30m': 0.5,
+                  '1H': 1, '2H': 2, '3H': 3, '4H': 4, '6H': 6, '8H': 8, '12H': 12,
+                  '1D': 24, '3D': 72, '1W': 168, '1M': 730
+                };
+                
+                Object.entries(tfHours).forEach(([tf, hours]) => {
+                  if (hours <= holdingHours) {
+                    const count = Math.floor(holdingHours / hours);
+                    if (count > 0 && count <= 100) {
+                      closesInWindow.push({ tf, count });
+                    }
+                  }
+                });
+                
+                // Show top 4 most significant
+                return closesInWindow.slice(-4).reverse().map(({ tf, count }) => (
+                  <span key={tf} style={{
+                    padding: '0.25rem 0.6rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    background: 'rgba(16,185,129,0.2)',
+                    color: '#10B981',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                  }}>
+                    {count}× {tf}
+                  </span>
+                ));
+              })()}
+            </div>
+          </div>
+          
+          {/* Exit timing guidance */}
+          {holdingHours >= 24 && (
+            <div style={{ 
+              marginTop: '0.75rem', 
+              paddingTop: '0.75rem', 
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              fontSize: '0.8rem',
+            }}>
+              <span style={{ color: '#F59E0B' }}>
+                ⏰ Exit by: {new Date(Date.now() + holdingHours * 3600000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric' })}
+              </span>
+              {holdingHours >= 168 && (
+                <span style={{ color: '#8B5CF6' }}>
+                  📅 Swing trade: Position sizing for volatility
+                </span>
+              )}
+              {holdingHours < 24 && holdingHours >= 9 && (
+                <span style={{ color: '#3B82F6' }}>
+                  ⚡ Day trade: Close before market close
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* �🚨 EXTREME CONDITIONS ALERT */}
         {extremeConditions && extremeConditions.length > 0 && (
           <div style={{
             background: extremeConditions.some(c => c.type === 'extreme') 
