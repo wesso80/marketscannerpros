@@ -270,6 +270,48 @@ interface DecompressionAnalysis {
 // HIERARCHICAL SCAN RESULT
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CANDLE CLOSE CONFLUENCE - Temporal alignment of multiple timeframe closes
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CandleCloseConfluence {
+  // Current close confluence window
+  closingNow: {
+    count: number;              // How many TFs closing within next 5 mins
+    timeframes: string[];       // Which TFs
+    highestTF: string | null;   // The highest TF in the window (monthly > weekly > daily)
+    isRare: boolean;            // True if monthly+ closing with other TFs
+  };
+  
+  // Near-term confluence (next 1-4 hours)
+  closingSoon: {
+    count: number;              // TFs closing in next 1-4 hours
+    timeframes: { tf: string; minsAway: number; weight: number }[];
+    peakConfluenceIn: number;   // Minutes until most TFs close together
+    peakCount: number;          // How many TFs close at peak
+  };
+  
+  // Special events
+  specialEvents: {
+    isMonthEnd: boolean;
+    isWeekEnd: boolean;
+    isQuarterEnd: boolean;
+    isYearEnd: boolean;
+    sessionClose: 'ny' | 'london' | 'asia' | 'none';
+  };
+  
+  // Confluence score (0-100)
+  confluenceScore: number;
+  confluenceRating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
+  
+  // Best entry window
+  bestEntryWindow: {
+    startMins: number;          // Minutes from now to start watching
+    endMins: number;            // Minutes from now - optimal entry window
+    reason: string;
+  };
+}
+
 export interface HierarchicalScanResult {
   mode: ScanMode;
   modeLabel: string;
@@ -288,6 +330,9 @@ export interface HierarchicalScanResult {
   
   // Clustered 50% levels (within ATR)
   clusters: { levels: number[]; tfs: string[]; avgLevel: number }[];
+  
+  // NEW: Candle Close Confluence - when multiple TFs close together
+  candleCloseConfluence: CandleCloseConfluence;
   
   // Prediction
   prediction: {
@@ -477,6 +522,182 @@ export class ConfluenceLearningAgent {
       atr += tr;
     }
     return atr / period;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANDLE CLOSE CONFLUENCE CALCULATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calculate when multiple timeframe candles close together.
+   * This is the key insight: more candles closing = higher probability move.
+   * 
+   * Example: If it's the last day of the month with 3 hours to go:
+   * - Monthly candle closing
+   * - Weekly candle (if Friday)
+   * - Daily candle
+   * - 8h, 4h, 2h, 1h candles
+   * = MASSIVE confluence = high probability volatility
+   */
+  calculateCandleCloseConfluence(currentTime: number): CandleCloseConfluence {
+    const now = new Date(currentTime);
+    
+    // Calculate time to close for each timeframe
+    const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number }[] = [];
+    
+    // TF weights based on significance (higher TF = more weight)
+    const tfWeights: Record<string, number> = {
+      'Y': 100, '3M': 50, 'M': 40, '2W': 25, 'W': 20,
+      '3D': 15, '2D': 12, 'D': 10, '8h': 6, '6h': 5,
+      '4h': 4, '3h': 3, '2h': 2, '1h': 1.5, '30m': 1,
+      '15m': 0.5, '10m': 0.3, '5m': 0.2
+    };
+    
+    for (const tfConfig of TIMEFRAMES) {
+      const tfMs = tfConfig.minutes * 60 * 1000;
+      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
+      const periodEnd = periodStart + tfMs;
+      const minsAway = Math.floor((periodEnd - currentTime) / 60000);
+      
+      tfCloses.push({
+        tf: tfConfig.label,
+        minutes: tfConfig.minutes,
+        minsAway: Math.max(0, minsAway),
+        weight: tfWeights[tfConfig.label] || 1
+      });
+    }
+    
+    // Sort by time to close
+    tfCloses.sort((a, b) => a.minsAway - b.minsAway);
+    
+    // 1. CLOSING NOW (within 5 minutes)
+    const closingNowTFs = tfCloses.filter(t => t.minsAway <= 5);
+    const highestClosingNow = closingNowTFs.reduce((max, t) => 
+      t.weight > (max?.weight || 0) ? t : max, null as typeof tfCloses[0] | null);
+    const hasMonthlyPlus = closingNowTFs.some(t => ['M', '3M', 'Y'].includes(t.tf.replace(/[0-9]/g, '')));
+    
+    // 2. CLOSING SOON (within 4 hours = 240 minutes)
+    const closingSoonTFs = tfCloses.filter(t => t.minsAway > 5 && t.minsAway <= 240);
+    
+    // Find peak confluence - when do most TFs close together?
+    // Group closes into 15-minute windows
+    const windowSize = 15;
+    const windows: Map<number, typeof tfCloses> = new Map();
+    
+    for (const tf of tfCloses.filter(t => t.minsAway <= 240)) {
+      const windowKey = Math.floor(tf.minsAway / windowSize) * windowSize;
+      if (!windows.has(windowKey)) windows.set(windowKey, []);
+      windows.get(windowKey)!.push(tf);
+    }
+    
+    // Find the window with highest weighted count
+    let peakWindow = 0;
+    let peakScore = 0;
+    let peakCount = 0;
+    
+    for (const [windowStart, tfs] of windows) {
+      const windowScore = tfs.reduce((sum, t) => sum + t.weight, 0);
+      if (windowScore > peakScore) {
+        peakScore = windowScore;
+        peakWindow = windowStart;
+        peakCount = tfs.length;
+      }
+    }
+    
+    // 3. SPECIAL EVENTS
+    const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 5 = Friday
+    const dayOfMonth = now.getUTCDate();
+    const month = now.getUTCMonth();
+    const daysInMonth = new Date(now.getUTCFullYear(), month + 1, 0).getDate();
+    const hour = now.getUTCHours();
+    
+    const isMonthEnd = dayOfMonth >= daysInMonth - 1;
+    const isWeekEnd = dayOfWeek === 5; // Friday
+    const isQuarterEnd = isMonthEnd && [2, 5, 8, 11].includes(month); // March, June, Sept, Dec
+    const isYearEnd = isMonthEnd && month === 11; // December
+    
+    // Trading session close detection (UTC times)
+    let sessionClose: 'ny' | 'london' | 'asia' | 'none' = 'none';
+    if (hour >= 20 && hour <= 21) sessionClose = 'ny';      // NY close ~21:00 UTC
+    else if (hour >= 16 && hour <= 17) sessionClose = 'london'; // London close ~16:30 UTC
+    else if (hour >= 6 && hour <= 7) sessionClose = 'asia';    // Asia close ~07:00 UTC
+    
+    // 4. CALCULATE CONFLUENCE SCORE
+    // Formula: sum of weights for closing TFs + bonuses for special events
+    let score = 0;
+    
+    // Closing now gets full weight
+    score += closingNowTFs.reduce((sum, t) => sum + t.weight * 2, 0);
+    
+    // Closing soon gets partial weight (decreasing by distance)
+    for (const tf of closingSoonTFs) {
+      const distanceFactor = 1 - (tf.minsAway / 240); // 1 at 0 mins, 0 at 240 mins
+      score += tf.weight * distanceFactor;
+    }
+    
+    // Bonuses for special events
+    if (isYearEnd) score += 50;
+    else if (isQuarterEnd) score += 30;
+    else if (isMonthEnd) score += 20;
+    if (isWeekEnd) score += 10;
+    if (sessionClose !== 'none') score += 5;
+    
+    // Normalize to 0-100
+    const maxPossibleScore = 200; // Rough estimate of max
+    const normalizedScore = Math.min(100, Math.round((score / maxPossibleScore) * 100));
+    
+    // Rating based on score
+    let rating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
+    if (normalizedScore >= 80) rating = 'extreme';
+    else if (normalizedScore >= 50) rating = 'high';
+    else if (normalizedScore >= 25) rating = 'moderate';
+    else if (normalizedScore >= 10) rating = 'low';
+    else rating = 'none';
+    
+    // 5. BEST ENTRY WINDOW
+    // Optimal entry is typically 5-15 minutes BEFORE peak confluence
+    const entryStart = Math.max(0, peakWindow - 15);
+    const entryEnd = peakWindow + 5;
+    
+    let entryReason = '';
+    if (peakCount >= 5) {
+      entryReason = `${peakCount} timeframes closing together - HIGH volatility expected`;
+    } else if (peakCount >= 3) {
+      entryReason = `${peakCount} timeframes closing - moderate confluence`;
+    } else {
+      entryReason = 'Standard market conditions';
+    }
+    
+    console.log(`📊 Candle Close Confluence: ${closingNowTFs.length} closing now, ${closingSoonTFs.length} closing soon, Score: ${normalizedScore} (${rating})`);
+    
+    return {
+      closingNow: {
+        count: closingNowTFs.length,
+        timeframes: closingNowTFs.map(t => t.tf),
+        highestTF: highestClosingNow?.tf || null,
+        isRare: hasMonthlyPlus && closingNowTFs.length >= 3
+      },
+      closingSoon: {
+        count: closingSoonTFs.length,
+        timeframes: closingSoonTFs.map(t => ({ tf: t.tf, minsAway: t.minsAway, weight: t.weight })),
+        peakConfluenceIn: peakWindow,
+        peakCount
+      },
+      specialEvents: {
+        isMonthEnd,
+        isWeekEnd,
+        isQuarterEnd,
+        isYearEnd,
+        sessionClose
+      },
+      confluenceScore: normalizedScore,
+      confluenceRating: rating,
+      bestEntryWindow: {
+        startMins: entryStart,
+        endMins: entryEnd,
+        reason: entryReason
+      }
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -985,6 +1206,29 @@ export class ConfluenceLearningAgent {
       rewardPercent,
     };
     
+    // Calculate Candle Close Confluence - when multiple TFs close together
+    const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime);
+    
+    // Boost confidence if high candle close confluence
+    if (candleCloseConfluence.confluenceRating === 'extreme') {
+      confidence = Math.min(95, confidence + 15);
+    } else if (candleCloseConfluence.confluenceRating === 'high') {
+      confidence = Math.min(90, confidence + 10);
+    } else if (candleCloseConfluence.confluenceRating === 'moderate') {
+      confidence = Math.min(85, confidence + 5);
+    }
+    
+    // Add candle close info to reasoning
+    if (candleCloseConfluence.closingNow.count >= 2) {
+      reasoningParts.push(`🕐 ${candleCloseConfluence.closingNow.count} TFs closing NOW (${candleCloseConfluence.closingNow.timeframes.join(', ')})`);
+    }
+    if (candleCloseConfluence.specialEvents.isMonthEnd) {
+      reasoningParts.push('📅 Month-end confluence');
+    }
+    if (candleCloseConfluence.specialEvents.isQuarterEnd) {
+      reasoningParts.push('📅 QUARTER-END - major rebalancing');
+    }
+    
     return {
       mode: scanMode,
       modeLabel: modeConfig.label,
@@ -995,6 +1239,7 @@ export class ConfluenceLearningAgent {
       decompression,
       mid50Levels,
       clusters,
+      candleCloseConfluence,
       prediction: {
         direction,
         confidence,

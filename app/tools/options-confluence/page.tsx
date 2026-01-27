@@ -141,6 +141,36 @@ interface StrategyRecommendation {
   maxReward: string;
 }
 
+// Candle Close Confluence - when multiple TFs close together
+interface CandleCloseConfluence {
+  closingNow: {
+    count: number;
+    timeframes: string[];
+    highestTF: string | null;
+    isRare: boolean;
+  };
+  closingSoon: {
+    count: number;
+    timeframes: { tf: string; minsAway: number; weight: number }[];
+    peakConfluenceIn: number;
+    peakCount: number;
+  };
+  specialEvents: {
+    isMonthEnd: boolean;
+    isWeekEnd: boolean;
+    isQuarterEnd: boolean;
+    isYearEnd: boolean;
+    sessionClose: 'ny' | 'london' | 'asia' | 'none';
+  };
+  confluenceScore: number;
+  confluenceRating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
+  bestEntryWindow: {
+    startMins: number;
+    endMins: number;
+    reason: string;
+  };
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -168,6 +198,7 @@ interface OptionsSetup {
   tradeLevels: TradeLevels | null;
   compositeScore?: CompositeScore;
   strategyRecommendation?: StrategyRecommendation;
+  candleCloseConfluence?: CandleCloseConfluence;
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -1211,6 +1242,170 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </div>
+
+            {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
+            {result.candleCloseConfluence && (
+              <div style={{
+                background: result.candleCloseConfluence.confluenceRating === 'extreme' 
+                  ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(168,85,247,0.15) 100%)'
+                  : result.candleCloseConfluence.confluenceRating === 'high'
+                  ? 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(168,85,247,0.15) 100%)'
+                  : 'rgba(30,41,59,0.6)',
+                border: `2px solid ${
+                  result.candleCloseConfluence.confluenceRating === 'extreme' ? 'rgba(239,68,68,0.5)' :
+                  result.candleCloseConfluence.confluenceRating === 'high' ? 'rgba(245,158,11,0.5)' :
+                  'rgba(168,85,247,0.3)'
+                }`,
+                borderRadius: '16px',
+                padding: '1.5rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: '#F59E0B' }}>
+                    🕐 Candle Close Confluence
+                    {result.candleCloseConfluence.confluenceRating === 'extreme' && (
+                      <span style={{ marginLeft: '0.5rem', background: 'rgba(239,68,68,0.3)', color: '#FCA5A5', padding: '3px 10px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                        🔥 EXTREME
+                      </span>
+                    )}
+                    {result.candleCloseConfluence.confluenceRating === 'high' && (
+                      <span style={{ marginLeft: '0.5rem', background: 'rgba(245,158,11,0.3)', color: '#FCD34D', padding: '3px 10px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                        ⚡ HIGH
+                      </span>
+                    )}
+                  </h3>
+                  <div style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: 'bold',
+                    color: result.candleCloseConfluence.confluenceScore >= 50 ? '#F59E0B' : '#94A3B8'
+                  }}>
+                    Score: {result.candleCloseConfluence.confluenceScore}%
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  {/* Closing Now */}
+                  <div style={{
+                    background: 'rgba(30,41,59,0.6)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    borderLeft: `3px solid ${result.candleCloseConfluence.closingNow.count >= 2 ? '#10B981' : '#64748B'}`
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Closing NOW (within 5 mins)</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: result.candleCloseConfluence.closingNow.count >= 2 ? '#10B981' : '#E2E8F0' }}>
+                      {result.candleCloseConfluence.closingNow.count} TFs
+                    </div>
+                    {result.candleCloseConfluence.closingNow.count > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                        {result.candleCloseConfluence.closingNow.timeframes.map(tf => (
+                          <span key={tf} style={{
+                            background: 'rgba(16,185,129,0.2)',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            fontSize: '0.7rem',
+                            color: '#6EE7B7'
+                          }}>{tf}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Closing Soon */}
+                  <div style={{
+                    background: 'rgba(30,41,59,0.6)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    borderLeft: '3px solid #3B82F6'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Closing Soon (1-4 hours)</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3B82F6' }}>
+                      {result.candleCloseConfluence.closingSoon.count} TFs
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#93C5FD', marginTop: '0.25rem' }}>
+                      Peak: {result.candleCloseConfluence.closingSoon.peakCount} TFs in {result.candleCloseConfluence.closingSoon.peakConfluenceIn}m
+                    </div>
+                  </div>
+
+                  {/* Special Events */}
+                  <div style={{
+                    background: 'rgba(30,41,59,0.6)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    borderLeft: `3px solid ${
+                      result.candleCloseConfluence.specialEvents.isYearEnd ? '#EF4444' :
+                      result.candleCloseConfluence.specialEvents.isQuarterEnd ? '#F59E0B' :
+                      result.candleCloseConfluence.specialEvents.isMonthEnd ? '#A855F7' :
+                      '#64748B'
+                    }`
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Special Events</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {result.candleCloseConfluence.specialEvents.isYearEnd && (
+                        <span style={{ fontSize: '0.8rem', color: '#FCA5A5', fontWeight: '600' }}>📅 YEAR END</span>
+                      )}
+                      {result.candleCloseConfluence.specialEvents.isQuarterEnd && (
+                        <span style={{ fontSize: '0.8rem', color: '#FCD34D', fontWeight: '600' }}>📅 QUARTER END</span>
+                      )}
+                      {result.candleCloseConfluence.specialEvents.isMonthEnd && (
+                        <span style={{ fontSize: '0.8rem', color: '#E9D5FF', fontWeight: '600' }}>📅 Month End</span>
+                      )}
+                      {result.candleCloseConfluence.specialEvents.isWeekEnd && (
+                        <span style={{ fontSize: '0.8rem', color: '#CBD5E1' }}>📅 Week End (Friday)</span>
+                      )}
+                      {result.candleCloseConfluence.specialEvents.sessionClose !== 'none' && (
+                        <span style={{ fontSize: '0.8rem', color: '#93C5FD' }}>
+                          🌍 {result.candleCloseConfluence.specialEvents.sessionClose.toUpperCase()} Session Close
+                        </span>
+                      )}
+                      {!result.candleCloseConfluence.specialEvents.isYearEnd && 
+                       !result.candleCloseConfluence.specialEvents.isQuarterEnd && 
+                       !result.candleCloseConfluence.specialEvents.isMonthEnd && 
+                       !result.candleCloseConfluence.specialEvents.isWeekEnd &&
+                       result.candleCloseConfluence.specialEvents.sessionClose === 'none' && (
+                        <span style={{ fontSize: '0.8rem', color: '#64748B' }}>No special events</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Best Entry Window */}
+                  <div style={{
+                    background: 'rgba(30,41,59,0.6)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    borderLeft: '3px solid #10B981'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Best Entry Window</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10B981' }}>
+                      {result.candleCloseConfluence.bestEntryWindow.startMins === 0 ? 'NOW' : `In ${result.candleCloseConfluence.bestEntryWindow.startMins}m`}
+                      {' → '}{result.candleCloseConfluence.bestEntryWindow.endMins}m
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6EE7B7', marginTop: '0.25rem' }}>
+                      {result.candleCloseConfluence.bestEntryWindow.reason}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Closing Soon Timeline */}
+                {result.candleCloseConfluence.closingSoon.timeframes.length > 0 && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(100,116,139,0.3)' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Upcoming Candle Closes:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {result.candleCloseConfluence.closingSoon.timeframes.slice(0, 8).map((item, idx) => (
+                        <div key={idx} style={{
+                          background: item.weight >= 10 ? 'rgba(239,68,68,0.15)' : item.weight >= 5 ? 'rgba(245,158,11,0.15)' : 'rgba(100,116,139,0.15)',
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          fontSize: '0.75rem',
+                          border: `1px solid ${item.weight >= 10 ? 'rgba(239,68,68,0.3)' : item.weight >= 5 ? 'rgba(245,158,11,0.3)' : 'rgba(100,116,139,0.3)'}`
+                        }}>
+                          <span style={{ fontWeight: '600', color: item.weight >= 10 ? '#FCA5A5' : item.weight >= 5 ? '#FCD34D' : '#CBD5E1' }}>{item.tf}</span>
+                          <span style={{ color: '#94A3B8' }}> in {item.minsAway}m</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Strike & Expiration Recommendations */}
             {result.direction !== 'neutral' && (

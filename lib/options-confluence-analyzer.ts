@@ -9,7 +9,7 @@
  * 5. Analyzes Open Interest for sentiment/liquidity
  */
 
-import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode } from './confluence-learning-agent';
+import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseConfluence } from './confluence-learning-agent';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -89,6 +89,9 @@ export interface OptionsSetup {
   // COMPOSITE SCORING (NEW)
   compositeScore: CompositeScore | null;
   strategyRecommendation: StrategyRecommendation | null;
+  
+  // CANDLE CLOSE CONFLUENCE (NEW) - When multiple TFs close together
+  candleCloseConfluence: CandleCloseConfluence | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1834,7 +1837,7 @@ export class OptionsConfluenceAnalyzer {
     // Get confluence analysis
     const confluenceResult = await this.confluenceAgent.scanHierarchical(symbol, scanMode);
     
-    const { currentPrice, decompression, prediction, signalStrength, clusters, mid50Levels } = confluenceResult;
+    const { currentPrice, decompression, prediction, signalStrength, clusters, mid50Levels, candleCloseConfluence } = confluenceResult;
     
     // Fetch options chain for O/I analysis (stocks only, not crypto)
     let openInterestAnalysis: OpenInterestData | null = null;
@@ -1984,6 +1987,7 @@ export class OptionsConfluenceAnalyzer {
       tradeLevels,
       compositeScore,
       strategyRecommendation,
+      candleCloseConfluence,
     };
   }
   
