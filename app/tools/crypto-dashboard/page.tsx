@@ -1,0 +1,558 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useUserTier } from '@/lib/useUserTier';
+
+interface FundingRate {
+  symbol: string;
+  rate: number;
+  sentiment: string;
+  annualized: string;
+}
+
+interface LongShortRatio {
+  symbol: string;
+  longAccount: number;
+  shortAccount: number;
+  longShortRatio: number;
+  sentiment: string;
+}
+
+interface OpenInterestCoin {
+  symbol: string;
+  openInterestValue: number;
+  change24h: number;
+  signal: string;
+}
+
+interface LiquidationCoin {
+  symbol: string;
+  longLiquidValue: number;
+  shortLiquidValue: number;
+  dominantSide: string;
+  intensity: string;
+}
+
+interface DashboardData {
+  fundingRates: { data: FundingRate[]; avgRate: number; sentiment: string } | null;
+  longShort: { data: LongShortRatio[]; overall: string } | null;
+  openInterest: { summary: any; coins: OpenInterestCoin[] } | null;
+  liquidations: { summary: any; coins: LiquidationCoin[] } | null;
+  prices: { [key: string]: { price: number; change24h: number } };
+}
+
+export default function CryptoDashboard() {
+  const { tier } = useUserTier();
+  const [data, setData] = useState<DashboardData>({
+    fundingRates: null,
+    longShort: null,
+    openInterest: null,
+    liquidations: null,
+    prices: {},
+  });
+  const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [fundingRes, lsRes, oiRes, liqRes, btcRes, ethRes, solRes] = await Promise.all([
+        fetch('/api/funding-rates').then(r => r.json()).catch(() => null),
+        fetch('/api/long-short-ratio').then(r => r.json()).catch(() => null),
+        fetch('/api/crypto/open-interest').then(r => r.json()).catch(() => null),
+        fetch('/api/crypto/liquidations').then(r => r.json()).catch(() => null),
+        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT').then(r => r.json()).catch(() => null),
+        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT').then(r => r.json()).catch(() => null),
+        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT').then(r => r.json()).catch(() => null),
+      ]);
+
+      const prices: { [key: string]: { price: number; change24h: number } } = {};
+      if (btcRes) prices['BTC'] = { price: parseFloat(btcRes.lastPrice), change24h: parseFloat(btcRes.priceChangePercent) };
+      if (ethRes) prices['ETH'] = { price: parseFloat(ethRes.lastPrice), change24h: parseFloat(ethRes.priceChangePercent) };
+      if (solRes) prices['SOL'] = { price: parseFloat(solRes.lastPrice), change24h: parseFloat(solRes.priceChangePercent) };
+
+      setData({
+        fundingRates: fundingRes?.data ? { data: fundingRes.data, avgRate: fundingRes.avgRate, sentiment: fundingRes.sentiment } : null,
+        longShort: lsRes?.data ? { data: lsRes.data, overall: lsRes.overallSentiment } : null,
+        openInterest: oiRes?.summary ? oiRes : null,
+        liquidations: liqRes?.summary ? liqRes : null,
+        prices,
+      });
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Failed to fetch crypto data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    
+    // Auto-refresh every 60 seconds if enabled
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (autoRefresh) {
+      interval = setInterval(fetchData, 60000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [fetchData, autoRefresh]);
+
+  const getMarketBias = (): { bias: string; confidence: number; signals: string[] } => {
+    const signals: string[] = [];
+    let bullishScore = 0;
+    let bearishScore = 0;
+
+    // Funding rate signal
+    if (data.fundingRates) {
+      if (data.fundingRates.avgRate > 0.01) {
+        bearishScore += 1; // High funding = overleveraged longs
+        signals.push('⚠️ Funding elevated - longs paying shorts');
+      } else if (data.fundingRates.avgRate < -0.01) {
+        bullishScore += 1;
+        signals.push('🟢 Negative funding - shorts paying longs');
+      }
+    }
+
+    // Long/Short ratio signal
+    if (data.longShort) {
+      if (data.longShort.overall === 'Bullish') {
+        bullishScore += 1;
+        signals.push('🟢 L/S ratio favors bulls');
+      } else if (data.longShort.overall === 'Bearish') {
+        bearishScore += 1;
+        signals.push('🔴 L/S ratio favors bears');
+      }
+    }
+
+    // Open Interest signal
+    if (data.openInterest?.summary) {
+      if (data.openInterest.summary.marketSignal === 'risk_on') {
+        bullishScore += 1;
+        signals.push('🟢 OI building - risk-on mode');
+      } else if (data.openInterest.summary.marketSignal === 'risk_off') {
+        bearishScore += 1;
+        signals.push('🔴 OI declining - deleveraging');
+      }
+    }
+
+    // Liquidation signal
+    if (data.liquidations?.summary) {
+      if (data.liquidations.summary.marketBias === 'shorts_getting_rekt') {
+        bullishScore += 1;
+        signals.push('🟢 Short squeeze in progress');
+      } else if (data.liquidations.summary.marketBias === 'longs_getting_rekt') {
+        bearishScore += 1;
+        signals.push('🔴 Long liquidation cascade');
+      }
+    }
+
+    const totalSignals = bullishScore + bearishScore;
+    const confidence = totalSignals > 0 ? Math.round((Math.max(bullishScore, bearishScore) / totalSignals) * 100) : 0;
+    
+    let bias: string;
+    if (bullishScore > bearishScore + 1) bias = 'BULLISH';
+    else if (bearishScore > bullishScore + 1) bias = 'BEARISH';
+    else if (bullishScore > bearishScore) bias = 'LEAN BULLISH';
+    else if (bearishScore > bullishScore) bias = 'LEAN BEARISH';
+    else bias = 'NEUTRAL';
+
+    return { bias, confidence: confidence || 50, signals };
+  };
+
+  const marketBias = getMarketBias();
+
+  return (
+    <div className="min-h-screen bg-[#0F172A] text-white">
+      <Header />
+      
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                ₿ Crypto Derivatives Dashboard
+              </h1>
+              <p className="text-gray-400">
+                Real-time funding, open interest, liquidations & positioning data
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600"
+                />
+                Auto-refresh (60s)
+              </label>
+              
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] disabled:opacity-50 transition-all"
+              >
+                {loading ? 'Loading...' : '🔄 Refresh'}
+              </button>
+            </div>
+          </div>
+          
+          {lastUpdate && (
+            <p className="text-xs text-gray-500 mt-2">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+
+        {/* Price Ticker */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {['BTC', 'ETH', 'SOL'].map((coin) => {
+            const priceData = data.prices[coin];
+            return (
+              <div key={coin} className="bg-[#1E293B] rounded-xl p-4 border border-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold">{coin}</span>
+                  {priceData ? (
+                    <div className="text-right">
+                      <div className="text-lg font-mono">
+                        ${priceData.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </div>
+                      <div className={`text-sm ${priceData.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {priceData.change24h >= 0 ? '+' : ''}{priceData.change24h.toFixed(2)}%
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">Loading...</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Market Bias Summary */}
+        <div className={`mb-8 p-6 rounded-xl border-2 ${
+          marketBias.bias.includes('BULLISH') ? 'bg-green-900/20 border-green-500' :
+          marketBias.bias.includes('BEARISH') ? 'bg-red-900/20 border-red-500' :
+          'bg-gray-800/50 border-gray-600'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-sm text-gray-400 mb-1">COMBINED DERIVATIVES SIGNAL</h2>
+              <div className="text-3xl font-bold">
+                {marketBias.bias.includes('BULLISH') ? '🟢' : 
+                 marketBias.bias.includes('BEARISH') ? '🔴' : '⚪'} {marketBias.bias}
+              </div>
+              <div className="text-sm text-gray-400 mt-1">
+                {marketBias.confidence}% signal alignment
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {marketBias.signals.map((signal, i) => (
+                <span key={i} className="text-xs bg-black/30 px-3 py-1 rounded-full">
+                  {signal}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          
+          {/* Funding Rates */}
+          <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">💰 Funding Rates</h3>
+              {data.fundingRates && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  data.fundingRates.avgRate > 0.01 ? 'bg-red-500/20 text-red-400' :
+                  data.fundingRates.avgRate < -0.01 ? 'bg-green-500/20 text-green-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  Avg: {(data.fundingRates.avgRate * 100).toFixed(4)}%
+                </span>
+              )}
+            </div>
+            
+            {data.fundingRates ? (
+              <div className="space-y-2">
+                {data.fundingRates.data.slice(0, 6).map((fr) => (
+                  <div key={fr.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
+                    <span className="font-medium">{fr.symbol}</span>
+                    <div className="text-right">
+                      <span className={`font-mono ${
+                        fr.rate > 0.01 ? 'text-red-400' :
+                        fr.rate < 0 ? 'text-green-400' :
+                        'text-gray-400'
+                      }`}>
+                        {(fr.rate * 100).toFixed(4)}%
+                      </span>
+                      <span className="text-xs text-gray-500 ml-2">({fr.annualized})</span>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
+                  <strong>💡 Trading Insight:</strong> {
+                    data.fundingRates.avgRate > 0.05 
+                      ? 'Extreme positive funding - longs are overleveraged. Consider shorting or waiting for correction.'
+                      : data.fundingRates.avgRate < -0.01
+                      ? 'Negative funding - shorts are paying. Bullish signal, shorts may get squeezed.'
+                      : 'Funding neutral - no clear directional bias from perpetual markets.'
+                  }
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading funding rates...</div>
+            )}
+          </div>
+
+          {/* Long/Short Ratio */}
+          <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">📊 Long/Short Ratio</h3>
+              {data.longShort && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  data.longShort.overall === 'Bullish' ? 'bg-green-500/20 text-green-400' :
+                  data.longShort.overall === 'Bearish' ? 'bg-red-500/20 text-red-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {data.longShort.overall}
+                </span>
+              )}
+            </div>
+            
+            {data.longShort ? (
+              <div className="space-y-3">
+                {data.longShort.data.slice(0, 6).map((ls) => (
+                  <div key={ls.symbol} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{ls.symbol}</span>
+                      <span className="text-gray-400">
+                        {(ls.longAccount * 100).toFixed(1)}% L / {(ls.shortAccount * 100).toFixed(1)}% S
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden flex">
+                      <div 
+                        className="bg-green-500 h-full transition-all"
+                        style={{ width: `${ls.longAccount * 100}%` }}
+                      />
+                      <div 
+                        className="bg-red-500 h-full transition-all"
+                        style={{ width: `${ls.shortAccount * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
+                  <strong>💡 Trading Insight:</strong> {
+                    data.longShort.overall === 'Bullish'
+                      ? 'More accounts are long - bullish sentiment. But be cautious of overcrowded trades.'
+                      : data.longShort.overall === 'Bearish'
+                      ? 'More accounts are short - bearish sentiment. Watch for potential short squeezes.'
+                      : 'Balanced positioning - no clear retail bias.'
+                  }
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading L/S ratios...</div>
+            )}
+          </div>
+
+          {/* Open Interest */}
+          <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">📈 Open Interest</h3>
+              {data.openInterest?.summary && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  data.openInterest.summary.marketSignal === 'risk_on' ? 'bg-green-500/20 text-green-400' :
+                  data.openInterest.summary.marketSignal === 'risk_off' ? 'bg-red-500/20 text-red-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {data.openInterest.summary.totalFormatted} Total
+                </span>
+              )}
+            </div>
+            
+            {data.openInterest ? (
+              <div className="space-y-2">
+                {data.openInterest.coins.slice(0, 6).map((coin) => (
+                  <div key={coin.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
+                    <div>
+                      <span className="font-medium">{coin.symbol}</span>
+                      <span className={`ml-2 text-xs ${
+                        coin.signal === 'longs_building' ? 'text-green-400' :
+                        coin.signal === 'deleveraging' ? 'text-red-400' :
+                        'text-gray-400'
+                      }`}>
+                        {coin.signal.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-mono ${
+                        coin.change24h > 0 ? 'text-green-400' :
+                        coin.change24h < 0 ? 'text-red-400' :
+                        'text-gray-400'
+                      }`}>
+                        {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
+                  <strong>💡 Trading Insight:</strong> {data.openInterest.summary.interpretation}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading open interest...</div>
+            )}
+          </div>
+
+          {/* Liquidations */}
+          <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">💥 Liquidations (1h)</h3>
+              {data.liquidations?.summary && (
+                <span className={`text-xs px-2 py-1 rounded ${
+                  data.liquidations.summary.marketBias === 'shorts_getting_rekt' ? 'bg-green-500/20 text-green-400' :
+                  data.liquidations.summary.marketBias === 'longs_getting_rekt' ? 'bg-red-500/20 text-red-400' :
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {data.liquidations.summary.totalLiquidations}
+                </span>
+              )}
+            </div>
+            
+            {data.liquidations ? (
+              <div className="space-y-3">
+                {/* Summary bars */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                    <div className="text-xs text-gray-400">Short Liqs</div>
+                    <div className="text-lg font-bold text-green-400">
+                      {data.liquidations.summary.shortLiquidations}
+                    </div>
+                  </div>
+                  <div className="bg-red-500/10 rounded-lg p-3 text-center">
+                    <div className="text-xs text-gray-400">Long Liqs</div>
+                    <div className="text-lg font-bold text-red-400">
+                      {data.liquidations.summary.longLiquidations}
+                    </div>
+                  </div>
+                </div>
+                
+                {data.liquidations.coins.slice(0, 5).map((coin) => (
+                  <div key={coin.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{coin.symbol}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        coin.intensity === 'extreme' ? 'bg-red-500 text-white' :
+                        coin.intensity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {coin.intensity}
+                      </span>
+                    </div>
+                    <span className={`text-sm ${
+                      coin.dominantSide === 'longs' ? 'text-red-400' :
+                      coin.dominantSide === 'shorts' ? 'text-green-400' :
+                      'text-gray-400'
+                    }`}>
+                      {coin.dominantSide === 'longs' ? '🔴 Longs' : 
+                       coin.dominantSide === 'shorts' ? '🟢 Shorts' : 
+                       '⚪ Balanced'}
+                    </span>
+                  </div>
+                ))}
+                
+                <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
+                  <strong>💡 Trading Insight:</strong> {data.liquidations.summary.tradingInsight}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">Loading liquidations...</div>
+            )}
+          </div>
+        </div>
+
+        {/* Trading Signals Summary */}
+        <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
+          <h3 className="text-lg font-bold mb-4">🎯 Combined Trading Signals</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Scalp Bias */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="text-sm text-gray-400 mb-2">SCALP (1-4h)</h4>
+              <div className="text-xl font-bold mb-2">
+                {data.liquidations?.summary.marketBias === 'shorts_getting_rekt' ? '🟢 BULLISH' :
+                 data.liquidations?.summary.marketBias === 'longs_getting_rekt' ? '🔴 BEARISH' :
+                 '⚪ NEUTRAL'}
+              </div>
+              <p className="text-xs text-gray-500">
+                Based on liquidation flow direction
+              </p>
+            </div>
+
+            {/* Swing Bias */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="text-sm text-gray-400 mb-2">SWING (1-7d)</h4>
+              <div className="text-xl font-bold mb-2">
+                {data.openInterest?.summary.marketSignal === 'risk_on' ? '🟢 BULLISH' :
+                 data.openInterest?.summary.marketSignal === 'risk_off' ? '🔴 BEARISH' :
+                 '⚪ NEUTRAL'}
+              </div>
+              <p className="text-xs text-gray-500">
+                Based on OI trends and positioning
+              </p>
+            </div>
+
+            {/* Fade/Contrarian */}
+            <div className="bg-black/30 rounded-lg p-4">
+              <h4 className="text-sm text-gray-400 mb-2">FADE SIGNAL</h4>
+              <div className="text-xl font-bold mb-2">
+                {data.fundingRates && data.fundingRates.avgRate > 0.05 ? '🔴 FADE LONGS' :
+                 data.fundingRates && data.fundingRates.avgRate < -0.02 ? '🟢 FADE SHORTS' :
+                 '⚪ NO FADE'}
+              </div>
+              <p className="text-xs text-gray-500">
+                Contrarian signal from extreme funding
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Educational Footer */}
+        <div className="mt-8 p-6 bg-gray-800/30 rounded-xl border border-gray-700">
+          <h4 className="text-sm font-bold text-gray-400 mb-3">📚 Understanding Crypto Derivatives</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500">
+            <div>
+              <strong className="text-gray-400">Funding Rates:</strong> Periodic payments between longs and shorts. Positive = longs pay shorts (bullish crowd). Negative = shorts pay longs (bearish crowd). Extreme rates often precede reversals.
+            </div>
+            <div>
+              <strong className="text-gray-400">Open Interest:</strong> Total value of outstanding futures contracts. Rising OI + rising price = new money entering longs. Falling OI = positions closing (deleveraging).
+            </div>
+            <div>
+              <strong className="text-gray-400">Long/Short Ratio:</strong> Shows what percentage of accounts are long vs short. Useful for gauging retail sentiment, but smart money often fades extremes.
+            </div>
+            <div>
+              <strong className="text-gray-400">Liquidations:</strong> Forced position closures. Large long liquidations create selling pressure. Large short liquidations create short squeezes.
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+    </div>
+  );
+}
