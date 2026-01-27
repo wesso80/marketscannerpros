@@ -112,6 +112,35 @@ interface TradeLevels {
   reasoning: string;
 }
 
+// PRO TRADER: Composite Scoring Types
+interface SignalComponent {
+  name: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  weight: number;
+  score: number;
+  reason: string;
+}
+
+interface CompositeScore {
+  finalDirection: 'bullish' | 'bearish' | 'neutral';
+  directionScore: number;
+  confidence: number;
+  components: SignalComponent[];
+  conflicts: string[];
+  alignedCount: number;
+  totalSignals: number;
+}
+
+interface StrategyRecommendation {
+  strategy: string;
+  strategyType: 'buy_premium' | 'sell_premium' | 'neutral';
+  reason: string;
+  strikes?: { long?: number; short?: number };
+  riskProfile: 'defined' | 'undefined';
+  maxRisk: string;
+  maxReward: string;
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -137,6 +166,8 @@ interface OptionsSetup {
   unusualActivity: UnusualActivity | null;
   expectedMove: ExpectedMove | null;
   tradeLevels: TradeLevels | null;
+  compositeScore?: CompositeScore;
+  strategyRecommendation?: StrategyRecommendation;
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -722,6 +753,201 @@ export default function OptionsConfluenceScanner() {
                 <span style={{ fontSize: '1.5rem' }}>🎯</span>
                 <h2 style={{ margin: 0, color: '#E9D5FF', fontSize: '1.25rem' }}>Pro Trader Insights</h2>
               </div>
+
+              {/* COMPOSITE SCORE & STRATEGY - TOP OF PRO SECTION */}
+              {result.compositeScore && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  {/* Strategy Recommendation Banner */}
+                  {result.strategyRecommendation && (
+                    <div style={{
+                      background: result.strategyRecommendation.strategyType === 'sell_premium' 
+                        ? 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(249,115,22,0.2) 100%)'
+                        : result.strategyRecommendation.strategyType === 'buy_premium'
+                        ? 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(59,130,246,0.2) 100%)'
+                        : 'linear-gradient(135deg, rgba(100,116,139,0.2) 0%, rgba(148,163,184,0.2) 100%)',
+                      border: `2px solid ${
+                        result.strategyRecommendation.strategyType === 'sell_premium' ? 'rgba(239,68,68,0.5)' :
+                        result.strategyRecommendation.strategyType === 'buy_premium' ? 'rgba(16,185,129,0.5)' :
+                        'rgba(100,116,139,0.5)'
+                      }`,
+                      borderRadius: '16px',
+                      padding: '1.25rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '1.25rem' }}>
+                              {result.strategyRecommendation.strategyType === 'sell_premium' ? '💰' :
+                               result.strategyRecommendation.strategyType === 'buy_premium' ? '📈' : '⚖️'}
+                            </span>
+                            <span style={{ 
+                              fontSize: '1.4rem', 
+                              fontWeight: 'bold',
+                              color: result.strategyRecommendation.strategyType === 'sell_premium' ? '#F87171' :
+                                     result.strategyRecommendation.strategyType === 'buy_premium' ? '#34D399' : '#94A3B8'
+                            }}>
+                              {result.strategyRecommendation.strategy}
+                            </span>
+                            <span style={{
+                              background: result.strategyRecommendation.riskProfile === 'defined' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
+                              color: result.strategyRecommendation.riskProfile === 'defined' ? '#6EE7B7' : '#FCD34D',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '0.7rem',
+                              fontWeight: '600'
+                            }}>
+                              {result.strategyRecommendation.riskProfile === 'defined' ? '✓ Defined Risk' : '⚠️ Undefined Risk'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginBottom: '0.5rem' }}>
+                            {result.strategyRecommendation.reason}
+                          </div>
+                          {result.strategyRecommendation.strikes && (
+                            <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                              {result.strategyRecommendation.strikes.long && (
+                                <span>Long: ${result.strategyRecommendation.strikes.long} </span>
+                              )}
+                              {result.strategyRecommendation.strikes.short && (
+                                <span>Short: ${result.strategyRecommendation.strikes.short}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right', minWidth: '150px' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '0.25rem' }}>Risk / Reward</div>
+                          <div style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>Max Risk: {result.strategyRecommendation.maxRisk}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#6EE7B7' }}>Max Reward: {result.strategyRecommendation.maxReward}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Composite Score Card */}
+                  <div style={{
+                    background: 'rgba(30,41,59,0.8)',
+                    border: '1px solid rgba(168,85,247,0.4)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.25rem' }}>Composite Signal</div>
+                        <div style={{ 
+                          fontSize: '1.75rem', 
+                          fontWeight: 'bold',
+                          color: result.compositeScore.finalDirection === 'bullish' ? '#10B981' :
+                                 result.compositeScore.finalDirection === 'bearish' ? '#EF4444' : '#F59E0B'
+                        }}>
+                          {result.compositeScore.finalDirection.toUpperCase()}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '1.5rem' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ 
+                            fontSize: '1.5rem', 
+                            fontWeight: 'bold',
+                            color: result.compositeScore.directionScore > 0 ? '#10B981' : 
+                                   result.compositeScore.directionScore < 0 ? '#EF4444' : '#F59E0B'
+                          }}>
+                            {result.compositeScore.directionScore > 0 ? '+' : ''}{result.compositeScore.directionScore.toFixed(0)}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Score</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ 
+                            fontSize: '1.5rem', 
+                            fontWeight: 'bold',
+                            color: result.compositeScore.confidence >= 70 ? '#10B981' :
+                                   result.compositeScore.confidence >= 50 ? '#F59E0B' : '#EF4444'
+                          }}>
+                            {result.compositeScore.confidence.toFixed(0)}%
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Confidence</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#A855F7' }}>
+                            {result.compositeScore.alignedCount}/{result.compositeScore.totalSignals}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Aligned</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Signal Components */}
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components:</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+                        {result.compositeScore.components.map((comp, idx) => (
+                          <div key={idx} style={{
+                            background: comp.direction === 'bullish' ? 'rgba(16,185,129,0.15)' :
+                                        comp.direction === 'bearish' ? 'rgba(239,68,68,0.15)' :
+                                        'rgba(100,116,139,0.15)',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '8px',
+                            borderLeft: `3px solid ${
+                              comp.direction === 'bullish' ? '#10B981' :
+                              comp.direction === 'bearish' ? '#EF4444' : '#64748B'
+                            }`,
+                            fontSize: '0.75rem'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                              <span style={{ fontWeight: '600', color: '#E2E8F0' }}>{comp.name}</span>
+                              <span style={{ 
+                                fontWeight: 'bold',
+                                color: comp.direction === 'bullish' ? '#10B981' :
+                                       comp.direction === 'bearish' ? '#EF4444' : '#64748B'
+                              }}>
+                                {comp.direction === 'neutral' ? '—' : comp.direction === 'bullish' ? '↑' : '↓'}
+                                {' '}{Math.abs(comp.score).toFixed(0)}
+                              </span>
+                            </div>
+                            <div style={{ color: '#94A3B8', fontSize: '0.65rem' }}>{comp.reason}</div>
+                            <div style={{ 
+                              marginTop: '0.25rem',
+                              height: '3px',
+                              background: 'rgba(100,116,139,0.3)',
+                              borderRadius: '2px',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                width: `${comp.weight * 100}%`,
+                                height: '100%',
+                                background: comp.direction === 'bullish' ? '#10B981' :
+                                            comp.direction === 'bearish' ? '#EF4444' : '#64748B',
+                                borderRadius: '2px'
+                              }} />
+                            </div>
+                            <div style={{ fontSize: '0.6rem', color: '#64748B', marginTop: '0.15rem' }}>
+                              Weight: {(comp.weight * 100).toFixed(0)}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Conflicts Warning */}
+                    {result.compositeScore.conflicts.length > 0 && (
+                      <div style={{
+                        background: 'rgba(239,68,68,0.15)',
+                        border: '1px solid rgba(239,68,68,0.4)',
+                        borderRadius: '8px',
+                        padding: '0.75rem',
+                      }}>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#FCA5A5', marginBottom: '0.5rem' }}>
+                          ⚠️ Signal Conflicts Detected
+                        </div>
+                        {result.compositeScore.conflicts.map((conflict, idx) => (
+                          <div key={idx} style={{ fontSize: '0.75rem', color: '#FDA4AF', marginBottom: '0.25rem' }}>
+                            {conflict}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
                 

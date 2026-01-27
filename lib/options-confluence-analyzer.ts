@@ -85,6 +85,45 @@ export interface OptionsSetup {
   unusualActivity: UnusualActivity | null;
   expectedMove: ExpectedMove | null;
   tradeLevels: TradeLevels | null;
+  
+  // COMPOSITE SCORING (NEW)
+  compositeScore: CompositeScore | null;
+  strategyRecommendation: StrategyRecommendation | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPOSITE SCORING SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface SignalComponent {
+  name: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  weight: number;           // 0-100 how much this factor contributes
+  score: number;           // -100 to +100 (negative=bearish, positive=bullish)
+  reason: string;
+}
+
+export interface CompositeScore {
+  finalDirection: 'bullish' | 'bearish' | 'neutral';
+  directionScore: number;   // -100 to +100
+  confidence: number;       // 0-100% based on signal alignment
+  components: SignalComponent[];
+  conflicts: string[];      // List of conflicting signals
+  alignedCount: number;     // How many signals agree
+  totalSignals: number;
+}
+
+export interface StrategyRecommendation {
+  strategy: string;         // e.g., "Bull Put Spread", "Long Call", etc.
+  strategyType: 'buy_premium' | 'sell_premium' | 'neutral';
+  reason: string;
+  strikes?: {
+    long?: number;
+    short?: number;
+  };
+  riskProfile: 'defined' | 'undefined';
+  maxRisk: string;
+  maxReward: string;
 }
 
 export interface OpenInterestData {
@@ -976,6 +1015,440 @@ function calculateTradeLevels(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// COMPOSITE SCORING SYSTEM - WEIGHTED MULTI-SIGNAL ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calculates a weighted composite score from all available signals.
+ * 
+ * Weights:
+ * - Unusual Activity: 25% (smart money is betting real $)
+ * - O/I Sentiment (P/C ratio): 20%
+ * - Time Confluence: 20%
+ * - IV Environment: 15%
+ * - Price vs Max Pain: 10%
+ * - R:R Profile: 10%
+ */
+function calculateCompositeScore(
+  confluenceResult: HierarchicalScanResult,
+  oiAnalysis: any,
+  unusualActivity: any,
+  ivRank: any,
+  tradeLevels: any,
+  maxPainData?: { maxPain: number; currentPrice: number }
+): CompositeScore {
+  const components: SignalComponent[] = [];
+  const conflicts: string[] = [];
+  let totalWeightedScore = 0;
+  let totalWeight = 0;
+
+  // 1. UNUSUAL ACTIVITY (25% weight) - Smart money signal
+  const unusualWeight = 0.25;
+  let unusualScore = 0;
+  let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  
+  if (unusualActivity.hasUnusualActivity) {
+    const callBias = unusualActivity.callPremiumTotal > unusualActivity.putPremiumTotal;
+    const premiumRatio = callBias 
+      ? unusualActivity.callPremiumTotal / Math.max(unusualActivity.putPremiumTotal, 1)
+      : unusualActivity.putPremiumTotal / Math.max(unusualActivity.callPremiumTotal, 1);
+    
+    unusualScore = Math.min(100, premiumRatio * 25); // Scale up to 100
+    unusualDirection = callBias ? 'bullish' : 'bearish';
+    
+    if (!callBias) unusualScore = -unusualScore; // Negative for bearish
+    
+    components.push({
+      name: 'Unusual Activity',
+      direction: unusualDirection,
+      weight: unusualWeight,
+      score: unusualScore,
+      reason: `$${(callBias ? unusualActivity.callPremiumTotal : unusualActivity.putPremiumTotal).toLocaleString()} in ${callBias ? 'call' : 'put'} premium flow`
+    });
+    totalWeightedScore += unusualScore * unusualWeight;
+    totalWeight += unusualWeight;
+  } else {
+    components.push({
+      name: 'Unusual Activity',
+      direction: 'neutral',
+      weight: unusualWeight,
+      score: 0,
+      reason: 'No unusual activity detected'
+    });
+  }
+
+  // 2. O/I SENTIMENT - Put/Call Ratio (20% weight)
+  const oiWeight = 0.20;
+  let oiScore = 0;
+  let oiDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  
+  if (oiAnalysis && oiAnalysis.avgPCRatio) {
+    const pcRatio = oiAnalysis.avgPCRatio;
+    // P/C < 0.7 = bullish (puts oversold relative to calls)
+    // P/C > 1.0 = bearish (heavy put buying)
+    // P/C 0.7-1.0 = neutral
+    if (pcRatio < 0.7) {
+      oiScore = Math.min(100, (0.7 - pcRatio) * 200);
+      oiDirection = 'bullish';
+    } else if (pcRatio > 1.0) {
+      oiScore = -Math.min(100, (pcRatio - 1.0) * 100);
+      oiDirection = 'bearish';
+    } else {
+      oiScore = 0;
+      oiDirection = 'neutral';
+    }
+    
+    components.push({
+      name: 'O/I Sentiment',
+      direction: oiDirection,
+      weight: oiWeight,
+      score: oiScore,
+      reason: `P/C Ratio: ${pcRatio.toFixed(2)} - ${oiDirection === 'bullish' ? 'Call-heavy positioning' : oiDirection === 'bearish' ? 'Put-heavy positioning' : 'Balanced positioning'}`
+    });
+    totalWeightedScore += oiScore * oiWeight;
+    totalWeight += oiWeight;
+  }
+
+  // 3. TIME CONFLUENCE (20% weight)
+  const confluenceWeight = 0.20;
+  let confluenceScore = 0;
+  let confluenceDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  
+  if (confluenceResult.prediction) {
+    const pred = confluenceResult.prediction;
+    confluenceDirection = pred.direction;
+    confluenceScore = pred.confidence * (pred.direction === 'bullish' ? 1 : pred.direction === 'bearish' ? -1 : 0);
+    
+    components.push({
+      name: 'Time Confluence',
+      direction: confluenceDirection,
+      weight: confluenceWeight,
+      score: confluenceScore,
+      reason: `Timeframes align ${pred.direction} (${pred.confidence.toFixed(0)}% conf)`
+    });
+    totalWeightedScore += confluenceScore * confluenceWeight;
+    totalWeight += confluenceWeight;
+  }
+
+  // 4. IV ENVIRONMENT (15% weight) - Determines strategy type, not direction
+  const ivWeight = 0.15;
+  let ivScore = 0;
+  let ivDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  
+  if (ivRank) {
+    // IV doesn't determine direction, but affects confidence
+    // High IV = higher confidence in mean reversion trades
+    // Low IV = lower risk, good for directional bets
+    const ivPercentile = ivRank.rank || 50;
+    
+    // For composite score, IV confirms or denies urgency
+    // High IV (>70) with bullish signals = careful (premium expensive)
+    // Low IV (<30) with bullish signals = great (cheap premium)
+    if (ivPercentile > 70) {
+      ivScore = 20; // Slight positive - volatility contraction likely
+      ivDirection = 'neutral'; // IV doesn't pick direction
+    } else if (ivPercentile < 30) {
+      ivScore = 30; // Good for buying premium
+      ivDirection = 'neutral';
+    } else {
+      ivScore = 10;
+      ivDirection = 'neutral';
+    }
+    
+    components.push({
+      name: 'IV Environment',
+      direction: 'neutral', // IV doesn't pick direction
+      weight: ivWeight,
+      score: Math.abs(ivScore), // Always positive contribution to confidence
+      reason: `IV Rank: ${ivPercentile.toFixed(0)}% - ${ivPercentile > 70 ? 'SELL premium strategies' : ivPercentile < 30 ? 'BUY premium strategies' : 'Either approach works'}`
+    });
+    // IV adds to confidence, not direction
+    totalWeight += ivWeight;
+  }
+
+  // 5. PRICE VS MAX PAIN (10% weight)
+  const maxPainWeight = 0.10;
+  let maxPainScore = 0;
+  let maxPainDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  
+  if (maxPainData && maxPainData.maxPain > 0) {
+    const priceDiff = ((maxPainData.currentPrice - maxPainData.maxPain) / maxPainData.maxPain) * 100;
+    
+    // Price below max pain = bullish (tendency to rise to max pain)
+    // Price above max pain = bearish (tendency to fall to max pain)
+    if (priceDiff < -2) {
+      maxPainScore = Math.min(100, Math.abs(priceDiff) * 10);
+      maxPainDirection = 'bullish';
+    } else if (priceDiff > 2) {
+      maxPainScore = -Math.min(100, priceDiff * 10);
+      maxPainDirection = 'bearish';
+    } else {
+      maxPainScore = 0;
+      maxPainDirection = 'neutral';
+    }
+    
+    components.push({
+      name: 'Max Pain Position',
+      direction: maxPainDirection,
+      weight: maxPainWeight,
+      score: maxPainScore,
+      reason: `Price ${priceDiff > 0 ? 'above' : 'below'} max pain ($${maxPainData.maxPain.toFixed(2)}) by ${Math.abs(priceDiff).toFixed(1)}%`
+    });
+    totalWeightedScore += maxPainScore * maxPainWeight;
+    totalWeight += maxPainWeight;
+  }
+
+  // 6. R:R PROFILE (10% weight)
+  const rrWeight = 0.10;
+  let rrScore = 0;
+  
+  if (tradeLevels && tradeLevels.riskRewardRatio) {
+    const rr = tradeLevels.riskRewardRatio;
+    // R:R >= 2:1 = excellent, boosts confidence
+    // R:R >= 1:1 = acceptable
+    // R:R < 1:1 = poor, reduces confidence
+    if (rr >= 2) {
+      rrScore = 50 + (rr - 2) * 10; // 50-100
+    } else if (rr >= 1) {
+      rrScore = rr * 50; // 50
+    } else {
+      rrScore = -50; // Negative for bad R:R
+    }
+    
+    components.push({
+      name: 'Risk:Reward',
+      direction: rr >= 1 ? 'bullish' : 'bearish', // Favorable or not
+      weight: rrWeight,
+      score: rrScore,
+      reason: `R:R Ratio: ${rr.toFixed(1)}:1 - ${rr >= 2 ? 'Excellent' : rr >= 1 ? 'Acceptable' : 'POOR - avoid'}`
+    });
+    totalWeightedScore += rrScore * rrWeight;
+    totalWeight += rrWeight;
+  }
+
+  // Calculate final weighted score
+  const normalizedScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
+  
+  // Determine final direction based on weighted score
+  let finalDirection: 'bullish' | 'bearish' | 'neutral';
+  if (normalizedScore > 15) {
+    finalDirection = 'bullish';
+  } else if (normalizedScore < -15) {
+    finalDirection = 'bearish';
+  } else {
+    finalDirection = 'neutral';
+  }
+
+  // Count aligned signals
+  const bullishSignals = components.filter(c => c.direction === 'bullish').length;
+  const bearishSignals = components.filter(c => c.direction === 'bearish').length;
+  const alignedCount = Math.max(bullishSignals, bearishSignals);
+  
+  // Detect conflicts
+  if (bullishSignals > 0 && bearishSignals > 0) {
+    const bullishComponents = components.filter(c => c.direction === 'bullish').map(c => c.name);
+    const bearishComponents = components.filter(c => c.direction === 'bearish').map(c => c.name);
+    conflicts.push(`⚠️ CONFLICT: ${bullishComponents.join(', ')} signal BULLISH but ${bearishComponents.join(', ')} signal BEARISH`);
+  }
+
+  // Check for IV vs direction conflict
+  if (ivRank && ivRank.rank > 70 && finalDirection !== 'neutral') {
+    conflicts.push(`⚠️ HIGH IV WARNING: Consider selling premium (spreads) rather than buying naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
+  }
+
+  // Check for poor R:R
+  if (tradeLevels && tradeLevels.riskRewardRatio < 1) {
+    conflicts.push(`⚠️ POOR R:R: Risk:Reward ratio of ${tradeLevels.riskRewardRatio.toFixed(1)}:1 is unfavorable`);
+  }
+
+  // Calculate confidence based on signal alignment
+  const totalSignals = components.filter(c => c.direction !== 'neutral').length;
+  const confidence = totalSignals > 0 ? (alignedCount / totalSignals) * 100 : 50;
+
+  console.log(`🎯 Composite Score: ${normalizedScore.toFixed(1)} → ${finalDirection.toUpperCase()} (${confidence.toFixed(0)}% confidence, ${conflicts.length} conflicts)`);
+
+  return {
+    finalDirection,
+    directionScore: normalizedScore,
+    confidence,
+    components,
+    conflicts,
+    alignedCount,
+    totalSignals: components.length
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRATEGY RECOMMENDATION BASED ON IV ENVIRONMENT
+// ═══════════════════════════════════════════════════════════════════════════
+
+function recommendStrategy(
+  compositeScore: CompositeScore,
+  ivRank: any,
+  currentPrice: number,
+  atmStrike?: number
+): StrategyRecommendation {
+  const direction = compositeScore.finalDirection;
+  const ivPercentile = ivRank?.rank || 50;
+  const confidence = compositeScore.confidence;
+  
+  const strike = atmStrike || Math.round(currentPrice);
+  const spreadWidth = Math.round(currentPrice * 0.02); // ~2% width for spreads
+
+  // High IV environment (>70%) - SELL premium
+  if (ivPercentile > 70) {
+    if (direction === 'bullish') {
+      return {
+        strategy: 'Bull Put Spread',
+        strategyType: 'sell_premium',
+        reason: `High IV (${ivPercentile.toFixed(0)}%) + Bullish bias → Sell put spreads to collect premium`,
+        strikes: { short: strike, long: strike - spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxReward: `Premium collected (typically 30-40% of width)`
+      };
+    } else if (direction === 'bearish') {
+      return {
+        strategy: 'Bear Call Spread',
+        strategyType: 'sell_premium',
+        reason: `High IV (${ivPercentile.toFixed(0)}%) + Bearish bias → Sell call spreads to collect premium`,
+        strikes: { short: strike, long: strike + spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxReward: `Premium collected (typically 30-40% of width)`
+      };
+    } else {
+      return {
+        strategy: 'Iron Condor',
+        strategyType: 'sell_premium',
+        reason: `High IV (${ivPercentile.toFixed(0)}%) + Neutral bias → Sell both sides`,
+        strikes: { short: strike, long: undefined },
+        riskProfile: 'defined',
+        maxRisk: `Spread width minus premium collected`,
+        maxReward: `Total premium collected from both spreads`
+      };
+    }
+  }
+  
+  // Low IV environment (<30%) - BUY premium
+  if (ivPercentile < 30) {
+    if (direction === 'bullish') {
+      if (confidence > 70) {
+        return {
+          strategy: 'Long Call',
+          strategyType: 'buy_premium',
+          reason: `Low IV (${ivPercentile.toFixed(0)}%) + Strong Bullish (${confidence.toFixed(0)}% conf) → Buy calls for max upside`,
+          strikes: { long: strike },
+          riskProfile: 'defined',
+          maxRisk: `Premium paid (100% of investment)`,
+          maxReward: `Unlimited upside`
+        };
+      } else {
+        return {
+          strategy: 'Call Debit Spread',
+          strategyType: 'buy_premium',
+          reason: `Low IV (${ivPercentile.toFixed(0)}%) + Moderate Bullish → Reduced cost spread`,
+          strikes: { long: strike, short: strike + spreadWidth },
+          riskProfile: 'defined',
+          maxRisk: `Net debit paid`,
+          maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+        };
+      }
+    } else if (direction === 'bearish') {
+      if (confidence > 70) {
+        return {
+          strategy: 'Long Put',
+          strategyType: 'buy_premium',
+          reason: `Low IV (${ivPercentile.toFixed(0)}%) + Strong Bearish (${confidence.toFixed(0)}% conf) → Buy puts for max downside capture`,
+          strikes: { long: strike },
+          riskProfile: 'defined',
+          maxRisk: `Premium paid (100% of investment)`,
+          maxReward: `Strike price minus premium (stock to zero)`
+        };
+      } else {
+        return {
+          strategy: 'Put Debit Spread',
+          strategyType: 'buy_premium',
+          reason: `Low IV (${ivPercentile.toFixed(0)}%) + Moderate Bearish → Reduced cost spread`,
+          strikes: { long: strike, short: strike - spreadWidth },
+          riskProfile: 'defined',
+          maxRisk: `Net debit paid`,
+          maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+        };
+      }
+    } else {
+      return {
+        strategy: 'Long Straddle',
+        strategyType: 'buy_premium',
+        reason: `Low IV (${ivPercentile.toFixed(0)}%) + Neutral → Bet on volatility expansion`,
+        strikes: { long: strike },
+        riskProfile: 'defined',
+        maxRisk: `Total premium paid for call + put`,
+        maxReward: `Unlimited in either direction`
+      };
+    }
+  }
+  
+  // Medium IV environment (30-70%) - Either approach based on direction strength
+  if (direction === 'bullish') {
+    if (confidence > 60) {
+      return {
+        strategy: 'Call Debit Spread',
+        strategyType: 'buy_premium',
+        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bullish → Balanced risk/reward with spread`,
+        strikes: { long: strike, short: strike + spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `Net debit paid`,
+        maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+      };
+    } else {
+      return {
+        strategy: 'Bull Put Spread',
+        strategyType: 'sell_premium',
+        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bullish → Collect some premium while bullish`,
+        strikes: { short: strike, long: strike - spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxReward: `Premium collected`
+      };
+    }
+  } else if (direction === 'bearish') {
+    if (confidence > 60) {
+      return {
+        strategy: 'Put Debit Spread',
+        strategyType: 'buy_premium',
+        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bearish → Balanced risk/reward with spread`,
+        strikes: { long: strike, short: strike - spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `Net debit paid`,
+        maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+      };
+    } else {
+      return {
+        strategy: 'Bear Call Spread',
+        strategyType: 'sell_premium',
+        reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bearish → Collect some premium while bearish`,
+        strikes: { short: strike, long: strike + spreadWidth },
+        riskProfile: 'defined',
+        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxReward: `Premium collected`
+      };
+    }
+  }
+  
+  // Default neutral
+  return {
+    strategy: 'Iron Condor',
+    strategyType: 'neutral',
+    reason: `Neutral bias with medium IV → Sell both sides for premium`,
+    strikes: { short: strike },
+    riskProfile: 'defined',
+    maxRisk: `Spread width minus premium collected`,
+    maxReward: `Total premium collected`
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STRIKE SELECTION BASED ON 50% LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1453,10 +1926,39 @@ export class OptionsConfluenceAnalyzer {
       openInterestAnalysis?.maxPainStrike || null
     );
     
+    // PRO TRADER: Calculate composite score from all signals
+    const compositeScore = calculateCompositeScore(
+      confluenceResult,
+      openInterestAnalysis ? {
+        avgPCRatio: openInterestAnalysis.pcRatio,
+        sentiment: openInterestAnalysis.sentiment
+      } : null,
+      unusualActivity || { hasUnusualActivity: false, callPremiumTotal: 0, putPremiumTotal: 0 },
+      ivAnalysis ? { rank: ivAnalysis.ivRank } : null,
+      tradeLevels,
+      openInterestAnalysis ? { 
+        maxPain: openInterestAnalysis.maxPainStrike || 0, 
+        currentPrice 
+      } : undefined
+    );
+    
+    // PRO TRADER: Get strategy recommendation based on IV environment and composite score
+    const strategyRecommendation = recommendStrategy(
+      compositeScore,
+      ivAnalysis ? { rank: ivAnalysis.ivRank } : null,
+      currentPrice,
+      primaryStrike?.strike
+    );
+    
+    // Use composite direction instead of just confluence direction
+    const finalDirection = compositeScore.finalDirection === 'bullish' ? 'bullish' 
+      : compositeScore.finalDirection === 'bearish' ? 'bearish' 
+      : direction; // Fall back to confluence if neutral
+    
     return {
       symbol,
       currentPrice,
-      direction,
+      direction: finalDirection,
       confluenceStack: decompression.activeCount,
       decompressingTFs: decompression.decompressions
         .filter(d => d.isDecompressing)
@@ -1480,6 +1982,8 @@ export class OptionsConfluenceAnalyzer {
       unusualActivity,
       expectedMove,
       tradeLevels,
+      compositeScore,
+      strategyRecommendation,
     };
   }
   
