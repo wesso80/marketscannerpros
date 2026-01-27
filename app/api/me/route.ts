@@ -4,7 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 
 // Admin emails that can access all features for testing
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "bradleywessling@yahoo.com.au").split(",").map(e => e.trim().toLowerCase());
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "bradleywessling@yahoo.com.au,arcabulls@gmail.com").split(",").map(e => e.trim().toLowerCase());
 
 async function getEmailFromWorkspace(workspaceId: string): Promise<string | null> {
   try {
