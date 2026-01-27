@@ -41,6 +41,7 @@ interface EntryTimingAdvice {
   urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade';
   reason: string;
   avoidWindows: string[];
+  marketSession?: 'premarket' | 'regular' | 'afterhours' | 'closed';
 }
 
 interface HighOIStrike {
@@ -774,7 +775,61 @@ export default function OptionsConfluenceScanner() {
                 borderRadius: '16px',
                 padding: '1.5rem',
               }}>
-                <h3 style={{ margin: '0 0 0.75rem 0', color: '#E2E8F0', fontSize: '1rem' }}>Entry Timing</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: '1rem' }}>Entry Timing</h3>
+                  
+                  {/* Market Session Badge */}
+                  {result.entryTiming.marketSession && (
+                    <span style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 'bold',
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: result.entryTiming.marketSession === 'regular' 
+                        ? 'rgba(16,185,129,0.2)' 
+                        : result.entryTiming.marketSession === 'closed'
+                        ? 'rgba(239,68,68,0.2)'
+                        : 'rgba(245,158,11,0.2)',
+                      color: result.entryTiming.marketSession === 'regular' 
+                        ? '#10B981' 
+                        : result.entryTiming.marketSession === 'closed'
+                        ? '#EF4444'
+                        : '#F59E0B',
+                      border: `1px solid ${
+                        result.entryTiming.marketSession === 'regular' 
+                          ? 'rgba(16,185,129,0.4)' 
+                          : result.entryTiming.marketSession === 'closed'
+                          ? 'rgba(239,68,68,0.4)'
+                          : 'rgba(245,158,11,0.4)'
+                      }`
+                    }}>
+                      {result.entryTiming.marketSession === 'regular' ? '🟢 REGULAR HOURS' :
+                       result.entryTiming.marketSession === 'premarket' ? '🌅 PRE-MARKET' :
+                       result.entryTiming.marketSession === 'afterhours' ? '🌙 AFTER-HOURS' :
+                       '🔒 CLOSED'}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Extended hours warning */}
+                {result.entryTiming.marketSession && result.entryTiming.marketSession !== 'regular' && (
+                  <div style={{
+                    background: 'rgba(245,158,11,0.15)',
+                    border: '1px solid rgba(245,158,11,0.4)',
+                    borderRadius: '8px',
+                    padding: '0.5rem',
+                    marginBottom: '0.75rem',
+                    fontSize: '0.7rem',
+                    color: '#FCD34D'
+                  }}>
+                    {result.entryTiming.marketSession === 'premarket' && 
+                      '⚠️ Pre-market (4am-9:30am EST) - Options have no liquidity. Prepare orders for market open.'}
+                    {result.entryTiming.marketSession === 'afterhours' && 
+                      '⚠️ After-hours (4pm-8pm EST) - Very low options liquidity. Wide spreads, poor fills.'}
+                    {result.entryTiming.marketSession === 'closed' && 
+                      '⚠️ Market closed - Price may gap at next open. Set limit orders, not market orders.'}
+                  </div>
+                )}
                 
                 {/* Low candle confluence warning */}
                 {result.candleCloseConfluence && result.candleCloseConfluence.confluenceScore < 20 && (
@@ -805,9 +860,19 @@ export default function OptionsConfluenceScanner() {
                 <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
                   Window: {result.entryTiming.idealEntryWindow}
                 </div>
-                {result.entryTiming.avoidWindows.length > 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#F97316', marginTop: '0.5rem' }}>
-                    ⚠️ {result.entryTiming.avoidWindows[0]}
+                {/* Show all avoid windows that aren't extended hours (those are shown above) */}
+                {result.entryTiming.avoidWindows
+                  .filter(w => !w.includes('PRE-MARKET') && !w.includes('AFTER-HOURS') && !w.includes('MARKET CLOSED'))
+                  .length > 0 && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    {result.entryTiming.avoidWindows
+                      .filter(w => !w.includes('PRE-MARKET') && !w.includes('AFTER-HOURS') && !w.includes('MARKET CLOSED'))
+                      .map((warning, idx) => (
+                        <div key={idx} style={{ fontSize: '0.7rem', color: '#F97316', marginTop: idx > 0 ? '0.25rem' : 0 }}>
+                          {warning}
+                        </div>
+                      ))
+                    }
                   </div>
                 )}
               </div>

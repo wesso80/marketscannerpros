@@ -204,6 +204,7 @@ export interface EntryTimingAdvice {
   urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade';
   reason: string;
   avoidWindows: string[];
+  marketSession?: 'premarket' | 'regular' | 'afterhours' | 'closed';
 }
 
 export interface OptionsChainData {
@@ -1737,9 +1738,13 @@ function calculateEntryTiming(
   const minute = now.getMinutes();
   const currentHourDecimal = hour + minute / 60;
   
-  // EST market hours (adjust for timezone)
-  const estOffset = -5;
-  const estHour = (hour + estOffset + 24) % 24;
+  // Convert to EST (Eastern Standard Time)
+  // Note: This is a simplified conversion - in production you'd use a timezone library
+  const estOffset = -5; // EST is UTC-5 (or -4 during DST)
+  const utcHour = now.getUTCHours();
+  const utcMin = now.getUTCMinutes();
+  const estHour = (utcHour + 24 + estOffset) % 24;
+  const estTimeDecimal = estHour + utcMin / 60;
   
   const decompCount = confluenceResult.decompression.activeCount;
   const activeDecomps = confluenceResult.decompression.decompressions.filter(d => d.isDecompressing);
@@ -1752,9 +1757,49 @@ function calculateEntryTiming(
   
   const avoidWindows: string[] = [];
   
+  // ═══════════════════════════════════════════════════════════════════════
+  // EXTENDED HOURS DETECTION (EST)
+  // Pre-market:  4:00 AM - 9:30 AM EST
+  // Regular:     9:30 AM - 4:00 PM EST
+  // After-hours: 4:00 PM - 8:00 PM EST
+  // Closed:      8:00 PM - 4:00 AM EST
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  type MarketSession = 'premarket' | 'regular' | 'afterhours' | 'closed';
+  let marketSession: MarketSession = 'closed';
+  let sessionWarning: string | null = null;
+  
+  if (estTimeDecimal >= 4 && estTimeDecimal < 9.5) {
+    marketSession = 'premarket';
+    sessionWarning = '🌅 PRE-MARKET SESSION (4am-9:30am EST) - Lower liquidity, wider spreads. Options typically don\'t trade until regular hours.';
+  } else if (estTimeDecimal >= 9.5 && estTimeDecimal < 16) {
+    marketSession = 'regular';
+    // No warning for regular hours
+  } else if (estTimeDecimal >= 16 && estTimeDecimal < 20) {
+    marketSession = 'afterhours';
+    sessionWarning = '🌙 AFTER-HOURS SESSION (4pm-8pm EST) - Lower liquidity, wider bid/ask spreads. Avoid large orders. Options may not execute.';
+  } else {
+    marketSession = 'closed';
+    sessionWarning = '🔒 MARKET CLOSED - Current prices may gap at next open. Extended hours trading has very low liquidity.';
+  }
+  
+  if (sessionWarning) {
+    avoidWindows.push(sessionWarning);
+  }
+  
+  // First 30 mins (9:30-10:00am EST) - high volatility
+  if (estTimeDecimal >= 9.5 && estTimeDecimal < 10) {
+    avoidWindows.push('🚀 Opening volatility (9:30-10am EST) - Wait for direction to establish');
+  }
+  
+  // Last 30 mins (3:30-4:00pm EST) - position squaring
+  if (estTimeDecimal >= 15.5 && estTimeDecimal < 16) {
+    avoidWindows.push('⏰ Power hour (3:30-4pm EST) - Increased volatility from position squaring');
+  }
+  
   // Lunch lull (12pm-2pm EST)
-  if (estHour >= 12 && estHour < 14) {
-    avoidWindows.push('Currently in lunch lull (12-2pm EST) - lower volume');
+  if (estTimeDecimal >= 12 && estTimeDecimal < 14) {
+    avoidWindows.push('😴 Lunch lull (12-2pm EST) - Lower volume, choppy price action');
   }
   
   // Get candle close confluence score (0-100)
@@ -1762,12 +1807,23 @@ function calculateEntryTiming(
   const hasStrongCandleConfluence = candleScore >= 25;
   const hasWeakCandleConfluence = candleScore < 15;
   
-  // Determine urgency - now factors in candle close confluence
+  // Determine urgency - now factors in candle close confluence AND market session
   let urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade' = 'wait';
   let reason = '';
   let idealWindow = '';
   
-  if (confluenceResult.signalStrength === 'no_signal' || 
+  // ═══════════════════════════════════════════════════════════════════════
+  // EXTENDED HOURS OVERRIDE - downgrade urgency outside regular hours
+  // ═══════════════════════════════════════════════════════════════════════
+  const isExtendedHours = marketSession !== 'regular';
+  const isMarketClosed = marketSession === 'closed';
+  
+  if (isMarketClosed) {
+    // Market fully closed - no trading
+    urgency = 'wait';
+    reason = 'Market closed - prepare order for next session';
+    idealWindow = 'Next regular market open (9:30am EST)';
+  } else if (confluenceResult.signalStrength === 'no_signal' || 
       confluenceResult.decompression.netPullDirection === 'neutral') {
     urgency = 'no_trade';
     reason = 'No clear directional signal - wait for confluence';
@@ -1781,19 +1837,38 @@ function calculateEntryTiming(
     idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Wait for TF alignment';
     avoidWindows.push(`⚠️ Candle Close Score only ${candleScore}% - higher probability when TFs close together`);
   } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60 && hasStrongCandleConfluence) {
-    urgency = 'immediate';
-    reason = `${decompCount} TFs decompressing + ${candleScore}% candle confluence - prime entry window`;
-    idealWindow = nearestClose ? `Before ${nearestClose}m TF close` : 'Now';
+    // Prime conditions - but check extended hours
+    if (isExtendedHours) {
+      urgency = 'wait';
+      reason = `Strong confluence but in ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} - wait for regular hours for options liquidity`;
+      idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
+    } else {
+      urgency = 'immediate';
+      reason = `${decompCount} TFs decompressing + ${candleScore}% candle confluence - prime entry window`;
+      idealWindow = nearestClose ? `Before ${nearestClose}m TF close` : 'Now';
+    }
   } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60) {
     // Good decompression but weak candle confluence - downgrade to within_hour
-    urgency = 'within_hour';
-    reason = `${decompCount} TFs decompressing but candle confluence only ${candleScore}% - wait for better alignment`;
-    const bestWindow = candleCloseConfluence?.bestEntryWindow;
-    idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Within 30 minutes';
+    if (isExtendedHours) {
+      urgency = 'wait';
+      reason = `Good confluence but in ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} - options lack liquidity`;
+      idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
+    } else {
+      urgency = 'within_hour';
+      reason = `${decompCount} TFs decompressing but candle confluence only ${candleScore}% - wait for better alignment`;
+      const bestWindow = candleCloseConfluence?.bestEntryWindow;
+      idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Within 30 minutes';
+    }
   } else if (decompCount >= 2) {
-    urgency = 'within_hour';
-    reason = 'Good confluence building - enter on slight pullback';
-    idealWindow = nearestClose ? `Within ${Math.min(nearestClose, 30)} minutes` : 'Within 30 minutes';
+    if (isExtendedHours) {
+      urgency = 'wait';
+      reason = `Confluence building but ${marketSession === 'premarket' ? 'pre-market' : 'after-hours'} session - prepare for regular hours`;
+      idealWindow = marketSession === 'premarket' ? 'At or after 9:30am EST' : 'Tomorrow';
+    } else {
+      urgency = 'within_hour';
+      reason = 'Good confluence building - enter on slight pullback';
+      idealWindow = nearestClose ? `Within ${Math.min(nearestClose, 30)} minutes` : 'Within 30 minutes';
+    }
   } else if (nearestClose && nearestClose <= 15) {
     urgency = 'within_hour';
     reason = `TF close in ${nearestClose}m - wait for post-close confirmation`;
@@ -1809,6 +1884,7 @@ function calculateEntryTiming(
     urgency,
     reason,
     avoidWindows,
+    marketSession, // Include session info in response
   };
 }
 
