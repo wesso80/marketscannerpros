@@ -51,7 +51,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </div>
             <h3 className="text-xl font-semibold">Pro</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-emerald-400">$9.99</span>
+              <span className="text-emerald-400">$14.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">
@@ -84,7 +84,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </div>
             <h3 className="text-xl font-semibold text-blue-400">Pro Trader</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-blue-400">$19.99</span>
+              <span className="text-blue-400">$29.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <ul className="mt-6 space-y-3">

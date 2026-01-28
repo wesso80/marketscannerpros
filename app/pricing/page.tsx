@@ -256,7 +256,7 @@ export default function PricingPage() {
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$9.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$14.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
@@ -321,7 +321,7 @@ export default function PricingPage() {
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$19.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$29.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>

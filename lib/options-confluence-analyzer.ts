@@ -674,9 +674,21 @@ function analyzeOpenInterest(
     });
   }
   
-  const topStrikes = contractsWithGreeks.slice(0, 10);
+  // Filter to strikes within 15% of current price for display (more relevant to traders)
+  // This prevents showing far OTM lottery tickets that distort the view
+  const relevantStrikes = contractsWithGreeks.filter(c => {
+    const distance = Math.abs(c.strike - currentPrice) / currentPrice;
+    return distance <= 0.15;  // Within 15% of current price
+  });
   
-  console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}, Contracts w/Greeks=${topStrikes.length}`);
+  // If filtering removes too many, fall back to proximity-based selection
+  const topStrikes = relevantStrikes.length >= 6 
+    ? relevantStrikes.slice(0, 10)
+    : contractsWithGreeks
+        .sort((a, b) => Math.abs(a.strike - currentPrice) - Math.abs(b.strike - currentPrice))
+        .slice(0, 10);
+  
+  console.log(`📊 O/I Summary (${expirationDate}): Calls=${totalCallOI.toLocaleString()}, Puts=${totalPutOI.toLocaleString()}, P/C=${pcRatio.toFixed(2)}, MaxPain=$${maxPainStrike}, Top strikes within 15%: ${topStrikes.length}`);
   
   return {
     totalCallOI,

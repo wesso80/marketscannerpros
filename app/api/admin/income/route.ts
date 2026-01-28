@@ -11,8 +11,8 @@ function verifyAdmin(req: NextRequest): boolean {
 
 // Subscription pricing
 const SUBSCRIPTION_PRICES = {
-  pro: 9.99,
-  pro_trader: 19.99,
+  pro: 14.99,
+  pro_trader: 29.99,
   free: 0,
 };
 

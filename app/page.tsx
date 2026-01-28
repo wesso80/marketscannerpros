@@ -474,7 +474,7 @@ export default function Home() {
               
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$9.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$14.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
@@ -544,7 +544,7 @@ export default function Home() {
             }}>
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$19.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$29.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>

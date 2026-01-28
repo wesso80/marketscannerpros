@@ -74,11 +74,11 @@ export default function TermsPage() {
 
           <Section id="billing" title="3. Subscriptions & Billing">
             <ul style={ulStyle}>
-              <li style={liStyle}>The App offers Free, Pro ($9.99/mo), and Pro Trader ($19.99/mo) plans.</li>
+              <li style={liStyle}>The App offers Free, Pro ($14.99/mo), and Pro Trader ($29.99/mo) plans.</li>
               <li style={liStyle}>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with MSP Analyst.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Plan ($9.99/mo):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Trader Plan ($19.99/mo):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Plan ($14.99/mo):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Trader Plan ($29.99/mo):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
               <li style={liStyle}>After your trial period ends, you will be automatically charged the monthly subscription fee unless you cancel before the trial expires.</li>
