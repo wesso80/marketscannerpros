@@ -478,7 +478,7 @@ export default function Home() {
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#22c55e' }}>$99.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%)</span>
+                or <span style={{ color: '#22c55e' }}>$134.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
@@ -548,7 +548,7 @@ export default function Home() {
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#60a5fa' }}>$199.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%)</span>
+                or <span style={{ color: '#60a5fa' }}>$269.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>

@@ -260,7 +260,7 @@ export default function PricingPage() {
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$99.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%!)</span>
+              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$134.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -325,7 +325,7 @@ export default function PricingPage() {
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$199.99/year</span> <span style={{ color: '#fbbf24' }}>(save 17%!)</span>
+              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$269.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
