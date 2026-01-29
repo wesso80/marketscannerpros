@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
+import { getPriceBySymbol } from '@/lib/coingecko';
 
 /**
  * Alert Price Checker
@@ -123,14 +124,9 @@ async function checkAlerts(req: NextRequest) {
 async function fetchPrice(symbol: string, assetType: string): Promise<number | null> {
   try {
     if (assetType === 'crypto') {
-      // Use Binance for crypto
-      const res = await fetch(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}USDT`,
-        { next: { revalidate: 0 } }
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
-      return parseFloat(data.price);
+      // Use CoinGecko commercial API for crypto prices
+      const result = await getPriceBySymbol(symbol);
+      return result?.price ?? null;
     } else {
       // Use Alpha Vantage for stocks
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;

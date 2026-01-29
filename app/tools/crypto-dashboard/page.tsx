@@ -59,20 +59,24 @@ export default function CryptoDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [fundingRes, lsRes, oiRes, liqRes, btcRes, ethRes, solRes] = await Promise.all([
+      // Use internal APIs that leverage CoinGecko commercial plan
+      const [fundingRes, lsRes, oiRes, liqRes, heatmapRes] = await Promise.all([
         fetch('/api/funding-rates').then(r => r.json()).catch(() => null),
         fetch('/api/long-short-ratio').then(r => r.json()).catch(() => null),
         fetch('/api/crypto/open-interest').then(r => r.json()).catch(() => null),
         fetch('/api/crypto/liquidations').then(r => r.json()).catch(() => null),
-        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT').then(r => r.json()).catch(() => null),
-        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT').then(r => r.json()).catch(() => null),
-        fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT').then(r => r.json()).catch(() => null),
+        fetch('/api/crypto/heatmap').then(r => r.json()).catch(() => null),
       ]);
 
+      // Extract BTC, ETH, SOL prices from heatmap (uses CoinGecko)
       const prices: { [key: string]: { price: number; change24h: number } } = {};
-      if (btcRes) prices['BTC'] = { price: parseFloat(btcRes.lastPrice), change24h: parseFloat(btcRes.priceChangePercent) };
-      if (ethRes) prices['ETH'] = { price: parseFloat(ethRes.lastPrice), change24h: parseFloat(ethRes.priceChangePercent) };
-      if (solRes) prices['SOL'] = { price: parseFloat(solRes.lastPrice), change24h: parseFloat(solRes.priceChangePercent) };
+      if (heatmapRes?.cryptos) {
+        for (const coin of heatmapRes.cryptos) {
+          if (['BTC', 'ETH', 'SOL'].includes(coin.symbol)) {
+            prices[coin.symbol] = { price: coin.price, change24h: coin.changePercent };
+          }
+        }
+      }
 
       setData({
         fundingRates: fundingRes?.coins ? { 
@@ -516,6 +520,9 @@ export default function CryptoDashboard() {
             Large long liquidations create selling pressure. Large short liquidations create short squeezes.
           </div>
         </div>
+        <p className="text-xs text-gray-600 mt-4 text-center">
+          Data powered by CoinGecko, Binance & OKX
+        </p>
       </div>
     </div>
   );

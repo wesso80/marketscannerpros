@@ -778,7 +778,7 @@ function ScannerContent() {
                 Discover Top 10 Opportunities
               </h3>
               <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
-                Scan 50+ assets using 7 technical indicators • Powered by Yahoo Finance
+                Scan 50+ assets using 7 technical indicators • Powered by CoinGecko & Alpha Vantage
               </p>
             </div>
           </div>
@@ -1126,7 +1126,7 @@ function ScannerContent() {
               </div>
               
               <p style={{ color: "#64748b", fontSize: "11px", marginTop: "16px", textAlign: "center" }}>
-                Click any result to deep dive with full analysis below • Data: {bulkScanType === 'crypto' ? 'Binance' : 'Yahoo Finance'}
+                Click any result to deep dive with full analysis below • Data: {bulkScanType === 'crypto' ? 'CoinGecko' : 'Alpha Vantage'}
               </p>
             </div>
           )}
@@ -1200,7 +1200,7 @@ function ScannerContent() {
             </div>
             {!isAdmin && (
               <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#64748B" }}>
-                📊 Crypto data provided by Binance. Stocks & Forex coming soon.
+                📊 Crypto data powered by CoinGecko & Binance. Stocks by Alpha Vantage.
               </p>
             )}
           </div>
@@ -1299,7 +1299,7 @@ function ScannerContent() {
               ))}
             </div>
             <p style={{ fontSize: "0.85rem", color: "#64748B", marginTop: "0.5rem" }}>
-              {assetType === "crypto" ? `${CRYPTO_LIST.length}+ cryptocurrencies supported` : "Any stock ticker supported"}
+              {assetType === "crypto" ? "15,000+ cryptocurrencies supported via CoinGecko" : "Any stock ticker supported"}
             </p>
           </div>
 

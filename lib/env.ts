@@ -31,6 +31,9 @@ const envSchema = z.object({
   // Alpha Vantage API (optional)
   ALPHA_VANTAGE_API_KEY: z.string().optional(),
   
+  // CoinGecko API (commercial plan - 500K calls/month)
+  COINGECKO_API_KEY: z.string().startsWith('CG-', 'COINGECKO_API_KEY must start with CG-').optional(),
+  
   // Email Service (optional)
   RESEND_API_KEY: z.string().optional(),
   

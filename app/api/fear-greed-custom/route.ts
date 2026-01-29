@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDerivativesTickers, getMarketData } from '@/lib/coingecko';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,49 +40,56 @@ async function fetchCryptoFG(): Promise<number | null> {
   }
 }
 
-// Fetch BTC derivatives data from Binance
+// Fetch BTC derivatives data from CoinGecko + Binance (L/S ratio only)
 async function fetchBTCDerivatives(): Promise<Partial<MarketData>> {
   const result: Partial<MarketData> = {};
   
   try {
-    const [oiRes, fundingRes, lsRes, priceRes] = await Promise.all([
-      fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      fetch('https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
+    // Fetch from CoinGecko (funding rate, OI) and Binance (L/S ratio, price change)
+    const [derivativesTickers, marketData, lsRes] = await Promise.all([
+      getDerivativesTickers(),
+      getMarketData({ ids: ['bitcoin'], per_page: 1 }),
+      // L/S ratio only available from Binance
       fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      fetch('https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BTCUSDT', {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       }).catch(() => null)
     ]);
     
-    if (oiRes?.ok) {
-      const oi = await oiRes.json();
-      result.btcOI = parseFloat(oi.openInterest || '0');
-    }
-    
-    if (fundingRes?.ok) {
-      const funding = await fundingRes.json();
-      if (funding?.[0]?.fundingRate) {
-        result.btcFundingRate = parseFloat(funding[0].fundingRate) * 100;
+    // Extract BTC data from CoinGecko derivatives
+    if (derivativesTickers) {
+      const btcDerivatives = derivativesTickers.filter(t => 
+        t.symbol?.toUpperCase().includes('BTC') && t.index_id?.toUpperCase() === 'BTC'
+      );
+      
+      if (btcDerivatives.length > 0) {
+        // Get average funding rate across exchanges
+        const fundingRates = btcDerivatives
+          .map(t => t.funding_rate)
+          .filter((r): r is number => r !== undefined && r !== null);
+        if (fundingRates.length > 0) {
+          result.btcFundingRate = (fundingRates.reduce((a, b) => a + b, 0) / fundingRates.length) * 100;
+        }
+        
+        // Get total OI across exchanges
+        const oiValues = btcDerivatives
+          .map(t => t.open_interest)
+          .filter((oi): oi is number => oi !== undefined && oi !== null);
+        if (oiValues.length > 0) {
+          result.btcOI = oiValues.reduce((a, b) => a + b, 0);
+        }
       }
     }
     
+    // Get price change from market data
+    if (marketData && marketData.length > 0) {
+      result.btcPriceChange24h = marketData[0].price_change_percentage_24h;
+    }
+    
+    // L/S ratio from Binance (CoinGecko doesn't have this)
     if (lsRes?.ok) {
       const ls = await lsRes.json();
       if (ls?.[0]?.longShortRatio) {
         result.btcLongShortRatio = parseFloat(ls[0].longShortRatio);
-      }
-    }
-    
-    if (priceRes?.ok) {
-      const price = await priceRes.json();
-      if (price?.priceChangePercent) {
-        result.btcPriceChange24h = parseFloat(price.priceChangePercent);
       }
     }
   } catch (e) {

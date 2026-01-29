@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAggregatedFundingRates } from '@/lib/coingecko';
 
 const CACHE_DURATION = 300; // 5 minute cache
 let cache: { data: any; timestamp: number } | null = null;
 
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'BNBUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT'];
+const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
 
 interface FundingRate {
   symbol: string;
   fundingRate: number;      // Raw rate (e.g., 0.0001)
   fundingRatePercent: number; // As percentage (e.g., 0.01%)
   annualized: number;       // Annualized rate
-  nextFundingTime: number;
   sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+  exchanges?: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -23,45 +24,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log('[Funding Rates API] Fetching fresh data from Binance');
-    const fundingPromises = SYMBOLS.map(async (symbol): Promise<FundingRate | null> => {
-      try {
-        const res = await fetch(
-          `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-
-        if (!res.ok) return null;
-
-        const data = await res.json();
-        const rate = parseFloat(data.lastFundingRate);
-        const ratePercent = rate * 100;
-        const annualized = ratePercent * 3 * 365; // 3 funding periods per day
-
-        let sentiment: 'Bullish' | 'Bearish' | 'Neutral';
-        if (ratePercent > 0.03) sentiment = 'Bullish';
-        else if (ratePercent < -0.01) sentiment = 'Bearish';
-        else sentiment = 'Neutral';
-
-        return {
-          symbol: symbol.replace('USDT', ''),
-          fundingRate: rate,
-          fundingRatePercent: ratePercent,
-          annualized,
-          nextFundingTime: data.nextFundingTime,
-          sentiment,
-        };
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(fundingPromises);
-    const rates = results.filter((r): r is FundingRate => r !== null);
-
-    if (rates.length === 0) {
-      throw new Error('No funding rate data');
+    console.log('[Funding Rates API] Fetching fresh data from CoinGecko');
+    
+    const fundingData = await getAggregatedFundingRates(SYMBOLS);
+    
+    if (!fundingData || fundingData.length === 0) {
+      throw new Error('No funding rate data from CoinGecko');
     }
+
+    const rates: FundingRate[] = fundingData.map(data => ({
+      symbol: data.symbol,
+      fundingRate: data.avgFundingRate,
+      fundingRatePercent: data.fundingRatePercent,
+      annualized: data.annualized,
+      sentiment: data.sentiment,
+      exchanges: data.exchanges,
+    }));
 
     const avgRate = rates.reduce((sum, r) => sum + r.fundingRatePercent, 0) / rates.length;
     const avgAnnualized = rates.reduce((sum, r) => sum + r.annualized, 0) / rates.length;
@@ -71,11 +49,6 @@ export async function GET(req: NextRequest) {
     else if (avgRate < -0.01) overallSentiment = 'Bearish';
     else overallSentiment = 'Neutral';
 
-    // Time until next funding
-    const btcFunding = rates.find(r => r.symbol === 'BTC');
-    const nextFundingTime = btcFunding?.nextFundingTime;
-    const timeUntilFunding = nextFundingTime ? Math.max(0, nextFundingTime - Date.now()) : null;
-
     const result = {
       average: {
         fundingRatePercent: avgRate.toFixed(4),
@@ -83,18 +56,18 @@ export async function GET(req: NextRequest) {
         sentiment: overallSentiment,
       },
       nextFunding: {
-        timestamp: nextFundingTime,
-        timeUntilMs: timeUntilFunding,
-        timeUntilFormatted: timeUntilFunding ? formatTime(timeUntilFunding) : null,
+        timestamp: null,
+        timeUntilMs: null,
+        timeUntilFormatted: null,
       },
       coins: rates.sort((a, b) => b.fundingRatePercent - a.fundingRatePercent),
-      source: 'binance',
-      exchange: 'Binance Futures',
+      source: 'coingecko',
+      exchange: 'Multiple Exchanges',
       timestamp: new Date().toISOString(),
     };
 
     cache = { data: result, timestamp: Date.now() };
-    console.log(`[Funding Rates API] Returning ${rates.length} funding rates`);
+    console.log(`[Funding Rates API] Returning ${rates.length} funding rates from CoinGecko`);
     return NextResponse.json(result);
 
   } catch (error) {
@@ -106,10 +79,4 @@ export async function GET(req: NextRequest) {
     
     return NextResponse.json({ error: 'Failed to fetch funding rates' }, { status: 500 });
   }
-}
-
-function formatTime(ms: number): string {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}h ${minutes}m`;
 }

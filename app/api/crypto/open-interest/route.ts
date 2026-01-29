@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAggregatedOpenInterest, getDerivativesForSymbols } from '@/lib/coingecko';
 
 const CACHE_DURATION = 300; // 5 minute cache
 let cache: { data: any; timestamp: number } | null = null;
 
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'BNBUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT'];
+const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
 
 interface OpenInterestData {
   symbol: string;
-  openInterest: number;        // In contracts
-  openInterestValue: number;   // In USD
-  change24h: number;           // % change
+  openInterest: number;        // Total OI in USD
+  openInterestValue: number;   // Alias for compatibility
+  change24h: number;           // Placeholder - CoinGecko doesn't provide historical OI
   signal: 'longs_building' | 'shorts_building' | 'deleveraging' | 'neutral';
+  exchanges: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -22,103 +24,48 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log('[Open Interest API] Fetching fresh data from Binance');
-    const oiPromises = SYMBOLS.map(async (symbol): Promise<OpenInterestData | null> => {
-      try {
-        // Get current OI
-        const [oiRes, priceRes] = await Promise.all([
-          fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`, {
-            headers: { 'Accept': 'application/json' }
-          }),
-          fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`, {
-            headers: { 'Accept': 'application/json' }
-          })
-        ]);
-
-        if (!oiRes.ok || !priceRes.ok) return null;
-
-        const oiData = await oiRes.json();
-        const priceData = await priceRes.json();
-        
-        const oi = parseFloat(oiData.openInterest);
-        const price = parseFloat(priceData.price);
-        const oiValue = oi * price;
-
-        // Get historical OI for 24h change (using klines as proxy)
-        const histRes = await fetch(
-          `https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=1h&limit=24`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-        
-        let change24h = 0;
-        let signal: OpenInterestData['signal'] = 'neutral';
-        
-        if (histRes.ok) {
-          const histData = await histRes.json();
-          if (histData && histData.length >= 2) {
-            const oldOI = parseFloat(histData[0].sumOpenInterest);
-            const newOI = parseFloat(histData[histData.length - 1].sumOpenInterest);
-            change24h = ((newOI - oldOI) / oldOI) * 100;
-            
-            // Determine signal based on OI change
-            if (change24h > 5) signal = 'longs_building';
-            else if (change24h < -5) signal = 'deleveraging';
-            else if (change24h > 2) signal = 'longs_building';
-            else if (change24h < -2) signal = 'shorts_building';
-          }
-        }
-
-        return {
-          symbol: symbol.replace('USDT', ''),
-          openInterest: oi,
-          openInterestValue: oiValue,
-          change24h,
-          signal,
-        };
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(oiPromises);
-    const oiData = results.filter((r): r is OpenInterestData => r !== null);
-
-    if (oiData.length === 0) {
-      throw new Error('No OI data retrieved');
+    console.log('[Open Interest API] Fetching fresh data from CoinGecko');
+    
+    const oiData = await getAggregatedOpenInterest(SYMBOLS);
+    
+    if (!oiData || oiData.length === 0) {
+      throw new Error('No OI data from CoinGecko');
     }
 
+    const results: OpenInterestData[] = oiData.map(data => {
+      // CoinGecko doesn't provide OI change, so we set neutral
+      // Could implement caching to calculate change ourselves
+      return {
+        symbol: data.symbol,
+        openInterest: data.totalOpenInterest,
+        openInterestValue: data.totalOpenInterest,
+        change24h: 0, // Would need historical tracking
+        signal: 'neutral' as const,
+        exchanges: data.exchanges,
+      };
+    });
+
     // Calculate totals
-    const totalOI = oiData.reduce((sum, r) => sum + r.openInterestValue, 0);
-    const avgChange = oiData.reduce((sum, r) => sum + r.change24h, 0) / oiData.length;
+    const totalOI = results.reduce((sum, r) => sum + r.openInterestValue, 0);
     
-    // Overall market signal
-    let marketSignal: 'risk_on' | 'risk_off' | 'neutral';
-    const positiveChanges = oiData.filter(r => r.change24h > 2).length;
-    const negativeChanges = oiData.filter(r => r.change24h < -2).length;
-    
-    if (positiveChanges >= 6) marketSignal = 'risk_on';
-    else if (negativeChanges >= 6) marketSignal = 'risk_off';
-    else marketSignal = 'neutral';
+    // Overall market signal (simplified since we don't have change data)
+    const marketSignal = 'neutral';
 
     const result = {
       summary: {
         totalOpenInterest: totalOI,
-        totalFormatted: formatLargeNumber(totalOI),
-        avgChange24h: avgChange.toFixed(2),
+        totalOpenInterestFormatted: formatUSD(totalOI),
+        avgChange24h: '0.00',
         marketSignal,
-        interpretation: marketSignal === 'risk_on' 
-          ? '🟢 Longs building - bullish positioning'
-          : marketSignal === 'risk_off'
-          ? '🔴 Deleveraging - risk-off mode'
-          : '⚪ Neutral positioning',
       },
-      coins: oiData.sort((a, b) => b.openInterestValue - a.openInterestValue),
-      source: 'binance',
+      coins: results.sort((a, b) => b.openInterestValue - a.openInterestValue),
+      source: 'coingecko',
+      exchange: 'Multiple Exchanges',
       timestamp: new Date().toISOString(),
     };
 
     cache = { data: result, timestamp: Date.now() };
-    console.log(`[Open Interest API] Returning ${oiData.length} coins, market signal: ${marketSignal}`);
+    console.log(`[Open Interest API] Returning ${results.length} OI records from CoinGecko`);
     return NextResponse.json(result);
 
   } catch (error) {
@@ -132,9 +79,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function formatLargeNumber(num: number): string {
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `$${(num / 1e3).toFixed(2)}K`;
-  return `$${num.toFixed(2)}`;
+function formatUSD(value: number): string {
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  return `$${value.toFixed(0)}`;
 }
