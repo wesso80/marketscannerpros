@@ -147,17 +147,28 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
             <span className="text-lg">{subscribed ? '🔔' : '🔕'}</span>
             <span className="text-sm text-slate-300">Push Notifications</span>
           </div>
-          <button
-            onClick={subscribed ? handleUnsubscribe : handleSubscribe}
-            disabled={loading}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-              subscribed
-                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-                : 'bg-slate-600 text-white hover:bg-slate-500'
-            }`}
-          >
-            {loading ? '...' : subscribed ? 'Enabled' : 'Enable'}
-          </button>
+          <div className="flex items-center gap-2">
+            {subscribed && (
+              <button
+                onClick={handleTest}
+                disabled={loading}
+                className="px-3 py-1 text-xs font-medium rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+              >
+                Test
+              </button>
+            )}
+            <button
+              onClick={subscribed ? handleUnsubscribe : handleSubscribe}
+              disabled={loading}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                subscribed
+                  ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                  : 'bg-slate-600 text-white hover:bg-slate-500'
+              }`}
+            >
+              {loading ? '...' : subscribed ? 'Enabled' : 'Enable'}
+            </button>
+          </div>
         </div>
         {error && (
           <div className="mt-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
