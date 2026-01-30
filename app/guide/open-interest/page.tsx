@@ -526,7 +526,7 @@ export default function OpenInterestGuidePage() {
 
       {/* Footer */}
       <div className="border-t border-slate-700 mt-12 py-6 text-center text-slate-500 text-sm">
-        <p>Data sourced from Binance Futures. Updated every 5 minutes.</p>
+        <p>Data sourced from CoinGecko. Updated every 5 minutes.</p>
         <p className="mt-1">This is educational content, not financial advice.</p>
       </div>
     </div>

@@ -1132,7 +1132,7 @@ function ScannerContent() {
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {(["crypto", "equity", "forex"] as AssetType[]).map((type) => {
                 // Equity & Forex require commercial data licenses - admin-only for testing
-                // Only Crypto (Binance) is free for commercial use
+                // Crypto uses CoinGecko (licensed)
                 const isDisabled = (type === "equity" || type === "forex") && !isAdmin;
                 return (
                   <button
@@ -1164,7 +1164,7 @@ function ScannerContent() {
             </div>
             {!isAdmin && (
               <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#64748B" }}>
-                📊 Crypto data powered by CoinGecko & Binance. Stocks by Alpha Vantage.
+                📊 Crypto data powered by CoinGecko. Stocks by Alpha Vantage.
               </p>
             )}
           </div>

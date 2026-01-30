@@ -157,7 +157,7 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             <div>
               <div className="text-xs text-slate-400 flex items-center gap-1">
                 Open Interest
-                <span className="text-blue-400/70">(Binance Futures)</span>
+                <span className="text-blue-400/70">(CoinGecko)</span>
                 <button
                   onClick={() => setShowTooltip(!showTooltip)}
                   className="ml-2 w-4 h-4 rounded-full bg-slate-600 hover:bg-emerald-500 text-[10px] text-white font-bold flex items-center justify-center transition-colors"

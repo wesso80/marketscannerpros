@@ -521,7 +521,7 @@ export default function CryptoDashboard() {
           </div>
         </div>
         <p className="text-xs text-gray-600 mt-4 text-center">
-          Data powered by CoinGecko, Binance & OKX
+          Data powered by CoinGecko
         </p>
       </div>
     </div>

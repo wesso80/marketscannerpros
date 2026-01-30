@@ -97,7 +97,7 @@ export default function Footer() {
       {/* Data Attribution */}
       <div style={{ textAlign: 'center', padding: '0.5rem 0', opacity: 0.5, fontSize: 11 }}>
         <span style={{ color: '#9ca3af' }}>
-          Crypto data provided by Binance
+          Market data powered by CoinGecko & Alpha Vantage
         </span>
       </div>
       

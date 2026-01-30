@@ -917,7 +917,7 @@ export default function AlertsWidget({
                         </div>
                         
                         <p className="text-xs text-slate-500">
-                          💡 Crypto uses Binance data • Stocks use Alpha Vantage • Check every 15 min
+                          💡 Data from CoinGecko & Alpha Vantage • Check every 15 min
                         </p>
                       </div>
                     )}

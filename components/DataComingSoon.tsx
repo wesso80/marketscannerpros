@@ -156,7 +156,7 @@ export default function DataComingSoon({ toolName, description }: DataComingSoon
           fontSize: '0.85rem',
           marginTop: '3rem'
         }}>
-          💡 Crypto tools using Binance and CoinGecko data are fully available now!
+          💡 Crypto tools powered by CoinGecko are fully available now!
         </p>
       </div>
     </div>

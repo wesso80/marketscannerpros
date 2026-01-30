@@ -235,7 +235,7 @@ export default function MarketPulseHero() {
                     {openInterest.change24h >= 0 ? '▲' : '▼'} {Math.abs(openInterest.change24h).toFixed(1)}%
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 mb-2">Binance Futures</div>
+                <div className="text-xs text-gray-500 mb-2">Crypto Futures</div>
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-orange-400">BTC</span>
@@ -298,7 +298,7 @@ export default function MarketPulseHero() {
         </div>
         
         <p className="text-center text-xs text-gray-500 mt-4">
-          Data from CoinGecko & Binance • Refreshes every minute
+          Data from CoinGecko • Refreshes every minute
         </p>
       </div>
     </section>

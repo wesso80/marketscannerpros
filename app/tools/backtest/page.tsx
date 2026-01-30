@@ -388,7 +388,7 @@ function BacktestContent() {
               </select>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
-                  ✓ Crypto uses Binance data (full historical intraday)
+                  ✓ Crypto uses CoinGecko data (full historical)
                 </p>
               )}
             </div>
