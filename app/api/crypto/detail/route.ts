@@ -113,7 +113,7 @@ async function getCoinDetail(coinId: string): Promise<CoinDetail | null> {
     
     const response = await fetch(
       `${getBaseUrl()}/coins/${coinId}?${params}`,
-      { headers: getHeaders(), next: { revalidate: 60 } }
+      { headers: getHeaders(), cache: 'no-store' }
     );
     
     if (!response.ok) {
@@ -158,7 +158,7 @@ async function getCoinMarketChart(coinId: string, days: number = 30): Promise<{
   try {
     const response = await fetch(
       `${getBaseUrl()}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`,
-      { headers: getHeaders(), next: { revalidate: 300 } }
+      { headers: getHeaders(), next: { revalidate: 60 } }
     );
     
     if (!response.ok) return null;

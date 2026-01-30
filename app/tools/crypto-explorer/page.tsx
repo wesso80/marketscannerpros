@@ -3,9 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import { COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 interface CoinData {
   coin: {
@@ -230,7 +227,9 @@ export default function CryptoDetailPage() {
     setSearchQuery('');
     
     try {
-      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbol)}`);
+      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbol)}`, {
+        cache: 'no-store'
+      });
       if (!res.ok) throw new Error('Failed to fetch coin data');
       const data = await res.json();
       setCoinData(data);
@@ -246,23 +245,19 @@ export default function CryptoDetailPage() {
   if (!tier || tier === 'free') {
     return (
       <div className="min-h-screen bg-[#0F172A]">
-        <Header />
-        <main className="container mx-auto px-4 py-16">
+        <div className="container mx-auto px-4 py-16">
           <UpgradeGate 
             requiredTier="pro" 
             feature="Crypto Asset Explorer" 
           />
-        </main>
-        <Footer />
+        </div>
       </div>
     );
   }
   
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
@@ -385,7 +380,19 @@ export default function CryptoDetailPage() {
                 
                 {/* Price Section */}
                 <div className="ml-auto text-right">
-                  <div className="text-4xl font-bold">{formatPrice(coinData.market.price_usd)}</div>
+                  <div className="flex items-center justify-end gap-3">
+                    <div className="text-4xl font-bold">{formatPrice(coinData.market.price_usd)}</div>
+                    <button
+                      onClick={() => selectedCoin && loadCoinDetails(selectedCoin)}
+                      disabled={loading}
+                      className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50"
+                      title="Refresh data"
+                    >
+                      <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
                   <div className="flex items-center justify-end gap-4 mt-2">
                     <PercentBadge value={coinData.price_changes['24h']} />
                     <span className="text-gray-400 text-sm">24h</span>
@@ -694,9 +701,7 @@ export default function CryptoDetailPage() {
         <div className="text-center text-gray-500 text-sm mt-12 pb-8">
           📊 Data powered by <span className="text-emerald-400">CoinGecko</span>
         </div>
-      </main>
-      
-      <Footer />
+      </div>
       
       <style jsx>{`
         @keyframes fadeIn {
