@@ -406,12 +406,14 @@ export interface DerivativeTicker {
  * Get all derivatives tickers across exchanges
  * Endpoint: /derivatives
  * Returns funding rates, open interest, volume for all perpetual contracts
+ * Note: This endpoint returns ~9MB of data, so we use cache: 'no-store' to skip Next.js data cache
+ * and rely on our own in-memory caching in the API routes
  */
 export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null> {
   try {
     const res = await fetch(`${getBaseUrl()}/derivatives`, {
       headers: getHeaders(),
-      next: { revalidate: 60 }, // Cache for 1 minute
+      cache: 'no-store', // Skip Next.js cache (response is >2MB limit)
     });
 
     if (!res.ok) {
