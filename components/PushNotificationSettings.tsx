@@ -44,29 +44,38 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
   const handleSubscribe = async () => {
     setLoading(true);
     setError('');
+    console.log('[Push UI] Starting subscription...');
     
     try {
       const subscription = await subscribeToPush();
+      console.log('[Push UI] subscribeToPush result:', subscription);
       
       if (subscription) {
         // Save to server
+        console.log('[Push UI] Saving to server...');
         const res = await fetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(subscription)
         });
         
+        console.log('[Push UI] Server response status:', res.status);
+        
         if (res.ok) {
           setSubscribed(true);
           setPermission('granted');
+          console.log('[Push UI] Subscription saved successfully!');
         } else {
           const data = await res.json();
+          console.error('[Push UI] Server error:', data);
           setError(data.error || 'Failed to save subscription');
         }
       } else {
-        setError('Could not create subscription');
+        console.error('[Push UI] No subscription returned');
+        setError('Could not create subscription. Check browser console for details.');
       }
     } catch (err: any) {
+      console.error('[Push UI] Exception:', err);
       setError(err.message || 'Failed to subscribe');
     } finally {
       setLoading(false);
@@ -132,22 +141,34 @@ export default function PushNotificationSettings({ compact = false }: PushNotifi
 
   if (compact) {
     return (
-      <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{subscribed ? '🔔' : '🔕'}</span>
-          <span className="text-sm text-slate-300">Push Notifications</span>
+      <div className="p-3 rounded-lg bg-slate-800/50 border border-slate-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{subscribed ? '🔔' : '🔕'}</span>
+            <span className="text-sm text-slate-300">Push Notifications</span>
+          </div>
+          <button
+            onClick={subscribed ? handleUnsubscribe : handleSubscribe}
+            disabled={loading}
+            className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+              subscribed
+                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
+                : 'bg-slate-600 text-white hover:bg-slate-500'
+            }`}
+          >
+            {loading ? '...' : subscribed ? 'Enabled' : 'Enable'}
+          </button>
         </div>
-        <button
-          onClick={subscribed ? handleUnsubscribe : handleSubscribe}
-          disabled={loading}
-          className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-            subscribed
-              ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30'
-              : 'bg-slate-600 text-white hover:bg-slate-500'
-          }`}
-        >
-          {loading ? '...' : subscribed ? 'Enabled' : 'Enable'}
-        </button>
+        {error && (
+          <div className="mt-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
+            ⚠️ {error}
+          </div>
+        )}
+        {permission === 'denied' && (
+          <div className="mt-2 text-xs text-amber-400">
+            ⚠️ Blocked in browser settings
+          </div>
+        )}
       </div>
     );
   }
