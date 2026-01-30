@@ -140,15 +140,6 @@ export default function GainersLosersPage() {
   const [sortField, setSortField] = useState<SortField>("percent");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  useEffect(() => {
-    if (isAdmin) fetchData();
-  }, [isAdmin]);
-
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
-  }
-
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -161,9 +152,9 @@ export default function GainersLosersPage() {
       const data = await response.json();
       
       if (data.success) {
-        setGainers(data.topGainers.slice(0, 20));
-        setLosers(data.topLosers.slice(0, 20));
-        setActive(data.mostActive.slice(0, 20));
+        setGainers(data.topGainers?.slice(0, 20) || []);
+        setLosers(data.topLosers?.slice(0, 20) || []);
+        setActive(data.mostActive?.slice(0, 20) || []);
         setLastUpdated(new Date());
         if (data.lastUpdated) {
           setMarketDate(data.lastUpdated);
@@ -176,6 +167,15 @@ export default function GainersLosersPage() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (isAdmin) fetchData();
+  }, [isAdmin]);
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
+  }
 
   const rawData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
   
