@@ -72,6 +72,8 @@ async function checkAlerts(req: NextRequest) {
       symbolGroups[key].push(alert);
     }
 
+    console.log(`[Alert Check] Found ${alerts.length} active alerts across ${Object.keys(symbolGroups).length} symbols`);
+
     const triggered: string[] = [];
     const errors: string[] = [];
 
@@ -82,6 +84,8 @@ async function checkAlerts(req: NextRequest) {
       try {
         // Fetch current price
         const price = await fetchPrice(symbol, assetType);
+        console.log(`[Alert Check] ${symbol} price: ${price}`);
+        
         if (price === null) {
           errors.push(`Failed to fetch price for ${symbol}`);
           continue;
@@ -90,10 +94,17 @@ async function checkAlerts(req: NextRequest) {
         // Check each alert for this symbol
         for (const alert of groupAlerts) {
           const shouldTrigger = checkCondition(alert, price);
+          console.log(`[Alert Check] ${alert.symbol} ${alert.condition_type} ${alert.condition_value} vs ${price} = ${shouldTrigger ? 'TRIGGER' : 'no'}`);
           
           if (shouldTrigger) {
-            await triggerAlert(alert, price);
-            triggered.push(alert.id);
+            try {
+              await triggerAlert(alert, price);
+              triggered.push(alert.id);
+              console.log(`[Alert Check] ✅ Alert ${alert.id} triggered successfully`);
+            } catch (triggerErr) {
+              console.error(`[Alert Check] ❌ Failed to trigger alert ${alert.id}:`, triggerErr);
+              errors.push(`Failed to trigger ${alert.symbol}: ${triggerErr}`);
+            }
           } else {
             // Update last_price for tracking
             await q(
@@ -103,6 +114,7 @@ async function checkAlerts(req: NextRequest) {
           }
         }
       } catch (err) {
+        console.error(`[Alert Check] Error checking ${symbol}:`, err);
         errors.push(`Error checking ${symbol}: ${err}`);
       }
     }
@@ -164,63 +176,83 @@ function checkCondition(alert: Alert, currentPrice: number): boolean {
 
 // Trigger an alert - record history and send notifications
 async function triggerAlert(alert: Alert, triggerPrice: number) {
+  console.log(`[Alert] Triggering alert ${alert.id} for ${alert.symbol} at $${triggerPrice}`);
+  
   const conditionMet = formatConditionMet(alert, triggerPrice);
   
   // Get user email for notifications
   let userEmail: string | null = null;
   if (alert.notify_email) {
-    const userResult = await q<{ email: string }>(
-      `SELECT email FROM user_subscriptions WHERE workspace_id = $1`,
-      [alert.workspace_id]
-    );
-    userEmail = userResult[0]?.email || null;
+    try {
+      const userResult = await q<{ email: string }>(
+        `SELECT email FROM user_subscriptions WHERE workspace_id = $1`,
+        [alert.workspace_id]
+      );
+      userEmail = userResult[0]?.email || null;
+      console.log(`[Alert] User email: ${userEmail || 'not found'}`);
+    } catch (e) {
+      console.error(`[Alert] Failed to get user email:`, e);
+    }
   }
   
-  // Record in history
-  await q(
-    `INSERT INTO alert_history (
-      alert_id, workspace_id, triggered_at, trigger_price, condition_met,
-      symbol, condition_type, condition_value, notification_sent, notification_channel
-    ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9)`,
-    [
-      alert.id,
-      alert.workspace_id,
-      triggerPrice,
-      conditionMet,
-      alert.symbol,
-      alert.condition_type,
-      alert.condition_value,
-      !!userEmail, // Mark as sent only if we have email
-      alert.notify_email && alert.notify_push ? 'both' : alert.notify_email ? 'email' : 'push',
-    ]
-  );
-
-  // Update alert status
-  if (alert.is_recurring) {
-    // Just update trigger count and timestamp
+  // Record in history (optional - don't fail if table doesn't exist)
+  try {
     await q(
-      `UPDATE alerts 
-       SET triggered_at = NOW(), trigger_count = trigger_count + 1, last_price = $1
-       WHERE id = $2`,
-      [triggerPrice, alert.id]
+      `INSERT INTO alert_history (
+        alert_id, workspace_id, triggered_at, trigger_price, condition_met,
+        symbol, condition_type, condition_value, notification_sent, notification_channel
+      ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        alert.id,
+        alert.workspace_id,
+        triggerPrice,
+        conditionMet,
+        alert.symbol,
+        alert.condition_type,
+        alert.condition_value,
+        !!userEmail,
+        alert.notify_email && alert.notify_push ? 'both' : alert.notify_email ? 'email' : 'push',
+      ]
     );
-  } else {
-    // Deactivate non-recurring alert
-    await q(
-      `UPDATE alerts 
-       SET is_active = false, triggered_at = NOW(), trigger_count = trigger_count + 1, last_price = $1
-       WHERE id = $2`,
-      [triggerPrice, alert.id]
-    );
+  } catch (historyError) {
+    console.error(`[Alert] Failed to record history (non-fatal):`, historyError);
   }
 
-  // Update daily trigger count
-  await q(
-    `UPDATE alert_quotas 
-     SET total_triggers_today = total_triggers_today + 1
-     WHERE workspace_id = $1`,
-    [alert.workspace_id]
-  );
+  // Update alert status - THIS IS CRITICAL
+  try {
+    if (alert.is_recurring) {
+      await q(
+        `UPDATE alerts 
+         SET triggered_at = NOW(), trigger_count = trigger_count + 1, last_price = $1, last_checked_at = NOW()
+         WHERE id = $2`,
+        [triggerPrice, alert.id]
+      );
+    } else {
+      await q(
+        `UPDATE alerts 
+         SET is_active = false, triggered_at = NOW(), trigger_count = trigger_count + 1, last_price = $1, last_checked_at = NOW()
+         WHERE id = $2`,
+        [triggerPrice, alert.id]
+      );
+    }
+    console.log(`[Alert] Updated alert status for ${alert.id}`);
+  } catch (updateError) {
+    console.error(`[Alert] CRITICAL - Failed to update alert status:`, updateError);
+    throw updateError; // Re-throw so we know something is wrong
+  }
+
+  // Update daily trigger count (optional - don't fail if no quota row)
+  try {
+    await q(
+      `INSERT INTO alert_quotas (workspace_id, tier, total_triggers_today)
+       VALUES ($1, 'free', 1)
+       ON CONFLICT (workspace_id) 
+       DO UPDATE SET total_triggers_today = alert_quotas.total_triggers_today + 1`,
+      [alert.workspace_id]
+    );
+  } catch (quotaError) {
+    console.error(`[Alert] Failed to update quota (non-fatal):`, quotaError);
+  }
 
   // Send email notification
   if (alert.notify_email && userEmail) {
