@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     // Fetch all data in parallel
     const [overviewRes, quoteRes, dailyRes, incomeRes, earningsRes, newsRes] = await Promise.all([
       fetch(`${BASE_URL}?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
-      fetch(`${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_API_KEY}`),
+      fetch(`${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=INCOME_STATEMENT&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
@@ -136,18 +136,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Symbol not found' }, { status: 404 });
     }
 
-    // Parse quote data
-    const globalQuote = quote['Global Quote'] || {};
-    const price = parseFloat(globalQuote['05. price']) || 0;
-    const change = parseFloat(globalQuote['09. change']) || 0;
-    const changePercent = parseFloat(globalQuote['10. change percent']?.replace('%', '')) || 0;
-    const open = parseFloat(globalQuote['02. open']) || 0;
-    const high = parseFloat(globalQuote['03. high']) || 0;
-    const low = parseFloat(globalQuote['04. low']) || 0;
-    const volume = parseInt(globalQuote['06. volume']) || 0;
-    const prevClose = parseFloat(globalQuote['08. previous close']) || 0;
-
-    // Parse daily data for chart
+    // Parse daily data for chart first (we'll use as fallback for quote)
     const timeSeries = daily['Time Series (Daily)'] as Record<string, { '1. open': string; '2. high': string; '3. low': string; '4. close': string; '5. volume': string }> || {};
     const chartData = Object.entries(timeSeries)
       .slice(0, 90) // Last 90 days
@@ -160,6 +149,43 @@ export async function GET(request: NextRequest) {
         close: parseFloat(values['4. close']),
         volume: parseInt(values['5. volume']),
       }));
+
+    // Get latest day from daily data as fallback
+    const latestDayEntry = Object.entries(timeSeries)[0];
+    const latestDay = latestDayEntry ? {
+      date: latestDayEntry[0],
+      ...latestDayEntry[1],
+    } : null;
+
+    // Parse quote data with fallback to daily data
+    const globalQuote = quote['Global Quote'] || {};
+    let price = parseFloat(globalQuote['05. price']) || 0;
+    let change = parseFloat(globalQuote['09. change']) || 0;
+    let changePercent = parseFloat(globalQuote['10. change percent']?.replace('%', '')) || 0;
+    let open = parseFloat(globalQuote['02. open']) || 0;
+    let high = parseFloat(globalQuote['03. high']) || 0;
+    let low = parseFloat(globalQuote['04. low']) || 0;
+    let volume = parseInt(globalQuote['06. volume']) || 0;
+    let prevClose = parseFloat(globalQuote['08. previous close']) || 0;
+    let latestTradingDay = globalQuote['07. latest trading day'] || '';
+
+    // Fallback to daily data if quote failed
+    if (price === 0 && latestDay) {
+      price = parseFloat(latestDay['4. close']) || 0;
+      open = parseFloat(latestDay['1. open']) || 0;
+      high = parseFloat(latestDay['2. high']) || 0;
+      low = parseFloat(latestDay['3. low']) || 0;
+      volume = parseInt(latestDay['5. volume']) || 0;
+      latestTradingDay = latestDayEntry![0];
+      
+      // Calculate change from previous day if available
+      const prevDayEntry = Object.entries(timeSeries)[1];
+      if (prevDayEntry) {
+        prevClose = parseFloat(prevDayEntry[1]['4. close']) || 0;
+        change = price - prevClose;
+        changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+      }
+    }
 
     // Parse income statement
     const annualIncome = (income.annualReports || []).slice(0, 4).map((report: IncomeStatement) => ({
@@ -245,7 +271,7 @@ export async function GET(request: NextRequest) {
         low,
         volume,
         prevClose,
-        latestTradingDay: globalQuote['07. latest trading day'],
+        latestTradingDay,
       },
       valuation: {
         marketCap: parseFloat(overview.MarketCapitalization) || 0,
