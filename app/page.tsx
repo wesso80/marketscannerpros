@@ -8,6 +8,7 @@ import ReferralBanner from "../components/ReferralBanner";
 import LiveMarketPulse from "../components/LiveMarketPulse";
 import WorkflowHero from "../components/WorkflowHero";
 import InstantDemo from "../components/InstantDemo";
+import MarketPulseHero from "../components/MarketPulseHero";
 import Link from "next/link";
 
 import { useState } from "react";
@@ -75,6 +76,9 @@ export default function Home() {
 
       {/* 🚀 NEW: Trading Workflow OS Hero */}
       <WorkflowHero />
+
+      {/* 📊 Live Market Pulse - 4 Box Hero */}
+      <MarketPulseHero />
 
       {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{

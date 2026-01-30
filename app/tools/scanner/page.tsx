@@ -7,12 +7,6 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import CustomFearGreedGauge from "@/components/CustomFearGreedGauge";
-import FearGreedHistory from "@/components/FearGreedHistory";
-import OpenInterestWidget from "@/components/OpenInterestWidget";
-import DerivativesWidget from "@/components/DerivativesWidget";
-import AlertsWidget from "@/components/AlertsWidget";
-import DominanceWidget from "@/components/DominanceWidget";
 import { useUserTier } from "@/lib/useUserTier";
 
 type TimeframeOption = "1h" | "30m" | "1d";
@@ -718,36 +712,6 @@ function ScannerContent() {
               <li>AI explanation = context, risk, invalidation. Use it before committing risk.</li>
             </ul>
           </div>
-        </div>
-
-        {/* Market Dominance - BTC, ETH, Stablecoins */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <DominanceWidget />
-        </div>
-
-        {/* Market Sentiment - Custom Fear & Greed Index (Crypto + Stocks) */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <CustomFearGreedGauge />
-        </div>
-
-        {/* Fear & Greed Historical Chart */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <FearGreedHistory days={7} height={180} showLegend={false} />
-        </div>
-
-        {/* Open Interest Widget */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <OpenInterestWidget compact />
-        </div>
-
-        {/* Derivatives Data - L/S Ratio & Funding */}
-        <div style={{ marginBottom: "0.75rem" }}>
-          <DerivativesWidget compact />
-        </div>
-
-        {/* Price Alerts Widget */}
-        <div style={{ marginBottom: "1.5rem" }}>
-          <AlertsWidget compact />
         </div>
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
