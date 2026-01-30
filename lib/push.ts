@@ -3,8 +3,9 @@
  * Handles Web Push API integration for real-time alerts
  */
 
-// VAPID public key - NEXT_PUBLIC_ vars are inlined at build time
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+// VAPID public key - hardcoded because it's PUBLIC and needs to be available at build time
+// This is safe - public keys are meant to be shared
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BJqMFo_4SSYzAT-YdXEwQlMjZNEmzA_F1jkM77pl6rxKAV09EhepSwYJnfdDNwHsweZICMwEcXWQZvtiEZlO0Xs';
 
 export interface PushSubscriptionData {
   endpoint: string;
