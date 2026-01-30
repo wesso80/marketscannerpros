@@ -39,6 +39,21 @@ services:
         sync: false
 
   - type: cron
+    name: alerts-smart-check
+    runtime: node
+    schedule: "*/5 * * * *"  # Every 5 minutes - derivatives/OI/funding alerts
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/alerts/smart-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          name: marketscannerpros
+          type: web
+          property: url
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
     name: alerts-strategy-check
     runtime: node
     schedule: "*/15 * * * *"  # Every 15 minutes
