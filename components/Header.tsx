@@ -115,13 +115,14 @@ export default function Header() {
   ];
 
   const marketItems: DropdownItem[] = [
-    { href: '/tools/heatmap', label: 'Sector Heatmap', icon: '🗺️' },
-    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
-    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
     { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📈' },
+    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
+    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
     { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
-    { href: '/tools/company-overview', label: 'Company Overview', icon: '🏢' },
+  ];
+
+  const calendarItems: DropdownItem[] = [
     { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📅' },
     { href: '/tools/earnings-calendar', label: 'Earnings Calendar', icon: '💰' },
     { href: '/tools/news', label: 'Market News', icon: '📰' },
@@ -146,6 +147,7 @@ export default function Header() {
           <Dropdown label="Tools" items={toolsItems} />
           <Dropdown label="AI" items={aiItems} />
           <Dropdown label="Markets" items={marketItems} />
+          <Dropdown label="Calendar" items={calendarItems} />
           <Dropdown label="Resources" items={resourceItems} />
           <Link href="/pricing" className="hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
           <Link href="/dashboard" className="hover:text-emerald-300 whitespace-nowrap">Dashboard</Link>
@@ -183,7 +185,8 @@ export default function Header() {
               <MobileAccordion label="🛠️ Tools" items={toolsItems} isOpen={mobileDropdown === 'tools'} onToggle={() => setMobileDropdown(mobileDropdown === 'tools' ? null : 'tools')} onLinkClick={() => setIsOpen(false)} />
               <MobileAccordion label="🤖 AI Features" items={aiItems} isOpen={mobileDropdown === 'ai'} onToggle={() => setMobileDropdown(mobileDropdown === 'ai' ? null : 'ai')} onLinkClick={() => setIsOpen(false)} />
               <MobileAccordion label="📈 Markets" items={marketItems} isOpen={mobileDropdown === 'markets'} onToggle={() => setMobileDropdown(mobileDropdown === 'markets' ? null : 'markets')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="📚 Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="� Calendar & News" items={calendarItems} isOpen={mobileDropdown === 'calendar'} onToggle={() => setMobileDropdown(mobileDropdown === 'calendar' ? null : 'calendar')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="�📚 Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
 
               <div className="mt-3 pt-3 border-t border-slate-700">
                 <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-emerald-500/10 hover:text-emerald-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>💰 Pricing</Link>
