@@ -489,6 +489,13 @@ function ScannerContent() {
       
       const data = await res.json();
       
+      if (!res.ok) {
+        if (res.status === 401) {
+          setBulkScanError('🔒 Please log in to use the scanner');
+          return;
+        }
+      }
+      
       if (data.success) {
         setBulkScanResults({
           type: data.type,
@@ -582,11 +589,15 @@ function ScannerContent() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Scanner API returned ${response.status}`);
-      }
-
       const data = await response.json();
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('🔒 Please log in to use the scanner');
+          return;
+        }
+        throw new Error(data.error || `Scanner API returned ${response.status}`);
+      }
 
       if (data.success && data.results?.length > 0) {
         console.log('Scanner API Response:', data.results[0]);
@@ -893,15 +904,50 @@ function ScannerContent() {
           {/* Error Display */}
           {bulkScanError && (
             <div style={{
-              background: "rgba(239,68,68,0.1)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: "8px",
-              padding: "12px 16px",
-              color: "#ef4444",
+              background: bulkScanError.toLowerCase().includes("log in") 
+                ? "rgba(59, 130, 246, 0.1)" 
+                : "rgba(239,68,68,0.1)",
+              border: bulkScanError.toLowerCase().includes("log in")
+                ? "1px solid rgba(59, 130, 246, 0.3)"
+                : "1px solid rgba(239,68,68,0.3)",
+              borderRadius: "12px",
+              padding: "1.5rem",
+              color: bulkScanError.toLowerCase().includes("log in") ? "#60A5FA" : "#ef4444",
               fontSize: "14px",
-              marginBottom: "16px"
+              marginBottom: "16px",
+              textAlign: "center",
             }}>
-              ⚠️ {bulkScanError}
+              {bulkScanError.toLowerCase().includes("log in") ? "🔒" : "⚠️"} {bulkScanError}
+              {bulkScanError.toLowerCase().includes("log in") && (
+                <div style={{ marginTop: "1rem" }}>
+                  <a
+                    href="/auth"
+                    style={{
+                      display: "inline-block",
+                      padding: "0.75rem 2rem",
+                      background: "linear-gradient(135deg, #10B981, #059669)",
+                      color: "white",
+                      borderRadius: "8px",
+                      fontWeight: 600,
+                      textDecoration: "none",
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      e.currentTarget.style.boxShadow = "0 4px 20px rgba(16, 185, 129, 0.4)";
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    Log In to Continue →
+                  </a>
+                  <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "#94A3B8" }}>
+                    Free accounts get full scanner access!
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1408,14 +1454,49 @@ function ScannerContent() {
         {/* Error Message */}
         {error && (
           <div style={{
-            padding: "1rem",
-            background: "rgba(239, 68, 68, 0.1)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            borderRadius: "8px",
-            color: "#EF4444",
+            padding: "1.5rem",
+            background: error.toLowerCase().includes("log in") 
+              ? "rgba(59, 130, 246, 0.1)" 
+              : "rgba(239, 68, 68, 0.1)",
+            border: error.toLowerCase().includes("log in")
+              ? "1px solid rgba(59, 130, 246, 0.3)"
+              : "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: "12px",
+            color: error.toLowerCase().includes("log in") ? "#60A5FA" : "#EF4444",
             marginBottom: "1rem",
+            textAlign: "center",
           }}>
-            ⚠️ {error}
+            {error.toLowerCase().includes("log in") ? "🔒" : "⚠️"} {error}
+            {error.toLowerCase().includes("log in") && (
+              <div style={{ marginTop: "1rem" }}>
+                <a
+                  href="/auth"
+                  style={{
+                    display: "inline-block",
+                    padding: "0.75rem 2rem",
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    color: "white",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 20px rgba(16, 185, 129, 0.4)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  Log In to Continue →
+                </a>
+                <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "#94A3B8" }}>
+                  Free accounts get full scanner access!
+                </p>
+              </div>
+            )}
           </div>
         )}
 
