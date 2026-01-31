@@ -317,6 +317,50 @@ export async function POST(req: NextRequest) {
       return { price };
     }
 
+    // BULK QUOTES: Fetch up to 100 symbols in a single API call (huge rate limit savings!)
+    // Returns a Map of symbol -> price for quick lookup
+    async function fetchBulkQuotes(symbols: string[]): Promise<Map<string, number>> {
+      if (symbols.length === 0) return new Map();
+      
+      // Alpha Vantage REALTIME_BULK_QUOTES supports up to 100 symbols per call
+      const MAX_BULK = 100;
+      const batches: string[][] = [];
+      for (let i = 0; i < symbols.length; i += MAX_BULK) {
+        batches.push(symbols.slice(i, i + MAX_BULK));
+      }
+      
+      const priceMap = new Map<string, number>();
+      
+      for (const batch of batches) {
+        const symbolList = batch.join(',');
+        const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+        
+        try {
+          console.info(`[scanner] Fetching BULK QUOTES for ${batch.length} symbols`);
+          const j = await fetchAlphaJson(url, `BULK_QUOTES`);
+          
+          // Response format: { "data": [ { "01. symbol": "AAPL", "02. open": "...", "05. price": "...", ... }, ... ] }
+          const data = j.data || [];
+          
+          for (const quote of data) {
+            const sym = quote["01. symbol"] || quote["symbol"];
+            const price = Number(quote["05. price"] || quote["price"]) || NaN;
+            if (sym && Number.isFinite(price)) {
+              priceMap.set(sym.toUpperCase(), price);
+              console.debug("[scanner] BULK_QUOTE", { sym, price });
+            }
+          }
+          
+          console.info(`[scanner] BULK QUOTES: Got ${priceMap.size} prices from ${batch.length} requested`);
+        } catch (err: any) {
+          console.error("[scanner] BULK QUOTES failed, will fall back to individual quotes:", err.message);
+          // Don't throw - we'll fall back to individual quotes if bulk fails
+        }
+      }
+      
+      return priceMap;
+    }
+
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
     type Candle = { t: string; open: number; high: number; low: number; close: number; };
 
@@ -807,6 +851,15 @@ export async function POST(req: NextRequest) {
     const results: ScanResult[] = [];
     const errors: string[] = [];
 
+    // PRE-FETCH: Bulk quotes for all equities (saves N-1 API calls!)
+    // This fetches all equity prices in 1 call instead of N individual calls
+    const equitySymbols = type === "equity" ? limited : [];
+    let bulkPriceMap: Map<string, number> = new Map();
+    if (equitySymbols.length > 0) {
+      console.info(`[scanner] Pre-fetching bulk quotes for ${equitySymbols.length} equities`);
+      bulkPriceMap = await fetchBulkQuotes(equitySymbols);
+    }
+
     for (const sym of limited) {
       try {
         if (type === "crypto") {
@@ -1034,6 +1087,10 @@ export async function POST(req: NextRequest) {
           // EQUITIES: Use Alpha Vantage (admin-only testing - requires commercial license for production)
           console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval})`);
           
+          // Get price from pre-fetched bulk quotes (saves 1 API call per symbol!)
+          // Fall back to individual fetch if bulk didn't have this symbol
+          let price = bulkPriceMap.get(sym.toUpperCase()) ?? NaN;
+          
           // Alpha Vantage enforces max 5 requests/second - batch with delays
           // Batch 1: First 5 indicators
           const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
@@ -1047,15 +1104,20 @@ export async function POST(req: NextRequest) {
           // Wait 250ms before second batch to respect rate limit
           await new Promise(resolve => setTimeout(resolve, 250));
           
-          // Batch 2: Remaining 4 indicators
-          const [stochObj, cciVal, aroonObj, priceData] = await Promise.all([
+          // Batch 2: Remaining 3 indicators (price already from bulk!)
+          const [stochObj, cciVal, aroonObj] = await Promise.all([
             fetchSTOCH(sym),
             fetchCCI(sym),
             fetchAROON(sym),
-            fetchEquityPrice(sym)
           ]);
           
-          const price = priceData.price;
+          // Only fetch individual price if bulk failed for this symbol
+          if (!Number.isFinite(price)) {
+            console.info(`[scanner] Bulk quote missing for ${sym}, fetching individually`);
+            const priceData = await fetchEquityPrice(sym);
+            price = priceData.price;
+          }
+          
           const macHist = macObj.hist;
           const macLine = macObj.macd;
           const sigLine = macObj.sig;
