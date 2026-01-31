@@ -117,6 +117,7 @@ export default function Header() {
   const marketItems: DropdownItem[] = [
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
     { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📈' },
+    { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '📈' },
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
     { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },

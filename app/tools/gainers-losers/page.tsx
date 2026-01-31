@@ -172,14 +172,10 @@ export default function GainersLosersPage() {
     if (isAdmin) fetchData();
   }, [isAdmin]);
 
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
-  }
-
+  // Compute rawData BEFORE any conditional returns
   const rawData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
   
-  // Apply filters and sorting
+  // Apply filters and sorting - MUST be before conditional returns
   const currentData = useMemo(() => {
     let filtered: ClassifiedMover[] = rawData.map(item => {
       const price = parseFloat(item.price);
@@ -237,6 +233,11 @@ export default function GainersLosersPage() {
   }, [rawData, hideETFs, hideLeveraged, hideExtremeRisk, minPrice, sortField, sortDirection]);
   
   const insight = generateMoverInsight(rawData, activeTab);
+
+  // Data licensing gate - only admins can access for now (AFTER all hooks)
+  if (!isAdmin) {
+    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
+  }
   
   const handleSort = (field: SortField) => {
     if (sortField === field) {
