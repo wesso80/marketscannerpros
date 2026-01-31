@@ -3,16 +3,20 @@
  * 
  * @route POST /api/scanner/bulk
  * @description Scans top stocks or crypto to find best opportunities
- *              - Crypto: Binance API (free, no key, fast, 100 coins)
- *              - Equity: Yahoo Finance (free, no key)
+ *              - Crypto: CoinGecko Commercial API (licensed, 500 calls/min)
+ *              - Equity: Alpha Vantage Premium (licensed, 300 calls/min)
  * 
  * No auth required - rate limited by normal request throttling
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
+
+// Alpha Vantage API Key
+const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY || process.env.ALPHAVANTAGE_API_KEY;
 
 // =============================================================================
 // UNIVERSES TO SCAN
@@ -57,6 +61,82 @@ const CRYPTO_UNIVERSE = [
   "DASH", "XMR", "BAT", "ZRX", "ANKR", "STORJ", "CELO", "ONE", "ICX", "QTUM",
   "ONT", "WAVES", "IOTA", "SC", "RVN", "BTT", "HOT", "CELR", "DENT", "CHZ"
 ];
+
+// Symbol to CoinGecko ID mapping (extend from lib + add missing)
+const SYMBOL_TO_COINGECKO: Record<string, string> = {
+  ...COINGECKO_ID_MAP,
+  // Add missing mappings from CRYPTO_UNIVERSE
+  'BCH': 'bitcoin-cash',
+  'ETC': 'ethereum-classic',
+  'FIL': 'filecoin',
+  'VET': 'vechain',
+  'HBAR': 'hedera-hashgraph',
+  'AAVE': 'aave',
+  'GRT': 'the-graph',
+  'ALGO': 'algorand',
+  'FTM': 'fantom',
+  'SAND': 'the-sandbox',
+  'MANA': 'decentraland',
+  'AXS': 'axie-infinity',
+  'MKR': 'maker',
+  'RNDR': 'render-token',
+  'TIA': 'celestia',
+  'IMX': 'immutable-x',
+  'RUNE': 'thorchain',
+  'THETA': 'theta-token',
+  'STX': 'blockstack',
+  'EGLD': 'elrond-erd-2',
+  'FLOW': 'flow',
+  'KAVA': 'kava',
+  'NEO': 'neo',
+  'XTZ': 'tezos',
+  'EOS': 'eos',
+  'CFX': 'conflux-token',
+  'GALA': 'gala',
+  'ROSE': 'oasis-network',
+  'ZIL': 'zilliqa',
+  '1INCH': '1inch',
+  'COMP': 'compound-governance-token',
+  'SNX': 'havven',
+  'ENJ': 'enjincoin',
+  'CRV': 'curve-dao-token',
+  'LDO': 'lido-dao',
+  'RPL': 'rocket-pool',
+  'BLUR': 'blur',
+  'PENDLE': 'pendle',
+  'WLD': 'worldcoin-wld',
+  'STRK': 'starknet',
+  'ONDO': 'ondo-finance',
+  'PYTH': 'pyth-network',
+  'JTO': 'jito-governance-token',
+  'FLOKI': 'floki',
+  'ORDI': 'ordinals',
+  'SATS': '1000sats-ordinals',
+  'TON': 'the-open-network',
+  'KLAY': 'klay-token',
+  'MINA': 'mina-protocol',
+  'ZEC': 'zcash',
+  'DASH': 'dash',
+  'XMR': 'monero',
+  'BAT': 'basic-attention-token',
+  'ZRX': '0x',
+  'ANKR': 'ankr',
+  'STORJ': 'storj',
+  'CELO': 'celo',
+  'ONE': 'harmony',
+  'ICX': 'icon',
+  'QTUM': 'qtum',
+  'ONT': 'ontology',
+  'WAVES': 'waves',
+  'IOTA': 'iota',
+  'SC': 'siacoin',
+  'RVN': 'ravencoin',
+  'BTT': 'bittorrent',
+  'HOT': 'holotoken',
+  'CELR': 'celer-network',
+  'DENT': 'dent',
+  'CHZ': 'chiliz',
+};
 
 // =============================================================================
 // TECHNICAL INDICATOR CALCULATIONS
@@ -335,94 +415,116 @@ function computeScore(indicators: Indicators): {
 }
 
 // =============================================================================
-// DATA FETCHERS
+// DATA FETCHERS (Licensed APIs)
 // =============================================================================
 
-// Yahoo Finance interval mapping (for equities)
-const INTERVAL_CONFIG: Record<string, { interval: string; rangeDays: number; minBars: number }> = {
-  '15m': { interval: '15m', rangeDays: 7, minBars: 50 },     // 7 days of 15min data
-  '30m': { interval: '30m', rangeDays: 14, minBars: 50 },    // 14 days of 30min data
-  '1h': { interval: '60m', rangeDays: 30, minBars: 50 },     // 30 days of 1h data
-  '1d': { interval: '1d', rangeDays: 180, minBars: 50 }      // 180 days of daily data
+// CoinGecko days mapping for OHLC endpoint
+const COINGECKO_DAYS_MAP: Record<string, 1 | 7 | 14 | 30 | 90 | 180 | 365> = {
+  '15m': 1,   // 1 day gives ~48 candles (30-min granularity on free, 15-min on Pro)
+  '30m': 7,   // 7 days gives ~336 candles
+  '1h': 30,   // 30 days of hourly data
+  '1d': 180   // 180 days of daily data
 };
 
-// Binance interval mapping (for crypto)
-const BINANCE_INTERVAL_MAP: Record<string, string> = {
-  '15m': '15m',
-  '30m': '30m', 
-  '1h': '1h',
-  '4h': '4h',
-  '1d': '1d'
+// Alpha Vantage interval mapping
+const AV_INTERVAL_MAP: Record<string, string> = {
+  '15m': '15min',
+  '30m': '30min',
+  '1h': '60min',
+  '1d': 'daily'
 };
 
-// Fetch crypto OHLCV data from Binance (fast, free, no API key)
-async function fetchBinanceData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+// Fetch crypto OHLCV data from CoinGecko (Commercial licensed - 500 calls/min)
+async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
   try {
-    const interval = BINANCE_INTERVAL_MAP[timeframe] || '1d';
-    const binanceSymbol = `${symbol.toUpperCase()}USDT`;
-    
     // Skip stablecoins
     const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
     if (stablecoins.includes(symbol.toUpperCase())) return null;
     
-    const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
+    // Get CoinGecko ID from symbol
+    const coinId = SYMBOL_TO_COINGECKO[symbol.toUpperCase()];
+    if (!coinId) {
+      console.warn(`[bulk-scan] No CoinGecko mapping for ${symbol}`);
+      return null;
+    }
     
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      cache: 'no-store'
-    });
+    const days = COINGECKO_DAYS_MAP[timeframe] || 30;
+    const ohlcData = await getOHLC(coinId, days);
     
-    if (!res.ok) return null;
+    if (!ohlcData || !Array.isArray(ohlcData) || ohlcData.length < 20) {
+      return null;
+    }
     
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length < 50) return null;
-    
-    const ohlcv: OHLCV[] = data.map((k: any[]) => ({
-      date: new Date(k[0]).toISOString(),
-      open: parseFloat(k[1]),
-      high: parseFloat(k[2]),
-      low: parseFloat(k[3]),
-      close: parseFloat(k[4]),
-      volume: parseFloat(k[5])
+    // CoinGecko OHLC format: [[timestamp, open, high, low, close], ...]
+    const ohlcv: OHLCV[] = ohlcData.map((candle: number[]) => ({
+      date: new Date(candle[0]).toISOString(),
+      open: candle[1],
+      high: candle[2],
+      low: candle[3],
+      close: candle[4],
+      volume: 0 // CoinGecko OHLC doesn't include volume
     })).filter((c: OHLCV) => Number.isFinite(c.close));
     
-    return ohlcv.length >= 50 ? ohlcv : null;
-  } catch {
+    return ohlcv.length >= 20 ? ohlcv : null;
+  } catch (err) {
+    console.error(`[bulk-scan] CoinGecko fetch error for ${symbol}:`, err);
     return null;
   }
 }
 
-async function fetchYahooData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+// Fetch equity OHLCV data from Alpha Vantage (Premium licensed - 300 calls/min)
+async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
   try {
-    const config = INTERVAL_CONFIG[timeframe] || INTERVAL_CONFIG['1d'];
-    const period1 = Math.floor(Date.now() / 1000) - (config.rangeDays * 24 * 60 * 60);
-    const period2 = Math.floor(Date.now() / 1000);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${config.interval}`;
+    if (!ALPHA_KEY) {
+      console.error('[bulk-scan] No Alpha Vantage API key');
+      return null;
+    }
     
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
+    const interval = AV_INTERVAL_MAP[timeframe] || 'daily';
+    let url: string;
+    let tsKey: string;
+    
+    if (interval === 'daily') {
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      tsKey = 'Time Series (Daily)';
+    } else {
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      tsKey = `Time Series (${interval})`;
+    }
+    
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     
     const data = await res.json();
-    const result = data?.chart?.result?.[0];
-    if (!result?.timestamp || !result?.indicators?.quote?.[0]) return null;
     
-    const { timestamp } = result;
-    const quote = result.indicators.quote[0];
-    
-    const ohlcv: OHLCV[] = [];
-    for (let i = 0; i < timestamp.length; i++) {
-      if (quote.open[i] && quote.high[i] && quote.low[i] && quote.close[i]) {
-        ohlcv.push({
-          date: new Date(timestamp[i] * 1000).toISOString(),
-          open: quote.open[i], high: quote.high[i], low: quote.low[i],
-          close: quote.close[i], volume: quote.volume[i] || 0
-        });
-      }
+    // Check for rate limit or errors
+    if (data.Note || data.Information) {
+      console.warn(`[bulk-scan] AV rate limit for ${symbol}`);
+      return null;
     }
-    return ohlcv.length >= config.minBars ? ohlcv : null;
-  } catch { return null; }
+    if (data['Error Message']) {
+      console.error(`[bulk-scan] AV error for ${symbol}: ${data['Error Message']}`);
+      return null;
+    }
+    
+    const ts = data[tsKey] || data['Time Series (Daily)'] || {};
+    
+    const ohlcv: OHLCV[] = Object.entries(ts).map(([date, values]: [string, any]) => ({
+      date,
+      open: parseFloat(values['1. open']),
+      high: parseFloat(values['2. high']),
+      low: parseFloat(values['3. low']),
+      close: parseFloat(values['4. close']),
+      volume: parseFloat(values['5. volume'] || '0')
+    }))
+    .filter((c: OHLCV) => Number.isFinite(c.close))
+    .sort((a, b) => a.date.localeCompare(b.date)); // Sort oldest first
+    
+    return ohlcv.length >= 50 ? ohlcv : null;
+  } catch (err) {
+    console.error(`[bulk-scan] Alpha Vantage fetch error for ${symbol}:`, err);
+    return null;
+  }
 }
 
 function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
@@ -439,14 +541,17 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
     longShortRatio?: number;
   };
 } | null {
-  if (!ohlcv || ohlcv.length < 50) return null;
+  // CoinGecko may return fewer bars, so accept 20+ for crypto
+  if (!ohlcv || ohlcv.length < 20) return null;
   
   const closes = ohlcv.map(d => d.close);
   const price = closes[closes.length - 1];
   const prevPrice = closes[closes.length - 2];
   const change24h = ((price - prevPrice) / prevPrice) * 100;
   
-  const ema200Arr = calculateEMA(closes, 200);
+  // Use shorter EMA if not enough bars for 200
+  const emaPeriod = Math.min(200, Math.floor(closes.length * 0.8));
+  const ema200Arr = calculateEMA(closes, emaPeriod);
   const macdData = calculateMACD(closes);
   const stoch = calculateStochastic(ohlcv);
   const aroon = calculateAroon(ohlcv);
@@ -572,21 +677,20 @@ export async function POST(req: NextRequest) {
       console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins`);
     }
     
-    // Process in parallel batches
-    // Crypto: Binance (very fast, 20 per batch)
-    // Equity: Yahoo Finance (slower, 10 per batch)
-    const BATCH_SIZE = type === 'crypto' ? 20 : 10;
-    const DELAY = type === 'crypto' ? 50 : 100;
+    // Crypto: CoinGecko (licensed, slower - 10 per batch)
+    // Equity: Alpha Vantage (licensed, rate limited - 5 per batch)
+    const BATCH_SIZE = type === 'crypto' ? 10 : 5;
+    const DELAY = type === 'crypto' ? 200 : 250; // More delay to respect rate limits
     
     for (let i = 0; i < universe.length; i += BATCH_SIZE) {
       const batch = universe.slice(i, i + BATCH_SIZE);
       
       const batchPromises = batch.map(async (id) => {
         try {
-          // Crypto uses Binance, Equity uses Yahoo Finance
+          // Crypto uses CoinGecko (licensed), Equity uses Alpha Vantage (licensed)
           const ohlcv = type === 'crypto' 
-            ? await fetchBinanceData(id, selectedTimeframe)
-            : await fetchYahooData(id, selectedTimeframe);
+            ? await fetchCoinGeckoData(id, selectedTimeframe)
+            : await fetchAlphaVantageData(id, selectedTimeframe);
           
           if (!ohlcv) {
             errors.push(`${id}: No data`);
