@@ -35,6 +35,21 @@ const POPULAR_STOCKS = [
   { symbol: 'AMD', name: 'AMD' },
 ];
 
+const POPULAR_CRYPTO = [
+  { symbol: 'BTC', name: 'Bitcoin' },
+  { symbol: 'ETH', name: 'Ethereum' },
+  { symbol: 'SOL', name: 'Solana' },
+  { symbol: 'XRP', name: 'XRP' },
+  { symbol: 'DOGE', name: 'Dogecoin' },
+  { symbol: 'ADA', name: 'Cardano' },
+  { symbol: 'AVAX', name: 'Avalanche' },
+  { symbol: 'LINK', name: 'Chainlink' },
+  { symbol: 'DOT', name: 'Polkadot' },
+  { symbol: 'MATIC', name: 'Polygon' },
+];
+
+type AssetType = 'stocks' | 'crypto';
+
 const INTERVALS: { value: Interval; label: string; description: string }[] = [
   { value: '1min', label: '1 Min', description: '1 minute candles' },
   { value: '5min', label: '5 Min', description: '5 minute candles' },
@@ -302,6 +317,8 @@ export default function IntradayChartsPage() {
   const [error, setError] = useState<string | null>(null);
   const [hoveredBar, setHoveredBar] = useState<IntradayBar | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [assetType, setAssetType] = useState<AssetType>('stocks');
+  const [isCrypto, setIsCrypto] = useState(false);
 
   const fetchData = useCallback(async (sym: string, int: Interval) => {
     if (!sym) return;
@@ -321,6 +338,7 @@ export default function IntradayChartsPage() {
 
       setData(result);
       setSymbol(sym);
+      setIsCrypto(result.isCrypto || false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch intraday data');
       setData(null);
@@ -385,8 +403,12 @@ export default function IntradayChartsPage() {
               </Link>
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 📈 Intraday Charts
-                <span className="text-sm font-normal text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
-                  Real-Time
+                <span className={`text-sm font-normal px-2 py-0.5 rounded ${
+                  isCrypto 
+                    ? 'text-orange-400 bg-orange-500/20' 
+                    : 'text-emerald-400 bg-emerald-500/20'
+                }`}>
+                  {isCrypto ? '₿ Crypto' : 'Real-Time'}
                 </span>
               </h1>
             </div>
@@ -413,23 +435,60 @@ export default function IntradayChartsPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Asset Type Toggle */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="flex bg-slate-800 rounded-lg p-1">
+            <button
+              onClick={() => {
+                setAssetType('stocks');
+                fetchData('AAPL', interval);
+              }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                assetType === 'stocks'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              📈 Stocks
+            </button>
+            <button
+              onClick={() => {
+                setAssetType('crypto');
+                fetchData('BTC', interval);
+              }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                assetType === 'crypto'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              ₿ Crypto
+            </button>
+          </div>
+          {assetType === 'crypto' && (
+            <span className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded">
+              24/7 Trading
+            </span>
+          )}
+        </div>
+
         {/* Quick Picks */}
         <div className="mb-6">
           <div className="flex flex-wrap gap-2">
-            {POPULAR_STOCKS.map((stock) => (
+            {(assetType === 'stocks' ? POPULAR_STOCKS : POPULAR_CRYPTO).map((item) => (
               <button
-                key={stock.symbol}
+                key={item.symbol}
                 onClick={() => {
-                  setSearchInput(stock.symbol);
-                  fetchData(stock.symbol, interval);
+                  setSearchInput(item.symbol);
+                  fetchData(item.symbol, interval);
                 }}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                  symbol === stock.symbol
-                    ? 'bg-emerald-600 text-white'
+                  symbol === item.symbol
+                    ? assetType === 'crypto' ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'
                     : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
                 }`}
               >
-                {stock.symbol}
+                {item.symbol}
               </button>
             ))}
           </div>

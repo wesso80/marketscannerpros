@@ -4,6 +4,19 @@ const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 type IntradayInterval = '1min' | '5min' | '15min' | '30min' | '60min';
 
+// Common crypto symbols - used to detect if a symbol is crypto
+const CRYPTO_SYMBOLS = new Set([
+  'BTC', 'ETH', 'XRP', 'BNB', 'SOL', 'DOGE', 'ADA', 'TRX', 'AVAX', 'LINK',
+  'DOT', 'MATIC', 'SHIB', 'LTC', 'UNI', 'ATOM', 'XLM', 'ETC', 'FIL', 'APT',
+  'NEAR', 'ARB', 'OP', 'INJ', 'IMX', 'AAVE', 'GRT', 'MKR', 'ALGO', 'FTM',
+  'HBAR', 'VET', 'SAND', 'MANA', 'AXS', 'CRO', 'EGLD', 'THETA', 'XTZ', 'EOS',
+  'PEPE', 'WIF', 'BONK', 'FLOKI', 'RUNE', 'SUI', 'SEI', 'TIA', 'STX', 'RENDER'
+]);
+
+function isCryptoSymbol(symbol: string): boolean {
+  return CRYPTO_SYMBOLS.has(symbol.toUpperCase());
+}
+
 interface IntradayBar {
   timestamp: string;
   open: number;
@@ -27,6 +40,7 @@ interface IntradayResponse {
     outputSize: string;
     timeZone: string;
   };
+  isCrypto?: boolean;
 }
 
 export async function GET(req: NextRequest) {
@@ -53,14 +67,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
   }
 
+  const isCrypto = isCryptoSymbol(symbol);
+
   try {
     const url = new URL('https://www.alphavantage.co/query');
-    url.searchParams.set('function', 'TIME_SERIES_INTRADAY');
-    url.searchParams.set('symbol', symbol);
-    url.searchParams.set('interval', interval);
-    url.searchParams.set('outputsize', outputSize);
-    url.searchParams.set('adjusted', adjusted.toString());
-    url.searchParams.set('extended_hours', extendedHours.toString());
+    
+    if (isCrypto) {
+      // Use CRYPTO_INTRADAY for cryptocurrency
+      url.searchParams.set('function', 'CRYPTO_INTRADAY');
+      url.searchParams.set('symbol', symbol);
+      url.searchParams.set('market', 'USD');
+      url.searchParams.set('interval', interval);
+      url.searchParams.set('outputsize', outputSize);
+    } else {
+      // Use TIME_SERIES_INTRADAY for stocks
+      url.searchParams.set('function', 'TIME_SERIES_INTRADAY');
+      url.searchParams.set('symbol', symbol);
+      url.searchParams.set('interval', interval);
+      url.searchParams.set('outputsize', outputSize);
+      url.searchParams.set('adjusted', adjusted.toString());
+      url.searchParams.set('extended_hours', extendedHours.toString());
+    }
     url.searchParams.set('apikey', ALPHA_VANTAGE_KEY);
 
     const response = await fetch(url.toString(), {
@@ -95,9 +122,11 @@ export async function GET(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Parse the response
+    // Parse the response - different key format for crypto
     const metaData = data['Meta Data'];
-    const timeSeriesKey = `Time Series (${interval})`;
+    const timeSeriesKey = isCrypto 
+      ? `Time Series Crypto (${interval})`
+      : `Time Series (${interval})`;
     const timeSeries = data[timeSeriesKey];
 
     if (!timeSeries || !metaData) {
@@ -120,19 +149,20 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const result: IntradayResponse = {
-      symbol: metaData['2. Symbol'],
+      symbol: isCrypto ? metaData['2. Digital Currency Code'] : metaData['2. Symbol'],
       interval: interval,
-      lastRefreshed: metaData['3. Last Refreshed'],
-      timeZone: metaData['6. Time Zone'],
+      lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
+      timeZone: isCrypto ? metaData['7. Time Zone'] : metaData['6. Time Zone'],
       data: bars,
       metadata: {
         information: metaData['1. Information'],
-        symbol: metaData['2. Symbol'],
-        lastRefreshed: metaData['3. Last Refreshed'],
-        interval: metaData['4. Interval'],
-        outputSize: metaData['5. Output Size'],
-        timeZone: metaData['6. Time Zone']
-      }
+        symbol: isCrypto ? metaData['2. Digital Currency Code'] : metaData['2. Symbol'],
+        lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
+        interval: isCrypto ? metaData['5. Interval'] : metaData['4. Interval'],
+        outputSize: isCrypto ? metaData['4. Output Size'] : metaData['5. Output Size'],
+        timeZone: isCrypto ? metaData['7. Time Zone'] : metaData['6. Time Zone']
+      },
+      isCrypto
     };
 
     return NextResponse.json(result);
