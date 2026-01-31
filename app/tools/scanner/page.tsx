@@ -1085,6 +1085,95 @@ function ScannerContent() {
                         )}
                       </div>
                     )}
+                    
+                    {/* Action Buttons */}
+                    <div style={{ 
+                      display: "flex", 
+                      gap: "8px", 
+                      marginTop: "12px",
+                      paddingTop: "8px",
+                      borderTop: "1px solid rgba(148,163,184,0.1)"
+                    }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`;
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "6px 10px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          background: "rgba(251,191,36,0.1)",
+                          color: "#fbbf24",
+                          border: "1px solid rgba(251,191,36,0.3)",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          transition: "all 0.2s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(251,191,36,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(251,191,36,0.1)";
+                        }}
+                      >
+                        🔔 Set Alert
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Add to default watchlist
+                          const price = pick.indicators?.price;
+                          fetch('/api/watchlist', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              symbol: pick.symbol,
+                              name: pick.name || pick.symbol,
+                              type: bulkScanResults.type === 'crypto' ? 'crypto' : 'stock',
+                              price: price
+                            })
+                          }).then(res => res.json()).then(data => {
+                            if (data.error) {
+                              alert(data.error);
+                            } else {
+                              alert(`✅ ${pick.symbol} added to watchlist!`);
+                            }
+                          }).catch(() => {
+                            alert('Failed to add to watchlist');
+                          });
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "6px 10px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          background: "rgba(16,185,129,0.1)",
+                          color: "#10b981",
+                          border: "1px solid rgba(16,185,129,0.3)",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          transition: "all 0.2s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(16,185,129,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(16,185,129,0.1)";
+                        }}
+                      >
+                        ⭐ Add to Watchlist
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

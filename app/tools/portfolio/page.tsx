@@ -29,6 +29,451 @@ interface PerformanceSnapshot {
   totalPL: number;
 }
 
+// Position Sizing Calculator Component
+function PositionSizerCalculator() {
+  const [accountSize, setAccountSize] = useState<string>('10000');
+  const [riskPercent, setRiskPercent] = useState<string>('2');
+  const [entryPrice, setEntryPrice] = useState<string>('');
+  const [stopLoss, setStopLoss] = useState<string>('');
+  const [takeProfit, setTakeProfit] = useState<string>('');
+  const [side, setSide] = useState<'LONG' | 'SHORT'>('LONG');
+  const [method, setMethod] = useState<'fixed' | 'kelly'>('fixed');
+  
+  // Kelly Criterion inputs
+  const [winRate, setWinRate] = useState<string>('55');
+  const [avgWin, setAvgWin] = useState<string>('2');
+  const [avgLoss, setAvgLoss] = useState<string>('1');
+
+  // Calculate position size
+  const calculate = () => {
+    const account = parseFloat(accountSize) || 0;
+    const risk = parseFloat(riskPercent) || 0;
+    const entry = parseFloat(entryPrice) || 0;
+    const stop = parseFloat(stopLoss) || 0;
+    const target = parseFloat(takeProfit) || 0;
+    
+    if (account <= 0 || entry <= 0 || stop <= 0) {
+      return { positionSize: 0, shares: 0, dollarRisk: 0, dollarReward: 0, rr: 0, kellyPercent: 0 };
+    }
+
+    // Calculate risk per share based on side
+    let riskPerShare: number;
+    let rewardPerShare: number;
+    
+    if (side === 'LONG') {
+      riskPerShare = entry - stop;
+      rewardPerShare = target > 0 ? target - entry : 0;
+    } else {
+      riskPerShare = stop - entry;
+      rewardPerShare = target > 0 ? entry - target : 0;
+    }
+    
+    if (riskPerShare <= 0) {
+      return { positionSize: 0, shares: 0, dollarRisk: 0, dollarReward: 0, rr: 0, kellyPercent: 0 };
+    }
+
+    // Fixed Fractional: Risk % of account
+    const dollarRisk = account * (risk / 100);
+    const shares = dollarRisk / riskPerShare;
+    const positionSize = shares * entry;
+    const dollarReward = rewardPerShare > 0 ? shares * rewardPerShare : 0;
+    const rr = riskPerShare > 0 && rewardPerShare > 0 ? rewardPerShare / riskPerShare : 0;
+
+    // Kelly Criterion calculation
+    const win = parseFloat(winRate) / 100 || 0;
+    const avgW = parseFloat(avgWin) || 1;
+    const avgL = parseFloat(avgLoss) || 1;
+    // Kelly % = W - [(1-W) / (AvgWin/AvgLoss)]
+    const kellyPercent = win > 0 && avgL > 0 
+      ? Math.max(0, (win - ((1 - win) / (avgW / avgL))) * 100)
+      : 0;
+
+    return { positionSize, shares, dollarRisk, dollarReward, rr, kellyPercent };
+  };
+
+  const result = calculate();
+  const kellyShares = method === 'kelly' && result.kellyPercent > 0
+    ? (parseFloat(accountSize) * (result.kellyPercent / 100)) / (parseFloat(entryPrice) || 1)
+    : 0;
+
+  const formatNumber = (n: number, decimals = 2) => {
+    if (isNaN(n) || !isFinite(n)) return '0';
+    return n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
+  return (
+    <div style={{
+      background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.8))',
+      border: '1px solid #334155',
+      borderRadius: '16px',
+      padding: '32px',
+      maxWidth: '800px',
+      margin: '0 auto'
+    }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          🎯 Position Sizing Calculator
+        </h2>
+        <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+          Calculate optimal position sizes based on your risk tolerance and trading setup.
+        </p>
+      </div>
+
+      {/* Method Toggle */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+        <button
+          onClick={() => setMethod('fixed')}
+          style={{
+            flex: 1,
+            padding: '12px',
+            background: method === 'fixed' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.1)',
+            border: method === 'fixed' ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(148,163,184,0.2)',
+            borderRadius: '8px',
+            color: method === 'fixed' ? '#10b981' : '#94a3b8',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          📊 Fixed Fractional
+        </button>
+        <button
+          onClick={() => setMethod('kelly')}
+          style={{
+            flex: 1,
+            padding: '12px',
+            background: method === 'kelly' ? 'rgba(139,92,246,0.15)' : 'rgba(148,163,184,0.1)',
+            border: method === 'kelly' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(148,163,184,0.2)',
+            borderRadius: '8px',
+            color: method === 'kelly' ? '#a78bfa' : '#94a3b8',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          📐 Kelly Criterion
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+        {/* Account Size */}
+        <div>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Account Size ($)
+          </label>
+          <input
+            type="number"
+            value={accountSize}
+            onChange={(e) => setAccountSize(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              color: '#f1f5f9',
+              fontSize: '15px'
+            }}
+          />
+        </div>
+
+        {/* Risk % */}
+        <div>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Risk Per Trade (%)
+          </label>
+          <input
+            type="number"
+            step="0.5"
+            value={riskPercent}
+            onChange={(e) => setRiskPercent(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              color: '#f1f5f9',
+              fontSize: '15px'
+            }}
+          />
+        </div>
+
+        {/* Side Toggle */}
+        <div style={{ gridColumn: 'span 2' }}>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Position Side
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setSide('LONG')}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: side === 'LONG' ? 'rgba(16,185,129,0.2)' : '#0f172a',
+                border: side === 'LONG' ? '1px solid #10b981' : '1px solid #334155',
+                borderRadius: '6px',
+                color: side === 'LONG' ? '#10b981' : '#94a3b8',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              📈 LONG
+            </button>
+            <button
+              onClick={() => setSide('SHORT')}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: side === 'SHORT' ? 'rgba(239,68,68,0.2)' : '#0f172a',
+                border: side === 'SHORT' ? '1px solid #ef4444' : '1px solid #334155',
+                borderRadius: '6px',
+                color: side === 'SHORT' ? '#ef4444' : '#94a3b8',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              📉 SHORT
+            </button>
+          </div>
+        </div>
+
+        {/* Entry Price */}
+        <div>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Entry Price ($)
+          </label>
+          <input
+            type="number"
+            step="any"
+            placeholder="e.g., 150.00"
+            value={entryPrice}
+            onChange={(e) => setEntryPrice(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              color: '#f1f5f9',
+              fontSize: '15px'
+            }}
+          />
+        </div>
+
+        {/* Stop Loss */}
+        <div>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Stop Loss ($)
+          </label>
+          <input
+            type="number"
+            step="any"
+            placeholder={side === 'LONG' ? 'Below entry' : 'Above entry'}
+            value={stopLoss}
+            onChange={(e) => setStopLoss(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0f172a',
+              border: '1px solid rgba(239,68,68,0.5)',
+              borderRadius: '8px',
+              color: '#ef4444',
+              fontSize: '15px'
+            }}
+          />
+        </div>
+
+        {/* Take Profit */}
+        <div style={{ gridColumn: 'span 2' }}>
+          <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+            Take Profit ($) <span style={{ color: '#64748b' }}>(optional)</span>
+          </label>
+          <input
+            type="number"
+            step="any"
+            placeholder={side === 'LONG' ? 'Above entry' : 'Below entry'}
+            value={takeProfit}
+            onChange={(e) => setTakeProfit(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: '#0f172a',
+              border: '1px solid rgba(16,185,129,0.5)',
+              borderRadius: '8px',
+              color: '#10b981',
+              fontSize: '15px'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Kelly Criterion Inputs */}
+      {method === 'kelly' && (
+        <div style={{
+          background: 'rgba(139,92,246,0.1)',
+          border: '1px solid rgba(139,92,246,0.3)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '24px'
+        }}>
+          <h4 style={{ color: '#a78bfa', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+            📐 Kelly Criterion Parameters
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+                Win Rate (%)
+              </label>
+              <input
+                type="number"
+                step="1"
+                value={winRate}
+                onChange={(e) => setWinRate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+                Avg Win ($)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={avgWin}
+                onChange={(e) => setAvgWin(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+                Avg Loss ($)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={avgLoss}
+                onChange={(e) => setAvgLoss(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '11px', marginTop: '10px' }}>
+            Kelly % = Win Rate - [(1 - Win Rate) / (Avg Win / Avg Loss)]
+          </p>
+        </div>
+      )}
+
+      {/* Results */}
+      <div style={{
+        background: 'linear-gradient(145deg, rgba(16,185,129,0.1), rgba(34,211,238,0.05))',
+        border: '1px solid rgba(16,185,129,0.3)',
+        borderRadius: '16px',
+        padding: '24px'
+      }}>
+        <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
+          📊 Position Size Results
+        </h3>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+              Position Size
+            </div>
+            <div style={{ color: '#f1f5f9', fontSize: '24px', fontWeight: '700' }}>
+              ${formatNumber(method === 'kelly' ? kellyShares * (parseFloat(entryPrice) || 0) : result.positionSize)}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+              Shares/Units
+            </div>
+            <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+              {formatNumber(method === 'kelly' ? kellyShares : result.shares, 4)}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+            <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+              Risk Amount
+            </div>
+            <div style={{ color: '#ef4444', fontSize: '24px', fontWeight: '700' }}>
+              ${formatNumber(result.dollarRisk)}
+            </div>
+          </div>
+        </div>
+
+        {result.rr > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+            <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(16,185,129,0.1)', borderRadius: '8px' }}>
+              <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Potential Reward</div>
+              <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '600' }}>
+                ${formatNumber(result.dollarReward)}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(251,191,36,0.1)', borderRadius: '8px' }}>
+              <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Risk/Reward Ratio</div>
+              <div style={{ color: '#fbbf24', fontSize: '18px', fontWeight: '600' }}>
+                1:{formatNumber(result.rr, 1)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {method === 'kelly' && result.kellyPercent > 0 && (
+          <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(139,92,246,0.1)', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ color: '#a78bfa', fontSize: '13px' }}>
+              Kelly Optimal Bet Size: <strong>{formatNumber(result.kellyPercent, 1)}%</strong> of account
+            </div>
+            <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
+              Many traders use Half-Kelly ({formatNumber(result.kellyPercent / 2, 1)}%) for reduced volatility
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Risk Warning */}
+      <div style={{ 
+        marginTop: '20px', 
+        padding: '12px 16px', 
+        background: 'rgba(251,191,36,0.1)', 
+        border: '1px solid rgba(251,191,36,0.3)',
+        borderRadius: '8px'
+      }}>
+        <div style={{ color: '#fbbf24', fontSize: '12px' }}>
+          ⚠️ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
+          Always use proper risk management and never risk more than you can afford to lose.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PortfolioContent() {
   const { tier } = useUserTier();
   const portfolioLimit = getPortfolioLimit(tier);
@@ -817,6 +1262,7 @@ function PortfolioContent() {
           {[
             { key: 'overview', label: 'Overview', icon: '📊' },
             { key: 'add position', label: 'Add', icon: '➕' },
+            { key: 'position sizer', label: 'Position Sizer', icon: '🎯' },
             { key: 'holdings', label: 'Holdings', icon: '💼' },
             { key: 'history', label: 'History', icon: '📜' },
           ].map((tab) => {
@@ -1713,6 +2159,11 @@ function PortfolioContent() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Position Sizing Calculator */}
+        {activeTab === 'position sizer' && (
+          <PositionSizerCalculator />
         )}
 
         {activeTab === 'holdings' && (

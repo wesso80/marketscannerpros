@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromCookie } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -158,6 +159,15 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
 export async function POST(req: NextRequest) {
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - USDT dominance enabled`);
   try {
+    // Auth check - require valid session to use scanner
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json(
+        { error: "Please log in to use the scanner" },
+        { status: 401 }
+      );
+    }
+    
     const body = (await req.json()) as ScanRequest;
     const { type, timeframe, minScore, symbols } = body;
     console.info("[scanner] request", { type, timeframe, minScore, symbolsCount: Array.isArray(symbols) ? symbols.length : 0 });

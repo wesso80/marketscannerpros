@@ -5,6 +5,7 @@ import AnalyticsLoader from "../components/AnalyticsLoader";
 import CookieBanner from "../components/CookieBanner";
 import Header from "../components/Header";
 import AlertToast from "../components/AlertToast";
+import ErrorBoundary from "../components/ErrorBoundary";
 import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 
@@ -63,16 +64,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
-        <AppUrlFixer />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <CookieBanner />
-        <AlertToast />
-        <Suspense>
-          <AnalyticsLoader />
-        </Suspense>
-        <BackToTop />
+        <ErrorBoundary>
+          <AppUrlFixer />
+          <Header />
+          <main>{children}</main>
+          <Footer />
+          <CookieBanner />
+          <AlertToast />
+          <Suspense>
+            <AnalyticsLoader />
+          </Suspense>
+          <BackToTop />
+        </ErrorBoundary>
       </body>
     </html>
   );
