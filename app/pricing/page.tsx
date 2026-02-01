@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const searchParams = useSearchParams();
 
   // Capture referral code from URL
@@ -35,7 +36,7 @@ function PricingContent() {
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'pro', billing: 'monthly', referralCode }),
+        body: JSON.stringify({ plan: 'pro', billing: billingPeriod, referralCode }),
       });
       const data = await res.json();
       if (data.url) {
@@ -56,7 +57,7 @@ function PricingContent() {
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'pro_trader', billing: 'monthly', referralCode }),
+        body: JSON.stringify({ plan: 'pro_trader', billing: billingPeriod, referralCode }),
       });
       const data = await res.json();
       if (data.url) {
@@ -190,6 +191,61 @@ function PricingContent() {
           <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 450, margin: '0 auto' }}>
             Start free. Upgrade when you're ready for advanced features.
           </p>
+          
+          {/* Billing Toggle */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 12,
+            marginTop: 24,
+          }}>
+            <span style={{ 
+              color: billingPeriod === 'monthly' ? '#f9fafb' : '#6b7280',
+              fontWeight: billingPeriod === 'monthly' ? 600 : 400,
+              fontSize: 14
+            }}>Monthly</span>
+            <button
+              onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
+              style={{
+                width: 56,
+                height: 28,
+                borderRadius: 14,
+                background: billingPeriod === 'yearly' ? '#10b981' : '#374151',
+                border: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background 0.2s',
+              }}
+            >
+              <div style={{
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                background: '#fff',
+                position: 'absolute',
+                top: 3,
+                left: billingPeriod === 'yearly' ? 31 : 3,
+                transition: 'left 0.2s',
+              }} />
+            </button>
+            <span style={{ 
+              color: billingPeriod === 'yearly' ? '#f9fafb' : '#6b7280',
+              fontWeight: billingPeriod === 'yearly' ? 600 : 400,
+              fontSize: 14
+            }}>
+              Yearly
+              <span style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff',
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 999,
+                marginLeft: 8,
+                fontWeight: 600,
+              }}>Save 2 months</span>
+            </span>
+          </div>
         </div>
 
         {/* Live Alerts Callout */}
@@ -293,11 +349,18 @@ function PricingContent() {
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$39.99</span>
-              <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>
+                {billingPeriod === 'monthly' ? '$39.99' : '$399.99'}
+              </span>
+              <span style={{ fontSize: 16, color: '#9ca3af' }}>
+                / {billingPeriod === 'monthly' ? 'month' : 'year'}
+              </span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$399.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span>
+              {billingPeriod === 'monthly' 
+                ? <>or <span style={{ color: '#22c55e', fontWeight: 600 }}>$399.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span></>
+                : <span style={{ color: '#fbbf24' }}>✓ You&apos;re saving 2 months!</span>
+              }
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -358,11 +421,18 @@ function PricingContent() {
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$89.99</span>
-              <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>
+                {billingPeriod === 'monthly' ? '$89.99' : '$899.99'}
+              </span>
+              <span style={{ fontSize: 16, color: '#9ca3af' }}>
+                / {billingPeriod === 'monthly' ? 'month' : 'year'}
+              </span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$899.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span>
+              {billingPeriod === 'monthly' 
+                ? <>or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$899.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span></>
+                : <span style={{ color: '#fbbf24' }}>✓ You&apos;re saving 2 months!</span>
+              }
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
