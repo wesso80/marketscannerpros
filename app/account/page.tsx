@@ -5,9 +5,22 @@ import Link from "next/link";
 import PortalButton from "@/components/PortalButton";
 import { useUserTier } from "@/lib/useUserTier";
 
+interface ReferralInfo {
+  referralCode: string;
+  referralUrl: string;
+  stats: {
+    pending: number;
+    completed: number;
+    rewarded: number;
+    totalReferrals: number;
+  };
+}
+
 export default function AccountPage() {
   const { tier, isLoading, isLoggedIn } = useUserTier();
   const [email, setEmail] = useState<string | null>(null);
+  const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Get user info
@@ -17,7 +30,25 @@ export default function AccountPage() {
         if (data.email) setEmail(data.email);
       })
       .catch(() => {});
+
+    // Get referral info
+    fetch("/api/referral", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setReferralInfo(data);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const copyReferralLink = () => {
+    if (referralInfo?.referralUrl) {
+      navigator.clipboard.writeText(referralInfo.referralUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const tierDisplay = {
     free: { name: "Free", color: "#9ca3af", badge: "bg-gray-600" },
@@ -212,7 +243,83 @@ export default function AccountPage() {
                 )}
               </ul>
             </div>
+            {/* Referral Program Card */}
+            {referralInfo && (
+              <div style={{ 
+                background: "linear-gradient(145deg, rgba(59,130,246,0.1), rgba(147,51,234,0.05))",
+                borderRadius: 16,
+                border: "1px solid rgba(59,130,246,0.3)",
+                padding: 32
+              }}>
+                <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span>🎁</span> Refer a Friend
+                </h2>
+                <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
+                  When your friend subscribes, you <strong style={{ color: "#60a5fa" }}>both get 1 month Pro Trader free!</strong>
+                </p>
 
+                {/* Referral Link */}
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 8 }}>
+                    Your Referral Link
+                  </label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={referralInfo.referralUrl}
+                      style={{
+                        flex: 1,
+                        padding: "12px 16px",
+                        background: "rgba(15,23,42,0.8)",
+                        border: "1px solid rgba(51,65,85,0.5)",
+                        borderRadius: 8,
+                        color: "#e5e7eb",
+                        fontSize: 13,
+                      }}
+                    />
+                    <button
+                      onClick={copyReferralLink}
+                      style={{
+                        padding: "12px 20px",
+                        background: copied ? "#22c55e" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                        border: "none",
+                        borderRadius: 8,
+                        color: "#fff",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "background 0.2s"
+                      }}
+                    >
+                      {copied ? "✓ Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Referral Stats */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "repeat(3, 1fr)", 
+                  gap: 16,
+                  padding: 16,
+                  background: "rgba(15,23,42,0.5)",
+                  borderRadius: 12
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#fbbf24" }}>{referralInfo.stats.pending}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Pending</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{referralInfo.stats.rewarded}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Rewarded</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa" }}>{referralInfo.stats.totalReferrals}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Total</div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Help Card */}
             <div style={{ 
               background: "rgba(15,23,42,0.5)",

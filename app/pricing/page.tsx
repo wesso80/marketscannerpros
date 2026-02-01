@@ -1,10 +1,29 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) {
+      setReferralCode(ref.toUpperCase());
+      // Store in sessionStorage so it persists through checkout
+      sessionStorage.setItem('referralCode', ref.toUpperCase());
+    } else {
+      // Check sessionStorage for previously captured code
+      const storedRef = sessionStorage.getItem('referralCode');
+      if (storedRef) {
+        setReferralCode(storedRef);
+      }
+    }
+  }, [searchParams]);
 
   const handleFreeLaunch = () => {
     window.location.href = '/tools/scanner';
@@ -16,7 +35,7 @@ export default function PricingPage() {
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'pro', billing: 'monthly' }),
+        body: JSON.stringify({ plan: 'pro', billing: 'monthly', referralCode }),
       });
       const data = await res.json();
       if (data.url) {
@@ -37,7 +56,7 @@ export default function PricingPage() {
       const res = await fetch('/api/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'pro_trader', billing: 'monthly' }),
+        body: JSON.stringify({ plan: 'pro_trader', billing: 'monthly', referralCode }),
       });
       const data = await res.json();
       if (data.url) {
@@ -133,6 +152,23 @@ export default function PricingPage() {
         }
       `}</style>
       <div style={{ maxWidth: 1000, padding: '48px 20px 60px', margin: '0 auto' }}>
+        {/* Referral Banner - show when arriving via referral link */}
+        {referralCode && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))',
+            border: '1px solid rgba(59,130,246,0.4)',
+            borderRadius: 12,
+            padding: '16px 24px',
+            marginBottom: 32,
+            textAlign: 'center',
+          }}>
+            <span style={{ fontSize: 20, marginRight: 8 }}>🎁</span>
+            <span style={{ color: '#bfdbfe', fontWeight: 500 }}>
+              You&apos;re using a referral link! Subscribe and you <strong style={{ color: '#60a5fa' }}>both get 1 month Pro Trader free</strong>
+            </span>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{

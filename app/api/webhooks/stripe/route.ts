@@ -25,6 +25,68 @@ function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
   return 'free';
 }
 
+// Process referral reward when someone subscribes
+async function processReferralReward(workspaceId: string, email: string) {
+  try {
+    // Check if this user signed up via referral and hasn't been rewarded yet
+    const referralResult = await q(
+      `SELECT id, referrer_workspace_id, status 
+       FROM referral_signups 
+       WHERE referee_workspace_id = $1 AND status = 'pending'`,
+      [workspaceId]
+    );
+
+    if (referralResult.length === 0) {
+      console.log(`[Referral] No pending referral for ${email}`);
+      return;
+    }
+
+    const referral = referralResult[0];
+    console.log(`[Referral] Found pending referral for ${email}, processing reward...`);
+
+    // Grant 1 month Pro Trader to BOTH users
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+    // Record reward for referee (the new subscriber)
+    await q(
+      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, applied_at, expires_at)
+       VALUES ($1, $2, 'pro_trader_month', NOW(), $3)`,
+      [workspaceId, referral.id, expiresAt]
+    );
+
+    // Record reward for referrer
+    await q(
+      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, applied_at, expires_at)
+       VALUES ($1, $2, 'pro_trader_month', NOW(), $3)`,
+      [referral.referrer_workspace_id, referral.id, expiresAt]
+    );
+
+    // Update referral status to rewarded
+    await q(
+      `UPDATE referral_signups SET status = 'rewarded', reward_applied_at = NOW() WHERE id = $1`,
+      [referral.id]
+    );
+
+    // Temporarily upgrade both users to Pro Trader
+    // The referrer gets Pro Trader for 1 month (or extends if already Pro Trader)
+    await q(
+      `UPDATE user_subscriptions 
+       SET tier = 'pro_trader', 
+           referral_bonus_expires = $2,
+           updated_at = NOW()
+       WHERE workspace_id = $1 AND (tier != 'pro_trader' OR referral_bonus_expires IS NULL)`,
+      [referral.referrer_workspace_id, expiresAt]
+    );
+
+    console.log(`[Referral] ✅ Reward applied! Both ${email} and referrer get Pro Trader until ${expiresAt.toISOString()}`);
+
+  } catch (error) {
+    console.error('[Referral] Error processing reward:', error);
+    // Don't throw - referral failures shouldn't break subscription processing
+  }
+}
+
 async function upsertSubscription(
   customerId: string,
   email: string,
@@ -88,6 +150,7 @@ export async function POST(req: NextRequest) {
           const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer;
           const priceId = subscription.items.data[0]?.price.id || '';
           const tier = getTierFromPriceId(priceId);
+          const workspaceId = hashWorkspaceId(customer.id);
           
           await upsertSubscription(
             customer.id,
@@ -98,6 +161,37 @@ export async function POST(req: NextRequest) {
             new Date((subscription as any).current_period_end * 1000),
             subscription.status === 'trialing'
           );
+
+          // Check for referral code in metadata and record the referral
+          const referralCode = session.metadata?.referralCode;
+          if (referralCode) {
+            try {
+              // Find the referrer
+              const referrerResult = await q(
+                `SELECT workspace_id FROM referrals WHERE referral_code = $1`,
+                [referralCode.toUpperCase()]
+              );
+
+              if (referrerResult.length > 0 && referrerResult[0].workspace_id !== workspaceId) {
+                // Record the referral signup
+                await q(
+                  `INSERT INTO referral_signups 
+                   (referrer_workspace_id, referee_workspace_id, referee_email, referral_code, status, created_at)
+                   VALUES ($1, $2, $3, $4, 'pending', NOW())
+                   ON CONFLICT (referee_workspace_id) DO NOTHING`,
+                  [referrerResult[0].workspace_id, workspaceId, customer.email, referralCode.toUpperCase()]
+                );
+                console.log(`[Webhook] Recorded referral: ${customer.email} referred by code ${referralCode}`);
+              }
+            } catch (refError) {
+              console.error('[Webhook] Error recording referral:', refError);
+            }
+          }
+
+          // Process referral reward if subscription is active
+          if (subscription.status === 'active') {
+            await processReferralReward(workspaceId, customer.email || '');
+          }
         }
         break;
       }
@@ -108,6 +202,7 @@ export async function POST(req: NextRequest) {
         const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
         const priceId = subscription.items.data[0]?.price.id || '';
         const tier = getTierFromPriceId(priceId);
+        const workspaceId = hashWorkspaceId(customer.id);
         
         await upsertSubscription(
           customer.id,
@@ -118,6 +213,11 @@ export async function POST(req: NextRequest) {
           new Date((subscription as any).current_period_end * 1000),
           subscription.status === 'trialing'
         );
+
+        // Process referral reward on new paid subscription
+        if (event.type === 'customer.subscription.created' && subscription.status === 'active') {
+          await processReferralReward(workspaceId, customer.email || '');
+        }
         break;
       }
 
