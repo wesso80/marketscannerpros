@@ -9,15 +9,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Price ID mappings
+// Price ID mappings - read from environment variables
 const PRO_PRICE_IDS = [
-  "price_1SfcQJLyhHN1qVrAfOpufz0L", // Pro Monthly
-  "price_1SfcRsLyhHN1qVrAuRE6IRU1", // Pro Yearly
-];
+  process.env.STRIPE_PRICE_PRO_MONTHLY || "",
+  process.env.STRIPE_PRICE_PRO_YEARLY || "",
+].filter(Boolean);
 const PRO_TRADER_PRICE_IDS = [
-  "price_1SfcSZLyhHN1qVrAaVrilpyO", // Pro Trader Monthly
-  "price_1SfcTALyhHN1qVrAoIHo4LN1", // Pro Trader Yearly
-];
+  process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "",
+  process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "",
+].filter(Boolean);
 
 function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
   if (PRO_TRADER_PRICE_IDS.includes(priceId)) return 'pro_trader';

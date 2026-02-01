@@ -7,12 +7,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
-// Price IDs from Stripe Dashboard
+// Price IDs from environment variables (set in .env.local and Vercel)
 const PRICE_IDS = {
-  pro_monthly: "price_1SfcQJLyhHN1qVrAfOpufz0L",
-  pro_yearly: "price_1SfcRsLyhHN1qVrAuRE6IRU1",
-  pro_trader_monthly: "price_1SfcSZLyhHN1qVrAaVrilpyO",
-  pro_trader_yearly: "price_1SfcTALyhHN1qVrAoIHo4LN1",
+  pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || "",
+  pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY || "",
+  pro_trader_monthly: process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "",
+  pro_trader_yearly: process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "",
 };
 
 export async function POST(req: NextRequest) {

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function PricingPage() {
+function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -433,5 +433,23 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#0F172A', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <div style={{ color: '#9ca3af' }}>Loading...</div>
+      </div>
+    }>
+      <PricingContent />
+    </Suspense>
   );
 }
