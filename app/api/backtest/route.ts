@@ -28,6 +28,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
+import { getSessionFromCookie } from '@/lib/auth';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -1762,6 +1763,15 @@ function runStrategy(
 
 export async function POST(req: NextRequest) {
   try {
+    // Pro Trader tier required
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
+    }
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
+    }
+
     // Validate request body with Zod
     const json = await req.json();
     const body: BacktestRequest = backtestRequestSchema.parse(json);

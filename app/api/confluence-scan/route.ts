@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { confluenceLearningAgent, getScanModes, type ScanMode } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 import { q } from '@/lib/db';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
@@ -52,6 +53,15 @@ function setCache(key: string, data: any): void {
 
 export async function POST(request: NextRequest): Promise<NextResponse<ScanResponse>> {
   try {
+    // Pro Trader tier required
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Please log in to use the AI Confluence Scanner' }, { status: 401 });
+    }
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for AI Confluence Scanner' }, { status: 403 });
+    }
+
     const body: ScanRequest = await request.json();
     const { symbol, mode = 'forecast', forceRefresh = false } = body;
 

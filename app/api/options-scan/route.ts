@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { ScanMode } from '@/lib/confluence-learning-agent';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // NOTE: In-memory cache doesn't persist across serverless invocations
 // Each request fetches fresh data (75 calls/min on premium is sufficient)
 
 export async function POST(request: NextRequest) {
   try {
+    // Pro Trader tier required
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 });
+    }
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Options Scanner' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { symbol, scanMode = 'intraday_1h', expirationDate } = body;
     

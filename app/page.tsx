@@ -478,11 +478,11 @@ export default function Home() {
               
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$14.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$39.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#22c55e' }}>$134.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%)</span>
+                or <span style={{ color: '#22c55e' }}>$399.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
@@ -548,11 +548,11 @@ export default function Home() {
             }}>
               <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
               <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$29.99</span>
+                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$89.99</span>
                 <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
               </div>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#60a5fa' }}>$269.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%)</span>
+                or <span style={{ color: '#60a5fa' }}>$899.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free)</span>
               </div>
               
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
@@ -560,7 +560,9 @@ export default function Home() {
                   { text: "Everything in Pro", highlight: false },
                   { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
                   { text: "📈 Full backtesting engine", highlight: false },
-                  { text: "TradingView script access", highlight: false },
+                  { text: "🥚 Golden Egg Deep Analysis", highlight: true },
+                  { text: "🔮 AI Confluence Scanner", highlight: false },
+                  { text: "🎯 Options Confluence Scanner", highlight: false },
                   { text: "Premium support", highlight: false }
                 ].map((item, i) => (
                   <li key={i} style={{

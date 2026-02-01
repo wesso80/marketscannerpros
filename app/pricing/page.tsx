@@ -80,10 +80,11 @@ export default function PricingPage() {
     { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
     { text: "🧠 Smart Alerts (AI-triggered)", highlight: true },
     { text: "🤖 AI + Derivatives Intelligence", highlight: true },
+    { text: "🥚 Golden Egg Deep Analysis", highlight: true },
+    { text: "🔮 AI Confluence Scanner", highlight: false },
+    { text: "🎯 Options Confluence Scanner", highlight: false },
     { text: "📈 Full backtesting engine", highlight: false },
     { text: "Real Alpha Vantage market data", highlight: false },
-    { text: "TradingView script access", highlight: false },
-    { text: "Advanced strategy testing", highlight: false },
     { text: "Premium support", highlight: false }
   ];
 
@@ -94,7 +95,7 @@ export default function PricingPage() {
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
-      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds 200 AI questions/day, AI-powered derivatives intelligence (Open Interest, Long/Short Ratios, Funding Rates, Fear & Greed Index), Smart Alerts that trigger on market anomalies, real Alpha Vantage backtesting, and TradingView scripts - essential tools for serious technical traders."
+      a: "Pro gives you unlimited scanning, 50 AI questions/day, portfolio tracking, and CSV exports. Pro Trader adds 200 AI questions/day, AI-powered derivatives intelligence (Open Interest, Long/Short Ratios, Funding Rates, Fear & Greed Index), Smart Alerts that trigger on market anomalies, Golden Egg Deep Analysis, AI Confluence Scanner, Options Confluence Scanner, and real Alpha Vantage backtesting - essential tools for serious technical traders."
     },
     {
       q: "How do I upgrade?",
@@ -256,11 +257,11 @@ export default function PricingPage() {
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$14.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>$39.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$134.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%!)</span>
+              or <span style={{ color: '#22c55e', fontWeight: 600 }}>$399.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>
@@ -321,11 +322,11 @@ export default function PricingPage() {
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$29.99</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>$89.99</span>
               <span style={{ fontSize: 16, color: '#9ca3af' }}>/ month</span>
             </div>
             <div style={{ fontSize: 14, color: '#9ca3af', marginBottom: 24 }}>
-              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$269.99/year</span> <span style={{ color: '#fbbf24' }}>(save 25%!)</span>
+              or <span style={{ color: '#60a5fa', fontWeight: 600 }}>$899.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free!)</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px' }}>

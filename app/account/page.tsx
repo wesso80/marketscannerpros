@@ -203,7 +203,7 @@ export default function AccountPage() {
                       <span style={{ color: "#3b82f6" }}>✓</span> Full backtesting engine
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> TradingView script access
+                      <span style={{ color: "#3b82f6" }}>✓</span> Golden Egg Deep Analysis
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
                       <span style={{ color: "#3b82f6" }}>✓</span> Premium support

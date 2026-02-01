@@ -17,9 +17,9 @@
  * @returns {object} response.usage - Token usage and costs
  * 
  * @rateLimit
- * - Free: 5 requests/day
+ * - Free: 10 requests/day
  * - Pro: 50 requests/day
- * - Pro Trader: Unlimited
+ * - Pro Trader: 200 requests/day
  * 
  * @example
  * POST /api/msp-analyst
@@ -155,12 +155,12 @@ export async function POST(req: NextRequest) {
 
     // Define tier limits (fair-use caps to prevent abuse)
     const tierLimits: Record<string, number> = {
-      'free': 5,         // Free/anonymous users: 5 questions/day
+      'free': 10,        // Free/anonymous users: 10 questions/day
       'pro': 50,         // Pro subscribers: 50 questions/day
       'pro_trader': 200, // Pro Trader: 200/day (generous for professional workflows)
     };
 
-    const dailyLimit = tierLimits[tier] || 5; // Default to free tier
+    const dailyLimit = tierLimits[tier] || 10; // Default to free tier
 
     // Check usage against daily limit
     if (dailyLimit) {

@@ -51,8 +51,11 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </div>
             <h3 className="text-xl font-semibold">Pro</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-emerald-400">$14.99</span>
+              <span className="text-emerald-400">$39.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
+            </p>
+            <p className="text-xs text-neutral-400 mt-1">
+              or <span className="text-emerald-400">$399.99/year</span> <span className="text-amber-400">(2 months free)</span>
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Free</li>
@@ -84,14 +87,19 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </div>
             <h3 className="text-xl font-semibold text-blue-400">Pro Trader</h3>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-blue-400">$29.99</span>
+              <span className="text-blue-400">$89.99</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
+            </p>
+            <p className="text-xs text-neutral-400 mt-1">
+              or <span className="text-blue-400">$899.99/year</span> <span className="text-amber-400">(2 months free)</span>
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Pro</li>
               <li className={featureItem}>• 🤖 MSP Analyst AI (200/day)</li>
               <li className={featureItem}>• 📈 Full backtesting engine</li>
-              <li className={featureItem}>• TradingView script access</li>
+              <li className={featureItem}>• Golden Egg Deep Analysis</li>
+              <li className={featureItem}>• AI Confluence Scanner</li>
+              <li className={featureItem}>• Options Confluence Scanner</li>
               <li className={featureItem}>• Premium support</li>
             </ul>
             <button
