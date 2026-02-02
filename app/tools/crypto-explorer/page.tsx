@@ -167,6 +167,94 @@ function MiniSparkline({ data, color = '#10B981' }: { data: number[]; color?: st
   );
 }
 
+// Directional intelligence helpers
+function getFundingInsight(fundingRate: number | undefined): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
+  if (fundingRate === undefined) return null;
+  const rate = fundingRate * 100; // Convert to percentage
+  
+  if (rate > 0.1) return { text: 'Crowded longs — squeeze risk rising', type: 'warning' };
+  if (rate > 0.05) return { text: 'Longs paying premium — bullish bias', type: 'bullish' };
+  if (rate < -0.1) return { text: 'Crowded shorts — potential short squeeze', type: 'warning' };
+  if (rate < -0.05) return { text: 'Shorts paying premium — bearish bias', type: 'bearish' };
+  return { text: 'Neutral positioning', type: 'neutral' };
+}
+
+function getOIPriceInsight(
+  priceChange24h: number | undefined, 
+  priceChange7d: number | undefined
+): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
+  if (priceChange24h === undefined || priceChange7d === undefined) return null;
+  
+  // Bearish absorption: OI rising + price falling
+  if (priceChange24h < -2 && priceChange7d < 0) {
+    return { text: 'Price weakness — potential distribution', type: 'bearish' };
+  }
+  // Bullish accumulation: OI rising + price rising  
+  if (priceChange24h > 2 && priceChange7d > 0) {
+    return { text: 'Price strength — potential accumulation', type: 'bullish' };
+  }
+  return null;
+}
+
+function getSentimentPriceInsight(
+  sentiment: string | undefined,
+  priceChange7d: number | undefined
+): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
+  if (!sentiment || priceChange7d === undefined) return null;
+  
+  // Divergence warnings
+  if (sentiment === 'bullish' && priceChange7d < -5) {
+    return { text: 'Euphoria while price weak — distribution risk', type: 'warning' };
+  }
+  if (sentiment === 'bearish' && priceChange7d > 5) {
+    return { text: 'Fear while price strong — accumulation signal', type: 'bullish' };
+  }
+  return null;
+}
+
+// Trend context helpers
+function getTrendContext(priceChanges: CoinData['price_changes']): {
+  weeklyTrend: 'Bullish' | 'Bearish' | 'Neutral';
+  monthlyTrend: 'Bullish' | 'Bearish' | 'Neutral';
+  momentum: 'Rising' | 'Falling' | 'Flat';
+  above200d: boolean | null;
+} {
+  const p7d = priceChanges['7d'] ?? 0;
+  const p30d = priceChanges['30d'] ?? 0;
+  const p200d = priceChanges['200d'];
+  
+  // Weekly trend
+  const weeklyTrend = p7d > 3 ? 'Bullish' : p7d < -3 ? 'Bearish' : 'Neutral';
+  
+  // Monthly trend
+  const monthlyTrend = p30d > 10 ? 'Bullish' : p30d < -10 ? 'Bearish' : 'Neutral';
+  
+  // Momentum: Compare short-term to mid-term
+  const momentum = p7d > p30d / 4 + 2 ? 'Rising' : p7d < p30d / 4 - 2 ? 'Falling' : 'Flat';
+  
+  // Above 200d (if price is positive vs 200d ago, we're above the rough "200d MA" equivalent)
+  const above200d = p200d !== undefined ? p200d > 0 : null;
+  
+  return { weeklyTrend, monthlyTrend, momentum, above200d };
+}
+
+function InsightBadge({ insight }: { insight: { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } }) {
+  const colors = {
+    warning: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+    bullish: 'bg-green-500/20 text-green-400 border-green-500/40',
+    bearish: 'bg-red-500/20 text-red-400 border-red-500/40',
+    neutral: 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+  };
+  const icons = { warning: '⚠️', bullish: '📈', bearish: '📉', neutral: '➖' };
+  
+  return (
+    <div className={`text-xs px-3 py-1.5 rounded-lg border ${colors[insight.type]} flex items-center gap-1.5`}>
+      <span>{icons[insight.type]}</span>
+      <span>{insight.text}</span>
+    </div>
+  );
+}
+
 export default function CryptoDetailPage() {
   const { tier } = useUserTier();
   const [searchQuery, setSearchQuery] = useState('');
@@ -470,6 +558,68 @@ export default function CryptoDetailPage() {
               </div>
             </div>
             
+            {/* Trend Context - Mini trend intelligence */}
+            {(() => {
+              const trend = getTrendContext(coinData.price_changes);
+              return (
+                <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-blue-500/30 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4">🧭 Trend Context</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center">
+                      <div className="text-gray-400 text-xs uppercase mb-1">Weekly Trend</div>
+                      <div className={`text-lg font-bold ${
+                        trend.weeklyTrend === 'Bullish' ? 'text-green-400' : 
+                        trend.weeklyTrend === 'Bearish' ? 'text-red-400' : 'text-yellow-400'
+                      }`}>
+                        {trend.weeklyTrend === 'Bullish' ? '📈' : trend.weeklyTrend === 'Bearish' ? '📉' : '➖'} {trend.weeklyTrend}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-400 text-xs uppercase mb-1">Monthly Trend</div>
+                      <div className={`text-lg font-bold ${
+                        trend.monthlyTrend === 'Bullish' ? 'text-green-400' : 
+                        trend.monthlyTrend === 'Bearish' ? 'text-red-400' : 'text-yellow-400'
+                      }`}>
+                        {trend.monthlyTrend === 'Bullish' ? '📈' : trend.monthlyTrend === 'Bearish' ? '📉' : '➖'} {trend.monthlyTrend}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-400 text-xs uppercase mb-1">Momentum</div>
+                      <div className={`text-lg font-bold ${
+                        trend.momentum === 'Rising' ? 'text-green-400' : 
+                        trend.momentum === 'Falling' ? 'text-red-400' : 'text-slate-400'
+                      }`}>
+                        {trend.momentum === 'Rising' ? '🔥' : trend.momentum === 'Falling' ? '❄️' : '⚖️'} {trend.momentum}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-400 text-xs uppercase mb-1">vs 200-Day</div>
+                      <div className={`text-lg font-bold ${
+                        trend.above200d === true ? 'text-green-400' : 
+                        trend.above200d === false ? 'text-red-400' : 'text-slate-400'
+                      }`}>
+                        {trend.above200d === true ? '✅ Above' : trend.above200d === false ? '⚠️ Below' : '—'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Quick interpretation */}
+                  <div className="mt-4 pt-4 border-t border-blue-500/20">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-blue-300">💡</span>
+                      <span className="text-slate-300">
+                        {trend.weeklyTrend === 'Bullish' && trend.monthlyTrend === 'Bullish' && 'Strong uptrend — momentum aligned across timeframes'}
+                        {trend.weeklyTrend === 'Bearish' && trend.monthlyTrend === 'Bearish' && 'Strong downtrend — caution advised'}
+                        {trend.weeklyTrend === 'Bullish' && trend.monthlyTrend === 'Bearish' && 'Potential trend reversal — watch for confirmation'}
+                        {trend.weeklyTrend === 'Bearish' && trend.monthlyTrend === 'Bullish' && 'Short-term pullback in larger uptrend — possible dip buy'}
+                        {trend.weeklyTrend === 'Neutral' && 'Consolidation phase — waiting for breakout direction'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {/* Price Changes & ATH/ATL */}
             <div className="grid md:grid-cols-2 gap-6">
               {/* Price Changes */}
@@ -528,7 +678,7 @@ export default function CryptoDetailPage() {
             {coinData.derivatives && (
               <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6">
                 <h3 className="text-lg font-semibold mb-4">📊 Derivatives Data</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   {coinData.derivatives.funding_rate !== undefined && (
                     <div>
                       <div className="text-gray-400 text-sm">Funding Rate</div>
@@ -558,6 +708,27 @@ export default function CryptoDetailPage() {
                     </div>
                   )}
                 </div>
+                
+                {/* Directional Intelligence Insights */}
+                {(() => {
+                  const fundingInsight = getFundingInsight(coinData.derivatives?.funding_rate);
+                  const oiInsight = getOIPriceInsight(coinData.price_changes['24h'], coinData.price_changes['7d']);
+                  const sentimentInsight = getSentimentPriceInsight(coinData.derivatives?.funding_sentiment, coinData.price_changes['7d']);
+                  const insights = [fundingInsight, oiInsight, sentimentInsight].filter(Boolean);
+                  
+                  if (insights.length === 0) return null;
+                  
+                  return (
+                    <div className="border-t border-purple-500/20 pt-4 mt-2">
+                      <div className="text-xs text-purple-300 uppercase font-semibold mb-2">🎯 Directional Intelligence</div>
+                      <div className="flex flex-wrap gap-2">
+                        {insights.map((insight, idx) => (
+                          <InsightBadge key={idx} insight={insight!} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             
