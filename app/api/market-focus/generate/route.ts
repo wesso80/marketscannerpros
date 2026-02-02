@@ -168,11 +168,11 @@ export async function POST(req: NextRequest) {
       }
     };
 
-    const [equityCandidates, cryptoCandidates, commodityCandidates] = await Promise.all([
-      fetchCandidatesForClass("equity"),
-      fetchCandidatesForClass("crypto"),
-      fetchCandidatesForClass("commodity"),
-    ]);
+    // Fetch sequentially to avoid rate limit conflicts between asset classes
+    // Each endpoint has internal batching, but running all 3 in parallel causes issues
+    const equityCandidates = await fetchCandidatesForClass("equity");
+    const cryptoCandidates = await fetchCandidatesForClass("crypto");
+    const commodityCandidates = await fetchCandidatesForClass("commodity");
 
     console.log("[generate] Candidates fetched:", {
       equity: equityCandidates.length,

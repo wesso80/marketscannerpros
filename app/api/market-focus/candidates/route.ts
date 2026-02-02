@@ -57,6 +57,27 @@ interface Candidate {
   risks?: string[];
 }
 
+// Process requests in small batches with delays to avoid rate limiting
+// Alpha Vantage allows ~5 requests/second, but we'll be conservative with 3/batch + 1.5s delay
+async function batchProcess<T, R>(
+  items: T[],
+  processor: (item: T) => Promise<R>,
+  batchSize = 3,
+  delayMs = 1500
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(processor));
+    results.push(...batchResults);
+    // Don't delay after last batch
+    if (i + batchSize < items.length) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  return results;
+}
+
 // Fetch helper with rate limit handling and retry logic
 async function fetchAlphaJson(url: string, tag: string, retries = 2): Promise<any> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -355,23 +376,29 @@ export async function GET(req: NextRequest) {
     let candidates: Candidate[] = [];
 
     if (!assetClass || assetClass === "equity") {
-      // Shuffle and scan 10 equities for variety
+      // Shuffle and scan 10 equities for variety - batched to avoid rate limits
       const shuffled = [...EQUITY_SYMBOLS].sort(() => Math.random() - 0.5);
       const symbols = shuffled.slice(0, 10);
       console.log(`[market-focus] Scanning equities: ${symbols.join(", ")}`);
-      const results = await Promise.all(
-        symbols.map(s => analyzeAsset(s, "equity", fetchEquityDaily))
+      const results = await batchProcess(
+        symbols,
+        s => analyzeAsset(s, "equity", fetchEquityDaily),
+        3, // 3 at a time
+        1500 // 1.5s between batches
       );
       candidates.push(...results.filter(Boolean) as Candidate[]);
     }
 
     if (!assetClass || assetClass === "crypto") {
-      // Shuffle and scan 10 cryptos for variety
+      // Shuffle and scan 10 cryptos for variety - batched to avoid rate limits
       const shuffled = [...CRYPTO_SYMBOLS].sort(() => Math.random() - 0.5);
       const symbols = shuffled.slice(0, 10);
       console.log(`[market-focus] Scanning crypto: ${symbols.join(", ")}`);
-      const results = await Promise.all(
-        symbols.map(s => analyzeAsset(s, "crypto", fetchCryptoDaily))
+      const results = await batchProcess(
+        symbols,
+        s => analyzeAsset(s, "crypto", fetchCryptoDaily),
+        3, // 3 at a time
+        1500 // 1.5s between batches
       );
       const validCrypto = results.filter(Boolean) as Candidate[];
       console.log(`[market-focus] Got ${validCrypto.length} valid crypto candidates`);
@@ -379,11 +406,14 @@ export async function GET(req: NextRequest) {
     }
 
     if (!assetClass || assetClass === "commodity") {
-      // Use commodity ETFs with equity API (GLD, USO, etc.)
+      // Use commodity ETFs with equity API (GLD, USO, etc.) - batched
       const etfs = COMMODITY_ETFS.slice(0, 5);
       console.log(`[market-focus] Scanning commodities: ${etfs.map(e => e.symbol).join(", ")}`);
-      const results = await Promise.all(
-        etfs.map(e => analyzeAsset(e.symbol, "commodity", fetchCommodityETF))
+      const results = await batchProcess(
+        etfs,
+        e => analyzeAsset(e.symbol, "commodity", fetchCommodityETF),
+        3, // 3 at a time
+        1500 // 1.5s between batches
       );
       candidates.push(...results.filter(Boolean) as Candidate[]);
     }
