@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAggregatedFundingRates } from '@/lib/coingecko';
 
-const CACHE_DURATION = 300; // 5 minute cache
+const CACHE_DURATION = 900; // 15 minute cache (funding rates update every 8 hours)
 let cache: { data: any; timestamp: number } | null = null;
 
 const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAggregatedOpenInterest, getMarketData, symbolToId } from '@/lib/coingecko';
 
-const CACHE_DURATION = 300; // 5 minute cache
+const CACHE_DURATION = 600; // 10 minute cache
 let cache: { data: any; timestamp: number } | null = null;
 
 // Historical OI cache for 24h change (we track snapshots ourselves since CoinGecko lacks historical OI)

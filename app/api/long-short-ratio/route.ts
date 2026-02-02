@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CACHE_DURATION = 300; // 5 minute cache
+const CACHE_DURATION = 600; // 10 minute cache
 let cache: { data: any; timestamp: number } | null = null;
 
 // Top coins to track

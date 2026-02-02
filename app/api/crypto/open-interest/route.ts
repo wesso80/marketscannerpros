@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAggregatedOpenInterest, getDerivativesForSymbols } from '@/lib/coingecko';
 
-const CACHE_DURATION = 300; // 5 minute cache
+const CACHE_DURATION = 600; // 10 minute cache (OI doesn't change fast)
 let cache: { data: any; timestamp: number } | null = null;
 
 const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
