@@ -828,10 +828,7 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               {/* Main Decision Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '1.5rem',
+              <div className="decision-grid-mobile" style={{
                 marginBottom: '1.5rem',
               }}>
                 {/* Trade Score - Weighted setup quality */}
@@ -1142,9 +1139,9 @@ export default function OptionsConfluenceScanner() {
                     />
 
                     {/* Phase Strip + Confluence Map Row */}
-                    <div style={{
+                    <div className="card-grid-mobile" style={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
                       gap: '1rem',
                     }}>
                       {/* Market Phase */}
@@ -1375,7 +1372,7 @@ export default function OptionsConfluenceScanner() {
                     {/* Signal Components - With weight % and proper color grading */}
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components (weighted):</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
+                      <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '0.5rem' }}>
                         {result.compositeScore.components.map((comp, idx) => {
                           // Color based on strength, not just direction
                           const isStrong = Math.abs(comp.score) >= 50;
@@ -1463,7 +1460,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1rem' }}>
                 
                 {/* IV Analysis Card */}
                 {result.ivAnalysis && (
@@ -1804,7 +1801,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                   {/* Closing Now */}
                   <div style={{
                     background: 'rgba(30,41,59,0.6)',
@@ -2148,7 +2145,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   {/* P/C Ratio */}
                   <div style={{
                     background: 'rgba(139,92,246,0.15)',
@@ -2440,7 +2437,7 @@ export default function OptionsConfluenceScanner() {
                 </span>
               </summary>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
                 <div>
                   <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Target Delta</div>
                   <div style={{ color: '#E2E8F0', fontWeight: 'bold' }}>{result.greeksAdvice.deltaTarget}</div>
@@ -2495,7 +2492,7 @@ export default function OptionsConfluenceScanner() {
                 </span>
               </summary>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                 <div style={{
                   background: 'rgba(239,68,68,0.1)',
                   padding: '1rem',
@@ -2607,7 +2604,7 @@ export default function OptionsConfluenceScanner() {
           }}>
             <h3 style={{ margin: '0 0 1.5rem 0', color: '#E2E8F0' }}>How It Works</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+            <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1.5rem' }}>
               <div>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔮</div>
                 <div style={{ fontWeight: 'bold', color: '#A855F7', marginBottom: '0.5rem' }}>Time Confluence</div>

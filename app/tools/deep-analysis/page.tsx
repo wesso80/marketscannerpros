@@ -920,10 +920,7 @@ export default function DeepAnalysisPage() {
                         overflow: "hidden",
                         marginBottom: "1rem"
                       }}>
-                        <div style={{ 
-                          display: "grid", 
-                          gridTemplateColumns: "1fr 60px 80px", 
-                          gap: "0.5rem",
+                        <div className="factor-grid-mobile" style={{ 
                           padding: "0.75rem 1rem",
                           background: "rgba(30,41,59,0.5)",
                           borderBottom: "1px solid rgba(51,65,85,0.5)",
@@ -937,10 +934,7 @@ export default function DeepAnalysisPage() {
                           <span style={{ textAlign: "right" }}>Result</span>
                         </div>
                         {weighted.factors.map((factor, idx) => (
-                          <div key={idx} style={{ 
-                            display: "grid", 
-                            gridTemplateColumns: "1fr 60px 80px", 
-                            gap: "0.5rem",
+                          <div key={idx} className="factor-grid-mobile" style={{ 
                             padding: "0.6rem 1rem",
                             borderBottom: idx < weighted.factors.length - 1 ? "1px solid rgba(51,65,85,0.3)" : "none",
                             fontSize: "0.85rem"
@@ -1248,7 +1242,7 @@ export default function DeepAnalysisPage() {
                             ${result.optionsData.highestOICall.strike}
                           </span>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
+                        <div className="grid-2col-stack" style={{ fontSize: "0.75rem" }}>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>OI:</span>
                             <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOICall.openInterest?.toLocaleString() || '—'}</span>
@@ -1286,7 +1280,7 @@ export default function DeepAnalysisPage() {
                             ${result.optionsData.highestOIPut.strike}
                           </span>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
+                        <div className="grid-2col-stack" style={{ fontSize: "0.75rem" }}>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>OI:</span>
                             <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOIPut.openInterest?.toLocaleString() || '—'}</span>

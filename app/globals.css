@@ -244,3 +244,68 @@ input, textarea, select, button {
     width: 100%;
   }
 }
+
+/* Grid that stacks on mobile - for grids with minmax values too large for mobile */
+.grid-mobile-stack {
+  display: grid;
+  gap: 1rem;
+}
+@media (max-width: 480px) {
+  .grid-mobile-stack {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Fix for 1fr 1fr grids that should stack on small screens */
+.grid-2col-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+@media (max-width: 400px) {
+  .grid-2col-stack {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Options page specific grid fixes */
+.decision-grid-mobile {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 1.5rem;
+}
+@media (max-width: 480px) {
+  .decision-grid-mobile {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+@media (max-width: 360px) {
+  .decision-grid-mobile {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Factor table mobile fix */
+.factor-grid-mobile {
+  display: grid;
+  grid-template-columns: 1fr 60px 80px;
+  gap: 0.5rem;
+}
+@media (max-width: 400px) {
+  .factor-grid-mobile {
+    grid-template-columns: 1fr 50px 60px;
+    gap: 0.25rem;
+  }
+}
+
+/* Cards that should be full width on mobile */
+.card-grid-mobile {
+  display: grid;
+  gap: 1rem;
+}
+@media (max-width: 600px) {
+  .card-grid-mobile {
+    grid-template-columns: 1fr !important;
+  }
+}
