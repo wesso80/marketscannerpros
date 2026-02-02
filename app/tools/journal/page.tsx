@@ -17,6 +17,11 @@ interface JournalEntry {
   entryPrice: number;
   exitPrice: number;
   quantity: number;
+  stopLoss?: number;      // Risk management: stop loss price
+  target?: number;        // Risk management: target/take profit price
+  riskAmount?: number;    // $ risk = |entry - stopLoss| * quantity
+  rMultiple?: number;     // R gained/lost = P&L / riskAmount
+  plannedRR?: number;     // Planned risk:reward ratio
   pl: number;
   plPercent: number;
   strategy: string;
@@ -56,6 +61,8 @@ function JournalContent() {
     entryPrice: '',
     exitPrice: '',
     quantity: '',
+    stopLoss: '',
+    target: '',
     strategy: '',
     setup: '',
     notes: '',
@@ -158,6 +165,24 @@ function JournalContent() {
 
     const entry = parseFloat(newEntry.entryPrice);
     const qty = parseFloat(newEntry.quantity);
+    const stopLoss = newEntry.stopLoss ? parseFloat(newEntry.stopLoss) : undefined;
+    const target = newEntry.target ? parseFloat(newEntry.target) : undefined;
+
+    // Calculate risk amount and planned R:R if stop loss is set
+    let riskAmount: number | undefined = undefined;
+    let plannedRR: number | undefined = undefined;
+    
+    if (stopLoss) {
+      // Risk = distance from entry to stop * quantity
+      riskAmount = Math.abs(entry - stopLoss) * qty;
+      
+      if (target) {
+        // Planned R:R = reward distance / risk distance
+        const rewardDistance = Math.abs(target - entry);
+        const riskDistance = Math.abs(entry - stopLoss);
+        plannedRR = riskDistance > 0 ? rewardDistance / riskDistance : undefined;
+      }
+    }
 
     const tags = newEntry.tags
       .split(',')
@@ -177,6 +202,10 @@ function JournalContent() {
       entryPrice: entry,
       exitPrice: 0,
       quantity: qty,
+      stopLoss,
+      target,
+      riskAmount,
+      plannedRR,
       pl: 0,
       plPercent: 0,
       strategy: newEntry.strategy,
@@ -201,6 +230,8 @@ function JournalContent() {
       entryPrice: '',
       exitPrice: '',
       quantity: '',
+      stopLoss: '',
+      target: '',
       strategy: '',
       setup: '',
       notes: '',
@@ -249,12 +280,19 @@ function JournalContent() {
         if (pl > 0) outcome = 'win';
         else if (pl < 0) outcome = 'loss';
         
+        // Calculate R-multiple if we have risk amount
+        let rMultiple: number | undefined = undefined;
+        if (entry.riskAmount && entry.riskAmount > 0) {
+          rMultiple = pl / entry.riskAmount;
+        }
+        
         return {
           ...entry,
           exitPrice,
           exitDate: closeTradeData.exitDate,
           pl,
           plPercent,
+          rMultiple,
           outcome,
           isOpen: false
         };
@@ -359,6 +397,73 @@ function JournalContent() {
   const profitFactorDisplay = profitFactor === Infinity ? '∞' : profitFactor.toFixed(2);
   const hasNoLosses = losses === 0 && wins > 0;
   const smallSampleSize = totalTrades > 0 && totalTrades < 10;
+
+  // R-Multiple Stats
+  const tradesWithR = closedTrades.filter(e => e.rMultiple !== undefined);
+  const totalR = tradesWithR.reduce((sum, e) => sum + (e.rMultiple || 0), 0);
+  const avgR = tradesWithR.length > 0 ? totalR / tradesWithR.length : 0;
+  const avgWinR = tradesWithR.filter(e => e.outcome === 'win').length > 0
+    ? tradesWithR.filter(e => e.outcome === 'win').reduce((sum, e) => sum + (e.rMultiple || 0), 0) / tradesWithR.filter(e => e.outcome === 'win').length
+    : 0;
+  const avgLossR = tradesWithR.filter(e => e.outcome === 'loss').length > 0
+    ? tradesWithR.filter(e => e.outcome === 'loss').reduce((sum, e) => sum + (e.rMultiple || 0), 0) / tradesWithR.filter(e => e.outcome === 'loss').length
+    : 0;
+
+  // Strategy Leaderboard
+  const strategyStats = (() => {
+    const strategies = new Map<string, { trades: number; wins: number; totalPL: number; totalR: number; rCount: number }>();
+    
+    closedTrades.forEach(trade => {
+      const strat = trade.strategy || 'No Strategy';
+      const current = strategies.get(strat) || { trades: 0, wins: 0, totalPL: 0, totalR: 0, rCount: 0 };
+      
+      current.trades += 1;
+      if (trade.outcome === 'win') current.wins += 1;
+      current.totalPL += trade.pl;
+      if (trade.rMultiple !== undefined) {
+        current.totalR += trade.rMultiple;
+        current.rCount += 1;
+      }
+      
+      strategies.set(strat, current);
+    });
+    
+    return Array.from(strategies.entries())
+      .map(([name, stats]) => ({
+        name,
+        trades: stats.trades,
+        winRate: stats.trades > 0 ? (stats.wins / stats.trades) * 100 : 0,
+        avgR: stats.rCount > 0 ? stats.totalR / stats.rCount : undefined,
+        totalPL: stats.totalPL
+      }))
+      .sort((a, b) => b.totalPL - a.totalPL);
+  })();
+
+  // Equity Curve Data (cumulative P&L over time)
+  const equityCurve = (() => {
+    const sortedClosed = [...closedTrades].sort((a, b) => {
+      const dateA = new Date(a.exitDate || a.date).getTime();
+      const dateB = new Date(b.exitDate || b.date).getTime();
+      return dateA - dateB;
+    });
+    
+    let cumulative = 0;
+    let peak = 0;
+    
+    return sortedClosed.map((trade, idx) => {
+      cumulative += trade.pl;
+      peak = Math.max(peak, cumulative);
+      const drawdown = peak > 0 ? ((peak - cumulative) / peak) * 100 : 0;
+      
+      return {
+        date: trade.exitDate || trade.date,
+        tradeNum: idx + 1,
+        balance: cumulative,
+        drawdown,
+        peak
+      };
+    });
+  })();
 
   // Get all unique tags
   const allTags = Array.from(new Set(entries.flatMap(e => e.tags)));
@@ -585,6 +690,42 @@ function JournalContent() {
               ${avgLoss.toFixed(2)}
             </div>
           </div>
+          {/* R-Multiple Stats */}
+          {tradesWithR.length > 0 && (
+            <>
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))',
+                borderRadius: '12px',
+                padding: '16px',
+                border: `1px solid ${totalR >= 0 ? 'rgba(139,92,246,0.4)' : 'rgba(239,68,68,0.3)'}`
+              }}>
+                <div style={{ color: '#a78bfa', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total R</div>
+                <div style={{ 
+                  fontSize: '22px', 
+                  fontWeight: '700',
+                  color: totalR >= 0 ? '#a78bfa' : '#ef4444'
+                }}>
+                  {totalR >= 0 ? '+' : ''}{totalR.toFixed(1)}R
+                </div>
+                <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>{tradesWithR.length} trades with R</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))',
+                borderRadius: '12px',
+                padding: '16px',
+                border: `1px solid ${avgR >= 0 ? 'rgba(139,92,246,0.4)' : 'rgba(239,68,68,0.3)'}`
+              }}>
+                <div style={{ color: '#a78bfa', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg R/Trade</div>
+                <div style={{ 
+                  fontSize: '22px', 
+                  fontWeight: '700',
+                  color: avgR >= 0 ? '#a78bfa' : '#ef4444'
+                }}>
+                  {avgR >= 0 ? '+' : ''}{avgR.toFixed(2)}R
+                </div>
+              </div>
+            </>
+          )}
         </div>
         
         {/* Small Sample Size Warning */}
@@ -856,6 +997,175 @@ function JournalContent() {
             </div>
           )}
         </div>
+
+        {/* Strategy Leaderboard & Equity Curve Row */}
+        {closedTrades.length >= 3 && (
+          <div style={{ 
+            maxWidth: '1600px', 
+            margin: '16px auto 0',
+            display: 'grid',
+            gridTemplateColumns: equityCurve.length >= 5 ? '1fr 1fr' : '1fr',
+            gap: '16px'
+          }}>
+            {/* Strategy Leaderboard */}
+            {strategyStats.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                border: '1px solid rgba(59,130,246,0.3)',
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '20px' }}>🏆</span>
+                  <h3 style={{ color: '#60a5fa', fontSize: '14px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Strategy Leaderboard
+                  </h3>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
+                        <th style={{ textAlign: 'left', padding: '8px 12px', color: '#94a3b8', fontWeight: '500' }}>Strategy</th>
+                        <th style={{ textAlign: 'center', padding: '8px 12px', color: '#94a3b8', fontWeight: '500' }}>Trades</th>
+                        <th style={{ textAlign: 'center', padding: '8px 12px', color: '#94a3b8', fontWeight: '500' }}>Win %</th>
+                        <th style={{ textAlign: 'center', padding: '8px 12px', color: '#94a3b8', fontWeight: '500' }}>Avg R</th>
+                        <th style={{ textAlign: 'right', padding: '8px 12px', color: '#94a3b8', fontWeight: '500' }}>Total P&L</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {strategyStats.slice(0, 8).map((strat, idx) => (
+                        <tr key={strat.name} style={{ borderBottom: '1px solid rgba(51,65,85,0.3)' }}>
+                          <td style={{ padding: '10px 12px', color: '#f1f5f9', fontWeight: '500' }}>
+                            {idx === 0 && strat.totalPL > 0 && <span style={{ marginRight: '6px' }}>🥇</span>}
+                            {idx === 1 && strat.totalPL > 0 && <span style={{ marginRight: '6px' }}>🥈</span>}
+                            {idx === 2 && strat.totalPL > 0 && <span style={{ marginRight: '6px' }}>🥉</span>}
+                            {strat.name}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '10px 12px', color: '#cbd5e1' }}>{strat.trades}</td>
+                          <td style={{ textAlign: 'center', padding: '10px 12px', color: strat.winRate >= 50 ? '#10b981' : '#ef4444', fontWeight: '600' }}>
+                            {strat.winRate.toFixed(0)}%
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '10px 12px', color: strat.avgR && strat.avgR >= 0 ? '#a78bfa' : '#ef4444', fontWeight: '600' }}>
+                            {strat.avgR !== undefined ? `${strat.avgR >= 0 ? '+' : ''}${strat.avgR.toFixed(1)}R` : '—'}
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '10px 12px', color: strat.totalPL >= 0 ? '#10b981' : '#ef4444', fontWeight: '700' }}>
+                            ${strat.totalPL >= 0 ? '' : '-'}{Math.abs(strat.totalPL).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Equity Curve */}
+            {equityCurve.length >= 5 && (
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                border: '1px solid rgba(16,185,129,0.3)',
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>📈</span>
+                    <h3 style={{ color: '#10b981', fontSize: '14px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Equity Curve
+                    </h3>
+                  </div>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                    <span style={{ color: '#94a3b8' }}>
+                      Peak: <span style={{ color: '#10b981', fontWeight: '600' }}>${equityCurve[equityCurve.length - 1]?.peak.toFixed(2) || '0.00'}</span>
+                    </span>
+                    <span style={{ color: '#94a3b8' }}>
+                      Current DD: <span style={{ color: '#ef4444', fontWeight: '600' }}>{equityCurve[equityCurve.length - 1]?.drawdown.toFixed(1) || '0'}%</span>
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Simple SVG Equity Curve */}
+                <div style={{ position: 'relative', height: '180px', marginTop: '10px' }}>
+                  <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                    {/* Grid lines */}
+                    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(51,65,85,0.3)" strokeDasharray="2,2" />
+                    <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(51,65,85,0.2)" strokeDasharray="2,2" />
+                    <line x1="0" y1="75" x2="100" y2="75" stroke="rgba(51,65,85,0.2)" strokeDasharray="2,2" />
+                    
+                    {/* Zero line */}
+                    {(() => {
+                      const minBalance = Math.min(...equityCurve.map(p => p.balance), 0);
+                      const maxBalance = Math.max(...equityCurve.map(p => p.balance), 0);
+                      const range = maxBalance - minBalance || 1;
+                      const zeroY = 100 - ((0 - minBalance) / range) * 100;
+                      return <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="rgba(148,163,184,0.4)" strokeWidth="0.5" />;
+                    })()}
+                    
+                    {/* Equity line */}
+                    <polyline
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={(() => {
+                        const minBalance = Math.min(...equityCurve.map(p => p.balance), 0);
+                        const maxBalance = Math.max(...equityCurve.map(p => p.balance), 0);
+                        const range = maxBalance - minBalance || 1;
+                        
+                        return equityCurve.map((point, i) => {
+                          const x = (i / (equityCurve.length - 1)) * 100;
+                          const y = 100 - ((point.balance - minBalance) / range) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                      })()}
+                    />
+                    
+                    {/* Gradient fill */}
+                    <defs>
+                      <linearGradient id="equityGradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <polygon
+                      fill="url(#equityGradient)"
+                      points={(() => {
+                        const minBalance = Math.min(...equityCurve.map(p => p.balance), 0);
+                        const maxBalance = Math.max(...equityCurve.map(p => p.balance), 0);
+                        const range = maxBalance - minBalance || 1;
+                        
+                        const linePoints = equityCurve.map((point, i) => {
+                          const x = (i / (equityCurve.length - 1)) * 100;
+                          const y = 100 - ((point.balance - minBalance) / range) * 100;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        
+                        return `0,100 ${linePoints} 100,100`;
+                      })()}
+                    />
+                  </svg>
+                  
+                  {/* Y-axis labels */}
+                  <div style={{ position: 'absolute', top: 0, left: -5, transform: 'translateX(-100%)', fontSize: '10px', color: '#64748b' }}>
+                    ${Math.max(...equityCurve.map(p => p.balance)).toFixed(0)}
+                  </div>
+                  <div style={{ position: 'absolute', bottom: 0, left: -5, transform: 'translateX(-100%)', fontSize: '10px', color: '#64748b' }}>
+                    ${Math.min(...equityCurve.map(p => p.balance), 0).toFixed(0)}
+                  </div>
+                </div>
+                
+                {/* X-axis info */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10px', color: '#64748b' }}>
+                  <span>Trade 1</span>
+                  <span>Trade {equityCurve.length}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -1046,6 +1356,97 @@ function JournalContent() {
                 />
               </div>
             </div>
+
+            {/* Risk Management Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ color: '#ef4444', fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🛑 Stop Loss
+                  <span style={{ color: '#64748b', fontSize: '11px', fontWeight: '400' }}>(for R-multiple)</span>
+                </label>
+                <input
+                  type="number"
+                  value={newEntry.stopLoss}
+                  onChange={(e) => setNewEntry({...newEntry, stopLoss: e.target.value})}
+                  placeholder="145.00"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#1e293b',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ color: '#10b981', fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🎯 Target
+                  <span style={{ color: '#64748b', fontSize: '11px', fontWeight: '400' }}>(take profit)</span>
+                </label>
+                <input
+                  type="number"
+                  value={newEntry.target}
+                  onChange={(e) => setNewEntry({...newEntry, target: e.target.value})}
+                  placeholder="165.00"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#1e293b',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* R:R Preview */}
+            {newEntry.entryPrice && newEntry.stopLoss && (
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05))',
+                border: '1px solid rgba(139,92,246,0.3)',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '20px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#a78bfa', fontSize: '12px', fontWeight: '600' }}>📊 RISK</span>
+                  <span style={{ color: '#ef4444', fontSize: '14px', fontWeight: '700' }}>
+                    ${(Math.abs(parseFloat(newEntry.entryPrice) - parseFloat(newEntry.stopLoss)) * (parseFloat(newEntry.quantity) || 1)).toFixed(2)}
+                  </span>
+                </div>
+                {newEntry.target && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#a78bfa', fontSize: '12px', fontWeight: '600' }}>🎯 REWARD</span>
+                      <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '700' }}>
+                        ${(Math.abs(parseFloat(newEntry.target) - parseFloat(newEntry.entryPrice)) * (parseFloat(newEntry.quantity) || 1)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#a78bfa', fontSize: '12px', fontWeight: '600' }}>R:R</span>
+                      <span style={{ 
+                        color: (Math.abs(parseFloat(newEntry.target) - parseFloat(newEntry.entryPrice)) / Math.abs(parseFloat(newEntry.entryPrice) - parseFloat(newEntry.stopLoss))) >= 2 ? '#10b981' : '#fbbf24',
+                        fontSize: '16px', 
+                        fontWeight: '700' 
+                      }}>
+                        1:{(Math.abs(parseFloat(newEntry.target) - parseFloat(newEntry.entryPrice)) / Math.abs(parseFloat(newEntry.entryPrice) - parseFloat(newEntry.stopLoss))).toFixed(1)}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Options-specific fields */}
             {newEntry.tradeType === 'Options' && (

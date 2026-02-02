@@ -14,6 +14,11 @@ interface JournalEntry {
   entryPrice: number;
   exitPrice: number;
   quantity: number;
+  stopLoss?: number;
+  target?: number;
+  riskAmount?: number;
+  rMultiple?: number;
+  plannedRR?: number;
   pl: number;
   plPercent: number;
   strategy: string;
@@ -39,7 +44,8 @@ export async function GET(req: NextRequest) {
     const entriesRaw = await q(
       `SELECT id, trade_date, symbol, side, trade_type, option_type, strike_price, expiration_date,
               quantity, entry_price, exit_price, exit_date, pl, pl_percent, strategy, setup, 
-              notes, emotions, outcome, tags, is_open
+              notes, emotions, outcome, tags, is_open,
+              stop_loss, target, risk_amount, r_multiple, planned_rr
        FROM journal_entries 
        WHERE workspace_id = $1 
        ORDER BY trade_date DESC, created_at DESC`,
@@ -58,6 +64,11 @@ export async function GET(req: NextRequest) {
       entryPrice: parseFloat(e.entry_price),
       exitPrice: e.exit_price ? parseFloat(e.exit_price) : 0,
       quantity: parseFloat(e.quantity),
+      stopLoss: e.stop_loss ? parseFloat(e.stop_loss) : undefined,
+      target: e.target ? parseFloat(e.target) : undefined,
+      riskAmount: e.risk_amount ? parseFloat(e.risk_amount) : undefined,
+      rMultiple: e.r_multiple ? parseFloat(e.r_multiple) : undefined,
+      plannedRR: e.planned_rr ? parseFloat(e.planned_rr) : undefined,
       pl: e.pl ? parseFloat(e.pl) : 0,
       plPercent: e.pl_percent ? parseFloat(e.pl_percent) : 0,
       strategy: e.strategy || '',
@@ -98,8 +109,9 @@ export async function POST(req: NextRequest) {
         `INSERT INTO journal_entries (
           workspace_id, trade_date, symbol, side, trade_type, option_type, strike_price, 
           expiration_date, quantity, entry_price, exit_price, exit_date, pl, pl_percent, 
-          strategy, setup, notes, emotions, outcome, tags, is_open
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+          strategy, setup, notes, emotions, outcome, tags, is_open,
+          stop_loss, target, risk_amount, r_multiple, planned_rr
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
         [
           workspaceId,
           e.date,
@@ -121,7 +133,12 @@ export async function POST(req: NextRequest) {
           e.emotions || null,
           e.outcome || 'open',
           e.tags || [],
-          e.isOpen !== false
+          e.isOpen !== false,
+          e.stopLoss || null,
+          e.target || null,
+          e.riskAmount || null,
+          e.rMultiple || null,
+          e.plannedRR || null
         ]
       );
     }
