@@ -900,7 +900,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                {/* POP (Probability of Profit) - Coming Soon */}
+                {/* POP (Probability of Profit) */}
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     POP
@@ -908,12 +908,12 @@ export default function OptionsConfluenceScanner() {
                   <div style={{
                     fontSize: '1.75rem',
                     fontWeight: '700',
-                    color: probabilityResult?.winProbability && probabilityResult.winProbability >= 0.55 ? '#10B981' 
-                      : probabilityResult?.winProbability && probabilityResult.winProbability >= 0.45 ? '#F59E0B' 
+                    color: probabilityResult?.winProbability && probabilityResult.winProbability >= 55 ? '#10B981' 
+                      : probabilityResult?.winProbability && probabilityResult.winProbability >= 45 ? '#F59E0B' 
                       : '#6B7280',
                   }}>
                     {probabilityResult?.winProbability 
-                      ? `${(probabilityResult.winProbability * 100).toFixed(0)}%`
+                      ? `${probabilityResult.winProbability.toFixed(0)}%`
                       : '—'}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
@@ -921,7 +921,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                {/* EV (Expected Value) - Using Kelly Size as proxy */}
+                {/* Kelly Size - Shows optimal position or "No Edge" */}
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Kelly Size
@@ -931,12 +931,16 @@ export default function OptionsConfluenceScanner() {
                     fontWeight: '700',
                     color: probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 ? '#10B981' : '#EF4444',
                   }}>
-                    {probabilityResult?.kellySizePercent 
-                      ? `${probabilityResult.kellySizePercent.toFixed(1)}%`
+                    {probabilityResult 
+                      ? (probabilityResult.kellySizePercent > 0 
+                          ? `${probabilityResult.kellySizePercent.toFixed(1)}%`
+                          : '0%')
                       : '—'}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    Optimal Position
+                    {probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 
+                      ? 'Optimal Position' 
+                      : 'No Edge (Skip)'}
                   </div>
                 </div>
 
