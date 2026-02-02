@@ -222,6 +222,78 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
   );
 }
 
+// Quick Signal Summary helpers
+function getQuickSignals(data: EquityData): {
+  trend: { label: 'Bullish' | 'Bearish' | 'Neutral'; icon: string; color: string };
+  momentum: { label: 'Strong' | 'Weak' | 'Neutral'; icon: string; color: string };
+  volatility: { label: 'High' | 'Normal' | 'Low'; icon: string; color: string };
+} {
+  // Trend: based on price vs MAs
+  const above50 = data.technicals.priceVs50MA > 0;
+  const above200 = data.technicals.priceVs200MA > 0;
+  const trend = above50 && above200 
+    ? { label: 'Bullish' as const, icon: '📈', color: 'text-green-400' }
+    : !above50 && !above200 
+      ? { label: 'Bearish' as const, icon: '📉', color: 'text-red-400' }
+      : { label: 'Neutral' as const, icon: '➖', color: 'text-yellow-400' };
+  
+  // Momentum: based on price change and 52-week position
+  const weekPos = data.technicals.week52Position;
+  const changePercent = data.quote.changePercent || 0;
+  const momentum = weekPos > 70 && changePercent > 0
+    ? { label: 'Strong' as const, icon: '🔥', color: 'text-green-400' }
+    : weekPos < 30 || changePercent < -2
+      ? { label: 'Weak' as const, icon: '❄️', color: 'text-red-400' }
+      : { label: 'Neutral' as const, icon: '⚖️', color: 'text-slate-400' };
+  
+  // Volatility: based on beta
+  const beta = data.technicals.beta || 1;
+  const volatility = beta > 1.5
+    ? { label: 'High' as const, icon: '⚡', color: 'text-yellow-400' }
+    : beta < 0.8
+      ? { label: 'Low' as const, icon: '🛡️', color: 'text-blue-400' }
+      : { label: 'Normal' as const, icon: '📊', color: 'text-slate-400' };
+  
+  return { trend, momentum, volatility };
+}
+
+// Aggregate news sentiment score
+function getAggregateSentiment(news: EquityData['news']): { score: number; label: string; color: string } | null {
+  if (!news || news.length === 0) return null;
+  
+  const sentimentValues: Record<string, number> = {
+    'Bullish': 1,
+    'Somewhat-Bullish': 0.5,
+    'Neutral': 0,
+    'Somewhat-Bearish': -0.5,
+    'Bearish': -1,
+  };
+  
+  let totalScore = 0;
+  let count = 0;
+  
+  for (const item of news) {
+    // Use sentimentScore if available, otherwise map from label
+    if (typeof item.sentimentScore === 'number') {
+      totalScore += item.sentimentScore;
+      count++;
+    } else if (item.sentiment && sentimentValues[item.sentiment] !== undefined) {
+      totalScore += sentimentValues[item.sentiment];
+      count++;
+    }
+  }
+  
+  if (count === 0) return null;
+  
+  const avgScore = totalScore / count;
+  const percentage = Math.round((avgScore + 1) / 2 * 100); // Convert -1 to 1 range to 0-100%
+  
+  const label = avgScore > 0.3 ? 'Bullish' : avgScore < -0.3 ? 'Bearish' : 'Neutral';
+  const color = avgScore > 0.3 ? 'text-green-400' : avgScore < -0.3 ? 'text-red-400' : 'text-yellow-400';
+  
+  return { score: percentage, label, color };
+}
+
 function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   const total = analysts.totalRatings || 1;
   const segments = [
@@ -444,6 +516,33 @@ export default function EquityExplorerPage() {
                   <MiniChart data={data.chart} />
                 </div>
               )}
+              
+              {/* Quick Signal Summary */}
+              {(() => {
+                const signals = getQuickSignals(data);
+                return (
+                  <div className="mt-4 flex flex-wrap justify-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <span className="text-xs text-gray-400 uppercase">Trend</span>
+                      <span className={`font-semibold ${signals.trend.color}`}>
+                        {signals.trend.icon} {signals.trend.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <span className="text-xs text-gray-400 uppercase">Momentum</span>
+                      <span className={`font-semibold ${signals.momentum.color}`}>
+                        {signals.momentum.icon} {signals.momentum.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
+                      <span className="text-xs text-gray-400 uppercase">Volatility</span>
+                      <span className={`font-semibold ${signals.volatility.color}`}>
+                        {signals.volatility.icon} {signals.volatility.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Key Stats Grid */}
@@ -506,6 +605,29 @@ export default function EquityExplorerPage() {
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   📊 Fundamentals
                 </h3>
+                
+                {/* Growth Metrics Highlight */}
+                {(data.fundamentals.quarterlyRevenueGrowth || data.fundamentals.quarterlyEarningsGrowth) && (
+                  <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-lg border border-blue-500/30">
+                    {data.fundamentals.quarterlyRevenueGrowth !== undefined && (
+                      <div className="text-center">
+                        <p className="text-xs text-blue-300 uppercase mb-1">Revenue YoY</p>
+                        <p className={`text-lg font-bold ${data.fundamentals.quarterlyRevenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {data.fundamentals.quarterlyRevenueGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyRevenueGrowth * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    )}
+                    {data.fundamentals.quarterlyEarningsGrowth !== undefined && (
+                      <div className="text-center">
+                        <p className="text-xs text-blue-300 uppercase mb-1">EPS YoY</p>
+                        <p className={`text-lg font-bold ${data.fundamentals.quarterlyEarningsGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {data.fundamentals.quarterlyEarningsGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyEarningsGrowth * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">EPS (TTM)</p>
@@ -648,9 +770,33 @@ export default function EquityExplorerPage() {
             {/* News */}
             {data.news.length > 0 && (
               <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  📰 Latest News
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    📰 Latest News
+                  </h3>
+                  {/* Aggregate News Sentiment */}
+                  {(() => {
+                    const sentiment = getAggregateSentiment(data.news);
+                    if (!sentiment) return null;
+                    return (
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-lg border border-slate-600">
+                        <span className="text-xs text-gray-400">News Sentiment:</span>
+                        <span className={`font-bold ${sentiment.color}`}>
+                          {sentiment.score}% {sentiment.label}
+                        </span>
+                        <div className="w-16 h-2 bg-slate-600 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${
+                              sentiment.score > 60 ? 'bg-green-500' : 
+                              sentiment.score < 40 ? 'bg-red-500' : 'bg-yellow-500'
+                            }`}
+                            style={{ width: `${sentiment.score}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
                 <div className="space-y-4">
                   {data.news.slice(0, 5).map((article, i) => (
                     <a
