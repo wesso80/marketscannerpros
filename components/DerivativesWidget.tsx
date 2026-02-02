@@ -38,6 +38,88 @@ interface DerivativesWidgetProps {
   className?: string;
 }
 
+// Crowding Risk Meter calculation
+function getCrowdingRisk(lsRatio: number, fundingRate: number): {
+  level: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  color: string;
+  bgColor: string;
+  description: string;
+} {
+  let score = 0;
+  
+  // L/S ratio scoring (1.0 = neutral)
+  const lsDeviation = Math.abs(lsRatio - 1);
+  if (lsDeviation > 0.3) score += 3; // Very skewed
+  else if (lsDeviation > 0.15) score += 2; // Moderately skewed
+  else if (lsDeviation > 0.05) score += 1; // Slightly skewed
+  
+  // Funding rate scoring
+  const absRate = Math.abs(fundingRate);
+  if (absRate > 0.05) score += 3; // Extreme funding
+  else if (absRate > 0.02) score += 2; // Elevated funding
+  else if (absRate > 0.01) score += 1; // Noticeable funding
+  
+  // Combined leverage signal (high L/S + high funding = very crowded)
+  if (lsDeviation > 0.2 && absRate > 0.03) score += 2;
+  
+  if (score >= 6) return { 
+    level: 'EXTREME', 
+    color: 'text-red-400', 
+    bgColor: 'bg-red-500',
+    description: 'High squeeze risk'
+  };
+  if (score >= 4) return { 
+    level: 'HIGH', 
+    color: 'text-orange-400', 
+    bgColor: 'bg-orange-500',
+    description: 'Position crowding'
+  };
+  if (score >= 2) return { 
+    level: 'MODERATE', 
+    color: 'text-yellow-400', 
+    bgColor: 'bg-yellow-500',
+    description: 'Some imbalance'
+  };
+  return { 
+    level: 'LOW', 
+    color: 'text-green-400', 
+    bgColor: 'bg-green-500',
+    description: 'Balanced market'
+  };
+}
+
+// Get directional insight based on positioning
+function getPositioningInsight(lsRatio: number, fundingRate: number): {
+  icon: string;
+  text: string;
+  color: string;
+} {
+  const isLongCrowded = lsRatio > 1.15;
+  const isShortCrowded = lsRatio < 0.85;
+  const highPositiveFunding = fundingRate > 0.03;
+  const highNegativeFunding = fundingRate < -0.03;
+  
+  if (isLongCrowded && highPositiveFunding) {
+    return { icon: '⚠️', text: 'Longs crowded — squeeze down risk', color: 'text-red-400' };
+  }
+  if (isShortCrowded && highNegativeFunding) {
+    return { icon: '⚠️', text: 'Shorts crowded — squeeze up risk', color: 'text-green-400' };
+  }
+  if (isLongCrowded) {
+    return { icon: '📊', text: 'Long bias — watching for exhaustion', color: 'text-yellow-400' };
+  }
+  if (isShortCrowded) {
+    return { icon: '📊', text: 'Short bias — contrarian long potential', color: 'text-yellow-400' };
+  }
+  if (highPositiveFunding) {
+    return { icon: '💰', text: 'Longs paying premium — bullish sentiment', color: 'text-green-400' };
+  }
+  if (highNegativeFunding) {
+    return { icon: '💰', text: 'Shorts paying premium — bearish sentiment', color: 'text-red-400' };
+  }
+  return { icon: '⚖️', text: 'Neutral positioning — no crowding', color: 'text-slate-400' };
+}
+
 export default function DerivativesWidget({
   compact = false,
   className = ''
@@ -201,6 +283,41 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
         Derivatives Sentiment
       </h3>
 
+      {/* Crowding Risk Meter */}
+      {lsData && fundingData && (() => {
+        const lsRatio = parseFloat(lsData.average.longShortRatio);
+        const fundingRate = parseFloat(fundingData.average.fundingRatePercent);
+        const crowding = getCrowdingRisk(lsRatio, fundingRate);
+        const insight = getPositioningInsight(lsRatio, fundingRate);
+        
+        return (
+          <div className="mb-4 p-4 bg-slate-900/70 rounded-lg border border-slate-600">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-400">Crowding Risk</span>
+              <span className={`font-bold ${crowding.color}`}>{crowding.level}</span>
+            </div>
+            {/* Risk meter bar */}
+            <div className="flex gap-1 mb-2">
+              <div className={`h-2 flex-1 rounded-l ${crowding.level === 'LOW' || crowding.level === 'MODERATE' || crowding.level === 'HIGH' || crowding.level === 'EXTREME' ? 'bg-green-500' : 'bg-slate-600'}`} />
+              <div className={`h-2 flex-1 ${crowding.level === 'MODERATE' || crowding.level === 'HIGH' || crowding.level === 'EXTREME' ? 'bg-yellow-500' : 'bg-slate-600'}`} />
+              <div className={`h-2 flex-1 ${crowding.level === 'HIGH' || crowding.level === 'EXTREME' ? 'bg-orange-500' : 'bg-slate-600'}`} />
+              <div className={`h-2 flex-1 rounded-r ${crowding.level === 'EXTREME' ? 'bg-red-500' : 'bg-slate-600'}`} />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 mb-3">
+              <span>LOW</span>
+              <span>MOD</span>
+              <span>HIGH</span>
+              <span>EXTREME</span>
+            </div>
+            {/* Insight */}
+            <div className={`text-sm flex items-center gap-2 ${insight.color}`}>
+              <span>{insight.icon}</span>
+              <span>{insight.text}</span>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-2 gap-4 mb-4">
         {/* Long/Short Ratio */}
         {lsData && (
@@ -257,12 +374,14 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
           <div className="grid grid-cols-2 gap-2">
             {lsData.coins.slice(0, 6).map(coin => {
               const funding = fundingData?.coins.find(f => f.symbol === coin.symbol);
+              const lsArrow = coin.longShortRatio > 1.1 ? '↑' : coin.longShortRatio < 0.9 ? '↓' : '';
+              const lsColor = coin.longShortRatio > 1.1 ? 'text-green-400' : coin.longShortRatio < 0.9 ? 'text-red-400' : 'text-white';
               return (
                 <div key={coin.symbol} className="flex items-center justify-between py-1 px-2 bg-slate-900/30 rounded">
                   <span className="font-medium text-white">{coin.symbol}</span>
                   <div className="flex gap-3 text-xs">
                     <span className="text-slate-400">
-                      L/S: <span className="text-white">{coin.longShortRatio.toFixed(2)}</span>
+                      L/S: <span className={lsColor}>{lsArrow}{coin.longShortRatio.toFixed(2)}</span>
                     </span>
                     {funding && (
                       <span className={funding.fundingRatePercent >= 0 ? 'text-green-400' : 'text-red-400'}>

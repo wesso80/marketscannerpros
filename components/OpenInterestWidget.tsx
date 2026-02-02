@@ -117,6 +117,55 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
     return 'text-slate-400';
   };
 
+  // Get OI directional interpretation based on OI change
+  const getOIInterpretation = (oiChange: number | undefined): {
+    label: string;
+    icon: string;
+    color: string;
+    description: string;
+  } | null => {
+    if (oiChange === undefined) return null;
+    
+    if (oiChange > 3) {
+      return {
+        label: 'OI Expanding',
+        icon: '📈',
+        color: 'text-green-400',
+        description: 'New positions entering — trend building'
+      };
+    }
+    if (oiChange > 0) {
+      return {
+        label: 'OI Rising',
+        icon: '↑',
+        color: 'text-green-400',
+        description: 'Gradual position building'
+      };
+    }
+    if (oiChange < -3) {
+      return {
+        label: 'OI Contracting',
+        icon: '📉',
+        color: 'text-red-400',
+        description: 'Deleveraging — risk-off mode'
+      };
+    }
+    if (oiChange < 0) {
+      return {
+        label: 'OI Falling',
+        icon: '↓',
+        color: 'text-yellow-400',
+        description: 'Position unwinding'
+      };
+    }
+    return {
+      label: 'OI Flat',
+      icon: '➖',
+      color: 'text-slate-400',
+      description: 'No significant change'
+    };
+  };
+
   if (loading) {
     return (
       <div className={`animate-pulse bg-slate-800/50 rounded-lg ${compact ? 'p-3 h-16' : 'p-6 h-64'} ${className}`}>
@@ -252,6 +301,26 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
           Total Open Interest (Top 20 Coins)
         </div>
 
+        {/* OI Directional Interpretation */}
+        {(() => {
+          const interpretation = getOIInterpretation(data.total.change24h);
+          if (!interpretation) return null;
+          return (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+              interpretation.color === 'text-green-400' ? 'bg-green-500/10 border-green-500/30' :
+              interpretation.color === 'text-red-400' ? 'bg-red-500/10 border-red-500/30' :
+              interpretation.color === 'text-yellow-400' ? 'bg-yellow-500/10 border-yellow-500/30' :
+              'bg-slate-500/10 border-slate-500/30'
+            } mb-4`}>
+              <span className="text-lg">{interpretation.icon}</span>
+              <div className="text-left">
+                <div className={`text-sm font-semibold ${interpretation.color}`}>{interpretation.label}</div>
+                <div className="text-xs text-slate-400">{interpretation.description}</div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Dominance bar */}
         <div className="h-3 bg-slate-700 rounded-full overflow-hidden flex">
           <div
@@ -327,27 +396,38 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
         <div>
           <div className="text-sm text-slate-400 mb-2">Top by Open Interest</div>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {data.coins.slice(0, 10).map((coin, i) => (
-              <div key={coin.symbol} className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500 w-5 text-right text-xs">{i + 1}</span>
-                  <span className="font-medium text-white">{coin.symbol}</span>
-                  {coin.change24h !== undefined && (
-                    <span className={`text-xs ${getChangeColor(coin.change24h)}`}>
-                      {formatChange(coin.change24h)}
-                    </span>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className="text-white text-sm">
-                    {formatCompact(coin.openInterest)}
+            {data.coins.slice(0, 10).map((coin, i) => {
+              const coinInterpretation = getOIInterpretation(coin.change24h);
+              return (
+                <div key={coin.symbol} className="flex items-center justify-between py-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 w-5 text-right text-xs">{i + 1}</span>
+                    <span className="font-medium text-white">{coin.symbol}</span>
+                    {coin.change24h !== undefined && (
+                      <span className={`text-xs flex items-center gap-1 ${getChangeColor(coin.change24h)}`}>
+                        <span>{coin.change24h > 0 ? '↑' : coin.change24h < 0 ? '↓' : '–'}</span>
+                        {formatChange(coin.change24h)}
+                      </span>
+                    )}
+                    {coinInterpretation && coin.change24h !== undefined && Math.abs(coin.change24h) > 3 && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        coin.change24h > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {coin.change24h > 0 ? 'Expanding' : 'Contracting'}
+                      </span>
+                    )}
                   </div>
-                  <div className="text-xs text-slate-500">
-                    ${coin.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  <div className="text-right">
+                    <div className="text-white text-sm">
+                      {formatCompact(coin.openInterest)}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      ${coin.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
