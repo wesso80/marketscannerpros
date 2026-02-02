@@ -27,19 +27,32 @@ const STANDARD_MINUTES = [1, 2, 3, 5, 10, 15, 30, 60];
 
 // Macro timeframe definitions (in trading days)
 const MACRO_TIMEFRAMES = {
+  // Daily cycles (1-7 days)
   daily: 1,
   '2day': 2,
   '3day': 3,
   '4day': 4,
+  '5day': 5,
+  '6day': 6,
+  '7day': 7,
+  // Weekly cycles (1-4 weeks)
   weekly: 5,
-  biweekly: 10,
+  '2week': 10,
   '3week': 15,
-  '5week': 25,
-  '7week': 35,
-  '9week': 45,
-  monthly: 21, // ~21 trading days
-  quarterly: 63, // ~63 trading days
-  yearly: 252, // ~252 trading days
+  '4week': 20,
+  // Monthly cycles (1-12 months in trading days)
+  monthly: 21,       // ~21 trading days
+  '2month': 42,      // ~42 trading days
+  '3month': 63,      // Quarterly
+  '4month': 84,
+  '5month': 105,
+  '6month': 126,     // Semi-annual
+  '7month': 147,
+  '8month': 168,
+  '9month': 189,
+  '10month': 210,
+  '11month': 231,
+  yearly: 252,       // ~252 trading days
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -64,23 +77,36 @@ const DECOMPRESSION_START: Record<string, number> = {
   '6H': 20,          // Starts 15-20 mins before close
   '8H': 20,          // Starts 15-20 mins before close
   
-  // Daily - each day adds 1 hour (in minutes)
+  // Daily cycles (1-7 days) - each day adds ~1 hour
   '1D': 60,          // 1 hour before close
   '2D': 120,         // 2 hours before close
   '3D': 180,         // 3 hours before close
   '4D': 240,         // 4 hours before close
   '5D': 300,         // 5 hours before close
+  '6D': 360,         // 6 hours before close
+  '7D': 390,         // 6.5 hours before close
   
-  // Weekly
-  '1W': 390,         // 6.5 hours before close (6.5 * 60)
-  '2W': 780,         // 13 hours before close (biweekly)
+  // Weekly cycles (1-4 weeks)
+  '1W': 390,         // 6.5 hours before close
+  '2W': 780,         // 13 hours before close
+  '3W': 1170,        // 19.5 hours before close
+  '4W': 1560,        // 26 hours before close
   
-  // Monthly
+  // Monthly cycles (1-12 months) - in minutes
   '1M': 1560,        // 26 hours before close
+  '2M': 3120,        // 52 hours before close
+  '3M': 4680,        // 78 hours before close (quarterly)
+  '4M': 6240,        // 104 hours
+  '5M': 7800,        // 130 hours
+  '6M': 9360,        // 156 hours (semi-annual)
+  '7M': 10920,       // 182 hours
+  '8M': 12480,       // 208 hours
+  '9M': 14040,       // 234 hours
+  '10M': 15600,      // 260 hours
+  '11M': 17160,      // 286 hours
+  '1Y': 18720,       // 312 hours (yearly)
   
-  // Long-term (in minutes, but represents days)
-  '6M': 9360,        // 6.5 trading days * 24 * 60 (simplified)
-  '1Y': 18720,       // 13 trading days
+  // Legacy/extended (for compatibility)
   '2Y': 37440,       // 26 trading days
   '4Y': 74880,       // 52 trading days
   '8Y': 149760,      // 104 trading days
@@ -565,42 +591,114 @@ function getWeekOfYear(date: Date): number {
 
 /**
  * Get macro candles closing on a given date
+ * Now tracks ALL 35 timeframes for complete confluence detection
  */
 export function getMacroClosingCandles(date: Date): string[] {
   const closing: string[] = [];
+  const dayOfYear = getDayOfYear(date);
+  const weekNum = getWeekOfYear(date);
+  const month = date.getMonth(); // 0-indexed
+  const dayOfMonth = date.getDate();
+  const daysInMonth = new Date(date.getFullYear(), month + 1, 0).getDate();
+  const isLastDayOfMonth = dayOfMonth === daysInMonth || 
+    (dayOfMonth >= daysInMonth - 2 && (date.getDay() === 5 || isLastTradingDayOfMonth(date)));
   
-  // Daily always closes
-  closing.push('Daily');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DAILY CYCLES (1D - 7D)
+  // ═══════════════════════════════════════════════════════════════════════════
   
-  // Weekly (Friday)
+  // 1D: Always closes every trading day
+  closing.push('1D');
+  
+  // 2D: Closes every 2nd day
+  if (dayOfYear % 2 === 0) closing.push('2D');
+  
+  // 3D: Closes every 3rd day
+  if (dayOfYear % 3 === 0) closing.push('3D');
+  
+  // 4D: Closes every 4th day
+  if (dayOfYear % 4 === 0) closing.push('4D');
+  
+  // 5D: Closes every 5th day
+  if (dayOfYear % 5 === 0) closing.push('5D');
+  
+  // 6D: Closes every 6th day
+  if (dayOfYear % 6 === 0) closing.push('6D');
+  
+  // 7D: Closes every 7th day (calendar week)
+  if (dayOfYear % 7 === 0) closing.push('7D');
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WEEKLY CYCLES (1W - 4W) - All close on Friday
+  // ═══════════════════════════════════════════════════════════════════════════
+  
   if (isFriday(date)) {
-    closing.push('Weekly');
+    // 1W: Every Friday
+    closing.push('1W');
     
-    // Check for bi-weekly, 3-week, etc.
-    const weekNum = getWeekOfYear(date);
-    if (weekNum % 2 === 0) closing.push('Bi-weekly');
-    if (weekNum % 3 === 0) closing.push('3-Week');
-    if (weekNum % 5 === 0) closing.push('5-Week');
-    if (weekNum % 7 === 0) closing.push('7-Week');
-    if (weekNum % 9 === 0) closing.push('9-Week');
+    // 2W: Every 2nd Friday
+    if (weekNum % 2 === 0) closing.push('2W');
+    
+    // 3W: Every 3rd Friday
+    if (weekNum % 3 === 0) closing.push('3W');
+    
+    // 4W: Every 4th Friday
+    if (weekNum % 4 === 0) closing.push('4W');
   }
   
-  // Monthly
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MONTHLY CYCLES (1M - 12M)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
   if (isLastTradingDayOfMonth(date)) {
-    closing.push('Monthly');
-  }
-  
-  // Quarterly
-  if (isLastTradingDayOfQuarter(date)) {
-    closing.push('Quarterly');
-  }
-  
-  // Yearly
-  if (isLastTradingDayOfYear(date)) {
-    closing.push('Yearly');
+    // 1M: Every month end
+    closing.push('1M');
+    
+    // 2M: Feb, Apr, Jun, Aug, Oct, Dec (bi-monthly)
+    if ([1, 3, 5, 7, 9, 11].includes(month)) closing.push('2M');
+    
+    // 3M: Mar, Jun, Sep, Dec (quarterly)
+    if ([2, 5, 8, 11].includes(month)) closing.push('3M');
+    
+    // 4M: Apr, Aug, Dec
+    if ([3, 7, 11].includes(month)) closing.push('4M');
+    
+    // 5M: May, Oct
+    if ([4, 9].includes(month)) closing.push('5M');
+    
+    // 6M: Jun, Dec (semi-annual)
+    if ([5, 11].includes(month)) closing.push('6M');
+    
+    // 7M: Jul
+    if (month === 6) closing.push('7M');
+    
+    // 8M: Aug
+    if (month === 7) closing.push('8M');
+    
+    // 9M: Sep
+    if (month === 8) closing.push('9M');
+    
+    // 10M: Oct
+    if (month === 9) closing.push('10M');
+    
+    // 11M: Nov
+    if (month === 10) closing.push('11M');
+    
+    // 1Y: Dec (yearly)
+    if (month === 11) closing.push('1Y');
   }
   
   return closing;
+}
+
+/**
+ * Helper: Get day of year (1-365/366)
+ */
+function getDayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  return Math.floor(diff / oneDay);
 }
 
 /**
@@ -608,23 +706,33 @@ export function getMacroClosingCandles(date: Date): string[] {
  */
 export function getMacroConfluence(date: Date): MacroConfluence {
   const closing = getMacroClosingCandles(date);
-  const isQuarterly = closing.includes('Quarterly');
-  const isYearly = closing.includes('Yearly');
+  const isQuarterly = closing.includes('3M');
+  const isYearly = closing.includes('1Y');
+  const isSemiAnnual = closing.includes('6M');
+  const isMonthly = closing.includes('1M');
+  const isWeekly = closing.includes('1W');
   
+  // Score based on how many TFs are closing
   let score = closing.length;
-  if (isQuarterly) score += 3;
-  if (isYearly) score += 5;
+  
+  // Bonus for significant periods
+  if (isYearly) score += 10;
+  else if (isSemiAnnual) score += 6;
+  else if (isQuarterly) score += 4;
+  else if (isMonthly) score += 2;
   
   let impact: 'high' | 'very_high' | 'maximum' = 'high';
   if (isYearly) impact = 'maximum';
-  else if (isQuarterly) impact = 'very_high';
+  else if (isSemiAnnual || isQuarterly) impact = 'very_high';
+  else if (closing.length >= 6) impact = 'very_high';
   
   let desc = '';
-  if (isYearly) desc = 'YEAR END - All timeframes align';
-  else if (isQuarterly) desc = 'Quarter end - major pivot';
-  else if (closing.includes('Monthly')) desc = 'Month end - swing pivot';
-  else if (closing.includes('Weekly')) desc = 'Weekly close';
-  else desc = 'Daily close';
+  if (isYearly) desc = `YEAR END - ${closing.length} timeframes closing together`;
+  else if (isSemiAnnual) desc = `SEMI-ANNUAL - ${closing.length} timeframes align`;
+  else if (isQuarterly) desc = `QUARTER END - ${closing.length} timeframes converge`;
+  else if (isMonthly) desc = `Month end - ${closing.length} TFs closing`;
+  else if (isWeekly) desc = `Weekly close - ${closing.length} TFs align`;
+  else desc = `Daily - ${closing.length} timeframes closing`;
   
   return {
     date,
