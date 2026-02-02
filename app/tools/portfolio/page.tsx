@@ -15,6 +15,7 @@ interface Position {
   pl: number;
   plPercent: number;
   entryDate: string;
+  strategy?: 'swing' | 'longterm' | 'options' | 'breakout' | 'ai_signal' | 'daytrade' | 'dividend';
 }
 
 interface ClosedPosition extends Position {
@@ -489,7 +490,8 @@ function PortfolioContent() {
     side: 'LONG' as 'LONG' | 'SHORT',
     quantity: '',
     entryPrice: '',
-    currentPrice: ''
+    currentPrice: '',
+    strategy: '' as Position['strategy'] | ''
   });
 
   // AI Analysis state
@@ -834,7 +836,7 @@ function PortfolioContent() {
     };
 
     setPositions([...positions, position]);
-    setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '' });
+    setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '', strategy: '' });
     setShowAddForm(false);
   };
 
@@ -1247,6 +1249,271 @@ function PortfolioContent() {
           </div>
         </div>
       </div>
+
+      {/* PRO FEATURES: Portfolio Health Score & Risk Metrics */}
+      {positions.length > 0 && (
+        <div style={{ 
+          background: 'rgba(15,23,42,0.6)',
+          padding: '20px 16px',
+          borderBottom: '1px solid rgba(51,65,85,0.4)'
+        }}>
+          <div style={{ 
+            maxWidth: '1600px', 
+            margin: '0 auto', 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '16px'
+          }}>
+            {/* Portfolio Health Score */}
+            {(() => {
+              // Calculate portfolio health metrics
+              const diversificationScore = Math.min(100, numPositions * 12); // More positions = better diversification (up to ~8)
+              const concentrationPenalty = allocationData[0]?.percentage > 50 ? 20 : allocationData[0]?.percentage > 30 ? 10 : 0;
+              const drawdownPenalty = totalReturn < -30 ? 30 : totalReturn < -20 ? 20 : totalReturn < -10 ? 10 : 0;
+              const winRatePenalty = closedPositions.length > 0 
+                ? (closedPositions.filter(p => p.realizedPL > 0).length / closedPositions.length) < 0.4 ? 15 : 0
+                : 0;
+              
+              let healthScore = Math.max(0, Math.min(100, 
+                50 + // Base score
+                (diversificationScore * 0.3) - // Diversification bonus
+                concentrationPenalty - // Concentration penalty
+                drawdownPenalty - // Drawdown penalty
+                winRatePenalty + // Win rate penalty
+                (totalReturn > 0 ? Math.min(20, totalReturn * 0.5) : 0) // Profit bonus
+              ));
+              
+              let riskLevel = 'Low';
+              let riskColor = '#10b981';
+              if (healthScore < 40) { riskLevel = 'High'; riskColor = '#ef4444'; }
+              else if (healthScore < 60) { riskLevel = 'Medium-High'; riskColor = '#f59e0b'; }
+              else if (healthScore < 75) { riskLevel = 'Medium'; riskColor = '#3b82f6'; }
+              else { riskLevel = 'Low'; riskColor = '#10b981'; }
+              
+              return (
+                <div style={{
+                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(100,116,139,0.3)',
+                }}>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: '#64748B', 
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '12px',
+                  }}>
+                    Portfolio Health
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      background: `conic-gradient(${riskColor} ${healthScore * 3.6}deg, rgba(30,41,59,0.8) 0deg)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        background: 'rgba(15,23,42,0.95)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                      }}>
+                        <span style={{ fontSize: '1.5rem', fontWeight: '800', color: riskColor }}>
+                          {Math.round(healthScore)}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#E2E8F0', marginBottom: '4px' }}>
+                        {healthScore >= 75 ? '💪 Strong' : healthScore >= 60 ? '👍 Good' : healthScore >= 40 ? '⚠️ Needs Work' : '🚨 At Risk'}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Risk Level:</span>
+                        <span style={{ 
+                          fontSize: '0.8rem', 
+                          fontWeight: '600',
+                          color: riskColor,
+                          padding: '2px 8px',
+                          background: `${riskColor}20`,
+                          borderRadius: '4px',
+                        }}>
+                          {riskLevel}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Risk Metrics */}
+            {(() => {
+              // Calculate risk metrics
+              const positionValues = positions.map(p => p.currentPrice * p.quantity);
+              const avgPositionValue = positionValues.length > 0 ? positionValues.reduce((a, b) => a + b, 0) / positionValues.length : 0;
+              const maxPositionValue = Math.max(...positionValues, 0);
+              const riskPerPosition = totalValue > 0 ? (maxPositionValue / totalValue * 100) : 0;
+              
+              // Portfolio volatility (simplified - based on P&L distribution)
+              const plPercentages = positions.map(p => p.plPercent);
+              const avgPL = plPercentages.length > 0 ? plPercentages.reduce((a, b) => a + b, 0) / plPercentages.length : 0;
+              const variance = plPercentages.length > 0 
+                ? plPercentages.reduce((sum, pl) => sum + Math.pow(pl - avgPL, 2), 0) / plPercentages.length 
+                : 0;
+              const volatility = Math.sqrt(variance);
+              
+              // Max drawdown (from performance history or current)
+              const maxDrawdown = Math.min(0, totalReturn);
+              
+              return (
+                <div style={{
+                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(100,116,139,0.3)',
+                }}>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: '#64748B', 
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '12px',
+                  }}>
+                    Risk Metrics
+                  </div>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Portfolio Volatility</span>
+                      <span style={{ 
+                        fontSize: '0.9rem', 
+                        fontWeight: '600',
+                        color: volatility > 30 ? '#ef4444' : volatility > 15 ? '#f59e0b' : '#10b981',
+                      }}>
+                        {volatility.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Max Drawdown</span>
+                      <span style={{ 
+                        fontSize: '0.9rem', 
+                        fontWeight: '600',
+                        color: maxDrawdown < -20 ? '#ef4444' : maxDrawdown < -10 ? '#f59e0b' : '#10b981',
+                      }}>
+                        {maxDrawdown.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Max Position Risk</span>
+                      <span style={{ 
+                        fontSize: '0.9rem', 
+                        fontWeight: '600',
+                        color: riskPerPosition > 40 ? '#ef4444' : riskPerPosition > 25 ? '#f59e0b' : '#10b981',
+                      }}>
+                        {riskPerPosition.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Avg Position Size</span>
+                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#E2E8F0' }}>
+                        ${avgPositionValue.toFixed(0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Strategy Performance */}
+            {(() => {
+              // Group positions by strategy
+              const strategyLabels: Record<string, string> = {
+                swing: '🔄 Swing',
+                longterm: '📈 Long Term',
+                options: '📊 Options',
+                breakout: '🚀 Breakout',
+                ai_signal: '🤖 AI Signal',
+                daytrade: '⚡ Day Trade',
+                dividend: '💰 Dividend',
+                undefined: '❓ Untagged',
+              };
+              
+              const strategyStats = positions.reduce((acc, p) => {
+                const strat = p.strategy || 'undefined';
+                if (!acc[strat]) acc[strat] = { count: 0, totalPL: 0, totalValue: 0 };
+                acc[strat].count++;
+                acc[strat].totalPL += p.pl;
+                acc[strat].totalValue += p.currentPrice * p.quantity;
+                return acc;
+              }, {} as Record<string, { count: number; totalPL: number; totalValue: number }>);
+              
+              const strategies = Object.entries(strategyStats)
+                .map(([key, val]) => ({
+                  strategy: key,
+                  label: strategyLabels[key] || key,
+                  ...val,
+                  plPercent: val.totalValue > 0 ? (val.totalPL / val.totalValue) * 100 : 0,
+                }))
+                .sort((a, b) => b.totalPL - a.totalPL);
+              
+              return (
+                <div style={{
+                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid rgba(100,116,139,0.3)',
+                }}>
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: '#64748B', 
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '12px',
+                  }}>
+                    Strategy Performance
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {strategies.slice(0, 4).map((s, i) => (
+                      <div key={i} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        padding: '6px 10px',
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: '6px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.85rem' }}>{s.label}</span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748B' }}>({s.count})</span>
+                        </div>
+                        <span style={{ 
+                          fontSize: '0.85rem', 
+                          fontWeight: '600',
+                          color: s.totalPL >= 0 ? '#10b981' : '#ef4444',
+                        }}>
+                          {s.totalPL >= 0 ? '+' : ''}{s.plPercent.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
+                    {strategies.length === 0 && (
+                      <div style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', padding: '10px' }}>
+                        Tag positions to track strategy performance
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* View Tabs */}
       <div style={{ padding: '0 16px' }}>
@@ -2140,6 +2407,34 @@ function PortfolioContent() {
                   }}
                 />
               </div>
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Strategy Tag <span style={{ color: '#64748b', fontSize: '11px' }}>(optional)</span>
+                </label>
+                <select
+                  value={newPosition.strategy || ''}
+                  onChange={(e) => setNewPosition({...newPosition, strategy: e.target.value as Position['strategy'] || undefined})}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Select strategy...</option>
+                  <option value="swing">🔄 Swing Trade</option>
+                  <option value="longterm">📈 Long Term</option>
+                  <option value="options">📊 Options Play</option>
+                  <option value="breakout">🚀 Breakout</option>
+                  <option value="ai_signal">🤖 AI Signal</option>
+                  <option value="daytrade">⚡ Day Trade</option>
+                  <option value="dividend">💰 Dividend</option>
+                </select>
+              </div>
               <button
                 onClick={addPosition}
                 style={{
@@ -2237,6 +2532,7 @@ function PortfolioContent() {
                     <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
                       <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
                       <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Strategy</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Current Price</th>
@@ -2267,6 +2563,29 @@ function PortfolioContent() {
                           }}>
                             {position.side}
                           </span>
+                        </td>
+                        <td style={{ padding: '16px 20px' }}>
+                          {position.strategy ? (
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              background: 'rgba(99,102,241,0.15)',
+                              color: '#a5b4fc',
+                              border: '1px solid rgba(99,102,241,0.3)'
+                            }}>
+                              {position.strategy === 'swing' ? '🔄 Swing' :
+                               position.strategy === 'longterm' ? '📈 Long' :
+                               position.strategy === 'options' ? '📊 Options' :
+                               position.strategy === 'breakout' ? '🚀 Breakout' :
+                               position.strategy === 'ai_signal' ? '🤖 AI' :
+                               position.strategy === 'daytrade' ? '⚡ Day' :
+                               position.strategy === 'dividend' ? '💰 Div' : position.strategy}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#64748b', fontSize: '11px' }}>—</span>
+                          )}
                         </td>
                         <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
                           {position.quantity}
