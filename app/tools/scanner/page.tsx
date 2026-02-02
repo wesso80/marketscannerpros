@@ -1685,6 +1685,303 @@ function ScannerContent() {
               );
             })()}
 
+            {/* PRO FEATURES: Confluence Count, Market Regime, Timeframe Stack, Expected Move */}
+            {result && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "1rem",
+                marginBottom: "1.5rem",
+              }}>
+                {/* 1. Confluence Count with Checkmarks */}
+                <div style={{
+                  background: "rgba(30,41,59,0.6)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: "1px solid rgba(100,116,139,0.3)",
+                }}>
+                  <div style={{ 
+                    fontSize: "0.7rem", 
+                    color: "#64748B", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "0.75rem",
+                  }}>
+                    Confluences Hit
+                  </div>
+                  {(() => {
+                    const confluences = [
+                      { name: "Trend", hit: result.ema200 && result.price ? (result.direction === 'bullish' ? result.price > result.ema200 : result.price < result.ema200) : false },
+                      { name: "Momentum", hit: result.rsi ? (result.direction === 'bullish' ? result.rsi > 50 : result.rsi < 50) : false },
+                      { name: "MACD", hit: result.macd_hist ? (result.direction === 'bullish' ? result.macd_hist > 0 : result.macd_hist < 0) : false },
+                      { name: "ADX Strength", hit: result.adx ? result.adx > 25 : false },
+                      { name: "Stochastic", hit: result.stoch_k && result.stoch_d ? (result.direction === 'bullish' ? result.stoch_k > result.stoch_d : result.stoch_k < result.stoch_d) : false },
+                      { name: "CCI", hit: result.cci ? (result.direction === 'bullish' ? result.cci > 0 : result.cci < 0) : false },
+                      { name: "Aroon", hit: result.aroon_up && result.aroon_down ? (result.direction === 'bullish' ? result.aroon_up > result.aroon_down : result.aroon_down > result.aroon_up) : false },
+                    ];
+                    const hitCount = confluences.filter(c => c.hit).length;
+                    const totalCount = confluences.length;
+                    
+                    return (
+                      <>
+                        <div style={{ 
+                          fontSize: "1.5rem", 
+                          fontWeight: "700", 
+                          color: hitCount >= 5 ? "#10B981" : hitCount >= 3 ? "#F59E0B" : "#EF4444",
+                          marginBottom: "0.5rem",
+                        }}>
+                          {hitCount} / {totalCount}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                          {confluences.map((c, i) => (
+                            <span key={i} style={{
+                              fontSize: "0.7rem",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              background: c.hit ? "rgba(16,185,129,0.2)" : "rgba(100,116,139,0.2)",
+                              color: c.hit ? "#10B981" : "#64748B",
+                            }}>
+                              {c.hit ? "✓" : "✗"} {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* 2. Market Regime Tag */}
+                <div style={{
+                  background: "rgba(30,41,59,0.6)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: "1px solid rgba(100,116,139,0.3)",
+                }}>
+                  <div style={{ 
+                    fontSize: "0.7rem", 
+                    color: "#64748B", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "0.75rem",
+                  }}>
+                    Market Regime
+                  </div>
+                  {(() => {
+                    // Determine regime from ADX, ATR, and RSI
+                    const adx = result.adx || 0;
+                    const atr = result.atr || 0;
+                    const price = result.price || 1;
+                    const atrPercent = (atr / price) * 100;
+                    const rsi = result.rsi || 50;
+                    
+                    let regime = "Unknown";
+                    let regimeIcon = "❓";
+                    let regimeColor = "#64748B";
+                    let regimeAdvice = "";
+                    
+                    if (adx >= 30) {
+                      regime = "Trending";
+                      regimeIcon = "📈";
+                      regimeColor = "#10B981";
+                      regimeAdvice = "Trend-following strategies";
+                    } else if (adx < 20 && atrPercent < 2) {
+                      regime = "Compression";
+                      regimeIcon = "🔄";
+                      regimeColor = "#8B5CF6";
+                      regimeAdvice = "Breakout setups imminent";
+                    } else if (atrPercent >= 3) {
+                      regime = "High Volatility";
+                      regimeIcon = "⚡";
+                      regimeColor = "#F59E0B";
+                      regimeAdvice = "Wider stops, smaller size";
+                    } else {
+                      regime = "Ranging";
+                      regimeIcon = "↔️";
+                      regimeColor = "#3B82F6";
+                      regimeAdvice = "Mean-reversion plays";
+                    }
+                    
+                    return (
+                      <>
+                        <div style={{ 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: "0.5rem",
+                          marginBottom: "0.5rem",
+                        }}>
+                          <span style={{ fontSize: "1.5rem" }}>{regimeIcon}</span>
+                          <span style={{ 
+                            fontSize: "1.25rem", 
+                            fontWeight: "700", 
+                            color: regimeColor,
+                          }}>
+                            {regime}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
+                          {regimeAdvice}
+                        </div>
+                        <div style={{ 
+                          marginTop: "0.5rem",
+                          fontSize: "0.7rem", 
+                          color: "#64748B",
+                        }}>
+                          ADX: {adx.toFixed(1)} | ATR%: {atrPercent.toFixed(2)}%
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* 3. Timeframe Stack View */}
+                <div style={{
+                  background: "rgba(30,41,59,0.6)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: "1px solid rgba(100,116,139,0.3)",
+                }}>
+                  <div style={{ 
+                    fontSize: "0.7rem", 
+                    color: "#64748B", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "0.75rem",
+                  }}>
+                    Timeframe Stack
+                  </div>
+                  {(() => {
+                    // Derive TF alignment from available indicators
+                    const direction = result.direction || 'neutral';
+                    const rsi = result.rsi || 50;
+                    const macdHist = result.macd_hist || 0;
+                    const priceVsEma = result.price && result.ema200 ? result.price > result.ema200 : null;
+                    
+                    // Simulate multi-TF view based on current TF indicators
+                    const tfStack = [
+                      { 
+                        tf: timeframe.toUpperCase(), 
+                        bias: direction === 'bullish' ? '↑' : direction === 'bearish' ? '↓' : '→',
+                        label: direction === 'bullish' ? 'bullish' : direction === 'bearish' ? 'bearish' : 'neutral',
+                        color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B',
+                      },
+                      { 
+                        tf: 'HTF', 
+                        bias: priceVsEma === true ? '↑' : priceVsEma === false ? '↓' : '→',
+                        label: priceVsEma === true ? 'trend up' : priceVsEma === false ? 'trend down' : 'unclear',
+                        color: priceVsEma === true ? '#10B981' : priceVsEma === false ? '#EF4444' : '#64748B',
+                      },
+                      { 
+                        tf: 'MOM', 
+                        bias: macdHist > 0 ? '↑' : macdHist < 0 ? '↓' : '→',
+                        label: macdHist > 0 ? 'expanding' : macdHist < 0 ? 'contracting' : 'flat',
+                        color: macdHist > 0 ? '#10B981' : macdHist < 0 ? '#EF4444' : '#64748B',
+                      },
+                    ];
+                    
+                    const aligned = tfStack.filter(t => t.bias === tfStack[0].bias).length;
+                    
+                    return (
+                      <>
+                        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.5rem" }}>
+                          {tfStack.map((tf, i) => (
+                            <div key={i} style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                            }}>
+                              <span style={{
+                                fontSize: "1.5rem",
+                                color: tf.color,
+                                fontWeight: "bold",
+                              }}>
+                                {tf.bias}
+                              </span>
+                              <span style={{ fontSize: "0.7rem", color: "#94A3B8", fontWeight: "600" }}>
+                                {tf.tf}
+                              </span>
+                              <span style={{ fontSize: "0.65rem", color: "#64748B" }}>
+                                {tf.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ 
+                          fontSize: "0.75rem", 
+                          color: aligned === 3 ? "#10B981" : aligned === 2 ? "#F59E0B" : "#EF4444",
+                          fontWeight: "600",
+                        }}>
+                          {aligned === 3 ? "✓ Full Alignment" : aligned === 2 ? "⚠ Partial Alignment" : "✗ Conflicting"}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* 4. Expected Move / Risk Box */}
+                <div style={{
+                  background: "rgba(30,41,59,0.6)",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  border: "1px solid rgba(100,116,139,0.3)",
+                }}>
+                  <div style={{ 
+                    fontSize: "0.7rem", 
+                    color: "#64748B", 
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "0.75rem",
+                  }}>
+                    Expected Move
+                  </div>
+                  {(() => {
+                    const atr = result.atr || 0;
+                    const price = result.price || 1;
+                    const atrPercent = (atr / price) * 100;
+                    
+                    // Expected move = 1-2x ATR typically
+                    const lowMove = atrPercent * 0.8;
+                    const highMove = atrPercent * 1.5;
+                    
+                    // Momentum strength from RSI deviation from 50
+                    const rsi = result.rsi || 50;
+                    const momentumStrength = Math.abs(rsi - 50) * 2; // 0-100 scale
+                    
+                    return (
+                      <>
+                        <div style={{ 
+                          fontSize: "1.25rem", 
+                          fontWeight: "700", 
+                          color: "#A855F7",
+                          marginBottom: "0.5rem",
+                        }}>
+                          {lowMove.toFixed(1)}% – {highMove.toFixed(1)}%
+                        </div>
+                        <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.75rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>ATR Target:</span>
+                            <span style={{ color: "#E2E8F0" }}>${atr.toFixed(2)}</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Risk Zone:</span>
+                            <span style={{ color: "#EF4444" }}>±{(atrPercent * 0.5).toFixed(2)}%</span>
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#64748B" }}>Momentum:</span>
+                            <span style={{ 
+                              color: momentumStrength > 60 ? "#10B981" : momentumStrength > 30 ? "#F59E0B" : "#64748B",
+                            }}>
+                              {momentumStrength > 60 ? "Strong" : momentumStrength > 30 ? "Moderate" : "Weak"} ({momentumStrength.toFixed(0)}%)
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
               {result.symbol} — {timeframe.toUpperCase()}
             </h2>
