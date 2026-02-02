@@ -1154,7 +1154,7 @@ export default function OptionsConfluenceScanner() {
                         📊 Log to Journal
                       </a>
                       <a
-                        href={`/tools/backtest?symbol=${symbol.toUpperCase()}`}
+                        href={`/tools/backtest?symbol=${symbol.toUpperCase()}&direction=${result.direction}&strategy=${encodeURIComponent(result.strategyRecommendation?.strategy || '')}&from=options-scanner`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',

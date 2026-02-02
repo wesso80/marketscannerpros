@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -48,8 +49,16 @@ interface EquityPoint {
 }
 
 function BacktestContent() {
+  const searchParams = useSearchParams();
   const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
-  const [symbol, setSymbol] = useState('SPY');
+  
+  // Query params from Options Scanner
+  const urlSymbol = searchParams.get('symbol');
+  const urlDirection = searchParams.get('direction');
+  const urlStrategy = searchParams.get('strategy');
+  const fromOptionsScanner = searchParams.get('from') === 'options-scanner';
+  
+  const [symbol, setSymbol] = useState(urlSymbol?.toUpperCase() || 'SPY');
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-12-31');
   const [initialCapital, setInitialCapital] = useState('10000');
@@ -60,6 +69,14 @@ function BacktestContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
+
+  // Update symbol if URL param changes
+  useEffect(() => {
+    if (urlSymbol) {
+      setSymbol(urlSymbol.toUpperCase());
+    }
+  }, [urlSymbol]);
 
   // Tier gate - Pro Trader only
   if (tierLoading) {
@@ -191,6 +208,85 @@ function BacktestContent() {
         backHref="/tools"
       />
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+
+        {/* Options Scanner Context Banner */}
+        {showOptionsBanner && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(168,85,247,0.15))',
+            border: '1px solid rgba(59,130,246,0.4)',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '1.5rem' }}>🔬</span>
+              <div>
+                <div style={{ 
+                  color: '#60A5FA', 
+                  fontWeight: '600', 
+                  fontSize: '14px',
+                  marginBottom: '2px'
+                }}>
+                  Testing Options Scanner Setup
+                </div>
+                <div style={{ color: '#94A3B8', fontSize: '13px' }}>
+                  Symbol: <span style={{ color: '#E2E8F0', fontWeight: '500' }}>{symbol}</span>
+                  {urlDirection && (
+                    <>
+                      {' • '}Direction: <span style={{ 
+                        color: urlDirection === 'bullish' ? '#10B981' : urlDirection === 'bearish' ? '#EF4444' : '#F59E0B',
+                        fontWeight: '500'
+                      }}>
+                        {urlDirection.toUpperCase()}
+                      </span>
+                    </>
+                  )}
+                  {urlStrategy && (
+                    <>
+                      {' • '}Strategy: <span style={{ color: '#A78BFA', fontWeight: '500' }}>{urlStrategy}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Link
+                href={`/tools/options-confluence?symbol=${symbol}`}
+                style={{
+                  padding: '8px 14px',
+                  background: 'rgba(59,130,246,0.2)',
+                  border: '1px solid rgba(59,130,246,0.4)',
+                  borderRadius: '8px',
+                  color: '#60A5FA',
+                  textDecoration: 'none',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                }}
+              >
+                ← Back to Scanner
+              </Link>
+              <button
+                onClick={() => setShowOptionsBanner(false)}
+                style={{
+                  padding: '8px 14px',
+                  background: 'transparent',
+                  border: '1px solid rgba(100,116,139,0.4)',
+                  borderRadius: '8px',
+                  color: '#64748B',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
