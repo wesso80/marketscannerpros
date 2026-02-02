@@ -188,16 +188,32 @@ const TIMEFRAMES: TimeframeConfig[] = [
   { tf: '240', label: '4h',  minutes: 240, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20, decompStart: 12 },
   { tf: '360', label: '6h',  minutes: 360, postCloseWindow: 30, preCloseStart: 30, preCloseEnd: 25, decompStart: 20 },
   { tf: '480', label: '8h',  minutes: 480, postCloseWindow: 35, preCloseStart: 35, preCloseEnd: 30, decompStart: 20 },
-  // Daily/Swing
-  { tf: 'D',   label: '1D',  minutes: 1440, postCloseWindow: 60, decompStart: 60 },
-  { tf: '2D',  label: '2D',  minutes: 2880, postCloseWindow: 90, decompStart: 120 },
-  { tf: '3D',  label: '3D',  minutes: 4320, postCloseWindow: 120, decompStart: 180 },
+  // Daily - ALL day cycles (1D through 7D)
+  { tf: 'D',   label: '1D',  minutes: 1440,  postCloseWindow: 60,  decompStart: 60 },
+  { tf: '2D',  label: '2D',  minutes: 2880,  postCloseWindow: 90,  decompStart: 120 },
+  { tf: '3D',  label: '3D',  minutes: 4320,  postCloseWindow: 120, decompStart: 180 },
+  { tf: '4D',  label: '4D',  minutes: 5760,  postCloseWindow: 150, decompStart: 240 },
+  { tf: '5D',  label: '5D',  minutes: 7200,  postCloseWindow: 180, decompStart: 300 },
+  { tf: '6D',  label: '6D',  minutes: 8640,  postCloseWindow: 210, decompStart: 360 },
+  { tf: '7D',  label: '7D',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
+  // Weekly - ALL week cycles (1W through 4W)
   { tf: 'W',   label: '1W',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
-  // Macro
   { tf: '2W',  label: '2W',  minutes: 20160, postCloseWindow: 480, decompStart: 780 },
-  { tf: 'M',   label: '1M',  minutes: 43200, postCloseWindow: 720, decompStart: 1560 },
+  { tf: '3W',  label: '3W',  minutes: 30240, postCloseWindow: 600, decompStart: 1170 },
+  { tf: '4W',  label: '4W',  minutes: 40320, postCloseWindow: 720, decompStart: 1560 },
+  // Monthly - ALL month cycles (1M through 12M)
+  { tf: 'M',   label: '1M',  minutes: 43200,  postCloseWindow: 720,  decompStart: 1560 },
+  { tf: '2M',  label: '2M',  minutes: 86400,  postCloseWindow: 1080, decompStart: 3120 },
   { tf: '3M',  label: '3M',  minutes: 129600, postCloseWindow: 1440, decompStart: 4680 },
-  { tf: 'Y',   label: '1Y',  minutes: 525600, postCloseWindow: 2880, decompStart: 18720 },
+  { tf: '4M',  label: '4M',  minutes: 172800, postCloseWindow: 1800, decompStart: 6240 },
+  { tf: '5M',  label: '5M',  minutes: 216000, postCloseWindow: 1980, decompStart: 7800 },
+  { tf: '6M',  label: '6M',  minutes: 259200, postCloseWindow: 2160, decompStart: 9360 },
+  { tf: '7M',  label: '7M',  minutes: 302400, postCloseWindow: 2340, decompStart: 10920 },
+  { tf: '8M',  label: '8M',  minutes: 345600, postCloseWindow: 2520, decompStart: 12480 },
+  { tf: '9M',  label: '9M',  minutes: 388800, postCloseWindow: 2700, decompStart: 14040 },
+  { tf: '10M', label: '10M', minutes: 432000, postCloseWindow: 2880, decompStart: 15600 },
+  { tf: '11M', label: '11M', minutes: 475200, postCloseWindow: 3060, decompStart: 17160 },
+  { tf: '12M', label: '1Y',  minutes: 525600, postCloseWindow: 2880, decompStart: 18720 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -525,6 +541,550 @@ export class ConfluenceLearningAgent {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // CANDLE CLOSE TIME CALCULATION (Calendar-based)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calculate minutes until a specific timeframe candle closes.
+   * KEY INSIGHT: All timeframes close at MARKET CLOSE (21:00 UTC) on their cycle end day.
+   * So 1D, 3D, W, M can all close at the SAME minute if today is the end of their cycles.
+   */
+  getMinutesToTimeframeClose(now: Date, tfConfig: { label: string; minutes: number }): number | null {
+    const currentTime = now.getTime();
+    
+    // For intraday TFs (5m to 8h), use minute-based periods
+    if (tfConfig.minutes <= 480) { // 8 hours or less
+      const tfMs = tfConfig.minutes * 60 * 1000;
+      const periodEnd = Math.ceil(currentTime / tfMs) * tfMs;
+      return Math.floor((periodEnd - currentTime) / 60000);
+    }
+    
+    // For daily and above, ALL close at market close (21:00 UTC)
+    // The question is: is TODAY the closing day for this timeframe?
+    const nyCloseHour = 21; // NYSE close in UTC
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+    const hour = now.getUTCHours();
+    
+    // Today's market close time
+    const todayClose = new Date(Date.UTC(year, month, date, nyCloseHour, 0, 0));
+    const todayCloseMs = todayClose.getTime();
+    const minsToTodayClose = Math.floor((todayCloseMs - currentTime) / 60000);
+    
+    // Helper: calculate days since a reference epoch for multi-day cycles
+    // Using Jan 1, 2020 as epoch (a Wednesday, but we'll adjust)
+    const epochMs = Date.UTC(2020, 0, 1, 0, 0, 0);
+    const daysSinceEpoch = Math.floor((currentTime - epochMs) / (24 * 60 * 60 * 1000));
+    
+    // Helper: get week number since epoch
+    const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
+    
+    switch (tfConfig.label) {
+      case 'D': {
+        // Daily ALWAYS closes today at market close (if market is open)
+        // Skip weekends for traditional markets
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          // Weekend - next close is Monday
+          const daysToMonday = dayOfWeek === 0 ? 1 : 2;
+          const mondayClose = new Date(Date.UTC(year, month, date + daysToMonday, nyCloseHour, 0, 0));
+          return Math.floor((mondayClose.getTime() - currentTime) / 60000);
+        }
+        if (currentTime >= todayCloseMs) {
+          // Past today's close, next is tomorrow (or Monday)
+          const nextDay = dayOfWeek === 5 ? 3 : 1; // Friday -> Monday, else tomorrow
+          const nextClose = new Date(Date.UTC(year, month, date + nextDay, nyCloseHour, 0, 0));
+          return Math.floor((nextClose.getTime() - currentTime) / 60000);
+        }
+        return minsToTodayClose;
+      }
+      
+      case '2D': {
+        // 2-Day candle: closes every 2nd trading day
+        const cycleDay = daysSinceEpoch % 2;
+        const is2DCloseDay = cycleDay === 1; // Day 2 of cycle
+        if (is2DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Closes today!
+        }
+        const daysToNext = (2 - cycleDay) % 2 || 2;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '3D': {
+        // 3-Day candle: closes every 3rd day
+        const cycleDay = daysSinceEpoch % 3;
+        const is3DCloseDay = cycleDay === 2; // Day 3 of cycle (0-indexed = 2)
+        if (is3DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Closes today!
+        }
+        const daysToNext = (3 - cycleDay) % 3 || 3;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '4D': {
+        // 4-Day candle: closes every 4th day
+        const cycleDay = daysSinceEpoch % 4;
+        const is4DCloseDay = cycleDay === 3; // Day 4 of cycle
+        if (is4DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        const daysToNext = (4 - cycleDay) % 4 || 4;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '5D': {
+        // 5-Day candle: closes every 5th day
+        const cycleDay = daysSinceEpoch % 5;
+        const is5DCloseDay = cycleDay === 4; // Day 5 of cycle
+        if (is5DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        const daysToNext = (5 - cycleDay) % 5 || 5;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '6D': {
+        // 6-Day candle: closes every 6th day
+        const cycleDay = daysSinceEpoch % 6;
+        const is6DCloseDay = cycleDay === 5; // Day 6 of cycle
+        if (is6DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        const daysToNext = (6 - cycleDay) % 6 || 6;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '7D': {
+        // 7-Day candle: closes every 7th day (calendar week, not trading week)
+        const cycleDay = daysSinceEpoch % 7;
+        const is7DCloseDay = cycleDay === 6; // Day 7 of cycle
+        if (is7DCloseDay && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        const daysToNext = (7 - cycleDay) % 7 || 7;
+        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '1W': {
+        // Weekly (trading week) closes on FRIDAY at market close
+        const isFriday = dayOfWeek === 5;
+        if (isFriday && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Closes today!
+        }
+        // Days until next Friday
+        let daysToFriday = (5 - dayOfWeek + 7) % 7;
+        if (daysToFriday === 0 && currentTime >= todayCloseMs) daysToFriday = 7;
+        const fridayClose = new Date(Date.UTC(year, month, date + daysToFriday, nyCloseHour, 0, 0));
+        return Math.floor((fridayClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '2W': {
+        // 2-Week: closes every OTHER Friday
+        const isFriday = dayOfWeek === 5;
+        const is2WCloseFriday = weeksSinceEpoch % 2 === 0;
+        if (isFriday && is2WCloseFriday && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Closes today!
+        }
+        // Find next 2W Friday
+        let daysToFriday = (5 - dayOfWeek + 7) % 7;
+        if (daysToFriday === 0) daysToFriday = 7;
+        let weeksToAdd = 0;
+        const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
+        if (nextFridayWeek % 2 !== 0) weeksToAdd = 7;
+        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + weeksToAdd, nyCloseHour, 0, 0));
+        return Math.floor((targetClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '3W': {
+        // 3-Week: closes every 3rd Friday
+        const isFriday = dayOfWeek === 5;
+        const is3WCloseFriday = weeksSinceEpoch % 3 === 0;
+        if (isFriday && is3WCloseFriday && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        let daysToFriday = (5 - dayOfWeek + 7) % 7;
+        if (daysToFriday === 0) daysToFriday = 7;
+        const weeksUntil3W = (3 - (weeksSinceEpoch % 3)) % 3;
+        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil3W * 7), nyCloseHour, 0, 0));
+        return Math.floor((targetClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '4W': {
+        // 4-Week: closes every 4th Friday
+        const isFriday = dayOfWeek === 5;
+        const is4WCloseFriday = weeksSinceEpoch % 4 === 0;
+        if (isFriday && is4WCloseFriday && currentTime < todayCloseMs) {
+          return minsToTodayClose;
+        }
+        let daysToFriday = (5 - dayOfWeek + 7) % 7;
+        if (daysToFriday === 0) daysToFriday = 7;
+        const weeksUntil4W = (4 - (weeksSinceEpoch % 4)) % 4;
+        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil4W * 7), nyCloseHour, 0, 0));
+        return Math.floor((targetClose.getTime() - currentTime) / 60000);
+      }
+      
+      case 'M': {
+        // Monthly: closes LAST TRADING DAY of month at market close
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        let lastTradingDay = daysInMonth;
+        // Adjust for weekends (find last weekday)
+        const lastDayOfMonth = new Date(Date.UTC(year, month, daysInMonth));
+        const lastDayDOW = lastDayOfMonth.getUTCDay();
+        if (lastDayDOW === 0) lastTradingDay -= 2; // Sunday -> Friday
+        else if (lastDayDOW === 6) lastTradingDay -= 1; // Saturday -> Friday
+        
+        const isMonthEnd = date === lastTradingDay;
+        if (isMonthEnd && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Monthly closes TODAY!
+        }
+        // Find next month end
+        let targetMonth = month;
+        let targetYear = year;
+        if (date >= lastTradingDay) {
+          targetMonth++;
+          if (targetMonth > 11) { targetMonth = 0; targetYear++; }
+        }
+        const nextMonthDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let nextLastTradingDay = nextMonthDays;
+        const nextLastDOW = new Date(Date.UTC(targetYear, targetMonth, nextMonthDays)).getUTCDay();
+        if (nextLastDOW === 0) nextLastTradingDay -= 2;
+        else if (nextLastDOW === 6) nextLastTradingDay -= 1;
+        
+        const monthEndClose = new Date(Date.UTC(targetYear, targetMonth, nextLastTradingDay, nyCloseHour, 0, 0));
+        return Math.floor((monthEndClose.getTime() - currentTime) / 60000);
+      }
+      
+      case '2M': {
+        // Bi-monthly: closes last trading day of Feb, Apr, Jun, Aug, Oct, Dec
+        const biMonthlyEnds = [1, 3, 5, 7, 9, 11]; // Feb, Apr, Jun, Aug, Oct, Dec (0-indexed)
+        const isBiMonthlyMonth = biMonthlyEnds.includes(month);
+        
+        if (isBiMonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose; // 2M closes today!
+          }
+        }
+        // Find next 2M close
+        let targetMonth = biMonthlyEnds.find(m => m > month) ?? biMonthlyEnds[0];
+        let targetYear = year;
+        if (targetMonth <= month) targetYear++;
+        
+        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '3M': {
+        // Quarterly: closes last trading day of Mar, Jun, Sep, Dec
+        const quarterEnds = [2, 5, 8, 11]; // March, June, Sept, Dec
+        const isQuarterMonth = quarterEnds.includes(month);
+        
+        if (isQuarterMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose; // Quarter closes today!
+          }
+        }
+        let targetMonth = quarterEnds.find(q => q > month) ?? quarterEnds[0];
+        let targetYear = year;
+        if (targetMonth <= month) targetYear++;
+        
+        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '4M': {
+        // 4-Monthly: closes last trading day of Apr, Aug, Dec
+        const fourMonthEnds = [3, 7, 11]; // April, August, December
+        const is4MonthlyMonth = fourMonthEnds.includes(month);
+        
+        if (is4MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        let targetMonth = fourMonthEnds.find(m => m > month) ?? fourMonthEnds[0];
+        let targetYear = year;
+        if (targetMonth <= month) targetYear++;
+        
+        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '5M': {
+        // 5-Monthly: closes last trading day of May, Oct (and wraps)
+        const fiveMonthEnds = [4, 9]; // May, October (every 5 months from Jan)
+        const is5MonthlyMonth = fiveMonthEnds.includes(month);
+        
+        if (is5MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        let targetMonth = fiveMonthEnds.find(m => m > month) ?? fiveMonthEnds[0];
+        let targetYear = year;
+        if (targetMonth <= month) targetYear++;
+        
+        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '6M': {
+        // Semi-annual: closes last trading day of Jun and Dec
+        const halfYearEnds = [5, 11]; // June, December
+        const isHalfYearMonth = halfYearEnds.includes(month);
+        
+        if (isHalfYearMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        let targetMonth = halfYearEnds.find(h => h > month) ?? halfYearEnds[0];
+        let targetYear = year;
+        if (targetMonth <= month) targetYear++;
+        
+        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '7M': {
+        // 7-Monthly: closes last trading day of Jul (7 months from Jan)
+        const sevenMonthEnds = [6]; // July
+        const is7MonthlyMonth = sevenMonthEnds.includes(month);
+        
+        if (is7MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        // Next July
+        let targetYear = month >= 6 ? year + 1 : year;
+        const tgtDays = new Date(targetYear, 7, 0).getDate(); // July
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, 6, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, 6, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '8M': {
+        // 8-Monthly: closes last trading day of Aug
+        const eightMonthEnds = [7]; // August
+        const is8MonthlyMonth = eightMonthEnds.includes(month);
+        
+        if (is8MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        // Next August
+        let targetYear = month >= 7 ? year + 1 : year;
+        const tgtDays = new Date(targetYear, 8, 0).getDate(); // August
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, 7, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, 7, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '9M': {
+        // 9-Monthly: closes last trading day of Sep
+        const nineMonthEnds = [8]; // September
+        const is9MonthlyMonth = nineMonthEnds.includes(month);
+        
+        if (is9MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        // Next September
+        let targetYear = month >= 8 ? year + 1 : year;
+        const tgtDays = new Date(targetYear, 9, 0).getDate(); // September
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, 8, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, 8, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '10M': {
+        // 10-Monthly: closes last trading day of Oct
+        const tenMonthEnds = [9]; // October
+        const is10MonthlyMonth = tenMonthEnds.includes(month);
+        
+        if (is10MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        // Next October
+        let targetYear = month >= 9 ? year + 1 : year;
+        const tgtDays = new Date(targetYear, 10, 0).getDate(); // October
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, 9, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, 9, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '11M': {
+        // 11-Monthly: closes last trading day of Nov
+        const elevenMonthEnds = [10]; // November
+        const is11MonthlyMonth = elevenMonthEnds.includes(month);
+        
+        if (is11MonthlyMonth) {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          let lastTradingDay = daysInMonth;
+          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
+          if (lastDOW === 0) lastTradingDay -= 2;
+          else if (lastDOW === 6) lastTradingDay -= 1;
+          
+          if (date === lastTradingDay && currentTime < todayCloseMs) {
+            return minsToTodayClose;
+          }
+        }
+        // Next November
+        let targetYear = month >= 10 ? year + 1 : year;
+        const tgtDays = new Date(targetYear, 11, 0).getDate(); // November
+        let tgtLastDay = tgtDays;
+        const tgtDOW = new Date(Date.UTC(targetYear, 10, tgtDays)).getUTCDay();
+        if (tgtDOW === 0) tgtLastDay -= 2;
+        else if (tgtDOW === 6) tgtLastDay -= 1;
+        
+        const closeDate = new Date(Date.UTC(targetYear, 10, tgtLastDay, nyCloseHour, 0, 0));
+        return Math.floor((closeDate.getTime() - currentTime) / 60000);
+      }
+      
+      case '1Y': {
+        // Yearly: closes last trading day of December
+        const daysInDec = new Date(year, 12, 0).getDate(); // Dec has 31 days
+        let lastTradingDay = daysInDec;
+        const lastDOW = new Date(Date.UTC(year, 11, daysInDec)).getUTCDay();
+        if (lastDOW === 0) lastTradingDay -= 2;
+        else if (lastDOW === 6) lastTradingDay -= 1;
+        
+        const isYearEnd = month === 11 && date === lastTradingDay;
+        if (isYearEnd && currentTime < todayCloseMs) {
+          return minsToTodayClose; // Yearly closes today!
+        }
+        // Next year end
+        const targetYear = month === 11 && date >= lastTradingDay ? year + 1 : year;
+        const nextDecDays = new Date(targetYear, 12, 0).getDate();
+        let nextLastDay = nextDecDays;
+        const nextDOW = new Date(Date.UTC(targetYear, 11, nextDecDays)).getUTCDay();
+        if (nextDOW === 0) nextLastDay -= 2;
+        else if (nextDOW === 6) nextLastDay -= 1;
+        
+        const yearEndClose = new Date(Date.UTC(targetYear, 11, nextLastDay, nyCloseHour, 0, 0));
+        return Math.floor((yearEndClose.getTime() - currentTime) / 60000);
+      }
+      
+      default:
+        // Fallback
+        const tfMs = tfConfig.minutes * 60 * 1000;
+        const periodEnd = Math.ceil(currentTime / tfMs) * tfMs;
+        return Math.floor((periodEnd - currentTime) / 60000);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CANDLE CLOSE CONFLUENCE CALCULATION
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -546,25 +1106,36 @@ export class ConfluenceLearningAgent {
     const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number }[] = [];
     
     // TF weights based on significance (higher TF = more weight)
+    // These weights determine how important each timeframe close is for confluence
     const tfWeights: Record<string, number> = {
-      'Y': 100, '3M': 50, 'M': 40, '2W': 25, 'W': 20,
-      '3D': 15, '2D': 12, 'D': 10, '8h': 6, '6h': 5,
-      '4h': 4, '3h': 3, '2h': 2, '1h': 1.5, '30m': 1,
-      '15m': 0.5, '10m': 0.3, '5m': 0.2
+      // Yearly - MASSIVE significance
+      '1Y': 100,
+      // Monthly cycles - scale by months (longer = more significant)
+      '11M': 55, '10M': 50, '9M': 48, '8M': 46, '7M': 44,
+      '6M': 42, '5M': 38, '4M': 36, '3M': 34, '2M': 32, '1M': 30,
+      // Weekly cycles - scale by weeks
+      '4W': 28, '3W': 26, '2W': 24, '1W': 20,
+      // Daily cycles - scale by days
+      '7D': 18, '6D': 17, '5D': 16, '4D': 15, '3D': 14, '2D': 12, '1D': 10,
+      // Intraday - Moderate significance
+      '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
+      // Micro - Lower significance
+      '30m': 1, '15m': 0.5, '10m': 0.3, '5m': 0.2
     };
     
     for (const tfConfig of TIMEFRAMES) {
-      const tfMs = tfConfig.minutes * 60 * 1000;
-      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
-      const periodEnd = periodStart + tfMs;
-      const minsAway = Math.floor((periodEnd - currentTime) / 60000);
+      // For calendar-based timeframes, calculate actual calendar close time
+      // rather than simple minute-based math
+      const minsAway = this.getMinutesToTimeframeClose(now, tfConfig);
       
-      tfCloses.push({
-        tf: tfConfig.label,
-        minutes: tfConfig.minutes,
-        minsAway: Math.max(0, minsAway),
-        weight: tfWeights[tfConfig.label] || 1
-      });
+      if (minsAway !== null && minsAway >= 0) {
+        tfCloses.push({
+          tf: tfConfig.label,
+          minutes: tfConfig.minutes,
+          minsAway: minsAway,
+          weight: tfWeights[tfConfig.label] || 1
+        });
+      }
     }
     
     // Sort by time to close

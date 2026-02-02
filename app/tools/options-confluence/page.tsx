@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import { ProModeDashboard, ConfluenceMap, PhaseStrip } from "@/components/ProModeDashboard";
+import { 
+  calculateOptionsProbability, 
+  OptionsSignals, 
+  ProbabilityResult 
+} from "@/lib/signals/probability-engine";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -244,6 +250,84 @@ export default function OptionsConfluenceScanner() {
   const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
+  const [showProMode, setShowProMode] = useState(true); // Toggle for Pro Mode dashboard
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROBABILITY ENGINE - Institutional-Grade Win Probability Calculation
+  // ═══════════════════════════════════════════════════════════════════════════
+  const probabilityResult = useMemo<ProbabilityResult | null>(() => {
+    if (!result) return null;
+    
+    // Build signals from the options analysis result
+    const signals: OptionsSignals = {
+      // Unusual Activity (Smart Money)
+      unusualActivity: result.unusualActivity?.hasUnusualActivity ? {
+        triggered: true,
+        confidence: result.unusualActivity.alertLevel === 'high' ? 0.95 
+          : result.unusualActivity.alertLevel === 'moderate' ? 0.75 
+          : result.unusualActivity.alertLevel === 'low' ? 0.5 : 0.3,
+        callPremium: result.unusualActivity.unusualStrikes
+          .filter(s => s.type === 'call')
+          .reduce((sum, s) => sum + s.volume * 100, 0), // Rough premium estimate
+        putPremium: result.unusualActivity.unusualStrikes
+          .filter(s => s.type === 'put')
+          .reduce((sum, s) => sum + s.volume * 100, 0),
+        alertLevel: result.unusualActivity.alertLevel,
+      } : { triggered: false, confidence: 0 },
+      
+      // Put/Call Ratio
+      putCallRatio: result.openInterestAnalysis ? {
+        triggered: result.openInterestAnalysis.pcRatio < 0.7 || result.openInterestAnalysis.pcRatio > 1.0,
+        confidence: Math.abs(result.openInterestAnalysis.pcRatio - 0.85) > 0.3 ? 0.8 : 0.5,
+        ratio: result.openInterestAnalysis.pcRatio,
+      } : { triggered: false, confidence: 0 },
+      
+      // Max Pain Distance
+      maxPainDistance: result.openInterestAnalysis?.maxPainStrike ? {
+        triggered: true,
+        confidence: 0.6,
+        maxPain: result.openInterestAnalysis.maxPainStrike,
+        currentPrice: result.currentPrice,
+      } : { triggered: false, confidence: 0 },
+      
+      // Time Confluence
+      timeConfluence: {
+        triggered: result.confluenceStack !== 0,
+        confidence: Math.min(Math.abs(result.confluenceStack) / 5, 1),
+        stack: result.confluenceStack,
+        decompressing: result.decompressingTFs,
+      },
+      
+      // IV Rank
+      ivRank: result.ivAnalysis ? {
+        triggered: result.ivAnalysis.ivRank <= 30 || result.ivAnalysis.ivRank >= 70,
+        confidence: result.ivAnalysis.ivRank <= 20 || result.ivAnalysis.ivRank >= 80 ? 0.85 : 0.6,
+        rank: result.ivAnalysis.ivRank,
+        signal: result.ivAnalysis.ivSignal,
+      } : { triggered: false, confidence: 0 },
+      
+      // Trend Alignment (using compositeScore if available)
+      trendAlignment: result.compositeScore ? {
+        triggered: result.compositeScore.finalDirection !== 'neutral',
+        confidence: result.compositeScore.confidence / 100,
+        ema200Direction: result.direction === 'bullish' ? 'above' : result.direction === 'bearish' ? 'below' : 'neutral',
+      } : { triggered: false, confidence: 0 },
+    };
+    
+    // Calculate probability with the R:R ratio from trade levels if available
+    const rr = result.tradeLevels?.riskRewardRatio || 2.0;
+    return calculateOptionsProbability(signals, result.direction, rr);
+  }, [result]);
+
+  // Determine market phase for phase strip
+  const marketPhase = useMemo(() => {
+    if (!result) return 'consolidation';
+    if (result.direction === 'bullish' && result.signalStrength === 'strong') return 'bullish_trend';
+    if (result.direction === 'bullish' && result.signalStrength === 'moderate') return 'bullish_pullback';
+    if (result.direction === 'bearish' && result.signalStrength === 'strong') return 'bearish_trend';
+    if (result.direction === 'bearish' && result.signalStrength === 'moderate') return 'bearish_pullback';
+    return 'consolidation';
+  }, [result]) as 'bearish_trend' | 'bearish_pullback' | 'consolidation' | 'bullish_pullback' | 'bullish_trend';
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
@@ -877,6 +961,140 @@ export default function OptionsConfluenceScanner() {
                 )}
               </div>
             </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════════════ */}
+            {/* 🏦 INSTITUTIONAL-GRADE PRO MODE DASHBOARD - PROBABILITY ENGINE */}
+            {/* ═══════════════════════════════════════════════════════════════════════════ */}
+            {probabilityResult && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                {/* Pro Mode Toggle */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '1rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{
+                      background: 'linear-gradient(135deg, #10B981, #3B82F6)',
+                      padding: '4px 12px',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: '#fff',
+                      letterSpacing: '0.5px',
+                    }}>
+                      🏦 INSTITUTIONAL EDGE
+                    </span>
+                    <span style={{ color: '#94A3B8', fontSize: '13px' }}>
+                      Probability-based analysis
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowProMode(!showProMode)}
+                    style={{
+                      background: showProMode ? 'rgba(16,185,129,0.2)' : 'rgba(100,116,139,0.2)',
+                      border: `1px solid ${showProMode ? 'rgba(16,185,129,0.5)' : 'rgba(100,116,139,0.5)'}`,
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      color: showProMode ? '#10B981' : '#94A3B8',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {showProMode ? '✓ Pro Mode' : 'Basic Mode'}
+                  </button>
+                </div>
+
+                {showProMode && (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {/* Main Pro Dashboard */}
+                    <ProModeDashboard
+                      probability={probabilityResult}
+                      tradeLevels={result.tradeLevels}
+                      currentPrice={result.currentPrice}
+                      symbol={symbol.toUpperCase()}
+                    />
+
+                    {/* Phase Strip + Confluence Map Row */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                      gap: '1rem',
+                    }}>
+                      {/* Market Phase */}
+                      <PhaseStrip currentPhase={marketPhase} />
+                      
+                      {/* Signal Confluence Map */}
+                      <ConfluenceMap components={probabilityResult.components} />
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '0.75rem',
+                      flexWrap: 'wrap',
+                      justifyContent: 'center',
+                    }}>
+                      <a
+                        href={`/tools/journal?symbol=${symbol.toUpperCase()}&type=${result.direction === 'bullish' ? 'call' : 'put'}&entry=${result.currentPrice}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1.25rem',
+                          background: 'linear-gradient(135deg, #10B981, #059669)',
+                          borderRadius: '12px',
+                          color: 'white',
+                          textDecoration: 'none',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        📊 Log to Journal
+                      </a>
+                      <a
+                        href={`/tools/backtest?symbol=${symbol.toUpperCase()}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1.25rem',
+                          background: 'rgba(59,130,246,0.2)',
+                          border: '1px solid rgba(59,130,246,0.5)',
+                          borderRadius: '12px',
+                          color: '#60A5FA',
+                          textDecoration: 'none',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        📈 Backtest This Setup
+                      </a>
+                      <a
+                        href={`/tools/deep-analysis?symbol=${symbol.toUpperCase()}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1.25rem',
+                          background: 'rgba(168,85,247,0.2)',
+                          border: '1px solid rgba(168,85,247,0.5)',
+                          borderRadius: '12px',
+                          color: '#C084FC',
+                          textDecoration: 'none',
+                          fontWeight: '600',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        🥚 Deep Analysis
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* PRO TRADER SECTION */}
             <div style={{
