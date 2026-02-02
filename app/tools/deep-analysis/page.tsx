@@ -170,12 +170,12 @@ interface AnalysisResult {
 }
 
 function formatNumber(num: number | null | undefined, decimals: number = 2): string {
-  if (num === null || num === undefined) return 'N/A';
+  if (num === null || num === undefined) return '—';
   return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function formatLargeNumber(num: number | null | undefined): string {
-  if (num === null || num === undefined) return 'N/A';
+  if (num === null || num === undefined) return '—';
   if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
   if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
@@ -200,6 +200,139 @@ function getRSIColor(rsi: number | undefined): string {
   if (rsi < 30) return '#10B981';
   if (rsi > 70) return '#EF4444';
   return '#F59E0B';
+}
+
+// Cap extreme percentages for trust/UX
+function capPercentage(value: number | undefined, max: number = 300): string {
+  if (value === undefined || value === null) return '—';
+  const capped = Math.min(Math.abs(value), max);
+  const sign = value >= 0 ? '+' : '-';
+  return `${sign}${capped.toFixed(0)}%${Math.abs(value) > max ? '+' : ''}`;
+}
+
+// Format metric with loading/insufficient data state
+function formatMetric(value: number | null | undefined, format: 'number' | 'percent' | 'price' = 'number', decimals: number = 2): { value: string; isLoading: boolean } {
+  if (value === null || value === undefined || isNaN(value)) {
+    return { value: '—', isLoading: true };
+  }
+  if (format === 'percent') return { value: `${value.toFixed(decimals)}%`, isLoading: false };
+  if (format === 'price') return { value: `$${value.toFixed(decimals)}`, isLoading: false };
+  return { value: value.toFixed(decimals), isLoading: false };
+}
+
+// Weighted signal calculation
+interface SignalFactor {
+  name: string;
+  weight: number;
+  result: 'bullish' | 'bearish' | 'neutral';
+  score: number; // -100 to +100
+}
+
+function calculateWeightedSignal(indicators: any, optionsData: any, news: any[] | null, cryptoData: any): { factors: SignalFactor[]; confidence: number; bias: 'BUY' | 'SELL' | 'HOLD' } {
+  const factors: SignalFactor[] = [];
+  let totalWeight = 0;
+  let weightedScore = 0;
+
+  // Trend Structure (25%)
+  if (indicators?.sma20 && indicators?.sma50) {
+    const trendBullish = indicators.priceVsSma20 > 0 && indicators.priceVsSma50 > 0;
+    const trendBearish = indicators.priceVsSma20 < 0 && indicators.priceVsSma50 < 0;
+    const score = trendBullish ? 80 : trendBearish ? -80 : 0;
+    factors.push({ name: 'Trend Structure', weight: 25, result: trendBullish ? 'bullish' : trendBearish ? 'bearish' : 'neutral', score });
+    weightedScore += score * 0.25;
+    totalWeight += 25;
+  }
+
+  // Momentum (20%)
+  if (indicators?.rsi !== undefined) {
+    const momentumBullish = indicators.rsi < 40;
+    const momentumBearish = indicators.rsi > 60;
+    const score = indicators.rsi < 30 ? 100 : indicators.rsi < 40 ? 50 : indicators.rsi > 70 ? -100 : indicators.rsi > 60 ? -50 : 0;
+    factors.push({ name: 'Momentum (RSI)', weight: 20, result: momentumBullish ? 'bullish' : momentumBearish ? 'bearish' : 'neutral', score });
+    weightedScore += score * 0.20;
+    totalWeight += 20;
+  }
+
+  // Options Flow (25%) - if available
+  if (optionsData?.putCallRatio !== undefined) {
+    const pcr = optionsData.putCallRatio;
+    const optionsBullish = pcr < 0.7;
+    const optionsBearish = pcr > 1.3;
+    const score = pcr < 0.5 ? 100 : pcr < 0.7 ? 60 : pcr > 1.5 ? -100 : pcr > 1.3 ? -60 : 0;
+    factors.push({ name: 'Options Flow', weight: 25, result: optionsBullish ? 'bullish' : optionsBearish ? 'bearish' : 'neutral', score });
+    weightedScore += score * 0.25;
+    totalWeight += 25;
+  }
+
+  // Sentiment (15%)
+  if (news && news.length > 0) {
+    const bullishNews = news.filter(n => n.sentiment?.toLowerCase() === 'bullish').length;
+    const bearishNews = news.filter(n => n.sentiment?.toLowerCase() === 'bearish').length;
+    const sentimentBullish = bullishNews > bearishNews * 1.5;
+    const sentimentBearish = bearishNews > bullishNews * 1.5;
+    const score = sentimentBullish ? 70 : sentimentBearish ? -70 : 0;
+    factors.push({ name: 'News Sentiment', weight: 15, result: sentimentBullish ? 'bullish' : sentimentBearish ? 'bearish' : 'neutral', score });
+    weightedScore += score * 0.15;
+    totalWeight += 15;
+  } else if (cryptoData?.fearGreed) {
+    const fg = cryptoData.fearGreed.value;
+    const sentimentBullish = fg < 30; // Fear = contrarian bullish
+    const sentimentBearish = fg > 75; // Extreme greed = contrarian bearish
+    const score = fg < 25 ? 80 : fg < 35 ? 40 : fg > 80 ? -80 : fg > 70 ? -40 : 0;
+    factors.push({ name: 'Market Sentiment', weight: 15, result: sentimentBullish ? 'bullish' : sentimentBearish ? 'bearish' : 'neutral', score });
+    weightedScore += score * 0.15;
+    totalWeight += 15;
+  }
+
+  // Volatility (15%)
+  if (indicators?.adx !== undefined) {
+    const trending = indicators.adx > 25;
+    const score = trending ? 30 : -20; // Trending is generally positive for directional trades
+    factors.push({ name: 'Volatility/Trend', weight: 15, result: trending ? 'bullish' : 'neutral', score });
+    weightedScore += score * 0.15;
+    totalWeight += 15;
+  }
+
+  // Calculate confidence (0-100)
+  const normalizedScore = totalWeight > 0 ? weightedScore / (totalWeight / 100) : 0;
+  const confidence = Math.min(95, Math.max(15, 50 + Math.abs(normalizedScore) * 0.45));
+  const bias: 'BUY' | 'SELL' | 'HOLD' = normalizedScore > 20 ? 'BUY' : normalizedScore < -20 ? 'SELL' : 'HOLD';
+
+  return { factors, confidence, bias };
+}
+
+// News impact classification
+function getNewsImpact(title: string, summary: string): { tag: string; color: string; emoji: string } {
+  const text = (title + ' ' + summary).toLowerCase();
+  
+  // High impact (red)
+  if (text.includes('earnings') || text.includes('quarterly report') || text.includes('guidance')) {
+    return { tag: 'Earnings', color: '#EF4444', emoji: '🔴' };
+  }
+  if (text.includes('sec') || text.includes('lawsuit') || text.includes('investigation') || text.includes('regulatory')) {
+    return { tag: 'Regulatory', color: '#F59E0B', emoji: '🟡' };
+  }
+  if (text.includes('fed') || text.includes('interest rate') || text.includes('inflation') || text.includes('fomc')) {
+    return { tag: 'Macro', color: '#EF4444', emoji: '🔴' };
+  }
+  
+  // Medium impact (yellow)
+  if (text.includes('upgrade') || text.includes('downgrade') || text.includes('price target')) {
+    return { tag: 'Analyst', color: '#F59E0B', emoji: '🟡' };
+  }
+  if (text.includes('acquisition') || text.includes('merger') || text.includes('buyout')) {
+    return { tag: 'M&A', color: '#F59E0B', emoji: '🟡' };
+  }
+  if (text.includes('partnership') || text.includes('contract') || text.includes('deal')) {
+    return { tag: 'Catalyst', color: '#10B981', emoji: '🟢' };
+  }
+  
+  // Low impact (green/gray)
+  if (text.includes('product') || text.includes('launch') || text.includes('release')) {
+    return { tag: 'Product', color: '#10B981', emoji: '🟢' };
+  }
+  
+  return { tag: 'News', color: '#64748B', emoji: '⚪' };
 }
 
 export default function DeepAnalysisPage() {
@@ -576,23 +709,35 @@ export default function DeepAnalysisPage() {
                     {/* RSI */}
                     <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center" }}>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>RSI (14)</div>
-                      <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: getRSIColor(result.indicators.rsi) }}>
-                        {result.indicators.rsi?.toFixed(1) || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: "0.7rem", color: "#64748B" }}>
-                        {result.indicators.rsi && result.indicators.rsi < 30 ? 'Oversold' : result.indicators.rsi && result.indicators.rsi > 70 ? 'Overbought' : 'Neutral'}
-                      </div>
+                      {result.indicators.rsi !== undefined && result.indicators.rsi !== null ? (
+                        <>
+                          <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: getRSIColor(result.indicators.rsi) }}>
+                            {result.indicators.rsi.toFixed(1)}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "#64748B" }}>
+                            {result.indicators.rsi < 30 ? 'Oversold' : result.indicators.rsi > 70 ? 'Overbought' : 'Neutral'}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.9rem", color: "#64748B", padding: "0.5rem 0" }}>Insufficient data</div>
+                      )}
                     </div>
                     
                     {/* MACD */}
                     <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center" }}>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>MACD</div>
-                      <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: result.indicators.macd && result.indicators.macd > 0 ? "#10B981" : "#EF4444" }}>
-                        {result.indicators.macd?.toFixed(4) || 'N/A'}
-                      </div>
-                      <div style={{ fontSize: "0.7rem", color: "#64748B" }}>
-                        {result.indicators.macd && result.indicators.macd > 0 ? 'Bullish' : 'Bearish'}
-                      </div>
+                      {result.indicators.macd !== undefined && result.indicators.macd !== null ? (
+                        <>
+                          <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: result.indicators.macd > 0 ? "#10B981" : "#EF4444" }}>
+                            {result.indicators.macd.toFixed(4)}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "#64748B" }}>
+                            {result.indicators.macd > 0 ? 'Bullish' : 'Bearish'}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: "0.9rem", color: "#64748B", padding: "0.5rem 0" }}>Insufficient data</div>
+                      )}
                     </div>
                     
                     {/* SMA20 */}
@@ -710,7 +855,7 @@ export default function DeepAnalysisPage() {
                 </div>
               )}
               
-              {/* Signal Reasons */}
+              {/* Signal Reasons - Weighted Probability Engine */}
               <div style={{ 
                 background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
                 borderRadius: "16px",
@@ -722,31 +867,152 @@ export default function DeepAnalysisPage() {
                   Signal Breakdown
                 </h3>
                 
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {result.signals.reasons.map((reason, idx) => (
-                    <div key={idx} style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: "0.5rem",
-                      padding: "0.5rem 0.75rem",
-                      background: "rgba(30,41,59,0.5)",
-                      borderRadius: "8px",
-                      fontSize: "0.9rem"
-                    }}>
-                      <span style={{ color: reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "#10B981" : 
-                                          reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "#EF4444" : "#F59E0B" }}>
-                        {reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "🟢" : 
-                         reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "🔴" : "🟡"}
-                      </span>
-                      <span style={{ color: "#E2E8F0" }}>{reason}</span>
+                {/* Confidence Meter */}
+                {(() => {
+                  const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
+                  return (
+                    <>
+                      {/* Confidence Bar */}
+                      <div style={{ marginBottom: "1.25rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                          <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: "500" }}>Trade Bias Confidence</span>
+                          <span style={{ 
+                            fontSize: "1.1rem", 
+                            fontWeight: "700", 
+                            color: weighted.confidence > 70 ? "#10B981" : weighted.confidence > 50 ? "#F59E0B" : "#EF4444"
+                          }}>
+                            {weighted.confidence.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div style={{ 
+                          height: "12px", 
+                          background: "rgba(30,41,59,0.8)", 
+                          borderRadius: "6px", 
+                          overflow: "hidden",
+                          position: "relative"
+                        }}>
+                          <div style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            height: "100%",
+                            width: `${weighted.confidence}%`,
+                            background: weighted.confidence > 70 
+                              ? "linear-gradient(90deg, #10B981, #34D399)" 
+                              : weighted.confidence > 50 
+                                ? "linear-gradient(90deg, #F59E0B, #FBBF24)" 
+                                : "linear-gradient(90deg, #EF4444, #F87171)",
+                            borderRadius: "6px",
+                            transition: "width 0.5s ease"
+                          }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem", fontSize: "0.65rem", color: "#64748B" }}>
+                          <span>Low</span>
+                          <span>Medium</span>
+                          <span>High</span>
+                        </div>
+                      </div>
+
+                      {/* Weighted Factors Table */}
+                      <div style={{ 
+                        background: "rgba(30,41,59,0.3)", 
+                        borderRadius: "10px", 
+                        overflow: "hidden",
+                        marginBottom: "1rem"
+                      }}>
+                        <div style={{ 
+                          display: "grid", 
+                          gridTemplateColumns: "1fr 60px 80px", 
+                          gap: "0.5rem",
+                          padding: "0.75rem 1rem",
+                          background: "rgba(30,41,59,0.5)",
+                          borderBottom: "1px solid rgba(51,65,85,0.5)",
+                          fontSize: "0.7rem",
+                          color: "#64748B",
+                          fontWeight: "600",
+                          textTransform: "uppercase"
+                        }}>
+                          <span>Factor</span>
+                          <span style={{ textAlign: "center" }}>Weight</span>
+                          <span style={{ textAlign: "right" }}>Result</span>
+                        </div>
+                        {weighted.factors.map((factor, idx) => (
+                          <div key={idx} style={{ 
+                            display: "grid", 
+                            gridTemplateColumns: "1fr 60px 80px", 
+                            gap: "0.5rem",
+                            padding: "0.6rem 1rem",
+                            borderBottom: idx < weighted.factors.length - 1 ? "1px solid rgba(51,65,85,0.3)" : "none",
+                            fontSize: "0.85rem"
+                          }}>
+                            <span style={{ color: "#E2E8F0" }}>{factor.name}</span>
+                            <span style={{ textAlign: "center", color: "#94A3B8" }}>{factor.weight}%</span>
+                            <span style={{ 
+                              textAlign: "right", 
+                              fontWeight: "600",
+                              color: factor.result === 'bullish' ? "#10B981" : factor.result === 'bearish' ? "#EF4444" : "#F59E0B"
+                            }}>
+                              {factor.result === 'bullish' ? '🟢 Bullish' : factor.result === 'bearish' ? '🔴 Bearish' : '🟡 Neutral'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Final Bias */}
+                      <div style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center",
+                        gap: "1rem",
+                        padding: "1rem",
+                        background: weighted.bias === 'BUY' ? "rgba(16,185,129,0.15)" : weighted.bias === 'SELL' ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)",
+                        borderRadius: "10px",
+                        border: `1px solid ${weighted.bias === 'BUY' ? "rgba(16,185,129,0.4)" : weighted.bias === 'SELL' ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.4)"}`
+                      }}>
+                        <span style={{ fontSize: "1.5rem" }}>
+                          {weighted.bias === 'BUY' ? '📈' : weighted.bias === 'SELL' ? '📉' : '⚖️'}
+                        </span>
+                        <div>
+                          <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Final Bias</div>
+                          <div style={{ 
+                            fontSize: "1.25rem", 
+                            fontWeight: "700", 
+                            color: weighted.bias === 'BUY' ? "#10B981" : weighted.bias === 'SELL' ? "#EF4444" : "#F59E0B"
+                          }}>
+                            {weighted.bias} ({weighted.confidence.toFixed(0)}% confidence)
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Original Signal Reasons */}
+                {result.signals.reasons.length > 0 && (
+                  <div style={{ marginTop: "1rem" }}>
+                    <div style={{ fontSize: "0.75rem", color: "#64748B", marginBottom: "0.5rem", textTransform: "uppercase" }}>Additional Signals</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                      {result.signals.reasons.slice(0, 5).map((reason, idx) => (
+                        <div key={idx} style={{ 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: "0.5rem",
+                          padding: "0.4rem 0.6rem",
+                          background: "rgba(30,41,59,0.3)",
+                          borderRadius: "6px",
+                          fontSize: "0.8rem"
+                        }}>
+                          <span style={{ color: reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "#10B981" : 
+                                              reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "#EF4444" : "#F59E0B" }}>
+                            {reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "🟢" : 
+                             reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "🔴" : "🟡"}
+                          </span>
+                          <span style={{ color: "#CBD5E1" }}>{reason}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {result.signals.reasons.length === 0 && (
-                    <div style={{ color: "#64748B", textAlign: "center", padding: "1rem" }}>
-                      No strong signals detected
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -942,25 +1208,25 @@ export default function DeepAnalysisPage() {
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Put/Call Ratio</div>
                     <div style={{ color: result.optionsData.putCallRatio > 1 ? "#EF4444" : "#10B981", fontSize: "1.25rem", fontWeight: "bold" }}>
-                      {result.optionsData.putCallRatio?.toFixed(2) || "N/A"}
+                      {result.optionsData.putCallRatio?.toFixed(2) || "—"}
                     </div>
                   </div>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Max Pain</div>
                     <div style={{ color: "#F59E0B", fontSize: "1.25rem", fontWeight: "bold" }}>
-                      ${result.optionsData.maxPain?.toFixed(2) || "N/A"}
+                      {result.optionsData.maxPain ? `$${result.optionsData.maxPain.toFixed(2)}` : "—"}
                     </div>
                   </div>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Avg IV</div>
                     <div style={{ color: "#3B82F6", fontSize: "1.25rem", fontWeight: "bold" }}>
-                      {result.optionsData.avgIV ? `${(result.optionsData.avgIV * 100).toFixed(1)}%` : "N/A"}
+                      {result.optionsData.avgIV ? `${capPercentage(result.optionsData.avgIV * 100, 300)}` : "—"}
                     </div>
                   </div>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Sentiment</div>
                     <div style={{ color: result.optionsData.sentiment === 'Bullish' ? "#10B981" : result.optionsData.sentiment === 'Bearish' ? "#EF4444" : "#F59E0B", fontSize: "1rem", fontWeight: "bold" }}>
-                      {result.optionsData.sentiment || "N/A"}
+                      {result.optionsData.sentiment || "—"}
                     </div>
                   </div>
                 </div>
@@ -985,27 +1251,27 @@ export default function DeepAnalysisPage() {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>OI:</span>
-                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOICall.openInterest?.toLocaleString()}</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOICall.openInterest?.toLocaleString() || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>IV:</span>
-                            <span style={{ color: "#CBD5E1" }}>{(result.optionsData.highestOICall.impliedVolatility * 100).toFixed(1)}%</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOICall.impliedVolatility ? `${capPercentage(result.optionsData.highestOICall.impliedVolatility * 100, 300)}` : '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Δ Delta:</span>
-                            <span style={{ color: "#10B981" }}>{result.optionsData.highestOICall.delta?.toFixed(3) || 'N/A'}</span>
+                            <span style={{ color: "#10B981" }}>{result.optionsData.highestOICall.delta?.toFixed(3) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Γ Gamma:</span>
-                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOICall.gamma?.toFixed(4) || 'N/A'}</span>
+                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOICall.gamma?.toFixed(4) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Θ Theta:</span>
-                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOICall.theta?.toFixed(3) || 'N/A'}</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOICall.theta?.toFixed(3) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>ν Vega:</span>
-                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOICall.vega?.toFixed(4) || 'N/A'}</span>
+                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOICall.vega?.toFixed(4) || '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1023,27 +1289,27 @@ export default function DeepAnalysisPage() {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.75rem" }}>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>OI:</span>
-                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOIPut.openInterest?.toLocaleString()}</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOIPut.openInterest?.toLocaleString() || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>IV:</span>
-                            <span style={{ color: "#CBD5E1" }}>{(result.optionsData.highestOIPut.impliedVolatility * 100).toFixed(1)}%</span>
+                            <span style={{ color: "#CBD5E1" }}>{result.optionsData.highestOIPut.impliedVolatility ? `${capPercentage(result.optionsData.highestOIPut.impliedVolatility * 100, 300)}` : '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Δ Delta:</span>
-                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.delta?.toFixed(3) || 'N/A'}</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.delta?.toFixed(3) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Γ Gamma:</span>
-                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOIPut.gamma?.toFixed(4) || 'N/A'}</span>
+                            <span style={{ color: "#A855F7" }}>{result.optionsData.highestOIPut.gamma?.toFixed(4) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>Θ Theta:</span>
-                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.theta?.toFixed(3) || 'N/A'}</span>
+                            <span style={{ color: "#EF4444" }}>{result.optionsData.highestOIPut.theta?.toFixed(3) || '—'}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>ν Vega:</span>
-                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOIPut.vega?.toFixed(4) || 'N/A'}</span>
+                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOIPut.vega?.toFixed(4) || '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1282,18 +1548,41 @@ export default function DeepAnalysisPage() {
                             )}
                           </div>
                         </div>
-                        <span style={{ 
-                          padding: "0.25rem 0.75rem", 
-                          borderRadius: "6px", 
-                          background: `${getSentimentColor(item.sentiment)}20`,
-                          color: getSentimentColor(item.sentiment),
-                          fontSize: "0.7rem",
-                          fontWeight: "700",
-                          textTransform: "uppercase",
-                          whiteSpace: "nowrap"
-                        }}>
-                          {item.sentiment}
-                        </span>
+                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                          {/* Impact Tag */}
+                          {(() => {
+                            const impact = getNewsImpact(item.title, item.summary || '');
+                            return (
+                              <span style={{ 
+                                padding: "0.25rem 0.6rem", 
+                                borderRadius: "6px", 
+                                background: `${impact.color}20`,
+                                color: impact.color,
+                                fontSize: "0.65rem",
+                                fontWeight: "600",
+                                whiteSpace: "nowrap",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem"
+                              }}>
+                                {impact.emoji} {impact.tag}
+                              </span>
+                            );
+                          })()}
+                          {/* Sentiment Badge */}
+                          <span style={{ 
+                            padding: "0.25rem 0.75rem", 
+                            borderRadius: "6px", 
+                            background: `${getSentimentColor(item.sentiment)}20`,
+                            color: getSentimentColor(item.sentiment),
+                            fontSize: "0.7rem",
+                            fontWeight: "700",
+                            textTransform: "uppercase",
+                            whiteSpace: "nowrap"
+                          }}>
+                            {item.sentiment}
+                          </span>
+                        </div>
                       </div>
                       {item.summary && (
                         <p style={{ 
