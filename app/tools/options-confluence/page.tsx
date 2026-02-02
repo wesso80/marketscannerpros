@@ -834,10 +834,16 @@ export default function OptionsConfluenceScanner() {
                 gap: '1.5rem',
                 marginBottom: '1.5rem',
               }}>
-                {/* Trade Score */}
+                {/* Trade Score - Weighted setup quality */}
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Trade Score
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#64748B', 
+                    marginBottom: '4px', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.5px',
+                  }}>
+                    Setup Quality
                   </div>
                   <div style={{
                     fontSize: '2.5rem',
@@ -847,10 +853,8 @@ export default function OptionsConfluenceScanner() {
                   }}>
                     {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
-                    {probabilityResult?.winProbability 
-                      ? `${(probabilityResult.winProbability * 100).toFixed(0)}% Win Probability`
-                      : 'Calculating...'}
+                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
+                    Weighted Score
                   </div>
                 </div>
 
@@ -936,7 +940,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                {/* Risk/Reward */}
+                {/* Risk/Reward - Graded: <0.75=poor, 0.75-1=weak, 1-1.5=acceptable, 1.5+=strong */}
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Risk/Reward
@@ -944,14 +948,31 @@ export default function OptionsConfluenceScanner() {
                   <div style={{
                     fontSize: '1.75rem',
                     fontWeight: '700',
-                    color: result.tradeLevels && result.tradeLevels.riskRewardRatio >= 2 ? '#10B981' 
-                      : result.tradeLevels && result.tradeLevels.riskRewardRatio >= 1.5 ? '#F59E0B' 
+                    color: result.tradeLevels 
+                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '#10B981'  // Strong (green)
+                      : result.tradeLevels.riskRewardRatio >= 1.0 ? '#F59E0B'  // Acceptable (amber)
+                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FB923C' // Weak (orange)
+                      : '#EF4444'  // Poor (red)
                       : '#6B7280',
                   }}>
                     {result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    {result.tradeLevels ? `${result.tradeLevels.stopLossPercent.toFixed(1)}% stop` : 'Calculating...'}
+                  <div style={{ 
+                    fontSize: '0.65rem', 
+                    color: result.tradeLevels 
+                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '#6EE7B7' 
+                      : result.tradeLevels.riskRewardRatio >= 1.0 ? '#FCD34D'
+                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FDBA74'
+                      : '#FCA5A5'
+                      : '#64748B',
+                    marginTop: '4px' 
+                  }}>
+                    {result.tradeLevels 
+                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '✓ Strong' 
+                      : result.tradeLevels.riskRewardRatio >= 1.0 ? 'Acceptable'
+                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '⚠ Weak'
+                      : '✗ Poor'
+                      : 'Calculating...'}
                   </div>
                 </div>
               </div>
@@ -1025,7 +1046,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
-                    CONFIDENCE
+                    ALIGNMENT
                   </div>
                   <div style={{ 
                     color: result.compositeScore && result.compositeScore.confidence >= 70 ? '#10B981' 
@@ -1347,55 +1368,72 @@ export default function OptionsConfluenceScanner() {
                       </div>
                     </div>
 
-                    {/* Signal Components */}
+                    {/* Signal Components - With weight % and proper color grading */}
                     <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components:</div>
+                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components (weighted):</div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
-                        {result.compositeScore.components.map((comp, idx) => (
-                          <div key={idx} style={{
-                            background: comp.direction === 'bullish' ? 'rgba(16,185,129,0.15)' :
-                                        comp.direction === 'bearish' ? 'rgba(239,68,68,0.15)' :
-                                        'rgba(100,116,139,0.15)',
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '8px',
-                            borderLeft: `3px solid ${
-                              comp.direction === 'bullish' ? '#10B981' :
-                              comp.direction === 'bearish' ? '#EF4444' : '#64748B'
-                            }`,
-                            fontSize: '0.75rem'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                              <span style={{ fontWeight: '600', color: '#E2E8F0' }}>{comp.name}</span>
-                              <span style={{ 
-                                fontWeight: 'bold',
-                                color: comp.direction === 'bullish' ? '#10B981' :
-                                       comp.direction === 'bearish' ? '#EF4444' : '#64748B'
-                              }}>
-                                {comp.direction === 'neutral' ? '—' : comp.direction === 'bullish' ? '↑' : '↓'}
-                                {' '}{Math.abs(comp.score).toFixed(0)}
-                              </span>
-                            </div>
-                            <div style={{ color: '#94A3B8', fontSize: '0.65rem' }}>{comp.reason}</div>
-                            <div style={{ 
-                              marginTop: '0.25rem',
-                              height: '3px',
-                              background: 'rgba(100,116,139,0.3)',
-                              borderRadius: '2px',
-                              overflow: 'hidden'
+                        {result.compositeScore.components.map((comp, idx) => {
+                          // Color based on strength, not just direction
+                          const isStrong = Math.abs(comp.score) >= 50;
+                          const isMedium = Math.abs(comp.score) >= 25;
+                          const barColor = comp.direction === 'neutral' ? '#64748B' 
+                            : isStrong 
+                              ? (comp.direction === 'bullish' ? '#10B981' : '#EF4444')
+                              : isMedium 
+                                ? (comp.direction === 'bullish' ? '#6EE7B7' : '#FCA5A5')
+                                : '#94A3B8'; // Weak = grey
+                          const bgColor = comp.direction === 'neutral' ? 'rgba(100,116,139,0.15)'
+                            : isStrong
+                              ? (comp.direction === 'bullish' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)')
+                              : isMedium
+                                ? (comp.direction === 'bullish' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)')
+                                : 'rgba(100,116,139,0.08)'; // Weak = faded
+                          
+                          return (
+                            <div key={idx} style={{
+                              background: bgColor,
+                              padding: '0.5rem 0.75rem',
+                              borderRadius: '8px',
+                              borderLeft: `3px solid ${barColor}`,
+                              fontSize: '0.75rem',
+                              opacity: isStrong ? 1 : isMedium ? 0.85 : 0.65,
                             }}>
-                              <div style={{
-                                width: `${comp.weight * 100}%`,
-                                height: '100%',
-                                background: comp.direction === 'bullish' ? '#10B981' :
-                                            comp.direction === 'bearish' ? '#EF4444' : '#64748B',
-                                borderRadius: '2px'
-                              }} />
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                <span style={{ fontWeight: '600', color: '#E2E8F0' }}>
+                                  {comp.name}
+                                  <span style={{ 
+                                    fontSize: '0.6rem', 
+                                    color: '#64748B',
+                                    marginLeft: '4px',
+                                    fontWeight: '400',
+                                  }}>({(comp.weight * 100).toFixed(0)}%)</span>
+                                </span>
+                                <span style={{ 
+                                  fontWeight: 'bold',
+                                  color: barColor,
+                                }}>
+                                  {comp.direction === 'neutral' ? '—' : comp.direction === 'bullish' ? '↑' : '↓'}
+                                  {' '}{Math.abs(comp.score).toFixed(0)}
+                                </span>
+                              </div>
+                              <div style={{ color: '#94A3B8', fontSize: '0.65rem' }}>{comp.reason}</div>
+                              <div style={{ 
+                                marginTop: '0.25rem',
+                                height: '4px',
+                                background: 'rgba(100,116,139,0.3)',
+                                borderRadius: '2px',
+                                overflow: 'hidden'
+                              }}>
+                                <div style={{
+                                  width: `${Math.min(Math.abs(comp.score), 100)}%`,
+                                  height: '100%',
+                                  background: barColor,
+                                  borderRadius: '2px'
+                                }} />
+                              </div>
                             </div>
-                            <div style={{ fontSize: '0.6rem', color: '#64748B', marginTop: '0.15rem' }}>
-                              Weight: {(comp.weight * 100).toFixed(0)}%
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -1586,8 +1624,14 @@ export default function OptionsConfluenceScanner() {
                       📍 Entry/Exit Levels
                       <span style={{ 
                         marginLeft: '0.5rem', 
-                        background: result.tradeLevels.riskRewardRatio >= 2 ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)',
-                        color: result.tradeLevels.riskRewardRatio >= 2 ? '#6EE7B7' : '#FCD34D',
+                        background: result.tradeLevels.riskRewardRatio >= 1.5 ? 'rgba(16,185,129,0.3)' 
+                          : result.tradeLevels.riskRewardRatio >= 1.0 ? 'rgba(245,158,11,0.3)'
+                          : result.tradeLevels.riskRewardRatio >= 0.75 ? 'rgba(251,146,60,0.3)'
+                          : 'rgba(239,68,68,0.3)',
+                        color: result.tradeLevels.riskRewardRatio >= 1.5 ? '#6EE7B7' 
+                          : result.tradeLevels.riskRewardRatio >= 1.0 ? '#FCD34D'
+                          : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FDBA74'
+                          : '#FCA5A5',
                         padding: '2px 8px', 
                         borderRadius: '999px', 
                         fontSize: '0.65rem' 
@@ -2349,14 +2393,33 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {/* Greeks Advice */}
-            <div style={{
+            {/* Greeks Advice - Collapsible (advanced) */}
+            <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(245,158,11,0.3)',
               borderRadius: '16px',
               padding: '1.5rem',
             }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#F59E0B' }}>📊 Greeks & Risk Advice</h3>
+              <summary style={{ 
+                margin: '0 0 1rem 0', 
+                color: '#F59E0B', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                listStyle: 'none',
+                fontWeight: '600',
+              }}>
+                📊 Greeks & Risk Advice
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  color: '#64748B',
+                  marginLeft: 'auto',
+                  fontWeight: '400',
+                }}>
+                  ▼ Show advanced data
+                </span>
+              </summary>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
                 <div>
@@ -2383,16 +2446,35 @@ export default function OptionsConfluenceScanner() {
                   <div style={{ color: '#E2E8F0' }}>{result.greeksAdvice.overallAdvice}</div>
                 </div>
               </div>
-            </div>
+            </details>
 
-            {/* Risk Management */}
-            <div style={{
+            {/* Risk Management - Collapsible (advanced) */}
+            <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(239,68,68,0.3)',
               borderRadius: '16px',
               padding: '1.5rem',
             }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#EF4444' }}>⚠️ Risk Management</h3>
+              <summary style={{ 
+                margin: '0 0 1rem 0', 
+                color: '#EF4444', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                listStyle: 'none',
+                fontWeight: '600',
+              }}>
+                ⚠️ Risk Management
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  color: '#64748B',
+                  marginLeft: 'auto',
+                  fontWeight: '400',
+                }}>
+                  {result.maxRiskPercent}% max risk • ▼ Show details
+                </span>
+              </summary>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                 <div style={{
@@ -2418,7 +2500,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             {/* Summary Trade Setup */}
             {result.primaryStrike && result.primaryExpiration && (

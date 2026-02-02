@@ -432,91 +432,104 @@ export function ProModeDashboard({
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {probability.components.map((component, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem',
-                background: component.triggered 
-                  ? component.direction === 'bullish' 
-                    ? 'rgba(16,185,129,0.1)'
-                    : component.direction === 'bearish'
-                    ? 'rgba(239,68,68,0.1)'
-                    : 'rgba(100,116,139,0.1)'
-                  : 'transparent',
-                borderRadius: '8px',
-                opacity: component.triggered ? 1 : 0.5,
-              }}
-            >
-              {/* Direction indicator */}
-              <div style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                background: component.triggered
-                  ? component.direction === 'bullish'
-                    ? 'rgba(16,185,129,0.3)'
-                    : component.direction === 'bearish'
-                    ? 'rgba(239,68,68,0.3)'
-                    : 'rgba(100,116,139,0.3)'
-                  : 'rgba(100,116,139,0.2)',
-              }}>
-                {component.triggered
-                  ? component.direction === 'bullish' ? '↗' : component.direction === 'bearish' ? '↘' : '→'
-                  : '○'}
-              </div>
-              
-              {/* Name */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '12px', fontWeight: '500', color: '#F1F5F9' }}>
-                  {component.name}
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B' }}>
-                  {component.reason}
-                </div>
-              </div>
-              
-              {/* Contribution bar */}
-              <div style={{ width: '60px' }}>
+          {probability.components.map((component, idx) => {
+            // Color based on contribution strength, not just direction
+            const isStrong = component.contribution >= 60;
+            const isMedium = component.contribution >= 30;
+            const barColor = !component.triggered ? '#64748B'
+              : component.direction === 'neutral' ? '#64748B' 
+              : isStrong 
+                ? (component.direction === 'bullish' ? '#10B981' : '#EF4444')
+                : isMedium 
+                  ? (component.direction === 'bullish' ? '#6EE7B7' : '#FCA5A5')
+                  : '#94A3B8'; // Weak = grey
+            
+            return (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.5rem',
+                  background: component.triggered 
+                    ? isStrong
+                      ? component.direction === 'bullish' 
+                        ? 'rgba(16,185,129,0.1)'
+                        : component.direction === 'bearish'
+                        ? 'rgba(239,68,68,0.1)'
+                        : 'rgba(100,116,139,0.1)'
+                      : 'rgba(100,116,139,0.05)'
+                    : 'transparent',
+                  borderRadius: '8px',
+                  opacity: component.triggered ? (isStrong ? 1 : isMedium ? 0.85 : 0.65) : 0.4,
+                }}
+              >
+                {/* Direction indicator */}
                 <div style={{
-                  height: '6px',
-                  background: 'rgba(255,255,255,0.1)',
-                  borderRadius: '3px',
-                  overflow: 'hidden',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  background: component.triggered
+                    ? `${barColor}30`
+                    : 'rgba(100,116,139,0.2)',
                 }}>
+                  {component.triggered
+                    ? component.direction === 'bullish' ? '↗' : component.direction === 'bearish' ? '↘' : '→'
+                    : '○'}
+                </div>
+                
+                {/* Name with weight */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', fontWeight: '500', color: '#F1F5F9' }}>
+                    {component.name}
+                    <span style={{ 
+                      fontSize: '9px', 
+                      color: '#64748B',
+                      marginLeft: '4px',
+                      fontWeight: '400',
+                    }}>({Math.round(component.confidence * 100)}%)</span>
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748B' }}>
+                    {component.reason}
+                  </div>
+                </div>
+                
+                {/* Contribution bar - color based on strength */}
+                <div style={{ width: '60px' }}>
                   <div style={{
-                    height: '100%',
-                    width: `${Math.min(component.contribution, 100)}%`,
-                    background: component.direction === 'bullish'
-                      ? '#10B981'
-                      : component.direction === 'bearish'
-                      ? '#EF4444'
-                      : '#64748B',
+                    height: '6px',
+                    background: 'rgba(255,255,255,0.1)',
                     borderRadius: '3px',
-                    transition: 'width 0.3s ease',
-                  }} />
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min(component.contribution, 100)}%`,
+                      background: barColor,
+                      borderRadius: '3px',
+                      transition: 'width 0.3s ease',
+                    }} />
+                  </div>
+                </div>
+                
+                {/* Contribution % */}
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: component.triggered ? barColor : '#64748B',
+                  minWidth: '35px',
+                  textAlign: 'right',
+                }}>
+                  {component.triggered ? `${Math.round(component.contribution)}%` : '—'}
                 </div>
               </div>
-              
-              {/* Confidence */}
-              <div style={{
-                fontSize: '11px',
-                fontWeight: '600',
-                color: component.triggered ? '#F1F5F9' : '#64748B',
-                minWidth: '35px',
-                textAlign: 'right',
-              }}>
-                {component.triggered ? `${Math.round(component.confidence * 100)}%` : '—'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
       
