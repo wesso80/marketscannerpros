@@ -1000,6 +1000,19 @@ function calculateTradeLevels(
     }
   }
   
+  // If T2 doesn't exist or is too close to T1, create a scaled target
+  // T2 should be at least 1.5x further than T1 from entry
+  const t1Distance = Math.abs(t1Price - currentPrice);
+  const t2MinDistance = t1Distance * 1.8;  // T2 at least 80% further than T1
+  
+  if (!t2Price || Math.abs(t2Price - t1Price) < t1Distance * 0.3) {
+    // Create T2 at 1.8x the distance of T1
+    t2Price = isLong 
+      ? currentPrice + t2MinDistance 
+      : currentPrice - t2MinDistance;
+    t2Reason = 'Extended target (1.8× T1 distance)';
+  }
+  
   const target2 = t2Price ? {
     price: t2Price,
     reason: t2Reason,
