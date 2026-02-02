@@ -17,28 +17,63 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Rate limiting (simple in-memory, use Redis in production)
-const rateLimits = new Map<string, { count: number; resetAt: number }>();
+// Tier-based daily limits (database-backed for persistence)
+const TIER_LIMITS: Record<string, number> = {
+  free: 5,       // Free users: 5/day
+  pro: 50,       // Pro subscribers: 50/day
+  pro_trader: 200, // Pro Trader: 200/day
+};
 
-function checkRateLimit(workspaceId: string, tier: string): boolean {
-  const limits = { free: 5, pro: 50, pro_trader: 200 };
-  const limit = limits[tier as keyof typeof limits] || 5;
+// Check daily usage against tier limit (database-backed)
+async function checkTierQuota(workspaceId: string, tier: string): Promise<{
+  allowed: boolean;
+  usageCount: number;
+  dailyLimit: number;
+}> {
+  const dailyLimit = TIER_LIMITS[tier] || 5;
+  const today = new Date().toISOString().split('T')[0];
   
-  const now = Date.now();
-  const dayStart = new Date().setHours(0, 0, 0, 0);
-  
-  const current = rateLimits.get(workspaceId);
-  if (!current || current.resetAt < dayStart) {
-    rateLimits.set(workspaceId, { count: 1, resetAt: dayStart + 86400000 });
-    return true;
+  try {
+    // Check usage from ai_usage table (same as msp-analyst)
+    const usageResult = await q(
+      `SELECT COUNT(*) as count FROM ai_usage 
+       WHERE workspace_id = $1 AND DATE(created_at) = $2`,
+      [workspaceId, today]
+    );
+    
+    const usageCount = parseInt(usageResult[0]?.count || '0');
+    
+    return {
+      allowed: usageCount < dailyLimit,
+      usageCount,
+      dailyLimit,
+    };
+  } catch (error) {
+    console.error('Error checking tier quota:', error);
+    // Allow on error to not block users
+    return { allowed: true, usageCount: 0, dailyLimit };
   }
-  
-  if (current.count >= limit) {
-    return false;
+}
+
+// Log usage to ai_usage table for tracking
+async function logAIUsage(
+  workspaceId: string,
+  tier: string,
+  question: string,
+  responseLength: number,
+  promptTokens: number,
+  completionTokens: number,
+  totalTokens: number
+): Promise<void> {
+  try {
+    await q(
+      `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+      [workspaceId, question.slice(0, 500), responseLength, tier, promptTokens, completionTokens, totalTokens, 'gpt-4o-mini']
+    );
+  } catch (error) {
+    console.error('Error logging AI usage:', error);
   }
-  
-  current.count++;
-  return true;
 }
 
 export async function POST(req: NextRequest) {
@@ -50,11 +85,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit check
-    if (!checkRateLimit(session.workspaceId, session.tier || 'free')) {
+    const tier = (session.tier || 'free') as 'free' | 'pro' | 'pro_trader';
+
+    // Check daily quota against tier limit (database-backed)
+    const quota = await checkTierQuota(session.workspaceId, tier);
+    if (!quota.allowed) {
+      const upgradeMsg = tier === 'free' 
+        ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' 
+        : tier === 'pro'
+        ? 'Upgrade to Pro Trader for 200/day.'
+        : 'Limit resets at midnight UTC.';
+      
       return NextResponse.json({ 
-        error: 'Daily AI question limit reached. Upgrade for more.',
-        limitReached: true 
+        error: `Daily AI question limit reached (${quota.usageCount}/${quota.dailyLimit}). ${upgradeMsg}`,
+        limitReached: true,
+        tier,
+        dailyLimit: quota.dailyLimit,
+        usageCount: quota.usageCount,
       }, { status: 429 });
     }
 
@@ -87,7 +134,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Build unified context
-    const tier = (session.tier || 'free') as 'free' | 'pro' | 'pro_trader';
     const context = await buildUnifiedContext(
       session.workspaceId,
       tier,
@@ -223,6 +269,17 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    // Log to ai_usage table for tier quota tracking (consistent with msp-analyst)
+    await logAIUsage(
+      session.workspaceId,
+      tier,
+      message,
+      responseContent.length,
+      completion.usage?.prompt_tokens || 0,
+      completion.usage?.completion_tokens || 0,
+      completion.usage?.total_tokens || 0
+    );
+
     return NextResponse.json({
       success: true,
       responseId,
@@ -237,6 +294,12 @@ export async function POST(req: NextRequest) {
       latencyMs: latency,
       contextVersion: CONTEXT_VERSION,
       skillVersion,
+      // Include quota info in response
+      quota: {
+        used: quota.usageCount + 1,
+        limit: quota.dailyLimit,
+        tier,
+      },
     });
 
   } catch (error) {
