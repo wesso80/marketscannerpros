@@ -137,9 +137,9 @@ export default function AdminSubscriptionsPage() {
         background: "rgba(17, 24, 39, 0.8)",
         border: "1px solid rgba(16, 185, 129, 0.2)",
         borderRadius: "1rem",
-        overflow: "hidden",
+        overflow: "auto",
       }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
           <thead>
             <tr style={{ background: "rgba(0,0,0,0.3)" }}>
               <th style={{ padding: "1rem", textAlign: "left", color: "#9CA3AF", fontWeight: 500 }}>Email</th>

@@ -1403,7 +1403,7 @@ function ScannerContent() {
           </div>
 
           {/* Timeframe & Run */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="grid-equal-2-col-responsive">
             <div>
               <label style={{ display: "block", color: "#10B981", fontWeight: "600", marginBottom: "0.75rem" }}>
                 Timeframe

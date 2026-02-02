@@ -1238,7 +1238,7 @@ export default function DeepAnalysisPage() {
                 
                 {/* Highest OI Strikes with Greeks */}
                 {(result.optionsData.highestOICall || result.optionsData.highestOIPut) && (
-                  <div style={{ marginTop: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div className="grid-equal-2-col-responsive" style={{ marginTop: "1.5rem" }}>
                     {/* Highest OI Call */}
                     {result.optionsData.highestOICall && (
                       <div style={{ padding: "1rem", background: "rgba(16,185,129,0.1)", borderRadius: "10px", border: "1px solid rgba(16,185,129,0.3)" }}>

@@ -197,7 +197,7 @@ export default function AdminCostsPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+      <div className="grid-equal-2-col-responsive" style={{ gap: "1.5rem" }}>
         {/* Last 7 days breakdown */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>

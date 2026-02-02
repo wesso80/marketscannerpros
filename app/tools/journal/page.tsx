@@ -1000,13 +1000,15 @@ function JournalContent() {
 
         {/* Strategy Leaderboard & Equity Curve Row */}
         {closedTrades.length >= 3 && (
-          <div style={{ 
-            maxWidth: '1600px', 
-            margin: '16px auto 0',
-            display: 'grid',
-            gridTemplateColumns: equityCurve.length >= 5 ? '1fr 1fr' : '1fr',
-            gap: '16px'
-          }}>
+          <div 
+            className={equityCurve.length >= 5 ? 'grid-equal-2-col-responsive' : ''}
+            style={{ 
+              maxWidth: '1600px', 
+              margin: '16px auto 0',
+              display: equityCurve.length >= 5 ? undefined : 'grid',
+              gridTemplateColumns: equityCurve.length >= 5 ? undefined : '1fr',
+              gap: '16px'
+            }}>
             {/* Strategy Leaderboard */}
             {strategyStats.length > 0 && (
               <div style={{

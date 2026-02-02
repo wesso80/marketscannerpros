@@ -244,7 +244,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+      <div className="grid-equal-2-col-responsive" style={{ gap: "1.5rem" }}>
         {/* Subscriptions by tier */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
@@ -433,7 +433,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+        <div className="grid-equal-2-col-responsive" style={{ gap: "1.5rem" }}>
           {/* Per-Symbol Stats */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>

@@ -158,7 +158,7 @@ function PositionSizerCalculator() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+      <div className="grid-equal-2-col-responsive" style={{ marginBottom: '24px' }}>
         {/* Account Size */}
         <div>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>

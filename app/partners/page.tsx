@@ -451,9 +451,7 @@ export default function PartnersPage() {
               We align:
             </p>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+            <div className="grid-equal-2-col-responsive" style={{
               gap: 20
             }}>
               <div style={{

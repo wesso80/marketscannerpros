@@ -32,14 +32,15 @@ export default function Hero() {
         borderBottom: '1px solid var(--border-subtle)'
       }}>
         <div style={{ maxWidth: 1120, padding: '48px 20px 60px', margin: '0 auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2.1fr) minmax(0, 1.6fr)',
-            gap: 26,
-            marginBottom: 40
-          }}>
+          <div 
+            className="grid-2-col-responsive"
+            style={{
+              marginBottom: 40
+            }}>
             {/* Hero section */}
-            <div style={{
+            <div 
+              className="hero-section"
+              style={{
               background: 'radial-gradient(circle at top, #111827, #020617 60%)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',

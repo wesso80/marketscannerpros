@@ -223,7 +223,7 @@ export default function AdminIncomePage() {
           </div>
 
           {/* Subscription metrics */}
-          <div style={{ marginTop: "1.5rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+          <div className="grid-equal-2-col-responsive" style={{ marginTop: "1.5rem", gap: "0.75rem" }}>
             <div style={{ ...statBoxStyle, textAlign: "left" }}>
               <div style={{ color: "#10B981", fontSize: "1.25rem", fontWeight: 600 }}>
                 +{stats.subscriptions.newThisMonth}

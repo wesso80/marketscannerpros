@@ -105,12 +105,11 @@ export default function ToolsPage() {
           </header>
 
           {/* Main content */}
-          <main style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 2.1fr) minmax(0, 1.6fr)',
-            gap: 26,
-            marginBottom: 40
-          }}>
+          <main 
+            className="grid-2-col-responsive"
+            style={{
+              marginBottom: 40
+            }}>
             {/* Hero section */}
             <section style={{
               background: 'radial-gradient(circle at top, #111827, #020617 60%)',
@@ -825,11 +824,7 @@ export default function ToolsPage() {
           </section>
 
           {/* How to section */}
-          <section style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
-            gap: 18
-          }}>
+          <section className="grid-3-2-col-responsive">
             <div style={{
               background: 'rgba(15,23,42,0.95)',
               borderRadius: 'var(--radius-md)',

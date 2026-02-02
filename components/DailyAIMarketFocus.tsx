@@ -228,7 +228,7 @@ export default function DailyAIMarketFocus() {
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <div className="grid-equal-2-col-responsive" style={{ marginBottom: 16 }}>
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px 12px', borderRadius: 10 }}>
                   <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Phase</div>
                   <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 500 }}>{pick.phase}</div>
