@@ -272,7 +272,7 @@ export default function GainersLosersPage() {
           title="Top Gainers & Losers"
           subtitle="Live gainers, losers, and most active tickers with risk context."
           icon="📊"
-          backHref="/tools"
+          backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <UpgradeGate feature="Market Movers" requiredTier="pro" />
@@ -288,7 +288,7 @@ export default function GainersLosersPage() {
         title="Top Gainers & Losers"
         subtitle="Live gainers, losers, and most active tickers with risk context."
         icon="📊"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <main style={{ padding: "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>

@@ -323,7 +323,7 @@ function PositionSizerCalculator() {
           <h4 style={{ color: '#a78bfa', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
             📐 Kelly Criterion Parameters
           </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
                 Win Rate (%)
@@ -402,7 +402,7 @@ function PositionSizerCalculator() {
           📊 Position Size Results
         </h3>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
             <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
               Position Size
@@ -1030,7 +1030,7 @@ function PortfolioContent() {
         title="Portfolio Tracking"
         subtitle="Track live prices, allocation, and performance in real-time."
         icon="📊"
-        backHref="/tools"
+        backHref="/dashboard"
         actions={
           <>
             {positions.length > 0 && (

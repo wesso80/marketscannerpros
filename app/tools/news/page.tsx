@@ -413,7 +413,7 @@ export default function NewsSentimentPage() {
           title="Market Intelligence"
           subtitle="News sentiment, earnings calendar, and insider activity."
           icon="📰"
-          backHref="/tools"
+          backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
@@ -429,7 +429,7 @@ export default function NewsSentimentPage() {
         title="Market Intelligence"
         subtitle="News sentiment, earnings calendar, and insider activity."
         icon="📰"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>

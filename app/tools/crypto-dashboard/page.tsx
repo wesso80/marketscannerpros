@@ -457,9 +457,6 @@ export default function CryptoDashboard() {
                   </div>
                 </div>
               ))}
-              <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
-                <strong>💡 Source:</strong> {data.liquidations.summary.note || 'Real liquidation data from OKX'}
-              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">Loading liquidation data...</div>

@@ -685,7 +685,7 @@ function ScannerContent() {
         title="Market Scanner Pro"
         subtitle="Scan any crypto, stock, or forex pair for confluence signals."
         icon="🧭"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <main style={{ padding: "24px 16px" }}>
         <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0" }}>

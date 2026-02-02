@@ -250,7 +250,7 @@ function AiAnalystContent() {
         title="MSP AI Analyst"
         subtitle="Ask the in-house quant & Pine engineer for structured market breakdowns."
         icon="🧠"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <main style={{
         minHeight: '100vh',
@@ -389,7 +389,7 @@ function AiAnalystContent() {
                 </p>
 
                 {/* Asset type + symbol */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 11, color: '#9ca3af' }}>
                       Asset Type
@@ -436,7 +436,7 @@ function AiAnalystContent() {
                 </div>
 
                 {/* Timeframe + price + auto-fill */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 8 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 11, color: '#9ca3af' }}>
                       Timeframe (e.g. 15m, 1H, 4H, 1D)

@@ -306,7 +306,7 @@ export default function CompanyOverviewPage() {
           title="Company Overview"
           subtitle="Key fundamentals, technicals, and valuation metrics."
           icon="🏢"
-          backHref="/tools"
+          backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <UpgradeGate feature="Company Overview" requiredTier="pro" />
@@ -322,7 +322,7 @@ export default function CompanyOverviewPage() {
         title="Company Overview"
         subtitle="Key fundamentals, technicals, and valuation metrics."
         icon="🏢"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0 }}>

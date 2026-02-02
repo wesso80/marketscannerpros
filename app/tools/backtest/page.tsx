@@ -95,7 +95,7 @@ function BacktestContent() {
           title="Strategy Backtester"
           subtitle="Pro Trader exclusive: Test and iterate trading ideas with historical data."
           icon="🧪"
-          backHref="/tools"
+          backHref="/dashboard"
         />
         <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
           <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
@@ -205,7 +205,7 @@ function BacktestContent() {
         title="Strategy Backtester"
         subtitle="Pro Trader exclusive: Test 25+ strategies across multiple timeframes with real market data."
         icon="🧪"
-        backHref="/tools"
+        backHref="/dashboard"
       />
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
 

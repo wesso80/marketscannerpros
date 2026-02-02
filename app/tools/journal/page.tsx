@@ -544,7 +544,7 @@ function JournalContent() {
         title="Trade Journal"
         subtitle="Track and analyze your trading performance."
         icon="📔"
-        backHref="/tools"
+        backHref="/dashboard"
         actions={headerActions}
       />
 
@@ -1450,7 +1450,7 @@ function JournalContent() {
 
             {/* Options-specific fields */}
             {newEntry.tradeType === 'Options' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                     Option Type *

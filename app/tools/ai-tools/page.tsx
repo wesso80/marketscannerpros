@@ -44,7 +44,7 @@ export default function AIToolsPage() {
           title="AI & Machine Learning Tools"
           subtitle="AI-powered market analysis using multi-timeframe structure and phase logic."
           icon="🤖"
-          backHref="/tools"
+          backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <UpgradeGate feature="AI Tools" requiredTier="pro" />
@@ -60,7 +60,7 @@ export default function AIToolsPage() {
         title="AI & Machine Learning Tools"
         subtitle="AI-powered market analysis using multi-timeframe structure and phase logic."
         icon="🤖"
-        backHref="/tools"
+        backHref="/dashboard"
         actions={
           <button
             onClick={handleGenerate}

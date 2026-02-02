@@ -299,7 +299,7 @@ export default function AccountPage() {
                 {/* Referral Stats */}
                 <div style={{ 
                   display: "grid", 
-                  gridTemplateColumns: "repeat(3, 1fr)", 
+                  gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", 
                   gap: 16,
                   padding: 16,
                   background: "rgba(15,23,42,0.5)",
