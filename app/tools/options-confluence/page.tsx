@@ -765,201 +765,300 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             
-            {/* Top Row: Trade Quality + Direction + Entry Timing */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              
-              {/* Trade Quality Card */}
+            {/* ═══════════════════════════════════════════════════════════════════════════ */}
+            {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
+            {/* ═══════════════════════════════════════════════════════════════════════════ */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95))',
+              border: `3px solid ${gradeColor(result.tradeQuality)}`,
+              borderRadius: '20px',
+              padding: '1.75rem',
+              boxShadow: `0 0 40px ${gradeColor(result.tradeQuality)}25`,
+            }}>
+              {/* Header Row */}
               <div style={{
-                background: 'rgba(30,41,59,0.6)',
-                border: `2px solid ${gradeColor(result.tradeQuality)}`,
-                borderRadius: '16px',
-                padding: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem',
+                paddingBottom: '1rem',
+                borderBottom: '1px solid rgba(148,163,184,0.2)',
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: '1rem' }}>Trade Quality</h3>
-                  <span style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 'bold',
-                    color: gradeColor(result.tradeQuality)
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span style={{
+                    background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)',
+                    padding: '6px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#fff',
+                    letterSpacing: '0.5px',
                   }}>
-                    {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
+                    🎯 DECISION ENGINE
+                  </span>
+                  <span style={{ color: '#64748B', fontSize: '14px' }}>
+                    {symbol.toUpperCase()} • ${result.currentPrice.toFixed(2)}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                
+                {/* Entry Status Badge */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '8px 16px',
+                  borderRadius: '12px',
+                  background: result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour'
+                    ? 'rgba(16,185,129,0.2)'
+                    : result.entryTiming.urgency === 'wait'
+                    ? 'rgba(245,158,11,0.2)'
+                    : 'rgba(239,68,68,0.2)',
+                  border: `1px solid ${urgencyColor(result.entryTiming.urgency)}50`,
+                }}>
+                  <span style={{ fontSize: '0.9rem' }}>{urgencyEmoji(result.entryTiming.urgency)}</span>
+                  <span style={{ 
+                    color: urgencyColor(result.entryTiming.urgency),
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    textTransform: 'uppercase',
+                  }}>
+                    {result.entryTiming.urgency === 'no_trade' ? 'NO TRADE' : result.entryTiming.urgency.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Main Decision Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '1.5rem',
+                marginBottom: '1.5rem',
+              }}>
+                {/* Trade Score */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Trade Score
+                  </div>
+                  <div style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '800',
+                    color: gradeColor(result.tradeQuality),
+                    lineHeight: 1,
+                  }}>
+                    {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
+                    {probabilityResult?.winProbability 
+                      ? `${(probabilityResult.winProbability * 100).toFixed(0)}% Win Probability`
+                      : 'Calculating...'}
+                  </div>
+                </div>
+
+                {/* Bias / Direction */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Bias
+                  </div>
+                  <div style={{
+                    fontSize: '1.75rem',
+                    fontWeight: '700',
+                    color: result.direction === 'bullish' ? '#10B981' 
+                      : result.direction === 'bearish' ? '#EF4444' 
+                      : '#F59E0B',
+                  }}>
+                    {result.direction === 'bullish' ? '🟢 BULLISH' 
+                      : result.direction === 'bearish' ? '🔴 BEARISH' 
+                      : '⚖️ NEUTRAL'}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
+                    Pull: {result.pullBias > 0 ? '+' : ''}{result.pullBias.toFixed(1)}%
+                  </div>
+                </div>
+
+                {/* Strategy */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Strategy
+                  </div>
+                  <div style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: result.strategyRecommendation?.strategyType === 'buy_premium' ? '#3B82F6'
+                      : result.strategyRecommendation?.strategyType === 'sell_premium' ? '#8B5CF6'
+                      : '#F59E0B',
+                  }}>
+                    {result.strategyRecommendation?.strategy || 
+                      (result.direction === 'bullish' ? 'Buy Calls' : 
+                       result.direction === 'bearish' ? 'Buy Puts' : 'Iron Condor')}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
+                    {result.strategyRecommendation?.riskProfile === 'defined' ? '✓ Defined Risk' : '⚠️ Undefined Risk'}
+                  </div>
+                </div>
+
+                {/* POP (Probability of Profit) - Coming Soon */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    POP
+                  </div>
+                  <div style={{
+                    fontSize: '1.75rem',
+                    fontWeight: '700',
+                    color: probabilityResult?.winProbability && probabilityResult.winProbability >= 0.55 ? '#10B981' 
+                      : probabilityResult?.winProbability && probabilityResult.winProbability >= 0.45 ? '#F59E0B' 
+                      : '#6B7280',
+                  }}>
+                    {probabilityResult?.winProbability 
+                      ? `${(probabilityResult.winProbability * 100).toFixed(0)}%`
+                      : '—'}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
+                    Probability of Profit
+                  </div>
+                </div>
+
+                {/* EV (Expected Value) - Using Kelly Size as proxy */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Kelly Size
+                  </div>
+                  <div style={{
+                    fontSize: '1.75rem',
+                    fontWeight: '700',
+                    color: probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 ? '#10B981' : '#EF4444',
+                  }}>
+                    {probabilityResult?.kellySizePercent 
+                      ? `${probabilityResult.kellySizePercent.toFixed(1)}%`
+                      : '—'}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
+                    Optimal Position
+                  </div>
+                </div>
+
+                {/* Risk/Reward */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Risk/Reward
+                  </div>
+                  <div style={{
+                    fontSize: '1.75rem',
+                    fontWeight: '700',
+                    color: result.tradeLevels && result.tradeLevels.riskRewardRatio >= 2 ? '#10B981' 
+                      : result.tradeLevels && result.tradeLevels.riskRewardRatio >= 1.5 ? '#F59E0B' 
+                      : '#6B7280',
+                  }}>
+                    {result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
+                    {result.tradeLevels ? `${result.tradeLevels.stopLossPercent.toFixed(1)}% stop` : 'Calculating...'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Conflicts Warning (if any) */}
+              {(result.compositeScore?.conflicts?.length ?? 0) > 0 && (
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  marginBottom: '1rem',
+                }}>
+                  <div style={{ 
+                    fontWeight: '700', 
+                    color: '#EF4444', 
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    ⚠️ SIGNAL CONFLICTS DETECTED
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>
+                    {result.compositeScore?.conflicts?.map((conflict, i) => (
+                      <div key={i} style={{ marginBottom: '4px' }}>• {conflict}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Entry Window Info */}
+              <div style={{
+                background: 'rgba(59,130,246,0.1)',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                    ENTRY WINDOW
+                  </div>
+                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                    {result.entryTiming.idealEntryWindow}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                    SESSION
+                  </div>
+                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                    {result.entryTiming.marketSession === 'regular' ? '🟢 Market Open' :
+                     result.entryTiming.marketSession === 'premarket' ? '🌅 Pre-Market' :
+                     result.entryTiming.marketSession === 'afterhours' ? '🌙 After Hours' :
+                     '🔒 Closed'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                    CONFLUENCE
+                  </div>
+                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                    {result.candleCloseConfluence 
+                      ? `${result.candleCloseConfluence.confluenceRating.toUpperCase()} (${result.candleCloseConfluence.confluenceScore}%)`
+                      : `${result.confluenceStack} TFs`}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                    CONFIDENCE
+                  </div>
+                  <div style={{ 
+                    color: result.compositeScore && result.compositeScore.confidence >= 70 ? '#10B981' 
+                      : result.compositeScore && result.compositeScore.confidence >= 50 ? '#F59E0B' 
+                      : '#94A3B8',
+                    fontWeight: '600' 
+                  }}>
+                    {result.compositeScore ? `${result.compositeScore.confidence.toFixed(0)}%` : '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Reasons (collapsible summary) */}
+              <details style={{ marginTop: '1rem' }}>
+                <summary style={{ 
+                  color: '#64748B', 
+                  fontSize: '0.8rem', 
+                  cursor: 'pointer',
+                  padding: '0.5rem 0',
+                }}>
+                  📋 Quality Factors ({result.qualityReasons.length})
+                </summary>
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#94A3B8', 
+                  paddingLeft: '1rem',
+                  marginTop: '0.5rem',
+                }}>
                   {result.qualityReasons.map((r, i) => (
-                    <div key={i} style={{ marginBottom: '4px' }}>{r}</div>
+                    <div key={i} style={{ marginBottom: '4px' }}>• {r}</div>
                   ))}
                 </div>
-              </div>
-
-              {/* Direction Card - with conflict awareness */}
-              <div style={{
-                background: 'rgba(30,41,59,0.6)',
-                border: `2px solid ${
-                  (result.compositeScore?.conflicts?.length ?? 0) > 0 ? '#F59E0B' : // Show warning color if conflicts
-                  result.direction === 'bullish' ? '#10B981' : 
-                  result.direction === 'bearish' ? '#EF4444' : '#6B7280'
-                }`,
-                borderRadius: '16px',
-                padding: '1.5rem',
-              }}>
-                <h3 style={{ margin: '0 0 0.75rem 0', color: '#E2E8F0', fontSize: '1rem' }}>Direction Signal</h3>
-                
-                {/* Show conflict warning at top if there are conflicts */}
-                {(result.compositeScore?.conflicts?.length ?? 0) > 0 && (
-                  <div style={{
-                    background: 'rgba(245,158,11,0.15)',
-                    border: '1px solid rgba(245,158,11,0.4)',
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.75rem',
-                    color: '#FCD34D'
-                  }}>
-                    ⚠️ {result.compositeScore?.conflicts?.length ?? 0} signal conflict(s) detected - see Pro Insights
-                  </div>
-                )}
-                
-                <div style={{ 
-                  fontSize: '1.5rem', 
-                  fontWeight: 'bold',
-                  color: (result.compositeScore?.conflicts?.length ?? 0) > 0 ? '#F59E0B' :
-                         result.direction === 'bullish' ? '#10B981' : 
-                         result.direction === 'bearish' ? '#EF4444' : '#6B7280',
-                  marginBottom: '0.5rem'
-                }}>
-                  {(result.compositeScore?.conflicts?.length ?? 0) > 0 && result.strategyRecommendation?.strategy === 'Iron Condor' 
-                    ? '⚖️ NEUTRAL — IRON CONDOR' 
-                    : result.direction === 'bullish' ? '🟢 BULLISH — BUY CALLS' : 
-                      result.direction === 'bearish' ? '🔴 BEARISH — BUY PUTS' : 
-                      '⚪ NEUTRAL — WAIT'}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>
-                  <div>Pull Bias: <span style={{ color: result.pullBias > 0 ? '#10B981' : result.pullBias < 0 ? '#EF4444' : '#6B7280' }}>
-                    {result.pullBias > 0 ? '+' : ''}{result.pullBias.toFixed(1)}%
-                  </span></div>
-                  <div>Signal Strength: <span style={{ color: result.signalStrength === 'strong' ? '#10B981' : result.signalStrength === 'moderate' ? '#F59E0B' : '#6B7280' }}>
-                    {result.signalStrength.toUpperCase()}
-                  </span></div>
-                  {result.compositeScore && (
-                    <div>Confidence: <span style={{ 
-                      color: result.compositeScore.confidence >= 70 ? '#10B981' : 
-                             result.compositeScore.confidence >= 50 ? '#F59E0B' : '#EF4444'
-                    }}>
-                      {result.compositeScore.confidence.toFixed(0)}%
-                    </span></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Entry Timing Card */}
-              <div style={{
-                background: 'rgba(30,41,59,0.6)',
-                border: `2px solid ${urgencyColor(result.entryTiming.urgency)}`,
-                borderRadius: '16px',
-                padding: '1.5rem',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: '1rem' }}>Entry Timing</h3>
-                  
-                  {/* Market Session Badge */}
-                  {result.entryTiming.marketSession && (
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 'bold',
-                      padding: '0.25rem 0.5rem',
-                      borderRadius: '9999px',
-                      background: result.entryTiming.marketSession === 'regular' 
-                        ? 'rgba(16,185,129,0.2)' 
-                        : result.entryTiming.marketSession === 'closed'
-                        ? 'rgba(239,68,68,0.2)'
-                        : 'rgba(245,158,11,0.2)',
-                      color: result.entryTiming.marketSession === 'regular' 
-                        ? '#10B981' 
-                        : result.entryTiming.marketSession === 'closed'
-                        ? '#EF4444'
-                        : '#F59E0B',
-                      border: `1px solid ${
-                        result.entryTiming.marketSession === 'regular' 
-                          ? 'rgba(16,185,129,0.4)' 
-                          : result.entryTiming.marketSession === 'closed'
-                          ? 'rgba(239,68,68,0.4)'
-                          : 'rgba(245,158,11,0.4)'
-                      }`
-                    }}>
-                      {result.entryTiming.marketSession === 'regular' ? '🟢 REGULAR HOURS' :
-                       result.entryTiming.marketSession === 'premarket' ? '🌅 PRE-MARKET' :
-                       result.entryTiming.marketSession === 'afterhours' ? '🌙 AFTER-HOURS' :
-                       '🔒 CLOSED'}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Extended hours warning */}
-                {result.entryTiming.marketSession && result.entryTiming.marketSession !== 'regular' && (
-                  <div style={{
-                    background: 'rgba(245,158,11,0.15)',
-                    border: '1px solid rgba(245,158,11,0.4)',
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.7rem',
-                    color: '#FCD34D'
-                  }}>
-                    {result.entryTiming.marketSession === 'premarket' && 
-                      '⚠️ Pre-market (4am-9:30am EST) - Options have no liquidity. Prepare orders for market open.'}
-                    {result.entryTiming.marketSession === 'afterhours' && 
-                      '⚠️ After-hours (4pm-8pm EST) - Very low options liquidity. Wide spreads, poor fills.'}
-                    {result.entryTiming.marketSession === 'closed' && 
-                      '⚠️ Market closed - Price may gap at next open. Set limit orders, not market orders.'}
-                  </div>
-                )}
-                
-                {/* Low candle confluence warning */}
-                {result.candleCloseConfluence && result.candleCloseConfluence.confluenceScore < 20 && (
-                  <div style={{
-                    background: 'rgba(245,158,11,0.15)',
-                    border: '1px solid rgba(245,158,11,0.4)',
-                    borderRadius: '8px',
-                    padding: '0.5rem',
-                    marginBottom: '0.75rem',
-                    fontSize: '0.75rem',
-                    color: '#FCD34D'
-                  }}>
-                    ⚠️ Low candle confluence ({result.candleCloseConfluence.confluenceScore}%) - better entries when TFs close together
-                  </div>
-                )}
-                
-                <div style={{ 
-                  fontSize: '1.25rem', 
-                  fontWeight: 'bold',
-                  color: urgencyColor(result.entryTiming.urgency),
-                  marginBottom: '0.5rem'
-                }}>
-                  {urgencyEmoji(result.entryTiming.urgency)} {result.entryTiming.urgency.replace('_', ' ').toUpperCase()}
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                  {result.entryTiming.reason}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                  Window: {result.entryTiming.idealEntryWindow}
-                </div>
-                {/* Show all avoid windows that aren't extended hours (those are shown above) */}
-                {result.entryTiming.avoidWindows
-                  .filter(w => !w.includes('PRE-MARKET') && !w.includes('AFTER-HOURS') && !w.includes('MARKET CLOSED'))
-                  .length > 0 && (
-                  <div style={{ marginTop: '0.5rem' }}>
-                    {result.entryTiming.avoidWindows
-                      .filter(w => !w.includes('PRE-MARKET') && !w.includes('AFTER-HOURS') && !w.includes('MARKET CLOSED'))
-                      .map((warning, idx) => (
-                        <div key={idx} style={{ fontSize: '0.7rem', color: '#F97316', marginTop: idx > 0 ? '0.25rem' : 0 }}>
-                          {warning}
-                        </div>
-                      ))
-                    }
-                  </div>
-                )}
-              </div>
+              </details>
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
@@ -1096,25 +1195,36 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {/* PRO TRADER SECTION */}
-            <div style={{
+            {/* PRO TRADER SECTION - Collapsible */}
+            <details open style={{
               background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(59,130,246,0.15) 100%)',
               border: '2px solid rgba(168,85,247,0.5)',
               borderRadius: '20px',
               padding: '1.5rem',
               marginBottom: '1rem',
             }}>
-              <div style={{ 
+              <summary style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.75rem', 
                 marginBottom: '1.25rem',
+                cursor: 'pointer',
                 borderBottom: '1px solid rgba(168,85,247,0.3)',
-                paddingBottom: '0.75rem'
+                paddingBottom: '0.75rem',
+                listStyle: 'none',
               }}>
                 <span style={{ fontSize: '1.5rem' }}>🎯</span>
-                <h2 style={{ margin: 0, color: '#E9D5FF', fontSize: '1.25rem' }}>Pro Trader Insights</h2>
-              </div>
+                <h2 style={{ margin: 0, color: '#E9D5FF', fontSize: '1.25rem', flex: 1 }}>Pro Trader Insights</h2>
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  color: '#A78BFA',
+                  background: 'rgba(168,85,247,0.2)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                }}>
+                  ▼ Show Details
+                </span>
+              </summary>
 
               {/* COMPOSITE SCORE & STRATEGY - TOP OF PRO SECTION */}
               {result.compositeScore && (
@@ -1529,16 +1639,34 @@ export default function OptionsConfluenceScanner() {
                 )}
 
               </div>
-            </div>
+            </details>
 
-            {/* Confluence Info */}
-            <div style={{
+            {/* Confluence Info - Collapsible */}
+            <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(168,85,247,0.3)',
               borderRadius: '16px',
               padding: '1.5rem',
             }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#A855F7' }}>🔮 Confluence Analysis</h3>
+              <summary style={{ 
+                margin: '0 0 1rem 0', 
+                color: '#A78BFA', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                listStyle: 'none',
+              }}>
+                <span style={{ color: '#A855F7' }}>🔮</span>
+                <span>Confluence Analysis</span>
+                <span style={{ 
+                  fontSize: '0.7rem',
+                  marginLeft: 'auto',
+                  color: '#64748B',
+                }}>
+                  {result.confluenceStack} TFs active • click to expand
+                </span>
+              </summary>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{
                   background: 'rgba(168,85,247,0.2)',
@@ -1572,7 +1700,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
               </div>
-            </div>
+            </details>
 
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
             {result.candleCloseConfluence && (
@@ -2053,74 +2181,87 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                {/* High O/I Strikes with Greeks */}
+                {/* High O/I Strikes with Greeks - Collapsible */}
                 {result.openInterestAnalysis.highOIStrikes.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.75rem' }}>Top Open Interest Strikes with Greeks:</div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(100,100,100,0.3)' }}>
-                            <th style={{ textAlign: 'left', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>Strike</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>OI</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>IV</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981', fontWeight: '500' }}>Δ</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7', fontWeight: '500' }}>Γ</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444', fontWeight: '500' }}>Θ</th>
-                            <th style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6', fontWeight: '500' }}>ν</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
-                            <tr key={i} style={{ 
-                              borderBottom: '1px solid rgba(100,100,100,0.15)',
-                              background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent'
-                            }}>
-                              <td style={{ padding: '0.5rem' }}>
-                                <span style={{ 
-                                  fontWeight: 'bold', 
-                                  color: s.type === 'call' ? '#10B981' : '#EF4444',
-                                  marginRight: '0.25rem'
-                                }}>
-                                  ${s.strike}
-                                </span>
-                                <span style={{ 
-                                  fontSize: '0.7rem',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px',
-                                  background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                                  color: s.type === 'call' ? '#10B981' : '#EF4444'
-                                }}>
-                                  {s.type === 'call' ? 'C' : 'P'}
-                                </span>
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
-                                {(s.openInterest / 1000).toFixed(1)}K
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
-                                {s.iv ? `${(s.iv * 100).toFixed(0)}%` : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981' }}>
-                                {s.delta !== undefined ? s.delta.toFixed(2) : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7' }}>
-                                {s.gamma !== undefined ? s.gamma.toFixed(3) : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444' }}>
-                                {s.theta !== undefined ? s.theta.toFixed(3) : '-'}
-                              </td>
-                              <td style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6' }}>
-                                {s.vega !== undefined ? s.vega.toFixed(3) : '-'}
-                              </td>
+                  <details style={{ marginTop: '0.5rem' }}>
+                    <summary style={{ 
+                      cursor: 'pointer', 
+                      color: '#A78BFA', 
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                      padding: '0.5rem 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}>
+                      📊 Show Strike Analysis ({result.openInterestAnalysis.highOIStrikes.length} strikes with Greeks)
+                    </summary>
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(100,100,100,0.3)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>Strike</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>OI</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>IV</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981', fontWeight: '500' }}>Δ</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7', fontWeight: '500' }}>Γ</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444', fontWeight: '500' }}>Θ</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6', fontWeight: '500' }}>ν</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
+                              <tr key={i} style={{ 
+                                borderBottom: '1px solid rgba(100,100,100,0.15)',
+                                background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent'
+                              }}>
+                                <td style={{ padding: '0.5rem' }}>
+                                  <span style={{ 
+                                    fontWeight: 'bold', 
+                                    color: s.type === 'call' ? '#10B981' : '#EF4444',
+                                    marginRight: '0.25rem'
+                                  }}>
+                                    ${s.strike}
+                                  </span>
+                                  <span style={{ 
+                                    fontSize: '0.7rem',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                                    color: s.type === 'call' ? '#10B981' : '#EF4444'
+                                  }}>
+                                    {s.type === 'call' ? 'C' : 'P'}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                  {(s.openInterest / 1000).toFixed(1)}K
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                  {s.iv ? `${(s.iv * 100).toFixed(0)}%` : '-'}
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981' }}>
+                                  {s.delta !== undefined ? s.delta.toFixed(2) : '-'}
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7' }}>
+                                  {s.gamma !== undefined ? s.gamma.toFixed(3) : '-'}
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444' }}>
+                                  {s.theta !== undefined ? s.theta.toFixed(3) : '-'}
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6' }}>
+                                  {s.vega !== undefined ? s.vega.toFixed(3) : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.5rem', textAlign: 'right' }}>
+                        Δ Delta • Γ Gamma • Θ Theta • ν Vega
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.5rem', textAlign: 'right' }}>
-                      Δ Delta • Γ Gamma • Θ Theta • ν Vega
-                    </div>
-                  </div>
+                  </details>
                 )}
                 
                 {/* Alignment Check */}
