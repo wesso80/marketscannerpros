@@ -1712,25 +1712,40 @@ export default function OptionsConfluenceScanner() {
                   marginLeft: 'auto',
                   color: '#64748B',
                 }}>
-                  {result.confluenceStack} TFs active • click to expand
+                  {result.confluenceStack} TFs closing together • click to expand
                 </span>
               </summary>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{
-                  background: 'rgba(168,85,247,0.2)',
+                  background: result.confluenceStack >= 4 
+                    ? 'linear-gradient(135deg, rgba(16,185,129,0.3) 0%, rgba(168,85,247,0.2) 100%)'
+                    : result.confluenceStack >= 2
+                    ? 'rgba(168,85,247,0.2)'
+                    : 'rgba(100,116,139,0.2)',
                   padding: '1rem',
                   borderRadius: '12px',
                   textAlign: 'center',
-                  minWidth: '120px'
+                  minWidth: '120px',
+                  border: result.confluenceStack >= 4 ? '1px solid rgba(16,185,129,0.4)' : '1px solid transparent',
                 }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#A855F7' }}>
+                  <div style={{ 
+                    fontSize: '2rem', 
+                    fontWeight: 'bold', 
+                    color: result.confluenceStack >= 4 ? '#10B981' : result.confluenceStack >= 2 ? '#A855F7' : '#64748B',
+                  }}>
                     {result.confluenceStack}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>TFs Decompressing</div>
+                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                    {result.confluenceStack >= 4 ? 'TFs Closing Together 🔥' : 
+                     result.confluenceStack >= 2 ? 'TFs Aligned' : 
+                     result.confluenceStack === 1 ? 'TF Active' : 'No Clustering'}
+                  </div>
                 </div>
                 
                 <div style={{ flex: 1, minWidth: '200px' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Active Timeframes:</div>
+                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
+                    {result.confluenceStack >= 2 ? 'Clustered Timeframes:' : 'Active Timeframes:'}
+                  </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {result.decompressingTFs.length > 0 ? result.decompressingTFs.map(tf => (
                       <span key={tf} style={{
@@ -1743,7 +1758,7 @@ export default function OptionsConfluenceScanner() {
                         {tf}
                       </span>
                     )) : (
-                      <span style={{ color: '#64748B', fontSize: '0.85rem' }}>No TFs actively decompressing</span>
+                      <span style={{ color: '#64748B', fontSize: '0.85rem' }}>No TFs actively aligned</span>
                     )}
                   </div>
                 </div>

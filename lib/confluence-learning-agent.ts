@@ -273,9 +273,24 @@ interface DecompressionPull {
   distanceToMid50: number;                 // % distance
 }
 
+// Temporal Cluster - TFs that close together within a time window
+interface TemporalCluster {
+  clusterCenter: number;       // Minutes to cluster center
+  timeframes: string[];        // TFs in this cluster
+  count: number;              // Number of TFs
+  intensity: 'low' | 'moderate' | 'strong' | 'very_strong' | 'explosive';
+  score: number;              // 0-100
+}
+
 interface DecompressionAnalysis {
   decompressions: DecompressionPull[];
-  activeCount: number;
+  activeCount: number;                     // LEGACY: All TFs in decompression window
+  
+  // NEW: Temporal Clustering (the REAL confluence)
+  temporalCluster: TemporalCluster;        // Main cluster of TFs closing together
+  clusteredCount: number;                  // TFs actually closing together (within ±5 min)
+  clusteringRatio: number;                 // What % of active TFs are clustered (quality metric)
+  
   netPullDirection: 'bullish' | 'bearish' | 'neutral';
   netPullStrength: number;                 // Aggregate pull strength
   pullBias: number;                        // -100 to +100 (negative=bearish, positive=bullish)
@@ -1445,17 +1460,112 @@ export class ConfluenceLearningAgent {
     const activeDecomps = decompressions.filter(d => d.isDecompressing);
     const activeCount = activeDecomps.length;
     
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TEMPORAL CLUSTERING - Find TFs that close together within ±5 min window
+    // This is the REAL confluence metric (not just "how many TFs are active")
+    // ═══════════════════════════════════════════════════════════════════════════
+    const CLUSTER_WINDOW_MINS = 5;
+    
+    // Sort active decomps by minutes to close
+    const sortedDecomps = [...activeDecomps].sort((a, b) => a.minsToClose - b.minsToClose);
+    
+    // Find clusters
+    const clusters: TemporalCluster[] = [];
+    const usedIndices = new Set<number>();
+    
+    for (let i = 0; i < sortedDecomps.length; i++) {
+      if (usedIndices.has(i)) continue;
+      
+      const clusterCenter = sortedDecomps[i].minsToClose;
+      const clusterTFs: string[] = [sortedDecomps[i].tf];
+      usedIndices.add(i);
+      
+      // Find all other TFs closing within ±CLUSTER_WINDOW_MINS
+      for (let j = i + 1; j < sortedDecomps.length; j++) {
+        if (usedIndices.has(j)) continue;
+        
+        const diff = Math.abs(sortedDecomps[j].minsToClose - clusterCenter);
+        if (diff <= CLUSTER_WINDOW_MINS) {
+          clusterTFs.push(sortedDecomps[j].tf);
+          usedIndices.add(j);
+        }
+      }
+      
+      // Score the cluster
+      const count = clusterTFs.length;
+      let score: number;
+      let intensity: TemporalCluster['intensity'];
+      
+      if (count >= 6) {
+        score = 95;
+        intensity = 'explosive';
+      } else if (count >= 5) {
+        score = 80;
+        intensity = 'very_strong';
+      } else if (count >= 4) {
+        score = 65;
+        intensity = 'strong';
+      } else if (count >= 3) {
+        score = 40;
+        intensity = 'moderate';
+      } else if (count >= 2) {
+        score = 25;
+        intensity = 'low';
+      } else {
+        score = 10;
+        intensity = 'low';
+      }
+      
+      clusters.push({
+        clusterCenter,
+        timeframes: clusterTFs,
+        count,
+        intensity,
+        score,
+      });
+    }
+    
+    // Sort clusters by count (descending), then by time (ascending)
+    clusters.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.clusterCenter - b.clusterCenter;
+    });
+    
+    // Main cluster is the largest
+    const mainCluster: TemporalCluster = clusters[0] || {
+      clusterCenter: 999,
+      timeframes: [],
+      count: 0,
+      intensity: 'low',
+      score: 0,
+    };
+    
+    const clusteredCount = mainCluster.count;
+    const clusteringRatio = activeCount > 0 ? (clusteredCount / activeCount) * 100 : 0;
+    
+    // Calculate pull from CLUSTERED TFs only (not all active)
     let bullishPull = 0;
     let bearishPull = 0;
     const pullReasons: string[] = [];
     
+    // Only count TFs in the main cluster for pull calculation
+    const clusteredTFSet = new Set(mainCluster.timeframes);
+    
     for (const d of activeDecomps) {
+      // Weight clustered TFs more heavily
+      const isInCluster = clusteredTFSet.has(d.tf);
+      const weightMultiplier = isInCluster ? 1.5 : 0.3; // Clustered = full weight, isolated = minimal
+      
       if (d.pullDirection === 'up') {
-        bullishPull += d.pullStrength;
-        pullReasons.push(`${d.tf} pulling UP to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m to close)`);
+        bullishPull += d.pullStrength * weightMultiplier;
+        if (isInCluster) {
+          pullReasons.push(`${d.tf} pulling UP to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m)`);
+        }
       } else if (d.pullDirection === 'down') {
-        bearishPull += d.pullStrength;
-        pullReasons.push(`${d.tf} pulling DOWN to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m to close)`);
+        bearishPull += d.pullStrength * weightMultiplier;
+        if (isInCluster) {
+          pullReasons.push(`${d.tf} pulling DOWN to ${d.mid50Level.toFixed(2)} (${d.minsToClose}m)`);
+        }
       }
     }
     
@@ -1469,13 +1579,27 @@ export class ConfluenceLearningAgent {
       netPullDirection = 'bearish';
     }
     
-    const reasoning = activeCount > 0 
-      ? `${activeCount} TFs decompressing: ${pullReasons.join(', ')}`
-      : 'No active decompressions - wait for TFs to enter decompression window';
+    // Build reasoning based on clustering (the real confluence)
+    let reasoning: string;
+    if (clusteredCount >= 3) {
+      reasoning = `${clusteredCount} TFs closing together in ${mainCluster.clusterCenter}m: ${mainCluster.timeframes.join(', ')}`;
+    } else if (clusteredCount >= 2) {
+      reasoning = `${clusteredCount} TFs aligning (${mainCluster.timeframes.join(', ')}) in ${mainCluster.clusterCenter}m`;
+    } else if (activeCount > 0) {
+      reasoning = `${activeCount} TFs active but not aligned - low temporal confluence`;
+    } else {
+      reasoning = 'No active decompressions - wait for TF alignment';
+    }
     
     return {
       decompressions,
       activeCount,
+      
+      // NEW: Temporal clustering data
+      temporalCluster: mainCluster,
+      clusteredCount,
+      clusteringRatio,
+      
       netPullDirection,
       netPullStrength,
       pullBias,
@@ -1597,17 +1721,107 @@ export class ConfluenceLearningAgent {
     
     // Calculate decompression analysis
     const activeDecomps = allDecomps.filter(d => d.isDecompressing);
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TEMPORAL CLUSTERING - Find TFs that close together within ±5 min window
+    // This is the REAL confluence metric (not just "how many TFs are active")
+    // ═══════════════════════════════════════════════════════════════════════════
+    const CLUSTER_WINDOW_MINS = 5;
+    
+    // Sort active decomps by minutes to close (only for live market)
+    const liveDecomps = activeDecomps.filter(d => d.minsToClose > 0);
+    const sortedDecomps = [...liveDecomps].sort((a, b) => a.minsToClose - b.minsToClose);
+    
+    // Find clusters
+    const temporalClusters: TemporalCluster[] = [];
+    const usedIndices = new Set<number>();
+    
+    for (let i = 0; i < sortedDecomps.length; i++) {
+      if (usedIndices.has(i)) continue;
+      
+      const clusterCenter = sortedDecomps[i].minsToClose;
+      const clusterTFs: string[] = [sortedDecomps[i].tf];
+      usedIndices.add(i);
+      
+      // Find all other TFs closing within ±CLUSTER_WINDOW_MINS
+      for (let j = i + 1; j < sortedDecomps.length; j++) {
+        if (usedIndices.has(j)) continue;
+        
+        const diff = Math.abs(sortedDecomps[j].minsToClose - clusterCenter);
+        if (diff <= CLUSTER_WINDOW_MINS) {
+          clusterTFs.push(sortedDecomps[j].tf);
+          usedIndices.add(j);
+        }
+      }
+      
+      // Score the cluster
+      const count = clusterTFs.length;
+      let score: number;
+      let intensity: TemporalCluster['intensity'];
+      
+      if (count >= 6) {
+        score = 95;
+        intensity = 'explosive';
+      } else if (count >= 5) {
+        score = 80;
+        intensity = 'very_strong';
+      } else if (count >= 4) {
+        score = 65;
+        intensity = 'strong';
+      } else if (count >= 3) {
+        score = 40;
+        intensity = 'moderate';
+      } else if (count >= 2) {
+        score = 25;
+        intensity = 'low';
+      } else {
+        score = 10;
+        intensity = 'low';
+      }
+      
+      temporalClusters.push({
+        clusterCenter,
+        timeframes: clusterTFs,
+        count,
+        intensity,
+        score,
+      });
+    }
+    
+    // Sort clusters by count (descending), then by time (ascending)
+    temporalClusters.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return a.clusterCenter - b.clusterCenter;
+    });
+    
+    // Main cluster is the largest
+    const mainCluster: TemporalCluster = temporalClusters[0] || {
+      clusterCenter: isMarketClosed ? -1 : 999,
+      timeframes: isMarketClosed ? activeDecomps.map(d => d.tf) : [],
+      count: isMarketClosed ? activeDecomps.length : 0,  // For closed market, show all proximity-based
+      intensity: 'low',
+      score: 0,
+    };
+    
+    const clusteredCount = mainCluster.count;
+    const clusteringRatio = activeDecomps.length > 0 ? (clusteredCount / activeDecomps.length) * 100 : 0;
+    
+    // Calculate pull - weight clustered TFs more heavily
     let bullishPull = 0;
     let bearishPull = 0;
     const pullReasons: string[] = [];
+    const clusteredTFSet = new Set(mainCluster.timeframes);
     
     for (const d of activeDecomps) {
+      const isInCluster = clusteredTFSet.has(d.tf);
+      const weightMultiplier = isInCluster ? 1.5 : 0.3;
+      
       if (d.pullDirection === 'up') {
-        bullishPull += d.pullStrength;
-        pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
+        bullishPull += d.pullStrength * weightMultiplier;
+        if (isInCluster) pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
       } else if (d.pullDirection === 'down') {
-        bearishPull += d.pullStrength;
-        pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
+        bearishPull += d.pullStrength * weightMultiplier;
+        if (isInCluster) pullReasons.push(`${d.tf}→${d.mid50Level.toFixed(2)}`);
       }
     }
     
@@ -1617,24 +1831,32 @@ export class ConfluenceLearningAgent {
     if (pullBias > 20) netPullDirection = 'bullish';
     else if (pullBias < -20) netPullDirection = 'bearish';
     
-    // Build reasoning text
+    // Build reasoning text - now based on CLUSTERED count (the real confluence)
     let reasoningText = '';
     const closedReason = isWeekend ? 'weekend' : 'after hours';
-    if (activeDecomps.length > 0) {
-      if (isMarketClosed) {
-        reasoningText = `${activeDecomps.length} TFs near 50% levels (${closedReason}): ${pullReasons.join(', ')}`;
-      } else {
-        reasoningText = `${activeDecomps.length} TFs decompressing: ${pullReasons.join(', ')}`;
-      }
+    if (isMarketClosed) {
+      reasoningText = activeDecomps.length > 0 
+        ? `${activeDecomps.length} TFs near 50% levels (${closedReason}): ${pullReasons.join(', ')}`
+        : `Market closed (${closedReason}) - no TFs near 50% levels`;
+    } else if (clusteredCount >= 3) {
+      reasoningText = `${clusteredCount} TFs closing together in ${mainCluster.clusterCenter}m: ${mainCluster.timeframes.join(', ')}`;
+    } else if (clusteredCount >= 2) {
+      reasoningText = `${clusteredCount} TFs aligned (${mainCluster.timeframes.join(', ')}) in ${mainCluster.clusterCenter}m`;
+    } else if (activeDecomps.length > 0) {
+      reasoningText = `${activeDecomps.length} TFs active but not aligned - low temporal confluence`;
     } else {
-      reasoningText = isMarketClosed 
-        ? `Market closed (${closedReason}) - no TFs near 50% levels`
-        : 'No active decompressions';
+      reasoningText = 'No active decompressions - wait for TF alignment';
     }
     
     const decompression: DecompressionAnalysis = {
       decompressions: allDecomps,
       activeCount: activeDecomps.length,
+      
+      // NEW: Temporal clustering data
+      temporalCluster: mainCluster,
+      clusteredCount,
+      clusteringRatio,
+      
       netPullDirection,
       netPullStrength,
       pullBias,

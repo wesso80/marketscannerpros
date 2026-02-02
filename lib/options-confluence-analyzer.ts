@@ -1595,8 +1595,8 @@ function selectExpirationFromConfluence(
   const recommendations: ExpirationRecommendation[] = [];
   const today = new Date();
   
-  // Get the number of decompressing TFs to gauge urgency
-  const decompCount = confluenceResult.decompression.activeCount;
+  // Use clusteredCount (TFs closing together) for urgency, not just active count
+  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
   const hasHighConfluence = decompCount >= 3;
   
   for (const dte of expirationConfig.dte) {
@@ -1652,19 +1652,26 @@ function gradeTradeQuality(
   const reasons: string[] = [];
   let score = 0;
   
-  // Confluence stack (0-25 points)
-  const decompCount = confluenceResult.decompression.activeCount;
+  // Use clusteredCount (TFs closing together) for real confluence score
+  // Fall back to activeCount for backwards compatibility
+  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
+  const clusterRatio = confluenceResult.decompression.clusteringRatio ?? 100;
+  
+  // Confluence stack (0-25 points) - based on CLUSTERED count now
   if (decompCount >= 5) {
     score += 25;
-    reasons.push(`✅ Mega confluence: ${decompCount} TFs decompressing`);
+    reasons.push(`✅ Mega confluence: ${decompCount} TFs closing together`);
   } else if (decompCount >= 3) {
     score += 18;
-    reasons.push(`✅ Strong confluence: ${decompCount} TFs decompressing`);
+    reasons.push(`✅ Strong confluence: ${decompCount} TFs closing together`);
   } else if (decompCount >= 2) {
     score += 10;
-    reasons.push(`⚡ Moderate confluence: ${decompCount} TFs`);
+    reasons.push(`⚡ Moderate confluence: ${decompCount} TFs aligned`);
+  } else if (decompCount === 1) {
+    score += 3;
+    reasons.push(`⚠️ Low confluence: 1 TF active (no clustering)`);
   } else {
-    reasons.push(`⚠️ Low confluence: only ${decompCount} TF decompressing`);
+    reasons.push(`❌ No active confluence - wait for TF alignment`);
   }
   
   // Direction clarity (0-25 points)
@@ -1771,11 +1778,16 @@ function calculateEntryTiming(
   const estHour = (utcHour + 24 + estOffset) % 24;
   const estTimeDecimal = estHour + utcMin / 60;
   
-  const decompCount = confluenceResult.decompression.activeCount;
+  // Use clusteredCount (TFs closing together) for real confluence
+  const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
   const activeDecomps = confluenceResult.decompression.decompressions.filter(d => d.isDecompressing);
   
-  // Find nearest decompression close
-  const nearestClose = activeDecomps
+  // Get cluster info for display
+  const clusterTimeframes = confluenceResult.decompression.temporalCluster?.timeframes || [];
+  const clusterMinsToClose = confluenceResult.decompression.temporalCluster?.clusterCenter || 0;
+  
+  // Find nearest decompression close from clustered TFs
+  const nearestClose = clusterMinsToClose > 0 ? clusterMinsToClose : activeDecomps
     .map(d => d.minsToClose)
     .filter(m => m > 0)
     .sort((a, b) => a - b)[0];
@@ -1869,7 +1881,7 @@ function calculateEntryTiming(
       idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
     } else {
       urgency = 'immediate';
-      reason = `${decompCount} TFs decompressing + ${candleScore}% candle confluence - prime entry window`;
+      reason = `${decompCount} TFs closing together + ${candleScore}% candle confluence - prime entry window`;
       idealWindow = nearestClose ? `Before ${nearestClose}m TF close` : 'Now';
     }
   } else if (decompCount >= 3 && Math.abs(confluenceResult.decompression.pullBias) >= 60) {
@@ -1880,7 +1892,7 @@ function calculateEntryTiming(
       idealWindow = marketSession === 'premarket' ? 'At market open (9:30am EST)' : 'Tomorrow at open';
     } else {
       urgency = 'within_hour';
-      reason = `${decompCount} TFs decompressing but candle confluence only ${candleScore}% - wait for better alignment`;
+      reason = `${decompCount} TFs closing together but candle confluence only ${candleScore}% - wait for better alignment`;
       const bestWindow = candleCloseConfluence?.bestEntryWindow;
       idealWindow = bestWindow ? `In ${bestWindow.startMins}-${bestWindow.endMins} mins` : 'Within 30 minutes';
     }
@@ -2111,14 +2123,24 @@ export class OptionsConfluenceAnalyzer {
       finalDirection = compositeScore.finalDirection || direction;
     }
     
+    // Use clusteredCount (TFs closing together) instead of activeCount (all decompressing)
+    // This reflects REAL temporal confluence, not just "how many TFs exist"
+    const realConfluenceCount = decompression.clusteredCount ?? decompression.activeCount;
+    
+    // Only show TFs that are part of the main temporal cluster
+    const clusteredTFSet = new Set(decompression.temporalCluster?.timeframes || []);
+    const clusteredDecompressingTFs = decompression.decompressions
+      .filter(d => d.isDecompressing && clusteredTFSet.has(d.tf))
+      .map(d => d.tf);
+    
     return {
       symbol,
       currentPrice,
       direction: finalDirection,
-      confluenceStack: decompression.activeCount,
-      decompressingTFs: decompression.decompressions
-        .filter(d => d.isDecompressing)
-        .map(d => d.tf),
+      confluenceStack: realConfluenceCount,
+      decompressingTFs: clusteredDecompressingTFs.length > 0 
+        ? clusteredDecompressingTFs 
+        : decompression.decompressions.filter(d => d.isDecompressing).map(d => d.tf),
       pullBias: decompression.pullBias,
       signalStrength,
       tradeQuality: grade,

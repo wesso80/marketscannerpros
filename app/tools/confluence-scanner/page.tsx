@@ -21,6 +21,9 @@ interface HierarchicalResult {
     netPullStrength: number;
     pullBias: number;
     reasoning: string;
+    temporalCluster?: { timeframes: string[]; avgMinsToClose: number; windowSize: number };
+    clusteredCount?: number;
+    clusteringRatio?: number;
   };
   mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[];
   clusters: { levels: number[]; tfs: string[]; avgLevel: number }[];
@@ -230,12 +233,14 @@ export default function AIConfluenceScanner() {
     if (!hierarchicalResult) return null;
     const conditions: { type: 'extreme' | 'warning' | 'opportunity'; label: string; desc: string }[] = [];
     
-    // High confluence stack (8+)
-    const activeDecompCount = hierarchicalResult.decompression.activeCount;
+    // Use clusteredCount (TFs closing together) for real confluence
+    const activeDecompCount = hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount;
     if (activeDecompCount >= 5) {
-      conditions.push({ type: 'extreme', label: '🔥 MEGA CONFLUENCE', desc: `${activeDecompCount} TFs decompressing simultaneously!` });
+      conditions.push({ type: 'extreme', label: '🔥 MEGA CONFLUENCE', desc: `${activeDecompCount} TFs closing together!` });
     } else if (activeDecompCount >= 3) {
-      conditions.push({ type: 'opportunity', label: '✨ STRONG CONFLUENCE', desc: `${activeDecompCount} TFs decompressing` });
+      conditions.push({ type: 'opportunity', label: '✨ STRONG CONFLUENCE', desc: `${activeDecompCount} TFs aligned` });
+    } else if (activeDecompCount <= 1) {
+      conditions.push({ type: 'warning', label: '⏸️ LOW ALIGNMENT', desc: 'Wait for TF clustering' });
     }
     
     // Strong directional bias (>80%)
@@ -805,7 +810,7 @@ export default function AIConfluenceScanner() {
                      hierarchicalResult.signalStrength === 'weak' ? '💤 WEAK' : '❌ NO SIGNAL'}
                   </div>
                   <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
-                    {hierarchicalResult.decompression.activeCount} TFs decompressing
+                    {hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount} TFs closing together
                   </div>
                 </div>
               </div>

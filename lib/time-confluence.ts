@@ -160,6 +160,9 @@ export interface TimeConfluenceState {
   decompressing: DecompressionStatus[];
   decompressionCount: number;
   
+  // TEMPORAL COMPRESSION - the REAL confluence metric
+  temporalCompression: TemporalCompressionState;
+  
   // Next major confluence
   nextMajor: TimeConfluence | null;
   minutesToNextMajor: number;
@@ -311,6 +314,31 @@ function getFibonacciCandlesClosing(minutesSinceOpen: number): string[] {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * All trackable intraday timeframes for clustering
+ */
+const ALL_INTRADAY_TFS = ['5m', '10m', '15m', '30m', '1H', '2H', '3H', '4H', '6H', '8H', '1D'];
+
+/**
+ * Get timeframe interval in minutes
+ */
+function getTFIntervalMins(tf: string): number {
+  switch (tf) {
+    case '5m': return 5;
+    case '10m': return 10;
+    case '15m': return 15;
+    case '30m': return 30;
+    case '1H': return 60;
+    case '2H': return 120;
+    case '3H': return 180;
+    case '4H': return 240;
+    case '6H': return 360;
+    case '8H': return 390; // Full trading day
+    case '1D': return 390; // Full trading day
+    default: return 9999;
+  }
+}
+
+/**
  * Calculate minutes until a specific timeframe candle closes
  */
 function getMinutesToClose(date: Date, timeframe: string): number {
@@ -319,53 +347,202 @@ function getMinutesToClose(date: Date, timeframe: string): number {
   const marketCloseMins = NYSE_CLOSE_HOUR * 60; // 4:00 PM = 960 mins
   const minutesSinceOpen = getMinutesSinceOpen(date);
   
-  // Intraday timeframes
-  switch (timeframe) {
-    case '1H': {
-      const nextHourClose = Math.ceil(minutesSinceOpen / 60) * 60;
-      return Math.max(0, nextHourClose - minutesSinceOpen);
-    }
-    case '2H': {
-      const next2HClose = Math.ceil(minutesSinceOpen / 120) * 120;
-      return Math.max(0, next2HClose - minutesSinceOpen);
-    }
-    case '3H': {
-      const next3HClose = Math.ceil(minutesSinceOpen / 180) * 180;
-      return Math.max(0, next3HClose - minutesSinceOpen);
-    }
-    case '4H': {
-      const next4HClose = Math.ceil(minutesSinceOpen / 240) * 240;
-      return Math.max(0, next4HClose - minutesSinceOpen);
-    }
-    case '6H': {
-      const next6HClose = Math.ceil(minutesSinceOpen / 360) * 360;
-      return Math.max(0, next6HClose - minutesSinceOpen);
-    }
-    case '8H': {
-      // 8H closes at market close
-      return Math.max(0, 390 - minutesSinceOpen);
-    }
-    case '1D': {
-      // Daily closes at 4 PM
-      return Math.max(0, marketCloseMins - totalMins);
-    }
-    // For multi-day, weekly, monthly - would need calendar logic
-    // Simplified: return large number if not applicable today
-    default:
-      return 99999;
+  // Handle pre-market and after-hours
+  if (minutesSinceOpen < 0 || minutesSinceOpen > 390) {
+    return 99999;
   }
+  
+  const interval = getTFIntervalMins(timeframe);
+  
+  // Daily and 8H close at market close
+  if (timeframe === '1D' || timeframe === '8H') {
+    return Math.max(0, marketCloseMins - totalMins);
+  }
+  
+  // For other timeframes, find next close
+  const nextClose = Math.ceil(minutesSinceOpen / interval) * interval;
+  
+  // Cap at market close (390 mins = 6.5 hours)
+  if (nextClose > 390) {
+    return 99999; // Won't close today
+  }
+  
+  return Math.max(0, nextClose - minutesSinceOpen);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEMPORAL COMPRESSION MODEL (Pro Version)
+// 
+// Real confluence = how many candle closes occur within a tight time window
+// Not just "how many timeframes exist"
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface TemporalCluster {
+  minutesToClose: number;      // Minutes until cluster center
+  timeframes: string[];        // TFs closing in this cluster
+  size: number;               // Number of TFs in cluster
+  intensity: 'low' | 'moderate' | 'strong' | 'very_strong' | 'explosive';
+  score: number;              // 0-100 score
+  label: string;              // Human-readable label
+}
+
+export interface TemporalCompressionState {
+  // The dominant cluster (highest count within window)
+  mainCluster: TemporalCluster;
+  
+  // All clusters found
+  allClusters: TemporalCluster[];
+  
+  // For countdown display
+  nextClusterTime: number;    // Minutes to next meaningful cluster
+  activeNow: boolean;         // Is a cluster closing right now (within 1 min)?
+  
+  // Summary
+  compressionLabel: string;   // "4 TFs closing in 3 min" or "Low alignment"
+}
+
+/**
+ * Calculate temporal compression - the REAL time confluence
+ * Clusters candle closes that occur within a rolling window
+ */
+export function calcTemporalCompression(date: Date, windowMinutes: number = 5): TemporalCompressionState {
+  const minutesSinceOpen = getMinutesSinceOpen(date);
+  
+  // Get minutes-to-close for all timeframes
+  const closeTimings: { tf: string; minsToClose: number }[] = [];
+  
+  for (const tf of ALL_INTRADAY_TFS) {
+    const minsToClose = getMinutesToClose(date, tf);
+    if (minsToClose < 9999 && minsToClose >= 0) {
+      closeTimings.push({ tf, minsToClose });
+    }
+  }
+  
+  // Sort by minutes to close
+  closeTimings.sort((a, b) => a.minsToClose - b.minsToClose);
+  
+  // Find clusters within the window
+  const clusters: TemporalCluster[] = [];
+  const used = new Set<number>();
+  
+  for (let i = 0; i < closeTimings.length; i++) {
+    if (used.has(i)) continue;
+    
+    const clusterCenter = closeTimings[i].minsToClose;
+    const clusterTFs: string[] = [closeTimings[i].tf];
+    used.add(i);
+    
+    // Find all other TFs closing within ±windowMinutes of this one
+    for (let j = i + 1; j < closeTimings.length; j++) {
+      if (used.has(j)) continue;
+      
+      const diff = Math.abs(closeTimings[j].minsToClose - clusterCenter);
+      if (diff <= windowMinutes) {
+        clusterTFs.push(closeTimings[j].tf);
+        used.add(j);
+      }
+    }
+    
+    // Score the cluster based on size
+    const size = clusterTFs.length;
+    let score: number;
+    let intensity: TemporalCluster['intensity'];
+    let label: string;
+    
+    if (size >= 6) {
+      score = 95;
+      intensity = 'explosive';
+      label = '🔥 Explosive Compression';
+    } else if (size >= 5) {
+      score = 80;
+      intensity = 'very_strong';
+      label = '⚡ Very Strong';
+    } else if (size >= 4) {
+      score = 65;
+      intensity = 'strong';
+      label = '💪 Strong';
+    } else if (size >= 3) {
+      score = 40;
+      intensity = 'moderate';
+      label = '📊 Moderate';
+    } else if (size >= 2) {
+      score = 25;
+      intensity = 'low';
+      label = '📉 Low';
+    } else {
+      score = 10;
+      intensity = 'low';
+      label = '⏸️ Quiet';
+    }
+    
+    clusters.push({
+      minutesToClose: clusterCenter,
+      timeframes: clusterTFs,
+      size,
+      intensity,
+      score,
+      label,
+    });
+  }
+  
+  // Sort clusters by size (descending) then by time (ascending)
+  clusters.sort((a, b) => {
+    if (b.size !== a.size) return b.size - a.size;
+    return a.minutesToClose - b.minutesToClose;
+  });
+  
+  // Get main cluster (largest, or nearest if tie)
+  const mainCluster = clusters[0] || {
+    minutesToClose: 999,
+    timeframes: [],
+    size: 0,
+    intensity: 'low' as const,
+    score: 0,
+    label: '⏸️ No Active Clusters',
+  };
+  
+  // Find next meaningful cluster (size >= 3)
+  const meaningfulClusters = clusters.filter(c => c.size >= 3);
+  const nextMeaningful = meaningfulClusters.find(c => c.minutesToClose > 0) || mainCluster;
+  
+  // Check if closing right now
+  const activeNow = mainCluster.minutesToClose <= 1 && mainCluster.size >= 2;
+  
+  // Build summary label
+  let compressionLabel: string;
+  if (activeNow) {
+    compressionLabel = `🔴 ${mainCluster.size} TFs closing NOW`;
+  } else if (mainCluster.size >= 3 && mainCluster.minutesToClose <= 10) {
+    compressionLabel = `${mainCluster.size} TFs closing in ${mainCluster.minutesToClose}m`;
+  } else if (mainCluster.size >= 2) {
+    compressionLabel = `${mainCluster.size} TFs align in ${mainCluster.minutesToClose}m`;
+  } else {
+    compressionLabel = 'Low temporal alignment';
+  }
+  
+  return {
+    mainCluster,
+    allClusters: clusters,
+    nextClusterTime: nextMeaningful.minutesToClose,
+    activeNow,
+    compressionLabel,
+  };
 }
 
 /**
  * Get all timeframes currently in decompression phase
+ * UPDATED: Now uses temporal clustering to show real confluence
  */
 export function getDecompressionStatus(date: Date): DecompressionStatus[] {
   const results: DecompressionStatus[] = [];
   
-  // Check each intraday timeframe
-  const intradayTFs = ['1H', '2H', '3H', '4H', '6H', '8H', '1D'];
+  // Get temporal compression for context
+  const compression = calcTemporalCompression(date, 5);
   
-  for (const tf of intradayTFs) {
+  // Only return TFs that are part of a meaningful cluster (size >= 2)
+  const mainClusterTFs = new Set(compression.mainCluster.timeframes);
+  
+  for (const tf of ALL_INTRADAY_TFS) {
     const startMins = DECOMPRESSION_START[tf];
     if (!startMins) continue;
     
@@ -373,6 +550,11 @@ export function getDecompressionStatus(date: Date): DecompressionStatus[] {
     
     // Skip if too far from close or already closed
     if (minsToClose > startMins || minsToClose <= 0) {
+      continue;
+    }
+    
+    // Only include if part of the main cluster (actual confluence)
+    if (!mainClusterTFs.has(tf) && compression.mainCluster.size >= 2) {
       continue;
     }
     
@@ -806,6 +988,17 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
   // Get decompression status - which TFs are decompressing toward 50%
   const decompressing = marketOpen ? getDecompressionStatus(date) : [];
   
+  // Get TEMPORAL COMPRESSION - the real confluence metric
+  const temporalCompression = marketOpen 
+    ? calcTemporalCompression(date, 5) 
+    : {
+        mainCluster: { minutesToClose: 999, timeframes: [], size: 0, intensity: 'low' as const, score: 0, label: '⏸️ Market Closed' },
+        allClusters: [],
+        nextClusterTime: 999,
+        activeNow: false,
+        compressionLabel: 'Market closed',
+      };
+  
   // Get next major intraday
   const { confluence: nextMajor, minutesAway: minutesToNextMajor } = getNextMajorConfluence(date);
   
@@ -830,6 +1023,9 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
     // Decompression tracking
     decompressing,
     decompressionCount: decompressing.length,
+    
+    // Temporal compression (the REAL confluence)
+    temporalCompression,
     
     nextMajor,
     minutesToNextMajor,
