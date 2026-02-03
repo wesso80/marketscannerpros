@@ -84,7 +84,7 @@ async function fetchAllIndicators(apiKey: string, now: number) {
     return allCached.data;
   }
   
-  // Fetch key indicators in parallel
+  // Fetch key indicators sequentially with delays to avoid rate limits
   const indicatorsToFetch = [
     { func: 'TREASURY_YIELD', maturity: '10year' },
     { func: 'TREASURY_YIELD', maturity: '2year' },
@@ -95,20 +95,30 @@ async function fetchAllIndicators(apiKey: string, now: number) {
     { func: 'REAL_GDP' },
   ];
   
-  const results = await Promise.all(
-    indicatorsToFetch.map(async (ind) => {
-      try {
-        let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
-        if (ind.maturity) url += `&maturity=${ind.maturity}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        return { indicator: ind.func, maturity: ind.maturity, data };
-      } catch (e) {
-        return { indicator: ind.func, maturity: ind.maturity, error: true };
+  const results: any[] = [];
+  
+  for (const ind of indicatorsToFetch) {
+    try {
+      let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
+      if (ind.maturity) url += `&maturity=${ind.maturity}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      // Log for debugging
+      if (data.Note || data['Error Message']) {
+        console.warn(`Economic indicator ${ind.func} rate limited or error:`, data.Note || data['Error Message']);
       }
-    })
-  );
+      
+      results.push({ indicator: ind.func, maturity: ind.maturity, data });
+      
+      // Wait 250ms between requests to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 250));
+    } catch (e) {
+      console.error(`Error fetching ${ind.func}:`, e);
+      results.push({ indicator: ind.func, maturity: ind.maturity, error: true });
+    }
+  }
   
   // Process results
   const treasury10y = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '10year');
