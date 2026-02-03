@@ -7,11 +7,17 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 // Commodity definitions with their AV function names and display info
 const COMMODITIES = {
+  // Precious Metals (use GOLD_SILVER_HISTORY endpoint)
+  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
+  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
+  // Energy
   WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy' },
   BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy' },
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy' },
+  // Base Metals
   COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals' },
   ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/tonne', category: 'Metals' },
+  // Agriculture
   WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture' },
   CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture' },
   COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture' },
@@ -45,7 +51,16 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
 
   try {
     const config = COMMODITIES[symbol];
-    const url = `https://www.alphavantage.co/query?function=${config.function}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    
+    // Different URL format for precious metals (Gold/Silver)
+    let url: string;
+    if ('isPreciousMetal' in config && config.isPreciousMetal) {
+      // Gold and Silver use GOLD_SILVER_HISTORY with symbol parameter
+      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_HISTORY&symbol=${config.symbol}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    } else {
+      // Other commodities use their function directly
+      url = `https://www.alphavantage.co/query?function=${config.function}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    }
     
     const res = await fetch(url, { 
       next: { revalidate: 900 } // 15 min cache

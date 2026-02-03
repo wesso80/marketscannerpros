@@ -44,6 +44,8 @@ const CATEGORY_CONFIG = {
 
 // Commodity-specific icons
 const COMMODITY_ICONS: { [key: string]: string } = {
+  GOLD: '🥇',
+  SILVER: '🥈',
   WTI: '🛢️',
   BRENT: '🛢️',
   NATURAL_GAS: '🔥',
