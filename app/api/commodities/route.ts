@@ -140,10 +140,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, commodity: data });
     }
 
-    // Fetch all commodities in parallel (with rate limiting consideration)
-    // Alpha Vantage Premium allows 75 calls/min, so we're safe here
+    // Fetch commodities sequentially to avoid rate limiting
+    // Alpha Vantage Premium allows 75 calls/min, but parallel calls can still hit limits
     const symbols = Object.keys(COMMODITIES) as (keyof typeof COMMODITIES)[];
-    const results = await Promise.all(symbols.map(s => fetchCommodity(s)));
+    const results: (CommodityData | null)[] = [];
+    
+    for (const s of symbols) {
+      const data = await fetchCommodity(s);
+      results.push(data);
+      // Add small delay between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
     
     const commodities = results.filter((r): r is CommodityData => r !== null);
     
