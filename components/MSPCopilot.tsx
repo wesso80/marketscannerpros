@@ -44,7 +44,7 @@ export default function MSPCopilot({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const skillConfig = SKILL_CONFIGS[skill];
+  const skillConfig = SKILL_CONFIGS[skill] || SKILL_CONFIGS.home;
   
   // Check if we have meaningful page data
   const hasPageData = useMemo(() => {

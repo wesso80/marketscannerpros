@@ -3,6 +3,7 @@
 import MSPCopilot from '@/components/MSPCopilot';
 import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import type { PageSkill } from '@/lib/ai/types';
 
 // Map route paths to skills
@@ -17,6 +18,10 @@ function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/watchlist')) return 'watchlist';
   if (pathname.includes('/backtest')) return 'backtest';
   if (pathname.includes('/ai-analyst')) return 'ai_analyst';
+  if (pathname.includes('/market-movers') || pathname.includes('/gainers-losers')) return 'market_movers';
+  if (pathname.includes('/macro')) return 'macro';
+  if (pathname.includes('/earnings')) return 'earnings';
+  if (pathname.includes('/commodities')) return 'commodities';
   return 'home';
 }
 
@@ -42,8 +47,12 @@ export default function ToolsLayout({
 
   return (
     <AIPageProvider>
-      {children}
-      <CopilotWithContext fallbackSkill={skill} />
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+      <ErrorBoundary fallback={null}>
+        <CopilotWithContext fallbackSkill={skill} />
+      </ErrorBoundary>
     </AIPageProvider>
   );
 }
