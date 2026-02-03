@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { 
   PageSkill, 
   CopilotTab, 
@@ -45,6 +45,68 @@ export default function MSPCopilot({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const skillConfig = SKILL_CONFIGS[skill];
+  
+  // Check if we have meaningful page data
+  const hasPageData = useMemo(() => {
+    return pageData && Object.keys(pageData).length > 0 && pageData.symbol;
+  }, [pageData]);
+
+  // Generate tab-specific content based on page data
+  const getTabContent = useMemo(() => {
+    if (!hasPageData) return null;
+    
+    const symbol = pageData.symbol as string || 'N/A';
+    const price = pageData.currentPrice as number || pageData.price as number;
+    const direction = pageData.direction as string;
+    const quality = pageData.tradeQuality as string;
+    const confluence = pageData.confluenceStack as number;
+    const signalStrength = pageData.signalStrength as string;
+    
+    return {
+      explain: {
+        title: '📊 Scan Results Summary',
+        content: [
+          { label: 'Symbol', value: symbol, highlight: true },
+          { label: 'Price', value: price ? `$${price.toFixed(2)}` : 'N/A' },
+          { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
+          { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
+          { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
+          { label: 'Signal', value: signalStrength || 'N/A' },
+        ],
+        footer: 'Ask me to explain any specific metric or signal.',
+      },
+      plan: {
+        title: '📋 Trade Plan',
+        content: direction ? [
+          { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
+          { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
+          { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
+          { label: 'Risk', value: pageData.tradeLevels ? `Stop: $${(pageData.tradeLevels as { stopLoss?: number })?.stopLoss?.toFixed(2) || 'N/A'}` : 'Define your stop' },
+        ] : [],
+        footer: direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.',
+      },
+      act: {
+        title: '⚡ Suggested Actions',
+        actions: hasPageData ? [
+          { icon: '🔔', label: `Create alert for ${symbol}`, action: 'create_alert' },
+          { icon: '📝', label: 'Log to trade journal', action: 'journal_trade' },
+          { icon: '⭐', label: 'Add to watchlist', action: 'add_to_watchlist' },
+          { icon: '📊', label: 'Run backtest', action: 'run_backtest' },
+        ] : [],
+        footer: 'Click an action or ask me to help.',
+      },
+      learn: {
+        title: '📚 Learn From This Scan',
+        topics: [
+          { icon: '💡', label: 'Why this signal matters', question: `Explain why ${direction || 'this'} signal on ${symbol} is significant` },
+          { icon: '📈', label: 'What confluence means', question: 'Explain what confluence stack means and how to use it' },
+          { icon: '⚠️', label: 'Risk considerations', question: `What are the risks of this ${symbol} trade?` },
+          { icon: '🎯', label: 'Similar setups', question: `Show me examples of similar ${direction || 'trading'} setups` },
+        ],
+        footer: 'Click a topic to learn more.',
+      },
+    };
+  }, [hasPageData, pageData]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -357,48 +419,195 @@ export default function MSPCopilot({
         }}
       >
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>👋</div>
-            <div style={{ color: '#E2E8F0', fontWeight: '600', marginBottom: '0.5rem' }}>
-              How can I help?
-            </div>
-            <div style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Ask me anything about this page, your trades, or market analysis.
-            </div>
-            
-            {/* Quick prompts */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {getQuickPrompts().map((prompt, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setInput(prompt);
-                    setTimeout(() => inputRef.current?.focus(), 0);
-                  }}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '10px',
-                    color: '#94A3B8',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
-                    e.currentTarget.style.color = '#E2E8F0';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-                    e.currentTarget.style.color = '#94A3B8';
-                  }}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
+          <div style={{ padding: '0.5rem 0' }}>
+            {/* Show tab-specific content when we have page data */}
+            {hasPageData && getTabContent ? (
+              <div>
+                {/* EXPLAIN TAB */}
+                {activeTab === 'explain' && getTabContent.explain && (
+                  <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      {getTabContent.explain.title}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      {getTabContent.explain.content.map((item, i) => (
+                        <div key={i} style={{ 
+                          background: item.highlight ? 'rgba(59, 130, 246, 0.15)' : 'rgba(51, 65, 85, 0.3)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          gridColumn: item.highlight ? '1 / -1' : undefined,
+                        }}>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase' }}>{item.label}</div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: '600', color: item.color || '#E2E8F0' }}>{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                      {getTabContent.explain.footer}
+                    </div>
+                  </div>
+                )}
+
+                {/* PLAN TAB */}
+                {activeTab === 'plan' && getTabContent.plan && (
+                  <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      {getTabContent.plan.title}
+                    </div>
+                    {getTabContent.plan.content.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {getTabContent.plan.content.map((item, i) => (
+                          <div key={i} style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            padding: '0.5rem 0.75rem',
+                            background: 'rgba(51, 65, 85, 0.3)',
+                            borderRadius: '6px',
+                          }}>
+                            <span style={{ color: '#94A3B8', fontSize: '0.85rem' }}>{item.label}</span>
+                            <span style={{ color: item.color || '#E2E8F0', fontWeight: '600', fontSize: '0.85rem' }}>{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#64748B', fontSize: '0.85rem' }}>Run a scan to see trade planning.</div>
+                    )}
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                      {getTabContent.plan.footer}
+                    </div>
+                  </div>
+                )}
+
+                {/* ACT TAB */}
+                {activeTab === 'act' && getTabContent.act && (
+                  <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(249, 115, 22, 0.2)' }}>
+                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      {getTabContent.act.title}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {getTabContent.act.actions.map((action, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setInput(`${action.label} for ${pageData.symbol}`);
+                            setTimeout(() => sendMessage(), 100);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem',
+                            background: 'rgba(249, 115, 22, 0.1)',
+                            border: '1px solid rgba(249, 115, 22, 0.3)',
+                            borderRadius: '8px',
+                            color: '#F97316',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.2)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)'}
+                        >
+                          <span style={{ fontSize: '1.1rem' }}>{action.icon}</span>
+                          <span>{action.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                      {getTabContent.act.footer}
+                    </div>
+                  </div>
+                )}
+
+                {/* LEARN TAB */}
+                {activeTab === 'learn' && getTabContent.learn && (
+                  <div style={{ background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+                    <div style={{ fontWeight: '600', color: '#E2E8F0', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                      {getTabContent.learn.title}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {getTabContent.learn.topics.map((topic, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setInput(topic.question);
+                            setTimeout(() => sendMessage(), 100);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            padding: '0.75rem',
+                            background: 'rgba(168, 85, 247, 0.1)',
+                            border: '1px solid rgba(168, 85, 247, 0.3)',
+                            borderRadius: '8px',
+                            color: '#A855F7',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'}
+                        >
+                          <span style={{ fontSize: '1.1rem' }}>{topic.icon}</span>
+                          <span>{topic.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
+                      {getTabContent.learn.footer}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Default empty state when no page data */
+              <div style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>👋</div>
+                <div style={{ color: '#E2E8F0', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  How can I help?
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                  Ask me anything about this page, your trades, or market analysis.
+                </div>
+                
+                {/* Quick prompts */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {getQuickPrompts().map((prompt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setInput(prompt);
+                        setTimeout(() => inputRef.current?.focus(), 0);
+                      }}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '10px',
+                        color: '#94A3B8',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                        e.currentTarget.style.color = '#E2E8F0';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                        e.currentTarget.style.color = '#94A3B8';
+                      }}
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
