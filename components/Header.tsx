@@ -120,6 +120,7 @@ export default function Header() {
     { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '📈' },
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
+    { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
     { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
   ];
 

@@ -1,0 +1,164 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// Alpha Vantage commodity endpoints
+// https://www.alphavantage.co/documentation/#commodities
+
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+
+// Commodity definitions with their AV function names and display info
+const COMMODITIES = {
+  WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy' },
+  BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy' },
+  NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy' },
+  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals' },
+  ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/tonne', category: 'Metals' },
+  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture' },
+  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture' },
+  COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture' },
+  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: 'cents/lb', category: 'Agriculture' },
+  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture' },
+};
+
+// Cache for commodity data (15 minute TTL - commodities update less frequently)
+const cache: Map<string, { data: any; timestamp: number }> = new Map();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+interface CommodityData {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  unit: string;
+  category: string;
+  date: string;
+  history: { date: string; value: number }[];
+}
+
+async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<CommodityData | null> {
+  const cacheKey = `commodity_${symbol}`;
+  const cached = cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const config = COMMODITIES[symbol];
+    const url = `https://www.alphavantage.co/query?function=${config.function}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    
+    const res = await fetch(url, { 
+      next: { revalidate: 900 } // 15 min cache
+    });
+    
+    if (!res.ok) {
+      console.error(`Failed to fetch ${symbol}: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    
+    // Check for API errors
+    if (data['Error Message'] || data['Note']) {
+      console.error(`Alpha Vantage error for ${symbol}:`, data['Error Message'] || data['Note']);
+      return null;
+    }
+
+    // Parse the data array
+    const dataPoints = data.data;
+    if (!dataPoints || !Array.isArray(dataPoints) || dataPoints.length < 2) {
+      console.error(`No data for ${symbol}`);
+      return null;
+    }
+
+    // Get latest and previous values
+    const latest = dataPoints[0];
+    const previous = dataPoints[1];
+    
+    const currentPrice = parseFloat(latest.value);
+    const previousPrice = parseFloat(previous.value);
+    const change = currentPrice - previousPrice;
+    const changePercent = (change / previousPrice) * 100;
+
+    // Get last 30 days of history
+    const history = dataPoints.slice(0, 30).map((d: any) => ({
+      date: d.date,
+      value: parseFloat(d.value)
+    }));
+
+    const result: CommodityData = {
+      symbol,
+      name: config.name,
+      price: currentPrice,
+      change,
+      changePercent,
+      unit: config.unit,
+      category: config.category,
+      date: latest.date,
+      history,
+    };
+
+    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
+  } catch (err) {
+    console.error(`Error fetching ${symbol}:`, err);
+    return null;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const symbol = searchParams.get('symbol')?.toUpperCase();
+
+    // If specific symbol requested
+    if (symbol && symbol in COMMODITIES) {
+      const data = await fetchCommodity(symbol as keyof typeof COMMODITIES);
+      if (!data) {
+        return NextResponse.json({ error: `Failed to fetch ${symbol}` }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, commodity: data });
+    }
+
+    // Fetch all commodities in parallel (with rate limiting consideration)
+    // Alpha Vantage Premium allows 75 calls/min, so we're safe here
+    const symbols = Object.keys(COMMODITIES) as (keyof typeof COMMODITIES)[];
+    const results = await Promise.all(symbols.map(s => fetchCommodity(s)));
+    
+    const commodities = results.filter((r): r is CommodityData => r !== null);
+    
+    // Group by category
+    const byCategory = {
+      Energy: commodities.filter(c => c.category === 'Energy'),
+      Metals: commodities.filter(c => c.category === 'Metals'),
+      Agriculture: commodities.filter(c => c.category === 'Agriculture'),
+    };
+
+    // Calculate summary stats
+    const summary = {
+      totalCommodities: commodities.length,
+      gainers: commodities.filter(c => c.changePercent > 0).length,
+      losers: commodities.filter(c => c.changePercent < 0).length,
+      avgChange: commodities.length > 0 
+        ? commodities.reduce((sum, c) => sum + c.changePercent, 0) / commodities.length 
+        : 0,
+      topGainer: commodities.length > 0 
+        ? commodities.reduce((max, c) => c.changePercent > max.changePercent ? c : max)
+        : null,
+      topLoser: commodities.length > 0 
+        ? commodities.reduce((min, c) => c.changePercent < min.changePercent ? c : min)
+        : null,
+    };
+
+    return NextResponse.json({
+      success: true,
+      commodities,
+      byCategory,
+      summary,
+      lastUpdate: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('Commodities API error:', err);
+    return NextResponse.json({ error: 'Failed to fetch commodity data' }, { status: 500 });
+  }
+}
