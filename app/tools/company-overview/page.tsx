@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -36,20 +37,26 @@ interface CompanyData {
   changePercent: string | null;
 }
 
-export default function CompanyOverviewPage() {
+function CompanyOverviewContent() {
   const { tier, isAdmin } = useUserTier();
+  const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CompanyData | null>(null);
   const [error, setError] = useState("");
 
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="🏢 Company Overview" description="Comprehensive company fundamentals and financials" />;
-  }
+  // Auto-load symbol from URL parameter
+  useEffect(() => {
+    const urlSymbol = searchParams.get('symbol');
+    if (urlSymbol) {
+      setSymbol(urlSymbol.toUpperCase());
+      // Auto-fetch the data
+      fetchCompanyData(urlSymbol.toUpperCase());
+    }
+  }, [searchParams]);
 
-  const handleSearch = async () => {
-    if (!symbol.trim()) {
+  const fetchCompanyData = async (sym: string) => {
+    if (!sym.trim()) {
       setError("Please enter a symbol");
       return;
     }
@@ -59,7 +66,7 @@ export default function CompanyOverviewPage() {
     setData(null);
 
     try {
-      const response = await fetch(`/api/company-overview?symbol=${symbol.toUpperCase()}`);
+      const response = await fetch(`/api/company-overview?symbol=${sym.toUpperCase()}`);
       const result = await response.json();
 
       if (!result.success) {
@@ -72,6 +79,15 @@ export default function CompanyOverviewPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Data licensing gate - only admins can access for now
+  if (!isAdmin) {
+    return <DataComingSoon toolName="🏢 Company Overview" description="Comprehensive company fundamentals and financials" />;
+  }
+
+  const handleSearch = async () => {
+    fetchCompanyData(symbol);
   };
 
   const formatValue = (value: string | undefined | null) => {
@@ -573,6 +589,19 @@ export default function CompanyOverviewPage() {
       </div>
     </main>
     </div>
+  );
+}
+
+// Wrapper component with Suspense for useSearchParams
+export default function CompanyOverviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0B1120] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    }>
+      <CompanyOverviewContent />
+    </Suspense>
   );
 }
 
