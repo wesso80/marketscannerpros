@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { ProModeDashboard, ConfluenceMap, PhaseStrip } from "@/components/ProModeDashboard";
@@ -9,6 +9,7 @@ import {
   OptionsSignals, 
   ProbabilityResult 
 } from "@/lib/signals/probability-engine";
+import { useAIPageContext } from "@/lib/ai/pageContext";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -237,6 +238,7 @@ interface ExpirationOption {
 
 export default function OptionsConfluenceScanner() {
   const { tier, isAdmin } = useUserTier();
+  const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<OptionsSetup | null>(null);
@@ -251,6 +253,37 @@ export default function OptionsConfluenceScanner() {
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
   const [showProMode, setShowProMode] = useState(true); // Toggle for Pro Mode dashboard
+
+  // Push scan results to AI Copilot context
+  useEffect(() => {
+    if (result) {
+      setPageData({
+        skill: 'options',
+        symbols: [result.symbol],
+        data: {
+          symbol: result.symbol,
+          currentPrice: result.currentPrice,
+          direction: result.direction,
+          signalStrength: result.signalStrength,
+          confluenceStack: result.confluenceStack,
+          tradeQuality: result.tradeQuality,
+          qualityReasons: result.qualityReasons,
+          primaryStrike: result.primaryStrike,
+          alternativeStrikes: result.alternativeStrikes,
+          primaryExpiration: result.primaryExpiration,
+          greeksAdvice: result.greeksAdvice,
+          entryTiming: result.entryTiming,
+          openInterestAnalysis: result.openInterestAnalysis,
+          ivAnalysis: result.ivAnalysis,
+          unusualActivity: result.unusualActivity,
+          tradeLevels: result.tradeLevels,
+          compositeScore: result.compositeScore,
+          strategyRecommendation: result.strategyRecommendation,
+        },
+        summary: `Options scan for ${result.symbol} at $${result.currentPrice}: ${result.direction.toUpperCase()} bias (${result.tradeQuality}) with ${result.signalStrength} strength. Confluence: ${result.confluenceStack}/8.`,
+      });
+    }
+  }, [result, setPageData]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROBABILITY ENGINE - Institutional-Grade Win Probability Calculation

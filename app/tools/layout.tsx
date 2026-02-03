@@ -2,6 +2,7 @@
 
 import MSPCopilot from '@/components/MSPCopilot';
 import { usePathname } from 'next/navigation';
+import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import type { PageSkill } from '@/lib/ai/types';
 
 // Map route paths to skills
@@ -19,6 +20,18 @@ function getSkillFromPath(pathname: string): PageSkill {
   return 'home';
 }
 
+function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
+  const { pageData } = useAIPageContext();
+  
+  return (
+    <MSPCopilot 
+      skill={pageData?.skill || fallbackSkill}
+      pageData={pageData?.data || {}}
+      symbols={pageData?.symbols || []}
+    />
+  );
+}
+
 export default function ToolsLayout({
   children,
 }: {
@@ -28,9 +41,9 @@ export default function ToolsLayout({
   const skill = getSkillFromPath(pathname);
 
   return (
-    <>
+    <AIPageProvider>
       {children}
-      <MSPCopilot skill={skill} />
-    </>
+      <CopilotWithContext fallbackSkill={skill} />
+    </AIPageProvider>
   );
 }
