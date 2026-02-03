@@ -42,16 +42,14 @@ const CATEGORY_CONFIG = {
   Agriculture: { icon: '🌾', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
 };
 
-// Commodity-specific icons (reduced to core 8 commodities)
+// Commodity-specific icons (6 core commodities)
 const COMMODITY_ICONS: { [key: string]: string } = {
+  WTI: '🛢️',
+  NATURAL_GAS: '🔥',
   GOLD: '🥇',
   SILVER: '🥈',
-  WTI: '🛢️',
-  BRENT: '🛢️',
-  NATURAL_GAS: '🔥',
   COPPER: '🟤',
   WHEAT: '🌾',
-  CORN: '🌽',
 };
 
 export default function CommoditiesPage() {

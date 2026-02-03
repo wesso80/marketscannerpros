@@ -5,22 +5,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// Commodity definitions with their AV function names and display info
-// NOTE: Energy commodities support daily interval, but base metals and agriculture only support monthly
-// REDUCED to 8 core commodities to avoid rate limiting issues
+// Core commodities - simplified for reliability
+// GOLD_SILVER_SPOT returns real-time spot price (different format than other commodities)
 const COMMODITIES = {
-  // Energy (supports daily interval) - 3 most important
-  WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
-  BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
-  NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', supportsDaily: true },
-  // Precious Metals (use GOLD_SILVER_HISTORY endpoint - supports daily)
-  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
-  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
-  // Base Metals (only monthly/quarterly/annual)
-  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', supportsDaily: false },
-  // Agriculture (only monthly/quarterly/annual) - top 2
-  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
-  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
+  WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
+  NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', interval: 'daily' },
+  GOLD: { function: 'GOLD_SILVER_SPOT', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
+  SILVER: { function: 'GOLD_SILVER_SPOT', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
+  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', interval: 'monthly' },
+  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', interval: 'monthly' },
 };
 
 // Cache for commodity data (15 minute TTL - commodities update less frequently)
@@ -44,24 +37,25 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
   const cached = cache.get(cacheKey);
   
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[Commodities] Cache hit for ${symbol}`);
     return cached.data;
   }
 
   try {
     const config = COMMODITIES[symbol];
     
-    // Determine the interval - some commodities only support monthly
-    const interval = config.supportsDaily ? 'daily' : 'monthly';
-    
-    // Different URL format for precious metals (Gold/Silver)
+    // Build URL based on commodity type
     let url: string;
     if ('isPreciousMetal' in config && config.isPreciousMetal) {
-      // Gold and Silver use GOLD_SILVER_HISTORY with symbol parameter
-      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_HISTORY&symbol=${config.symbol}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      // Gold/Silver use GOLD_SILVER_SPOT endpoint (no interval needed)
+      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_SPOT&symbol=${config.symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     } else {
-      // Other commodities use their function directly
+      // Other commodities use their function directly with interval
+      const interval = 'interval' in config ? config.interval : 'monthly';
       url = `https://www.alphavantage.co/query?function=${config.function}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     }
+    
+    console.log(`[Commodities] Fetching ${symbol}...`);
     
     const res = await fetch(url, { 
       next: { revalidate: 900 } // 15 min cache
@@ -80,28 +74,51 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       return null;
     }
 
-    // Parse the data array
-    const dataPoints = data.data;
-    if (!dataPoints || !Array.isArray(dataPoints) || dataPoints.length < 2) {
-      console.error(`No data for ${symbol}`);
-      return null;
+    let currentPrice: number;
+    let previousPrice: number;
+    let latestDate: string;
+    let history: { date: string; value: number }[] = [];
+
+    // Handle Gold/Silver spot price format (different from other commodities)
+    if ('isPreciousMetal' in config && config.isPreciousMetal) {
+      // GOLD_SILVER_SPOT returns: { "symbol": "GOLD", "price": "2853.12", ... }
+      if (!data.price) {
+        console.error(`No spot price data for ${symbol}:`, JSON.stringify(data));
+        return null;
+      }
+      currentPrice = parseFloat(data.price);
+      // Spot endpoint doesn't provide previous price, use 0 change
+      previousPrice = currentPrice;
+      latestDate = new Date().toISOString().split('T')[0];
+      // No history available from spot endpoint
+      history = [{ date: latestDate, value: currentPrice }];
+    } else {
+      // Regular commodities return historical data array
+      const dataPoints = data.data;
+      if (!dataPoints || !Array.isArray(dataPoints) || dataPoints.length < 2) {
+        console.error(`No data for ${symbol}:`, JSON.stringify(data));
+        return null;
+      }
+
+      // Get latest and previous values
+      const latest = dataPoints[0];
+      const previous = dataPoints[1];
+      
+      currentPrice = parseFloat(latest.value);
+      previousPrice = parseFloat(previous.value);
+      latestDate = latest.date;
+
+      // Get history (30 points for daily, 12 months for monthly)
+      const interval = 'interval' in config ? config.interval : 'monthly';
+      const historyLimit = interval === 'daily' ? 30 : 12;
+      history = dataPoints.slice(0, historyLimit).map((d: any) => ({
+        date: d.date,
+        value: parseFloat(d.value)
+      }));
     }
 
-    // Get latest and previous values
-    const latest = dataPoints[0];
-    const previous = dataPoints[1];
-    
-    const currentPrice = parseFloat(latest.value);
-    const previousPrice = parseFloat(previous.value);
     const change = currentPrice - previousPrice;
-    const changePercent = (change / previousPrice) * 100;
-
-    // Get history (30 points for daily, 12 months for monthly)
-    const historyLimit = config.supportsDaily ? 30 : 12;
-    const history = dataPoints.slice(0, historyLimit).map((d: any) => ({
-      date: d.date,
-      value: parseFloat(d.value)
-    }));
+    const changePercent = previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
 
     const result: CommodityData = {
       symbol,
@@ -111,7 +128,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
       changePercent,
       unit: config.unit,
       category: config.category,
-      date: latest.date,
+      date: latestDate,
       history,
     };
 
@@ -137,19 +154,33 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, commodity: data });
     }
 
-    // Fetch commodities sequentially to avoid rate limiting
-    // Alpha Vantage Premium allows 75 calls/min, but parallel calls can still hit limits
+    // Fetch commodities sequentially with longer delays
     const symbols = Object.keys(COMMODITIES) as (keyof typeof COMMODITIES)[];
     const results: (CommodityData | null)[] = [];
     
-    for (const s of symbols) {
+    console.log(`[Commodities] Starting fetch for ${symbols.length} commodities...`);
+    
+    for (let i = 0; i < symbols.length; i++) {
+      const s = symbols[i];
       const data = await fetchCommodity(s);
       results.push(data);
-      // Add delay between requests to avoid rate limiting (300ms = safe for 75 calls/min limit)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Add 500ms delay between requests (except after last)
+      if (i < symbols.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
     
     const commodities = results.filter((r): r is CommodityData => r !== null);
+    
+    console.log(`[Commodities] Fetched ${commodities.length}/${symbols.length} successfully`);
+    
+    // If zero commodities, return error
+    if (commodities.length === 0) {
+      return NextResponse.json({ 
+        error: 'Failed to fetch commodity data. Please try again.',
+        success: false 
+      }, { status: 500 });
+    }
     
     // Group by category
     const byCategory = {
