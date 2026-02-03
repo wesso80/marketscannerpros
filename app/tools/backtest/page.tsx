@@ -7,6 +7,7 @@ import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
 import DataComingSoon from '@/components/DataComingSoon';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 
 interface BacktestResult {
   totalTrades: number;
@@ -70,6 +71,33 @@ function BacktestContent() {
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
+
+  // AI Page Context - share backtest results with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (results) {
+      setPageData({
+        skill: 'backtest',
+        symbols: [symbol],
+        data: {
+          symbol,
+          strategy,
+          timeframe,
+          startDate,
+          endDate,
+          totalTrades: results.totalTrades,
+          winRate: results.winRate,
+          totalReturn: results.totalReturn,
+          maxDrawdown: results.maxDrawdown,
+          profitFactor: results.profitFactor,
+          sharpeRatio: results.sharpeRatio,
+          cagr: results.cagr,
+        },
+        summary: `Backtest ${symbol} (${strategy}): ${results.winRate.toFixed(1)}% win rate, ${results.totalReturn >= 0 ? '+' : ''}${results.totalReturn.toFixed(1)}% return, ${results.maxDrawdown.toFixed(1)}% max drawdown`,
+      });
+    }
+  }, [results, symbol, strategy, timeframe, startDate, endDate, setPageData]);
 
   // Update symbol if URL param changes
   useEffect(() => {

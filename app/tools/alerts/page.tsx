@@ -1,13 +1,30 @@
 'use client';
 
+import { useEffect, Suspense } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import { Suspense } from "react";
+import { useAIPageContext } from "@/lib/ai/pageContext";
 
 function AlertsContent() {
   const { tier, isLoading } = useUserTier();
+
+  // AI Page Context - share alerts page state with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    // Set basic page context - alerts are managed by AlertsWidget
+    setPageData({
+      skill: 'watchlist', // alerts fall under watchlist skill
+      symbols: [],
+      data: {
+        pageType: 'alerts',
+        tier,
+      },
+      summary: `Price Alerts page - manage price alerts for crypto, stocks, and forex`,
+    });
+  }, [tier, setPageData]);
 
   if (isLoading) {
     return (

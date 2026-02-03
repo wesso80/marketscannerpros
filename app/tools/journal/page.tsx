@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import { useUserTier, canExportCSV, canAccessAdvancedJournal } from '@/lib/useUserTier';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 
 interface JournalEntry {
   id: number;
@@ -72,6 +73,37 @@ function JournalContent() {
 
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // AI Page Context - share journal data with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (entries.length > 0) {
+      const closedEntries = entries.filter(e => !e.isOpen);
+      const wins = closedEntries.filter(e => e.outcome === 'win').length;
+      const winRate = closedEntries.length > 0 ? (wins / closedEntries.length) * 100 : 0;
+      const recentEntries = entries.slice(0, 5).map(e => ({
+        symbol: e.symbol,
+        side: e.side,
+        outcome: e.outcome,
+        pl: e.pl,
+        date: e.date,
+      }));
+
+      setPageData({
+        skill: 'journal',
+        symbols: [...new Set(entries.map(e => e.symbol))],
+        data: {
+          entriesCount: entries.length,
+          openCount: entries.filter(e => e.isOpen).length,
+          closedCount: closedEntries.length,
+          winRate,
+          recentEntries,
+        },
+        summary: `Journal: ${entries.length} entries, ${closedEntries.length} closed trades, ${winRate.toFixed(1)}% win rate`,
+      });
+    }
+  }, [entries, setPageData]);
 
   // AI Journal Analysis function
   async function runAiAnalysis() {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import DataComingSoon from '@/components/DataComingSoon';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 
 interface FundingRate {
   symbol: string;
@@ -112,6 +113,38 @@ export default function CryptoDashboard() {
       if (interval) clearInterval(interval);
     };
   }, [fetchData, autoRefresh]);
+
+  // AI Page Context - share derivatives data with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (data.fundingRates || data.longShort || data.openInterest) {
+      const symbols = [
+        ...(data.fundingRates?.coins.map(c => c.symbol) || []),
+        ...(data.longShort?.coins.map(c => c.symbol) || []),
+      ].filter((v, i, a) => a.indexOf(v) === i).slice(0, 10);
+
+      setPageData({
+        skill: 'derivatives',
+        symbols,
+        data: {
+          fundingRates: data.fundingRates ? {
+            avgRate: data.fundingRates.avgRate,
+            sentiment: data.fundingRates.sentiment,
+            topCoins: data.fundingRates.coins.slice(0, 5),
+          } : null,
+          longShort: data.longShort ? {
+            overall: data.longShort.overall,
+            avgLong: data.longShort.avgLong,
+            avgShort: data.longShort.avgShort,
+          } : null,
+          openInterest: data.openInterest?.summary || null,
+          prices: data.prices,
+        },
+        summary: `Crypto Derivatives: Funding ${data.fundingRates?.sentiment || 'N/A'}, L/S ${data.longShort?.overall || 'N/A'}, OI ${data.openInterest?.summary?.marketSignal || 'N/A'}`,
+      });
+    }
+  }, [data, setPageData]);
   
   // OKX liquidation data - admin-only testing while negotiating commercial licenses
   // Must be after ALL hooks to comply with React rules

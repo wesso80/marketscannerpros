@@ -1,13 +1,25 @@
-import { Metadata } from 'next';
-import { Suspense } from 'react';
-import WatchlistWidget from '@/components/WatchlistWidget';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Watchlists | MarketScannerPros',
-  description: 'Create custom watchlists to track your favorite stocks, crypto, forex, and commodities. Organize symbols into multiple lists for easy monitoring.',
-};
+import { Suspense, useEffect } from 'react';
+import WatchlistWidget from '@/components/WatchlistWidget';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 
 function WatchlistsContent() {
+  // AI Page Context - share watchlist page state with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    // Set basic page context - watchlists are managed by WatchlistWidget
+    setPageData({
+      skill: 'watchlist',
+      symbols: [],
+      data: {
+        pageType: 'watchlists',
+      },
+      summary: `Watchlists page - create and manage custom symbol watchlists`,
+    });
+  }, [setPageData]);
+
   return (
     <div className="min-h-screen">
       <main className="pt-6 pb-16">

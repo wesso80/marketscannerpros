@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import DataComingSoon from "@/components/DataComingSoon";
+import { useAIPageContext } from "@/lib/ai/pageContext";
 
 interface PriceData {
   price: number;
@@ -341,6 +342,33 @@ export default function DeepAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
+
+  // AI Page Context - share analysis results with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (result) {
+      setPageData({
+        skill: 'deep_analysis',
+        symbols: [result.symbol],
+        data: {
+          symbol: result.symbol,
+          assetType: result.assetType,
+          price: result.price,
+          indicators: result.indicators,
+          signals: result.signals,
+          optionsData: result.optionsData ? {
+            putCallRatio: result.optionsData.putCallRatio,
+            maxPain: result.optionsData.maxPain,
+            totalCallOI: result.optionsData.totalCallOI,
+            totalPutOI: result.optionsData.totalPutOI,
+          } : null,
+          cryptoData: result.cryptoData,
+        },
+        summary: `Deep Analysis ${result.symbol}: ${result.signals?.signal || 'N/A'}, Score ${result.signals?.score || 0}/100, RSI ${result.indicators?.rsi?.toFixed(1) || 'N/A'}`,
+      });
+    }
+  }, [result, setPageData]);
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {

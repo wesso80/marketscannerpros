@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 
 interface Position {
   id: number;
@@ -505,6 +506,33 @@ function PortfolioContent() {
   const [manualPosition, setManualPosition] = useState<Position | null>(null);
   const [manualValue, setManualValue] = useState('');
   const [manualOpen, setManualOpen] = useState(false);
+
+  // AI Page Context - share portfolio data with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (positions.length > 0 || closedPositions.length > 0) {
+      const totalValue = positions.reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+      const totalPL = positions.reduce((sum, p) => sum + p.pl, 0);
+      const topPositions = [...positions]
+        .sort((a, b) => Math.abs(b.pl) - Math.abs(a.pl))
+        .slice(0, 5)
+        .map(p => ({ symbol: p.symbol, pl: p.pl, plPercent: p.plPercent }));
+
+      setPageData({
+        skill: 'portfolio',
+        symbols: positions.map(p => p.symbol),
+        data: {
+          positionsCount: positions.length,
+          closedCount: closedPositions.length,
+          totalValue,
+          totalPL,
+          topPositions,
+        },
+        summary: `Portfolio: ${positions.length} open positions, $${totalValue.toFixed(0)} value, ${totalPL >= 0 ? '+' : ''}$${totalPL.toFixed(2)} P&L`,
+      });
+    }
+  }, [positions, closedPositions, setPageData]);
 
   // AI Portfolio Analysis function
   async function runAiAnalysis() {

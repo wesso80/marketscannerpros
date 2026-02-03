@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier } from "@/lib/useUserTier";
+import { useAIPageContext } from "@/lib/ai/pageContext";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -524,6 +525,33 @@ function ScannerContent() {
     };
   } | null>(null);
   const [dailyPicksLoading, setDailyPicksLoading] = useState(false); // Disabled by default
+
+  // AI Page Context - share scan results with copilot
+  const { setPageData } = useAIPageContext();
+
+  useEffect(() => {
+    if (result) {
+      setPageData({
+        skill: 'scanner',
+        symbols: [result.symbol],
+        data: {
+          symbol: result.symbol,
+          price: result.price,
+          score: result.score,
+          direction: result.direction,
+          signals: result.signals,
+          rsi: result.rsi,
+          macd_hist: result.macd_hist,
+          atr: result.atr,
+          adx: result.adx,
+          derivatives: result.derivatives,
+          timeframe,
+          assetType,
+        },
+        summary: `Scanned ${result.symbol}: Score ${result.score}/100, ${result.direction || 'neutral'} bias, RSI ${result.rsi?.toFixed(1) || 'N/A'}`,
+      });
+    }
+  }, [result, timeframe, assetType, setPageData]);
 
   // Fetch daily top picks on mount (disabled - using bulk scan instead)
   useEffect(() => {
