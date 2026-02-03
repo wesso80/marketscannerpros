@@ -55,57 +55,62 @@ export default function MSPCopilot({
   const getTabContent = useMemo(() => {
     if (!hasPageData) return null;
     
-    const symbol = pageData.symbol as string || 'N/A';
-    const price = pageData.currentPrice as number || pageData.price as number;
-    const direction = pageData.direction as string;
-    const quality = pageData.tradeQuality as string;
-    const confluence = pageData.confluenceStack as number;
-    const signalStrength = pageData.signalStrength as string;
-    
-    return {
-      explain: {
-        title: '📊 Scan Results Summary',
-        content: [
-          { label: 'Symbol', value: symbol, highlight: true },
-          { label: 'Price', value: price ? `$${price.toFixed(2)}` : 'N/A' },
-          { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
-          { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
-          { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
-          { label: 'Signal', value: signalStrength || 'N/A' },
-        ],
-        footer: 'Ask me to explain any specific metric or signal.',
-      },
-      plan: {
-        title: '📋 Trade Plan',
-        content: direction ? [
-          { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
-          { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
-          { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
-          { label: 'Risk', value: pageData.tradeLevels ? `Stop: $${(pageData.tradeLevels as { stopLoss?: number })?.stopLoss?.toFixed(2) || 'N/A'}` : 'Define your stop' },
-        ] : [],
-        footer: direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.',
-      },
-      act: {
-        title: '⚡ Suggested Actions',
-        actions: hasPageData ? [
-          { icon: '🔔', label: `Create alert for ${symbol}`, action: 'create_alert' },
-          { icon: '📝', label: 'Log to trade journal', action: 'journal_trade' },
-          { icon: '⭐', label: 'Add to watchlist', action: 'add_to_watchlist' },
-          { icon: '📊', label: 'Run backtest', action: 'run_backtest' },
-        ] : [],
-        footer: 'Click an action or ask me to help.',
-      },
-      learn: {
-        title: '📚 Learn From This Scan',
-        topics: [
-          { icon: '💡', label: 'Why this signal matters', question: `Explain why ${direction || 'this'} signal on ${symbol} is significant` },
-          { icon: '📈', label: 'What confluence means', question: 'Explain what confluence stack means and how to use it' },
-          { icon: '⚠️', label: 'Risk considerations', question: `What are the risks of this ${symbol} trade?` },
-          { icon: '🎯', label: 'Similar setups', question: `Show me examples of similar ${direction || 'trading'} setups` },
-        ],
-        footer: 'Click a topic to learn more.',
-      },
-    };
+    try {
+      const symbol = pageData.symbol as string || 'N/A';
+      const price = pageData.currentPrice as number || pageData.price as number;
+      const direction = pageData.direction as string;
+      const quality = pageData.tradeQuality as string;
+      const confluence = pageData.confluenceStack as number;
+      const signalStrength = pageData.signalStrength as string;
+      
+      return {
+        explain: {
+          title: '📊 Scan Results Summary',
+          content: [
+            { label: 'Symbol', value: symbol, highlight: true },
+            { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
+            { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
+            { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
+            { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
+            { label: 'Signal', value: signalStrength || 'N/A' },
+          ],
+          footer: 'Ask me to explain any specific metric or signal.',
+        },
+        plan: {
+          title: '📋 Trade Plan',
+          content: direction ? [
+            { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
+            { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
+            { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
+            { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Stop: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your stop' },
+          ] : [],
+          footer: direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.',
+        },
+        act: {
+          title: '⚡ Suggested Actions',
+          actions: hasPageData ? [
+            { icon: '🔔', label: `Create alert for ${symbol}`, action: 'create_alert' },
+            { icon: '📝', label: 'Log to trade journal', action: 'journal_trade' },
+            { icon: '⭐', label: 'Add to watchlist', action: 'add_to_watchlist' },
+            { icon: '📊', label: 'Run backtest', action: 'run_backtest' },
+          ] : [],
+          footer: 'Click an action or ask me to help.',
+        },
+        learn: {
+          title: '📚 Learn From This Scan',
+          topics: [
+            { icon: '💡', label: 'Why this signal matters', question: `Explain why ${direction || 'this'} signal on ${symbol} is significant` },
+            { icon: '📈', label: 'What confluence means', question: 'Explain what confluence stack means and how to use it' },
+            { icon: '⚠️', label: 'Risk considerations', question: `What are the risks of this ${symbol} trade?` },
+            { icon: '🎯', label: 'Similar setups', question: `Show me examples of similar ${direction || 'trading'} setups` },
+          ],
+          footer: 'Click a topic to learn more.',
+        },
+      };
+    } catch (e) {
+      console.error('Error generating tab content:', e);
+      return null;
+    }
   }, [hasPageData, pageData]);
 
   // Scroll to bottom on new messages
