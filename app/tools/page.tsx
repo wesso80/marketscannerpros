@@ -821,6 +821,102 @@ export default function ToolsPage() {
                 </article>
               </Link>
 
+              {/* Market Movers */}
+              <Link href="/tools/market-movers" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>🚀</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Market Movers</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Top gainers, biggest losers, and most actively traded stocks. One-click to scan any mover in Options Confluence.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Daily Movers</span></span>
+                      <span>Type: Dashboard</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Macro Dashboard */}
+              <Link href="/tools/macro" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>🏛️</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Macro Dashboard</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Treasury yields, Fed funds rate, CPI, unemployment, and GDP. Yield curve inversion alerts and market regime analysis.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Economics</span></span>
+                      <span>Type: Dashboard</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
+              {/* Earnings Calendar */}
+              <Link href="/tools/earnings" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>📅</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Earnings Calendar</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Upcoming earnings reports with event risk warnings. Avoid undefined-risk options trades when earnings are within your DTE.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Event Risk</span></span>
+                      <span>Type: Calendar</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
               {/* Intraday Charts */}
               <Link href="/tools/intraday-charts" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{

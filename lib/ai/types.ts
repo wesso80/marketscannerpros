@@ -35,7 +35,11 @@ export type PageSkill =
   | 'deep_analysis'
   | 'watchlist'
   | 'backtest'
-  | 'ai_analyst';
+  | 'ai_analyst'
+  | 'market_movers'
+  | 'macro'
+  | 'earnings'
+  | 'commodities';
 
 export interface PageContext {
   name: PageSkill;
@@ -421,5 +425,37 @@ export const SKILL_CONFIGS: Record<PageSkill, SkillConfig> = {
     systemPromptAddition: 'General market analysis assistant. Can discuss any topic but stay within educational bounds.',
     retrievalCategories: ['methodology', 'signals', 'market_regime'],
     maxTokens: 800,
+  },
+  market_movers: {
+    skill: 'market_movers',
+    displayName: 'Market Movers',
+    allowedTools: ['get_market_context', 'add_to_watchlist', 'explain_metric'],
+    systemPromptAddition: 'Help analyze top gainers, losers, and most active stocks. Explain momentum signals.',
+    retrievalCategories: ['signals', 'methodology'],
+    maxTokens: 600,
+  },
+  macro: {
+    skill: 'macro',
+    displayName: 'Macro Dashboard',
+    allowedTools: ['get_market_context', 'explain_metric'],
+    systemPromptAddition: 'Explain economic indicators like treasury yields, inflation, unemployment. Discuss market regime implications.',
+    retrievalCategories: ['market_regime', 'methodology'],
+    maxTokens: 700,
+  },
+  earnings: {
+    skill: 'earnings',
+    displayName: 'Earnings Calendar',
+    allowedTools: ['get_market_context', 'add_to_watchlist', 'explain_metric'],
+    systemPromptAddition: 'Help identify earnings event risk. Warn about options strategies during earnings windows.',
+    retrievalCategories: ['options', 'methodology'],
+    maxTokens: 600,
+  },
+  commodities: {
+    skill: 'commodities',
+    displayName: 'Commodities',
+    allowedTools: ['get_market_context', 'explain_metric', 'add_to_watchlist'],
+    systemPromptAddition: 'Explain commodity price movements, energy and agriculture markets, and macro correlations.',
+    retrievalCategories: ['market_regime', 'signals'],
+    maxTokens: 600,
   },
 };

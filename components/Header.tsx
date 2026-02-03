@@ -115,18 +115,19 @@ export default function Header() {
   ];
 
   const marketItems: DropdownItem[] = [
+    { href: '/tools/market-movers', label: 'Market Movers', icon: '📈' },
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
     { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📈' },
     { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '📈' },
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
     { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
-    { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
+    { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
   ];
 
   const calendarItems: DropdownItem[] = [
-    { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📅' },
-    { href: '/tools/earnings-calendar', label: 'Earnings Calendar', icon: '💰' },
+    { href: '/tools/earnings', label: 'Earnings Calendar', icon: '📅' },
+    { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📊' },
     { href: '/tools/news', label: 'Market News', icon: '📰' },
   ];
 
