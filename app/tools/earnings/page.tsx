@@ -259,7 +259,7 @@ export default function EarningsCalendarPage() {
                       </td>
                       <td className="text-center px-4 py-3">
                         <a
-                          href={`/tools/options-confluence?symbol=${event.symbol}`}
+                          href={`/tools/company-overview?symbol=${event.symbol}`}
                           className="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
                         >
                           Analyze
