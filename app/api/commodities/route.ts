@@ -6,23 +6,24 @@ import { NextRequest, NextResponse } from 'next/server';
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 // Commodity definitions with their AV function names and display info
+// NOTE: Energy commodities support daily interval, but base metals and agriculture only support monthly
 const COMMODITIES = {
-  // Precious Metals (use GOLD_SILVER_HISTORY endpoint)
-  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
-  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
-  // Energy
-  WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy' },
-  BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy' },
-  NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy' },
-  // Base Metals
-  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals' },
-  ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/tonne', category: 'Metals' },
-  // Agriculture
-  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture' },
-  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture' },
-  COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture' },
-  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: 'cents/lb', category: 'Agriculture' },
-  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture' },
+  // Precious Metals (use GOLD_SILVER_HISTORY endpoint - supports daily)
+  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
+  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
+  // Energy (supports daily interval)
+  WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
+  BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
+  NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', supportsDaily: true },
+  // Base Metals (only monthly/quarterly/annual)
+  COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', supportsDaily: false },
+  ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/tonne', category: 'Metals', supportsDaily: false },
+  // Agriculture (only monthly/quarterly/annual)
+  WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
+  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
+  COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
+  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
+  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
 };
 
 // Cache for commodity data (15 minute TTL - commodities update less frequently)
@@ -52,14 +53,17 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
   try {
     const config = COMMODITIES[symbol];
     
+    // Determine the interval - some commodities only support monthly
+    const interval = config.supportsDaily ? 'daily' : 'monthly';
+    
     // Different URL format for precious metals (Gold/Silver)
     let url: string;
     if ('isPreciousMetal' in config && config.isPreciousMetal) {
       // Gold and Silver use GOLD_SILVER_HISTORY with symbol parameter
-      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_HISTORY&symbol=${config.symbol}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=GOLD_SILVER_HISTORY&symbol=${config.symbol}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     } else {
       // Other commodities use their function directly
-      url = `https://www.alphavantage.co/query?function=${config.function}&interval=daily&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      url = `https://www.alphavantage.co/query?function=${config.function}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     }
     
     const res = await fetch(url, { 
@@ -95,8 +99,9 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     const change = currentPrice - previousPrice;
     const changePercent = (change / previousPrice) * 100;
 
-    // Get last 30 days of history
-    const history = dataPoints.slice(0, 30).map((d: any) => ({
+    // Get history (30 points for daily, 12 months for monthly)
+    const historyLimit = config.supportsDaily ? 30 : 12;
+    const history = dataPoints.slice(0, historyLimit).map((d: any) => ({
       date: d.date,
       value: parseFloat(d.value)
     }));
