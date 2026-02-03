@@ -294,6 +294,21 @@ export function serializeContextForPrompt(context: UnifiedAIContext): string {
   // Market state
   parts.push(`Market: ${context.marketState.regime} regime, ${context.marketState.volatility} volatility, Fear/Greed: ${context.marketState.fearGreedIndex}`);
   
+  // PAGE DATA - Include the actual scan/page results!
+  if (context.pageData && Object.keys(context.pageData).length > 0) {
+    parts.push(`\n=== CURRENT PAGE DATA (USE THIS TO ANSWER QUESTIONS) ===`);
+    for (const [key, value] of Object.entries(context.pageData)) {
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'object') {
+          parts.push(`${key}: ${JSON.stringify(value, null, 0).slice(0, 500)}`);
+        } else {
+          parts.push(`${key}: ${value}`);
+        }
+      }
+    }
+    parts.push(`=== END PAGE DATA ===\n`);
+  }
+  
   // Open trades
   if (context.history.openTrades.length > 0) {
     const trades = context.history.openTrades.slice(0, 5).map(t => 
