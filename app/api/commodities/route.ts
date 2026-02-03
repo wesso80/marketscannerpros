@@ -7,23 +7,20 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 // Commodity definitions with their AV function names and display info
 // NOTE: Energy commodities support daily interval, but base metals and agriculture only support monthly
+// REDUCED to 8 core commodities to avoid rate limiting issues
 const COMMODITIES = {
-  // Precious Metals (use GOLD_SILVER_HISTORY endpoint - supports daily)
-  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
-  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
-  // Energy (supports daily interval)
+  // Energy (supports daily interval) - 3 most important
   WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
   BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy', supportsDaily: true },
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', supportsDaily: true },
+  // Precious Metals (use GOLD_SILVER_HISTORY endpoint - supports daily)
+  GOLD: { function: 'GOLD_SILVER_HISTORY', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
+  SILVER: { function: 'GOLD_SILVER_HISTORY', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true, supportsDaily: true },
   // Base Metals (only monthly/quarterly/annual)
   COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', supportsDaily: false },
-  ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/tonne', category: 'Metals', supportsDaily: false },
-  // Agriculture (only monthly/quarterly/annual)
+  // Agriculture (only monthly/quarterly/annual) - top 2
   WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
   CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture', supportsDaily: false },
-  COTTON: { function: 'COTTON', name: 'Cotton', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
-  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
-  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: 'cents/lb', category: 'Agriculture', supportsDaily: false },
 };
 
 // Cache for commodity data (15 minute TTL - commodities update less frequently)
@@ -148,8 +145,8 @@ export async function GET(req: NextRequest) {
     for (const s of symbols) {
       const data = await fetchCommodity(s);
       results.push(data);
-      // Add small delay between requests to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Add delay between requests to avoid rate limiting (300ms = safe for 75 calls/min limit)
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     const commodities = results.filter((r): r is CommodityData => r !== null);

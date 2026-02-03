@@ -42,7 +42,7 @@ const CATEGORY_CONFIG = {
   Agriculture: { icon: '🌾', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
 };
 
-// Commodity-specific icons
+// Commodity-specific icons (reduced to core 8 commodities)
 const COMMODITY_ICONS: { [key: string]: string } = {
   GOLD: '🥇',
   SILVER: '🥈',
@@ -50,12 +50,8 @@ const COMMODITY_ICONS: { [key: string]: string } = {
   BRENT: '🛢️',
   NATURAL_GAS: '🔥',
   COPPER: '🟤',
-  ALUMINUM: '⬜',
   WHEAT: '🌾',
   CORN: '🌽',
-  COTTON: '🧶',
-  SUGAR: '🍬',
-  COFFEE: '☕',
 };
 
 export default function CommoditiesPage() {
