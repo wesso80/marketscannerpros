@@ -372,7 +372,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
-    type Candle = { t: string; open: number; high: number; low: number; close: number; };
+    type Candle = { t: string; open: number; high: number; low: number; close: number; volume: number; };
 
     // USDT Dominance - fetch from CoinCap.io (more generous rate limits than CoinGecko)
     async function fetchUSDTDominance(timeframe: string): Promise<Candle[]> {
@@ -430,7 +430,8 @@ export async function POST(req: NextRequest) {
             open: value - (variance * 0.2),
             high: value + Math.abs(variance) * 0.5,
             low: value - Math.abs(variance) * 0.5,
-            close: value
+            close: value,
+            volume: 0 // No volume data for dominance
           });
         }
         
@@ -506,6 +507,7 @@ export async function POST(req: NextRequest) {
           high: parseFloat(k[2]),
           low: parseFloat(k[3]),
           close: parseFloat(k[4]),
+          volume: parseFloat(k[5]) || 0,
         })).filter((c: Candle) => Number.isFinite(c.close));
         
         console.info(`[scanner] Binance ${binanceSymbol}: ${candles.length} candles`);
@@ -527,6 +529,7 @@ export async function POST(req: NextRequest) {
         high: Number(v["2a. high (USD)"] ?? v["2. high"] ?? NaN),
         low: Number(v["3a. low (USD)"] ?? v["3. low"] ?? NaN),
         close: Number(v["4a. close (USD)"] ?? v["4. close"] ?? NaN),
+        volume: Number(v["5. volume"] ?? 0),
       })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
       console.debug("[scanner] crypto daily candles", { symbol, count: candles.length, latestDate: candles[candles.length-1]?.t });
       return candles;
@@ -556,6 +559,7 @@ export async function POST(req: NextRequest) {
           high: Number(v["2. high"] ?? NaN),
           low: Number(v["3. low"] ?? NaN),
           close: Number(v["4. close"] ?? NaN),
+          volume: Number(v["5. volume"] ?? 0),
         })).filter(c => Number.isFinite(c.close)).sort((a, b) => a.t.localeCompare(b.t));
         
         console.info(`[scanner] CRYPTO_INTRADAY ${symbol}: Got ${candles.length} candles, latest: ${candles[candles.length-1]?.t}`);
@@ -591,14 +595,16 @@ export async function POST(req: NextRequest) {
       }
       let avgGain = gains / period;
       let avgLoss = losses / period;
-      out[period] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+      const rsiVal = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+      out[period] = Math.min(100, Math.max(0, rsiVal));
       for (let i = period + 1; i < values.length; i++) {
         const ch = values[i] - values[i-1];
         const gain = Math.max(0, ch);
         const loss = Math.max(0, -ch);
         avgGain = ((avgGain * (period - 1)) + gain) / period;
         avgLoss = ((avgLoss * (period - 1)) + loss) / period;
-        out[i] = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+        const val = 100 - (100 / (1 + (avgGain / (avgLoss || 1e-9))));
+        out[i] = Math.min(100, Math.max(0, val));
       }
       return out;
     }
@@ -643,27 +649,42 @@ export async function POST(req: NextRequest) {
         const tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
         trs.push(tr);
       }
-      const atr_vals: number[] = [], plus_di: number[] = [], minus_di: number[] = [];
+      const plus_di: number[] = [], minus_di: number[] = [];
       let tr_sum = 0, pdm_sum = 0, mdm_sum = 0;
       for (let i = 0; i < trs.length; i++) {
         tr_sum += trs[i]; pdm_sum += plus_dm[i]; mdm_sum += minus_dm[i];
         if (i >= period - 1) {
-          atr_vals.push(tr_sum / period);
-          const atr_val = atr_vals[atr_vals.length-1];
-          plus_di.push((pdm_sum / atr_val) * 100);
-          minus_di.push((mdm_sum / atr_val) * 100);
+          // Both numerator and denominator should be sums (or both averages)
+          // DI+ = (sum of +DM / sum of TR) * 100
+          // DI- = (sum of -DM / sum of TR) * 100
+          const diPlus = tr_sum > 0 ? (pdm_sum / tr_sum) * 100 : 0;
+          const diMinus = tr_sum > 0 ? (mdm_sum / tr_sum) * 100 : 0;
+          plus_di.push(diPlus);
+          minus_di.push(diMinus);
           if (i > period - 1) { tr_sum -= trs[i-period]; pdm_sum -= plus_dm[i-period]; mdm_sum -= minus_dm[i-period]; }
         }
       }
-      const di_diff = plus_di.map((p, i) => Math.abs(p - minus_di[i])), di_sum = plus_di.map((p, i) => p + minus_di[i]);
-      const dx = di_diff.map((d, i) => (d / di_sum[i]) * 100);
+      const dx: number[] = [];
+      for (let i = 0; i < plus_di.length; i++) {
+        const diSum = plus_di[i] + minus_di[i];
+        const diDiff = Math.abs(plus_di[i] - minus_di[i]);
+        dx.push(diSum === 0 ? 0 : (diDiff / diSum) * 100);
+      }
       const adx_out: number[] = [];
       let adx_sum = 0;
       for (let i = 0; i < dx.length; i++) {
         adx_sum += dx[i];
-        adx_out.push(i >= period - 1 ? adx_sum / period : NaN);
+        if (i >= period - 1) {
+          adx_out.push(adx_sum / period);
+          adx_sum -= dx[i - period + 1];
+        } else {
+          adx_out.push(NaN);
+        }
       }
-      return { adx: adx_out[adx_out.length - 1] ?? NaN, plus_di: plus_di[plus_di.length - 1] ?? NaN, minus_di: minus_di[minus_di.length - 1] ?? NaN };
+      const finalAdx = adx_out.length > 0 ? adx_out[adx_out.length - 1] : NaN;
+      // Clamp to 0-100 range as a safety measure
+      const clampedAdx = Number.isFinite(finalAdx) ? Math.min(100, Math.max(0, finalAdx)) : NaN;
+      return { adx: clampedAdx, plus_di: plus_di[plus_di.length - 1] ?? NaN, minus_di: minus_di[minus_di.length - 1] ?? NaN };
     }
 
     function stochastic(highs: number[], lows: number[], closes: number[], period=14, smooth=3) {
@@ -676,7 +697,13 @@ export async function POST(req: NextRequest) {
       }
       const k_smooth = ema(k_vals, smooth);
       const d_smooth = ema(k_smooth, smooth);
-      return { k: k_smooth[k_smooth.length - 1] ?? NaN, d: d_smooth[d_smooth.length - 1] ?? NaN };
+      const k = k_smooth[k_smooth.length - 1] ?? NaN;
+      const d = d_smooth[d_smooth.length - 1] ?? NaN;
+      // Clamp to 0-100
+      return { 
+        k: Number.isFinite(k) ? Math.min(100, Math.max(0, k)) : NaN, 
+        d: Number.isFinite(d) ? Math.min(100, Math.max(0, d)) : NaN 
+      };
     }
 
     function cci(highs: number[], lows: number[], closes: number[], period=20) {
@@ -701,12 +728,36 @@ export async function POST(req: NextRequest) {
     function aroon(highs: number[], lows: number[], period=25) {
       const aroon_up: number[] = [], aroon_down: number[] = [];
       for (let i = period; i < highs.length; i++) {
-        const h_idx = highs.slice(i - period, i).lastIndexOf(Math.max(...highs.slice(i - period, i)));
-        const l_idx = lows.slice(i - period, i).lastIndexOf(Math.min(...lows.slice(i - period, i)));
-        aroon_up.push(((period - (period - 1 - h_idx)) / period) * 100);
-        aroon_down.push(((period - (period - 1 - l_idx)) / period) * 100);
+        const slice_highs = highs.slice(i - period, i + 1);
+        const slice_lows = lows.slice(i - period, i + 1);
+        const max_high = Math.max(...slice_highs);
+        const min_low = Math.min(...slice_lows);
+        // Find the most recent occurrence (last index) of max/min within the period
+        let days_since_high = period;
+        let days_since_low = period;
+        for (let j = slice_highs.length - 1; j >= 0; j--) {
+          if (slice_highs[j] === max_high) {
+            days_since_high = slice_highs.length - 1 - j;
+            break;
+          }
+        }
+        for (let j = slice_lows.length - 1; j >= 0; j--) {
+          if (slice_lows[j] === min_low) {
+            days_since_low = slice_lows.length - 1 - j;
+            break;
+          }
+        }
+        // Aroon Up = ((period - days since high) / period) * 100
+        aroon_up.push(((period - days_since_high) / period) * 100);
+        aroon_down.push(((period - days_since_low) / period) * 100);
       }
-      return { up: aroon_up[aroon_up.length - 1] ?? NaN, down: aroon_down[aroon_down.length - 1] ?? NaN };
+      const up = aroon_up.length > 0 ? aroon_up[aroon_up.length - 1] : NaN;
+      const down = aroon_down.length > 0 ? aroon_down[aroon_down.length - 1] : NaN;
+      // Clamp to 0-100 range
+      return { 
+        up: Number.isFinite(up) ? Math.min(100, Math.max(0, up)) : NaN, 
+        down: Number.isFinite(down) ? Math.min(100, Math.max(0, down)) : NaN 
+      };
     }
 
     function obv(closes: number[], volumes: number[]): number[] {
@@ -895,7 +946,7 @@ export async function POST(req: NextRequest) {
           const closes = candles.map(c => c.close);
           const highs = candles.map(c => c.high);
           const lows = candles.map(c => c.low);
-          const volumes = candles.map(c => 0); // placeholder
+          const volumes = candles.map(c => c.volume);
           
           const rsiArr = rsi(closes, 14);
           const macObj = macd(closes, 12, 26, 9);

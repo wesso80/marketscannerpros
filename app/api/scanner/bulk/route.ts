@@ -267,7 +267,9 @@ function calculateADX(ohlcv: OHLCV[], period: number = 14): number {
   }
   
   const adx = calculateEMA(dx.filter(v => !isNaN(v)), period);
-  return adx.length > 0 ? adx[adx.length - 1] : NaN;
+  const result = adx.length > 0 ? adx[adx.length - 1] : NaN;
+  // Clamp to 0-100 range as ADX should never exceed 100
+  return Number.isFinite(result) ? Math.min(100, Math.max(0, result)) : NaN;
 }
 
 function calculateStochastic(ohlcv: OHLCV[], period: number = 14): { k: number; d: number } {

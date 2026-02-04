@@ -449,6 +449,7 @@ function calculateADX(highs: number[], lows: number[], closes: number[], period:
   if (highs.length < period * 2) return 25;
   
   let sumDX = 0;
+  let validCount = 0;
   for (let i = highs.length - period; i < highs.length; i++) {
     const upMove = highs[i] - highs[i - 1];
     const downMove = lows[i - 1] - lows[i];
@@ -456,10 +457,17 @@ function calculateADX(highs: number[], lows: number[], closes: number[], period:
     const minusDM = downMove > upMove && downMove > 0 ? downMove : 0;
     const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]));
     if (tr > 0) {
-      const dx = Math.abs(plusDM - minusDM) / (plusDM + minusDM + 0.0001) * 100;
-      sumDX += dx;
+      const dmSum = plusDM + minusDM;
+      // Only calculate DX when there's directional movement
+      if (dmSum > 0) {
+        const dx = Math.abs(plusDM - minusDM) / dmSum * 100;
+        sumDX += dx;
+        validCount++;
+      }
     }
   }
   
-  return sumDX / period;
+  const result = validCount > 0 ? sumDX / validCount : 25;
+  // Clamp to 0-100 range as ADX should never exceed 100
+  return Math.min(100, Math.max(0, result));
 }
