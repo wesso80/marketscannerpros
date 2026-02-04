@@ -1087,6 +1087,7 @@ export async function POST(req: NextRequest) {
             high: Number(v["2. high"] ?? NaN),
             low: Number(v["3. low"] ?? NaN),
             close: Number(v["4. close"] ?? NaN),
+            volume: 0, // Forex doesn't have volume data
           })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
           
           if (!candles.length) throw new Error(`No forex candles returned for ${sym}`);
