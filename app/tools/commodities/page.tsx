@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useUserTier } from '@/lib/useUserTier';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import UpgradeGate from '@/components/UpgradeGate';
 
 interface CommodityData {
   symbol: string;
@@ -129,6 +130,23 @@ export default function CommoditiesPage() {
     const sign = change >= 0 ? '+' : '';
     return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
   };
+
+  // Gate for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
+        <ToolsPageHeader 
+          badge="Commodities"
+          title="Commodities Dashboard" 
+          subtitle="Real-time commodity prices powered by Alpha Vantage"
+          icon="🛢️"
+        />
+        <main style={{ padding: '24px 16px', display: 'flex', justifyContent: 'center' }}>
+          <UpgradeGate feature="Commodities Dashboard" requiredTier="pro" />
+        </main>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

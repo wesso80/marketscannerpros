@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 interface EarningsEvent {
   symbol: string;
@@ -111,12 +113,36 @@ function TimeframeBadge({ days }: { days: number }) {
 }
 
 export default function EarningsCalendarPage() {
+  const { tier } = useUserTier();
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [horizon, setHorizon] = useState<'3month' | '6month' | '12month'>('3month');
   const [searchSymbol, setSearchSymbol] = useState('');
   const [groupByDate, setGroupByDate] = useState(true);
+
+  // Gate for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div className="min-h-screen text-white">
+        <div className="max-w-6xl mx-auto px-4 py-8 pt-24">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-emerald-400 to-amber-400 bg-clip-text text-transparent">
+                Earnings Calendar
+              </span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Track upcoming earnings reports and recent results. See which companies beat or missed estimates.
+            </p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <UpgradeGate feature="Earnings Calendar" requiredTier="pro" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchCalendar();
