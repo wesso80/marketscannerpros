@@ -221,7 +221,12 @@ function formatMetric(value: number | null | undefined, format: 'number' | 'perc
   return { value: value.toFixed(decimals), isLoading: false };
 }
 
-// Weighted signal calculation
+// ═══════════════════════════════════════════════════════════════════════════
+// WEIGHTED SIGNAL CALCULATION - Track A/Track B Approach
+// Track A: Direction (BUY vs SELL) 
+// Track B: Quality (Confidence %)
+// ═══════════════════════════════════════════════════════════════════════════
+
 interface SignalFactor {
   name: string;
   weight: number;
@@ -231,73 +236,271 @@ interface SignalFactor {
 
 function calculateWeightedSignal(indicators: any, optionsData: any, news: any[] | null, cryptoData: any): { factors: SignalFactor[]; confidence: number; bias: 'BUY' | 'SELL' | 'HOLD' } {
   const factors: SignalFactor[] = [];
-  let totalWeight = 0;
-  let weightedScore = 0;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // REGIME DETECTION (ADX-based) - determines how to interpret other signals
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let regime: 'trending' | 'ranging' | 'weak' = 'ranging';
+  let trendMultiplier = 1.0;
+  let meanReversionMultiplier = 1.0;
+  
+  if (indicators?.adx !== undefined) {
+    if (indicators.adx >= 40) {
+      regime = 'trending';
+      trendMultiplier = 1.3;      // Trust trend signals more
+      meanReversionMultiplier = 0.5; // RSI mean-reversion less reliable
+    } else if (indicators.adx >= 25) {
+      regime = 'trending';
+      trendMultiplier = 1.15;
+      meanReversionMultiplier = 0.7;
+    } else if (indicators.adx >= 15) {
+      regime = 'ranging';
+      trendMultiplier = 0.8;
+      meanReversionMultiplier = 1.2; // RSI works better in ranges
+    } else {
+      regime = 'weak';
+      trendMultiplier = 0.6;       // Don't trust trend signals in chop
+      meanReversionMultiplier = 0.8;
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // TRACK A: DIRECTION SCORE (determines BUY/SELL/HOLD)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let directionScore = 0;
+  let directionWeight = 0;
 
-  // Trend Structure (25%)
+  // 1. TREND STRUCTURE (35% of direction) - Multi-feature, not just SMA cross
   if (indicators?.sma20 && indicators?.sma50) {
-    const trendBullish = indicators.priceVsSma20 > 0 && indicators.priceVsSma50 > 0;
-    const trendBearish = indicators.priceVsSma20 < 0 && indicators.priceVsSma50 < 0;
-    const score = trendBullish ? 80 : trendBearish ? -80 : 0;
-    factors.push({ name: 'Trend Structure', weight: 25, result: trendBullish ? 'bullish' : trendBearish ? 'bearish' : 'neutral', score });
-    weightedScore += score * 0.25;
-    totalWeight += 25;
+    let trendScore = 0;
+    let trendConfirmations = 0;
+    
+    // Feature 1: SMA20 vs SMA50 (direction) - max ±25
+    const smaStackBullish = indicators.sma20 > indicators.sma50;
+    const smaStackBearish = indicators.sma20 < indicators.sma50;
+    if (smaStackBullish) { trendScore += 25; trendConfirmations++; }
+    else if (smaStackBearish) { trendScore -= 25; trendConfirmations++; }
+    
+    // Feature 2: Price vs SMA50 (confirmation) - max ±20
+    if (indicators.priceVsSma50 > 2) { trendScore += 20; trendConfirmations++; }
+    else if (indicators.priceVsSma50 > 0) { trendScore += 10; }
+    else if (indicators.priceVsSma50 < -2) { trendScore -= 20; trendConfirmations++; }
+    else if (indicators.priceVsSma50 < 0) { trendScore -= 10; }
+    
+    // Feature 3: Price vs SMA20 (short-term confirmation) - max ±15
+    if (indicators.priceVsSma20 > 1) { trendScore += 15; trendConfirmations++; }
+    else if (indicators.priceVsSma20 > 0) { trendScore += 7; }
+    else if (indicators.priceVsSma20 < -1) { trendScore -= 15; trendConfirmations++; }
+    else if (indicators.priceVsSma20 < 0) { trendScore -= 7; }
+    
+    // Cap at ±60 unless multiple confirmations (then allow up to ±75)
+    const maxTrendScore = trendConfirmations >= 3 ? 75 : 60;
+    trendScore = Math.max(-maxTrendScore, Math.min(maxTrendScore, trendScore));
+    
+    // Apply regime multiplier
+    trendScore *= trendMultiplier;
+    trendScore = Math.max(-100, Math.min(100, trendScore));
+    
+    const trendResult = trendScore > 15 ? 'bullish' : trendScore < -15 ? 'bearish' : 'neutral';
+    factors.push({ name: 'Trend Structure', weight: 35, result: trendResult, score: trendScore });
+    
+    directionScore += trendScore * 0.35;
+    directionWeight += 35;
   }
 
-  // Momentum (20%)
-  if (indicators?.rsi !== undefined) {
-    const momentumBullish = indicators.rsi < 40;
-    const momentumBearish = indicators.rsi > 60;
-    const score = indicators.rsi < 30 ? 100 : indicators.rsi < 40 ? 50 : indicators.rsi > 70 ? -100 : indicators.rsi > 60 ? -50 : 0;
-    factors.push({ name: 'Momentum (RSI)', weight: 20, result: momentumBullish ? 'bullish' : momentumBearish ? 'bearish' : 'neutral', score });
-    weightedScore += score * 0.20;
-    totalWeight += 20;
-  }
-
-  // Options Flow (25%) - if available
+  // 2. OPTIONS FLOW (35% of direction) - with baseline normalization and min gating
   if (optionsData?.putCallRatio !== undefined) {
     const pcr = optionsData.putCallRatio;
-    const optionsBullish = pcr < 0.7;
-    const optionsBearish = pcr > 1.3;
-    const score = pcr < 0.5 ? 100 : pcr < 0.7 ? 60 : pcr > 1.5 ? -100 : pcr > 1.3 ? -60 : 0;
-    factors.push({ name: 'Options Flow', weight: 25, result: optionsBullish ? 'bullish' : optionsBearish ? 'bearish' : 'neutral', score });
-    weightedScore += score * 0.25;
-    totalWeight += 25;
+    
+    // Use baseline-relative scoring (assume 0.85 is neutral)
+    const baseline = 0.85;
+    const deviation = pcr - baseline;
+    
+    // Smooth mapping: each 0.1 deviation = ~20 points
+    let flowScore = -deviation * 200; // Negative because high P/C = bearish
+    
+    // Min volume gating: reduce score if volume is low
+    const totalOI = (optionsData.callOI || 0) + (optionsData.putOI || 0);
+    const volumeMultiplier = totalOI > 50000 ? 1.0 : totalOI > 10000 ? 0.7 : 0.4;
+    flowScore *= volumeMultiplier;
+    
+    // Cap at ±80 (never full conviction from flow alone)
+    flowScore = Math.max(-80, Math.min(80, flowScore));
+    
+    // Dead zone: if within 0.1 of baseline, treat as neutral
+    if (Math.abs(deviation) < 0.1) {
+      flowScore = 0;
+    }
+    
+    const flowResult = flowScore > 15 ? 'bullish' : flowScore < -15 ? 'bearish' : 'neutral';
+    const volumeNote = volumeMultiplier < 1 ? ' (low vol)' : '';
+    factors.push({ name: 'Options Flow', weight: 35, result: flowResult, score: flowScore });
+    
+    directionScore += flowScore * 0.35;
+    directionWeight += 35;
   }
 
-  // Sentiment (15%)
+  // 3. NEWS SENTIMENT (15% of direction) - Capped with sample size adjustment
+  let newsProcessed = false;
   if (news && news.length > 0) {
     const bullishNews = news.filter(n => n.sentiment?.toLowerCase() === 'bullish').length;
     const bearishNews = news.filter(n => n.sentiment?.toLowerCase() === 'bearish').length;
-    const sentimentBullish = bullishNews > bearishNews * 1.5;
-    const sentimentBearish = bearishNews > bullishNews * 1.5;
-    const score = sentimentBullish ? 70 : sentimentBearish ? -70 : 0;
-    factors.push({ name: 'News Sentiment', weight: 15, result: sentimentBullish ? 'bullish' : sentimentBearish ? 'bearish' : 'neutral', score });
-    weightedScore += score * 0.15;
-    totalWeight += 15;
+    const totalNews = news.length;
+    
+    // Sample size multiplier: <10 articles = 30% weight, 10-30 = normal, 30+ = full
+    let sampleMultiplier = 1.0;
+    if (totalNews < 10) sampleMultiplier = 0.3;
+    else if (totalNews < 30) sampleMultiplier = 0.7;
+    
+    // Calculate net sentiment ratio
+    const netSentiment = (bullishNews - bearishNews) / Math.max(1, totalNews);
+    
+    // Map to score: each 10% net = ~20 points, capped at ±50
+    let newsScore = netSentiment * 200;
+    newsScore = Math.max(-50, Math.min(50, newsScore)); // Cap at ±50 (not ±70)
+    newsScore *= sampleMultiplier;
+    
+    const newsResult = newsScore > 10 ? 'bullish' : newsScore < -10 ? 'bearish' : 'neutral';
+    factors.push({ name: 'News Sentiment', weight: 15, result: newsResult, score: newsScore });
+    
+    directionScore += newsScore * 0.15;
+    directionWeight += 15;
+    newsProcessed = true;
   } else if (cryptoData?.fearGreed) {
     const fg = cryptoData.fearGreed.value;
-    const sentimentBullish = fg < 30; // Fear = contrarian bullish
-    const sentimentBearish = fg > 75; // Extreme greed = contrarian bearish
-    const score = fg < 25 ? 80 : fg < 35 ? 40 : fg > 80 ? -80 : fg > 70 ? -40 : 0;
-    factors.push({ name: 'Market Sentiment', weight: 15, result: sentimentBullish ? 'bullish' : sentimentBearish ? 'bearish' : 'neutral', score });
-    weightedScore += score * 0.15;
-    totalWeight += 15;
+    // Contrarian: Extreme fear = bullish opportunity, extreme greed = bearish warning
+    // But cap the impact
+    let fgScore = 0;
+    if (fg < 25) fgScore = 50; // Extreme fear = bullish
+    else if (fg < 40) fgScore = 25;
+    else if (fg > 75) fgScore = -50; // Extreme greed = bearish
+    else if (fg > 60) fgScore = -25;
+    // else neutral
+    
+    const fgResult = fgScore > 10 ? 'bullish' : fgScore < -10 ? 'bearish' : 'neutral';
+    factors.push({ name: 'Market Sentiment', weight: 15, result: fgResult, score: fgScore });
+    
+    directionScore += fgScore * 0.15;
+    directionWeight += 15;
+    newsProcessed = true;
   }
 
-  // Volatility (15%)
+  // 4. MOMENTUM / RSI (15% of direction) - TREND-CONDITIONED
+  if (indicators?.rsi !== undefined) {
+    const rsi = indicators.rsi;
+    let rsiScore = 0;
+    
+    // Determine trend direction from trend structure
+    const inUptrend = indicators.priceVsSma50 > 0 && indicators.priceVsSma20 > 0;
+    const inDowntrend = indicators.priceVsSma50 < 0 && indicators.priceVsSma20 < 0;
+    
+    if (inUptrend) {
+      // UPTREND: RSI pullbacks are buying opportunities
+      if (rsi < 30) rsiScore = 60 * meanReversionMultiplier; // Strong pullback = bullish
+      else if (rsi < 40) rsiScore = 40 * meanReversionMultiplier; // Mild pullback = bullish
+      else if (rsi > 80) rsiScore = -30; // Overbought warning
+      else if (rsi > 70) rsiScore = -10; // Getting stretched
+      else rsiScore = 10; // Healthy momentum
+    } else if (inDowntrend) {
+      // DOWNTREND: RSI <40 is NOT bullish, it's continuation
+      if (rsi < 30) rsiScore = 20 * meanReversionMultiplier; // Only mildly bullish (dead cat)
+      else if (rsi < 40) rsiScore = 0; // Neutral in downtrend - NOT bullish
+      else if (rsi > 70) rsiScore = -60 * meanReversionMultiplier; // Overbought in downtrend = sell
+      else if (rsi > 60) rsiScore = -40 * meanReversionMultiplier;
+      else rsiScore = -10; // Weak momentum
+    } else {
+      // RANGING: Mean reversion works best
+      if (rsi < 30) rsiScore = 70 * meanReversionMultiplier; // Oversold = bullish
+      else if (rsi < 40) rsiScore = 35 * meanReversionMultiplier;
+      else if (rsi > 70) rsiScore = -70 * meanReversionMultiplier; // Overbought = bearish
+      else if (rsi > 60) rsiScore = -35 * meanReversionMultiplier;
+      else rsiScore = 0;
+    }
+    
+    rsiScore = Math.max(-100, Math.min(100, rsiScore));
+    
+    const rsiResult = rsiScore > 15 ? 'bullish' : rsiScore < -15 ? 'bearish' : 'neutral';
+    factors.push({ name: 'Momentum (RSI)', weight: 15, result: rsiResult, score: rsiScore });
+    
+    directionScore += rsiScore * 0.15;
+    directionWeight += 15;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // TRACK B: QUALITY SCORE (determines Confidence %)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let qualityScore = 0;
+  
+  // 1. Regime Clarity (40% of quality) - How clear is the market regime?
+  let regimeScore = 50; // Default neutral
   if (indicators?.adx !== undefined) {
-    const trending = indicators.adx > 25;
-    const score = trending ? 30 : -20; // Trending is generally positive for directional trades
-    factors.push({ name: 'Volatility/Trend', weight: 15, result: trending ? 'bullish' : 'neutral', score });
-    weightedScore += score * 0.15;
-    totalWeight += 15;
+    if (indicators.adx >= 40) regimeScore = 95; // Very clear trending
+    else if (indicators.adx >= 30) regimeScore = 80;
+    else if (indicators.adx >= 25) regimeScore = 70;
+    else if (indicators.adx >= 20) regimeScore = 55;
+    else if (indicators.adx >= 15) regimeScore = 45;
+    else regimeScore = 30; // Very choppy, low confidence
   }
-
-  // Calculate confidence (0-100)
-  const normalizedScore = totalWeight > 0 ? weightedScore / (totalWeight / 100) : 0;
-  const confidence = Math.min(95, Math.max(15, 50 + Math.abs(normalizedScore) * 0.45));
-  const bias: 'BUY' | 'SELL' | 'HOLD' = normalizedScore > 20 ? 'BUY' : normalizedScore < -20 ? 'SELL' : 'HOLD';
+  qualityScore += regimeScore * 0.40;
+  
+  // 2. Signal Agreement (35% of quality) - Do directional signals agree?
+  const directionalFactors = factors.filter(f => f.result !== 'neutral');
+  const finalDirection = directionScore > 15 ? 'bullish' : directionScore < -15 ? 'bearish' : 'neutral';
+  
+  let alignedStrength = 0;
+  let totalStrength = 0;
+  
+  for (const factor of directionalFactors) {
+    const strength = Math.abs(factor.score) / 100;
+    const weight = factor.weight / 100;
+    totalStrength += weight * strength;
+    
+    if (factor.result === finalDirection) {
+      alignedStrength += weight * strength;
+    }
+  }
+  
+  const agreementScore = totalStrength > 0 
+    ? (alignedStrength / totalStrength) * 100 
+    : 50;
+  qualityScore += agreementScore * 0.35;
+  
+  // 3. Overextension Check (25% of quality) - Is price stretched from MA?
+  let extensionScore = 70; // Default reasonable
+  if (indicators?.priceVsSma50 !== undefined) {
+    const distanceFromMA = Math.abs(indicators.priceVsSma50);
+    if (distanceFromMA > 15) extensionScore = 30; // Very stretched = risky
+    else if (distanceFromMA > 10) extensionScore = 50;
+    else if (distanceFromMA > 5) extensionScore = 70;
+    else extensionScore = 90; // Close to MA = good entry
+  }
+  qualityScore += extensionScore * 0.25;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // FINAL OUTPUTS
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  // Normalize direction score
+  const normalizedDirection = directionWeight > 0 
+    ? directionScore / (directionWeight / 100) 
+    : 0;
+  
+  // Determine bias from direction only
+  const bias: 'BUY' | 'SELL' | 'HOLD' = normalizedDirection > 20 ? 'BUY' : normalizedDirection < -20 ? 'SELL' : 'HOLD';
+  
+  // Confidence from quality score (not direction magnitude)
+  const confidence = Math.min(95, Math.max(15, qualityScore));
+  
+  // Add regime info as a factor for display
+  factors.push({ 
+    name: 'Market Regime', 
+    weight: 0, // Display only, not in direction calculation
+    result: regime === 'trending' ? 'bullish' : 'neutral', 
+    score: regimeScore 
+  });
 
   return { factors, confidence, bias };
 }
