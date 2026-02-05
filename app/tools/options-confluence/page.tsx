@@ -930,10 +930,10 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                {/* POP (Probability of Profit) */}
+                {/* Edge Score - Signal-based edge calculation */}
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    POP
+                    EDGE
                   </div>
                   <div style={{
                     fontSize: '1.75rem',
@@ -947,7 +947,7 @@ export default function OptionsConfluenceScanner() {
                       : '—'}
                   </div>
                   <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    Probability of Profit
+                    Signal Edge
                   </div>
                 </div>
 
