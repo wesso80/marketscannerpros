@@ -501,13 +501,28 @@ export class ConfluenceLearningAgent {
     const response = await fetch(url);
     const data = await response.json();
 
-    const timeSeriesKey = Object.keys(data).find(k => k.includes('Time Series'));
-    if (!timeSeriesKey || !data[timeSeriesKey]) {
+    let timeSeriesKey = Object.keys(data).find(k => k.includes('Time Series'));
+    let timeSeries = timeSeriesKey ? data[timeSeriesKey] : null;
+    
+    // Fallback to daily data if intraday is not available (common for smaller ETFs)
+    if (!timeSeries && !isCrypto) {
+      console.log(`⚠️ No intraday data for ${symbol}, falling back to daily data`);
+      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      const dailyResponse = await fetch(dailyUrl);
+      const dailyData = await dailyResponse.json();
+      
+      timeSeriesKey = Object.keys(dailyData).find(k => k.includes('Time Series'));
+      timeSeries = timeSeriesKey ? dailyData[timeSeriesKey] : null;
+      
+      if (!timeSeries) {
+        console.error('No intraday or daily data returned for', symbol, dailyData);
+        return [];
+      }
+    } else if (!timeSeries) {
       console.error('No data returned:', data);
       return [];
     }
 
-    const timeSeries = data[timeSeriesKey];
     const bars: OHLCV[] = [];
 
     for (const [timestamp, values] of Object.entries(timeSeries)) {
