@@ -1105,8 +1105,9 @@ function calculateCompositeScore(
     return outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin);
   };
   
-  // 1. UNUSUAL ACTIVITY (35% of direction) - Smart money signal
-  const unusualWeight = 0.35;
+  // 1. UNUSUAL ACTIVITY (30% of direction) - Smart money signal
+  // Reduced from 35% to prevent flow dominance on big names during news
+  const unusualWeight = 0.30;
   let unusualScore = 0;
   let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
@@ -1129,13 +1130,22 @@ function calculateCompositeScore(
       // Map to score: -80 to +80 (capped, not full ±100)
       unusualScore = cappedRatio * 100;
       
-      if (cappedRatio > 0.15) {
+      // Calculate raw premium ratio for dead zone check
+      const premiumRatio = putPremium > 0 ? callPremium / putPremium : (callPremium > 0 ? 10 : 1);
+      const isInDeadZone = (premiumRatio >= 0.9 && premiumRatio <= 1.1) || Math.abs(unusualScore) < 15;
+      
+      if (isInDeadZone) {
+        // PRECISE DEAD ZONE: balanced flow or tiny imbalance = neutral
+        unusualDirection = 'neutral';
+        unusualScore = 0;
+      } else if (cappedRatio > 0.15) {
         unusualDirection = 'bullish';
       } else if (cappedRatio < -0.15) {
         unusualDirection = 'bearish';
       } else {
+        // Fallback for edge cases
         unusualDirection = 'neutral';
-        unusualScore = 0; // Dead zone to avoid noise
+        unusualScore = 0;
       }
       
       components.push({
@@ -1209,8 +1219,9 @@ function calculateCompositeScore(
     directionTotalWeight += oiWeight;
   }
 
-  // 3. TIME CONFLUENCE (25% of direction)
-  const confluenceWeight = 0.25;
+  // 3. TIME CONFLUENCE (30% of direction)
+  // Increased from 25% - price action confirmation is co-equal king with flow
+  const confluenceWeight = 0.30;
   let confluenceScore = 0;
   let confluenceDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
@@ -1395,31 +1406,36 @@ function calculateCompositeScore(
   }
 
   // 7. SIGNAL AGREEMENT (30% of quality)
+  // Formula: sum(weight_i × |strength_i| for aligned signals) / sum(weight_i × |strength_i| for all signals)
   const agreementWeight = 0.30;
   
-  // Get directional components only
+  // Get directional components only (exclude neutral signals)
   const directionalComponents = components.filter(c => 
     ['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position'].includes(c.name)
     && c.direction !== 'neutral'
   );
   
-  // Calculate weighted agreement with final direction
-  let agreementScore = 0;
-  let agreementWeight_sum = 0;
+  // Calculate weighted agreement with final direction using strength-weighted formula
+  let alignedWeightedStrength = 0;
+  let totalWeightedStrength = 0;
   
   for (const comp of directionalComponents) {
-    const agrees = comp.direction === finalDirection;
     const strength = Math.abs(comp.score) / 100; // 0 to 1
+    const weightedStrength = comp.weight * strength;
     
-    if (agrees) {
-      agreementScore += comp.weight * strength * 100;
+    // Add to total for ALL available signals
+    totalWeightedStrength += weightedStrength;
+    
+    // Add to aligned only if agrees with final direction
+    if (comp.direction === finalDirection) {
+      alignedWeightedStrength += weightedStrength;
     }
-    agreementWeight_sum += comp.weight;
   }
   
-  const normalizedAgreement = agreementWeight_sum > 0 
-    ? agreementScore / agreementWeight_sum 
-    : 50;
+  // Agreement = aligned / total (handles missing data gracefully)
+  const normalizedAgreement = totalWeightedStrength > 0 
+    ? (alignedWeightedStrength / totalWeightedStrength) * 100 
+    : 50; // Default to 50% if no directional signals
   
   qualityScore += normalizedAgreement * agreementWeight;
   qualityMaxScore += 100 * agreementWeight;
