@@ -904,6 +904,25 @@ export default function AIConfluenceScanner() {
                     </span>
                   </div>
                   
+                  {/* No Signal State - Clear messaging when no decompressions */}
+                  {hierarchicalResult.scoreBreakdown.activeTFs === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '1.5rem 1rem',
+                      background: 'rgba(100,116,139,0.1)',
+                      borderRadius: '8px',
+                      border: '1px dashed #475569',
+                    }}>
+                      <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.9rem', fontWeight: 500 }}>
+                        No Active Decompressions
+                      </div>
+                      <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                        Waiting for price to move toward 50% levels. Check back when TFs start decompressing.
+                      </div>
+                    </div>
+                  ) : (
+                  <>
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
@@ -1030,6 +1049,8 @@ export default function AIConfluenceScanner() {
                         </span>
                       ))}
                     </div>
+                  )}
+                  </>
                   )}
                 </div>
               )}
