@@ -1061,15 +1061,24 @@ function calculateTradeLevels(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Calculates a weighted composite score from all available signals.
+ * REFACTORED SCORING SYSTEM v2.0
  * 
- * Weights:
- * - Unusual Activity: 25% (smart money is betting real $)
- * - O/I Sentiment (P/C ratio): 20%
- * - Time Confluence: 20%
- * - IV Environment: 15%
- * - Price vs Max Pain: 10%
- * - R:R Profile: 10%
+ * Split into two independent tracks:
+ * 
+ * TRACK A - DIRECTION SCORE (determines Bull/Bear/Neutral)
+ * Only includes signals that are genuinely directional:
+ * - Unusual Activity: 35% (smart money premium flow)
+ * - O/I Sentiment (P/C ratio): 25%  
+ * - Time Confluence: 25%
+ * - Max Pain Position: 15% (dynamic by DTE)
+ * 
+ * TRACK B - SETUP QUALITY SCORE (determines A+/A/B/C grade)
+ * Includes factors that affect trade quality, not direction:
+ * - IV Environment: 35% (strategy suitability)
+ * - Risk:Reward: 35% (trade quality)
+ * - Signal Agreement: 30% (how aligned are directional signals)
+ * 
+ * Confidence = weighted agreement of directional signals with final direction
  */
 function calculateCompositeScore(
   confluenceResult: HierarchicalScanResult,
@@ -1077,41 +1086,77 @@ function calculateCompositeScore(
   unusualActivity: any,
   ivRank: any,
   tradeLevels: any,
-  maxPainData?: { maxPain: number; currentPrice: number }
+  maxPainData?: { maxPain: number; currentPrice: number },
+  dte?: number  // Days to expiration for dynamic weighting
 ): CompositeScore {
   const components: SignalComponent[] = [];
   const conflicts: string[] = [];
-  let totalWeightedScore = 0;
-  let totalWeight = 0;
-
-  // 1. UNUSUAL ACTIVITY (25% weight) - Smart money signal
-  const unusualWeight = 0.25;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // TRACK A: DIRECTION SCORE (only directional signals)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let directionWeightedScore = 0;
+  let directionTotalWeight = 0;
+  
+  // Helper: Smooth score mapping with clamping
+  const smoothMap = (value: number, inMin: number, inMax: number, outMin: number, outMax: number): number => {
+    const clamped = Math.max(inMin, Math.min(inMax, value));
+    return outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin);
+  };
+  
+  // 1. UNUSUAL ACTIVITY (35% of direction) - Smart money signal
+  const unusualWeight = 0.35;
   let unusualScore = 0;
   let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
-  if (unusualActivity.hasUnusualActivity) {
+  if (unusualActivity && unusualActivity.hasUnusualActivity) {
     const callPremium = unusualActivity.callPremiumTotal || 0;
     const putPremium = unusualActivity.putPremiumTotal || 0;
-    const callBias = callPremium > putPremium;
-    const premiumRatio = callBias 
-      ? callPremium / Math.max(putPremium, 1)
-      : putPremium / Math.max(callPremium, 1);
+    const totalPremium = callPremium + putPremium;
     
-    unusualScore = Math.min(100, premiumRatio * 25); // Scale up to 100
-    unusualDirection = callBias ? 'bullish' : 'bearish';
+    // Guardrail: Require minimum premium to trust the signal
+    const MIN_PREMIUM_THRESHOLD = 50000; // $50k minimum to avoid noise
     
-    if (!callBias) unusualScore = -unusualScore; // Negative for bearish
-    
-    const premiumValue = callBias ? callPremium : putPremium;
-    components.push({
-      name: 'Unusual Activity',
-      direction: unusualDirection,
-      weight: unusualWeight,
-      score: unusualScore,
-      reason: premiumValue > 0 ? `$${premiumValue.toLocaleString()} est. ${callBias ? 'call' : 'put'} premium flow` : `Smart money: ${unusualActivity.smartMoneyDirection}`
-    });
-    totalWeightedScore += unusualScore * unusualWeight;
-    totalWeight += unusualWeight;
+    if (totalPremium >= MIN_PREMIUM_THRESHOLD) {
+      // Calculate net flow ratio: (calls - puts) / total
+      // Range: -1 (all puts) to +1 (all calls)
+      const netFlowRatio = totalPremium > 0 ? (callPremium - putPremium) / totalPremium : 0;
+      
+      // Winsorize: Cap extreme ratios to prevent single whale from dominating
+      const cappedRatio = Math.max(-0.8, Math.min(0.8, netFlowRatio));
+      
+      // Map to score: -80 to +80 (capped, not full ±100)
+      unusualScore = cappedRatio * 100;
+      
+      if (cappedRatio > 0.15) {
+        unusualDirection = 'bullish';
+      } else if (cappedRatio < -0.15) {
+        unusualDirection = 'bearish';
+      } else {
+        unusualDirection = 'neutral';
+        unusualScore = 0; // Dead zone to avoid noise
+      }
+      
+      components.push({
+        name: 'Unusual Activity',
+        direction: unusualDirection,
+        weight: unusualWeight,
+        score: unusualScore,
+        reason: `Net flow: $${((callPremium - putPremium) / 1000).toFixed(0)}k (${(netFlowRatio * 100).toFixed(0)}% call bias)`
+      });
+      
+      directionWeightedScore += unusualScore * unusualWeight;
+      directionTotalWeight += unusualWeight;
+    } else {
+      components.push({
+        name: 'Unusual Activity',
+        direction: 'neutral',
+        weight: unusualWeight,
+        score: 0,
+        reason: `Insufficient volume ($${(totalPremium / 1000).toFixed(0)}k < $50k threshold)`
+      });
+    }
   } else {
     components.push({
       name: 'Unusual Activity',
@@ -1122,24 +1167,33 @@ function calculateCompositeScore(
     });
   }
 
-  // 2. O/I SENTIMENT - Put/Call Ratio (20% weight)
-  const oiWeight = 0.20;
+  // 2. O/I SENTIMENT - Put/Call Ratio (25% of direction)
+  const oiWeight = 0.25;
   let oiScore = 0;
   let oiDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
   if (oiAnalysis && oiAnalysis.avgPCRatio) {
     const pcRatio = oiAnalysis.avgPCRatio;
-    // P/C < 0.7 = bullish (puts oversold relative to calls)
-    // P/C > 1.0 = bearish (heavy put buying)
-    // P/C 0.7-1.0 = neutral
-    if (pcRatio < 0.7) {
-      oiScore = Math.min(100, (0.7 - pcRatio) * 200);
+    
+    // Use z-score-like mapping:
+    // P/C 0.5 or less = strongly bullish (+80)
+    // P/C 0.7 = moderately bullish (+40)
+    // P/C 0.85 = neutral (0)
+    // P/C 1.0 = moderately bearish (-40)
+    // P/C 1.3+ = strongly bearish (-80)
+    
+    const neutralPC = 0.85; // Typical baseline
+    const deviation = pcRatio - neutralPC;
+    
+    // Smooth mapping: each 0.1 deviation = ~25 points
+    oiScore = -deviation * 250; // Negative because high P/C = bearish
+    oiScore = Math.max(-80, Math.min(80, oiScore)); // Cap at ±80
+    
+    if (oiScore > 20) {
       oiDirection = 'bullish';
-    } else if (pcRatio > 1.0) {
-      oiScore = -Math.min(100, (pcRatio - 1.0) * 100);
+    } else if (oiScore < -20) {
       oiDirection = 'bearish';
     } else {
-      oiScore = 0;
       oiDirection = 'neutral';
     }
     
@@ -1148,88 +1202,79 @@ function calculateCompositeScore(
       direction: oiDirection,
       weight: oiWeight,
       score: oiScore,
-      reason: `P/C Ratio: ${pcRatio.toFixed(2)} - ${oiDirection === 'bullish' ? 'Call-heavy positioning' : oiDirection === 'bearish' ? 'Put-heavy positioning' : 'Balanced positioning'}`
+      reason: `P/C: ${pcRatio.toFixed(2)} (${oiDirection === 'bullish' ? 'call-heavy' : oiDirection === 'bearish' ? 'put-heavy' : 'balanced'})`
     });
-    totalWeightedScore += oiScore * oiWeight;
-    totalWeight += oiWeight;
+    
+    directionWeightedScore += oiScore * oiWeight;
+    directionTotalWeight += oiWeight;
   }
 
-  // 3. TIME CONFLUENCE (20% weight)
-  const confluenceWeight = 0.20;
+  // 3. TIME CONFLUENCE (25% of direction)
+  const confluenceWeight = 0.25;
   let confluenceScore = 0;
   let confluenceDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
-  if (confluenceResult.prediction) {
+  if (confluenceResult && confluenceResult.prediction) {
     const pred = confluenceResult.prediction;
     confluenceDirection = pred.direction;
-    confluenceScore = pred.confidence * (pred.direction === 'bullish' ? 1 : pred.direction === 'bearish' ? -1 : 0);
+    
+    // Map confidence (0-100) to score based on direction
+    if (pred.direction === 'bullish') {
+      confluenceScore = pred.confidence; // 0 to +100
+    } else if (pred.direction === 'bearish') {
+      confluenceScore = -pred.confidence; // 0 to -100
+    } else {
+      confluenceScore = 0;
+    }
     
     components.push({
       name: 'Time Confluence',
       direction: confluenceDirection,
       weight: confluenceWeight,
       score: confluenceScore,
-      reason: `Timeframes align ${pred.direction} (${pred.confidence.toFixed(0)}% conf)`
+      reason: `${pred.direction.toUpperCase()} alignment (${pred.confidence.toFixed(0)}% conf)`
     });
-    totalWeightedScore += confluenceScore * confluenceWeight;
-    totalWeight += confluenceWeight;
+    
+    directionWeightedScore += confluenceScore * confluenceWeight;
+    directionTotalWeight += confluenceWeight;
   }
 
-  // 4. IV ENVIRONMENT (15% weight) - Determines strategy type, not direction
-  const ivWeight = 0.15;
-  let ivScore = 0;
-  let ivDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  // 4. MAX PAIN POSITION (15% of direction, DYNAMIC by DTE)
+  // Pinning effects are strongest 0-7 DTE, weak beyond 14 DTE
+  const effectiveDte = dte ?? 14; // Default to 14 if not provided
+  let maxPainWeight = 0.15;
   
-  if (ivRank) {
-    // IV doesn't determine direction, but affects confidence
-    // High IV = higher confidence in mean reversion trades
-    // Low IV = lower risk, good for directional bets
-    const ivPercentile = ivRank.rank || 50;
-    
-    // For composite score, IV confirms or denies urgency
-    // High IV (>70) with bullish signals = careful (premium expensive)
-    // Low IV (<30) with bullish signals = great (cheap premium)
-    if (ivPercentile > 70) {
-      ivScore = 20; // Slight positive - volatility contraction likely
-      ivDirection = 'neutral'; // IV doesn't pick direction
-    } else if (ivPercentile < 30) {
-      ivScore = 30; // Good for buying premium
-      ivDirection = 'neutral';
-    } else {
-      ivScore = 10;
-      ivDirection = 'neutral';
-    }
-    
-    components.push({
-      name: 'IV Environment',
-      direction: 'neutral', // IV doesn't pick direction
-      weight: ivWeight,
-      score: Math.abs(ivScore), // Always positive contribution to confidence
-      reason: `IV Rank: ${ivPercentile.toFixed(0)}% - ${ivPercentile > 70 ? 'SELL premium strategies' : ivPercentile < 30 ? 'BUY premium strategies' : 'Either approach works'}`
-    });
-    // IV adds to confidence, not direction
-    totalWeight += ivWeight;
+  // Dynamic weight: full weight at DTE 0-3, half at 7, near-zero at 14+
+  if (effectiveDte <= 3) {
+    maxPainWeight = 0.15;
+  } else if (effectiveDte <= 7) {
+    maxPainWeight = 0.15 * (1 - (effectiveDte - 3) / 8); // Linear decay
+  } else if (effectiveDte <= 14) {
+    maxPainWeight = 0.05 * (1 - (effectiveDte - 7) / 14);
+  } else {
+    maxPainWeight = 0; // Ignore max pain for longer-dated
   }
-
-  // 5. PRICE VS MAX PAIN (10% weight)
-  const maxPainWeight = 0.10;
+  
   let maxPainScore = 0;
   let maxPainDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
-  if (maxPainData && maxPainData.maxPain > 0) {
-    const priceDiff = ((maxPainData.currentPrice - maxPainData.maxPain) / maxPainData.maxPain) * 100;
+  if (maxPainData && maxPainData.maxPain > 0 && maxPainWeight > 0) {
+    const priceDiffPercent = ((maxPainData.currentPrice - maxPainData.maxPain) / maxPainData.maxPain) * 100;
     
-    // Price below max pain = bullish (tendency to rise to max pain)
-    // Price above max pain = bearish (tendency to fall to max pain)
-    if (priceDiff < -2) {
-      maxPainScore = Math.min(100, Math.abs(priceDiff) * 10);
-      maxPainDirection = 'bullish';
-    } else if (priceDiff > 2) {
-      maxPainScore = -Math.min(100, priceDiff * 10);
-      maxPainDirection = 'bearish';
-    } else {
+    // Price below max pain = pull upward (bullish)
+    // Price above max pain = pull downward (bearish)
+    // Smooth mapping: ±10% from max pain = ±100 score
+    maxPainScore = -priceDiffPercent * 10; // Negative because above max pain = bearish pull
+    maxPainScore = Math.max(-100, Math.min(100, maxPainScore));
+    
+    // Dead zone: if within 1.5% of max pain, consider neutral
+    if (Math.abs(priceDiffPercent) < 1.5) {
       maxPainScore = 0;
       maxPainDirection = 'neutral';
+    } else if (maxPainScore > 0) {
+      maxPainDirection = 'bullish';
+    } else {
+      maxPainDirection = 'bearish';
     }
     
     components.push({
@@ -1237,88 +1282,211 @@ function calculateCompositeScore(
       direction: maxPainDirection,
       weight: maxPainWeight,
       score: maxPainScore,
-      reason: `Price ${priceDiff > 0 ? 'above' : 'below'} max pain ($${maxPainData.maxPain.toFixed(2)}) by ${Math.abs(priceDiff).toFixed(1)}%`
+      reason: `${priceDiffPercent > 0 ? 'Above' : 'Below'} max pain ($${maxPainData.maxPain.toFixed(2)}) by ${Math.abs(priceDiffPercent).toFixed(1)}% [DTE: ${effectiveDte}]`
     });
-    totalWeightedScore += maxPainScore * maxPainWeight;
-    totalWeight += maxPainWeight;
-  }
-
-  // 6. R:R PROFILE (10% weight)
-  const rrWeight = 0.10;
-  let rrScore = 0;
-  
-  if (tradeLevels && tradeLevels.riskRewardRatio) {
-    const rr = tradeLevels.riskRewardRatio;
-    // R:R >= 2:1 = excellent, boosts confidence
-    // R:R >= 1:1 = acceptable
-    // R:R < 1:1 = poor, reduces confidence
-    if (rr >= 2) {
-      rrScore = 50 + (rr - 2) * 10; // 50-100
-    } else if (rr >= 1) {
-      rrScore = rr * 50; // 50
-    } else {
-      rrScore = -50; // Negative for bad R:R
-    }
     
-    components.push({
-      name: 'Risk:Reward',
-      direction: rr >= 1 ? 'bullish' : 'bearish', // Favorable or not
-      weight: rrWeight,
-      score: rrScore,
-      reason: `R:R Ratio: ${rr.toFixed(1)}:1 - ${rr >= 2 ? 'Excellent' : rr >= 1 ? 'Acceptable' : 'POOR - avoid'}`
-    });
-    totalWeightedScore += rrScore * rrWeight;
-    totalWeight += rrWeight;
+    if (maxPainWeight > 0) {
+      directionWeightedScore += maxPainScore * maxPainWeight;
+      directionTotalWeight += maxPainWeight;
+    }
   }
 
-  // Calculate final weighted score
-  const normalizedScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
+  // Calculate normalized direction score
+  const normalizedDirectionScore = directionTotalWeight > 0 
+    ? directionWeightedScore / directionTotalWeight 
+    : 0;
   
-  // Determine final direction based on weighted score
+  // Determine final direction based on direction score only
   let finalDirection: 'bullish' | 'bearish' | 'neutral';
-  if (normalizedScore > 15) {
+  if (normalizedDirectionScore > 15) {
     finalDirection = 'bullish';
-  } else if (normalizedScore < -15) {
+  } else if (normalizedDirectionScore < -15) {
     finalDirection = 'bearish';
   } else {
     finalDirection = 'neutral';
   }
 
-  // Count aligned signals
-  const bullishSignals = components.filter(c => c.direction === 'bullish').length;
-  const bearishSignals = components.filter(c => c.direction === 'bearish').length;
-  const alignedCount = Math.max(bullishSignals, bearishSignals);
+  // ═══════════════════════════════════════════════════════════════════════
+  // TRACK B: SETUP QUALITY SCORE (non-directional factors)
+  // ═══════════════════════════════════════════════════════════════════════
   
-  // Detect conflicts
-  if (bullishSignals > 0 && bearishSignals > 0) {
-    const bullishComponents = components.filter(c => c.direction === 'bullish').map(c => c.name);
-    const bearishComponents = components.filter(c => c.direction === 'bearish').map(c => c.name);
-    conflicts.push(`⚠️ CONFLICT: ${bullishComponents.join(', ')} signal BULLISH but ${bearishComponents.join(', ')} signal BEARISH`);
+  let qualityScore = 0;
+  let qualityMaxScore = 0;
+  
+  // 5. IV ENVIRONMENT (35% of quality) - Strategy suitability, NOT direction
+  const ivQualityWeight = 0.35;
+  let ivScore = 0;
+  
+  if (ivRank) {
+    const ivPercentile = ivRank.rank || 50;
+    
+    // Quality scoring for IV:
+    // Low IV (<30) = great for buying premium = high quality
+    // High IV (>70) = great for selling premium = high quality  
+    // Mid IV (30-70) = either works, moderate quality
+    
+    if (ivPercentile <= 30) {
+      ivScore = 80 + (30 - ivPercentile); // 80-110 → capped at 100
+    } else if (ivPercentile >= 70) {
+      ivScore = 80 + (ivPercentile - 70); // 80-110 → capped at 100
+    } else {
+      // Mid IV: moderate quality
+      ivScore = 50;
+    }
+    ivScore = Math.min(100, ivScore);
+    
+    const ivStrategy = ivPercentile > 70 ? 'SELL premium (spreads)' : ivPercentile < 30 ? 'BUY premium (directional)' : 'Either approach';
+    
+    components.push({
+      name: 'IV Environment',
+      direction: 'neutral', // IV is never directional
+      weight: ivQualityWeight,
+      score: ivScore,
+      reason: `IV Rank: ${ivPercentile.toFixed(0)}% → ${ivStrategy}`
+    });
+    
+    qualityScore += ivScore * ivQualityWeight;
+    qualityMaxScore += 100 * ivQualityWeight;
   }
 
-  // Check for IV vs direction conflict
+  // 6. RISK:REWARD (35% of quality) - Smooth continuous mapping
+  const rrQualityWeight = 0.35;
+  let rrScore = 0;
+  
+  if (tradeLevels && tradeLevels.riskRewardRatio) {
+    const rr = tradeLevels.riskRewardRatio;
+    
+    // Smooth continuous mapping (no discontinuities):
+    // R:R 0.0 → -50 (terrible)
+    // R:R 0.5 → -25
+    // R:R 1.0 → +25 (break-even is okay, not great)
+    // R:R 1.5 → +50
+    // R:R 2.0 → +70
+    // R:R 3.0 → +85
+    // R:R 4.0+ → +95 (capped)
+    
+    if (rr <= 0) {
+      rrScore = -50;
+    } else if (rr <= 1) {
+      // 0 to 1: maps -50 to +25
+      rrScore = -50 + (rr * 75);
+    } else if (rr <= 2) {
+      // 1 to 2: maps +25 to +70
+      rrScore = 25 + ((rr - 1) * 45);
+    } else if (rr <= 4) {
+      // 2 to 4: maps +70 to +95
+      rrScore = 70 + ((rr - 2) * 12.5);
+    } else {
+      rrScore = 95; // Cap at 4:1+
+    }
+    
+    const rrGrade = rr >= 2.5 ? 'Excellent' : rr >= 1.5 ? 'Good' : rr >= 1 ? 'Acceptable' : 'POOR';
+    
+    components.push({
+      name: 'Risk:Reward',
+      direction: 'neutral', // R:R is quality, not direction
+      weight: rrQualityWeight,
+      score: rrScore,
+      reason: `R:R ${rr.toFixed(1)}:1 - ${rrGrade}`
+    });
+    
+    qualityScore += Math.max(0, rrScore) * rrQualityWeight; // Only positive contributes to quality
+    qualityMaxScore += 100 * rrQualityWeight;
+  }
+
+  // 7. SIGNAL AGREEMENT (30% of quality)
+  const agreementWeight = 0.30;
+  
+  // Get directional components only
+  const directionalComponents = components.filter(c => 
+    ['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position'].includes(c.name)
+    && c.direction !== 'neutral'
+  );
+  
+  // Calculate weighted agreement with final direction
+  let agreementScore = 0;
+  let agreementWeight_sum = 0;
+  
+  for (const comp of directionalComponents) {
+    const agrees = comp.direction === finalDirection;
+    const strength = Math.abs(comp.score) / 100; // 0 to 1
+    
+    if (agrees) {
+      agreementScore += comp.weight * strength * 100;
+    }
+    agreementWeight_sum += comp.weight;
+  }
+  
+  const normalizedAgreement = agreementWeight_sum > 0 
+    ? agreementScore / agreementWeight_sum 
+    : 50;
+  
+  qualityScore += normalizedAgreement * agreementWeight;
+  qualityMaxScore += 100 * agreementWeight;
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CONFIDENCE CALCULATION (weighted agreement, not simple count)
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  // Confidence = how much weight agrees with the final direction, scaled by signal strength
+  let confidenceNumerator = 0;
+  let confidenceDenominator = 0;
+  
+  for (const comp of directionalComponents) {
+    const signalStrength = Math.abs(comp.score) / 100; // 0 to 1
+    const weightedStrength = comp.weight * signalStrength;
+    
+    confidenceDenominator += weightedStrength;
+    
+    if (comp.direction === finalDirection) {
+      confidenceNumerator += weightedStrength;
+    } else if (comp.direction !== 'neutral') {
+      // Opposing signal reduces confidence
+      confidenceNumerator -= weightedStrength * 0.5;
+    }
+  }
+  
+  let confidence = confidenceDenominator > 0 
+    ? Math.max(0, Math.min(100, (confidenceNumerator / confidenceDenominator) * 100))
+    : 50;
+  
+  // If neutral direction, confidence is low by definition
+  if (finalDirection === 'neutral') {
+    confidence = Math.min(confidence, 40);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CONFLICT DETECTION
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  const bullishSignals = directionalComponents.filter(c => c.direction === 'bullish');
+  const bearishSignals = directionalComponents.filter(c => c.direction === 'bearish');
+  
+  if (bullishSignals.length > 0 && bearishSignals.length > 0) {
+    const bullNames = bullishSignals.map(c => c.name).join(', ');
+    const bearNames = bearishSignals.map(c => c.name).join(', ');
+    conflicts.push(`⚠️ CONFLICT: ${bullNames} → BULLISH but ${bearNames} → BEARISH`);
+  }
+  
+  // IV warning
   if (ivRank && ivRank.rank > 70 && finalDirection !== 'neutral') {
-    conflicts.push(`⚠️ HIGH IV WARNING: Consider selling premium (spreads) rather than buying naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
+    conflicts.push(`⚠️ HIGH IV (${ivRank.rank.toFixed(0)}%): Consider spreads instead of naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
   }
-
-  // Check for poor R:R
+  
+  // Poor R:R warning
   if (tradeLevels && tradeLevels.riskRewardRatio < 1) {
-    conflicts.push(`⚠️ POOR R:R: Risk:Reward ratio of ${tradeLevels.riskRewardRatio.toFixed(1)}:1 is unfavorable`);
+    conflicts.push(`⚠️ POOR R:R (${tradeLevels.riskRewardRatio.toFixed(1)}:1): Risk exceeds potential reward`);
   }
 
-  // Calculate confidence based on signal alignment
-  const totalSignals = components.filter(c => c.direction !== 'neutral').length;
-  const confidence = totalSignals > 0 ? (alignedCount / totalSignals) * 100 : 50;
-
-  console.log(`🎯 Composite Score: ${normalizedScore.toFixed(1)} → ${finalDirection.toUpperCase()} (${confidence.toFixed(0)}% confidence, ${conflicts.length} conflicts)`);
+  console.log(`🎯 Direction: ${normalizedDirectionScore.toFixed(1)} → ${finalDirection.toUpperCase()} | Quality: ${(qualityScore/qualityMaxScore*100).toFixed(0)}% | Confidence: ${confidence.toFixed(0)}%`);
 
   return {
     finalDirection,
-    directionScore: normalizedScore,
+    directionScore: normalizedDirectionScore,
     confidence,
     components,
     conflicts,
-    alignedCount,
+    alignedCount: finalDirection === 'bullish' ? bullishSignals.length : bearishSignals.length,
     totalSignals: components.length
   };
 }
@@ -2100,7 +2268,8 @@ export class OptionsConfluenceAnalyzer {
       openInterestAnalysis ? { 
         maxPain: openInterestAnalysis.maxPainStrike || 0, 
         currentPrice 
-      } : undefined
+      } : undefined,
+      primaryExpiration?.dte || 14  // Pass DTE for dynamic max pain weighting
     );
     
     // PRO TRADER: Get strategy recommendation based on IV environment and composite score
