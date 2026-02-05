@@ -791,14 +791,72 @@ export async function POST(req: NextRequest) {
       let bearishSignals = 0;
       let neutralSignals = 0;
       
-      // 1. Trend vs EMA200 (major signal)
+      // =================================================================
+      // ADX-BASED TREND MULTIPLIER (not a directional vote!)
+      // ADX measures trend STRENGTH, not direction
+      // High ADX = trust trend signals more, Low ADX = choppy, reduce trust
+      // =================================================================
+      let trendMultiplier = 1.0;
+      if (Number.isFinite(adxVal)) {
+        if (adxVal! >= 40) {
+          trendMultiplier = 1.4; // Very strong trend - heavily trust trend signals
+        } else if (adxVal! >= 25) {
+          trendMultiplier = 1.25; // Strong trend - trust trend signals more
+        } else if (adxVal! >= 20) {
+          trendMultiplier = 1.0; // Moderate - normal weighting
+        } else {
+          trendMultiplier = 0.7; // Choppy market - reduce trend signal trust
+        }
+      }
+      
+      // =================================================================
+      // TREND-BASED SIGNALS (affected by ADX multiplier)
+      // =================================================================
+      
+      // 1. Trend vs EMA200 (base weight: 2, affected by ADX)
       if (Number.isFinite(ema200) && Number.isFinite(close)) {
-        if (close! > ema200 * 1.01) { bullishSignals += 2; } // Above EMA200 by 1%+
-        else if (close! < ema200 * 0.99) { bearishSignals += 2; } // Below EMA200 by 1%+
+        const ema200Weight = 2 * trendMultiplier;
+        if (close! > ema200 * 1.01) { bullishSignals += ema200Weight; } // Above EMA200 by 1%+
+        else if (close! < ema200 * 0.99) { bearishSignals += ema200Weight; } // Below EMA200 by 1%+
         else { neutralSignals += 1; }
       }
       
-      // 2. RSI
+      // 2. MACD Histogram (base weight: 1, affected by ADX)
+      if (Number.isFinite(hist)) {
+        const macdHistWeight = 1 * trendMultiplier;
+        if (hist > 0) { bullishSignals += macdHistWeight; }
+        else { bearishSignals += macdHistWeight; }
+      }
+      
+      // 3. MACD vs Signal (base weight: 1, affected by ADX)
+      if (Number.isFinite(macd) && Number.isFinite(sig)) {
+        const macdSigWeight = 1 * trendMultiplier;
+        if (macd > sig) { bullishSignals += macdSigWeight; }
+        else { bearishSignals += macdSigWeight; }
+      }
+      
+      // 4. Aroon (base weight: 1, affected by ADX - it's a trend indicator)
+      if (Number.isFinite(aroonUp) && Number.isFinite(aroonDown)) {
+        const aroonWeight = 1 * trendMultiplier;
+        if (aroonUp! > aroonDown! && aroonUp! > 70) { bullishSignals += aroonWeight; }
+        else if (aroonDown! > aroonUp! && aroonDown! > 70) { bearishSignals += aroonWeight; }
+        else { neutralSignals += 0.5; }
+      }
+      
+      // 5. OBV (On Balance Volume) - trend confirmation (affected by ADX)
+      if (Number.isFinite(obvCurrent) && Number.isFinite(obvPrev)) {
+        const obvWeight = 1 * trendMultiplier;
+        if (obvCurrent! > obvPrev!) { bullishSignals += obvWeight; } // Volume confirming up move
+        else if (obvCurrent! < obvPrev!) { bearishSignals += obvWeight; } // Volume confirming down move
+        else { neutralSignals += 0.5; }
+      }
+      
+      // =================================================================
+      // MOMENTUM/OSCILLATOR SIGNALS (NOT affected by ADX)
+      // These work differently - they catch reversals in ranges
+      // =================================================================
+      
+      // 6. RSI (not affected by ADX - works well in ranges for reversals)
       if (Number.isFinite(rsi)) {
         if (rsi >= 55 && rsi <= 70) { bullishSignals += 1; } // Bullish momentum
         else if (rsi > 70) { bearishSignals += 1; } // Overbought = caution
@@ -807,30 +865,7 @@ export async function POST(req: NextRequest) {
         else { neutralSignals += 1; }
       }
       
-      // 3. MACD Histogram
-      if (Number.isFinite(hist)) {
-        if (hist > 0) { bullishSignals += 1; }
-        else { bearishSignals += 1; }
-      }
-      
-      // 4. MACD vs Signal
-      if (Number.isFinite(macd) && Number.isFinite(sig)) {
-        if (macd > sig) { bullishSignals += 1; }
-        else { bearishSignals += 1; }
-      }
-      
-      // 5. ADX (trend strength)
-      if (Number.isFinite(adxVal)) {
-        if (adxVal! > 25) { 
-          // Strong trend - amplify the dominant direction
-          if (bullishSignals > bearishSignals) bullishSignals += 1;
-          else if (bearishSignals > bullishSignals) bearishSignals += 1;
-        } else {
-          neutralSignals += 1; // Weak trend
-        }
-      }
-      
-      // 6. Stochastic
+      // 7. Stochastic (not affected by ADX - oscillator works in ranges)
       if (Number.isFinite(stochK)) {
         if (stochK! > 80) { bearishSignals += 1; } // Overbought
         else if (stochK! < 20) { bullishSignals += 1; } // Oversold
@@ -838,14 +873,7 @@ export async function POST(req: NextRequest) {
         else { bearishSignals += 0.5; }
       }
       
-      // 7. Aroon
-      if (Number.isFinite(aroonUp) && Number.isFinite(aroonDown)) {
-        if (aroonUp! > aroonDown! && aroonUp! > 70) { bullishSignals += 1; }
-        else if (aroonDown! > aroonUp! && aroonDown! > 70) { bearishSignals += 1; }
-        else { neutralSignals += 0.5; }
-      }
-      
-      // 8. CCI (Commodity Channel Index)
+      // 8. CCI (Commodity Channel Index - not affected by ADX)
       if (Number.isFinite(cciVal)) {
         if (cciVal! > 100) { bullishSignals += 1; } // Strong bullish
         else if (cciVal! > 0) { bullishSignals += 0.5; } // Mild bullish
@@ -853,16 +881,8 @@ export async function POST(req: NextRequest) {
         else { bearishSignals += 0.5; } // Mild bearish
       }
       
-      // 9. OBV (On Balance Volume) - trend confirmation
-      if (Number.isFinite(obvCurrent) && Number.isFinite(obvPrev)) {
-        if (obvCurrent! > obvPrev!) { bullishSignals += 1; } // Volume confirming up move
-        else if (obvCurrent! < obvPrev!) { bearishSignals += 1; } // Volume confirming down move
-        else { neutralSignals += 0.5; }
-      }
-      
-      // 10. ATR-based volatility adjustment (risk factor)
-      // High ATR in a downtrend is more bearish; high ATR in uptrend can be bullish breakout
-      // For now, extreme volatility adds caution (neutral weight)
+      // 9. ATR-based volatility adjustment (risk factor)
+      // High ATR adds caution regardless of direction
       if (Number.isFinite(atr) && Number.isFinite(close)) {
         const atrPercent = (atr / close!) * 100;
         if (atrPercent > 5) { // Very high volatility (>5% daily range)
@@ -885,9 +905,10 @@ export async function POST(req: NextRequest) {
       
       // Calculate score (0-100 scale)
       // Base score starts at 50 (neutral)
+      // Max signals now depends on ADX multiplier (approx 10-14 range)
       let score = 50;
       const signalDiff = bullishSignals - bearishSignals;
-      const maxSignals = 12; // Max possible with all 10 indicators
+      const maxSignals = 10 * trendMultiplier; // Dynamic based on trend strength
       
       // Adjust score based on signal difference
       score += (signalDiff / maxSignals) * 50;
@@ -899,9 +920,9 @@ export async function POST(req: NextRequest) {
         score,
         direction,
         signals: {
-          bullish: Math.round(bullishSignals),
-          bearish: Math.round(bearishSignals),
-          neutral: Math.round(neutralSignals)
+          bullish: Math.round(bullishSignals * 10) / 10,
+          bearish: Math.round(bearishSignals * 10) / 10,
+          neutral: Math.round(neutralSignals * 10) / 10
         }
       };
     }

@@ -349,14 +349,57 @@ function computeScore(indicators: Indicators): {
   let bullish = 0, bearish = 0, neutral = 0;
   const { price, ema200, rsi, macd, macdSignal, adx, stochK, aroonUp, aroonDown, cci } = indicators;
 
-  // 1. Trend vs EMA200 (2 pts)
+  // =================================================================
+  // ADX-BASED TREND MULTIPLIER (not a directional vote!)
+  // ADX measures trend STRENGTH, not direction
+  // High ADX = trust trend signals more, Low ADX = choppy, reduce trust
+  // =================================================================
+  let trendMultiplier = 1.0;
+  if (adx !== undefined && !isNaN(adx)) {
+    if (adx >= 40) {
+      trendMultiplier = 1.4; // Very strong trend - heavily trust trend signals
+    } else if (adx >= 25) {
+      trendMultiplier = 1.25; // Strong trend - trust trend signals more
+    } else if (adx >= 20) {
+      trendMultiplier = 1.0; // Moderate - normal weighting
+    } else {
+      trendMultiplier = 0.7; // Choppy market - reduce trend signal trust
+    }
+  }
+
+  // =================================================================
+  // TREND-BASED SIGNALS (affected by ADX multiplier)
+  // =================================================================
+
+  // 1. Trend vs EMA200 (base weight: 2, affected by ADX)
   if (price && ema200) {
-    if (price > ema200 * 1.01) bullish += 2;
-    else if (price < ema200 * 0.99) bearish += 2;
+    const ema200Weight = 2 * trendMultiplier;
+    if (price > ema200 * 1.01) bullish += ema200Weight;
+    else if (price < ema200 * 0.99) bearish += ema200Weight;
     else neutral += 1;
   }
-  
-  // 2. RSI (1 pt)
+
+  // 2. MACD (base weight: 1.5, affected by ADX)
+  if (macd !== undefined && macdSignal !== undefined && !isNaN(macd) && !isNaN(macdSignal)) {
+    const macdWeight = 1 * trendMultiplier;
+    if (macd > macdSignal) bullish += macdWeight; else bearish += macdWeight;
+    if (macd > 0) bullish += 0.5 * trendMultiplier; else bearish += 0.5 * trendMultiplier;
+  }
+
+  // 3. Aroon (base weight: 1, affected by ADX - it's a trend indicator)
+  if (aroonUp !== undefined && aroonDown !== undefined && !isNaN(aroonUp) && !isNaN(aroonDown)) {
+    const aroonWeight = 1 * trendMultiplier;
+    if (aroonUp > aroonDown && aroonUp > 70) bullish += aroonWeight;
+    else if (aroonDown > aroonUp && aroonDown > 70) bearish += aroonWeight;
+    else neutral += 0.5;
+  }
+
+  // =================================================================
+  // MOMENTUM/OSCILLATOR SIGNALS (NOT affected by ADX)
+  // These work differently - they catch reversals in ranges
+  // =================================================================
+
+  // 4. RSI (not affected by ADX - works well in ranges for reversals)
   if (rsi !== undefined && !isNaN(rsi)) {
     if (rsi >= 55 && rsi <= 70) bullish += 1;
     else if (rsi > 70) bearish += 1;
@@ -365,21 +408,7 @@ function computeScore(indicators: Indicators): {
     else neutral += 1;
   }
 
-  // 3. MACD (1.5 pts)
-  if (macd !== undefined && macdSignal !== undefined && !isNaN(macd) && !isNaN(macdSignal)) {
-    if (macd > macdSignal) bullish += 1; else bearish += 1;
-    if (macd > 0) bullish += 0.5; else bearish += 0.5;
-  }
-
-  // 4. ADX (1 pt)
-  if (adx !== undefined && !isNaN(adx)) {
-    if (adx > 25) {
-      if (bullish > bearish) bullish += 1;
-      else if (bearish > bullish) bearish += 1;
-    } else neutral += 1;
-  }
-
-  // 5. Stochastic (1 pt)
+  // 5. Stochastic (not affected by ADX - oscillator works in ranges)
   if (stochK !== undefined && !isNaN(stochK)) {
     if (stochK > 80) bearish += 1;
     else if (stochK < 20) bullish += 1;
@@ -387,14 +416,7 @@ function computeScore(indicators: Indicators): {
     else bearish += 0.5;
   }
 
-  // 6. Aroon (1 pt)
-  if (aroonUp !== undefined && aroonDown !== undefined && !isNaN(aroonUp) && !isNaN(aroonDown)) {
-    if (aroonUp > aroonDown && aroonUp > 70) bullish += 1;
-    else if (aroonDown > aroonUp && aroonDown > 70) bearish += 1;
-    else neutral += 0.5;
-  }
-
-  // 7. CCI (1 pt)
+  // 6. CCI (not affected by ADX)
   if (cci !== undefined && !isNaN(cci)) {
     if (cci > 100) bullish += 1;
     else if (cci > 0) bullish += 0.5;
@@ -408,12 +430,20 @@ function computeScore(indicators: Indicators): {
   else if (bearish > bullish * 1.3) direction = 'bearish';
   else direction = 'neutral';
 
-  // Score 0-100 (max possible signals is ~8.5 each way)
-  const maxSignals = 8.5;
+  // Score 0-100 (max possible signals depends on ADX multiplier)
+  const maxSignals = 7 * trendMultiplier; // Dynamic based on trend strength
   let score = 50 + ((bullish - bearish) / maxSignals) * 50;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
-  return { score, direction, signals: { bullish, bearish, neutral } };
+  return { 
+    score, 
+    direction, 
+    signals: { 
+      bullish: Math.round(bullish * 10) / 10, 
+      bearish: Math.round(bearish * 10) / 10, 
+      neutral: Math.round(neutral * 10) / 10 
+    } 
+  };
 }
 
 // =============================================================================
