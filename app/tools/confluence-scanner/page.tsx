@@ -43,6 +43,15 @@ interface HierarchicalResult {
     rewardPercent: number;
   };
   signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
+  scoreBreakdown?: {
+    directionScore: number;
+    clusterScore: number;
+    dominantClusterRatio: number;
+    decompressionScore: number;
+    activeTFs: number;
+    hasHigherTF: boolean;
+    banners: string[];
+  };
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -863,6 +872,167 @@ export default function AIConfluenceScanner() {
               <div style={{ marginTop: '1rem', color: '#94A3B8', fontSize: '0.9rem' }}>
                 💡 {hierarchicalResult.prediction.reasoning}
               </div>
+
+              {/* 📐 SCORE BREAKDOWN PANEL */}
+              {hierarchicalResult.scoreBreakdown && (
+                <div style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  background: 'rgba(30,41,59,0.6)',
+                  border: '1px solid #334155',
+                  borderRadius: '12px',
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    marginBottom: '1rem',
+                    borderBottom: '1px solid #334155',
+                    paddingBottom: '0.75rem',
+                  }}>
+                    <span style={{ fontSize: '1.1rem' }}>📐</span>
+                    <span style={{ fontWeight: 600, color: '#E2E8F0' }}>Score Breakdown</span>
+                    <span style={{ 
+                      marginLeft: 'auto', 
+                      fontSize: '0.7rem', 
+                      color: '#64748B',
+                      background: 'rgba(100,116,139,0.2)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                    }}>
+                      Track A / Track B
+                    </span>
+                  </div>
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                    gap: '0.75rem',
+                  }}>
+                    {/* Direction Score */}
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '0.75rem',
+                      background: hierarchicalResult.scoreBreakdown.directionScore > 15 
+                        ? 'rgba(16,185,129,0.15)' 
+                        : hierarchicalResult.scoreBreakdown.directionScore < -15
+                        ? 'rgba(239,68,68,0.15)'
+                        : 'rgba(100,116,139,0.1)',
+                      borderRadius: '8px',
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        Direction
+                      </div>
+                      <div style={{ 
+                        fontSize: '1.25rem', 
+                        fontWeight: 'bold',
+                        color: hierarchicalResult.scoreBreakdown.directionScore > 15 
+                          ? '#10B981' 
+                          : hierarchicalResult.scoreBreakdown.directionScore < -15
+                          ? '#EF4444'
+                          : '#64748B',
+                      }}>
+                        {hierarchicalResult.scoreBreakdown.directionScore > 0 ? '+' : ''}{hierarchicalResult.scoreBreakdown.directionScore}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#64748B' }}>-100 to +100</div>
+                    </div>
+
+                    {/* Cluster Score */}
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '0.75rem',
+                      background: 'rgba(59,130,246,0.1)',
+                      borderRadius: '8px',
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        Cluster
+                      </div>
+                      <div style={{ 
+                        fontSize: '1.25rem', 
+                        fontWeight: 'bold',
+                        color: hierarchicalResult.scoreBreakdown.clusterScore >= 70 ? '#3B82F6' : '#94A3B8',
+                      }}>
+                        {hierarchicalResult.scoreBreakdown.clusterScore}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#64748B' }}>
+                        {Math.round(hierarchicalResult.scoreBreakdown.dominantClusterRatio * 100)}% ratio
+                      </div>
+                    </div>
+
+                    {/* Decompression Score */}
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '0.75rem',
+                      background: 'rgba(168,85,247,0.1)',
+                      borderRadius: '8px',
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        Decomp
+                      </div>
+                      <div style={{ 
+                        fontSize: '1.25rem', 
+                        fontWeight: 'bold',
+                        color: hierarchicalResult.scoreBreakdown.decompressionScore >= 70 ? '#A855F7' : '#94A3B8',
+                      }}>
+                        {hierarchicalResult.scoreBreakdown.decompressionScore}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#64748B' }}>weighted avg</div>
+                    </div>
+
+                    {/* Active TFs */}
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '0.75rem',
+                      background: 'rgba(245,158,11,0.1)',
+                      borderRadius: '8px',
+                    }}>
+                      <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                        Active TFs
+                      </div>
+                      <div style={{ 
+                        fontSize: '1.25rem', 
+                        fontWeight: 'bold',
+                        color: hierarchicalResult.scoreBreakdown.activeTFs >= 4 ? '#F59E0B' : '#94A3B8',
+                      }}>
+                        {hierarchicalResult.scoreBreakdown.activeTFs}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#64748B' }}>
+                        {hierarchicalResult.scoreBreakdown.hasHigherTF ? '✓ 1H+' : 'no 1H+'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Banners */}
+                  {hierarchicalResult.scoreBreakdown.banners.length > 0 && (
+                    <div style={{ 
+                      marginTop: '0.75rem', 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '0.5rem',
+                      justifyContent: 'center',
+                    }}>
+                      {hierarchicalResult.scoreBreakdown.banners.map((banner, i) => (
+                        <span key={i} style={{
+                          background: banner.includes('MEGA') ? 'linear-gradient(135deg, #F59E0B, #EF4444)' :
+                                     banner.includes('EXTREME BULLISH') ? 'linear-gradient(135deg, #10B981, #059669)' :
+                                     banner.includes('EXTREME BEARISH') ? 'linear-gradient(135deg, #EF4444, #DC2626)' :
+                                     banner.includes('MAGNET') ? 'linear-gradient(135deg, #8B5CF6, #6366F1)' :
+                                     'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+                          color: '#fff',
+                          padding: '4px 12px',
+                          borderRadius: '999px',
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                        }}>
+                          🏆 {banner}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 📊 TRADE SETUP CARD */}

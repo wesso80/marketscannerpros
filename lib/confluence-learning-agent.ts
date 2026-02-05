@@ -386,6 +386,31 @@ export interface HierarchicalScanResult {
   
   // Signal quality
   signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NEW: Formalized Score Breakdown (makes confidence defensible)
+  // ═══════════════════════════════════════════════════════════════════════════
+  scoreBreakdown: {
+    // A) Direction Score (-100 to +100)
+    directionScore: number;           // Weighted by TF hierarchy
+    
+    // B) Cluster Score (0-100) - How time-aligned are the signals?
+    clusterScore: number;
+    dominantClusterRatio: number;     // % of active TFs in main cluster
+    
+    // C) Decompression Score (0-100) - Weighted avg confidence
+    decompressionScore: number;
+    
+    // Final Confidence = 0.55*clusterScore + 0.45*decompressionScore
+    // Direction comes from directionScore only
+    
+    // Gates for signal strength
+    activeTFs: number;
+    hasHigherTF: boolean;             // At least one TF >= 1h active
+    
+    // Banners (deterministic rules)
+    banners: string[];                // e.g., "MEGA CONFLUENCE", "EXTREME BULLISH"
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1887,46 +1912,165 @@ export class ConfluenceLearningAgent {
       }
     }
     
-    // Build prediction
-    let direction: 'bullish' | 'bearish' | 'neutral' = netPullDirection;
-    let confidence = Math.min(90, 40 + activeDecomps.length * 10 + clusters.length * 5);
-    let targetLevel = currentPrice;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FORMALIZED SCORING MODEL (Track A/Track B approach)
+    // A) Direction Score (-100 to +100) - from TF-weighted pull
+    // B) Cluster Score (0-100) - temporal alignment quality
+    // C) Decompression Score (0-100) - weighted average confidence
+    // Final Confidence = 0.55*clusterScore + 0.45*decompressionScore
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    // Timeframe weights (hierarchy)
+    const TF_WEIGHTS: Record<string, number> = {
+      '5m': 1.0, '10m': 1.2, '15m': 1.4, '30m': 1.7,
+      '1H': 2.0, '1h': 2.0, '2H': 2.3, '2h': 2.3, '3H': 2.4, '3h': 2.4, '4H': 2.6, '4h': 2.6,
+      '6H': 2.8, '6h': 2.8, '8H': 2.9, '8h': 2.9,
+      '1D': 3.2, 'D': 3.2, '2D': 3.4, '3D': 3.6, '4D': 3.7, '5D': 3.8, '6D': 3.9, '7D': 4.0,
+      '1W': 4.0, 'W': 4.0, '2W': 4.2, '3W': 4.4, '4W': 4.5,
+      '1M': 5.0, 'M': 5.0, '2M': 5.2, '3M': 5.4,
+    };
+    
+    const getTFWeight = (tf: string): number => TF_WEIGHTS[tf] || 1.0;
+    const isHigherTF = (tf: string): boolean => {
+      const mins = TIMEFRAMES.find(t => t.label === tf)?.minutes || 0;
+      return mins >= 60; // 1h or higher
+    };
+    
+    // A) DIRECTION SCORE (-100 to +100)
+    // Formula: 100 * Σ(w_tf * conf_tf * dir_tf) / Σ(w_tf * conf_tf)
+    let dirNumerator = 0;
+    let dirDenominator = 0;
+    
+    for (const d of activeDecomps) {
+      const weight = getTFWeight(d.tf);
+      const conf = Math.min(1, d.pullStrength / 10); // Normalize pullStrength to 0-1
+      const dir = d.pullDirection === 'up' ? 1 : d.pullDirection === 'down' ? -1 : 0;
+      
+      dirNumerator += weight * conf * dir;
+      dirDenominator += weight * conf;
+    }
+    
+    const directionScore = dirDenominator > 0 
+      ? Math.max(-100, Math.min(100, 100 * (dirNumerator / dirDenominator)))
+      : 0;
+    
+    // Direction label from score (not from simple pullBias)
+    let direction: 'bullish' | 'bearish' | 'neutral';
+    if (directionScore > 15) direction = 'bullish';
+    else if (directionScore < -15) direction = 'bearish';
+    else direction = 'neutral';
+    
+    // B) CLUSTER SCORE (0-100) - Temporal alignment quality
+    // dominantClusterRatio = max(clusterWeight) / Σ(clusterWeight)
+    let totalClusterWeight = 0;
+    let maxClusterWeight = 0;
+    
+    for (const tc of temporalClusters) {
+      let clusterWeight = 0;
+      for (const tf of tc.timeframes) {
+        const decomp = activeDecomps.find(d => d.tf === tf);
+        if (decomp) {
+          const weight = getTFWeight(tf);
+          const conf = Math.min(1, decomp.pullStrength / 10);
+          clusterWeight += weight * conf;
+        }
+      }
+      totalClusterWeight += clusterWeight;
+      maxClusterWeight = Math.max(maxClusterWeight, clusterWeight);
+    }
+    
+    const dominantClusterRatio = totalClusterWeight > 0 
+      ? maxClusterWeight / totalClusterWeight 
+      : 0;
+    
+    const clusterScore = Math.min(100, Math.max(0, dominantClusterRatio * 100));
+    
+    // C) DECOMPRESSION SCORE (0-100) - Weighted average confidence
+    // Formula: 100 * Σ(w_tf * conf_tf) / Σ(w_tf)
+    let decompNumerator = 0;
+    let decompDenominator = 0;
+    
+    for (const d of activeDecomps) {
+      const weight = getTFWeight(d.tf);
+      const conf = Math.min(1, d.pullStrength / 10);
+      decompNumerator += weight * conf;
+      decompDenominator += weight;
+    }
+    
+    const decompressionScore = decompDenominator > 0 
+      ? Math.min(100, 100 * (decompNumerator / decompDenominator))
+      : 0;
+    
+    // FINAL CONFIDENCE (0-100)
+    // Cluster slightly dominates because "time confluence" is the product
+    let confidence = Math.min(95, Math.max(10, 
+      0.55 * clusterScore + 0.45 * decompressionScore
+    ));
+    
+    // Check for higher TF presence
+    const hasHigherTFActive = activeDecomps.some(d => isHigherTF(d.tf));
+    const activeTFCount = activeDecomps.length;
+    
+    // SIGNAL STRENGTH with gates (not just confidence)
+    let signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal' = 'no_signal';
+    if (confidence >= 75 && activeTFCount >= 4 && dominantClusterRatio >= 0.70 && hasHigherTFActive) {
+      signalStrength = 'strong';
+    } else if (confidence >= 55 && activeTFCount >= 3 && dominantClusterRatio >= 0.60) {
+      signalStrength = 'moderate';
+    } else if (confidence >= 40 && activeTFCount >= 2) {
+      signalStrength = 'weak';
+    }
+    
+    // BANNERS (deterministic rules)
+    const banners: string[] = [];
+    
+    // MEGA CONFLUENCE: 5+ TFs clustered together with high ratio
+    if (activeTFCount >= 5 && dominantClusterRatio >= 0.75) {
+      banners.push('MEGA CONFLUENCE');
+    }
+    
+    // EXTREME BULLISH/BEARISH: Strong direction + high confidence
+    if (Math.abs(directionScore) >= 70 && confidence >= 70) {
+      banners.push(directionScore > 0 ? 'EXTREME BULLISH' : 'EXTREME BEARISH');
+    }
+    
+    // PRICE MAGNET: Dominant cluster's target is within 1% of current price
+    if (clusters.length > 0 && clusterScore >= 70) {
+      const nearestCluster = clusters[0];
+      const distanceToCluster = Math.abs((nearestCluster.avgLevel - currentPrice) / currentPrice) * 100;
+      if (distanceToCluster <= 1.5) {
+        banners.push('PRICE MAGNET');
+      }
+    }
+    
+    // HIGH CONFIDENCE
+    if (confidence >= 80) {
+      banners.push('HIGH CONFIDENCE');
+    }
     
     // Find target: nearest cluster or strongest decompressing 50%
+    let targetLevel = currentPrice;
     if (clusters.length > 0) {
-      // Sort clusters by proximity to price
       clusters.sort((a, b) => Math.abs(a.avgLevel - currentPrice) - Math.abs(b.avgLevel - currentPrice));
       targetLevel = clusters[0].avgLevel;
     } else if (activeDecomps.length > 0) {
-      // Use strongest decompressing TF's 50%
       const strongest = activeDecomps.sort((a, b) => b.pullStrength - a.pullStrength)[0];
       targetLevel = strongest.mid50Level;
     }
     
-    // Adjust direction based on target
-    if (targetLevel > currentPrice * 1.001) direction = 'bullish';
-    else if (targetLevel < currentPrice * 0.999) direction = 'bearish';
-    
-    // Determine signal strength
-    let signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal' = 'no_signal';
-    if (activeDecomps.length >= modeConfig.minConfluence && clusters.length >= 1) {
-      signalStrength = 'strong';
-    } else if (activeDecomps.length >= modeConfig.minConfluence - 1) {
-      signalStrength = 'moderate';
-    } else if (activeDecomps.length >= 1) {
-      signalStrength = 'weak';
-    }
-    
-    // Build reasoning
+    // Build reasoning with score breakdown
     const reasoningParts: string[] = [];
-    if (activeDecomps.length > 0) {
-      reasoningParts.push(`${activeDecomps.length} TFs decompressing toward 50%`);
+    if (activeTFCount > 0) {
+      reasoningParts.push(`${activeTFCount} TFs decompressing`);
     }
-    if (clusters.length > 0) {
-      reasoningParts.push(`${clusters.length} 50% cluster(s) detected`);
+    if (clusteredCount >= 2) {
+      reasoningParts.push(`${clusteredCount} TFs clustered (${dominantClusterRatio.toFixed(0)}% ratio)`);
     }
-    if (netPullDirection !== 'neutral') {
-      reasoningParts.push(`Net pull ${netPullDirection} (bias: ${pullBias.toFixed(0)}%)`);
+    if (direction !== 'neutral') {
+      reasoningParts.push(`Direction: ${direction.toUpperCase()} (${directionScore > 0 ? '+' : ''}${directionScore.toFixed(0)})`);
+    }
+    if (banners.length > 0) {
+      reasoningParts.push(`🏆 ${banners.join(' | ')}`);
     }
     
     // Expected move time based on nearest close
@@ -1936,6 +2080,17 @@ export class ConfluenceLearningAgent {
     const expectedMoveTime = nearestClose 
       ? `${nearestClose.minsToClose}m (${nearestClose.tf} close)`
       : 'Wait for decompression';
+    
+    // Build the score breakdown object
+    const scoreBreakdown = {
+      directionScore: Math.round(directionScore),
+      clusterScore: Math.round(clusterScore),
+      dominantClusterRatio: Math.round(dominantClusterRatio * 100) / 100,
+      decompressionScore: Math.round(decompressionScore),
+      activeTFs: activeTFCount,
+      hasHigherTF: hasHigherTFActive,
+      banners,
+    };
     
     // ═══════════════════════════════════════════════════════════════════════════
     // TRADE SETUP CALCULATION (Swing Stop + 2.5 R:R)
@@ -2035,13 +2190,14 @@ export class ConfluenceLearningAgent {
       candleCloseConfluence,
       prediction: {
         direction,
-        confidence,
+        confidence: Math.round(confidence),
         reasoning: reasoningParts.join(' | ') || 'No confluence detected',
         targetLevel,
         expectedMoveTime,
       },
       tradeSetup,
       signalStrength,
+      scoreBreakdown,
     };
   }
 
