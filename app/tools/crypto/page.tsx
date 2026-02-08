@@ -36,6 +36,14 @@ const TrendingPoolsWidget = dynamic(() => import('@/components/TrendingPoolsWidg
   ssr: false,
   loading: () => <WidgetSkeleton />
 });
+const NewPoolsWidget = dynamic(() => import('@/components/NewPoolsWidget'), { 
+  ssr: false,
+  loading: () => <WidgetSkeleton />
+});
+const CryptoSearchWidget = dynamic(() => import('@/components/CryptoSearchWidget'), { 
+  ssr: false,
+  loading: () => <WidgetSkeleton />
+});
 const CryptoHeatmap = dynamic(() => import('@/components/CryptoHeatmap'), { 
   ssr: false,
   loading: () => <WidgetSkeleton height="400px" />
@@ -76,7 +84,7 @@ function PageLoadingSkeleton() {
   );
 }
 
-type Section = 'overview' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'listings';
+type Section = 'overview' | 'search' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'newpools' | 'listings';
 
 interface SidebarItem {
   id: Section;
@@ -87,13 +95,15 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { id: 'overview', label: 'Overview', icon: '📊', description: 'Market cap, dominance & global metrics' },
+  { id: 'search', label: 'Coin Search', icon: '🔍', description: 'Find any cryptocurrency' },
   { id: 'market', label: 'Market Heatmap', icon: '🗺️', description: 'Visual market performance' },
   { id: 'trending', label: 'Trending', icon: '🔥', description: 'Hot coins & searches' },
   { id: 'movers', label: 'Top Movers', icon: '📈', description: 'Biggest gainers & losers' },
   { id: 'sectors', label: 'Sectors', icon: '🏷️', description: 'Category performance' },
   { id: 'defi', label: 'DeFi', icon: '🏦', description: 'Decentralized finance stats' },
   { id: 'dex', label: 'DEX Pools', icon: '🔄', description: 'Hot trading pairs' },
-  { id: 'listings', label: 'New Listings', icon: '🆕', description: 'Newly listed coins' },
+  { id: 'newpools', label: 'New Pools', icon: '🌱', description: 'Just created liquidity' },
+  { id: 'listings', label: 'New Coins', icon: '🆕', description: 'Newly listed tokens' },
 ];
 
 // Wrapper component with Suspense boundary for useSearchParams
@@ -137,6 +147,8 @@ function CryptoCommandCenterContent() {
         'sectors': 'sectors',
         'defi': 'defi',
         'dex': 'dex',
+        'newpools': 'newpools',
+        'search': 'search',
         'listings': 'listings',
         'overview': 'overview',
       };
@@ -248,6 +260,22 @@ function CryptoCommandCenterContent() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="lg:col-span-2">
               <TrendingPoolsWidget />
+            </div>
+          </div>
+        );
+      case 'newpools':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-2">
+              <NewPoolsWidget />
+            </div>
+          </div>
+        );
+      case 'search':
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-2">
+              <CryptoSearchWidget />
             </div>
           </div>
         );
