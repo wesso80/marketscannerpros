@@ -221,7 +221,7 @@ export default function CryptoCommandCenter() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors lg:hidden"
+                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors md:hidden"
                 style={{ color: '#94a3b8' }}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,20 +290,19 @@ export default function CryptoCommandCenter() {
       </div>
 
       <div className="max-w-[1600px] mx-auto flex">
-        {/* Sidebar */}
+        {/* Sidebar - visible on medium screens and up */}
         <aside 
           style={{
-            width: sidebarOpen ? '240px' : '0px',
-            minWidth: sidebarOpen ? '240px' : '0px',
+            width: '240px',
+            minWidth: '240px',
             background: '#1e293b',
             borderRight: '1px solid #334155',
-            transition: 'all 0.3s ease',
-            overflow: 'hidden',
             height: 'calc(100vh - 81px)',
             position: 'sticky',
             top: '81px',
+            overflowY: 'auto',
           }}
-          className="hidden lg:block"
+          className="hidden md:block"
         >
           <nav style={{ padding: '16px 12px' }}>
             <div style={{ 
@@ -453,14 +452,14 @@ export default function CryptoCommandCenter() {
         {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Mobile Sidebar */}
         <aside 
-          className={`fixed left-0 top-[81px] h-[calc(100vh-81px)] z-50 lg:hidden transition-transform duration-300 ${
+          className={`fixed left-0 top-[81px] h-[calc(100vh-81px)] z-50 md:hidden transition-transform duration-300 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           style={{
@@ -554,7 +553,7 @@ export default function CryptoCommandCenter() {
 
           {/* Mobile Tab Bar (visible only on mobile when sidebar closed) */}
           <div 
-            className="fixed bottom-0 left-0 right-0 lg:hidden"
+            className="fixed bottom-0 left-0 right-0 md:hidden"
             style={{
               background: '#1e293b',
               borderTop: '1px solid #334155',
