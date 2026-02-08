@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { useUserTier } from '@/lib/useUserTier';
+import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import UpgradeGate from '@/components/UpgradeGate';
 
 // Dynamic imports for code splitting
 const TrendingCoinsWidget = dynamic(() => import('@/components/TrendingCoinsWidget'), { 
@@ -123,6 +124,16 @@ export default function CryptoCommandCenter() {
       });
     }
   }, [marketData, setPageData]);
+
+  // Pro+ tier gate - must be after all hooks
+  if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
+    return (
+      <UpgradeGate 
+        requiredTier="pro" 
+        feature="Crypto Command Center"
+      />
+    );
+  }
 
   const renderContent = () => {
     switch (activeSection) {
