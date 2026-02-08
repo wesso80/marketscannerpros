@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -82,10 +83,34 @@ const sidebarItems: SidebarItem[] = [
 
 export default function CryptoCommandCenter() {
   const { tier, isAdmin } = useUserTier();
+  const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
+
+  // Handle section from URL query param (e.g., ?section=heatmap)
+  useEffect(() => {
+    const sectionParam = searchParams.get('section');
+    if (sectionParam) {
+      // Map URL param to section id
+      const sectionMap: Record<string, Section> = {
+        'heatmap': 'market',
+        'market': 'market',
+        'trending': 'trending',
+        'movers': 'movers',
+        'sectors': 'sectors',
+        'defi': 'defi',
+        'dex': 'dex',
+        'listings': 'listings',
+        'overview': 'overview',
+      };
+      const mappedSection = sectionMap[sectionParam.toLowerCase()];
+      if (mappedSection) {
+        setActiveSection(mappedSection);
+      }
+    }
+  }, [searchParams]);
 
   // Fetch overview data for AI context
   const fetchOverview = useCallback(async () => {
