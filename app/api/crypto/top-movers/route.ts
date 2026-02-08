@@ -11,6 +11,12 @@ export async function GET(request: NextRequest) {
 
     const data = await getTopGainersLosers(duration, '1000');
     
+    // Debug: log raw response structure
+    if (data && data.top_gainers && data.top_gainers.length > 0) {
+      console.log('[Top Movers API] Sample gainer fields:', Object.keys(data.top_gainers[0]));
+      console.log('[Top Movers API] Sample gainer data:', JSON.stringify(data.top_gainers[0], null, 2));
+    }
+    
     if (!data) {
       return NextResponse.json({ 
         success: false, 
@@ -18,30 +24,30 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Format gainers
+    // Format gainers - handle both old and new CoinGecko response formats
     const gainers = data.top_gainers.slice(0, 10).map(coin => ({
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol.toUpperCase(),
       image: coin.image,
-      price: coin.current_price,
-      change: coin.price_change_percentage_24h,
-      volume: coin.total_volume,
-      marketCap: coin.market_cap,
-      rank: coin.market_cap_rank,
+      price: coin.usd ?? coin.current_price ?? 0,
+      change: coin.usd_24h_change ?? coin.price_change_percentage_24h ?? 0,
+      volume: coin.usd_24h_vol ?? coin.total_volume ?? 0,
+      marketCap: coin.usd_market_cap ?? coin.market_cap ?? 0,
+      rank: coin.market_cap_rank ?? 0,
     }));
 
-    // Format losers
+    // Format losers - handle both old and new CoinGecko response formats
     const losers = data.top_losers.slice(0, 10).map(coin => ({
       id: coin.id,
       name: coin.name,
       symbol: coin.symbol.toUpperCase(),
       image: coin.image,
-      price: coin.current_price,
-      change: coin.price_change_percentage_24h,
-      volume: coin.total_volume,
-      marketCap: coin.market_cap,
-      rank: coin.market_cap_rank,
+      price: coin.usd ?? coin.current_price ?? 0,
+      change: coin.usd_24h_change ?? coin.price_change_percentage_24h ?? 0,
+      volume: coin.usd_24h_vol ?? coin.total_volume ?? 0,
+      marketCap: coin.usd_market_cap ?? coin.market_cap ?? 0,
+      rank: coin.market_cap_rank ?? 0,
     }));
 
     return NextResponse.json({

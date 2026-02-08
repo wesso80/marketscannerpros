@@ -607,11 +607,17 @@ export interface TopMover {
   symbol: string;
   name: string;
   image: string;
-  current_price: number;
-  market_cap: number;
-  market_cap_rank: number;
-  price_change_percentage_24h: number;
-  total_volume: number;
+  // CoinGecko top_gainers_losers uses different field names
+  usd?: number;  // Current price
+  usd_24h_vol?: number;  // Volume
+  usd_24h_change?: number;  // Price change % for the selected duration
+  usd_market_cap?: number;  // Market cap
+  market_cap_rank?: number;
+  // Legacy fields for backward compatibility
+  current_price?: number;
+  market_cap?: number;
+  price_change_percentage_24h?: number;
+  total_volume?: number;
 }
 
 /**
