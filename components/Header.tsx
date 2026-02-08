@@ -115,12 +115,13 @@ export default function Header() {
   ];
 
   const marketItems: DropdownItem[] = [
+    { href: '/tools/crypto', label: 'Crypto Command Center', icon: '₿' },
     { href: '/tools/market-movers', label: 'Market Movers', icon: '📈' },
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
     { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📈' },
     { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '📈' },
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
-    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '₿' },
+    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '📊' },
     { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
     { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
   ];

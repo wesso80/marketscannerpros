@@ -105,6 +105,7 @@ export default function MobileNav() {
             ✕
           </button>
           <a href="/tools/scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Scanner</a>
+          <a href="/tools/crypto" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Command Center</a>
           <a href="/tools/portfolio" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Portfolio</a>
           <a href="/tools/backtest" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Backtest</a>
           <a href="/tools/journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>
