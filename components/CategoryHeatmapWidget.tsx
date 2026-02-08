@@ -41,29 +41,32 @@ export default function CategoryHeatmapWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  const formatMarketCap = (cap: number): string => {
+  const formatMarketCap = (cap: number | null | undefined): string => {
+    if (cap == null) return 'N/A';
     if (cap >= 1e12) return `$${(cap / 1e12).toFixed(2)}T`;
     if (cap >= 1e9) return `$${(cap / 1e9).toFixed(0)}B`;
     if (cap >= 1e6) return `$${(cap / 1e6).toFixed(0)}M`;
     return `$${cap.toLocaleString()}`;
   };
 
-  const getHeatColor = (change: number): string => {
-    const intensity = Math.min(Math.abs(change) / 15, 1);
+  const getHeatColor = (change: number | null | undefined): string => {
+    const safeChange = change ?? 0;
+    const intensity = Math.min(Math.abs(safeChange) / 15, 1);
     
-    if (change > 0) {
+    if (safeChange > 0) {
       return `rgba(16, 185, 129, ${0.15 + intensity * 0.35})`;
-    } else if (change < 0) {
+    } else if (safeChange < 0) {
       return `rgba(239, 68, 68, ${0.15 + intensity * 0.35})`;
     }
     return 'rgba(100, 116, 139, 0.2)';
   };
 
-  const getBorderColor = (change: number): string => {
-    if (change > 5) return 'rgba(16, 185, 129, 0.6)';
-    if (change > 0) return 'rgba(16, 185, 129, 0.3)';
-    if (change < -5) return 'rgba(239, 68, 68, 0.6)';
-    if (change < 0) return 'rgba(239, 68, 68, 0.3)';
+  const getBorderColor = (change: number | null | undefined): string => {
+    const safeChange = change ?? 0;
+    if (safeChange > 5) return 'rgba(16, 185, 129, 0.6)';
+    if (safeChange > 0) return 'rgba(16, 185, 129, 0.3)';
+    if (safeChange < -5) return 'rgba(239, 68, 68, 0.6)';
+    if (safeChange < 0) return 'rgba(239, 68, 68, 0.3)';
     return 'rgba(100, 116, 139, 0.3)';
   };
 
@@ -85,8 +88,8 @@ export default function CategoryHeatmapWidget() {
   };
 
   const sortedCategories = [...categories].sort((a, b) => {
-    if (sortBy === 'change24h') return Math.abs(b.change24h) - Math.abs(a.change24h);
-    return b.marketCap - a.marketCap;
+    if (sortBy === 'change24h') return Math.abs(b.change24h ?? 0) - Math.abs(a.change24h ?? 0);
+    return (b.marketCap ?? 0) - (a.marketCap ?? 0);
   });
 
   if (loading) {
@@ -123,8 +126,10 @@ export default function CategoryHeatmapWidget() {
   }
 
   // Compute market sentiment
-  const avgChange = categories.reduce((sum, c) => sum + c.change24h, 0) / categories.length;
-  const bullishCount = categories.filter(c => c.change24h > 0).length;
+  const avgChange = categories.length > 0 
+    ? categories.reduce((sum, c) => sum + (c.change24h ?? 0), 0) / categories.length 
+    : 0;
+  const bullishCount = categories.filter(c => (c.change24h ?? 0) > 0).length;
   const marketSentiment = bullishCount > categories.length * 0.6 ? 'RISK ON' : 
                           bullishCount < categories.length * 0.4 ? 'RISK OFF' : 'MIXED';
 
@@ -250,11 +255,11 @@ export default function CategoryHeatmapWidget() {
                 {formatMarketCap(cat.marketCap)}
               </span>
               <span style={{ 
-                color: cat.change24h >= 0 ? '#10b981' : '#ef4444',
+                color: (cat.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
                 fontSize: '14px',
                 fontWeight: 700
               }}>
-                {cat.change24h >= 0 ? '+' : ''}{cat.change24h.toFixed(1)}%
+                {(cat.change24h ?? 0) >= 0 ? '+' : ''}{(cat.change24h ?? 0).toFixed(1)}%
               </span>
             </div>
           </div>
@@ -271,8 +276,8 @@ export default function CategoryHeatmapWidget() {
         color: '#64748b'
       }}>
         💡 {bullishCount}/{categories.length} sectors green • Avg change: {' '}
-        <span style={{ color: avgChange >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
-          {avgChange >= 0 ? '+' : ''}{avgChange.toFixed(1)}%
+        <span style={{ color: (avgChange ?? 0) >= 0 ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+          {(avgChange ?? 0) >= 0 ? '+' : ''}{(avgChange ?? 0).toFixed(1)}%
         </span>
       </div>
     </div>

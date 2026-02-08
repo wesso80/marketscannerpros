@@ -52,14 +52,16 @@ export default function TopMoversWidget() {
     return () => clearInterval(interval);
   }, [duration]);
 
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | null | undefined): string => {
+    if (price == null) return 'N/A';
     if (price >= 1000) return `$${price.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     if (price >= 1) return `$${price.toFixed(2)}`;
     if (price >= 0.0001) return `$${price.toFixed(4)}`;
     return `$${price.toFixed(8)}`;
   };
 
-  const formatVolume = (vol: number): string => {
+  const formatVolume = (vol: number | null | undefined): string => {
+    if (vol == null) return 'N/A';
     if (vol >= 1e9) return `$${(vol / 1e9).toFixed(1)}B`;
     if (vol >= 1e6) return `$${(vol / 1e6).toFixed(0)}M`;
     return `$${(vol / 1e3).toFixed(0)}K`;
@@ -245,11 +247,11 @@ export default function TopMoversWidget() {
                 {formatPrice(coin.price)}
               </div>
               <div style={{ 
-                color: coin.change >= 0 ? '#10b981' : '#ef4444', 
+                color: (coin.change ?? 0) >= 0 ? '#10b981' : '#ef4444', 
                 fontSize: '13px',
                 fontWeight: 600
               }}>
-                {coin.change >= 0 ? '+' : ''}{coin.change.toFixed(1)}%
+                {(coin.change ?? 0) >= 0 ? '+' : ''}{(coin.change ?? 0).toFixed(1)}%
               </div>
             </div>
           </div>

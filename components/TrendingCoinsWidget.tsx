@@ -50,7 +50,8 @@ export default function TrendingCoinsWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | null | undefined): string => {
+    if (price == null) return 'N/A';
     if (price >= 1000) return `$${price.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     if (price >= 1) return `$${price.toFixed(2)}`;
     if (price >= 0.0001) return `$${price.toFixed(4)}`;
@@ -171,11 +172,11 @@ export default function TrendingCoinsWidget() {
                 {formatPrice(coin.price)}
               </div>
               <div style={{ 
-                color: coin.change24h >= 0 ? '#10b981' : '#ef4444', 
+                color: (coin.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
                 fontSize: '12px',
                 fontWeight: 500
               }}>
-                {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(1)}%
+                {(coin.change24h ?? 0) >= 0 ? '+' : ''}{(coin.change24h ?? 0).toFixed(1)}%
               </div>
             </div>
           </div>
@@ -196,12 +197,12 @@ export default function TrendingCoinsWidget() {
                   fontSize: '11px',
                   padding: '4px 10px',
                   borderRadius: '12px',
-                  background: cat.change1h >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  color: cat.change1h >= 0 ? '#10b981' : '#ef4444',
-                  border: `1px solid ${cat.change1h >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                  background: (cat.change1h ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                  color: (cat.change1h ?? 0) >= 0 ? '#10b981' : '#ef4444',
+                  border: `1px solid ${(cat.change1h ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
                 }}
               >
-                {cat.name} {cat.change1h >= 0 ? '↗' : '↘'} {Math.abs(cat.change1h).toFixed(1)}%
+                {cat.name} {(cat.change1h ?? 0) >= 0 ? '↗' : '↘'} {Math.abs(cat.change1h ?? 0).toFixed(1)}%
               </span>
             ))}
           </div>
