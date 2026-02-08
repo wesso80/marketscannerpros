@@ -61,6 +61,21 @@ function WidgetSkeleton({ height = '280px' }: { height?: string }) {
   );
 }
 
+function PageLoadingSkeleton() {
+  return (
+    <div style={{ background: '#0f172a', minHeight: '100vh', padding: '24px' }}>
+      <div className="animate-pulse" style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        <div className="h-8 bg-slate-700 rounded w-64 mb-4"></div>
+        <div className="h-4 bg-slate-700/50 rounded w-48 mb-8"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <WidgetSkeleton />
+          <WidgetSkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Section = 'overview' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'listings';
 
 interface SidebarItem {
@@ -81,7 +96,16 @@ const sidebarItems: SidebarItem[] = [
   { id: 'listings', label: 'New Listings', icon: '🆕', description: 'Newly listed coins' },
 ];
 
+// Wrapper component with Suspense boundary for useSearchParams
 export default function CryptoCommandCenter() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton />}>
+      <CryptoCommandCenterContent />
+    </Suspense>
+  );
+}
+
+function CryptoCommandCenterContent() {
   const { tier, isAdmin } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
