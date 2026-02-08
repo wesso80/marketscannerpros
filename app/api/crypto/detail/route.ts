@@ -178,10 +178,13 @@ export async function GET(req: NextRequest) {
   
   // Simple coin lookup by ID (for search widget - no auth required)
   if (coinIdParam && !action) {
+    console.log('[CryptoDetail] Fetching coin:', coinIdParam);
     const coinDetail = await getCoinDetail(coinIdParam);
     if (!coinDetail) {
+      console.error('[CryptoDetail] Failed to fetch:', coinIdParam);
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
     }
+    console.log('[CryptoDetail] Success:', coinIdParam, coinDetail.name);
     return NextResponse.json(coinDetail);
   }
   

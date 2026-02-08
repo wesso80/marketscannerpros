@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 
@@ -167,6 +168,93 @@ function MiniSparkline({ data, color = '#10B981' }: { data: number[]; color?: st
   );
 }
 
+// OHLC Candlestick Chart Component
+function OHLCChart({ data, height = 200 }: { data: [number, number, number, number, number][]; height?: number }) {
+  if (!data || data.length < 2) {
+    return (
+      <div className="flex items-center justify-center h-48 text-gray-500">
+        No OHLC data available
+      </div>
+    );
+  }
+  
+  // Data format: [timestamp, open, high, low, close]
+  const prices = data.map(d => [d[2], d[3]]).flat(); // All highs and lows
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const priceRange = maxPrice - minPrice || 1;
+  
+  const chartWidth = 800;
+  const candleWidth = Math.max(2, Math.floor((chartWidth - 40) / data.length) - 2);
+  const spacing = candleWidth + 2;
+  
+  const getY = (price: number) => {
+    return height - 20 - ((price - minPrice) / priceRange) * (height - 40);
+  };
+  
+  return (
+    <div className="relative overflow-x-auto">
+      <svg 
+        viewBox={`0 0 ${Math.max(chartWidth, data.length * spacing + 40)} ${height}`} 
+        className="w-full" 
+        style={{ minWidth: '400px', maxHeight: `${height}px` }}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
+          const y = 20 + pct * (height - 40);
+          const price = maxPrice - pct * priceRange;
+          return (
+            <g key={i}>
+              <line x1="40" y1={y} x2={data.length * spacing + 40} y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="4,4" />
+              <text x="5" y={y + 4} fill="#64748b" fontSize="10">
+                ${price >= 1 ? price.toFixed(0) : price.toFixed(4)}
+              </text>
+            </g>
+          );
+        })}
+        
+        {/* Candles */}
+        {data.map((candle, i) => {
+          const [, open, high, low, close] = candle;
+          const x = 45 + i * spacing;
+          const isGreen = close >= open;
+          const color = isGreen ? '#10B981' : '#EF4444';
+          
+          const bodyTop = getY(Math.max(open, close));
+          const bodyBottom = getY(Math.min(open, close));
+          const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+          
+          return (
+            <g key={i}>
+              {/* Wick */}
+              <line
+                x1={x + candleWidth / 2}
+                y1={getY(high)}
+                x2={x + candleWidth / 2}
+                y2={getY(low)}
+                stroke={color}
+                strokeWidth="1"
+              />
+              {/* Body */}
+              <rect
+                x={x}
+                y={bodyTop}
+                width={candleWidth}
+                height={bodyHeight}
+                fill={isGreen ? color : color}
+                stroke={color}
+                strokeWidth="1"
+                rx="1"
+              />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 // Directional intelligence helpers
 function getFundingInsight(fundingRate: number | undefined): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
   if (fundingRate === undefined) return null;
@@ -255,8 +343,11 @@ function InsightBadge({ insight }: { insight: { text: string; type: 'warning' | 
   );
 }
 
-export default function CryptoDetailPage() {
+function CryptoDetailPageContent() {
   const { tier } = useUserTier();
+  const searchParams = useSearchParams();
+  const initialCoinId = searchParams.get('coin');
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -265,7 +356,9 @@ export default function CryptoDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [chartView, setChartView] = useState<'sparkline' | 'ohlc'>('ohlc');
   const searchRef = useRef<HTMLDivElement>(null);
+  const hasLoadedInitial = useRef(false);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -306,7 +399,7 @@ export default function CryptoDetailPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, searchCoins]);
   
-  // Load coin details
+  // Load coin details by symbol (for quick buttons)
   const loadCoinDetails = useCallback(async (symbol: string) => {
     setLoading(true);
     setError(null);
@@ -328,6 +421,38 @@ export default function CryptoDetailPage() {
       setLoading(false);
     }
   }, []);
+  
+  // Load coin details by CoinGecko ID (for URL params and search results)
+  const loadCoinById = useCallback(async (coinId: string) => {
+    setLoading(true);
+    setError(null);
+    setSelectedCoin(coinId);
+    setShowDropdown(false);
+    setSearchQuery('');
+    
+    try {
+      // Use ID directly - the API will handle it
+      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(coinId)}`, {
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('Failed to fetch coin data');
+      const data = await res.json();
+      setCoinData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setCoinData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Auto-load coin from URL parameter
+  useEffect(() => {
+    if (initialCoinId && !hasLoadedInitial.current && tier && tier !== 'free') {
+      hasLoadedInitial.current = true;
+      loadCoinById(initialCoinId);
+    }
+  }, [initialCoinId, loadCoinById, tier]);
   
   // Gate check
   if (!tier || tier === 'free') {
@@ -488,16 +613,63 @@ export default function CryptoDetailPage() {
                 </div>
               </div>
               
-              {/* 7-day Sparkline */}
-              {coinData.sparkline && coinData.sparkline.length > 0 && (
-                <div className="mt-6">
-                  <div className="text-sm text-gray-400 mb-2">7-Day Price Chart</div>
-                  <MiniSparkline 
-                    data={coinData.sparkline} 
-                    color={coinData.price_changes['7d'] && coinData.price_changes['7d'] >= 0 ? '#10B981' : '#EF4444'} 
-                  />
+              {/* Price Chart with Toggle */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm text-gray-400">Price Chart</div>
+                  <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1">
+                    <button
+                      onClick={() => setChartView('sparkline')}
+                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                        chartView === 'sparkline'
+                          ? 'bg-emerald-500 text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      📈 Line
+                    </button>
+                    <button
+                      onClick={() => setChartView('ohlc')}
+                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                        chartView === 'ohlc'
+                          ? 'bg-emerald-500 text-white'
+                          : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      🕯️ Candles
+                    </button>
+                  </div>
                 </div>
-              )}
+                
+                {chartView === 'sparkline' && coinData.sparkline && coinData.sparkline.length > 0 && (
+                  <div className="bg-slate-900/50 rounded-lg p-4">
+                    <MiniSparkline 
+                      data={coinData.sparkline} 
+                      color={coinData.price_changes['7d'] && coinData.price_changes['7d'] >= 0 ? '#10B981' : '#EF4444'} 
+                    />
+                    <div className="text-center text-xs text-gray-500 mt-2">7-Day Price Movement</div>
+                  </div>
+                )}
+                
+                {chartView === 'ohlc' && coinData.ohlc && coinData.ohlc.length > 0 && (
+                  <div className="bg-slate-900/50 rounded-lg p-4">
+                    <OHLCChart data={coinData.ohlc} height={220} />
+                    <div className="text-center text-xs text-gray-500 mt-2">30-Day OHLC Candlestick Chart</div>
+                  </div>
+                )}
+                
+                {chartView === 'ohlc' && (!coinData.ohlc || coinData.ohlc.length === 0) && (
+                  <div className="bg-slate-900/50 rounded-lg p-8 text-center text-gray-500">
+                    No OHLC data available for this coin
+                  </div>
+                )}
+                
+                {chartView === 'sparkline' && (!coinData.sparkline || coinData.sparkline.length === 0) && (
+                  <div className="bg-slate-900/50 rounded-lg p-8 text-center text-gray-500">
+                    No price history data available
+                  </div>
+                )}
+              </div>
               
               {/* Links */}
               <div className="flex flex-wrap gap-3 mt-6">
@@ -884,5 +1056,23 @@ export default function CryptoDetailPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Loading skeleton for Suspense
+function PageLoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// Export with Suspense wrapper for useSearchParams
+export default function CryptoDetailPage() {
+  return (
+    <Suspense fallback={<PageLoadingSkeleton />}>
+      <CryptoDetailPageContent />
+    </Suspense>
   );
 }
