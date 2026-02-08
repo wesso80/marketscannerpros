@@ -9,6 +9,9 @@ import LiveMarketPulse from "../components/LiveMarketPulse";
 import WorkflowHero from "../components/WorkflowHero";
 import InstantDemo from "../components/InstantDemo";
 import MarketPulseHero from "../components/MarketPulseHero";
+import TrendingCoinsWidget from "../components/TrendingCoinsWidget";
+import TopMoversWidget from "../components/TopMoversWidget";
+import CategoryHeatmapWidget from "../components/CategoryHeatmapWidget";
 import Link from "next/link";
 
 import { useState } from "react";
@@ -352,6 +355,63 @@ export default function Home() {
       
       {/* THE WOW FACTOR - Live Market Pulse */}
       <LiveMarketPulse />
+
+      {/* Crypto Market Pulse - Trending, Movers, Sectors */}
+      <section style={{
+        width: '100%',
+        background: 'linear-gradient(180deg, #0f172a 0%, #0a0e1a 100%)',
+        padding: '48px 0',
+        borderBottom: '1px solid #1f2933'
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <h2 style={{ 
+              fontSize: 28, 
+              fontWeight: 700, 
+              color: '#f1f5f9', 
+              marginBottom: 8 
+            }}>
+              🔥 Crypto Market Pulse
+            </h2>
+            <p style={{ 
+              fontSize: 14, 
+              color: '#64748b',
+              maxWidth: 500,
+              margin: '0 auto'
+            }}>
+              Real-time trending coins, top movers, and sector performance
+            </p>
+          </div>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+            gap: 20 
+          }}>
+            <TrendingCoinsWidget />
+            <TopMoversWidget />
+            <CategoryHeatmapWidget />
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Link
+              href="/tools/crypto-dashboard"
+              style={{
+                display: 'inline-block',
+                padding: '12px 28px',
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: 8,
+                color: '#10b981',
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              View Full Crypto Dashboard →
+            </Link>
+          </div>
+        </div>
+      </section>
       
       <SocialProof />
       <Why />

@@ -546,3 +546,324 @@ export async function getDerivativesExchanges(): Promise<{ id: string; name: str
     return null;
   }
 }
+
+// ============================================
+// TRENDING & TOP MOVERS (Analyst Plan Features)
+// ============================================
+
+export interface TrendingCoin {
+  id: string;
+  coin_id: number;
+  name: string;
+  symbol: string;
+  market_cap_rank: number;
+  thumb: string;
+  small: string;
+  large: string;
+  slug: string;
+  price_btc: number;
+  score: number;
+  data?: {
+    price: number;
+    price_change_percentage_24h: { usd: number };
+    market_cap: string;
+    total_volume: string;
+    sparkline: string;
+  };
+}
+
+export interface TrendingResponse {
+  coins: { item: TrendingCoin }[];
+  nfts?: { id: string; name: string; symbol: string; thumb: string }[];
+  categories?: { id: number; name: string; market_cap_1h_change: number }[];
+}
+
+/**
+ * Get trending coins in the last 24 hours
+ * Endpoint: /search/trending
+ * FREE - No Analyst plan required
+ */
+export async function getTrendingCoins(): Promise<TrendingResponse | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/search/trending`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] Trending fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] Trending fetch error:', error);
+    return null;
+  }
+}
+
+export interface TopMover {
+  id: string;
+  symbol: string;
+  name: string;
+  image: string;
+  current_price: number;
+  market_cap: number;
+  market_cap_rank: number;
+  price_change_percentage_24h: number;
+  total_volume: number;
+}
+
+/**
+ * Get top gainers and losers (💼 Analyst Plan)
+ * Endpoint: /coins/top_gainers_losers
+ * Duration: 1h, 24h, 7d, 14d, 30d, 60d, 1y
+ */
+export async function getTopGainersLosers(
+  duration: '1h' | '24h' | '7d' | '14d' | '30d' | '60d' | '1y' = '24h',
+  topCoins: 'all' | '300' | '500' | '1000' = '1000'
+): Promise<{ top_gainers: TopMover[]; top_losers: TopMover[] } | null> {
+  try {
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      duration,
+      top_coins: topCoins,
+    });
+
+    const res = await fetch(`${getBaseUrl()}/coins/top_gainers_losers?${params}`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] Top gainers/losers fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] Top gainers/losers fetch error:', error);
+    return null;
+  }
+}
+
+export interface NewListing {
+  id: string;
+  symbol: string;
+  name: string;
+  activated_at: number; // Unix timestamp
+}
+
+/**
+ * Get newly listed coins (💼 Analyst Plan)
+ * Endpoint: /coins/list/new
+ * Returns latest 200 coins
+ */
+export async function getNewListings(): Promise<NewListing[] | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/coins/list/new`, {
+      headers: getHeaders(),
+      next: { revalidate: 600 }, // Cache for 10 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] New listings fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] New listings fetch error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// CATEGORIES / SECTORS
+// ============================================
+
+export interface CoinCategory {
+  id: string;
+  name: string;
+  market_cap: number;
+  market_cap_change_24h: number;
+  volume_24h: number;
+  top_3_coins: string[];
+  updated_at: string;
+}
+
+/**
+ * Get all coin categories with market data
+ * Endpoint: /coins/categories
+ * FREE - Returns DeFi, Layer 2, Meme, AI, etc.
+ */
+export async function getCoinCategories(): Promise<CoinCategory[] | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/coins/categories?order=market_cap_desc`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] Categories fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] Categories fetch error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// DeFi DATA
+// ============================================
+
+export interface DefiData {
+  defi_market_cap: string;
+  eth_market_cap: string;
+  defi_to_eth_ratio: string;
+  trading_volume_24h: string;
+  defi_dominance: string;
+  top_coin_name: string;
+  top_coin_defi_dominance: number;
+}
+
+/**
+ * Get global DeFi market data
+ * Endpoint: /global/decentralized_finance_defi
+ * FREE
+ */
+export async function getDefiData(): Promise<DefiData | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/global/decentralized_finance_defi`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] DeFi data fetch failed: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    return data.data;
+  } catch (error) {
+    console.error('[CoinGecko] DeFi data fetch error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// HISTORICAL MARKET CAP (💼 Analyst Plan)
+// ============================================
+
+/**
+ * Get historical global market cap chart
+ * Endpoint: /global/market_cap_chart (💼 Analyst Plan)
+ * Returns [timestamp, market_cap] pairs
+ */
+export async function getGlobalMarketCapChart(
+  days: number = 30
+): Promise<{ market_cap_chart: { market_cap: [number, number][] } } | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/global/market_cap_chart?days=${days}`, {
+      headers: getHeaders(),
+      next: { revalidate: 600 }, // Cache for 10 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] Global market cap chart fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] Global market cap chart fetch error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// ONCHAIN DEX (GeckoTerminal)
+// ============================================
+
+export interface TrendingPool {
+  id: string;
+  type: string;
+  attributes: {
+    name: string;
+    address: string;
+    base_token_price_usd: string;
+    quote_token_price_usd: string;
+    base_token_price_native_currency: string;
+    price_change_percentage: {
+      h1: string;
+      h24: string;
+    };
+    transactions: {
+      h1: { buys: number; sells: number };
+      h24: { buys: number; sells: number };
+    };
+    volume_usd: {
+      h1: string;
+      h24: string;
+    };
+    reserve_in_usd: string;
+  };
+  relationships: {
+    base_token: { data: { id: string } };
+    quote_token: { data: { id: string } };
+    network: { data: { id: string } };
+    dex: { data: { id: string } };
+  };
+}
+
+/**
+ * Get trending DEX pools across all networks
+ * Endpoint: /onchain/networks/trending_pools
+ * FREE
+ */
+export async function getTrendingPools(): Promise<{ data: TrendingPool[] } | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/onchain/networks/trending_pools`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] Trending pools fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] Trending pools fetch error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get newly created DEX pools
+ * Endpoint: /onchain/networks/new_pools
+ * FREE
+ */
+export async function getNewPools(): Promise<{ data: TrendingPool[] } | null> {
+  try {
+    const res = await fetch(`${getBaseUrl()}/onchain/networks/new_pools`, {
+      headers: getHeaders(),
+      next: { revalidate: 300 }, // Cache for 5 minutes
+    });
+
+    if (!res.ok) {
+      console.error(`[CoinGecko] New pools fetch failed: ${res.status}`);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('[CoinGecko] New pools fetch error:', error);
+    return null;
+  }
+}

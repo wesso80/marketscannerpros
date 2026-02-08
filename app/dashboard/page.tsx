@@ -8,6 +8,8 @@ import DashboardInner from './DashboardInner';
 import DailyAIMarketFocus from '@/components/DailyAIMarketFocus';
 import FearGreedHistory from '@/components/FearGreedHistory';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
+import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
+import TopMoversWidget from '@/components/TopMoversWidget';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +22,12 @@ export default function DashboardPage(){
         <SessionBadge/>
       </div>
       <Suspense fallback={null}><DashboardInner/></Suspense>
+      
+      {/* Crypto Market Pulse - Trending & Movers */}
+      <div className="my-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <TrendingCoinsWidget />
+        <TopMoversWidget />
+      </div>
       
       {/* Time Confluence Quick Status */}
       <div className="my-4">

@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import DataComingSoon from '@/components/DataComingSoon';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
+import TopMoversWidget from '@/components/TopMoversWidget';
+import CategoryHeatmapWidget from '@/components/CategoryHeatmapWidget';
 
 interface FundingRate {
   symbol: string;
@@ -298,6 +301,13 @@ export default function CryptoDashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Market Pulse - Trending, Top Movers, Sectors */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <TrendingCoinsWidget />
+        <TopMoversWidget />
+        <CategoryHeatmapWidget />
       </div>
 
       {/* Main Grid */}
