@@ -68,14 +68,19 @@ export default function CryptoSearchWidget() {
 
     async function fetchCoinDetail() {
       setLoadingDetail(true);
+      setCoinData(null);
       try {
         const res = await fetch(`/api/crypto/detail?id=${coinId}`);
-        if (res.ok) {
-          const data = await res.json();
+        const data = await res.json();
+        if (res.ok && data && !data.error) {
           setCoinData(data);
+        } else {
+          console.error('Coin detail API error:', data?.error || res.status);
+          setCoinData(null);
         }
       } catch (e) {
         console.error('Failed to fetch coin:', e);
+        setCoinData(null);
       } finally {
         setLoadingDetail(false);
       }
@@ -379,7 +384,42 @@ export default function CryptoSearchWidget() {
             </>
           ) : (
             <div style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-              Failed to load coin data
+              <div style={{ marginBottom: '12px' }}>Failed to load coin data</div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    // Trigger re-fetch by resetting selectedCoin then setting it again
+                    const coin = selectedCoin;
+                    setSelectedCoin(null);
+                    setTimeout(() => setSelectedCoin(coin), 100);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Retry
+                </button>
+                <button
+                  onClick={() => setSelectedCoin(null)}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'rgba(100, 116, 139, 0.2)',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#94a3b8',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
         </div>
