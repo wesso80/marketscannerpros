@@ -170,15 +170,26 @@ async function getCoinMarketChart(coinId: string, days: number = 30): Promise<{
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
   const symbol = searchParams.get('symbol');
   const query = searchParams.get('q');
+  const coinIdParam = searchParams.get('id');
+  
+  // Simple coin lookup by ID (for search widget - no auth required)
+  if (coinIdParam && !action) {
+    const coinDetail = await getCoinDetail(coinIdParam);
+    if (!coinDetail) {
+      return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
+    }
+    return NextResponse.json(coinDetail);
+  }
+  
+  // Protected routes require auth
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   
   // Search for coins
   if (action === 'search' && query) {
