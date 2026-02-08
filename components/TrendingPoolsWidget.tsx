@@ -47,14 +47,16 @@ export default function TrendingPoolsWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  const formatVolume = (vol: number): string => {
+  const formatVolume = (vol: number | null | undefined): string => {
+    if (vol == null) return 'N/A';
     if (vol >= 1e9) return `$${(vol / 1e9).toFixed(1)}B`;
     if (vol >= 1e6) return `$${(vol / 1e6).toFixed(1)}M`;
     if (vol >= 1e3) return `$${(vol / 1e3).toFixed(0)}K`;
     return `$${vol.toFixed(0)}`;
   };
 
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | null | undefined): string => {
+    if (price == null) return 'N/A';
     if (price >= 1000) return `$${price.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     if (price >= 1) return `$${price.toFixed(2)}`;
     if (price >= 0.0001) return `$${price.toFixed(4)}`;
@@ -147,7 +149,9 @@ export default function TrendingPoolsWidget() {
       {/* Pools List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {pools.slice(0, 6).map((pool, index) => {
-          const buyRatio = pool.buys24h / (pool.buys24h + pool.sells24h || 1) * 100;
+          const buys = pool.buys24h ?? 0;
+          const sells = pool.sells24h ?? 0;
+          const buyRatio = (buys + sells) > 0 ? (buys / (buys + sells)) * 100 : 50;
           
           return (
             <div 
@@ -195,14 +199,14 @@ export default function TrendingPoolsWidget() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ 
-                    color: pool.priceChange24h >= 0 ? '#10b981' : '#ef4444', 
+                    color: (pool.priceChange24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
                     fontSize: '14px',
                     fontWeight: 700
                   }}>
-                    {pool.priceChange24h >= 0 ? '+' : ''}{pool.priceChange24h.toFixed(1)}%
+                    {(pool.priceChange24h ?? 0) >= 0 ? '+' : ''}{(pool.priceChange24h ?? 0).toFixed(1)}%
                   </div>
                   <div style={{ color: '#64748b', fontSize: '10px' }}>
-                    1h: {pool.priceChange1h >= 0 ? '+' : ''}{pool.priceChange1h.toFixed(1)}%
+                    1h: {(pool.priceChange1h ?? 0) >= 0 ? '+' : ''}{(pool.priceChange1h ?? 0).toFixed(1)}%
                   </div>
                 </div>
               </div>

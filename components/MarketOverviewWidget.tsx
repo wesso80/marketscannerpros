@@ -147,10 +147,10 @@ export default function MarketOverviewWidget() {
         </h3>
         <span style={{
           fontSize: '12px',
-          color: data.marketCapChange24h >= 0 ? '#10b981' : '#ef4444',
+          color: (data.marketCapChange24h ?? 0) >= 0 ? '#10b981' : '#ef4444',
           fontWeight: 600
         }}>
-          {data.marketCapChange24h >= 0 ? '↗' : '↘'} {Math.abs(data.marketCapChange24h).toFixed(2)}%
+          {(data.marketCapChange24h ?? 0) >= 0 ? '↗' : '↘'} {Math.abs(data.marketCapChange24h ?? 0).toFixed(2)}%
         </span>
       </div>
 
@@ -160,7 +160,7 @@ export default function MarketOverviewWidget() {
         padding: '16px',
         background: 'rgba(15, 23, 42, 0.6)',
         borderRadius: '10px',
-        border: data.marketCapChange24h >= 0 
+        border: (data.marketCapChange24h ?? 0) >= 0 
           ? '1px solid rgba(16, 185, 129, 0.2)' 
           : '1px solid rgba(239, 68, 68, 0.2)'
       }}>
@@ -206,7 +206,7 @@ export default function MarketOverviewWidget() {
           Market Dominance
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {data.dominance.slice(0, 4).map((coin, index) => {
+          {(data.dominance || []).slice(0, 4).map((coin, index) => {
             const colors = ['#f7931a', '#627eea', '#14f195', '#e84142'];
             return (
               <div
@@ -230,7 +230,7 @@ export default function MarketOverviewWidget() {
                   fontSize: '11px',
                   marginLeft: '6px'
                 }}>
-                  {coin.dominance.toFixed(1)}%
+                  {(coin.dominance ?? 0).toFixed(1)}%
                 </span>
               </div>
             );

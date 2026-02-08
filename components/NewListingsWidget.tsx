@@ -179,13 +179,13 @@ export default function NewListingsWidget() {
               }}>
                 {formatPrice(coin.price)}
               </div>
-              {coin.change24h !== null && (
+              {coin.change24h != null && (
                 <div style={{ 
-                  color: coin.change24h >= 0 ? '#10b981' : '#ef4444', 
+                  color: (coin.change24h ?? 0) >= 0 ? '#10b981' : '#ef4444', 
                   fontSize: '11px',
                   fontWeight: 500
                 }}>
-                  {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(1)}%
+                  {(coin.change24h ?? 0) >= 0 ? '+' : ''}{(coin.change24h ?? 0).toFixed(1)}%
                 </div>
               )}
             </div>

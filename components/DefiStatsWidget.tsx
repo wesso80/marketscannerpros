@@ -41,7 +41,8 @@ export default function DefiStatsWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  const formatValue = (val: number): string => {
+  const formatValue = (val: number | null | undefined): string => {
+    if (val == null) return 'N/A';
     if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`;
     if (val >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
     if (val >= 1e6) return `$${(val / 1e6).toFixed(0)}M`;
@@ -171,7 +172,7 @@ export default function DefiStatsWidget() {
             DeFi Dominance
           </div>
           <div style={{ color: '#10b981', fontSize: '18px', fontWeight: 700 }}>
-            {data.dominance.toFixed(2)}%
+            {(data.dominance ?? 0).toFixed(2)}%
           </div>
         </div>
 
@@ -186,7 +187,7 @@ export default function DefiStatsWidget() {
             DeFi/ETH Ratio
           </div>
           <div style={{ color: '#8b5cf6', fontSize: '18px', fontWeight: 700 }}>
-            {data.defiToEthRatio.toFixed(1)}%
+            {(data.defiToEthRatio ?? 0).toFixed(1)}%
           </div>
         </div>
       </div>
@@ -212,7 +213,7 @@ export default function DefiStatsWidget() {
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#64748b', fontSize: '10px' }}>DeFi Dominance</div>
           <div style={{ color: '#8b5cf6', fontSize: '16px', fontWeight: 700 }}>
-            {data.topCoinDominance.toFixed(1)}%
+            {(data.topCoinDominance ?? 0).toFixed(1)}%
           </div>
         </div>
       </div>
