@@ -85,9 +85,20 @@ export default function CryptoCommandCenter() {
   const { tier, isAdmin } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
+
+  // Detect screen size for sidebar visibility
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   // Handle section from URL query param (e.g., ?section=heatmap)
   useEffect(() => {
@@ -245,9 +256,9 @@ export default function CryptoCommandCenter() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors md:hidden"
-                style={{ color: '#94a3b8' }}
+                onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
+                style={{ display: isDesktop ? 'none' : 'block', color: '#94a3b8' }}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -314,8 +325,9 @@ export default function CryptoCommandCenter() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto flex">
-        {/* Sidebar - visible on medium screens and up */}
+      <div className="max-w-[1600px] mx-auto" style={{ display: 'flex' }}>
+        {/* Sidebar - visible on desktop (768px+) */}
+        {isDesktop && (
         <aside 
           style={{
             width: '240px',
@@ -326,8 +338,8 @@ export default function CryptoCommandCenter() {
             position: 'sticky',
             top: '81px',
             overflowY: 'auto',
+            display: 'block',
           }}
-          className="hidden md:block"
         >
           <nav style={{ padding: '16px 12px' }}>
             <div style={{ 
@@ -473,24 +485,31 @@ export default function CryptoCommandCenter() {
             </div>
           </nav>
         </aside>
+        )}
 
         {/* Mobile Sidebar Overlay */}
-        {sidebarOpen && (
+        {mobileSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
-            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setMobileSidebarOpen(false)}
+            style={{ display: isDesktop ? 'none' : 'block' }}
           />
         )}
 
         {/* Mobile Sidebar */}
+        {!isDesktop && (
         <aside 
-          className={`fixed left-0 top-[81px] h-[calc(100vh-81px)] z-50 md:hidden transition-transform duration-300 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
           style={{
+            position: 'fixed',
+            left: 0,
+            top: '81px',
+            height: 'calc(100vh - 81px)',
+            zIndex: 50,
             width: '280px',
             background: '#1e293b',
             borderRight: '1px solid #334155',
+            transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.3s ease',
           }}
         >
           <nav style={{ padding: '16px' }}>
@@ -499,7 +518,7 @@ export default function CryptoCommandCenter() {
                 key={item.id}
                 onClick={() => {
                   setActiveSection(item.id);
-                  setSidebarOpen(false);
+                  setMobileSidebarOpen(false);
                 }}
                 style={{
                   width: '100%',
@@ -533,6 +552,7 @@ export default function CryptoCommandCenter() {
             ))}
           </nav>
         </aside>
+        )}
 
         {/* Main Content */}
         <main style={{ flex: 1, padding: '24px' }}>
@@ -577,13 +597,17 @@ export default function CryptoCommandCenter() {
           </Suspense>
 
           {/* Mobile Tab Bar (visible only on mobile when sidebar closed) */}
+          {!isDesktop && (
           <div 
-            className="fixed bottom-0 left-0 right-0 md:hidden"
             style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
               background: '#1e293b',
               borderTop: '1px solid #334155',
               padding: '8px',
-              display: sidebarOpen ? 'none' : 'flex',
+              display: mobileSidebarOpen ? 'none' : 'flex',
               justifyContent: 'space-around',
             }}
           >
@@ -615,6 +639,7 @@ export default function CryptoCommandCenter() {
               </button>
             ))}
           </div>
+          )}
         </main>
       </div>
 
