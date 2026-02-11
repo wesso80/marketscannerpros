@@ -623,13 +623,13 @@ export default function OptionsConfluenceScanner() {
   };
 
   return (
-    <div style={{ 
+    <div className="options-page-container" style={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
       padding: 'clamp(1rem, 4vw, 2rem)',
-      color: 'white'
+      color: 'white',
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <h1 style={{ 
@@ -1174,11 +1174,7 @@ export default function OptionsConfluenceScanner() {
                     />
 
                     {/* Phase Strip + Confluence Map Row */}
-                    <div className="card-grid-mobile" style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-                      gap: '1rem',
-                    }}>
+                    <div className="card-grid-mobile">
                       {/* Market Phase */}
                       <PhaseStrip currentPhase={marketPhase} />
                       
@@ -1407,7 +1403,7 @@ export default function OptionsConfluenceScanner() {
                     {/* Signal Components - With weight % and proper color grading */}
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components (weighted):</div>
-                      <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '0.5rem' }}>
+                      <div className="card-grid-mobile" style={{ gap: '0.5rem' }}>
                         {result.compositeScore.components.map((comp, idx) => {
                           // Color based on strength, not just direction
                           const isStrong = Math.abs(comp.score) >= 50;
@@ -1495,7 +1491,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               )}
 
-              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile" style={{ gap: '1rem' }}>
                 
                 {/* IV Analysis Card */}
                 {result.ivAnalysis && (
@@ -1835,7 +1831,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
+                <div className="card-grid-mobile">
                   {/* Closing Now */}
                   <div style={{
                     background: 'rgba(30,41,59,0.6)',
@@ -1962,7 +1958,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* Strike & Expiration Recommendations */}
             {result.direction !== 'neutral' && (
-              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile">
                 
                 {/* Strike Recommendation */}
                 <div style={{
@@ -2179,7 +2175,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="card-grid-mobile" style={{ marginBottom: '1rem' }}>
                   {/* P/C Ratio */}
                   <div style={{
                     background: 'rgba(139,92,246,0.15)',
@@ -2469,7 +2465,7 @@ export default function OptionsConfluenceScanner() {
                 </span>
               </summary>
               
-              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile">
                 <div>
                   <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Target Delta</div>
                   <div style={{ color: '#E2E8F0', fontWeight: 'bold' }}>{result.greeksAdvice.deltaTarget}</div>
@@ -2524,7 +2520,7 @@ export default function OptionsConfluenceScanner() {
                 </span>
               </summary>
               
-              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile">
                 <div style={{
                   background: 'rgba(239,68,68,0.1)',
                   padding: '1rem',
@@ -2636,7 +2632,7 @@ export default function OptionsConfluenceScanner() {
           }}>
             <h3 style={{ margin: '0 0 1.5rem 0', color: '#E2E8F0' }}>How It Works</h3>
             
-            <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1.5rem' }}>
+            <div className="card-grid-mobile" style={{ gap: '1.5rem' }}>
               <div>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔮</div>
                 <div style={{ fontWeight: 'bold', color: '#A855F7', marginBottom: '0.5rem' }}>Time Confluence</div>
