@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from '@/lib/auth';
+import { estimateGreeks } from '@/lib/options-confluence-analyzer';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -123,23 +124,48 @@ async function fetchOptionsData(symbol: string) {
     
     console.log(`${symbol} - Using expiry: ${bestExpiry}, Calls: ${callsFiltered.length}, Puts: ${putsFiltered.length}`);
     
-    // Convert Alpha Vantage format to our internal format (including Greeks)
-    const formatOption = (opt: any) => ({
-      strike: parseFloat(opt.strike),
-      openInterest: parseInt(opt.open_interest || '0', 10),
-      volume: parseInt(opt.volume || '0', 10),
-      impliedVolatility: parseFloat(opt.implied_volatility || '0'),
-      lastPrice: parseFloat(opt.last_price || opt.mark || '0'),
-      // Greeks from Alpha Vantage
-      delta: parseFloat(opt.delta || '0'),
-      gamma: parseFloat(opt.gamma || '0'),
-      theta: parseFloat(opt.theta || '0'),
-      vega: parseFloat(opt.vega || '0'),
-      rho: parseFloat(opt.rho || '0')
-    });
+    // Calculate DTE for Greeks fallback
+    const expiryDateObj = new Date(bestExpiry);
+    const today = new Date();
+    const daysToExpiry = Math.max(1, Math.ceil((expiryDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
     
-    const formattedCalls = callsFiltered.map(formatOption);
-    const formattedPuts = putsFiltered.map(formatOption);
+    // Convert Alpha Vantage format to our internal format (including Greeks with Black-Scholes fallback)
+    const formatOption = (opt: any, isCall: boolean) => {
+      const strike = parseFloat(opt.strike);
+      const iv = parseFloat(opt.implied_volatility || '0') || 0.25;  // Default 25% IV
+      
+      // Parse API Greeks
+      const apiDelta = parseFloat(opt.delta || '0');
+      const apiGamma = parseFloat(opt.gamma || '0');
+      const apiTheta = parseFloat(opt.theta || '0');
+      const apiVega = parseFloat(opt.vega || '0');
+      
+      // Use Black-Scholes fallback when API doesn't provide Greeks (returns 0)
+      let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
+      if (apiDelta === 0 && apiGamma === 0 && apiTheta === 0) {
+        const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, isCall);
+        delta = estimated.delta;
+        gamma = estimated.gamma;
+        theta = estimated.theta;
+        vega = estimated.vega;
+      }
+      
+      return {
+        strike,
+        openInterest: parseInt(opt.open_interest || '0', 10),
+        volume: parseInt(opt.volume || '0', 10),
+        impliedVolatility: iv,
+        lastPrice: parseFloat(opt.last_price || opt.mark || '0'),
+        delta,
+        gamma,
+        theta,
+        vega,
+        rho: parseFloat(opt.rho || '0')
+      };
+    };
+    
+    const formattedCalls = callsFiltered.map((opt: any) => formatOption(opt, true));
+    const formattedPuts = putsFiltered.map((opt: any) => formatOption(opt, false));
     
     // Calculate IV statistics across all options
     const allIVs = [...formattedCalls, ...formattedPuts]

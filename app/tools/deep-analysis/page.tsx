@@ -648,7 +648,7 @@ export default function DeepAnalysisPage() {
           marginBottom: "2rem",
           boxShadow: "0 8px 32px rgba(245,158,11,0.1)"
         }}>
-          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div className="options-form-controls" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <input
               type="text"
               value={symbol}
@@ -657,7 +657,6 @@ export default function DeepAnalysisPage() {
               placeholder="Enter symbol: AAPL, BTC, EURUSD..."
               style={{
                 flex: 1,
-                minWidth: "200px",
                 padding: "0.875rem 1.25rem",
                 borderRadius: "12px",
                 border: "2px solid rgba(245,158,11,0.3)",
@@ -1466,8 +1465,8 @@ export default function DeepAnalysisPage() {
                   <div className="grid-equal-2-col-responsive" style={{ marginTop: "1.5rem" }}>
                     {/* Highest OI Call */}
                     {result.optionsData.highestOICall && (
-                      <div style={{ padding: "1rem", background: "rgba(16,185,129,0.1)", borderRadius: "10px", border: "1px solid rgba(16,185,129,0.3)" }}>
-                        <div style={{ color: "#10B981", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div className="greeks-card" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)" }}>
+                        <div style={{ color: "#10B981", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                           📈 Highest OI Call
                           <span style={{ background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
                             ${result.optionsData.highestOICall.strike}
@@ -1504,8 +1503,8 @@ export default function DeepAnalysisPage() {
                     
                     {/* Highest OI Put */}
                     {result.optionsData.highestOIPut && (
-                      <div style={{ padding: "1rem", background: "rgba(239,68,68,0.1)", borderRadius: "10px", border: "1px solid rgba(239,68,68,0.3)" }}>
-                        <div style={{ color: "#EF4444", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div className="greeks-card" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                        <div style={{ color: "#EF4444", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                           📉 Highest OI Put
                           <span style={{ background: "rgba(239,68,68,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
                             ${result.optionsData.highestOIPut.strike}

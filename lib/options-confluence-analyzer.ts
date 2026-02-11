@@ -486,6 +486,11 @@ function analyzeOpenInterest(
   currentPrice: number,
   expirationDate: string
 ): OpenInterestData {
+  // Calculate DTE for Greeks estimation fallback
+  const expiryDate = new Date(expirationDate);
+  const today = new Date();
+  const daysToExpiry = Math.max(1, Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  
   // Calculate total OI
   let totalCallOI = 0;
   let totalPutOI = 0;
@@ -555,15 +560,32 @@ function analyzeOpenInterest(
       // This ensures we always show Greeks data
       const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
       if (oi > 0 || isNearATM) {
+        // Parse API Greeks if available
+        const apiDelta = call.delta ? parseFloat(call.delta) : undefined;
+        const apiGamma = call.gamma ? parseFloat(call.gamma) : undefined;
+        const apiTheta = call.theta ? parseFloat(call.theta) : undefined;
+        const apiVega = call.vega ? parseFloat(call.vega) : undefined;
+        const iv = call.implied_volatility ? parseFloat(call.implied_volatility) : 0.25;  // Default 25% IV
+        
+        // Use estimateGreeks as fallback when API doesn't provide Greeks
+        let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
+        if (apiDelta === undefined || apiGamma === undefined || apiTheta === undefined || apiVega === undefined) {
+          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, true);
+          delta = apiDelta ?? estimated.delta;
+          gamma = apiGamma ?? estimated.gamma;
+          theta = apiTheta ?? estimated.theta;
+          vega = apiVega ?? estimated.vega;
+        }
+        
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
           type: 'call',
-          delta: call.delta ? parseFloat(call.delta) : undefined,
-          gamma: call.gamma ? parseFloat(call.gamma) : undefined,
-          theta: call.theta ? parseFloat(call.theta) : undefined,
-          vega: call.vega ? parseFloat(call.vega) : undefined,
-          iv: call.implied_volatility ? parseFloat(call.implied_volatility) : undefined,
+          delta,
+          gamma,
+          theta,
+          vega,
+          iv,
         });
       }
     }
@@ -586,15 +608,32 @@ function analyzeOpenInterest(
       // Capture contract with Greeks - include all ATM/near-ATM contracts even with 0 OI
       const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
       if (oi > 0 || isNearATM) {
+        // Parse API Greeks if available
+        const apiDelta = put.delta ? parseFloat(put.delta) : undefined;
+        const apiGamma = put.gamma ? parseFloat(put.gamma) : undefined;
+        const apiTheta = put.theta ? parseFloat(put.theta) : undefined;
+        const apiVega = put.vega ? parseFloat(put.vega) : undefined;
+        const iv = put.implied_volatility ? parseFloat(put.implied_volatility) : 0.25;  // Default 25% IV
+        
+        // Use estimateGreeks as fallback when API doesn't provide Greeks
+        let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
+        if (apiDelta === undefined || apiGamma === undefined || apiTheta === undefined || apiVega === undefined) {
+          const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, false);  // false = put
+          delta = apiDelta ?? estimated.delta;
+          gamma = apiGamma ?? estimated.gamma;
+          theta = apiTheta ?? estimated.theta;
+          vega = apiVega ?? estimated.vega;
+        }
+        
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
           type: 'put',
-          delta: put.delta ? parseFloat(put.delta) : undefined,
-          gamma: put.gamma ? parseFloat(put.gamma) : undefined,
-          theta: put.theta ? parseFloat(put.theta) : undefined,
-          vega: put.vega ? parseFloat(put.vega) : undefined,
-          iv: put.implied_volatility ? parseFloat(put.implied_volatility) : undefined,
+          delta,
+          gamma,
+          theta,
+          vega,
+          iv,
         });
       }
     }

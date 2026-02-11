@@ -649,7 +649,7 @@ export default function OptionsConfluenceScanner() {
         </div>
 
         {/* Input Section */}
-        <div style={{ 
+        <div className="options-form-controls" style={{ 
           display: 'flex', 
           gap: '0.75rem', 
           justifyContent: 'center',
@@ -669,7 +669,6 @@ export default function OptionsConfluenceScanner() {
               border: '2px solid rgba(16,185,129,0.3)',
               borderRadius: '12px',
               color: 'white',
-              minWidth: '150px',
               flex: '1 1 150px',
               maxWidth: '250px',
               outline: 'none',
@@ -717,7 +716,6 @@ export default function OptionsConfluenceScanner() {
               cursor: expirations.length > 0 ? 'pointer' : 'not-allowed',
               fontSize: '0.9rem',
               fontWeight: '600',
-              minWidth: '160px',
             }}
           >
             <option value="">
@@ -1301,9 +1299,9 @@ export default function OptionsConfluenceScanner() {
                       padding: '1.25rem',
                       marginBottom: '1rem'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div className="trade-levels-row">
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '1.25rem' }}>
                               {result.strategyRecommendation.strategyType === 'sell_premium' ? '💰' :
                                result.strategyRecommendation.strategyType === 'buy_premium' ? '📈' : '⚖️'}
@@ -1341,7 +1339,7 @@ export default function OptionsConfluenceScanner() {
                             </div>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right', minWidth: '150px' }}>
+                        <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '0.25rem' }}>Risk / Reward</div>
                           <div style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>Max Risk: {result.strategyRecommendation.maxRisk}</div>
                           <div style={{ fontSize: '0.8rem', color: '#6EE7B7' }}>Max Reward: {result.strategyRecommendation.maxReward}</div>
@@ -1745,7 +1743,7 @@ export default function OptionsConfluenceScanner() {
                   {result.confluenceStack} TFs closing together • click to expand
                 </span>
               </summary>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              <div className="confluence-info-row">
                 <div style={{
                   background: result.confluenceStack >= 4 
                     ? 'linear-gradient(135deg, rgba(16,185,129,0.3) 0%, rgba(168,85,247,0.2) 100%)'
@@ -1755,7 +1753,6 @@ export default function OptionsConfluenceScanner() {
                   padding: '1rem',
                   borderRadius: '12px',
                   textAlign: 'center',
-                  minWidth: '120px',
                   border: result.confluenceStack >= 4 ? '1px solid rgba(16,185,129,0.4)' : '1px solid transparent',
                 }}>
                   <div style={{ 
@@ -1772,7 +1769,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                <div style={{ flex: 1, minWidth: '200px' }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
                     {result.confluenceStack >= 2 ? 'Clustered Timeframes:' : 'Active Timeframes:'}
                   </div>
@@ -2274,9 +2271,9 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 
-                {/* High O/I Strikes with Greeks - Collapsible */}
+                {/* High O/I Strikes with Greeks - Open by default */}
                 {result.openInterestAnalysis.highOIStrikes.length > 0 && (
-                  <details style={{ marginTop: '0.5rem' }}>
+                  <details open style={{ marginTop: '0.5rem' }}>
                     <summary style={{ 
                       cursor: 'pointer', 
                       color: '#A78BFA', 
@@ -2287,11 +2284,11 @@ export default function OptionsConfluenceScanner() {
                       alignItems: 'center',
                       gap: '0.5rem',
                     }}>
-                      📊 Show Strike Analysis ({result.openInterestAnalysis.highOIStrikes.length} strikes with Greeks)
+                      📊 Strike Analysis with Greeks ({result.openInterestAnalysis.highOIStrikes.length} strikes)
                     </summary>
                     <div style={{ marginTop: '0.75rem' }}>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                      <div className="greeks-table-container">
+                        <table className="greeks-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid rgba(100,100,100,0.3)' }}>
                               <th style={{ textAlign: 'left', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>Strike</th>

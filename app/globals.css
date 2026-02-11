@@ -309,3 +309,119 @@ input, textarea, select, button {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ========================================
+   OPTIONS & DEEP ANALYSIS MOBILE FIXES
+   ======================================== */
+
+/* Greeks table mobile scrolling container */
+.greeks-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Compact table for mobile */
+.greeks-table {
+  width: 100%;
+  min-width: 400px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+  .greeks-table {
+    min-width: 350px;
+    font-size: 0.7rem;
+  }
+  .greeks-table th,
+  .greeks-table td {
+    padding: 0.35rem 0.25rem !important;
+  }
+}
+
+/* Options form inputs - stack on mobile */
+.options-form-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .options-form-controls {
+    flex-direction: column;
+  }
+  .options-form-controls input,
+  .options-form-controls select,
+  .options-form-controls button {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+}
+
+/* Confluence info row - stack on mobile */
+.confluence-info-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .confluence-info-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .confluence-info-row > div {
+    min-width: unset !important;
+    width: 100%;
+  }
+}
+
+/* Pro Trader insights grid fixes */
+.pro-trader-insights-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .pro-trader-insights-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Trade levels mobile fix */
+.trade-levels-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .trade-levels-row {
+    flex-direction: column;
+  }
+  .trade-levels-row > div {
+    min-width: unset !important;
+    width: 100%;
+  }
+}
+
+/* Deep analysis Greeks card fixes */
+.greeks-card {
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+@media (max-width: 480px) {
+  .greeks-card {
+    padding: 0.75rem;
+  }
+  .greeks-card .grid-2col-stack {
+    gap: 0.25rem;
+  }
+}
