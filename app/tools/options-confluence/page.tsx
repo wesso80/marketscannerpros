@@ -814,6 +814,8 @@ export default function OptionsConfluenceScanner() {
                 marginBottom: '1.5rem',
                 paddingBottom: '1rem',
                 borderBottom: '1px solid rgba(148,163,184,0.2)',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span style={{
@@ -1368,7 +1370,7 @@ export default function OptionsConfluenceScanner() {
                           {result.compositeScore.finalDirection.toUpperCase()}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '1.5rem' }}>
+                      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ 
                             fontSize: '1.5rem', 
@@ -1502,7 +1504,7 @@ export default function OptionsConfluenceScanner() {
                     padding: '1rem',
                   }}>
                     <h4 style={{ margin: '0 0 0.75rem 0', color: '#A855F7', fontSize: '0.9rem' }}>📊 IV Rank / Percentile</h4>
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ 
                           fontSize: '1.75rem', 
@@ -1958,7 +1960,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* Strike & Expiration Recommendations */}
             {result.direction !== 'neutral' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', gap: '1rem' }}>
+              <div className="card-grid-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
                 
                 {/* Strike Recommendation */}
                 <div style={{
@@ -2002,7 +2004,7 @@ export default function OptionsConfluenceScanner() {
                           {result.primaryStrike.reason}
                         </div>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(45%, 120px), 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
+                        <div className="grid-equal-2-col-responsive" style={{ gap: '0.75rem', fontSize: '0.8rem' }}>
                           <div>
                             <span style={{ color: '#64748B' }}>Est. Delta:</span>
                             <span style={{ color: '#E2E8F0', marginLeft: '6px', fontWeight: 'bold' }}>
@@ -2099,7 +2101,7 @@ export default function OptionsConfluenceScanner() {
                           {result.primaryExpiration.reason}
                         </div>
                         
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap' }}>
                           <div>
                             <span style={{ color: '#64748B' }}>Timeframe:</span>
                             <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
@@ -2241,9 +2243,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
                 
                 {/* O/I Volume Comparison */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(45%, 140px), 1fr))',
+                <div className="grid-equal-2-col-responsive" style={{
                   gap: '1rem',
                   marginBottom: '1rem'
                 }}>
