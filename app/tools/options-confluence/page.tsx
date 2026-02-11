@@ -626,10 +626,10 @@ export default function OptionsConfluenceScanner() {
     <div className="options-page-container" style={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
-      padding: 'clamp(1rem, 4vw, 2rem)',
+      padding: 'clamp(0.5rem, 3vw, 2rem)',
       color: 'white',
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', padding: '0 0.25rem' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <h1 style={{ 

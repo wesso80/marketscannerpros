@@ -26,10 +26,23 @@ html, body {
   max-width: 100vw;
   overflow-x: hidden;
   box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
-.options-page-container > * {
+.options-page-container *:not(svg):not(svg *) {
   max-width: 100%;
   box-sizing: border-box;
+}
+.options-page-container > div {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+@media (max-width: 480px) {
+  .options-page-container {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
 }
 
 /* Links */
