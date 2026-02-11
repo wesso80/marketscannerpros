@@ -817,7 +817,7 @@ export default function OptionsConfluenceScanner() {
                 flexWrap: 'wrap',
                 gap: '0.75rem',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <span style={{
                     background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)',
                     padding: '6px 16px',
@@ -1127,8 +1127,10 @@ export default function OptionsConfluenceScanner() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginBottom: '1rem',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span style={{
                       background: 'linear-gradient(135deg, #10B981, #3B82F6)',
                       padding: '4px 12px',
@@ -2153,9 +2155,9 @@ export default function OptionsConfluenceScanner() {
                 borderRadius: '16px',
                 padding: '1.5rem',
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ 
                       background: 'rgba(245,158,11,0.2)', 
                       padding: '4px 8px', 

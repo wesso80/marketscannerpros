@@ -425,3 +425,53 @@ input, textarea, select, button {
     gap: 0.25rem;
   }
 }
+
+/* ProModeDashboard main grid - stacks on mobile */
+.pro-mode-main-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 600px) {
+  .pro-mode-main-grid {
+    grid-template-columns: 1fr !important;
+    justify-items: center;
+  }
+}
+
+/* ProModeDashboard stats grid - single column on mobile */
+.pro-mode-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+@media (max-width: 480px) {
+  .pro-mode-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Flex row that wraps on mobile */
+.flex-wrap-mobile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+@media (max-width: 480px) {
+  .flex-wrap-mobile {
+    flex-direction: column;
+  }
+}
+
+/* Trade levels 4-column grid - 2x2 on mobile */
+.trade-levels-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .trade-levels-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

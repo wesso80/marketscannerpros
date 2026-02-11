@@ -136,8 +136,10 @@ export function ProModeDashboard({
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: '1.5rem',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span style={{
             background: 'linear-gradient(135deg, #10B981, #3B82F6)',
             padding: '4px 10px',
@@ -161,10 +163,7 @@ export function ProModeDashboard({
       </div>
       
       {/* Main Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'auto 1fr',
-        gap: '1.5rem',
+      <div className="pro-mode-main-grid" style={{
         marginBottom: '1.5rem',
       }}>
         {/* Left: Probability Circle */}
@@ -235,11 +234,7 @@ export function ProModeDashboard({
         </div>
         
         {/* Right: Stats Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '0.75rem',
-        }}>
+        <div className="pro-mode-stats-grid">
           {/* Kelly Size */}
           <div style={{
             background: 'rgba(30,41,59,0.5)',
@@ -342,12 +337,7 @@ export function ProModeDashboard({
             <span>🎯</span> TRADE LEVELS
           </div>
           
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '0.5rem',
-            textAlign: 'center',
-          }}>
+          <div className="trade-levels-grid">
             <div style={{
               padding: '0.5rem',
               background: 'rgba(239,68,68,0.1)',
