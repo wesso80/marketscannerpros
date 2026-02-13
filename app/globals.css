@@ -38,10 +38,44 @@ html, body {
   max-width: 100%;
   overflow-x: hidden;
 }
+@media (max-width: 768px) {
+  .options-page-container {
+    padding: 0.5rem !important;
+  }
+  .options-page-container > div {
+    padding: 0 !important;
+  }
+  .options-page-container h1 {
+    font-size: 1.5rem !important;
+  }
+  .options-page-container h2 {
+    font-size: 1.25rem !important;
+  }
+  .options-page-container h3 {
+    font-size: 1.1rem !important;
+  }
+}
 @media (max-width: 480px) {
   .options-page-container {
     padding-left: 0.25rem !important;
     padding-right: 0.25rem !important;
+  }
+  .options-page-container [style*="padding: 1.5rem"],
+  .options-page-container [style*="padding: 1.75rem"],
+  .options-page-container [style*="padding: 2rem"] {
+    padding: 0.75rem !important;
+  }
+  .options-page-container [style*="gap: 1.5rem"],
+  .options-page-container [style*="gap: 2rem"] {
+    gap: 0.75rem !important;
+  }
+  .options-page-container [style*="fontSize: 2.5rem"],
+  .options-page-container [style*="font-size: 2.5rem"] {
+    font-size: 1.75rem !important;
+  }
+  .options-page-container [style*="fontSize: 1.75rem"],
+  .options-page-container [style*="font-size: 1.75rem"] {
+    font-size: 1.25rem !important;
   }
 }
 
@@ -296,18 +330,81 @@ input, textarea, select, button {
 /* Options page specific grid fixes */
 .decision-grid-mobile {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  gap: 1rem;
+}
+@media (max-width: 600px) {
+  .decision-grid-mobile {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  .decision-grid-mobile > div {
+    padding: 0.125rem;
+  }
 }
 @media (max-width: 480px) {
   .decision-grid-mobile {
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    gap: 0.375rem;
   }
 }
 @media (max-width: 360px) {
   .decision-grid-mobile {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Entry timing row - 4 items that should wrap on mobile */
+.entry-timing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+@media (max-width: 600px) {
+  .entry-timing-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+@media (max-width: 400px) {
+  .entry-timing-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* Options page responsive text class */
+.options-big-text {
+  font-size: 1.75rem;
+}
+.options-huge-text {
+  font-size: 2.5rem;
+}
+@media (max-width: 600px) {
+  .options-big-text {
+    font-size: 1.1rem !important;
+  }
+  .options-huge-text {
+    font-size: 1.5rem !important;
+  }
+}
+@media (max-width: 400px) {
+  .options-big-text {
+    font-size: 0.95rem !important;
+  }
+  .options-huge-text {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* Options page card padding reduction on mobile */
+@media (max-width: 480px) {
+  .options-page-container > div > div {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
 
@@ -500,4 +597,52 @@ input, textarea, select, button {
   .trade-levels-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
+}
+
+/* ========================================
+   GLOBAL MOBILE PAGE FIXES
+   ======================================== */
+
+/* Ensure all pages don't overflow horizontally */
+body, html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Common container width restrictions */
+.page-container,
+[class*="-page-container"] {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Ensure form inputs scale on mobile */
+@media (max-width: 480px) {
+  input, select, textarea, button {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Fix flex containers that might overflow */
+@media (max-width: 600px) {
+  [style*="display: flex"][style*="gap"] {
+    gap: 0.5rem !important;
+  }
+}
+
+/* Universal text wrapping for long content */
+.wrap-text,
+[style*="word-break"],
+p, span, div {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Buttons should never overflow */
+button {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

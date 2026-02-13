@@ -803,7 +803,7 @@ export default function OptionsConfluenceScanner() {
               background: 'linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95))',
               border: `3px solid ${gradeColor(result.tradeQuality)}`,
               borderRadius: '20px',
-              padding: '1.75rem',
+              padding: 'clamp(1rem, 3vw, 1.75rem)',
               boxShadow: `0 0 40px ${gradeColor(result.tradeQuality)}25`,
             }}>
               {/* Header Row */}
@@ -876,7 +876,7 @@ export default function OptionsConfluenceScanner() {
                     Setup Quality
                   </div>
                   <div style={{
-                    fontSize: '2.5rem',
+                    fontSize: 'clamp(1.5rem, 5vw, 2.5rem)',
                     fontWeight: '800',
                     color: gradeColor(result.tradeQuality),
                     lineHeight: 1,
@@ -894,7 +894,7 @@ export default function OptionsConfluenceScanner() {
                     Bias
                   </div>
                   <div style={{
-                    fontSize: '1.75rem',
+                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
                     fontWeight: '700',
                     color: result.direction === 'bullish' ? '#10B981' 
                       : result.direction === 'bearish' ? '#EF4444' 
@@ -915,7 +915,7 @@ export default function OptionsConfluenceScanner() {
                     Strategy
                   </div>
                   <div style={{
-                    fontSize: '1.25rem',
+                    fontSize: 'clamp(0.9rem, 3vw, 1.25rem)',
                     fontWeight: '700',
                     color: result.strategyRecommendation?.strategyType === 'buy_premium' ? '#3B82F6'
                       : result.strategyRecommendation?.strategyType === 'sell_premium' ? '#8B5CF6'
@@ -936,7 +936,7 @@ export default function OptionsConfluenceScanner() {
                     EDGE
                   </div>
                   <div style={{
-                    fontSize: '1.75rem',
+                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
                     fontWeight: '700',
                     color: probabilityResult?.winProbability && probabilityResult.winProbability >= 55 ? '#10B981' 
                       : probabilityResult?.winProbability && probabilityResult.winProbability >= 45 ? '#F59E0B' 
@@ -957,7 +957,7 @@ export default function OptionsConfluenceScanner() {
                     Kelly Size
                   </div>
                   <div style={{
-                    fontSize: '1.75rem',
+                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
                     fontWeight: '700',
                     color: probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 ? '#10B981' : '#EF4444',
                   }}>
@@ -980,7 +980,7 @@ export default function OptionsConfluenceScanner() {
                     Risk/Reward
                   </div>
                   <div style={{
-                    fontSize: '1.75rem',
+                    fontSize: 'clamp(1rem, 4vw, 1.75rem)',
                     fontWeight: '700',
                     color: result.tradeLevels 
                       ? result.tradeLevels.riskRewardRatio >= 1.5 ? '#10B981'  // Strong (green)
@@ -1039,15 +1039,10 @@ export default function OptionsConfluenceScanner() {
               )}
 
               {/* Entry Window Info */}
-              <div style={{
+              <div className="entry-timing-row" style={{
                 background: 'rgba(59,130,246,0.1)',
                 borderRadius: '12px',
                 padding: '1rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem',
               }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
@@ -1356,11 +1351,11 @@ export default function OptionsConfluenceScanner() {
                     padding: '1rem',
                     marginBottom: '1rem'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="flex-wrap-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.25rem' }}>Composite Signal</div>
                         <div style={{ 
-                          fontSize: '1.75rem', 
+                          fontSize: 'clamp(1.1rem, 4vw, 1.75rem)', 
                           fontWeight: 'bold',
                           color: result.compositeScore.finalDirection === 'bullish' ? '#10B981' :
                                  result.compositeScore.finalDirection === 'bearish' ? '#EF4444' : '#F59E0B'
@@ -1368,10 +1363,10 @@ export default function OptionsConfluenceScanner() {
                           {result.compositeScore.finalDirection.toUpperCase()}
                         </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                      <div className="flex-wrap-mobile" style={{ display: 'flex', gap: '1rem' }}>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ 
-                            fontSize: '1.5rem', 
+                            fontSize: 'clamp(1rem, 3vw, 1.5rem)', 
                             fontWeight: 'bold',
                             color: result.compositeScore.directionScore > 0 ? '#10B981' : 
                                    result.compositeScore.directionScore < 0 ? '#EF4444' : '#F59E0B'
@@ -1382,7 +1377,7 @@ export default function OptionsConfluenceScanner() {
                         </div>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ 
-                            fontSize: '1.5rem', 
+                            fontSize: 'clamp(1rem, 3vw, 1.5rem)', 
                             fontWeight: 'bold',
                             color: result.compositeScore.confidence >= 70 ? '#10B981' :
                                    result.compositeScore.confidence >= 50 ? '#F59E0B' : '#EF4444'
@@ -1392,7 +1387,7 @@ export default function OptionsConfluenceScanner() {
                           <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Confidence</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#A855F7' }}>
+                          <div style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)', fontWeight: 'bold', color: '#A855F7' }}>
                             {result.compositeScore.alignedCount}/{result.compositeScore.totalSignals}
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Aligned</div>
