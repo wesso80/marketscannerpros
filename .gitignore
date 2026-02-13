@@ -18,3 +18,6 @@ marketscannerpros.zip
 
 .vercel
 .env*.local
+
+# Worker build artifacts
+.tmp-worker/
