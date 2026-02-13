@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
+import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
+import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
+import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -7,8 +10,8 @@ export const revalidate = 0; // Disable ISR caching
 
 // Scanner API - Binance for crypto (free commercial use)
 // Equity & Forex require commercial data licenses - admin-only testing with Alpha Vantage
-// v2.9 - Removed Finnhub (no free commercial use for individuals)
-const SCANNER_VERSION = 'v2.9';
+// v3.0 - Added cache mode support for reduced AV calls
+const SCANNER_VERSION = 'v3.0';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 // Friendly handler for Alpha Vantage throttling/premium notices
@@ -1167,67 +1170,127 @@ export async function POST(req: NextRequest) {
           };
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
-          // EQUITIES: Use Alpha Vantage (admin-only testing - requires commercial license for production)
-          console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval})`);
+          // EQUITIES: Try cached data first, fall back to Alpha Vantage
+          // v3.0: Cache mode support - reduces AV calls by ~90%
           
-          // Get price from pre-fetched bulk quotes (saves 1 API call per symbol!)
-          // Fall back to individual fetch if bulk didn't have this symbol
-          let price = bulkPriceMap.get(sym.toUpperCase()) ?? NaN;
+          const useCache = shouldUseCache();
+          let cachedData: CachedScanData | null = null;
           
-          // Alpha Vantage enforces max 5 requests/second - batch with delays
-          // Batch 1: First 5 indicators
-          const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
-            fetchRSI(sym),
-            fetchMACD(sym),
-            fetchEMA200(sym),
-            fetchATR(sym),
-            fetchADX(sym),
-          ]);
-          
-          // Wait 250ms before second batch to respect rate limit
-          await new Promise(resolve => setTimeout(resolve, 250));
-          
-          // Batch 2: Remaining 3 indicators (price already from bulk!)
-          const [stochObj, cciVal, aroonObj] = await Promise.all([
-            fetchSTOCH(sym),
-            fetchCCI(sym),
-            fetchAROON(sym),
-          ]);
-          
-          // Only fetch individual price if bulk failed for this symbol
-          if (!Number.isFinite(price)) {
-            console.info(`[scanner] Bulk quote missing for ${sym}, fetching individually`);
-            const priceData = await fetchEquityPrice(sym);
-            price = priceData.price;
+          if (useCache) {
+            cachedData = await getCachedScanData(sym);
           }
           
-          const macHist = macObj.hist;
-          const macLine = macObj.macd;
-          const sigLine = macObj.sig;
+          if (cachedData) {
+            // Use cached data - no AV calls needed!
+            console.info(`[scanner] EQUITY ${sym} served from ${cachedData.source} (${getCacheMode()} mode) - 0 AV calls`);
+            
+            const price = cachedData.price;
+            const rsiVal = cachedData.rsi;
+            const macHist = cachedData.macdHist;
+            const macLine = cachedData.macdLine;
+            const sigLine = cachedData.macdSignal;
+            const ema200Val = cachedData.ema200;
+            const atrVal = cachedData.atr;
+            const adxVal = cachedData.adx;
+            const stochK = cachedData.stochK;
+            const stochD = cachedData.stochD;
+            const cciVal = cachedData.cci;
+            
+            // Aroon not cached yet - use NaN (won't affect scoring much)
+            const aroonUp = NaN;
+            const aroonDown = NaN;
+            
+            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0);
+            const item: ScanResult & { direction?: string; signals?: any } = {
+              symbol: sym,
+              score: scoreResult.score,
+              direction: scoreResult.direction,
+              signals: scoreResult.signals,
+              timeframe,
+              type,
+              price,
+              rsi: rsiVal,
+              macd_hist: macHist,
+              ema200: ema200Val,
+              atr: atrVal,
+              adx: adxVal,
+              stoch_k: stochK,
+              stoch_d: stochD,
+              cci: cciVal,
+              aroon_up: aroonUp,
+              aroon_down: aroonDown,
+              obv: NaN,
+              lastCandleTime: new Date().toISOString(),
+            };
+            if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+            
+          } else if (canFallbackToAV()) {
+            // Fallback to Alpha Vantage (legacy behavior)
+            console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval}) - ${getCacheMode()} mode`);
           
-          const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, 0, 0);
-          const item: ScanResult & { direction?: string; signals?: any } = {
-            symbol: sym,
-            score: scoreResult.score,
-            direction: scoreResult.direction,
-            signals: scoreResult.signals,
-            timeframe,
-            type,
-            price,
-            rsi: rsiVal,
-            macd_hist: macHist,
-            ema200: ema200Val,
-            atr: atrVal,
-            adx: adxObj.adx,
-            stoch_k: stochObj.k,
-            stoch_d: stochObj.d,
-            cci: cciVal,
-            aroon_up: aroonObj.up,
-            aroon_down: aroonObj.down,
-            obv: NaN,
-            lastCandleTime: new Date().toISOString(),
-          };
-          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+            // Get price from pre-fetched bulk quotes (saves 1 API call per symbol!)
+            // Fall back to individual fetch if bulk didn't have this symbol
+            let price = bulkPriceMap.get(sym.toUpperCase()) ?? NaN;
+          
+            // Alpha Vantage enforces max 5 requests/second - batch with delays
+            // Batch 1: First 5 indicators
+            const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
+              fetchRSI(sym),
+              fetchMACD(sym),
+              fetchEMA200(sym),
+              fetchATR(sym),
+              fetchADX(sym),
+            ]);
+          
+            // Wait 250ms before second batch to respect rate limit
+            await new Promise(resolve => setTimeout(resolve, 250));
+          
+            // Batch 2: Remaining 3 indicators (price already from bulk!)
+            const [stochObj, cciVal, aroonObj] = await Promise.all([
+              fetchSTOCH(sym),
+              fetchCCI(sym),
+              fetchAROON(sym),
+            ]);
+          
+            // Only fetch individual price if bulk failed for this symbol
+            if (!Number.isFinite(price)) {
+              console.info(`[scanner] Bulk quote missing for ${sym}, fetching individually`);
+              const priceData = await fetchEquityPrice(sym);
+              price = priceData.price;
+            }
+          
+            const macHist = macObj.hist;
+            const macLine = macObj.macd;
+            const sigLine = macObj.sig;
+          
+            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, 0, 0);
+            const item: ScanResult & { direction?: string; signals?: any } = {
+              symbol: sym,
+              score: scoreResult.score,
+              direction: scoreResult.direction,
+              signals: scoreResult.signals,
+              timeframe,
+              type,
+              price,
+              rsi: rsiVal,
+              macd_hist: macHist,
+              ema200: ema200Val,
+              atr: atrVal,
+              adx: adxObj.adx,
+              stoch_k: stochObj.k,
+              stoch_d: stochObj.d,
+              cci: cciVal,
+              aroon_up: aroonObj.up,
+              aroon_down: aroonObj.down,
+              obv: NaN,
+              lastCandleTime: new Date().toISOString(),
+            };
+            if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          } else {
+            // cache_only mode but no cached data
+            console.warn(`[scanner] ${sym} not in cache (cache_only mode)`);
+            errors.push(`${sym}: Data not cached yet. Try again later.`);
+          }
         }
       } catch (err: any) {
         console.error("[scanner] error for", sym, err);
@@ -1237,6 +1300,39 @@ export async function POST(req: NextRequest) {
           : `${sym}: ${msg}`;
         errors.push(friendly);
       }
+    }
+
+    // Record signals for AI learning (async, non-blocking)
+    if (results.length > 0) {
+      const signalsToRecord: RecordSignalParams[] = results
+        .filter(r => r.price && r.direction && r.direction !== 'neutral' && r.score >= 50) // Only record high-conviction bullish/bearish signals
+        .map(r => ({
+          symbol: r.symbol,
+          signalType: type,
+          direction: r.direction as 'bullish' | 'bearish',
+          score: r.score,
+          priceAtSignal: r.price!,
+          timeframe,
+          features: {
+            rsi: r.rsi,
+            macd_hist: r.macd_hist,
+            ema200: r.ema200,
+            atr: r.atr,
+            adx: r.adx,
+            stoch_k: r.stoch_k,
+            stoch_d: r.stoch_d,
+            cci: r.cci,
+            aroon_up: r.aroon_up,
+            aroon_down: r.aroon_down,
+            price: r.price,
+            score: r.score
+          }
+        }));
+      
+      // Fire and forget - don't slow down the response
+      recordSignalsBatch(signalsToRecord).catch(err => 
+        console.warn('[scanner] Signal recording failed:', err)
+      );
     }
 
     // Return results with cache-prevention headers

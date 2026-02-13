@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId } from "@/lib/coingecko";
+import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
+import { getQuote } from "@/lib/onDemandFetch";
 
 /**
  * /api/quote?symbol=XRPUSD&type=crypto&market=USD
@@ -8,8 +10,13 @@ import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId } from "@/lib/coingecko"
  * 
  * Supports:
  * - Crypto: BTC, ETH, XRP, etc. (vs USD/EUR/etc.) - Uses CoinGecko commercial API
- * - Stocks: AAPL, NVDA, TSLA, etc. - Uses Alpha Vantage
+ * - Stocks: AAPL, NVDA, TSLA, etc. - Uses cached data → Alpha Vantage fallback
  * - FX: EUR/USD, GBP/USD, etc. - Uses Alpha Vantage
+ * 
+ * Cache Mode (CACHE_MODE env var):
+ * - 'legacy': Direct AV calls (default)
+ * - 'prefer_cache': Cache first, AV fallback
+ * - 'cache_only': Cache only, no AV calls
  */
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "";
@@ -169,49 +176,95 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
 }
 
 /**
- * Fetch stock price using Alpha Vantage GLOBAL_QUOTE
+ * Fetch stock price - uses cache layer when enabled
+ * Cache Mode determines behavior:
+ * - legacy: Direct AV call (old behavior)
+ * - prefer_cache: Cache first, AV fallback
+ * - cache_only: Cache only
  */
 async function getStockPrice(symbol: string): Promise<number | null> {
-  if (!ALPHA_VANTAGE_API_KEY) {
-    console.warn("No ALPHA_VANTAGE_API_KEY - cannot fetch stock prices");
-    return null;
+  const useCache = shouldUseCache();
+  const allowAVFallback = canFallbackToAV();
+
+  // Try cached data first (if cache mode enabled)
+  if (useCache) {
+    try {
+      const cachedQuote = await getQuote(symbol);
+      if (cachedQuote?.price) {
+        console.log(`[quote] ${symbol} served from ${cachedQuote.source} (${getCacheMode()} mode)`);
+        return cachedQuote.price;
+      }
+    } catch (err) {
+      console.warn(`[quote] Cache lookup failed for ${symbol}:`, err);
+    }
   }
 
-  try {
-    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
+  // Fallback to direct AV call (if allowed)
+  if (allowAVFallback && ALPHA_VANTAGE_API_KEY) {
+    try {
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json();
 
-    const price = data["Global Quote"]?.["05. price"];
-    if (price) return parseFloat(price);
-  } catch (err) {
-    console.warn("Alpha Vantage stock fetch failed:", err);
+      const price = data["Global Quote"]?.["05. price"];
+      if (price) {
+        console.log(`[quote] ${symbol} served from direct AV call (${getCacheMode()} mode)`);
+        return parseFloat(price);
+      }
+    } catch (err) {
+      console.warn("Alpha Vantage stock fetch failed:", err);
+    }
+  }
+
+  // cache_only mode and nothing in cache
+  if (!allowAVFallback) {
+    console.warn(`[quote] ${symbol} not in cache (cache_only mode, no AV fallback)`);
   }
 
   return null;
 }
 
 /**
- * Fetch FX rate using Alpha Vantage CURRENCY_EXCHANGE_RATE
+ * Fetch FX rate - uses cache layer when enabled
  * Example: symbol=EUR, market=USD → EUR/USD rate
  */
 async function getFxPrice(symbol: string, market: string): Promise<number | null> {
-  if (!ALPHA_VANTAGE_API_KEY) {
-    console.warn("No ALPHA_VANTAGE_API_KEY - cannot fetch FX rates");
-    return null;
+  const useCache = shouldUseCache();
+  const allowAVFallback = canFallbackToAV();
+
+  // For forex, we store as combined symbol (e.g., EURUSD)
+  const fxSymbol = `${symbol}${market}`;
+
+  // Try cached data first (if cache mode enabled)
+  if (useCache) {
+    try {
+      const cachedQuote = await getQuote(fxSymbol);
+      if (cachedQuote?.price) {
+        console.log(`[quote] ${fxSymbol} served from ${cachedQuote.source} (${getCacheMode()} mode)`);
+        return cachedQuote.price;
+      }
+    } catch (err) {
+      console.warn(`[quote] Cache lookup failed for ${fxSymbol}:`, err);
+    }
   }
 
-  try {
-    const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
+  // Fallback to direct AV call (if allowed)
+  if (allowAVFallback && ALPHA_VANTAGE_API_KEY) {
+    try {
+      const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json();
 
-    const rate = data["Realtime Currency Exchange Rate"]?.[
-      "5. Exchange Rate"
-    ];
-    if (rate) return parseFloat(rate);
-  } catch (err) {
-    console.warn("Alpha Vantage FX fetch failed:", err);
+      const rate = data["Realtime Currency Exchange Rate"]?.[
+        "5. Exchange Rate"
+      ];
+      if (rate) {
+        console.log(`[quote] ${fxSymbol} served from direct AV call (${getCacheMode()} mode)`);
+        return parseFloat(rate);
+      }
+    } catch (err) {
+      console.warn("Alpha Vantage FX fetch failed:", err);
+    }
   }
 
   return null;

@@ -7,6 +7,31 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+  # ==========================================================================
+  # Background Worker: Data Ingestion (Alpha Vantage)
+  # Fetches OHLCV data, computes indicators locally, stores in DB + Redis
+  # This eliminates per-user API calls - all users read from cache
+  # ==========================================================================
+  - type: worker
+    name: msp-data-worker
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm run worker:ingest
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_RPM
+        value: "70"
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
   # Cron Jobs for Alerts
   - type: cron
     name: alerts-price-check

@@ -1,19 +1,31 @@
-import { Pool } from "pg";
+import { Pool, QueryResult } from "pg";
 
 declare global {
   // eslint-disable-next-line no-var
   var __pgPool: Pool | undefined;
 }
 
-export const pool =
-  global.__pgPool ??
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 5,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-  });
+// Lazy pool initialization to support worker context where dotenv runs after imports
+function getPool(): Pool {
+  if (!global.__pgPool) {
+    // Neon requires SSL - enable if DATABASE_URL contains "neon" or in production
+    const requiresSSL = process.env.DATABASE_URL?.includes('neon') || process.env.NODE_ENV === "production";
+    
+    global.__pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 5,
+      ssl: requiresSSL ? { rejectUnauthorized: false } : undefined,
+    });
+  }
+  return global.__pgPool;
+}
 
-if (process.env.NODE_ENV !== "production") global.__pgPool = pool;
+// Export pool getter for backwards compatibility
+export const pool = {
+  query: async (text: string, params?: any[]): Promise<QueryResult> => {
+    return getPool().query(text, params);
+  }
+};
 
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
   const res = await pool.query(text, params);
