@@ -179,16 +179,55 @@ interface CandleCloseConfluence {
   };
 }
 
+// Data quality tracking from backend
+interface DataQuality {
+  optionsChainSource: 'alpha_vantage' | 'cboe' | 'none';
+  freshness: 'REALTIME' | 'DELAYED' | 'EOD' | 'STALE';
+  hasGreeksFromAPI: boolean;
+  hasMeaningfulOI: boolean;
+  contractsCount: { calls: number; puts: number };
+  availableStrikes: number[];
+  lastUpdated: string;
+}
+
+// AI Market State from backend
+interface AIMarketState {
+  regime: {
+    type: 'trending' | 'ranging' | 'breakout' | 'reversal' | 'uncertain';
+    confidence: number;
+    description: string;
+  };
+  edges: {
+    primaryEdge: string | null;
+    edgeStrength: number;
+    edgeType: 'momentum' | 'mean_reversion' | 'volatility' | 'structural' | 'none';
+  };
+  thesis: {
+    summary: string;
+    invalidationLevel: number | null;
+    timeHorizon: string;
+  };
+  scenarios: {
+    bull: { probability: number; target: number; catalyst: string };
+    bear: { probability: number; target: number; catalyst: string };
+    base: { probability: number; target: number; catalyst: string };
+  };
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
   direction: 'bullish' | 'bearish' | 'neutral';
+  assetType?: 'equity' | 'crypto' | 'index' | 'etf' | 'forex';
   confluenceStack: number;
   decompressingTFs: string[];
   pullBias: number;
   signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
   tradeQuality: 'A+' | 'A' | 'B' | 'C' | 'F';
   qualityReasons: string[];
+  // Options quality (separate from confluence grade)
+  optionsQualityScore?: number;
+  optionsGrade?: 'A+' | 'A' | 'B' | 'C' | 'F';
   primaryStrike: StrikeRecommendation | null;
   alternativeStrikes: StrikeRecommendation[];
   primaryExpiration: ExpirationRecommendation | null;
@@ -207,74 +246,13 @@ interface OptionsSetup {
   compositeScore?: CompositeScore;
   strategyRecommendation?: StrategyRecommendation;
   candleCloseConfluence?: CandleCloseConfluence;
-  aiMarketState?: AIMarketState;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// INSTITUTIONAL AI MARKET STATE TYPES (HEDGE FUND MODEL)
-// ═══════════════════════════════════════════════════════════════════════════
-
-type MarketRegimeType = 'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL';
-
-interface MarketRegime {
-  regime: MarketRegimeType;
-  confidence: number;
-  reason: string;
-  characteristics: string[];
-}
-
-interface EdgeAnalysis {
-  directionEdge: {
-    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
-    score: number;
-    bias: 'bullish' | 'bearish' | 'neutral';
-    factors: string[];
-  };
-  volatilityEdge: {
-    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
-    score: number;
-    signal: 'SELL_VOL' | 'BUY_VOL' | 'NEUTRAL';
-    factors: string[];
-  };
-  timeEdge: {
-    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
-    score: number;
-    factors: string[];
-  };
-}
-
-interface TradeThesis {
-  primaryEdge: string;
-  thesis: string;
-  keyFactors: string[];
-  notEdge: string;
-}
-
-interface ScenarioMap {
-  baseCase: {
-    description: string;
-    outcome: string;
-    probability: number;
-  };
-  bullCase: {
-    trigger: string;
-    outcome: string;
-    adjustment: string;
-  };
-  bearCase: {
-    trigger: string;
-    outcome: string;
-    adjustment: string;
-  };
-}
-
-interface AIMarketState {
-  regime: MarketRegime;
-  edges: EdgeAnalysis;
-  thesis: TradeThesis;
-  scenarios: ScenarioMap;
-  strategyMatchScore: number;
-  tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
+  // INSTITUTIONAL AI MARKET STATE
+  aiMarketState?: AIMarketState | null;
+  // DATA QUALITY & COMPLIANCE
+  dataQuality?: DataQuality;
+  executionNotes?: string[];
+  dataConfidenceCaps?: string[];
+  disclaimerFlags?: string[];
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -347,12 +325,8 @@ export default function OptionsConfluenceScanner() {
           tradeLevels: result.tradeLevels,
           compositeScore: result.compositeScore,
           strategyRecommendation: result.strategyRecommendation,
-          // INSTITUTIONAL AI MARKET STATE
-          aiMarketState: result.aiMarketState,
         },
-        summary: result.aiMarketState 
-          ? `Options scan for ${result.symbol}: REGIME=${result.aiMarketState.regime.regime} | PRIMARY EDGE=${result.aiMarketState.thesis.primaryEdge} | STRATEGY MATCH=${result.aiMarketState.strategyMatchScore}% | QUALITY=${result.aiMarketState.tradeQualityGate}`
-          : `Options scan for ${result.symbol} at $${result.currentPrice}: ${result.direction.toUpperCase()} bias (${result.tradeQuality}) with ${result.signalStrength} strength. Confluence: ${result.confluenceStack}/8.`,
+        summary: `Options scan for ${result.symbol} at $${result.currentPrice}: ${result.direction.toUpperCase()} bias (${result.tradeQuality}) with ${result.signalStrength} strength. Confluence: ${result.confluenceStack}/8.`,
       });
     }
   }, [result, setPageData]);
@@ -869,399 +843,107 @@ export default function OptionsConfluenceScanner() {
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {/* 📘 EDUCATIONAL MODE BADGE - Compliance first */}
+            {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1))',
-              border: '1px solid rgba(59,130,246,0.3)',
-              borderRadius: '12px',
-              padding: '0.75rem 1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-            }}>
-              <span style={{ fontSize: '1.25rem' }}>📘</span>
-              <div>
-                <span style={{ 
-                  color: '#60A5FA', 
-                  fontWeight: '600',
-                  fontSize: '0.85rem',
-                }}>
-                  EDUCATIONAL MODE ACTIVE
-                </span>
-                <span style={{ 
-                  color: '#94A3B8', 
-                  fontSize: '0.75rem',
-                  marginLeft: '0.5rem',
-                }}>
-                  • Analysis for learning market structure. Not financial advice.
-                </span>
-              </div>
-            </div>
-            
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {/* 🧠 AI MARKET STATE - Institutional Decision Framework */}
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {result.aiMarketState && (
+            {(result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.95))',
-                border: '2px solid rgba(168,85,247,0.5)',
-                borderRadius: '20px',
-                padding: 'clamp(1rem, 3vw, 1.5rem)',
-                boxShadow: '0 0 60px rgba(168,85,247,0.15)',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1))',
+                border: '2px solid #EF4444',
+                borderRadius: '16px',
+                padding: '1rem 1.25rem',
               }}>
-                {/* Header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '1.25rem',
-                  paddingBottom: '1rem',
-                  borderBottom: '1px solid rgba(168,85,247,0.3)',
-                  flexWrap: 'wrap',
-                }}>
-                  <span style={{ fontSize: '1.75rem' }}>🧠</span>
-                  <div>
-                    <div style={{ 
-                      color: '#E9D5FF', 
-                      fontWeight: '700',
-                      fontSize: 'clamp(1rem, 3vw, 1.25rem)',
-                      letterSpacing: '0.5px',
-                    }}>
-                      AI MARKET STATE
-                    </div>
-                    <div style={{ color: '#A78BFA', fontSize: '0.75rem' }}>
-                      Institutional Decision Framework (Educational)
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '1.25rem' }}>🚨</span>
+                  <span style={{ 
+                    color: '#EF4444', 
+                    fontWeight: '700', 
+                    fontSize: '0.9rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}>
+                    Critical Risk Events
+                  </span>
                 </div>
-                
-                {/* Main State Grid - The 4 Key Metrics */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                  gap: '1rem',
-                  marginBottom: '1.5rem',
-                }}>
-                  {/* Regime */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    border: '1px solid rgba(168,85,247,0.3)',
-                  }}>
-                    <div style={{ fontSize: '0.7rem', color: '#A78BFA', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      MARKET REGIME
-                    </div>
-                    <div style={{ 
-                      fontSize: 'clamp(1.1rem, 4vw, 1.5rem)', 
-                      fontWeight: '800',
-                      color: result.aiMarketState.regime.regime === 'TREND' ? '#10B981' :
-                             result.aiMarketState.regime.regime === 'RANGE' ? '#F59E0B' :
-                             result.aiMarketState.regime.regime === 'EXPANSION' ? '#EF4444' : '#8B5CF6',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {result.disclaimerFlags.map((flag, idx) => (
+                    <div key={idx} style={{ 
+                      color: '#FCA5A5', 
+                      fontSize: '0.875rem',
+                      padding: '8px 12px',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '8px',
+                      fontWeight: '500',
                     }}>
-                      {result.aiMarketState.regime.regime}
+                      {flag}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.25rem' }}>
-                      {result.aiMarketState.regime.confidence.toFixed(0)}% confidence
-                    </div>
-                  </div>
-                  
-                  {/* Primary Edge */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    border: '1px solid rgba(16,185,129,0.3)',
-                  }}>
-                    <div style={{ fontSize: '0.7rem', color: '#6EE7B7', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      PRIMARY EDGE
-                    </div>
-                    <div style={{ 
-                      fontSize: 'clamp(0.8rem, 3vw, 1rem)', 
-                      fontWeight: '700',
-                      color: '#10B981',
-                      lineHeight: 1.3,
-                    }}>
-                      {result.aiMarketState.thesis.primaryEdge}
-                    </div>
-                  </div>
-                  
-                  {/* Strategy Match */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    border: '1px solid rgba(59,130,246,0.3)',
-                  }}>
-                    <div style={{ fontSize: '0.7rem', color: '#93C5FD', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      STRATEGY MATCH
-                    </div>
-                    <div style={{ 
-                      fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', 
-                      fontWeight: '800',
-                      color: result.aiMarketState.strategyMatchScore >= 80 ? '#10B981' :
-                             result.aiMarketState.strategyMatchScore >= 60 ? '#F59E0B' : '#EF4444',
-                    }}>
-                      {result.aiMarketState.strategyMatchScore.toFixed(0)}%
-                    </div>
-                  </div>
-                  
-                  {/* Trade Quality Gate */}
-                  <div style={{
-                    background: result.aiMarketState.tradeQualityGate === 'HIGH' ? 'rgba(16,185,129,0.15)' :
-                               result.aiMarketState.tradeQualityGate === 'MODERATE' ? 'rgba(245,158,11,0.15)' :
-                               result.aiMarketState.tradeQualityGate === 'LOW' ? 'rgba(249,115,22,0.15)' :
-                               'rgba(239,68,68,0.15)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                    border: `1px solid ${
-                      result.aiMarketState.tradeQualityGate === 'HIGH' ? 'rgba(16,185,129,0.5)' :
-                      result.aiMarketState.tradeQualityGate === 'MODERATE' ? 'rgba(245,158,11,0.5)' :
-                      result.aiMarketState.tradeQualityGate === 'LOW' ? 'rgba(249,115,22,0.5)' :
-                      'rgba(239,68,68,0.5)'
-                    }`,
-                  }}>
-                    <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      TRADE QUALITY
-                    </div>
-                    <div style={{ 
-                      fontSize: 'clamp(1.1rem, 4vw, 1.5rem)', 
-                      fontWeight: '800',
-                      color: result.aiMarketState.tradeQualityGate === 'HIGH' ? '#10B981' :
-                             result.aiMarketState.tradeQualityGate === 'MODERATE' ? '#F59E0B' :
-                             result.aiMarketState.tradeQualityGate === 'LOW' ? '#FB923C' : '#EF4444',
-                    }}>
-                      {result.aiMarketState.tradeQualityGate}
-                    </div>
-                    {result.aiMarketState.tradeQualityGate === 'WAIT' && (
-                      <div style={{ fontSize: '0.65rem', color: '#FCA5A5', marginTop: '0.25rem' }}>
-                        Not recommended
-                      </div>
-                    )}
-                  </div>
+                  ))}
                 </div>
-                
-                {/* Edge Breakdown - Horizontal Bars */}
-                <div style={{
-                  background: 'rgba(15,23,42,0.8)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginBottom: '0.75rem', fontWeight: '600' }}>
-                    EDGE ANALYSIS (Educational Insight)
-                  </div>
-                  
-                  {/* Direction Edge */}
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        Direction Edge ({result.aiMarketState.edges.directionEdge.bias.toUpperCase()})
-                      </span>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '600',
-                        color: result.aiMarketState.edges.directionEdge.strength === 'STRONG' ? '#10B981' :
-                               result.aiMarketState.edges.directionEdge.strength === 'MODERATE' ? '#F59E0B' :
-                               result.aiMarketState.edges.directionEdge.strength === 'WEAK' ? '#FB923C' : '#64748B',
-                      }}>
-                        {result.aiMarketState.edges.directionEdge.strength} ({result.aiMarketState.edges.directionEdge.score}%)
-                      </span>
-                    </div>
-                    <div style={{ height: '6px', background: 'rgba(100,100,100,0.3)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${result.aiMarketState.edges.directionEdge.score}%`, 
-                        height: '100%', 
-                        background: result.aiMarketState.edges.directionEdge.bias === 'bullish' ? '#10B981' :
-                                   result.aiMarketState.edges.directionEdge.bias === 'bearish' ? '#EF4444' : '#64748B',
-                        borderRadius: '3px',
-                        transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  </div>
-                  
-                  {/* Volatility Edge */}
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        Volatility Edge ({result.aiMarketState.edges.volatilityEdge.signal.replace('_', ' ')})
-                      </span>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '600',
-                        color: result.aiMarketState.edges.volatilityEdge.strength === 'STRONG' ? '#10B981' :
-                               result.aiMarketState.edges.volatilityEdge.strength === 'MODERATE' ? '#F59E0B' :
-                               result.aiMarketState.edges.volatilityEdge.strength === 'WEAK' ? '#FB923C' : '#64748B',
-                      }}>
-                        {result.aiMarketState.edges.volatilityEdge.strength} ({result.aiMarketState.edges.volatilityEdge.score}%)
-                      </span>
-                    </div>
-                    <div style={{ height: '6px', background: 'rgba(100,100,100,0.3)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${result.aiMarketState.edges.volatilityEdge.score}%`, 
-                        height: '100%', 
-                        background: result.aiMarketState.edges.volatilityEdge.signal === 'SELL_VOL' ? '#A855F7' :
-                                   result.aiMarketState.edges.volatilityEdge.signal === 'BUY_VOL' ? '#3B82F6' : '#64748B',
-                        borderRadius: '3px',
-                        transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  </div>
-                  
-                  {/* Time Edge */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        Time Confluence Edge
-                      </span>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '600',
-                        color: result.aiMarketState.edges.timeEdge.strength === 'STRONG' ? '#10B981' :
-                               result.aiMarketState.edges.timeEdge.strength === 'MODERATE' ? '#F59E0B' :
-                               result.aiMarketState.edges.timeEdge.strength === 'WEAK' ? '#FB923C' : '#64748B',
-                      }}>
-                        {result.aiMarketState.edges.timeEdge.strength} ({result.aiMarketState.edges.timeEdge.score.toFixed(0)}%)
-                      </span>
-                    </div>
-                    <div style={{ height: '6px', background: 'rgba(100,100,100,0.3)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        width: `${result.aiMarketState.edges.timeEdge.score}%`, 
-                        height: '100%', 
-                        background: '#F59E0B',
-                        borderRadius: '3px',
-                        transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Trade Thesis - WHY THIS TRADE EXISTS */}
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
-                  border: '1px solid rgba(16,185,129,0.3)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                }}>
-                  <div style={{ 
-                    fontSize: '0.8rem', 
-                    color: '#6EE7B7', 
-                    marginBottom: '0.75rem', 
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}>
-                    ⭐ TRADE THESIS (Educational)
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#E2E8F0', marginBottom: '0.75rem', lineHeight: 1.5 }}>
-                    {result.aiMarketState.thesis.thesis}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
-                    Key factors observed:
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.75rem', color: '#CBD5E1' }}>
-                    {result.aiMarketState.thesis.keyFactors.map((factor, i) => (
-                      <li key={i} style={{ marginBottom: '0.25rem' }}>• {factor}</li>
-                    ))}
-                  </ul>
-                  <div style={{ 
-                    marginTop: '0.75rem', 
-                    paddingTop: '0.75rem', 
-                    borderTop: '1px solid rgba(100,100,100,0.3)',
-                    fontSize: '0.7rem',
-                    color: '#F87171',
-                    fontStyle: 'italic',
-                  }}>
-                    ⚠️ {result.aiMarketState.thesis.notEdge}
-                  </div>
-                </div>
-                
-                {/* Scenario Map - Educational Only */}
-                <details style={{ background: 'rgba(30,41,59,0.6)', borderRadius: '12px', padding: '0.75rem' }}>
-                  <summary style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '0.8rem', 
-                    color: '#94A3B8',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}>
-                    📊 Expected Scenario Map (Educational)
-                  </summary>
-                  <div style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
-                    {/* Base Case */}
-                    <div style={{ 
-                      background: 'rgba(100,100,100,0.2)', 
-                      borderRadius: '8px', 
-                      padding: '0.75rem',
-                      borderLeft: '3px solid #64748B',
-                    }}>
-                      <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: '600', marginBottom: '0.25rem' }}>
-                        BASE CASE ({result.aiMarketState.scenarios.baseCase.probability}% probability estimate)
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        {result.aiMarketState.scenarios.baseCase.description}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: '#A78BFA', marginTop: '0.25rem' }}>
-                        → {result.aiMarketState.scenarios.baseCase.outcome}
-                      </div>
-                    </div>
-                    
-                    {/* Bull Case */}
-                    <div style={{ 
-                      background: 'rgba(16,185,129,0.1)', 
-                      borderRadius: '8px', 
-                      padding: '0.75rem',
-                      borderLeft: '3px solid #10B981',
-                    }}>
-                      <div style={{ fontSize: '0.7rem', color: '#6EE7B7', fontWeight: '600', marginBottom: '0.25rem' }}>
-                        BULLISH SCENARIO
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        IF: {result.aiMarketState.scenarios.bullCase.trigger}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: '#A78BFA', marginTop: '0.25rem' }}>
-                        → {result.aiMarketState.scenarios.bullCase.outcome}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-                        Adjustment: {result.aiMarketState.scenarios.bullCase.adjustment}
-                      </div>
-                    </div>
-                    
-                    {/* Bear Case */}
-                    <div style={{ 
-                      background: 'rgba(239,68,68,0.1)', 
-                      borderRadius: '8px', 
-                      padding: '0.75rem',
-                      borderLeft: '3px solid #EF4444',
-                    }}>
-                      <div style={{ fontSize: '0.7rem', color: '#FCA5A5', fontWeight: '600', marginBottom: '0.25rem' }}>
-                        BEARISH SCENARIO
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-                        IF: {result.aiMarketState.scenarios.bearCase.trigger}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: '#A78BFA', marginTop: '0.25rem' }}>
-                        → {result.aiMarketState.scenarios.bearCase.outcome}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '0.25rem' }}>
-                        Adjustment: {result.aiMarketState.scenarios.bearCase.adjustment}
-                      </div>
-                    </div>
-                  </div>
-                </details>
               </div>
             )}
-
+            
+            {/* Data Quality & Execution Notes */}
+            {((result.executionNotes && result.executionNotes.length > 0) || 
+              (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.08))',
+                border: '1px solid rgba(245,158,11,0.4)',
+                borderRadius: '12px',
+                padding: '0.875rem 1rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1rem' }}>📋</span>
+                  <span style={{ 
+                    color: '#F59E0B', 
+                    fontWeight: '600', 
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                  }}>
+                    Execution Notes
+                  </span>
+                  {result.dataQuality && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      background: result.dataQuality.freshness === 'REALTIME' ? 'rgba(16,185,129,0.2)' :
+                                  result.dataQuality.freshness === 'DELAYED' ? 'rgba(245,158,11,0.2)' :
+                                  'rgba(239,68,68,0.2)',
+                      color: result.dataQuality.freshness === 'REALTIME' ? '#10B981' :
+                             result.dataQuality.freshness === 'DELAYED' ? '#F59E0B' : '#EF4444',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                    }}>
+                      {result.dataQuality.freshness} DATA
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {result.dataConfidenceCaps?.map((cap, idx) => (
+                    <span key={`cap-${idx}`} style={{ 
+                      color: '#FBBF24', 
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '6px',
+                    }}>
+                      ⚠️ {cap}
+                    </span>
+                  ))}
+                  {result.executionNotes?.map((note, idx) => (
+                    <span key={`note-${idx}`} style={{ 
+                      color: '#94A3B8', 
+                      fontSize: '0.75rem',
+                      padding: '4px 8px',
+                      background: 'rgba(0,0,0,0.15)',
+                      borderRadius: '6px',
+                    }}>
+                      💡 {note}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}

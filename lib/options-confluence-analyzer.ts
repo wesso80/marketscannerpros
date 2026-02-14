@@ -47,6 +47,64 @@ function normalizeIV(rawIV: number | string | undefined, fallback = 0.25): numbe
 export type AssetType = 'equity' | 'crypto' | 'index' | 'etf' | 'forex';
 
 // ═══════════════════════════════════════════════════════════════════════════
+// EARNINGS CALENDAR CHECK (for disclaimer flags)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Check if symbol has earnings within N days
+ * Returns the earnings date if found, null otherwise
+ */
+async function checkUpcomingEarnings(symbol: string, daysAhead: number = 7): Promise<{
+  hasEarnings: boolean;
+  earningsDate?: string;
+  daysUntil?: number;
+} | null> {
+  try {
+    // Use internal API to check earnings calendar
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    
+    const response = await fetch(`${baseUrl}/api/earnings?type=calendar`, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 3600 }, // Cache for 1 hour
+    });
+    
+    if (!response.ok) {
+      console.warn(`Earnings calendar fetch failed: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    const upperSymbol = symbol.toUpperCase();
+    const now = new Date();
+    const cutoffDate = new Date(now);
+    cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
+    
+    // Look for symbol in earnings list
+    const earnings = data.earnings || data.upcoming || [];
+    for (const event of earnings) {
+      if (event.symbol?.toUpperCase() === upperSymbol || event.ticker?.toUpperCase() === upperSymbol) {
+        const earningsDate = new Date(event.reportDate || event.date);
+        if (earningsDate >= now && earningsDate <= cutoffDate) {
+          const daysUntil = Math.ceil((earningsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            hasEarnings: true,
+            earningsDate: earningsDate.toISOString().split('T')[0],
+            daysUntil,
+          };
+        }
+      }
+    }
+    
+    return { hasEarnings: false };
+  } catch (error) {
+    console.warn('Earnings check failed:', error);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -494,13 +552,26 @@ interface AVOptionContract {
   rho?: string;
 }
 
-// Get the NEAREST coming Friday for weekly options expiry
+// Get the NEAREST coming Friday for weekly options expiry (in market timezone)
 // - Friday: use today (0 days)
 // - Saturday: use next Friday (6 days) 
 // - Sunday-Thursday: use this coming Friday (5 to 1 days)
 function getThisWeekFriday(): Date {
+  // Use America/New_York timezone for market hours
   const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
+  const nyFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = nyFormatter.formatToParts(now);
+  const weekdayPart = parts.find(p => p.type === 'weekday')?.value;
+  
+  // Map weekday name to number
+  const weekdayMap: Record<string, number> = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+  const dayOfWeek = weekdayMap[weekdayPart || 'Mon'] ?? 1;
   
   // Calculate days until nearest coming Friday
   let daysUntilFriday: number;
@@ -516,6 +587,35 @@ function getThisWeekFriday(): Date {
   friday.setDate(now.getDate() + daysUntilFriday);
   friday.setHours(0, 0, 0, 0);
   return friday;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FIND NEAREST STRIKE FROM ACTUAL CHAIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Find the nearest actual strike from the options chain.
+ * Falls back to Math.round if no chain strikes available.
+ */
+function findNearestChainStrike(targetPrice: number, availableStrikes: number[]): number {
+  if (!availableStrikes || availableStrikes.length === 0) {
+    // Fallback: round to nearest dollar
+    return Math.round(targetPrice);
+  }
+  
+  // Find the strike closest to target price
+  let nearest = availableStrikes[0];
+  let minDiff = Math.abs(targetPrice - nearest);
+  
+  for (const strike of availableStrikes) {
+    const diff = Math.abs(targetPrice - strike);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearest = strike;
+    }
+  }
+  
+  return nearest;
 }
 
 async function fetchOptionsChain(symbol: string, targetExpiration?: string): Promise<{
@@ -2193,7 +2293,8 @@ function recommendStrategy(
 
 function selectStrikesFromConfluence(
   confluenceResult: HierarchicalScanResult,
-  isCallDirection: boolean
+  isCallDirection: boolean,
+  availableStrikes: number[] = []
 ): StrikeRecommendation[] {
   const { currentPrice, mid50Levels, clusters, decompression, prediction } = confluenceResult;
   const recommendations: StrikeRecommendation[] = [];
@@ -2207,7 +2308,8 @@ function selectStrikesFromConfluence(
     );
   
   // Primary recommendation: ATM or 1 strike OTM for best delta exposure
-  const atmStrike = Math.round(currentPrice);
+  // Use actual chain strikes when available
+  const atmStrike = findNearestChainStrike(currentPrice, availableStrikes);
   const atmGreeks = estimateGreeks(currentPrice, atmStrike, 7, 0.05, 0.25, isCallDirection);
   
   // Calculate target level with sanity check - must be within 20% of current price
@@ -2233,8 +2335,8 @@ function selectStrikesFromConfluence(
   // Secondary: Strike at nearest 50% cluster
   if (clusters.length > 0) {
     const clusterLevel = clusters[0].avgLevel;
-    // Find strike near cluster
-    const clusterStrike = Math.round(clusterLevel);
+    // Find strike near cluster - use actual chain strikes
+    const clusterStrike = findNearestChainStrike(clusterLevel, availableStrikes);
     if (clusterStrike !== atmStrike) {
       const clusterGreeks = estimateGreeks(currentPrice, clusterStrike, 7, 0.05, 0.25, isCallDirection);
       const distPct = ((clusterStrike - currentPrice) / currentPrice) * 100;
@@ -2256,7 +2358,7 @@ function selectStrikesFromConfluence(
   const decompLevels = mid50Levels.filter(l => l.isDecompressing);
   if (decompLevels.length > 0) {
     const primaryDecomp = decompLevels[0];
-    const decompStrike = Math.round(primaryDecomp.level);
+    const decompStrike = findNearestChainStrike(primaryDecomp.level, availableStrikes);
     if (decompStrike !== atmStrike && !recommendations.find(r => r.strike === decompStrike)) {
       const decompGreeks = estimateGreeks(currentPrice, decompStrike, 7, 0.05, 0.25, isCallDirection);
       const distPct = ((decompStrike - currentPrice) / currentPrice) * 100;
@@ -2781,9 +2883,9 @@ export class OptionsConfluenceAnalyzer {
     // Grade trade quality (now includes O/I sentiment alignment)
     const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
     
-    // Select strikes based on 50% levels
+    // Select strikes based on 50% levels (using actual chain strikes when available)
     const allStrikes = direction !== 'neutral' 
-      ? selectStrikesFromConfluence(confluenceResult, isCallDirection)
+      ? selectStrikesFromConfluence(confluenceResult, isCallDirection, dataQuality.availableStrikes)
       : [];
     
     const primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
@@ -2905,8 +3007,22 @@ export class OptionsConfluenceAnalyzer {
     }
     
     // PRODUCTION FIX: Disclaimer flags for risk events
-    // TODO: Hook into earnings calendar API
-    // if (hasUpcomingEarnings(symbol, 7)) disclaimerFlags.push('⚠️ Earnings within 7 days - IV crush risk');
+    // Check earnings calendar (async but don't block on it)
+    try {
+      const earningsCheck = await checkUpcomingEarnings(symbol, 14);
+      if (earningsCheck?.hasEarnings) {
+        const daysText = earningsCheck.daysUntil === 0 ? 'TODAY' : 
+                        earningsCheck.daysUntil === 1 ? 'TOMORROW' :
+                        `in ${earningsCheck.daysUntil} days (${earningsCheck.earningsDate})`;
+        disclaimerFlags.push(`⚠️ EARNINGS ${daysText} - IV crush risk!`);
+        if (earningsCheck.daysUntil && earningsCheck.daysUntil <= 3) {
+          executionNotes.push('🔴 CRITICAL: Earnings imminent - undefined IV risk');
+        }
+      }
+    } catch (e) {
+      console.warn('Earnings check skipped:', e);
+    }
+    
     // TODO: Hook into FOMC/CPI calendar
     // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
     
