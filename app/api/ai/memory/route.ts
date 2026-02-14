@@ -20,21 +20,7 @@ export async function GET() {
 
     return NextResponse.json({ 
       success: true, 
-      memory: memory || {
-        preferredTimeframes: ['1H', '4H', '1D'],
-        preferredAssets: [],
-        riskProfile: 'medium',
-        maxRiskPerTrade: 2.0,
-        favoredSetups: [],
-        tradingStyle: 'swing',
-        typicalHoldTime: '1-5 days',
-        responseVerbosity: 'balanced',
-        showEducationalContent: true,
-        autoSuggestActions: true,
-        mostUsedFeatures: [],
-        commonScanFilters: {},
-        downvotedTopics: [],
-      }
+      memory
     });
 
   } catch (error) {
@@ -66,6 +52,9 @@ export async function PATCH(req: NextRequest) {
       'responseVerbosity',
       'showEducationalContent',
       'autoSuggestActions',
+      'mostUsedFeatures',
+      'commonScanFilters',
+      'downvotedTopics',
     ];
 
     const sanitizedUpdates: Partial<UserMemory> = {};

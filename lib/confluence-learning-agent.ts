@@ -595,6 +595,102 @@ export class ConfluenceLearningAgent {
     return atr / period;
   }
 
+  private getNYDateTimeParts(date: Date): {
+    year: number;
+    month: number;
+    day: number;
+    dayOfWeek: number;
+    hour: number;
+    minute: number;
+  } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+
+    const value = (type: string): string => parts.find((p) => p.type === type)?.value || '';
+    const weekdayMap: Record<string, number> = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+    return {
+      year: Number(value('year')),
+      month: Number(value('month')) - 1,
+      day: Number(value('day')),
+      dayOfWeek: weekdayMap[value('weekday')] ?? date.getUTCDay(),
+      hour: Number(value('hour')),
+      minute: Number(value('minute')),
+    };
+  }
+
+  private getTimezoneOffsetMinutes(date: Date, timeZone: string): number {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+
+    const value = (type: string): string => parts.find((p) => p.type === type)?.value || '0';
+    const asUtcMs = Date.UTC(
+      Number(value('year')),
+      Number(value('month')) - 1,
+      Number(value('day')),
+      Number(value('hour')),
+      Number(value('minute')),
+      Number(value('second'))
+    );
+
+    return Math.round((asUtcMs - date.getTime()) / 60000);
+  }
+
+  private getNYMarketCloseUtcMs(year: number, month: number, day: number): number {
+    const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
+    const nyOffsetMins = this.getTimezoneOffsetMinutes(noonUtc, 'America/New_York');
+    return Date.UTC(year, month, day, 16, 0, 0) - nyOffsetMins * 60 * 1000;
+  }
+
+  private getCanonicalTimeframeId(tfConfig: Pick<TimeframeConfig, 'tf' | 'label'>): string {
+    const rawTf = (tfConfig.tf || '').toUpperCase();
+    if (rawTf === 'D') return '1D';
+    if (rawTf === 'W') return '1W';
+    if (rawTf === 'M') return '1M';
+    if (rawTf === '12M') return '1Y';
+    if (rawTf) return rawTf;
+
+    const rawLabel = (tfConfig.label || '').toUpperCase();
+    if (rawLabel === 'D') return '1D';
+    if (rawLabel === 'W') return '1W';
+    if (rawLabel === 'M') return '1M';
+    return rawLabel;
+  }
+
+  private isUsEquityMarketOpen(now: Date): boolean {
+    const nyNow = this.getNYDateTimeParts(now);
+    if (nyNow.dayOfWeek === 0 || nyNow.dayOfWeek === 6) return false;
+
+    const mins = nyNow.hour * 60 + nyNow.minute;
+    const openMins = 9 * 60 + 30;
+    const closeMins = 16 * 60;
+    return mins >= openMins && mins < closeMins;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CANDLE CLOSE TIME CALCULATION (Calendar-based)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -604,7 +700,7 @@ export class ConfluenceLearningAgent {
    * KEY INSIGHT: All timeframes close at MARKET CLOSE (21:00 UTC) on their cycle end day.
    * So 1D, 3D, W, M can all close at the SAME minute if today is the end of their cycles.
    */
-  getMinutesToTimeframeClose(now: Date, tfConfig: { label: string; minutes: number }): number | null {
+  getMinutesToTimeframeClose(now: Date, tfConfig: Pick<TimeframeConfig, 'tf' | 'label' | 'minutes'>): number | null {
     const currentTime = now.getTime();
     
     // For intraday TFs (5m to 8h), use minute-based periods
@@ -614,17 +710,19 @@ export class ConfluenceLearningAgent {
       return Math.floor((periodEnd - currentTime) / 60000);
     }
     
-    // For daily and above, ALL close at market close (21:00 UTC)
-    // The question is: is TODAY the closing day for this timeframe?
-    const nyCloseHour = 21; // NYSE close in UTC
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const date = now.getUTCDate();
-    const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
-    const hour = now.getUTCHours();
-    
+    // For daily and above, all closes are anchored to NY market close (4:00 PM ET, DST-aware)
+    const nyNow = this.getNYDateTimeParts(now);
+    const year = nyNow.year;
+    const month = nyNow.month;
+    const date = nyNow.day;
+    const dayOfWeek = nyNow.dayOfWeek;
+    const tfId = this.getCanonicalTimeframeId(tfConfig);
+
+    const closeAt = (targetYear: number, targetMonth: number, targetDate: number): Date =>
+      new Date(this.getNYMarketCloseUtcMs(targetYear, targetMonth, targetDate));
+
     // Today's market close time
-    const todayClose = new Date(Date.UTC(year, month, date, nyCloseHour, 0, 0));
+    const todayClose = closeAt(year, month, date);
     const todayCloseMs = todayClose.getTime();
     const minsToTodayClose = Math.floor((todayCloseMs - currentTime) / 60000);
     
@@ -636,20 +734,20 @@ export class ConfluenceLearningAgent {
     // Helper: get week number since epoch
     const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
     
-    switch (tfConfig.label) {
-      case 'D': {
+    switch (tfId) {
+      case '1D': {
         // Daily ALWAYS closes today at market close (if market is open)
         // Skip weekends for traditional markets
         if (dayOfWeek === 0 || dayOfWeek === 6) {
           // Weekend - next close is Monday
           const daysToMonday = dayOfWeek === 0 ? 1 : 2;
-          const mondayClose = new Date(Date.UTC(year, month, date + daysToMonday, nyCloseHour, 0, 0));
+          const mondayClose = closeAt(year, month, date + daysToMonday);
           return Math.floor((mondayClose.getTime() - currentTime) / 60000);
         }
         if (currentTime >= todayCloseMs) {
           // Past today's close, next is tomorrow (or Monday)
           const nextDay = dayOfWeek === 5 ? 3 : 1; // Friday -> Monday, else tomorrow
-          const nextClose = new Date(Date.UTC(year, month, date + nextDay, nyCloseHour, 0, 0));
+          const nextClose = closeAt(year, month, date + nextDay);
           return Math.floor((nextClose.getTime() - currentTime) / 60000);
         }
         return minsToTodayClose;
@@ -663,7 +761,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose; // Closes today!
         }
         const daysToNext = (2 - cycleDay) % 2 || 2;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -675,7 +773,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose; // Closes today!
         }
         const daysToNext = (3 - cycleDay) % 3 || 3;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -687,7 +785,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose;
         }
         const daysToNext = (4 - cycleDay) % 4 || 4;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -699,7 +797,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose;
         }
         const daysToNext = (5 - cycleDay) % 5 || 5;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -711,7 +809,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose;
         }
         const daysToNext = (6 - cycleDay) % 6 || 6;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -723,7 +821,7 @@ export class ConfluenceLearningAgent {
           return minsToTodayClose;
         }
         const daysToNext = (7 - cycleDay) % 7 || 7;
-        const nextClose = new Date(Date.UTC(year, month, date + daysToNext, nyCloseHour, 0, 0));
+        const nextClose = closeAt(year, month, date + daysToNext);
         return Math.floor((nextClose.getTime() - currentTime) / 60000);
       }
       
@@ -736,7 +834,7 @@ export class ConfluenceLearningAgent {
         // Days until next Friday
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
         if (daysToFriday === 0 && currentTime >= todayCloseMs) daysToFriday = 7;
-        const fridayClose = new Date(Date.UTC(year, month, date + daysToFriday, nyCloseHour, 0, 0));
+        const fridayClose = closeAt(year, month, date + daysToFriday);
         return Math.floor((fridayClose.getTime() - currentTime) / 60000);
       }
       
@@ -753,7 +851,7 @@ export class ConfluenceLearningAgent {
         let weeksToAdd = 0;
         const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
         if (nextFridayWeek % 2 !== 0) weeksToAdd = 7;
-        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + weeksToAdd, nyCloseHour, 0, 0));
+        const targetClose = closeAt(year, month, date + daysToFriday + weeksToAdd);
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
@@ -767,7 +865,7 @@ export class ConfluenceLearningAgent {
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
         if (daysToFriday === 0) daysToFriday = 7;
         const weeksUntil3W = (3 - (weeksSinceEpoch % 3)) % 3;
-        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil3W * 7), nyCloseHour, 0, 0));
+        const targetClose = closeAt(year, month, date + daysToFriday + (weeksUntil3W * 7));
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
@@ -781,11 +879,11 @@ export class ConfluenceLearningAgent {
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
         if (daysToFriday === 0) daysToFriday = 7;
         const weeksUntil4W = (4 - (weeksSinceEpoch % 4)) % 4;
-        const targetClose = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil4W * 7), nyCloseHour, 0, 0));
+        const targetClose = closeAt(year, month, date + daysToFriday + (weeksUntil4W * 7));
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
-      case 'M': {
+      case '1M': {
         // Monthly: closes LAST TRADING DAY of month at market close
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let lastTradingDay = daysInMonth;
@@ -812,7 +910,7 @@ export class ConfluenceLearningAgent {
         if (nextLastDOW === 0) nextLastTradingDay -= 2;
         else if (nextLastDOW === 6) nextLastTradingDay -= 1;
         
-        const monthEndClose = new Date(Date.UTC(targetYear, targetMonth, nextLastTradingDay, nyCloseHour, 0, 0));
+        const monthEndClose = closeAt(targetYear, targetMonth, nextLastTradingDay);
         return Math.floor((monthEndClose.getTime() - currentTime) / 60000);
       }
       
@@ -843,7 +941,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -873,7 +971,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -903,7 +1001,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -933,7 +1031,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -963,7 +1061,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, targetMonth, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -991,7 +1089,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, 6, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, 6, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -1019,7 +1117,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, 7, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, 7, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -1047,7 +1145,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, 8, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, 8, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -1075,7 +1173,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, 9, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, 9, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -1103,7 +1201,7 @@ export class ConfluenceLearningAgent {
         if (tgtDOW === 0) tgtLastDay -= 2;
         else if (tgtDOW === 6) tgtLastDay -= 1;
         
-        const closeDate = new Date(Date.UTC(targetYear, 10, tgtLastDay, nyCloseHour, 0, 0));
+        const closeDate = closeAt(targetYear, 10, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
@@ -1127,7 +1225,7 @@ export class ConfluenceLearningAgent {
         if (nextDOW === 0) nextLastDay -= 2;
         else if (nextDOW === 6) nextLastDay -= 1;
         
-        const yearEndClose = new Date(Date.UTC(targetYear, 11, nextLastDay, nyCloseHour, 0, 0));
+        const yearEndClose = closeAt(targetYear, 11, nextLastDay);
         return Math.floor((yearEndClose.getTime() - currentTime) / 60000);
       }
       
@@ -1443,13 +1541,11 @@ export class ConfluenceLearningAgent {
 
   analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number): DecompressionAnalysis {
     const decompressions: DecompressionPull[] = [];
+    const now = new Date(currentTime);
     
     for (const tfConfig of TIMEFRAMES) {
-      const tfMs = tfConfig.minutes * 60 * 1000;
-      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
-      const periodEnd = periodStart + tfMs;
-      const timeToClose = periodEnd - currentTime;
-      const minsToClose = Math.floor(timeToClose / 60000);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig);
+      if (minsToClose === null || minsToClose < 0) continue;
       
       // Get resampled bars for this TF
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
@@ -1681,27 +1777,12 @@ export class ConfluenceLearningAgent {
     // Detect if this is likely a stock (not crypto) - crypto symbols contain USD
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
     
-    // Check if US market is closed (weekend + after hours)
-    const now = new Date();
-    const utcDay = now.getUTCDay(); // 0 = Sunday, 6 = Saturday
-    const utcHour = now.getUTCHours();
-    
-    // Convert UTC to ET (Eastern Time) - simplified: EST = UTC-5
-    // Note: This doesn't account for DST but is close enough
-    const etHour = (utcHour - 5 + 24) % 24;
-    
-    // US Market regular hours: 9:30 AM - 4:00 PM ET
-    // We consider market "open" from 9:00 AM - 4:30 PM ET (with buffer)
-    const isWeekend = utcDay === 0 || utcDay === 6;
-    const isAfterHours = etHour < 9 || etHour >= 17;  // Before 9 AM or after 5 PM ET
-    const isMarketClosed = !isCrypto && (isWeekend || isAfterHours);
+    const now = new Date(currentTime);
+    const isMarketClosed = !isCrypto && !this.isUsEquityMarketOpen(now);
     
     for (const tfConfig of includedTFConfigs) {
-      const tfMs = tfConfig.minutes * 60 * 1000;
-      const periodStart = Math.floor(currentTime / tfMs) * tfMs;
-      const periodEnd = periodStart + tfMs;
-      const timeToClose = periodEnd - currentTime;
-      const minsToClose = Math.floor(timeToClose / 60000);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig);
+      if (minsToClose === null) continue;
       
       // Resample for 50% level
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
@@ -1873,6 +1954,8 @@ export class ConfluenceLearningAgent {
     
     // Build reasoning text - now based on CLUSTERED count (the real confluence)
     let reasoningText = '';
+    const nyNow = this.getNYDateTimeParts(now);
+    const isWeekend = nyNow.dayOfWeek === 0 || nyNow.dayOfWeek === 6;
     const closedReason = isWeekend ? 'weekend' : 'after hours';
     if (isMarketClosed) {
       reasoningText = activeDecomps.length > 0 

@@ -17,7 +17,7 @@ dotenv.config(); // Also try .env as fallback
 import { Pool } from 'pg';
 import { Redis } from '@upstash/redis';
 import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
-import { calculateAllIndicators, detectSqueeze, OHLCVBar } from '../lib/indicators';
+import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
 import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC } from '../lib/coingecko';
@@ -289,44 +289,6 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   }
 }
 
-/**
- * Fallback: Fetch crypto OHLC from Alpha Vantage (rate limited)
- */
-async function fetchAVCryptoDaily(symbol: string): Promise<AVBar[]> {
-  await getRateLimiter().take(1);
-
-  const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=USD&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
-  
-  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) {
-    throw new Error(`AV crypto HTTP ${res.status} for ${symbol}`);
-  }
-
-  const json = await res.json();
-  const timeSeries = json['Time Series (Digital Currency Daily)'];
-
-  if (!timeSeries) {
-    console.warn(`[worker] No crypto data for ${symbol}`);
-    return [];
-  }
-
-  const bars: AVBar[] = [];
-  for (const [timestamp, values] of Object.entries(timeSeries)) {
-    const v = values as Record<string, string>;
-    bars.push({
-      timestamp,
-      open: parseFloat(v['1a. open (USD)'] || v['1. open'] || '0'),
-      high: parseFloat(v['2a. high (USD)'] || v['2. high'] || '0'),
-      low: parseFloat(v['3a. low (USD)'] || v['3. low'] || '0'),
-      close: parseFloat(v['4a. close (USD)'] || v['4. close'] || '0'),
-      volume: parseFloat(v['5. volume'] || '0'),
-    });
-  }
-
-  bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  return bars;
-}
-
 // ============================================================================
 // Database Operations
 // ============================================================================
@@ -417,10 +379,10 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       symbol, timeframe, rsi14, macd_line, macd_signal, macd_hist,
       ema9, ema20, ema50, ema200, sma20, sma50, sma200,
       atr14, adx14, plus_di, minus_di, stoch_k, stoch_d, cci20,
-      bb_upper, bb_middle, bb_lower, obv, vwap, in_squeeze, squeeze_strength, computed_at
+      bb_upper, bb_middle, bb_lower, obv, vwap, in_squeeze, squeeze_strength, warmup_json, computed_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, NOW()
+      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28::jsonb, NOW()
     )
     ON CONFLICT (symbol, timeframe) DO UPDATE SET
       rsi14 = EXCLUDED.rsi14,
@@ -448,6 +410,7 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       vwap = EXCLUDED.vwap,
       in_squeeze = EXCLUDED.in_squeeze,
       squeeze_strength = EXCLUDED.squeeze_strength,
+        warmup_json = EXCLUDED.warmup_json,
       computed_at = NOW()
   `, [
     symbol.toUpperCase(),
@@ -477,6 +440,7 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
     indicators.vwap ?? null,
     indicators.inSqueeze ?? null,
     indicators.squeezeStrength ?? null,
+    indicators.warmup ? JSON.stringify(indicators.warmup) : null,
   ]);
 }
 
@@ -801,11 +765,13 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
 
       const indicators = calculateAllIndicators(ohlcvBars);
       const squeeze = detectSqueeze(ohlcvBars);
+      const warmup = getIndicatorWarmupStatus(ohlcvBars.length, 'daily');
       
       const fullIndicators = {
         ...indicators,
         inSqueeze: squeeze?.inSqueeze ?? false,
         squeezeStrength: squeeze?.squeezeStrength ?? 0,
+        warmup,
       };
 
       await upsertIndicators(symbol, 'daily', fullIndicators);
@@ -813,7 +779,7 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
       
       // 4. Detect and record signals (runs on full universe automatically)
       const latestPrice = bars[bars.length - 1]?.close;
-      if (latestPrice) {
+      if (latestPrice && warmup.coreReady) {
         const detectedSignals = detectSignals(symbol, fullIndicators, latestPrice);
         if (detectedSignals.length > 0) {
           const recorded = await recordSignals(symbol, detectedSignals, latestPrice, 'daily');
@@ -821,6 +787,8 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
             console.log(`[worker] ${symbol}: Recorded ${recorded} signal(s): ${detectedSignals.map(s => `${s.signalType}:${s.direction}`).join(', ')}`);
           }
         }
+      } else if (latestPrice) {
+        console.log(`[worker] ${symbol}: Skipping signals, warmup incomplete (${warmup.missingIndicators.join(', ')})`);
       }
     }
 
@@ -838,14 +806,11 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
   let apiCalls = 0;
   
   try {
-    // Try CoinGecko first (faster, more generous rate limits)
+    // CoinGecko only for crypto ingestion
     let bars = await fetchCoinGeckoDaily(symbol);
-    
-    // Fallback to Alpha Vantage if CoinGecko fails
+
     if (bars.length === 0) {
-      console.log(`[worker] Falling back to Alpha Vantage for ${symbol}`);
-      bars = await fetchAVCryptoDaily(symbol);
-      apiCalls++;
+      console.log(`[worker] CoinGecko unavailable/no mapping for ${symbol}; skipping crypto fallback source`);
     }
 
     if (bars.length > 0) {
@@ -884,23 +849,29 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
 
       const indicators = calculateAllIndicators(ohlcvBars);
       const squeeze = detectSqueeze(ohlcvBars);
+      const warmup = getIndicatorWarmupStatus(ohlcvBars.length, 'daily');
       
       const fullIndicators = {
         ...indicators,
         inSqueeze: squeeze?.inSqueeze ?? false,
         squeezeStrength: squeeze?.squeezeStrength ?? 0,
+        warmup,
       };
 
       await upsertIndicators(symbol, 'daily', fullIndicators);
       await cacheIndicators(symbol, 'daily', fullIndicators);
       
       // Detect and record signals (runs on full universe automatically)
-      const detectedSignals = detectSignals(symbol, fullIndicators, latest.close);
-      if (detectedSignals.length > 0) {
-        const recorded = await recordSignals(symbol, detectedSignals, latest.close, 'daily');
-        if (recorded > 0) {
-          console.log(`[worker] ${symbol}: Recorded ${recorded} signal(s): ${detectedSignals.map(s => `${s.signalType}:${s.direction}`).join(', ')}`);
+      if (warmup.coreReady) {
+        const detectedSignals = detectSignals(symbol, fullIndicators, latest.close);
+        if (detectedSignals.length > 0) {
+          const recorded = await recordSignals(symbol, detectedSignals, latest.close, 'daily');
+          if (recorded > 0) {
+            console.log(`[worker] ${symbol}: Recorded ${recorded} signal(s): ${detectedSignals.map(s => `${s.signalType}:${s.direction}`).join(', ')}`);
+          }
         }
+      } else {
+        console.log(`[worker] ${symbol}: Skipping signals, warmup incomplete (${warmup.missingIndicators.join(', ')})`);
       }
     }
 

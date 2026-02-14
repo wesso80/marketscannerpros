@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Cookie Policy — MarketScanner Pros",
   description: "How MarketScanner Pros uses cookies and similar tracking technologies.",
   alternates: { canonical: "/cookie-policy" },
-  robots: { index: true, follow: true }
+  robots: { index: false, follow: true }
 };
 
 const effective = "7 October 2025";

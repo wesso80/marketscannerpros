@@ -1,58 +1,49 @@
-'use client';
+import type { Metadata } from 'next';
+import ToolsLayoutClient from './ToolsLayoutClient';
 
-import MSPCopilot from '@/components/MSPCopilot';
-import { usePathname } from 'next/navigation';
-import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import type { PageSkill } from '@/lib/ai/types';
-
-// Map route paths to skills
-function getSkillFromPath(pathname: string): PageSkill {
-  if (pathname.includes('/scanner')) return 'scanner';
-  if (pathname.includes('/crypto-dashboard') || pathname.includes('/open-interest')) return 'derivatives';
-  if (pathname.includes('/options')) return 'options';
-  if (pathname.includes('/confluence')) return 'time_confluence';
-  if (pathname.includes('/portfolio')) return 'portfolio';
-  if (pathname.includes('/journal')) return 'journal';
-  if (pathname.includes('/deep-analysis')) return 'deep_analysis';
-  if (pathname.includes('/watchlist')) return 'watchlist';
-  if (pathname.includes('/backtest')) return 'backtest';
-  if (pathname.includes('/ai-analyst')) return 'ai_analyst';
-  if (pathname.includes('/market-movers') || pathname.includes('/gainers-losers')) return 'market_movers';
-  if (pathname.includes('/macro')) return 'macro';
-  if (pathname.includes('/earnings')) return 'earnings';
-  if (pathname.includes('/commodities')) return 'commodities';
-  return 'home';
-}
-
-function CopilotWithContext({ fallbackSkill }: { fallbackSkill: PageSkill }) {
-  const { pageData } = useAIPageContext();
-  
-  return (
-    <MSPCopilot 
-      skill={pageData?.skill || fallbackSkill}
-      pageData={pageData?.data || {}}
-      symbols={pageData?.symbols || []}
-    />
-  );
-}
+export const metadata: Metadata = {
+  title: {
+    default: 'Trading Tools',
+    template: '%s | Trading Tools | MarketScanner Pros',
+  },
+  description:
+    'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+  alternates: {
+    canonical: '/tools',
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://marketscannerpros.app/tools',
+    title: 'Trading Tools | MarketScanner Pros',
+    description:
+      'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+    siteName: 'MarketScanner Pros',
+    images: [
+      {
+        url: '/scan-banner.png',
+        width: 1200,
+        height: 630,
+        alt: 'MarketScanner Pros Trading Tools',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Trading Tools | MarketScanner Pros',
+    description:
+      'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+    images: ['/scan-banner.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function ToolsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const skill = getSkillFromPath(pathname);
-
-  return (
-    <AIPageProvider>
-      <ErrorBoundary>
-        {children}
-      </ErrorBoundary>
-      <ErrorBoundary fallback={null}>
-        <CopilotWithContext fallbackSkill={skill} />
-      </ErrorBoundary>
-    </AIPageProvider>
-  );
+  return <ToolsLayoutClient>{children}</ToolsLayoutClient>;
 }

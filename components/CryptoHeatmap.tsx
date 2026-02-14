@@ -19,6 +19,7 @@ export default function CryptoHeatmap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState('CoinGecko');
   const [hoveredCrypto, setHoveredCrypto] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'weight' | 'change'>('weight');
 
@@ -35,6 +36,9 @@ export default function CryptoHeatmap() {
       const data = await res.json();
       setCryptos(data.cryptos);
       setLastUpdate(data.timestamp);
+      if (typeof data.source === 'string' && data.source.trim()) {
+        setDataSource(data.source.toLowerCase() === 'coingecko' ? 'CoinGecko' : data.source);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to load crypto data');
@@ -311,7 +315,7 @@ export default function CryptoHeatmap() {
             </p>
           )}
           <span className="text-xs text-slate-500">
-            Data by Yahoo Finance
+            Data by {dataSource}
           </span>
         </div>
       </div>

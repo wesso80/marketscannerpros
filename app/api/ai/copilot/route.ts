@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
     // Add context summary
     messages.push({
       role: 'system',
-      content: `Current context:\n${serializeContextForPrompt(context)}\n\nPage data summary: ${JSON.stringify(pageData || {}).slice(0, 1000)}`,
+      content: `Current context:\n${serializeContextForPrompt(context)}`,
     });
 
     // Add user message

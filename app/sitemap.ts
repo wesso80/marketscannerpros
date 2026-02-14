@@ -1,56 +1,59 @@
 import { MetadataRoute } from 'next';
+import { blogPosts } from './blog/posts-data';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://marketscannerpros.app';
   const lastModified = new Date();
 
-  // Core marketing pages
   const corePages = [
     '',
     '/pricing',
     '/partners',
     '/contact',
     '/guide',
-    '/reviews',
+    '/guide/open-interest',
     '/blog',
-  ];
-
-  // Legal pages
-  const legalPages = [
     '/terms',
     '/privacy',
     '/disclaimer',
     '/cookie-policy',
     '/refund-policy',
-    '/legal',
   ];
 
-  // Tools pages (public landing pages)
   const toolsPages = [
     '/tools',
     '/tools/scanner',
     '/tools/ai-analyst',
+    '/tools/ai-tools',
     '/tools/deep-analysis',
     '/tools/confluence-scanner',
+    '/tools/options-confluence',
     '/tools/portfolio',
     '/tools/journal',
     '/tools/backtest',
-    '/tools/options',
-    '/tools/economics',
+    '/tools/alerts',
+    '/tools/watchlists',
     '/tools/news',
-    '/tools/etf',
-    '/tools/gainers-losers',
+    '/tools/market-movers',
+    '/tools/macro',
+    '/tools/earnings',
+    '/tools/earnings-calendar',
+    '/tools/economic-calendar',
     '/tools/company-overview',
     '/tools/commodities',
+    '/tools/gainers-losers',
+    '/tools/heatmap',
+    '/tools/crypto',
+    '/tools/crypto-dashboard',
+    '/tools/crypto-explorer',
+    '/tools/crypto-heatmap',
+    '/tools/equity-explorer',
+    '/tools/intraday-charts',
   ];
 
-  // Auth pages
-  const authPages = [
-    '/auth/login',
-  ];
+  const blogPages = blogPosts.map((post) => `/blog/${post.slug}`);
 
-  // Combine all pages
-  const allPages = [...corePages, ...legalPages, ...toolsPages, ...authPages];
+  const allPages = [...corePages, ...toolsPages, ...blogPages];
 
   return allPages.map((path) => ({
     url: `${baseUrl}${path}`,

@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Terms of Service — MarketScanner Pros",
   description: "Terms of Service for MarketScanner Pros.",
   alternates: { canonical: "/terms" },
-  robots: { index: true, follow: true }
+  robots: { index: false, follow: true }
 };
 
 const effective = "13 December 2025";

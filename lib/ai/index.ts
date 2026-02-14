@@ -25,6 +25,7 @@ export {
   isToolCacheable,
   getToolCacheTTL,
   isToolRateLimited,
+  assertToolAllowedForSkill,
   generateIdempotencyKey,
   getToolSummary,
 } from './tools';

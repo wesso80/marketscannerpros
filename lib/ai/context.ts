@@ -14,6 +14,109 @@ import type {
   OpenTrade 
 } from './types';
 
+const DEFAULT_USER_MEMORY: UserMemory = {
+  preferredTimeframes: ['1H', '4H', '1D'],
+  preferredAssets: [],
+  riskProfile: 'medium',
+  maxRiskPerTrade: 2.0,
+  favoredSetups: [],
+  tradingStyle: 'swing',
+  typicalHoldTime: '1-5 days',
+  responseVerbosity: 'balanced',
+  showEducationalContent: true,
+  autoSuggestActions: true,
+  mostUsedFeatures: [],
+  commonScanFilters: {},
+  downvotedTopics: [],
+};
+
+const CONTEXT_MAX_CHARS = 12_000;
+const PER_FIELD_MAX_CHARS = 800;
+
+const JSONB_MEMORY_FIELDS = new Set([
+  'preferred_timeframes',
+  'preferred_assets',
+  'favored_setups',
+  'most_used_features',
+  'common_scan_filters',
+  'downvoted_topics',
+]);
+
+function asNumber(value: unknown, fallback: number): number {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function asStringArray(value: unknown, fallback: string[] = []): string[] {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string');
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function asObject(value: unknown, fallback: Record<string, unknown> = {}): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function truncateString(value: string, maxChars = PER_FIELD_MAX_CHARS): string {
+  return value.length > maxChars ? `${value.slice(0, maxChars)}...` : value;
+}
+
+function sanitizePageDataForPrompt(pageData: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(pageData || {})) {
+    if (value === null || value === undefined) continue;
+    if (typeof value === 'string') {
+      sanitized[key] = truncateString(value);
+      continue;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      sanitized[key] = value;
+      continue;
+    }
+
+    const serialized = JSON.stringify(value);
+    sanitized[key] = serialized.length > PER_FIELD_MAX_CHARS
+      ? `${serialized.slice(0, PER_FIELD_MAX_CHARS)}...`
+      : value;
+  }
+
+  return sanitized;
+}
+
+function normalizeTradeDirection(side: unknown): 'long' | 'short' {
+  if (typeof side !== 'string') return 'long';
+  const normalized = side.toLowerCase();
+  if (normalized === 'long') return 'long';
+  if (normalized === 'short') return 'short';
+  return 'long';
+}
+
+function resolveMarketApiBase(): string | null {
+  const base = process.env.INTERNAL_API_BASE_URL || process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE || '';
+  return base ? base.replace(/\/$/, '') : null;
+}
+
 // Default user context for new/free users
 const DEFAULT_USER_CONTEXT: UserContext = {
   tier: 'free',
@@ -25,7 +128,7 @@ const DEFAULT_USER_CONTEXT: UserContext = {
 };
 
 // Fetch or create user memory
-export async function getUserMemory(workspaceId: string): Promise<UserMemory | null> {
+export async function getUserMemory(workspaceId: string): Promise<UserMemory> {
   try {
     const rows = await q(
       `SELECT * FROM user_memory WHERE workspace_id = $1`,
@@ -38,28 +141,28 @@ export async function getUserMemory(workspaceId: string): Promise<UserMemory | n
         `INSERT INTO user_memory (workspace_id) VALUES ($1) ON CONFLICT DO NOTHING`,
         [workspaceId]
       );
-      return null;
+      return { ...DEFAULT_USER_MEMORY };
     }
     
     const row = rows[0];
     return {
-      preferredTimeframes: row.preferred_timeframes || ['1H', '4H', '1D'],
-      preferredAssets: row.preferred_assets || [],
-      riskProfile: row.risk_profile || 'medium',
-      maxRiskPerTrade: parseFloat(row.max_risk_per_trade) || 2.0,
-      favoredSetups: row.favored_setups || [],
-      tradingStyle: row.trading_style || 'swing',
-      typicalHoldTime: row.typical_hold_time || '1-5 days',
-      responseVerbosity: row.response_verbosity || 'balanced',
-      showEducationalContent: row.show_educational_content ?? true,
-      autoSuggestActions: row.auto_suggest_actions ?? true,
-      mostUsedFeatures: row.most_used_features || [],
-      commonScanFilters: row.common_scan_filters || {},
-      downvotedTopics: row.downvoted_topics || [],
+      preferredTimeframes: asStringArray(row.preferred_timeframes, DEFAULT_USER_MEMORY.preferredTimeframes),
+      preferredAssets: asStringArray(row.preferred_assets, DEFAULT_USER_MEMORY.preferredAssets),
+      riskProfile: row.risk_profile || DEFAULT_USER_MEMORY.riskProfile,
+      maxRiskPerTrade: asNumber(row.max_risk_per_trade, DEFAULT_USER_MEMORY.maxRiskPerTrade),
+      favoredSetups: asStringArray(row.favored_setups, DEFAULT_USER_MEMORY.favoredSetups),
+      tradingStyle: row.trading_style || DEFAULT_USER_MEMORY.tradingStyle,
+      typicalHoldTime: row.typical_hold_time || DEFAULT_USER_MEMORY.typicalHoldTime,
+      responseVerbosity: row.response_verbosity || DEFAULT_USER_MEMORY.responseVerbosity,
+      showEducationalContent: row.show_educational_content ?? DEFAULT_USER_MEMORY.showEducationalContent,
+      autoSuggestActions: row.auto_suggest_actions ?? DEFAULT_USER_MEMORY.autoSuggestActions,
+      mostUsedFeatures: asStringArray(row.most_used_features, DEFAULT_USER_MEMORY.mostUsedFeatures),
+      commonScanFilters: asObject(row.common_scan_filters, DEFAULT_USER_MEMORY.commonScanFilters),
+      downvotedTopics: asStringArray(row.downvoted_topics, DEFAULT_USER_MEMORY.downvotedTopics),
     };
   } catch (error) {
     console.error('Error fetching user memory:', error);
-    return null;
+    return { ...DEFAULT_USER_MEMORY };
   }
 }
 
@@ -89,11 +192,21 @@ export async function updateUserMemory(
       downvotedTopics: 'downvoted_topics',
     };
     
+    await q(
+      `INSERT INTO user_memory (workspace_id) VALUES ($1) ON CONFLICT (workspace_id) DO NOTHING`,
+      [workspaceId]
+    );
+
     for (const [key, value] of Object.entries(updates)) {
       const dbField = fieldMap[key as keyof UserMemory];
       if (dbField && value !== undefined) {
-        setClauses.push(`${dbField} = $${paramIndex}`);
-        values.push(typeof value === 'object' ? JSON.stringify(value) : value);
+        if (JSONB_MEMORY_FIELDS.has(dbField)) {
+          setClauses.push(`${dbField} = $${paramIndex}::jsonb`);
+          values.push(JSON.stringify(value));
+        } else {
+          setClauses.push(`${dbField} = $${paramIndex}`);
+          values.push(value);
+        }
         paramIndex++;
       }
     }
@@ -128,7 +241,7 @@ async function getRecentActions(workspaceId: string, limit = 10): Promise<Recent
     
     return rows.map(row => ({
       type: row.event_type,
-      details: row.event_data,
+      details: asObject(row.event_data, {}),
       timestamp: row.created_at,
     }));
   } catch (error) {
@@ -137,13 +250,13 @@ async function getRecentActions(workspaceId: string, limit = 10): Promise<Recent
   }
 }
 
-// Fetch open trades from portfolio
-async function getOpenTrades(workspaceId: string): Promise<OpenTrade[]> {
+// Fetch open positions from portfolio
+async function getOpenPositions(workspaceId: string): Promise<OpenTrade[]> {
   try {
     const rows = await q(
-      `SELECT symbol, side, entry_price, current_price, pnl_percent, created_at
+      `SELECT symbol, side, quantity, entry_price, current_price, created_at, entry_date
        FROM portfolio_positions 
-       WHERE workspace_id = $1 
+       WHERE workspace_id = $1 AND quantity > 0
        ORDER BY created_at DESC 
        LIMIT 20`,
       [workspaceId]
@@ -151,14 +264,18 @@ async function getOpenTrades(workspaceId: string): Promise<OpenTrade[]> {
     
     return rows.map(row => ({
       symbol: row.symbol,
-      direction: row.side === 'long' ? 'long' : 'short',
-      entryPrice: parseFloat(row.entry_price),
-      currentPrice: row.current_price ? parseFloat(row.current_price) : undefined,
-      pnlPercent: row.pnl_percent ? parseFloat(row.pnl_percent) : undefined,
-      openedAt: row.created_at,
+      direction: normalizeTradeDirection(row.side),
+      entryPrice: asNumber(row.entry_price, 0),
+      currentPrice: row.current_price !== null && row.current_price !== undefined
+        ? asNumber(row.current_price, 0)
+        : undefined,
+      pnlPercent: row.current_price !== null && row.current_price !== undefined && asNumber(row.entry_price, 0) > 0
+        ? ((asNumber(row.current_price, 0) - asNumber(row.entry_price, 0)) / asNumber(row.entry_price, 0)) * 100
+        : undefined,
+      openedAt: row.entry_date || row.created_at,
     }));
   } catch (error) {
-    console.error('Error fetching open trades:', error);
+    console.error('Error fetching open positions:', error);
     return [];
   }
 }
@@ -168,7 +285,7 @@ async function getWatchlist(workspaceId: string): Promise<string[]> {
   try {
     // Assuming watchlist is stored - adjust table name as needed
     const rows = await q(
-      `SELECT symbol FROM user_watchlist WHERE workspace_id = $1 LIMIT 50`,
+      `SELECT symbol FROM user_watchlist WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [workspaceId]
     );
     return rows.map(row => row.symbol);
@@ -198,9 +315,17 @@ export async function getMarketState(): Promise<MarketState> {
   // This would ideally fetch from a real-time source or cache
   // For now, return reasonable defaults
   try {
-    // You could fetch from your fear/greed endpoint or cache
-    const fngResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || ''}/api/fear-greed`, {
-      next: { revalidate: 300 } // Cache for 5 minutes
+    const apiBase = resolveMarketApiBase();
+    if (!apiBase) {
+      return {
+        regime: 'neutral',
+        volatility: 'normal',
+        fearGreedIndex: 50,
+      };
+    }
+
+    const fngResponse = await fetch(`${apiBase}/api/fear-greed`, {
+      next: { revalidate: 300 }
     }).catch(() => null);
     
     let fng = 50;
@@ -241,7 +366,7 @@ export async function buildUnifiedContext(
   ] = await Promise.all([
     getUserMemory(workspaceId),
     getRecentActions(workspaceId),
-    getOpenTrades(workspaceId),
+    getOpenPositions(workspaceId),
     getWatchlist(workspaceId),
     getRecentQuestions(workspaceId),
     getMarketState(),
@@ -250,11 +375,11 @@ export async function buildUnifiedContext(
   // Build user context from memory + tier
   const userContext: UserContext = {
     tier,
-    riskProfile: userMemory?.riskProfile || DEFAULT_USER_CONTEXT.riskProfile,
-    preferredAssets: userMemory?.preferredAssets || DEFAULT_USER_CONTEXT.preferredAssets,
-    preferredTimeframes: userMemory?.preferredTimeframes || DEFAULT_USER_CONTEXT.preferredTimeframes,
-    tradingStyle: (userMemory?.tradingStyle as UserContext['tradingStyle']) || DEFAULT_USER_CONTEXT.tradingStyle,
-    responseVerbosity: userMemory?.responseVerbosity || DEFAULT_USER_CONTEXT.responseVerbosity,
+    riskProfile: userMemory.riskProfile || DEFAULT_USER_CONTEXT.riskProfile,
+    preferredAssets: userMemory.preferredAssets || DEFAULT_USER_CONTEXT.preferredAssets,
+    preferredTimeframes: userMemory.preferredTimeframes || DEFAULT_USER_CONTEXT.preferredTimeframes,
+    tradingStyle: userMemory.tradingStyle || DEFAULT_USER_CONTEXT.tradingStyle,
+    responseVerbosity: userMemory.responseVerbosity || DEFAULT_USER_CONTEXT.responseVerbosity,
   };
   
   return {
@@ -274,53 +399,24 @@ export async function buildUnifiedContext(
 
 // Serialize context for prompt injection
 export function serializeContextForPrompt(context: UnifiedAIContext): string {
-  const parts: string[] = [];
-  
-  // User info
-  parts.push(`User: ${context.user.tier} tier, ${context.user.riskProfile} risk profile, ${context.user.tradingStyle} trading style`);
-  if (context.user.preferredAssets.length > 0) {
-    parts.push(`Preferred assets: ${context.user.preferredAssets.join(', ')}`);
+  const payload = {
+    user: context.user,
+    page: context.page,
+    marketState: context.marketState,
+    history: {
+      recentActions: context.history.recentActions.slice(0, 10),
+      openTrades: context.history.openTrades.slice(0, 10),
+      watchlist: context.history.watchlist.slice(0, 25),
+      recentQuestions: context.history.recentQuestions.slice(0, 5).map((question) => truncateString(question, 240)),
+    },
+    pageData: sanitizePageDataForPrompt(context.pageData),
+    timestamp: context.timestamp,
+  };
+
+  let serialized = JSON.stringify(payload);
+  if (serialized.length > CONTEXT_MAX_CHARS) {
+    serialized = `${serialized.slice(0, CONTEXT_MAX_CHARS)}...`;
   }
-  
-  // Page context
-  parts.push(`Current page: ${context.page.name}`);
-  if (context.page.symbols?.length) {
-    parts.push(`Viewing symbols: ${context.page.symbols.join(', ')}`);
-  }
-  if (context.page.timeframes?.length) {
-    parts.push(`Timeframes: ${context.page.timeframes.join(', ')}`);
-  }
-  
-  // Market state
-  parts.push(`Market: ${context.marketState.regime} regime, ${context.marketState.volatility} volatility, Fear/Greed: ${context.marketState.fearGreedIndex}`);
-  
-  // PAGE DATA - Include the actual scan/page results!
-  if (context.pageData && Object.keys(context.pageData).length > 0) {
-    parts.push(`\n=== CURRENT PAGE DATA (USE THIS TO ANSWER QUESTIONS) ===`);
-    for (const [key, value] of Object.entries(context.pageData)) {
-      if (value !== null && value !== undefined) {
-        if (typeof value === 'object') {
-          parts.push(`${key}: ${JSON.stringify(value, null, 0).slice(0, 500)}`);
-        } else {
-          parts.push(`${key}: ${value}`);
-        }
-      }
-    }
-    parts.push(`=== END PAGE DATA ===\n`);
-  }
-  
-  // Open trades
-  if (context.history.openTrades.length > 0) {
-    const trades = context.history.openTrades.slice(0, 5).map(t => 
-      `${t.symbol} ${t.direction} @ ${t.entryPrice}${t.pnlPercent ? ` (${t.pnlPercent > 0 ? '+' : ''}${t.pnlPercent.toFixed(2)}%)` : ''}`
-    );
-    parts.push(`Open positions: ${trades.join(', ')}`);
-  }
-  
-  // Watchlist
-  if (context.history.watchlist.length > 0) {
-    parts.push(`Watchlist: ${context.history.watchlist.slice(0, 10).join(', ')}`);
-  }
-  
-  return parts.join('\n');
+
+  return `<<MSP_CONTEXT_JSON>>\n${serialized}\n<</MSP_CONTEXT_JSON>>`;
 }

@@ -1,11 +1,11 @@
 /**
  * Institutional-Grade Probability Engine
  * 
- * Converts technical signals into Bayesian win probability using:
- * 1. Individual signal confidence scoring
- * 2. Signal confluence weighting
- * 3. Kelly Criterion position sizing
- * 4. Probability-adjusted risk/reward
+ * Converts technical signals into a direction-aware posterior probability using:
+ * 1. Prior win-rate baseline in log-odds space
+ * 2. Weighted, confidence-scaled signal evidence updates
+ * 3. Correlation-aware confluence handling
+ * 4. Guard-railed Kelly-based sizing for options
  * 
  * Based on quantitative trading frameworks used by hedge funds.
  */
@@ -27,7 +27,7 @@ export interface ProbabilityResult {
   totalSignals: number;         // Total signals checked
   confluenceScore: number;      // 0-100 based on alignment
   direction: 'bullish' | 'bearish' | 'neutral';
-  kellySizePercent: number;     // Optimal position size (quarter Kelly for safety)
+  kellySizePercent: number;     // Kelly-based position size after conviction/edge gates and hard cap
   rMultiple: number;            // Risk multiple for trade sizing
   components: SignalComponent[];
 }
@@ -37,7 +37,7 @@ export interface SignalComponent {
   direction: 'bullish' | 'bearish' | 'neutral';
   triggered: boolean;
   confidence: number;
-  contribution: number;  // How much this signal contributed to final probability
+  contribution: number;  // Relative influence score (scaled from bounded log-odds delta)
   reason: string;
 }
 
@@ -46,8 +46,19 @@ export interface OptionsSignals {
   timeConfluence?: SignalInput & { stack?: number; decompressing?: string[] };
   
   // Open Interest Analysis
-  putCallRatio?: SignalInput & { ratio?: number };
-  maxPainDistance?: SignalInput & { maxPain?: number; currentPrice?: number };
+  putCallRatio?: SignalInput & {
+    ratio?: number;
+    mode?: 'flow' | 'contrarian';
+    extremeHigh?: number;
+    extremeLow?: number;
+  };
+  maxPainDistance?: SignalInput & {
+    maxPain?: number;
+    currentPrice?: number;
+    dte?: number;
+    atr?: number;
+    maxPainWindowDTE?: number;
+  };
   
   // Options Flow
   unusualActivity?: SignalInput & { 
@@ -133,61 +144,71 @@ export const SIGNAL_WEIGHTS = {
 // PROBABILITY CALCULATIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Bayesian Signal Combination
- * 
- * When multiple independent signals agree, the probability compounds.
- * Formula: P(Win|All) = 1 - Π(1 - P_i * Confidence_i)
- * 
- * This models: "What's the probability at least one signal is right?"
- */
-function bayesianCombine(probabilities: number[]): number {
-  if (probabilities.length === 0) return 0.5;
-  
-  // Product of (1 - P_i) gives probability all signals are wrong
-  const allWrongProb = probabilities.reduce((acc, p) => acc * (1 - p), 1);
-  
-  // 1 - allWrongProb = probability at least one is right
-  return 1 - allWrongProb;
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
-/**
- * Weighted probability combination
- * 
- * Alternative to Bayesian when signals have known weights
- */
-function weightedCombine(
-  signals: { probability: number; weight: number }[]
+function logit(p: number): number {
+  const x = clamp(p, 0.001, 0.999);
+  return Math.log(x / (1 - x));
+}
+
+function logistic(z: number): number {
+  return 1 / (1 + Math.exp(-z));
+}
+
+type Dir = 'bullish' | 'bearish' | 'neutral';
+
+function signForDirection(
+  signalDirection: 'bullish' | 'bearish' | 'neutral',
+  tradeDirection: 'bullish' | 'bearish' | 'neutral'
 ): number {
-  if (signals.length === 0) return 0.5;
-  
-  const totalWeight = signals.reduce((sum, s) => sum + s.weight, 0);
-  if (totalWeight === 0) return 0.5;
-  
-  const weightedSum = signals.reduce(
-    (sum, s) => sum + s.probability * s.weight,
-    0
-  );
-  
-  return weightedSum / totalWeight;
+  if (tradeDirection === 'neutral') {
+    return signalDirection === 'bullish' ? 1 : signalDirection === 'bearish' ? -1 : 0;
+  }
+  if (signalDirection === 'neutral') return 0;
+  return signalDirection === tradeDirection ? 1 : -1;
 }
 
-/**
- * Score to probability using sigmoid transformation
- * 
- * Converts a raw score (0-100) to a realistic trading probability.
- * Trading probabilities should cluster around 40-70% range.
- */
-export function scoreToProbability(score: number): number {
-  // Normalize score to center around 0
-  const normalized = (score - 50) / 25;
-  
-  // Apply sigmoid for smooth probability curve
-  const sigmoid = 1 / (1 + Math.exp(-normalized * 1.5));
-  
-  // Map to realistic trading range: 35% - 75%
-  return 0.35 + sigmoid * 0.40;
+function inferDirectionFromZ(z: number, priorWinRate: number, margin: number = 0.1): Dir {
+  const baseline = logit(priorWinRate);
+  if (z > baseline + margin) return 'bullish';
+  if (z < baseline - margin) return 'bearish';
+  return 'neutral';
 }
+
+function breakevenProbability(rr: number): number {
+  return 1 / (rr + 1);
+}
+
+const PRIOR_WIN_RATE = 0.5;
+const STRONG_EDGE = 0.15;
+
+export interface ProbabilityEngineCalibration {
+  priorWinRate: number;
+  strongEdge: number;
+  maxDeltaPerSignal: number;
+  directionInferenceMargin: number;
+  confluenceBoostCap: number;
+  confluenceBoostGain: number;
+  minKellyConviction: number;
+  minKellySignals: number;
+  maxOptionsKellyPercent: number;
+  minEdgeBuffer: number;
+}
+
+export const PROBABILITY_ENGINE_CALIBRATION: ProbabilityEngineCalibration = {
+  priorWinRate: PRIOR_WIN_RATE,
+  strongEdge: STRONG_EDGE,
+  maxDeltaPerSignal: 0.35,
+  directionInferenceMargin: 0.1,
+  confluenceBoostCap: 0.1,
+  confluenceBoostGain: 0.08,
+  minKellyConviction: 0.55,
+  minKellySignals: 3,
+  maxOptionsKellyPercent: 10,
+  minEdgeBuffer: 0.05,
+};
 
 /**
  * Kelly Criterion Position Sizing
@@ -198,7 +219,8 @@ export function scoreToProbability(score: number): number {
  *   q = 1 - p (loss probability)
  *   b = reward/risk ratio
  * 
- * We use Quarter Kelly for safety (common practice)
+ * Base output is Quarter Kelly; final applied size is additionally gated and
+ * capped in the options probability engine.
  */
 export function kellyPositionSize(
   winProbability: number,
@@ -249,14 +271,23 @@ export function calculateRMultiple(
  */
 export function calculateOptionsProbability(
   signals: OptionsSignals,
-  direction: 'bullish' | 'bearish' | 'neutral' = 'neutral',
+  tradeDirection: Dir = 'neutral',
   rewardRiskRatio: number = 2.0
 ): ProbabilityResult {
   const components: SignalComponent[] = [];
-  const activeSignals: { probability: number; weight: number }[] = [];
+  let totalSignals = 0;
+
+  let z = logit(PROBABILITY_ENGINE_CALIBRATION.priorWinRate);
+
   let bullishCount = 0;
   let bearishCount = 0;
-  let totalSignals = 0;
+
+  let alignedWeightSum = 0;
+  let activeWeightSum = 0;
+
+  const clusterState: Record<'trend_cluster', { aligned: number; opposing: number }> = {
+    trend_cluster: { aligned: 0, opposing: 0 },
+  };
   
   // Helper to add signal component
   const addSignal = (
@@ -264,7 +295,8 @@ export function calculateOptionsProbability(
     signal: SignalInput | undefined,
     weightConfig: typeof SIGNAL_WEIGHTS.unusualActivity,
     signalDirection: 'bullish' | 'bearish' | 'neutral',
-    reason: string
+    reason: string,
+    correlationGroup: 'none' | 'trend_cluster' = 'none'
   ) => {
     totalSignals++;
     
@@ -279,24 +311,54 @@ export function calculateOptionsProbability(
       });
       return;
     }
-    
-    const probability = weightConfig.baseWinRate * signal.confidence;
-    const contribution = probability * weightConfig.maxContribution;
-    
-    activeSignals.push({
-      probability,
-      weight: weightConfig.weight,
-    });
-    
+
+    const conf = clamp(signal.confidence, 0, 1);
+    const baseRate = clamp(weightConfig.baseWinRate, 0.35, 0.75);
+    const edge = baseRate - 0.5;
+    const sign = signForDirection(signalDirection, tradeDirection);
+
     if (signalDirection === 'bullish') bullishCount++;
     if (signalDirection === 'bearish') bearishCount++;
-    
+
+    let correlationMultiplier = 1;
+    if (correlationGroup !== 'none') {
+      const state = clusterState[correlationGroup];
+      const aligns = tradeDirection === 'neutral' ? false : sign === 1;
+
+      if (tradeDirection === 'neutral') {
+        const used = state.aligned + state.opposing;
+        correlationMultiplier = used === 0 ? 1 : used === 1 ? 0.85 : 0.7;
+        state.aligned += 1;
+      } else if (aligns) {
+        correlationMultiplier = state.aligned === 0 ? 1 : state.aligned === 1 ? 0.75 : 0.6;
+        state.aligned += 1;
+      } else if (sign === -1) {
+        correlationMultiplier = state.opposing === 0 ? 1 : state.opposing === 1 ? 0.9 : 0.8;
+        state.opposing += 1;
+      }
+    }
+
+    const effectiveWeight = weightConfig.weight * correlationMultiplier;
+    const rawDelta = sign * effectiveWeight * conf * (edge / PROBABILITY_ENGINE_CALIBRATION.strongEdge);
+    const delta = clamp(
+      rawDelta,
+      -PROBABILITY_ENGINE_CALIBRATION.maxDeltaPerSignal,
+      PROBABILITY_ENGINE_CALIBRATION.maxDeltaPerSignal
+    );
+
+    z += delta;
+    activeWeightSum += effectiveWeight;
+
+    if (tradeDirection !== 'neutral' && sign === 1) {
+      alignedWeightSum += effectiveWeight * conf;
+    }
+
     components.push({
       name,
       direction: signalDirection,
       triggered: true,
-      confidence: signal.confidence,
-      contribution,
+      confidence: conf,
+      contribution: Math.round(Math.abs(delta) * 100),
       reason,
     });
   };
@@ -328,16 +390,39 @@ export function calculateOptionsProbability(
   // 2. Put/Call Ratio
   if (signals.putCallRatio) {
     const pcr = signals.putCallRatio;
-    const pcrDirection = (pcr.ratio || 1) < 0.7 ? 'bullish' 
-      : (pcr.ratio || 1) > 1.0 ? 'bearish' 
-      : 'neutral';
+    const ratio = pcr.ratio ?? 1;
+
+    const mode = pcr.mode ?? 'flow';
+    const extremeHigh = pcr.extremeHigh ?? 1.3;
+    const extremeLow = pcr.extremeLow ?? 0.7;
+
+    let pcrDirection: Dir = 'neutral';
+    let reasonTag = 'Balanced';
+
+    if (mode === 'flow') {
+      if (ratio < extremeLow) {
+        pcrDirection = 'bullish';
+        reasonTag = 'Call-heavy';
+      } else if (ratio > 1.0) {
+        pcrDirection = 'bearish';
+        reasonTag = 'Put-heavy';
+      }
+    } else {
+      if (ratio >= extremeHigh) {
+        pcrDirection = 'bullish';
+        reasonTag = 'Fear extreme (contrarian)';
+      } else if (ratio <= extremeLow) {
+        pcrDirection = 'bearish';
+        reasonTag = 'Euphoria extreme (contrarian)';
+      }
+    }
     
     addSignal(
       'Put/Call Ratio',
       pcr,
       SIGNAL_WEIGHTS.putCallRatio,
       pcrDirection,
-      `P/C ${(pcr.ratio || 1).toFixed(2)} - ${pcrDirection === 'bullish' ? 'Call-heavy' : pcrDirection === 'bearish' ? 'Put-heavy' : 'Balanced'}`
+      `P/C ${ratio.toFixed(2)} (${mode}) - ${reasonTag}`
     );
   } else {
     addSignal('Put/Call Ratio', undefined, SIGNAL_WEIGHTS.putCallRatio, 'neutral', '');
@@ -346,18 +431,32 @@ export function calculateOptionsProbability(
   // 3. Max Pain Distance
   if (signals.maxPainDistance) {
     const mpd = signals.maxPainDistance;
-    const priceVsMaxPain = (mpd.currentPrice || 0) - (mpd.maxPain || 0);
-    const mpdDirection = priceVsMaxPain > 0 ? 'bearish' : priceVsMaxPain < 0 ? 'bullish' : 'neutral';
-    
-    addSignal(
-      'Max Pain Gravity',
-      mpd,
-      SIGNAL_WEIGHTS.maxPainDistance,
-      mpdDirection,
-      mpd.maxPain 
-        ? `Price $${Math.abs(priceVsMaxPain).toFixed(2)} ${priceVsMaxPain > 0 ? 'above' : 'below'} Max Pain $${mpd.maxPain.toFixed(2)}`
-        : 'Max pain level detected'
-    );
+    const maxPain = mpd.maxPain;
+    const price = mpd.currentPrice;
+    const dte = mpd.dte ?? null;
+    const maxPainWindowDTE = mpd.maxPainWindowDTE ?? 10;
+    const withinWindow = dte === null ? true : dte <= maxPainWindowDTE;
+
+    if (mpd.triggered && withinWindow && maxPain != null && price != null) {
+      const diff = price - maxPain;
+      const mpdDirection: Dir = diff > 0 ? 'bearish' : diff < 0 ? 'bullish' : 'neutral';
+
+      addSignal(
+        'Max Pain Gravity',
+        mpd,
+        SIGNAL_WEIGHTS.maxPainDistance,
+        mpdDirection,
+        `Price $${Math.abs(diff).toFixed(2)} ${diff > 0 ? 'above' : 'below'} Max Pain $${maxPain.toFixed(2)}${dte !== null ? ` | DTE ${dte}` : ''}`
+      );
+    } else {
+      addSignal(
+        'Max Pain Gravity',
+        { triggered: false, confidence: 0 },
+        SIGNAL_WEIGHTS.maxPainDistance,
+        'neutral',
+        withinWindow ? 'Not triggered' : `Outside max pain window (DTE>${maxPainWindowDTE})`
+      );
+    }
   } else {
     addSignal('Max Pain Gravity', undefined, SIGNAL_WEIGHTS.maxPainDistance, 'neutral', '');
   }
@@ -365,7 +464,7 @@ export function calculateOptionsProbability(
   // 4. Time Confluence
   if (signals.timeConfluence) {
     const tc = signals.timeConfluence;
-    const tcDirection = tc.stack && tc.stack > 0 ? 'bullish' : tc.stack && tc.stack < 0 ? 'bearish' : 'neutral';
+    const tcDirection = 'neutral' as const;
     
     addSignal(
       'Time Confluence',
@@ -398,14 +497,15 @@ export function calculateOptionsProbability(
   // 6. Trend Alignment
   if (signals.trendAlignment) {
     const ta = signals.trendAlignment;
-    const taDirection = ta.ema200Direction === 'above' ? 'bullish' : ta.ema200Direction === 'below' ? 'bearish' : 'neutral';
+    const taDirection: Dir = ta.ema200Direction === 'above' ? 'bullish' : ta.ema200Direction === 'below' ? 'bearish' : 'neutral';
     
     addSignal(
       'Trend Alignment',
       ta,
       SIGNAL_WEIGHTS.trendAlignment,
       taDirection,
-      `Price ${ta.ema200Direction || 'near'} EMA200`
+      `Price ${ta.ema200Direction || 'near'} EMA200`,
+      'trend_cluster'
     );
   } else {
     addSignal('Trend Alignment', undefined, SIGNAL_WEIGHTS.trendAlignment, 'neutral', '');
@@ -414,18 +514,25 @@ export function calculateOptionsProbability(
   // 7. RSI Momentum
   if (signals.rsiMomentum) {
     const rsi = signals.rsiMomentum;
-    const rsiVal = rsi.rsi || 50;
-    const rsiDirection = rsiVal >= 55 && rsiVal <= 70 ? 'bullish' 
-      : rsiVal > 70 || (rsiVal <= 45 && rsiVal >= 30) ? 'bearish'
-      : rsiVal < 30 ? 'bullish'  // Oversold bounce
-      : 'neutral';
+    const rsiVal = rsi.rsi ?? 50;
+    const trendRegime = signals.trendAlignment?.ema200Direction ?? 'neutral';
+    let rsiDirection: Dir = 'neutral';
+
+    if (trendRegime === 'above') {
+      rsiDirection = rsiVal < 30 ? 'bullish' : 'neutral';
+    } else if (trendRegime === 'below') {
+      rsiDirection = rsiVal > 70 ? 'bearish' : 'neutral';
+    } else {
+      rsiDirection = rsiVal < 30 ? 'bullish' : rsiVal > 70 ? 'bearish' : 'neutral';
+    }
     
     addSignal(
       'RSI Momentum',
       rsi,
       SIGNAL_WEIGHTS.rsiMomentum,
       rsiDirection,
-      `RSI ${rsiVal.toFixed(0)} - ${rsiDirection === 'bullish' ? 'Bullish momentum' : rsiDirection === 'bearish' ? 'Bearish/Overbought' : 'Neutral'}`
+      `RSI ${rsiVal.toFixed(0)} (${trendRegime})`,
+      'trend_cluster'
     );
   } else {
     addSignal('RSI Momentum', undefined, SIGNAL_WEIGHTS.rsiMomentum, 'neutral', '');
@@ -433,12 +540,15 @@ export function calculateOptionsProbability(
   
   // 8. Volume Confirmation
   if (signals.volumeConfirmation) {
+    const volumeDirection: Dir = tradeDirection === 'neutral' ? 'neutral' : tradeDirection;
+
     addSignal(
       'Volume Confirmation',
       signals.volumeConfirmation,
       SIGNAL_WEIGHTS.volumeConfirmation,
-      direction, // Volume confirms the trade direction
-      signals.volumeConfirmation.triggered ? 'Above-average volume' : 'Normal volume'
+      volumeDirection,
+      signals.volumeConfirmation.triggered ? 'Above-average volume' : 'Normal volume',
+      'trend_cluster'
     );
   } else {
     addSignal('Volume Confirmation', undefined, SIGNAL_WEIGHTS.volumeConfirmation, 'neutral', '');
@@ -448,49 +558,60 @@ export function calculateOptionsProbability(
   // Calculate final probability
   // ─────────────────────────────────────────────────────────────────────────
   
-  // Use weighted combination for smoother results
-  const rawProbability = activeSignals.length > 0
-    ? weightedCombine(activeSignals)
-    : 0.5;
-  
-  // Apply confluence bonus (more aligned signals = higher confidence)
-  const alignedCount = Math.max(bullishCount, bearishCount);
-  const confluenceBonus = alignedCount >= 5 ? 0.05 : alignedCount >= 3 ? 0.03 : 0;
-  
-  // Adjust for direction alignment
-  const dominantDirection = bullishCount > bearishCount ? 'bullish' 
-    : bearishCount > bullishCount ? 'bearish' 
-    : 'neutral';
-  
-  // If specified direction matches dominant, boost probability
-  let winProbability = rawProbability;
-  if (direction !== 'neutral' && direction === dominantDirection) {
-    winProbability = Math.min(0.80, rawProbability + confluenceBonus);
-  } else if (direction !== 'neutral' && direction !== dominantDirection) {
-    winProbability = Math.max(0.35, rawProbability - 0.05);
+  if (tradeDirection !== 'neutral' && activeWeightSum > 0) {
+    const quality = clamp(alignedWeightSum / activeWeightSum, 0, 1);
+    const boost = clamp(
+      PROBABILITY_ENGINE_CALIBRATION.confluenceBoostGain * quality,
+      0,
+      PROBABILITY_ENGINE_CALIBRATION.confluenceBoostCap
+    );
+    z += boost;
   }
+
+  const dominantDirection: Dir = tradeDirection !== 'neutral'
+    ? tradeDirection
+    : inferDirectionFromZ(
+      z,
+      PROBABILITY_ENGINE_CALIBRATION.priorWinRate,
+      PROBABILITY_ENGINE_CALIBRATION.directionInferenceMargin
+    );
+
+  let winProbability = logistic(z);
+  winProbability = clamp(winProbability, 0.35, 0.8);
   
   // Convert to percentage
   const winProbabilityPercent = Math.round(winProbability * 100);
   
-  // Calculate confluence score (how aligned are the signals?)
-  const confluenceScore = Math.round((alignedCount / Math.max(totalSignals, 1)) * 100);
+  const confluenceScore = tradeDirection !== 'neutral' && activeWeightSum > 0
+    ? Math.round((alignedWeightSum / activeWeightSum) * 100)
+    : 0;
+
+  const alignedCount = tradeDirection === 'neutral'
+    ? Math.max(bullishCount, bearishCount)
+    : components.filter((component) => (
+      component.triggered && signForDirection(component.direction, tradeDirection) === 1
+    )).length;
   
   // Determine confidence label
   let confidenceLabel: string;
-  if (winProbabilityPercent >= 72) confidenceLabel = 'High Conviction';
+  if (dominantDirection === 'neutral') confidenceLabel = 'No Clear Signal';
+  else if (winProbabilityPercent >= 72) confidenceLabel = 'High Conviction';
   else if (winProbabilityPercent >= 65) confidenceLabel = 'Strong';
   else if (winProbabilityPercent >= 55) confidenceLabel = 'Moderate';
   else if (winProbabilityPercent >= 45) confidenceLabel = 'Weak';
-  else confidenceLabel = 'Bearish Lean';
+  else confidenceLabel = dominantDirection === 'bearish' ? 'Bearish Lean' : 'Bullish Lean';
   
-  // If neutral direction, adjust label
-  if (dominantDirection === 'neutral') {
-    confidenceLabel = 'No Clear Signal';
-  }
-  
-  // Calculate Kelly position size
-  const kellySizePercent = kellyPositionSize(winProbability, rewardRiskRatio) * 100;
+  const minimumEdgeProbability = breakevenProbability(rewardRiskRatio);
+  const allowKelly = alignedCount >= PROBABILITY_ENGINE_CALIBRATION.minKellySignals
+    && winProbability >= PROBABILITY_ENGINE_CALIBRATION.minKellyConviction
+    && winProbability > minimumEdgeProbability + PROBABILITY_ENGINE_CALIBRATION.minEdgeBuffer;
+
+  const kellySizePercent = allowKelly
+    ? Math.min(
+      PROBABILITY_ENGINE_CALIBRATION.maxOptionsKellyPercent,
+      kellyPositionSize(winProbability, rewardRiskRatio) * 100
+    )
+    : 0;
   
   return {
     winProbability: winProbabilityPercent,

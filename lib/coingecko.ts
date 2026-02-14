@@ -29,6 +29,119 @@ const getHeaders = (): HeadersInit => {
   return headers;
 };
 
+const DERIVATIVES_CACHE_TTL_MS = 45_000;
+const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+let derivativesCache: { value: DerivativeTicker[]; fetchedAt: number } | null = null;
+let derivativesInFlight: Promise<DerivativeTicker[] | null> | null = null;
+
+const symbolResolutionCache = new Map<string, { id: string | null; expiresAt: number }>();
+const symbolResolutionInFlight = new Map<string, Promise<string | null>>();
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildCoinGeckoUrl(path: string, params?: URLSearchParams): string {
+  const base = getBaseUrl();
+  const url = new URL(`${base}${path}`);
+
+  if (params) {
+    url.search = params.toString();
+  }
+
+  if (COINGECKO_API_KEY && !url.searchParams.has('x_cg_pro_api_key')) {
+    url.searchParams.set('x_cg_pro_api_key', COINGECKO_API_KEY);
+  }
+
+  return url.toString();
+}
+
+async function cgFetch<T>(
+  path: string,
+  options?: {
+    params?: URLSearchParams;
+    init?: RequestInit;
+    retries?: number;
+    timeoutMs?: number;
+  }
+): Promise<T> {
+  const url = buildCoinGeckoUrl(path, options?.params);
+  const retries = options?.retries ?? 3;
+  const timeoutMs = options?.timeoutMs ?? 12_000;
+
+  const execute = async (remainingRetries: number): Promise<T> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...(options?.init || {}),
+        headers: {
+          ...getHeaders(),
+          ...(options?.init?.headers || {}),
+        },
+        signal: controller.signal,
+      });
+
+      if (response.status === 429 && remainingRetries > 0) {
+        const retryAfterSeconds = Number(response.headers.get('retry-after') || '0');
+        const jitterMs = Math.floor(Math.random() * 250);
+        const backoffMs = retryAfterSeconds > 0
+          ? retryAfterSeconds * 1000
+          : (4 - remainingRetries) * 500 + jitterMs;
+        await sleep(backoffMs);
+        return execute(remainingRetries - 1);
+      }
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        const statusError = new Error(
+          `[CoinGecko] ${response.status} ${response.statusText} :: ${body.slice(0, 300)}`
+        );
+        if (response.status >= 500 && remainingRetries > 0) {
+          const jitterMs = Math.floor(Math.random() * 250);
+          await sleep((4 - remainingRetries) * 500 + jitterMs);
+          return execute(remainingRetries - 1);
+        }
+        throw statusError;
+      }
+
+      return (await response.json()) as T;
+    } catch (error) {
+      if (remainingRetries > 0) {
+        const message = error instanceof Error ? error.message : String(error);
+        const retryable =
+          message.includes('aborted') ||
+          message.includes('fetch failed') ||
+          message.includes('network') ||
+          message.includes('ECONNRESET') ||
+          message.includes('ETIMEDOUT');
+        if (retryable) {
+          const jitterMs = Math.floor(Math.random() * 250);
+          await sleep((4 - remainingRetries) * 500 + jitterMs);
+          return execute(remainingRetries - 1);
+        }
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  return execute(retries);
+}
+
+function normalizeSymbol(symbol: string): string {
+  return symbol
+    .toUpperCase()
+    .trim()
+    .replace(/[-_/]/g, '')
+    .replace(/USDT$/, '')
+    .replace(/USDC$/, '')
+    .replace(/USD$/, '');
+}
+
 // Symbol to CoinGecko ID mapping
 export const COINGECKO_ID_MAP: Record<string, string> = {
   // Major Cryptocurrencies
@@ -144,19 +257,14 @@ export async function getSimplePrices(
       include_24hr_change: String(options?.include_24h_change ?? true),
       include_24hr_vol: String(options?.include_24h_vol ?? false),
       include_market_cap: String(options?.include_market_cap ?? false),
+      include_last_updated_at: 'true',
+      precision: 'full',
     });
 
-    const res = await fetch(`${getBaseUrl()}/simple/price?${params}`, {
-      headers: getHeaders(),
-      next: { revalidate: 60 }, // Cache for 1 minute
+    return await cgFetch<Record<string, CoinGeckoPrice>>('/simple/price', {
+      params,
+      init: { next: { revalidate: 30 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Price fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Price fetch error:', error);
     return null;
@@ -190,17 +298,10 @@ export async function getMarketData(
       params.set('ids', options.ids.join(','));
     }
 
-    const res = await fetch(`${getBaseUrl()}/coins/markets?${params}`, {
-      headers: getHeaders(),
-      next: { revalidate: 120 }, // Cache for 2 minutes
+    return await cgFetch<CoinGeckoMarketData[]>('/coins/markets', {
+      params,
+      init: { next: { revalidate: 90 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Markets fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Markets fetch error:', error);
     return null;
@@ -217,21 +318,15 @@ export async function getOHLC(
   days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7
 ): Promise<number[][] | null> {
   try {
-    const res = await fetch(
-      `${getBaseUrl()}/coins/${coinId}/ohlc?vs_currency=usd&days=${days}`,
-      {
-        headers: getHeaders(),
-        next: { revalidate: 300 }, // Cache for 5 minutes
-      }
-    );
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      days: String(days),
+    });
 
-    if (!res.ok) {
-      console.error(`[CoinGecko] OHLC fetch failed: ${res.status}`);
-      return null;
-    }
-
-    // Returns [[timestamp, open, high, low, close], ...]
-    return await res.json();
+    return await cgFetch<number[][]>(`/coins/${coinId}/ohlc`, {
+      params,
+      init: { next: { revalidate: 300 } },
+    });
   } catch (error) {
     console.error('[CoinGecko] OHLC fetch error:', error);
     return null;
@@ -252,13 +347,10 @@ export async function getCoinDetail(coinId: string): Promise<any | null> {
       developer_data: 'false',
     });
 
-    const res = await fetch(`${getBaseUrl()}/coins/${coinId}?${params}`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<any>(`/coins/${coinId}`, {
+      params,
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) return null;
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Coin detail error:', error);
     return null;
@@ -276,13 +368,14 @@ export async function getGlobalData(): Promise<{
   market_cap_change_percentage_24h_usd: number;
 } | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/global`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    const data = await cgFetch<{ data: {
+      total_market_cap: Record<string, number>;
+      total_volume: Record<string, number>;
+      market_cap_percentage: Record<string, number>;
+      market_cap_change_percentage_24h_usd: number;
+    } }>('/global', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) return null;
-    const data = await res.json();
     return data.data;
   } catch (error) {
     console.error('[CoinGecko] Global data error:', error);
@@ -298,13 +391,11 @@ export async function searchCoins(query: string): Promise<{
   coins: Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>;
 } | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/search?query=${encodeURIComponent(query)}`, {
-      headers: getHeaders(),
-      next: { revalidate: 600 }, // Cache for 10 minutes
+    const params = new URLSearchParams({ query });
+    return await cgFetch<{ coins: Array<{ id: string; name: string; symbol: string; market_cap_rank: number }> }>('/search', {
+      params,
+      init: { next: { revalidate: 600 } },
     });
-
-    if (!res.ok) return null;
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Search error:', error);
     return null;
@@ -315,8 +406,71 @@ export async function searchCoins(query: string): Promise<{
  * Convert symbol to CoinGecko ID
  */
 export function symbolToId(symbol: string): string | null {
-  const normalized = symbol.toUpperCase().replace('-USD', '').replace('/USD', '');
+  const normalized = normalizeSymbol(symbol);
   return COINGECKO_ID_MAP[normalized] || null;
+}
+
+function selectBestSearchMatch(
+  symbol: string,
+  matches: Array<{ id: string; name: string; symbol: string; market_cap_rank: number }>
+): string | null {
+  if (!matches.length) return null;
+
+  const normalized = normalizeSymbol(symbol);
+  const scored = matches.map((item) => {
+    const itemSymbol = normalizeSymbol(item.symbol);
+    const exactSymbol = itemSymbol === normalized ? 1 : 0;
+    const exactName = item.name.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
+    const rankScore = item.market_cap_rank && item.market_cap_rank > 0
+      ? Math.max(0, 10_000 - item.market_cap_rank)
+      : 0;
+    return {
+      id: item.id,
+      score: exactSymbol * 1_000_000 + exactName * 100_000 + rankScore,
+    };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.id || null;
+}
+
+export async function resolveSymbolToId(symbol: string): Promise<string | null> {
+  const normalized = normalizeSymbol(symbol);
+  if (!normalized) return null;
+
+  const staticId = COINGECKO_ID_MAP[normalized];
+  if (staticId) return staticId;
+
+  const now = Date.now();
+  const cached = symbolResolutionCache.get(normalized);
+  if (cached && cached.expiresAt > now) {
+    return cached.id;
+  }
+
+  const inFlight = symbolResolutionInFlight.get(normalized);
+  if (inFlight) return inFlight;
+
+  const resolverPromise = (async () => {
+    const search = await searchCoins(normalized);
+    const bestId = search?.coins?.length
+      ? selectBestSearchMatch(normalized, search.coins)
+      : null;
+
+    symbolResolutionCache.set(normalized, {
+      id: bestId,
+      expiresAt: now + SYMBOL_RESOLUTION_CACHE_TTL_MS,
+    });
+
+    return bestId;
+  })();
+
+  symbolResolutionInFlight.set(normalized, resolverPromise);
+
+  try {
+    return await resolverPromise;
+  } finally {
+    symbolResolutionInFlight.delete(normalized);
+  }
 }
 
 /**
@@ -327,7 +481,7 @@ export async function getPriceBySymbol(symbol: string): Promise<{
   price: number;
   change24h: number;
 } | null> {
-  const coinId = symbolToId(symbol);
+  const coinId = await resolveSymbolToId(symbol);
   if (!coinId) {
     console.warn(`[CoinGecko] Unknown symbol: ${symbol}`);
     return null;
@@ -354,7 +508,7 @@ export async function getPricesBySymbols(symbols: string[]): Promise<Record<stri
   const ids: string[] = [];
 
   for (const symbol of symbols) {
-    const coinId = symbolToId(symbol);
+    const coinId = await resolveSymbolToId(symbol);
     if (coinId) {
       symbolToIdMap[symbol] = coinId;
       if (!ids.includes(coinId)) {
@@ -410,22 +564,51 @@ export interface DerivativeTicker {
  * and rely on our own in-memory caching in the API routes
  */
 export async function getDerivativesTickers(): Promise<DerivativeTicker[] | null> {
-  try {
-    const res = await fetch(`${getBaseUrl()}/derivatives`, {
-      headers: getHeaders(),
-      cache: 'no-store', // Skip Next.js cache (response is >2MB limit)
-    });
+  const now = Date.now();
+  if (derivativesCache && now - derivativesCache.fetchedAt < DERIVATIVES_CACHE_TTL_MS) {
+    return derivativesCache.value;
+  }
 
-    if (!res.ok) {
-      console.error(`[CoinGecko] Derivatives fetch failed: ${res.status}`);
-      return null;
+  if (derivativesInFlight) {
+    return derivativesInFlight;
+  }
+
+  derivativesInFlight = (async () => {
+    try {
+      const data = await cgFetch<DerivativeTicker[]>('/derivatives', {
+        init: { cache: 'no-store' },
+        retries: 2,
+        timeoutMs: 15_000,
+      });
+
+      derivativesCache = {
+        value: data,
+        fetchedAt: Date.now(),
+      };
+
+      return data;
+    } catch (error) {
+      console.error('[CoinGecko] Derivatives fetch error:', error);
+      return derivativesCache?.value ?? null;
+    } finally {
+      derivativesInFlight = null;
     }
+  })();
 
-    return await res.json();
+  try {
+    return await derivativesInFlight;
   } catch (error) {
     console.error('[CoinGecko] Derivatives fetch error:', error);
     return null;
   }
+}
+
+export async function warmDerivativesCache(): Promise<void> {
+  await getDerivativesTickers();
+}
+
+export function invalidateDerivativesCache(): void {
+  derivativesCache = null;
 }
 
 /**
@@ -534,13 +717,9 @@ export async function getAggregatedOpenInterest(symbols: string[]): Promise<{
  */
 export async function getDerivativesExchanges(): Promise<{ id: string; name: string }[] | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/derivatives/exchanges/list`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<{ id: string; name: string }[]>('/derivatives/exchanges/list', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) return null;
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Derivatives exchanges error:', error);
     return null;
@@ -585,17 +764,9 @@ export interface TrendingResponse {
  */
 export async function getTrendingCoins(): Promise<TrendingResponse | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/search/trending`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<TrendingResponse>('/search/trending', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Trending fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Trending fetch error:', error);
     return null;
@@ -636,17 +807,10 @@ export async function getTopGainersLosers(
       top_coins: topCoins,
     });
 
-    const res = await fetch(`${getBaseUrl()}/coins/top_gainers_losers?${params}`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<{ top_gainers: TopMover[]; top_losers: TopMover[] }>('/coins/top_gainers_losers', {
+      params,
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Top gainers/losers fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Top gainers/losers fetch error:', error);
     return null;
@@ -667,17 +831,9 @@ export interface NewListing {
  */
 export async function getNewListings(): Promise<NewListing[] | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/coins/list/new`, {
-      headers: getHeaders(),
-      next: { revalidate: 600 }, // Cache for 10 minutes
+    return await cgFetch<NewListing[]>('/coins/list/new', {
+      init: { next: { revalidate: 600 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] New listings fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] New listings fetch error:', error);
     return null;
@@ -705,17 +861,11 @@ export interface CoinCategory {
  */
 export async function getCoinCategories(): Promise<CoinCategory[] | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/coins/categories?order=market_cap_desc`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    const params = new URLSearchParams({ order: 'market_cap_desc' });
+    return await cgFetch<CoinCategory[]>('/coins/categories', {
+      params,
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Categories fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Categories fetch error:', error);
     return null;
@@ -743,17 +893,9 @@ export interface DefiData {
  */
 export async function getDefiData(): Promise<DefiData | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/global/decentralized_finance_defi`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    const data = await cgFetch<{ data: DefiData }>('/global/decentralized_finance_defi', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] DeFi data fetch failed: ${res.status}`);
-      return null;
-    }
-
-    const data = await res.json();
     return data.data;
   } catch (error) {
     console.error('[CoinGecko] DeFi data fetch error:', error);
@@ -774,17 +916,11 @@ export async function getGlobalMarketCapChart(
   days: number = 30
 ): Promise<{ market_cap_chart: { market_cap: [number, number][] } } | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/global/market_cap_chart?days=${days}`, {
-      headers: getHeaders(),
-      next: { revalidate: 600 }, // Cache for 10 minutes
+    const params = new URLSearchParams({ days: String(days) });
+    return await cgFetch<{ market_cap_chart: { market_cap: [number, number][] } }>('/global/market_cap_chart', {
+      params,
+      init: { next: { revalidate: 600 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Global market cap chart fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Global market cap chart fetch error:', error);
     return null;
@@ -833,17 +969,9 @@ export interface TrendingPool {
  */
 export async function getTrendingPools(): Promise<{ data: TrendingPool[] } | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/onchain/networks/trending_pools`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<{ data: TrendingPool[] }>('/onchain/networks/trending_pools', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] Trending pools fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] Trending pools fetch error:', error);
     return null;
@@ -857,17 +985,9 @@ export async function getTrendingPools(): Promise<{ data: TrendingPool[] } | nul
  */
 export async function getNewPools(): Promise<{ data: TrendingPool[] } | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/onchain/networks/new_pools`, {
-      headers: getHeaders(),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+    return await cgFetch<{ data: TrendingPool[] }>('/onchain/networks/new_pools', {
+      init: { next: { revalidate: 300 } },
     });
-
-    if (!res.ok) {
-      console.error(`[CoinGecko] New pools fetch failed: ${res.status}`);
-      return null;
-    }
-
-    return await res.json();
   } catch (error) {
     console.error('[CoinGecko] New pools fetch error:', error);
     return null;

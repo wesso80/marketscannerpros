@@ -5,7 +5,7 @@
  * 1. MACRO: Daily, Weekly, Monthly, Quarterly, Yearly candle closes
  * 2. MICRO: Intraday 1m, 2m, 3m, 5m, 10m, 15m, 30m, 60m closes
  * 3. FIBONACCI: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144 minute intervals
- * 4. EXTENDED HOURS: Pre-market and after-hours alignments
+ * 4. SESSION STATE: Pre-market/regular/after-hours labeling (RTH confluence only)
  * 5. INSTITUTIONAL: TWAP-style execution windows
  * 
  * v2.0 FIXES (from professional code review):
@@ -97,6 +97,7 @@ const MACRO_TIMEFRAMES = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // 2025-2026 NYSE Holidays (market closed)
+// NOTE: This static set must be updated annually (or replaced with an exchange calendar feed)
 const NYSE_HOLIDAYS: Set<string> = new Set([
   // 2025
   '2025-01-01', // New Year's Day
@@ -123,6 +124,7 @@ const NYSE_HOLIDAYS: Set<string> = new Set([
 ]);
 
 // NYSE Half-days (close at 1:00 PM ET = 780 mins from midnight)
+// NOTE: This static set is intentionally explicit and must be maintained each year
 const NYSE_HALF_DAYS: Set<string> = new Set([
   // 2025
   '2025-07-03', // Day before Independence Day
@@ -406,6 +408,28 @@ const EPOCH_DATE = new Date('2020-01-02T00:00:00Z');
 const EPOCH_DATE_STR = '2020-01-02';
 const tradingDayIndexCache = new Map<string, number>([[EPOCH_DATE_STR, 0]]);
 
+function getDateDiffDays(fromDateStr: string, toDateStr: string): number {
+  const [fy, fm, fd] = fromDateStr.split('-').map(Number);
+  const [ty, tm, td] = toDateStr.split('-').map(Number);
+  const fromUtc = Date.UTC(fy, fm - 1, fd);
+  const toUtc = Date.UTC(ty, tm - 1, td);
+  return Math.max(0, Math.round((toUtc - fromUtc) / (1000 * 60 * 60 * 24)));
+}
+
+function findNearestCachedDateAtOrBefore(targetDateStr: string): { dateStr: string; index: number } {
+  let bestDate = EPOCH_DATE_STR;
+  let bestIndex = tradingDayIndexCache.get(EPOCH_DATE_STR) ?? 0;
+
+  for (const [cachedDate, cachedIndex] of tradingDayIndexCache.entries()) {
+    if (cachedDate <= targetDateStr && cachedDate >= bestDate) {
+      bestDate = cachedDate;
+      bestIndex = cachedIndex;
+    }
+  }
+
+  return { dateStr: bestDate, index: bestIndex };
+}
+
 function getNextDateStr(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const utc = new Date(Date.UTC(year, month - 1, day));
@@ -427,8 +451,34 @@ function getTradingDayIndex(dateStr: string): number {
     return 0;
   }
 
-  let cursor = EPOCH_DATE_STR;
-  let index = tradingDayIndexCache.get(EPOCH_DATE_STR) ?? 0;
+  const nearestCached = findNearestCachedDateAtOrBefore(dateStr);
+  let cursor = nearestCached.dateStr;
+  let index = nearestCached.index;
+
+  // Guardrail for serverless cold starts: if requested date is very far from nearest cache,
+  // seed a midpoint to reduce repeated full-range scans in short-lived runtimes.
+  const remainingDays = getDateDiffDays(cursor, dateStr);
+  if (remainingDays > 1200) {
+    const [year, month, day] = cursor.split('-').map(Number);
+    const midpointUtc = new Date(Date.UTC(year, month - 1, day));
+    midpointUtc.setUTCDate(midpointUtc.getUTCDate() + Math.floor(remainingDays / 2));
+    const midpointStr = `${midpointUtc.getUTCFullYear()}-${String(midpointUtc.getUTCMonth() + 1).padStart(2, '0')}-${String(midpointUtc.getUTCDate()).padStart(2, '0')}`;
+
+    let midpointCursor = cursor;
+    let midpointIndex = index;
+    while (midpointCursor < midpointStr) {
+      const nextDate = getNextDateStr(midpointCursor);
+      const dayInfo = getMarketDayInfo(nextDate, getDayOfWeekFromDateStr(nextDate));
+      if (dayInfo.isTradingDay) {
+        midpointIndex += 1;
+      }
+      tradingDayIndexCache.set(nextDate, midpointIndex);
+      midpointCursor = nextDate;
+    }
+
+    cursor = midpointStr;
+    index = tradingDayIndexCache.get(midpointStr) ?? midpointIndex;
+  }
 
   while (cursor < dateStr) {
     const nextDate = getNextDateStr(cursor);
@@ -1022,24 +1072,24 @@ export function getNextMajorConfluence(date: Date): { confluence: TimeConfluence
  */
 function isLastTradingDayOfMonth(date: Date): boolean {
   const etParts = getETParts(date);
-  const currentDate = new Date(`${etParts.dateStr}T12:00:00`);
+  const currentDate = new Date(Date.UTC(etParts.year, etParts.month - 1, etParts.day, 12, 0, 0));
   const nextDay = new Date(currentDate);
-  nextDay.setDate(nextDay.getDate() + 1);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   
   // Skip weekends
-  while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
-    nextDay.setDate(nextDay.getDate() + 1);
+  while (nextDay.getUTCDay() === 0 || nextDay.getUTCDay() === 6) {
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   }
 
   // Skip market holidays
-  while (NYSE_HOLIDAYS.has(`${nextDay.getFullYear()}-${String(nextDay.getMonth() + 1).padStart(2, '0')}-${String(nextDay.getDate()).padStart(2, '0')}`)) {
-    nextDay.setDate(nextDay.getDate() + 1);
-    while (nextDay.getDay() === 0 || nextDay.getDay() === 6) {
-      nextDay.setDate(nextDay.getDate() + 1);
+  while (NYSE_HOLIDAYS.has(`${nextDay.getUTCFullYear()}-${String(nextDay.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDay.getUTCDate()).padStart(2, '0')}`)) {
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    while (nextDay.getUTCDay() === 0 || nextDay.getUTCDay() === 6) {
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
     }
   }
   
-  return nextDay.getMonth() !== currentDate.getMonth();
+  return nextDay.getUTCMonth() !== currentDate.getUTCMonth();
 }
 
 /**
@@ -1063,7 +1113,7 @@ function isLastTradingDayOfYear(date: Date): boolean {
  * Check if date is a Friday
  */
 function isFriday(date: Date): boolean {
-  return new Date(getETParts(date).dateStr).getDay() === 5;
+  return getETParts(date).dayOfWeek === 5;
 }
 
 /**

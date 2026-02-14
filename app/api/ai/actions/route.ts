@@ -7,21 +7,141 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-import type { AIToolName, ActionStatus, AIActionResult } from '@/lib/ai/types';
-import { AI_TOOLS, generateIdempotencyKey, getToolPolicy } from '@/lib/ai/tools';
+import type { AIToolName, ActionStatus, AIActionResult, PageSkill } from '@/lib/ai/types';
+import { AI_TOOLS, assertToolAllowedForSkill, generateIdempotencyKey, getToolPolicy, isToolCacheable, getToolCacheTTL } from '@/lib/ai/tools';
 
 interface ActionRequest {
   tool: AIToolName;
   parameters: Record<string, unknown>;
+  skill?: PageSkill;
+  sessionId?: string;
   responseId?: string;
   idempotencyKey?: string;
+  actionId?: string;
+  confirm?: boolean;
   dryRun?: boolean;
   initiatedBy?: 'user' | 'ai';
 }
 
+async function resolveActionSkill(
+  workspaceId: string,
+  requestedSkill?: PageSkill,
+  responseId?: string
+): Promise<PageSkill | null> {
+  if (requestedSkill) return requestedSkill;
+
+  if (responseId) {
+    const rows = await q(
+      `SELECT page_skill FROM ai_responses WHERE id = $1 AND workspace_id = $2 LIMIT 1`,
+      [responseId, workspaceId]
+    );
+    const fromResponse = rows[0]?.page_skill;
+    if (typeof fromResponse === 'string') {
+      return fromResponse as PageSkill;
+    }
+  }
+
+  return null;
+}
+
+function validateToolParameters(
+  tool: AIToolName,
+  parameters: Record<string, unknown>
+): { valid: true } | { valid: false; error: string } {
+  const schema = AI_TOOLS[tool]?.parameters as {
+    additionalProperties?: boolean;
+    properties?: Record<string, { type?: string; enum?: unknown[]; required?: boolean; minLength?: number; maxLength?: number; minimum?: number; maximum?: number; minItems?: number; maxItems?: number; items?: { type?: string; minimum?: number; maximum?: number } }>;
+    required?: string[];
+  };
+
+  if (!schema || typeof parameters !== 'object' || parameters === null || Array.isArray(parameters)) {
+    return { valid: false, error: 'Invalid parameters payload' };
+  }
+
+  const allowedKeys = new Set(Object.keys(schema.properties || {}));
+  const requiredKeys = schema.required || [];
+
+  if (schema.additionalProperties === false) {
+    const extra = Object.keys(parameters).find((key) => !allowedKeys.has(key));
+    if (extra) return { valid: false, error: `Unknown parameter: ${extra}` };
+  }
+
+  for (const requiredKey of requiredKeys) {
+    if (parameters[requiredKey] === undefined || parameters[requiredKey] === null) {
+      return { valid: false, error: `Missing required parameter: ${requiredKey}` };
+    }
+  }
+
+  for (const [name, rule] of Object.entries(schema.properties || {})) {
+    const value = parameters[name];
+    if (value === undefined || value === null) continue;
+
+    if (rule.type === 'string') {
+      if (typeof value !== 'string') return { valid: false, error: `Parameter ${name} must be a string` };
+      if (rule.minLength !== undefined && value.length < rule.minLength) return { valid: false, error: `Parameter ${name} is too short` };
+      if (rule.maxLength !== undefined && value.length > rule.maxLength) return { valid: false, error: `Parameter ${name} is too long` };
+      if (rule.enum && !rule.enum.includes(value)) return { valid: false, error: `Parameter ${name} must be one of: ${rule.enum.join(', ')}` };
+      if ((rule as { pattern?: string }).pattern) {
+        const regex = new RegExp((rule as { pattern?: string }).pattern || '');
+        if (!regex.test(value)) return { valid: false, error: `Parameter ${name} format is invalid` };
+      }
+    }
+
+    if (rule.type === 'number') {
+      if (typeof value !== 'number' || Number.isNaN(value)) return { valid: false, error: `Parameter ${name} must be a number` };
+      if (rule.minimum !== undefined && value < rule.minimum) return { valid: false, error: `Parameter ${name} must be >= ${rule.minimum}` };
+      if (rule.maximum !== undefined && value > rule.maximum) return { valid: false, error: `Parameter ${name} must be <= ${rule.maximum}` };
+    }
+
+    if (rule.type === 'array') {
+      if (!Array.isArray(value)) return { valid: false, error: `Parameter ${name} must be an array` };
+      if (rule.minItems !== undefined && value.length < rule.minItems) return { valid: false, error: `Parameter ${name} requires at least ${rule.minItems} item(s)` };
+      if (rule.maxItems !== undefined && value.length > rule.maxItems) return { valid: false, error: `Parameter ${name} exceeds ${rule.maxItems} items` };
+      if (rule.items?.type === 'number') {
+        const invalid = value.find((entry) => typeof entry !== 'number' || Number.isNaN(entry));
+        if (invalid !== undefined) return { valid: false, error: `Parameter ${name} must contain only numbers` };
+      }
+      if (rule.items?.type === 'string') {
+        const invalid = value.find((entry) => typeof entry !== 'string');
+        if (invalid !== undefined) return { valid: false, error: `Parameter ${name} must contain only strings` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
+function validateBusinessRules(
+  tool: AIToolName,
+  parameters: Record<string, unknown>
+): { valid: true } | { valid: false; error: string } {
+  if (tool === 'create_alert') {
+    const alertType = parameters.alertType;
+    const value = parameters.value;
+    if (typeof value === 'number' && value <= 0 && (alertType === 'price_above' || alertType === 'price_below')) {
+      return { valid: false, error: 'Price alert value must be positive' };
+    }
+    if (typeof value === 'number' && (alertType === 'rsi_overbought' || alertType === 'rsi_oversold') && (value < 0 || value > 100)) {
+      return { valid: false, error: 'RSI alert value must be between 0 and 100' };
+    }
+  }
+
+  if (tool === 'risk_position_size') {
+    const accountSize = parameters.accountSize;
+    const riskPercent = parameters.riskPercent;
+    const entryPrice = parameters.entryPrice;
+    const stopLoss = parameters.stopLoss;
+    if ([accountSize, riskPercent, entryPrice, stopLoss].some((value) => typeof value !== 'number')) {
+      return { valid: false, error: 'accountSize, riskPercent, entryPrice, and stopLoss are required numbers' };
+    }
+  }
+
+  return { valid: true };
+}
+
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
@@ -29,58 +149,131 @@ export async function POST(req: NextRequest) {
     }
 
     const body: ActionRequest = await req.json();
-    const { 
-      tool, 
-      parameters, 
+    const {
+      tool,
+      parameters,
+      skill: requestedSkill,
+      sessionId,
       responseId,
+      actionId,
+      confirm = false,
       dryRun = false,
-      initiatedBy = 'user'
+      initiatedBy = 'user',
     } = body;
 
-    if (!tool) {
-      return NextResponse.json({ error: 'Tool name required' }, { status: 400 });
+    if (!tool || !parameters || typeof parameters !== 'object') {
+      return NextResponse.json({ error: 'Tool name and parameters are required' }, { status: 400 });
     }
 
-    // Get tool policy
     const policy = getToolPolicy(tool);
     if (!policy) {
       return NextResponse.json({ error: 'Unknown tool' }, { status: 400 });
     }
 
-    // Generate idempotency key if not provided
+    const resolvedSkill = await resolveActionSkill(session.workspaceId, requestedSkill, responseId);
+    if (!resolvedSkill) {
+      return NextResponse.json({ error: 'Skill context required for tool execution' }, { status: 400 });
+    }
+
+    try {
+      assertToolAllowedForSkill(tool, resolvedSkill);
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Tool not allowed for skill' }, { status: 403 });
+    }
+
+    const schemaValidation = validateToolParameters(tool, parameters);
+    if (!schemaValidation.valid) {
+      return NextResponse.json({ error: schemaValidation.error }, { status: 400 });
+    }
+
+    const businessValidation = validateBusinessRules(tool, parameters);
+    if (!businessValidation.valid) {
+      return NextResponse.json({ error: businessValidation.error }, { status: 400 });
+    }
+
     const idempotencyKey = body.idempotencyKey || generateIdempotencyKey(
       session.workspaceId,
       tool,
-      parameters
+      parameters,
+      resolvedSkill,
+      sessionId
     );
 
-    // Check for existing action with same idempotency key (prevent duplicates)
+    let pendingActionId: string | null = actionId || null;
+
     const existingAction = await q(
-      `SELECT id, status, result_data, error_message FROM ai_actions 
-       WHERE workspace_id = $1 AND idempotency_key = $2 AND status IN ('executed', 'pending')`,
+      `SELECT id, status, result_data, error_message
+       FROM ai_actions
+       WHERE workspace_id = $1 AND idempotency_key = $2 AND status IN ('executed', 'pending', 'confirmed')
+       ORDER BY created_at DESC
+       LIMIT 1`,
       [session.workspaceId, idempotencyKey]
     );
 
     if (existingAction.length > 0) {
       const existing = existingAction[0];
-      return NextResponse.json({
-        success: existing.status === 'executed',
-        actionId: existing.id,
-        idempotencyKey,
-        status: existing.status as ActionStatus,
-        duplicate: true,
-        data: existing.result_data,
-        error: existing.error_message,
-        message: 'Action already processed (idempotent)',
-      });
+      pendingActionId = existing.id;
+
+      if (existing.status === 'executed') {
+        return NextResponse.json({
+          success: true,
+          actionId: existing.id,
+          idempotencyKey,
+          status: existing.status as ActionStatus,
+          duplicate: true,
+          executedResult: existing.result_data,
+          error: existing.error_message,
+          message: 'Action already processed (idempotent)',
+        });
+      }
+
+      if ((existing.status === 'pending' || existing.status === 'confirmed') && !confirm && !dryRun) {
+        return NextResponse.json({
+          success: true,
+          actionId: existing.id,
+          idempotencyKey,
+          status: existing.status as ActionStatus,
+          requiresConfirmation: policy.requiresConfirmation,
+          message: 'Action already pending confirmation',
+        });
+      }
     }
 
-    // Check rate limits
+    if (!dryRun && !confirm && policy.sideEffect === 'read' && isToolCacheable(tool)) {
+      const ttlSeconds = getToolCacheTTL(tool);
+      if (ttlSeconds > 0) {
+        const cachedRows = await q(
+          `SELECT id, result_data
+           FROM ai_actions
+           WHERE workspace_id = $1
+             AND action_type = $2
+             AND action_params = $3::jsonb
+             AND status = 'executed'
+             AND success = true
+             AND created_at > NOW() - ($4::TEXT || ' seconds')::INTERVAL
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [session.workspaceId, tool, JSON.stringify(parameters), ttlSeconds]
+        );
+
+        if (cachedRows.length > 0) {
+          return NextResponse.json({
+            success: true,
+            actionId: cachedRows[0].id,
+            idempotencyKey,
+            status: 'executed' as ActionStatus,
+            cached: true,
+            executedResult: cachedRows[0].result_data,
+          });
+        }
+      }
+    }
+
     const rateLimitResult = await q(
       `SELECT * FROM increment_rate_limit($1, $2, 0)`,
       [session.workspaceId, tool]
     );
-    
+
     if (rateLimitResult.length > 0) {
       const { minute_count, hour_count } = rateLimitResult[0];
       if (minute_count > policy.rateLimitPerMinute || hour_count > policy.rateLimitPerHour) {
@@ -91,17 +284,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // If dry run, simulate the action without executing
-    if (dryRun) {
+    if (policy.requiresConfirmation && !dryRun && !confirm) {
       const dryRunResult = await simulateAction(tool, parameters);
-      
-      // Log dry run for audit
-      await q(
-        `INSERT INTO ai_actions 
-         (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by, 
-          status, dry_run, dry_run_result, tool_cost_level, execution_time_ms)
-         VALUES ($1, $2, $3, $4, $5, $6, 'pending', true, $7, $8, $9)
-         RETURNING id`,
+
+      const pendingInsert = await q(
+        `INSERT INTO ai_actions
+         (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
+          status, dry_run, dry_run_result, required_confirmation, user_confirmed, tool_cost_level, execution_time_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', true, $7, true, false, $8, $9)
+         ON CONFLICT (workspace_id, idempotency_key)
+         DO UPDATE SET
+           status = CASE WHEN ai_actions.status = 'executed' THEN ai_actions.status ELSE 'pending' END,
+           dry_run_result = EXCLUDED.dry_run_result
+         RETURNING id, status`,
         [
           session.workspaceId,
           responseId || null,
@@ -117,13 +312,23 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        actionId: pendingInsert[0]?.id,
         idempotencyKey,
-        status: 'pending' as ActionStatus,
-        requiresConfirmation: policy.requiresConfirmation,
+        status: pendingInsert[0]?.status || 'pending',
+        requiresConfirmation: true,
         dryRun: true,
         dryRunResult,
-        message: 'Dry run complete. Confirm to execute.',
+        message: 'Action pending confirmation',
       });
+    }
+
+    if (confirm && policy.requiresConfirmation && pendingActionId) {
+      await q(
+        `UPDATE ai_actions
+         SET status = 'confirmed', user_confirmed = true, confirmed_at = NOW()
+         WHERE id = $1 AND workspace_id = $2`,
+        [pendingActionId, session.workspaceId]
+      );
     }
 
     // Execute the action
@@ -155,33 +360,65 @@ export async function POST(req: NextRequest) {
     const executionTime = Date.now() - startTime;
     const status: ActionStatus = result.success ? 'executed' : 'failed';
 
-    // Log the action with full audit trail
-    const actionResult = await q(
-      `INSERT INTO ai_actions 
-       (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
-        success, status, result_data, error_message, error_code, 
-        user_confirmed, confirmed_at, required_confirmation, tool_cost_level, execution_time_ms)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, NOW(), $12, $13, $14)
-       RETURNING id`,
-      [
-        session.workspaceId,
-        responseId || null,
-        tool,
-        JSON.stringify(parameters),
-        idempotencyKey,
-        initiatedBy,
-        result.success,
-        status,
-        JSON.stringify(result.data || {}),
-        result.error || null,
-        result.success ? null : 'EXECUTION_ERROR',
-        policy.requiresConfirmation,
-        policy.costLevel,
-        executionTime,
-      ]
-    );
+    let finalActionId: string | null = pendingActionId;
 
-    const actionId = actionResult[0]?.id;
+    if (pendingActionId) {
+      const updated = await q(
+        `UPDATE ai_actions
+         SET success = $3,
+             status = $4,
+             result_data = $5,
+             error_message = $6,
+             error_code = $7,
+             required_confirmation = $8,
+             tool_cost_level = $9,
+             execution_time_ms = $10,
+             user_confirmed = CASE WHEN $8 THEN true ELSE user_confirmed END,
+             confirmed_at = CASE WHEN $8 THEN COALESCE(confirmed_at, NOW()) ELSE confirmed_at END
+         WHERE id = $1 AND workspace_id = $2
+         RETURNING id`,
+        [
+          pendingActionId,
+          session.workspaceId,
+          result.success,
+          status,
+          JSON.stringify(result.data || {}),
+          result.error || null,
+          result.success ? null : 'EXECUTION_ERROR',
+          policy.requiresConfirmation,
+          policy.costLevel,
+          executionTime,
+        ]
+      );
+      finalActionId = updated[0]?.id || pendingActionId;
+    } else {
+      const actionResult = await q(
+        `INSERT INTO ai_actions 
+         (workspace_id, response_id, action_type, action_params, idempotency_key, initiated_by,
+          success, status, result_data, error_message, error_code,
+          user_confirmed, confirmed_at, required_confirmation, tool_cost_level, execution_time_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CASE WHEN $12 THEN NOW() ELSE NULL END, $13, $14, $15)
+         RETURNING id`,
+        [
+          session.workspaceId,
+          responseId || null,
+          tool,
+          JSON.stringify(parameters),
+          idempotencyKey,
+          initiatedBy,
+          result.success,
+          status,
+          JSON.stringify(result.data || {}),
+          result.error || null,
+          result.success ? null : 'EXECUTION_ERROR',
+          confirm || !policy.requiresConfirmation,
+          policy.requiresConfirmation,
+          policy.costLevel,
+          executionTime,
+        ]
+      );
+      finalActionId = actionResult[0]?.id || null;
+    }
 
     // Update response record if action was taken
     if (responseId && result.success) {
@@ -205,7 +442,7 @@ export async function POST(req: NextRequest) {
     );
 
     const response: AIActionResult = {
-      actionId,
+      actionId: finalActionId || '',
       idempotencyKey,
       status,
       requiresConfirmation: policy.requiresConfirmation,
@@ -317,12 +554,25 @@ async function executeCreateAlert(
       return { success: false, error: 'Symbol, alertType, and value are required' };
     }
 
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return { success: false, error: 'Alert value must be numeric' };
+    }
+
+    if ((alertType === 'price_above' || alertType === 'price_below') && numericValue <= 0) {
+      return { success: false, error: 'Price alert value must be positive' };
+    }
+
+    if ((alertType === 'rsi_overbought' || alertType === 'rsi_oversold') && (numericValue < 0 || numericValue > 100)) {
+      return { success: false, error: 'RSI alert value must be between 0 and 100' };
+    }
+
     // Insert into alerts table
     const result = await q(
       `INSERT INTO user_alerts (workspace_id, symbol, alert_type, target_value, note, is_active, created_at)
        VALUES ($1, $2, $3, $4, $5, true, NOW())
        RETURNING id`,
-      [workspaceId, symbol, alertType, value, note || null]
+      [workspaceId, symbol, alertType, numericValue, typeof note === 'string' ? note.slice(0, 280) : null]
     );
 
     return {
@@ -349,13 +599,25 @@ async function executeAddToWatchlist(
       return { success: false, error: 'Symbol required' };
     }
 
+    const watchlistCount = await q(
+      `SELECT COUNT(*)::INT AS count FROM user_watchlist WHERE workspace_id = $1`,
+      [workspaceId]
+    );
+    const currentCount = watchlistCount[0]?.count || 0;
+    const maxWatchlistSize = 250;
+    if (currentCount >= maxWatchlistSize) {
+      return { success: false, error: `Watchlist limit reached (${maxWatchlistSize})` };
+    }
+
+    const sanitizedNote = typeof note === 'string' ? note.slice(0, 280) : null;
+
     // Upsert into watchlist
     await q(
       `INSERT INTO user_watchlist (workspace_id, symbol, note, priority, created_at)
        VALUES ($1, $2, $3, $4, NOW())
        ON CONFLICT (workspace_id, symbol) 
        DO UPDATE SET note = COALESCE($3, user_watchlist.note), priority = COALESCE($4, user_watchlist.priority), updated_at = NOW()`,
-      [workspaceId, (symbol as string).toUpperCase(), note || null, priority || 'medium']
+      [workspaceId, (symbol as string).toUpperCase(), sanitizedNote, priority || 'medium']
     );
 
     return { 
@@ -450,14 +712,24 @@ function executePositionSize(
 ): { success: boolean; data?: unknown; error?: string } {
   const { accountSize, riskPercent, entryPrice, stopLoss, symbol } = params;
 
-  if (!entryPrice || !stopLoss) {
-    return { success: false, error: 'Entry and stop loss prices required' };
+  if (accountSize === undefined || riskPercent === undefined || entryPrice === undefined || stopLoss === undefined) {
+    return { success: false, error: 'accountSize, riskPercent, entryPrice, and stopLoss are required' };
   }
 
   const entry = Number(entryPrice);
   const stop = Number(stopLoss);
-  const account = Number(accountSize) || 10000;
-  const risk = Number(riskPercent) || 1;
+  const account = Number(accountSize);
+  const risk = Number(riskPercent);
+
+  if (!Number.isFinite(entry) || !Number.isFinite(stop) || !Number.isFinite(account) || !Number.isFinite(risk)) {
+    return { success: false, error: 'Position size inputs must be numeric' };
+  }
+  if (entry <= 0 || stop < 0 || account <= 0 || risk <= 0 || risk > 100) {
+    return { success: false, error: 'Invalid risk or price inputs' };
+  }
+  if (entry === stop) {
+    return { success: false, error: 'Entry and stop cannot be equal' };
+  }
 
   const riskPerShare = Math.abs(entry - stop);
   const dollarRisk = account * (risk / 100);

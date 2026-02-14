@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   description:
     "How MarketScanner Pros collects, uses, and protects your data, including secure access code authentication and Stripe billing.",
   alternates: { canonical: "https://marketscannerpros.app/privacy" },
+  robots: { index: false, follow: true },
 };
 
 export default function PrivacyPage() {

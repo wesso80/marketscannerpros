@@ -35,6 +35,11 @@ function getIntField(obj: Record<string, unknown>, keys: string[], fallback = 0)
   return Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
 }
 
+function getOptionalNumericField(obj: Record<string, unknown>, keys: string[]): number | undefined {
+  const value = getNumericField(obj, keys, Number.NaN);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 function getNYTimeParts(date: Date = new Date()): { hour: number; minute: number } {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -45,6 +50,56 @@ function getNYTimeParts(date: Date = new Date()): { hour: number; minute: number
   const parts = formatter.formatToParts(date);
   const get = (type: string) => Number(parts.find(p => p.type === type)?.value || '0');
   return { hour: get('hour'), minute: get('minute') };
+}
+
+function getNYDateParts(date: Date = new Date()): { year: number; month: number; day: number; dayOfWeek: number } {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  });
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => parts.find(p => p.type === type)?.value || '';
+  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: Number(get('year') || '1970'),
+    month: Number(get('month') || '1'),
+    day: Number(get('day') || '1'),
+    dayOfWeek: weekdayMap[get('weekday')] ?? 1,
+  };
+}
+
+function formatNYDate(date: Date = new Date()): string {
+  const { year, month, day } = getNYDateParts(date);
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+function parseYMDToUTCNoon(ymd: string): Date {
+  const [yearStr, monthStr, dayStr] = ymd.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+}
+
+function addDaysToYMD(ymd: string, days: number): string {
+  const date = parseYMDToUTCNoon(ymd);
+  date.setUTCDate(date.getUTCDate() + days);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateDiffDaysYMD(fromYmd: string, toYmd: string): number {
+  const from = parseYMDToUTCNoon(fromYmd);
+  const to = parseYMDToUTCNoon(toYmd);
+  const diffMs = to.getTime() - from.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
 function calculateMarketDTE(
@@ -124,19 +179,20 @@ async function checkUpcomingEarnings(symbol: string, daysAhead: number = 7): Pro
     const data = await response.json();
     const upperSymbol = symbol.toUpperCase();
     const now = new Date();
-    const cutoffDate = new Date(now);
-    cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
+    const todayNY = formatNYDate(now);
+    const cutoffNY = addDaysToYMD(todayNY, daysAhead);
     
     // Look for symbol in earnings list
     const earnings = data.earnings || data.upcoming || [];
     for (const event of earnings) {
       if (event.symbol?.toUpperCase() === upperSymbol || event.ticker?.toUpperCase() === upperSymbol) {
-        const earningsDate = new Date(event.reportDate || event.date);
-        if (earningsDate >= now && earningsDate <= cutoffDate) {
-          const daysUntil = Math.ceil((earningsDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const eventRawDate = String(event.reportDate || event.date || '').slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(eventRawDate)) continue;
+        if (eventRawDate >= todayNY && eventRawDate <= cutoffNY) {
+          const daysUntil = Math.max(0, dateDiffDaysYMD(todayNY, eventRawDate));
           return {
             hasEarnings: true,
-            earningsDate: earningsDate.toISOString().split('T')[0],
+            earningsDate: eventRawDate,
             daysUntil,
           };
         }
@@ -175,6 +231,7 @@ export interface StrikeRecommendation {
 
 export interface ExpirationRecommendation {
   dte: number;                  // Days to expiration
+  calendarDte: number;          // Calendar days to expiration (0DTE/1DTE semantics)
   expirationDate: string;       // YYYY-MM-DD
   reason: string;
   thetaRisk: 'low' | 'moderate' | 'high';
@@ -231,7 +288,7 @@ export interface OptionsSetup {
   tradeLevels: TradeLevels | null;
   
   // COMPOSITE SCORING (NEW)
-  compositeScore: CompositeScore | null;
+  compositeScore: CompositeScore;
   strategyRecommendation: StrategyRecommendation | null;
   
   // CANDLE CLOSE CONFLUENCE (NEW) - When multiple TFs close together
@@ -258,9 +315,10 @@ export interface OptionsSetup {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export interface DataQuality {
-  optionsChainSource: 'alpha_vantage' | 'cboe' | 'none';
+  optionsChainSource: 'alpha_vantage' | 'nasdaq_fmv' | 'cboe' | 'none';
   freshness: 'REALTIME' | 'DELAYED' | 'EOD' | 'STALE';
   hasGreeksFromAPI: boolean;
+  greeksModel?: 'api' | 'black_scholes_european';
   hasMeaningfulOI: boolean;
   contractsCount: { calls: number; puts: number };
   availableStrikes: number[];  // Actual strikes from chain
@@ -285,7 +343,7 @@ export interface OISummary {
 export interface SignalComponent {
   name: string;
   direction: 'bullish' | 'bearish' | 'neutral';
-  weight: number;           // 0-100 how much this factor contributes
+  weight: number;           // 0-1 how much this factor contributes
   score: number;           // -100 to +100 (negative=bearish, positive=bullish)
   reason: string;
 }
@@ -298,6 +356,7 @@ export interface CompositeScore {
   components: SignalComponent[];
   conflicts: string[];      // List of conflicting signals
   alignedCount: number;     // How many signals agree
+  alignedWeightPct: number; // Strength-weighted agreement percent
   totalSignals: number;
 }
 
@@ -608,41 +667,22 @@ interface AVOptionContract {
   rho?: string;
 }
 
-// Get the NEAREST coming Friday for weekly options expiry (in market timezone)
+// Get the nearest coming Friday in NY date space (YYYY-MM-DD)
 // - Friday: use today (0 days)
-// - Saturday: use next Friday (6 days) 
+// - Saturday: use next Friday (6 days)
 // - Sunday-Thursday: use this coming Friday (5 to 1 days)
-function getThisWeekFriday(): Date {
-  // Use America/New_York timezone for market hours
-  const now = new Date();
-  const nyFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = nyFormatter.formatToParts(now);
-  const weekdayPart = parts.find(p => p.type === 'weekday')?.value;
-  
-  // Map weekday name to number
-  const weekdayMap: Record<string, number> = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
-  const dayOfWeek = weekdayMap[weekdayPart || 'Mon'] ?? 1;
-  
-  // Calculate days until nearest coming Friday
+function getThisWeekFridayYMD(now: Date = new Date()): string {
+  const ny = getNYDateParts(now);
   let daysUntilFriday: number;
-  if (dayOfWeek === 5) {
-    daysUntilFriday = 0; // Today is Friday
-  } else if (dayOfWeek === 6) {
-    daysUntilFriday = 6; // Saturday -> next Friday (6 days)
+  if (ny.dayOfWeek === 5) {
+    daysUntilFriday = 0;
+  } else if (ny.dayOfWeek === 6) {
+    daysUntilFriday = 6;
   } else {
-    daysUntilFriday = (5 - dayOfWeek + 7) % 7; // Sunday-Thursday -> this Friday
+    daysUntilFriday = (5 - ny.dayOfWeek + 7) % 7;
   }
-  
-  const friday = new Date(now);
-  friday.setDate(now.getDate() + daysUntilFriday);
-  friday.setHours(0, 0, 0, 0);
-  return friday;
+  const todayNY = `${ny.year}-${String(ny.month).padStart(2, '0')}-${String(ny.day).padStart(2, '0')}`;
+  return addDaysToYMD(todayNY, daysUntilFriday);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -776,15 +816,13 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       console.log(`📅 Using user-specified expiration: ${bestExpiry} (${expiryMap[bestExpiry]} contracts)`);
     } else {
       // Auto-select: Find expiration closest to this Friday with the most contracts
-      const targetFriday = getThisWeekFriday();
-      const targetDateStr = targetFriday.toISOString().split('T')[0];
+      const targetDateStr = getThisWeekFridayYMD();
       
       bestExpiry = Object.keys(expiryMap)[0];
       let minDiff = Infinity;
       
       for (const expiry of Object.keys(expiryMap)) {
-        const expiryDate = new Date(expiry);
-        const diff = Math.abs(expiryDate.getTime() - targetFriday.getTime());
+        const diff = Math.abs(dateDiffDaysYMD(targetDateStr, expiry));
         // Prefer closer dates, but also consider contract count
         if (diff < minDiff || (diff === minDiff && expiryMap[expiry] > expiryMap[bestExpiry])) {
           minDiff = diff;
@@ -833,9 +871,7 @@ function analyzeOpenInterest(
   expirationDate: string
 ): OpenInterestData {
   // Calculate DTE for Greeks estimation fallback
-  const expiryDate = new Date(expirationDate);
-  const today = new Date();
-  const daysToExpiry = Math.max(1, Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+  const daysToExpiry = Math.max(1, dateDiffDaysYMD(formatNYDate(new Date()), expirationDate));
   
   // Calculate total OI
   let totalCallOI = 0;
@@ -877,9 +913,19 @@ function analyzeOpenInterest(
     };
   }
   
-  // Only consider strikes within 30% of current price (tighter range for accuracy)
-  const minStrike = currentPrice * 0.7;
-  const maxStrike = currentPrice * 1.3;
+  // Dynamic strike coverage: default ±30%, expand to ±50% on dense but low-OI chains
+  let minStrike = currentPrice * 0.7;
+  let maxStrike = currentPrice * 1.3;
+  const contractCount = calls.length + puts.length;
+  const roughTotalOI = [...calls, ...puts].reduce((sum, contract) => {
+    const oi = getIntField(contract as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    return sum + oi;
+  }, 0);
+  if (contractCount > 800 && roughTotalOI < 500) {
+    minStrike = currentPrice * 0.5;
+    maxStrike = currentPrice * 1.5;
+    console.log('📊 Expanding OI strike filter to ±50% due to high contract count with weak OI coverage');
+  }
   
   console.log(`📊 Filtering strikes to range: $${minStrike.toFixed(2)} - $${maxStrike.toFixed(2)} (current: $${currentPrice})`);
   
@@ -911,10 +957,10 @@ function analyzeOpenInterest(
       const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
       if (oi > 0 || isNearATM) {
         // Parse API Greeks if available
-        const apiDelta = call.delta ? parseFloat(call.delta) : undefined;
-        const apiGamma = call.gamma ? parseFloat(call.gamma) : undefined;
-        const apiTheta = call.theta ? parseFloat(call.theta) : undefined;
-        const apiVega = call.vega ? parseFloat(call.vega) : undefined;
+        const apiDelta = getOptionalNumericField(call as unknown as Record<string, unknown>, ['delta', 'Delta']);
+        const apiGamma = getOptionalNumericField(call as unknown as Record<string, unknown>, ['gamma', 'Gamma']);
+        const apiTheta = getOptionalNumericField(call as unknown as Record<string, unknown>, ['theta', 'Theta']);
+        const apiVega = getOptionalNumericField(call as unknown as Record<string, unknown>, ['vega', 'Vega']);
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(call.implied_volatility, 0.25);
         
@@ -959,10 +1005,10 @@ function analyzeOpenInterest(
       const isNearATM = Math.abs(strike - currentPrice) / currentPrice <= 0.10;  // Within 10% of price
       if (oi > 0 || isNearATM) {
         // Parse API Greeks if available
-        const apiDelta = put.delta ? parseFloat(put.delta) : undefined;
-        const apiGamma = put.gamma ? parseFloat(put.gamma) : undefined;
-        const apiTheta = put.theta ? parseFloat(put.theta) : undefined;
-        const apiVega = put.vega ? parseFloat(put.vega) : undefined;
+        const apiDelta = getOptionalNumericField(put as unknown as Record<string, unknown>, ['delta', 'Delta']);
+        const apiGamma = getOptionalNumericField(put as unknown as Record<string, unknown>, ['gamma', 'Gamma']);
+        const apiTheta = getOptionalNumericField(put as unknown as Record<string, unknown>, ['theta', 'Theta']);
+        const apiVega = getOptionalNumericField(put as unknown as Record<string, unknown>, ['vega', 'Vega']);
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(put.implied_volatility, 0.25);
         
@@ -1020,14 +1066,15 @@ function analyzeOpenInterest(
   let maxPainStrike: number | null = null;
   let minPain = Infinity;
   
-  const maxPainUniverse = [...strikeOI.keys()]
-    .sort((a, b) => Math.abs(a - currentPrice) - Math.abs(b - currentPrice))
-    .slice(0, 60);
+  const sortedByProximity = [...strikeOI.keys()]
+    .sort((a, b) => Math.abs(a - currentPrice) - Math.abs(b - currentPrice));
+  const settlementCandidates = sortedByProximity.slice(0, 40);
+  const painSummationUniverse = sortedByProximity.slice(0, 120);
 
-  for (const potentialSettlement of maxPainUniverse) {
+  for (const potentialSettlement of settlementCandidates) {
     let totalPain = 0;
     
-    for (const contractStrike of maxPainUniverse) {
+    for (const contractStrike of painSummationUniverse) {
       const data = strikeOI.get(contractStrike);
       if (!data) continue;
       // Calls are ITM when strike < settlement price
@@ -1046,20 +1093,20 @@ function analyzeOpenInterest(
     }
   }
   
-  const strikesWithNonZeroOI = maxPainUniverse.filter(strike => {
+  const strikesWithNonZeroOI = painSummationUniverse.filter(strike => {
     const data = strikeOI.get(strike);
     return !!data && (data.callOI > 0 || data.putOI > 0);
   }).length;
-  const nonZeroCoverage = maxPainUniverse.length > 0 ? strikesWithNonZeroOI / maxPainUniverse.length : 0;
+  const nonZeroCoverage = painSummationUniverse.length > 0 ? strikesWithNonZeroOI / painSummationUniverse.length : 0;
   const totalOI = totalCallOI + totalPutOI;
   const reliabilityScore = Math.round(
     Math.min(100,
-      (Math.min(maxPainUniverse.length, 20) / 20) * 40 +
+      (Math.min(painSummationUniverse.length, 20) / 20) * 40 +
       nonZeroCoverage * 35 +
       (Math.min(totalOI, 10000) / 10000) * 25
     )
   );
-  const isReliableMaxPain = maxPainUniverse.length >= 6 && nonZeroCoverage >= 0.5 && totalOI >= 500;
+  const isReliableMaxPain = painSummationUniverse.length >= 6 && nonZeroCoverage >= 0.5 && totalOI >= 500;
 
   // Final validation: max pain must be within reasonable range of current price
   if (maxPainStrike !== null) {
@@ -1114,7 +1161,7 @@ function analyzeOpenInterest(
     maxPainStrike,
     maxPainReliability: {
       score: reliabilityScore,
-      strikesUsed: maxPainUniverse.length,
+      strikesUsed: painSummationUniverse.length,
       nonZeroCoverage,
       totalOI,
       reliable: isReliableMaxPain,
@@ -1220,6 +1267,9 @@ function detectUnusualActivity(
   const VOLUME_OI_THRESHOLD = 2.0;  // Volume > 2x Open Interest = unusual
   const MIN_VOLUME = 500;           // Minimum volume to consider
   const MIN_OI = 200;               // Avoid false positives on tiny OI
+  const CORE_DISTANCE_PCT = 0.15;   // Primary unusual activity zone
+  const EXTENDED_DISTANCE_PCT = 0.35;
+  const EXTENDED_PREMIUM_THRESHOLD = 250000;
   
   // Build map of mark prices for premium calculation
   const markPriceMap = new Map<string, number>();
@@ -1244,9 +1294,14 @@ function detectUnusualActivity(
     const key = `${strike}-${opt.type}`;
     if (markPrice > 0) markPriceMap.set(key, markPrice);
     
-    // Filter to reasonable strike range (within 15% of price)
     const distancePercent = Math.abs((strike - currentPrice) / currentPrice);
-    if (distancePercent > 0.15) continue;
+    if (distancePercent > EXTENDED_DISTANCE_PCT) continue;
+
+    const estimatedPremiumForGate = markPrice > 0 ? markPrice * volume * 100 : 0;
+    const inCoreZone = distancePercent <= CORE_DISTANCE_PCT;
+    const inExtendedZone = distancePercent > CORE_DISTANCE_PCT && distancePercent <= EXTENDED_DISTANCE_PCT;
+    const passesExtendedGate = inExtendedZone && estimatedPremiumForGate >= EXTENDED_PREMIUM_THRESHOLD;
+    if (!inCoreZone && !passesExtendedGate) continue;
     
     // Check for unusual volume
     if (volume >= MIN_VOLUME && openInterest >= MIN_OI) {
@@ -1255,9 +1310,10 @@ function detectUnusualActivity(
       
       if (volumeOIRatio >= VOLUME_OI_THRESHOLD) {
         const signal = opt.type === 'call' ? 'bullish' : 'bearish';
+        const reasonPrefix = inExtendedZone ? '🧭 Extended OTM flow: ' : '';
         const reason = volumeOIRatio >= 5 
-          ? `🚨 EXTREME: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`
-          : `⚡ High activity: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`;
+          ? `${reasonPrefix}🚨 EXTREME: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`
+          : `${reasonPrefix}⚡ High activity: ${volume.toLocaleString()} vol vs ${openInterest.toLocaleString()} OI (${volumeOIRatio.toFixed(1)}x)`;
         
         unusualStrikes.push({
           strike,
@@ -1947,7 +2003,14 @@ function calculateCompositeScore(
   // Calculate final quality percentage
   const finalQualityScore = qualityMaxScore > 0 ? (qualityScore / qualityMaxScore) * 100 : 50;
   const directionalNames = new Set(['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position']);
-  const directionalTotal = components.filter(c => directionalNames.has(c.name)).length;
+  const directionalTotal = components.filter(c => directionalNames.has(c.name) && c.weight > 0).length;
+  const alignedSignalsCount = directionalComponents.filter(c => c.weight > 0 && c.direction === finalDirection).length;
+  const alignedWeight = directionalComponents
+    .filter(c => c.direction === finalDirection)
+    .reduce((sum, c) => sum + c.weight * (Math.abs(c.score) / 100), 0);
+  const totalWeightStrength = directionalComponents
+    .reduce((sum, c) => sum + c.weight * (Math.abs(c.score) / 100), 0);
+  const alignedWeightPct = totalWeightStrength > 0 ? (alignedWeight / totalWeightStrength) * 100 : 50;
 
   console.log(`🎯 Direction: ${normalizedDirectionScore.toFixed(1)} → ${finalDirection.toUpperCase()} | Quality: ${finalQualityScore.toFixed(0)}% | Confidence: ${confidence.toFixed(0)}%`);
 
@@ -1958,8 +2021,23 @@ function calculateCompositeScore(
     qualityScore: finalQualityScore,  // Now exposed for optionsGrade calculation
     components,
     conflicts,
-    alignedCount: finalDirection === 'bullish' ? bullishSignals.length : bearishSignals.length,
+    alignedCount: alignedSignalsCount,
+    alignedWeightPct,
     totalSignals: directionalTotal
+  };
+}
+
+function createFallbackCompositeScore(reason: string): CompositeScore {
+  return {
+    finalDirection: 'neutral',
+    directionScore: 0,
+    confidence: 40,
+    qualityScore: 50,
+    components: [],
+    conflicts: [reason],
+    alignedCount: 0,
+    alignedWeightPct: 50,
+    totalSignals: 0,
   };
 }
 
@@ -2439,7 +2517,8 @@ function recommendStrategy(
 function selectStrikesFromConfluence(
   confluenceResult: HierarchicalScanResult,
   isCallDirection: boolean,
-  availableStrikes: number[] = []
+  availableStrikes: number[] = [],
+  impliedVolatility: number = 0.25
 ): StrikeRecommendation[] {
   const { currentPrice, mid50Levels, clusters, decompression, prediction } = confluenceResult;
   const recommendations: StrikeRecommendation[] = [];
@@ -2455,7 +2534,7 @@ function selectStrikesFromConfluence(
   // Primary recommendation: ATM or 1 strike OTM for best delta exposure
   // Use actual chain strikes when available
   const atmStrike = findNearestChainStrike(currentPrice, availableStrikes);
-  const atmGreeks = estimateGreeks(currentPrice, atmStrike, 7, 0.05, 0.25, isCallDirection);
+  const atmGreeks = estimateGreeks(currentPrice, atmStrike, 7, 0.05, impliedVolatility, isCallDirection);
   
   // Calculate target level with sanity check - must be within 20% of current price
   let targetLevel = relevantLevels[0]?.level || (isCallDirection ? currentPrice * 1.02 : currentPrice * 0.98);
@@ -2464,6 +2543,11 @@ function selectStrikesFromConfluence(
   if (targetLevel > maxReasonableTarget || targetLevel < minReasonableTarget) {
     console.warn(`⚠️ Target level $${targetLevel} out of range, defaulting to 2% move`);
     targetLevel = isCallDirection ? currentPrice * 1.02 : currentPrice * 0.98;
+  }
+  const minTargetDistancePct = 0.008;
+  const currentTargetDistancePct = Math.abs((targetLevel - currentPrice) / currentPrice);
+  if (currentTargetDistancePct < minTargetDistancePct) {
+    targetLevel = isCallDirection ? currentPrice * (1 + minTargetDistancePct) : currentPrice * (1 - minTargetDistancePct);
   }
 
   recommendations.push({
@@ -2483,7 +2567,7 @@ function selectStrikesFromConfluence(
     // Find strike near cluster - use actual chain strikes
     const clusterStrike = findNearestChainStrike(clusterLevel, availableStrikes);
     if (clusterStrike !== atmStrike) {
-      const clusterGreeks = estimateGreeks(currentPrice, clusterStrike, 7, 0.05, 0.25, isCallDirection);
+      const clusterGreeks = estimateGreeks(currentPrice, clusterStrike, 7, 0.05, impliedVolatility, isCallDirection);
       const distPct = ((clusterStrike - currentPrice) / currentPrice) * 100;
       
       recommendations.push({
@@ -2505,7 +2589,7 @@ function selectStrikesFromConfluence(
     const primaryDecomp = decompLevels[0];
     const decompStrike = findNearestChainStrike(primaryDecomp.level, availableStrikes);
     if (decompStrike !== atmStrike && !recommendations.find(r => r.strike === decompStrike)) {
-      const decompGreeks = estimateGreeks(currentPrice, decompStrike, 7, 0.05, 0.25, isCallDirection);
+      const decompGreeks = estimateGreeks(currentPrice, decompStrike, 7, 0.05, impliedVolatility, isCallDirection);
       const distPct = ((decompStrike - currentPrice) / currentPrice) * 100;
       
       recommendations.push({
@@ -2549,7 +2633,8 @@ function selectExpirationFromConfluence(
       expDate.setDate(expDate.getDate() + 1);
     }
     
-    const dateStr = expDate.toISOString().split('T')[0];
+    const dateStr = formatNYDate(expDate);
+    const calendarDTE = Math.max(0, dateDiffDaysYMD(formatNYDate(today), dateStr));
     const marketDTE = calculateMarketDTE(today, expDate, assetType);
 
     let thetaRisk: 'low' | 'moderate' | 'high' = 'low';
@@ -2574,6 +2659,7 @@ function selectExpirationFromConfluence(
     
     recommendations.push({
       dte: marketDTE,
+      calendarDte: calendarDTE,
       expirationDate: dateStr,
       reason,
       thetaRisk,
@@ -2743,16 +2829,16 @@ function calculateEntryTiming(
   
   if (estTimeDecimal >= 4 && estTimeDecimal < 9.5) {
     marketSession = 'premarket';
-    sessionWarning = '🌅 PRE-MARKET SESSION (4am-9:30am EST) - Lower liquidity, wider spreads. Options typically don\'t trade until regular hours.';
+    sessionWarning = '🌅 PRE-MARKET SESSION (4am-9:30am EST) - Options execution is limited/unavailable; spreads can be misleading. Use underlying-only context until regular hours.';
   } else if (estTimeDecimal >= 9.5 && estTimeDecimal < 16) {
     marketSession = 'regular';
     // No warning for regular hours
   } else if (estTimeDecimal >= 16 && estTimeDecimal < 20) {
     marketSession = 'afterhours';
-    sessionWarning = '🌙 AFTER-HOURS SESSION (4pm-8pm EST) - Lower liquidity, wider bid/ask spreads. Avoid large orders. Options may not execute.';
+    sessionWarning = '🌙 AFTER-HOURS SESSION (4pm-8pm EST) - Options execution is limited/unavailable; displayed spreads can be misleading. Use underlying-only context.';
   } else {
     marketSession = 'closed';
-    sessionWarning = '🔒 MARKET CLOSED - Current prices may gap at next open. Extended hours trading has very low liquidity.';
+    sessionWarning = '🔒 MARKET CLOSED - Current prices may gap at next open. Options execution is unavailable outside regular session.';
   }
   
   if (sessionWarning) {
@@ -2877,14 +2963,14 @@ function generateGreeksAdvice(
   
   let thetaWarning: string | null = null;
   if (expirationDte <= 2) {
-    thetaWarning = '⚠️ HIGH THETA DECAY: 0-2 DTE options lose value rapidly. Exit same-day or next morning.';
+    thetaWarning = '⚠️ HIGH THETA DECAY: 0-2 DTE options lose value rapidly. Theta shown as $/day per contract equivalent.';
   } else if (expirationDte <= 5) {
-    thetaWarning = '⚡ Moderate theta: Consider closing before last 2 DTE if target not hit.';
+    thetaWarning = '⚡ Moderate theta: Consider closing before last 2 DTE if target not hit. Theta units are $/day equivalent.';
   }
   
   let vegaConsideration: string | null = null;
   if (signalStrength === 'strong') {
-    vegaConsideration = 'IV crush risk if playing earnings or events. Otherwise, IV expansion helps.';
+    vegaConsideration = 'IV crush risk if playing earnings or events. Vega shown as sensitivity per 1% IV move.';
   }
   
   let gammaAdvice: string | null = null;
@@ -2939,6 +3025,7 @@ export class OptionsConfluenceAnalyzer {
       optionsChainSource: 'none',
       freshness: 'STALE',
       hasGreeksFromAPI: false,
+      greeksModel: 'black_scholes_european',
       hasMeaningfulOI: false,
       contractsCount: { calls: 0, puts: 0 },
       availableStrikes: [],
@@ -2977,9 +3064,13 @@ export class OptionsConfluenceAnalyzer {
           dataQuality.chainExpiryUsed = optionsChain.selectedExpiry;
           dataQuality.lastUpdated = optionsChain.dataDate || 'UNKNOWN_EOD';
           
-          // Check if API provided Greeks
-          const sampleContract = optionsChain.calls[0] || optionsChain.puts[0];
-          dataQuality.hasGreeksFromAPI = !!(sampleContract?.delta);
+          // Check if API provided Greeks (numeric validation, not truthy string check)
+          const samplePool = [...optionsChain.calls, ...optionsChain.puts].slice(0, 50);
+          dataQuality.hasGreeksFromAPI = samplePool.some(contract => {
+            const delta = getOptionalNumericField(contract as unknown as Record<string, unknown>, ['delta', 'Delta']);
+            return delta !== undefined;
+          });
+          dataQuality.greeksModel = dataQuality.hasGreeksFromAPI ? 'api' : 'black_scholes_european';
           
           openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
           dataQuality.hasMeaningfulOI = openInterestAnalysis.totalCallOI > 100 || openInterestAnalysis.totalPutOI > 100;
@@ -2994,10 +3085,14 @@ export class OptionsConfluenceAnalyzer {
           
           // PRO TRADER: Expected Move Calculation
           const avgIV = ivAnalysis.currentIV;
+          const todayNy = formatNYDate(new Date());
+          const selectedCalendarDTE = expirationDate
+            ? Math.max(0, dateDiffDaysYMD(todayNy, expirationDate))
+            : 7;
           const selectedDTE = expirationDate
             ? calculateMarketDTE(new Date(), new Date(expirationDate), assetType)
             : 7;
-          expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedDTE);
+          expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedCalendarDTE);
           
           // Add EOD data confidence cap
           dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
@@ -3030,9 +3125,18 @@ export class OptionsConfluenceAnalyzer {
     const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
     
     // Select expirations based on confluence timing
-    const allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType);
-    const primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
-    const alternativeExpirations = allExpirations.slice(1);
+    let allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType);
+    let primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
+    let alternativeExpirations = allExpirations.slice(1);
+
+    if (dataQuality.optionsChainSource === 'none') {
+      allExpirations = allExpirations.map(exp => ({
+        ...exp,
+        reason: `Theoretical (no live options chain): ${exp.reason}`,
+      }));
+      primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
+      alternativeExpirations = allExpirations.slice(1);
+    }
     
     // Entry timing - now factors in candle close confluence score
     const entryTiming = calculateEntryTiming(confluenceResult, candleCloseConfluence);
@@ -3073,24 +3177,47 @@ export class OptionsConfluenceAnalyzer {
     );
     
     // PRO TRADER: Calculate composite score from all signals
-    const compositeScore = calculateCompositeScore(
-      confluenceResult,
-      openInterestAnalysis ? {
-        pcRatio: openInterestAnalysis.pcRatio,
-        sentiment: openInterestAnalysis.sentiment
-      } : null,
-      unusualActivity,
-      ivAnalysis,
-      tradeLevels,
-      openInterestAnalysis ? { 
-        maxPain: openInterestAnalysis.maxPainStrike || 0, 
-        currentPrice 
-      } : undefined,
-      primaryExpiration?.dte || 14  // Pass DTE for dynamic max pain weighting
-    );
+    let compositeScoreRaw: CompositeScore | null = null;
+    try {
+      compositeScoreRaw = calculateCompositeScore(
+        confluenceResult,
+        openInterestAnalysis ? {
+          pcRatio: openInterestAnalysis.pcRatio,
+          sentiment: openInterestAnalysis.sentiment
+        } : null,
+        unusualActivity,
+        ivAnalysis,
+        tradeLevels,
+        openInterestAnalysis ? {
+          maxPain: openInterestAnalysis.maxPainStrike || 0,
+          currentPrice
+        } : undefined,
+        primaryExpiration?.dte || 14  // Pass DTE for dynamic max pain weighting
+      );
+    } catch (error) {
+      console.warn('Composite score calculation failed:', error);
+    }
+
+    const compositeScore = compositeScoreRaw ?? createFallbackCompositeScore('Composite score unavailable');
 
     const confidenceCap = dataQuality.freshness === 'EOD' ? 75 : 95;
     compositeScore.confidence = Math.min(compositeScore.confidence, confidenceCap);
+
+    const domains = [
+      true,
+      !!openInterestAnalysis,
+      !!unusualActivity,
+      !!ivAnalysis,
+      !!tradeLevels,
+    ];
+    const completeness = domains.filter(Boolean).length / domains.length;
+    const completenessCap = 40 + completeness * 60;
+    compositeScore.confidence = Math.min(compositeScore.confidence, completenessCap);
+
+    if (!dataQuality.hasGreeksFromAPI && (primaryExpiration?.dte ?? 99) <= 3) {
+      dataConfidenceCaps.push('Greeks are Black-Scholes estimates; short-DTE accuracy reduced');
+      compositeScore.confidence = Math.min(compositeScore.confidence, 65);
+    }
     
     // Use composite direction - if composite says neutral, respect it (don't force a direction)
     // Only fall back to confluence direction if composite has very low confidence
@@ -3107,7 +3234,12 @@ export class OptionsConfluenceAnalyzer {
 
     // Select strikes after final direction is resolved
     const allStrikes = finalDirection !== 'neutral'
-      ? selectStrikesFromConfluence(confluenceResult, isCallDirection, dataQuality.availableStrikes)
+      ? selectStrikesFromConfluence(
+          confluenceResult,
+          isCallDirection,
+          dataQuality.availableStrikes,
+          ivAnalysis?.currentIV ?? 0.25
+        )
       : [];
     let primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
     let alternativeStrikes = allStrikes.slice(1);
@@ -3170,6 +3302,8 @@ export class OptionsConfluenceAnalyzer {
     if (shouldGateWait) {
       primaryStrike = null;
       alternativeStrikes = [];
+      primaryExpiration = null;
+      alternativeExpirations = [];
       strategyRecommendation = {
         strategy: 'WAIT',
         strategyType: 'neutral',
@@ -3186,6 +3320,9 @@ export class OptionsConfluenceAnalyzer {
     }
     if (dataQuality.freshness === 'STALE') {
       dataConfidenceCaps.push('Stale data - refresh recommended');
+    }
+    if ((assetType === 'equity' || assetType === 'etf' || assetType === 'index') && dataQuality.optionsChainSource !== 'none') {
+      dataConfidenceCaps.push('DTE excludes market holidays (approx.)');
     }
     
     // PRODUCTION FIX: Disclaimer flags for risk events

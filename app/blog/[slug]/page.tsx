@@ -3,6 +3,20 @@ import { getPostBySlug, blogPosts } from "../posts-data";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 
+type ParamsInput = { slug: string } | Promise<{ slug: string }>;
+
+async function resolveSlug(params: ParamsInput): Promise<string> {
+  const resolved = await Promise.resolve(params);
+  const raw = (resolved.slug || '').trim().toLowerCase();
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return blogPosts.map((post) => ({
     slug: post.slug,
@@ -10,7 +24,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+  const slug = await resolveSlug(params);
+  const post = getPostBySlug(slug);
   
   if (!post) {
     return {
@@ -24,8 +39,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default function BlogPost({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+export default async function BlogPost({ params }: { params: ParamsInput }) {
+  const slug = await resolveSlug(params);
+  const post = getPostBySlug(slug);
 
   if (!post) {
     notFound();

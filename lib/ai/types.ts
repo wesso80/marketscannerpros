@@ -252,7 +252,7 @@ export interface UserMemory {
   riskProfile: 'conservative' | 'medium' | 'aggressive';
   maxRiskPerTrade: number;
   favoredSetups: string[];
-  tradingStyle: string;
+  tradingStyle: 'scalp' | 'day' | 'swing' | 'position';
   typicalHoldTime: string;
   responseVerbosity: 'brief' | 'balanced' | 'detailed';
   showEducationalContent: boolean;

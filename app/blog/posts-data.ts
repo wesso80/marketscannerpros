@@ -412,5 +412,12 @@ The best traders demand alignment across timeframes. It filters out noise, reduc
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
-  return blogPosts.find((post) => post.slug === slug);
+  const raw = (slug || '').trim().toLowerCase();
+  let normalized = raw;
+  try {
+    normalized = decodeURIComponent(raw);
+  } catch {
+    normalized = raw;
+  }
+  return blogPosts.find((post) => post.slug.toLowerCase() === normalized);
 }

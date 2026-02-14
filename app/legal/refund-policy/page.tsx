@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Refund Policy — MarketScanner Pros",
   description: "Refund and cancellation policy for MarketScanner Pros subscriptions.",
   alternates: { canonical: "/refund-policy" },
-  robots: { index: true, follow: true }
+  robots: { index: false, follow: true }
 };
 
 const effective = "20 December 2025";

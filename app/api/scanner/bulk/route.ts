@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { adx, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -573,32 +574,67 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
     longShortRatio?: number;
   };
 } | null {
-  // CoinGecko may return fewer bars, so accept 20+ for crypto
+  return analyzeAssetByTimeframe(symbol, ohlcv, '1d');
+}
+
+function analyzeAssetByTimeframe(
+  symbol: string,
+  ohlcv: OHLCV[],
+  timeframe: string
+): {
+  symbol: string;
+  score: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  signals: { bullish: number; bearish: number; neutral: number };
+  indicators: Indicators;
+  change24h: number;
+  derivatives?: {
+    openInterest: number;
+    openInterestCoin: number;
+    fundingRate?: number;
+    longShortRatio?: number;
+  };
+} | null {
   if (!ohlcv || ohlcv.length < 20) return null;
+
+  const warmup = getIndicatorWarmupStatus(ohlcv.length, timeframe);
+  if (!warmup.coreReady) return null;
+
+  const bars: OHLCVBar[] = ohlcv.map((bar) => ({
+    timestamp: bar.date,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume,
+  }));
   
   const closes = ohlcv.map(d => d.close);
   const price = closes[closes.length - 1];
   const prevPrice = closes[closes.length - 2];
   const change24h = ((price - prevPrice) / prevPrice) * 100;
   
-  // Use shorter EMA if not enough bars for 200
+  // Use shorter EMA when history is below 200 bars
   const emaPeriod = Math.min(200, Math.floor(closes.length * 0.8));
-  const ema200Arr = calculateEMA(closes, emaPeriod);
-  const macdData = calculateMACD(closes);
-  const stoch = calculateStochastic(ohlcv);
+  const emaValue = ema(closes, emaPeriod);
+  const macdData = macd(closes);
+  const stoch = stochastic(bars);
   const aroon = calculateAroon(ohlcv);
+  const adxData = adx(bars);
+  const cciValue = cci(bars);
+  const rsiValue = rsi(closes);
   
   const indicators: Indicators = {
     price,
-    ema200: ema200Arr[ema200Arr.length - 1],
-    rsi: calculateRSI(closes),
-    macd: macdData.macd,
-    macdSignal: macdData.signal,
-    adx: calculateADX(ohlcv),
-    stochK: stoch.k,
+    ema200: emaValue ?? Number.NaN,
+    rsi: rsiValue ?? Number.NaN,
+    macd: macdData?.line ?? Number.NaN,
+    macdSignal: macdData?.signal ?? Number.NaN,
+    adx: adxData?.adx ?? Number.NaN,
+    stochK: stoch?.k ?? Number.NaN,
     aroonUp: aroon.up,
     aroonDown: aroon.down,
-    cci: calculateCCI(ohlcv),
+    cci: cciValue ?? Number.NaN,
     change24h
   };
   
@@ -729,7 +765,7 @@ export async function POST(req: NextRequest) {
             return null;
           }
           
-          const result = analyzeAsset(id, ohlcv);
+          const result = analyzeAssetByTimeframe(id, ohlcv, selectedTimeframe);
           if (result && type === 'crypto') {
             // Add derivatives data
             const derivData = derivativesMap.get(id);

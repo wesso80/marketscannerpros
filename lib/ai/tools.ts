@@ -3,6 +3,7 @@
 // Defines all tools the AI can call with parameters
 // =====================================================
 
+import crypto from 'crypto';
 import type { AITool, AIToolName, PageSkill, ToolPolicy } from './types';
 
 // Default policies for different tool types
@@ -40,16 +41,17 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Create a price or condition-based alert for a symbol',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        symbol: { type: 'string', description: 'The trading symbol (e.g., BTC, AAPL)' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol (e.g., BTC, AAPL)' },
         alertType: { 
           type: 'string', 
           enum: ['price_above', 'price_below', 'rsi_overbought', 'rsi_oversold', 'volume_spike', 'custom'],
           description: 'Type of alert condition'
         },
-        value: { type: 'number', description: 'The threshold value for the alert' },
-        timeframe: { type: 'string', description: 'Timeframe for the condition (e.g., 1H, 4H, 1D)' },
-        note: { type: 'string', description: 'Optional note to include with the alert' },
+        value: { type: 'number', minimum: 0, maximum: 1000000000, description: 'The threshold value for the alert' },
+        timeframe: { type: 'string', enum: ['5m', '15m', '30m', '1H', '4H', '1D', '1W'], description: 'Timeframe for the condition (e.g., 1H, 4H, 1D)' },
+        note: { type: 'string', maxLength: 280, description: 'Optional note to include with the alert' },
       },
       required: ['symbol', 'alertType', 'value'],
     },
@@ -62,9 +64,10 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Add a symbol to the user\'s watchlist with an optional note',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        symbol: { type: 'string', description: 'The trading symbol to add' },
-        note: { type: 'string', description: 'Why this symbol is being watched' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol to add' },
+        note: { type: 'string', maxLength: 280, description: 'Why this symbol is being watched' },
         priority: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Priority level' },
       },
       required: ['symbol'],
@@ -78,8 +81,9 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Remove a symbol from the user\'s watchlist',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        symbol: { type: 'string', description: 'The trading symbol to remove' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol to remove' },
       },
       required: ['symbol'],
     },
@@ -92,9 +96,10 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Get a concise summary of a specific signal or scan result',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        signalId: { type: 'string', description: 'The signal ID to summarize' },
-        symbol: { type: 'string', description: 'The symbol the signal is for' },
+        signalId: { type: 'string', maxLength: 100, description: 'The signal ID to summarize' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The symbol the signal is for' },
         signalType: { type: 'string', description: 'Type of signal (trend, reversal, etc.)' },
       },
       required: ['symbol'],
@@ -108,22 +113,25 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Generate a structured trade plan with entry, stops, and targets',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        symbol: { type: 'string', description: 'The trading symbol' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol' },
         direction: { type: 'string', enum: ['long', 'short'], description: 'Trade direction' },
-        entryPrice: { type: 'number', description: 'Planned entry price' },
-        stopLoss: { type: 'number', description: 'Stop loss price' },
+        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Planned entry price' },
+        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Stop loss price' },
         targets: { 
           type: 'array', 
-          items: { type: 'number' },
+          minItems: 1,
+          maxItems: 5,
+          items: { type: 'number', minimum: 0, maximum: 1000000000 },
           description: 'Array of profit target prices'
         },
-        timeframe: { type: 'string', description: 'Trading timeframe' },
-        thesis: { type: 'string', description: 'The reasoning behind the trade' },
+        timeframe: { type: 'string', enum: ['5m', '15m', '30m', '1H', '4H', '1D', '1W'], description: 'Trading timeframe' },
+        thesis: { type: 'string', maxLength: 1000, description: 'The reasoning behind the trade' },
       },
       required: ['symbol', 'direction'],
     },
-    policy: { ...READ_POLICY, costLevel: 'medium', cacheable: false },
+    policy: { ...READ_POLICY, costLevel: 'medium', cacheable: false, rateLimitPerMinute: 10, rateLimitPerHour: 100 },
     allowedSkills: ['derivatives', 'options', 'deep_analysis', 'ai_analyst'],
   },
 
@@ -132,23 +140,25 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Create or update a trade journal entry',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        symbol: { type: 'string', description: 'The trading symbol' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol' },
         direction: { type: 'string', enum: ['long', 'short'], description: 'Trade direction' },
-        entryPrice: { type: 'number', description: 'Entry price' },
-        exitPrice: { type: 'number', description: 'Exit price (if closed)' },
+        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Entry price' },
+        exitPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Exit price (if closed)' },
         setupType: { 
           type: 'string', 
           enum: ['breakout', 'pullback', 'reversal', 'squeeze', 'momentum', 'mean_reversion', 'other'],
           description: 'Type of trade setup'
         },
-        notes: { type: 'string', description: 'Trade notes and observations' },
+        notes: { type: 'string', maxLength: 2000, description: 'Trade notes and observations' },
         mistakes: { 
           type: 'array', 
+          maxItems: 20,
           items: { type: 'string' },
           description: 'Any mistakes made during the trade'
         },
-        lessons: { type: 'string', description: 'Lessons learned from this trade' },
+        lessons: { type: 'string', maxLength: 1000, description: 'Lessons learned from this trade' },
       },
       required: ['symbol', 'direction'],
     },
@@ -161,14 +171,15 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Calculate proper position size based on risk parameters',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        accountSize: { type: 'number', description: 'Total account size in USD' },
-        riskPercent: { type: 'number', description: 'Risk percentage per trade (e.g., 1 or 2)' },
-        entryPrice: { type: 'number', description: 'Planned entry price' },
-        stopLoss: { type: 'number', description: 'Stop loss price' },
-        symbol: { type: 'string', description: 'The trading symbol' },
+        accountSize: { type: 'number', minimum: 1, maximum: 1000000000, description: 'Total account size in USD' },
+        riskPercent: { type: 'number', minimum: 0.1, maximum: 100, description: 'Risk percentage per trade (e.g., 1 or 2)' },
+        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Planned entry price' },
+        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Stop loss price' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol' },
       },
-      required: ['entryPrice', 'stopLoss'],
+      required: ['accountSize', 'riskPercent', 'entryPrice', 'stopLoss'],
     },
     policy: READ_POLICY,
     allowedSkills: ['options', 'portfolio'],
@@ -179,12 +190,13 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Run a backtest on a trading strategy',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         strategyId: { type: 'string', description: 'ID of a saved strategy to test' },
-        symbol: { type: 'string', description: 'Symbol to backtest on' },
+        symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'Symbol to backtest on' },
         startDate: { type: 'string', description: 'Backtest start date (YYYY-MM-DD)' },
         endDate: { type: 'string', description: 'Backtest end date (YYYY-MM-DD)' },
-        timeframe: { type: 'string', description: 'Candle timeframe' },
+        timeframe: { type: 'string', enum: ['5m', '15m', '30m', '1H', '4H', '1D', '1W'], description: 'Candle timeframe' },
       },
       required: ['symbol'],
     },
@@ -197,10 +209,11 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Explain what a specific metric means and how to interpret it',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
-        metricName: { type: 'string', description: 'Name of the metric to explain' },
+        metricName: { type: 'string', minLength: 1, maxLength: 100, description: 'Name of the metric to explain' },
         currentValue: { type: 'number', description: 'Current value of the metric' },
-        context: { type: 'string', description: 'Additional context about where this metric appears' },
+        context: { type: 'string', maxLength: 500, description: 'Additional context about where this metric appears' },
       },
       required: ['metricName'],
     },
@@ -213,18 +226,22 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Compare multiple assets across various metrics',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         symbols: { 
           type: 'array', 
-          items: { type: 'string' },
+          minItems: 2,
+          maxItems: 10,
+          items: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$' },
           description: 'Array of symbols to compare'
         },
         metrics: { 
           type: 'array', 
+          maxItems: 12,
           items: { type: 'string' },
           description: 'Metrics to compare (trend, momentum, volatility, etc.)'
         },
-        timeframe: { type: 'string', description: 'Timeframe for comparison' },
+        timeframe: { type: 'string', enum: ['5m', '15m', '30m', '1H', '4H', '1D', '1W'], description: 'Timeframe for comparison' },
       },
       required: ['symbols'],
     },
@@ -237,6 +254,7 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
     description: 'Get current overall market context and regime',
     parameters: {
       type: 'object',
+      additionalProperties: false,
       properties: {
         includeCorrelations: { type: 'boolean', description: 'Include correlation data' },
         includeSectors: { type: 'boolean', description: 'Include sector breakdown' },
@@ -263,10 +281,20 @@ export function getOpenAITools(skill: PageSkill) {
     type: 'function' as const,
     function: {
       name: tool.name,
-      description: tool.description,
+      description: `${tool.description}. Policy: sideEffect=${tool.policy.sideEffect}, confirmation=${tool.policy.requiresConfirmation ? 'required' : 'not_required'}, rate=${tool.policy.rateLimitPerMinute}/min.`,
       parameters: tool.parameters,
     },
   }));
+}
+
+export function assertToolAllowedForSkill(toolName: AIToolName, skill: PageSkill): void {
+  const tool = AI_TOOLS[toolName];
+  if (!tool) {
+    throw new Error(`Unknown tool: ${toolName}`);
+  }
+  if (!tool.allowedSkills.includes(skill)) {
+    throw new Error(`Tool ${toolName} not allowed for skill ${skill}`);
+  }
 }
 
 // Check if a tool requires confirmation (uses new policy system)
@@ -305,17 +333,15 @@ export function isToolRateLimited(
 export function generateIdempotencyKey(
   workspaceId: string,
   tool: AIToolName,
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown>,
+  skill?: PageSkill,
+  sessionId?: string
 ): string {
-  const input = `${workspaceId}:${tool}:${JSON.stringify(parameters)}`;
-  // Simple hash function for idempotency
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return `idem_${Math.abs(hash).toString(36)}`;
+  const sortedKeys = Object.keys(parameters || {}).sort();
+  const canonicalParams = JSON.stringify(parameters || {}, sortedKeys);
+  const input = `${workspaceId}:${tool}:${skill || 'na'}:${sessionId || 'na'}:${canonicalParams}`;
+  const digest = crypto.createHash('sha256').update(input).digest('hex').slice(0, 24);
+  return `idem_${digest}`;
 }
 
 // Get tool summary for documentation
