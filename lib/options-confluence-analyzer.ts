@@ -47,6 +47,35 @@ function getNYTimeParts(date: Date = new Date()): { hour: number; minute: number
   return { hour: get('hour'), minute: get('minute') };
 }
 
+function calculateMarketDTE(
+  fromDate: Date,
+  toDate: Date,
+  assetType: AssetType
+): number {
+  const millisPerDay = 1000 * 60 * 60 * 24;
+  if (toDate.getTime() <= fromDate.getTime()) return 1;
+
+  if (assetType === 'crypto' || assetType === 'forex') {
+    return Math.max(1, Math.ceil((toDate.getTime() - fromDate.getTime()) / millisPerDay));
+  }
+
+  const cursor = new Date(fromDate);
+  cursor.setHours(0, 0, 0, 0);
+  const end = new Date(toDate);
+  end.setHours(0, 0, 0, 0);
+
+  let tradingDays = 0;
+  while (cursor < end) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) {
+      tradingDays += 1;
+    }
+  }
+
+  return Math.max(1, tradingDays);
+}
+
 /**
  * Normalize IV from API (handles both decimal 0.25 and percent 25 formats)
  */
@@ -235,6 +264,8 @@ export interface DataQuality {
   hasMeaningfulOI: boolean;
   contractsCount: { calls: number; puts: number };
   availableStrikes: number[];  // Actual strikes from chain
+  chainExpiryUsed: string | null;
+  underlyingAsOf: string;
   lastUpdated: string;
 }
 
@@ -357,6 +388,13 @@ export interface OpenInterestData {
   sentiment: 'bullish' | 'bearish' | 'neutral';
   sentimentReason: string;
   maxPainStrike: number | null;
+  maxPainReliability: {
+    score: number;
+    strikesUsed: number;
+    nonZeroCoverage: number;
+    totalOI: number;
+    reliable: boolean;
+  };
   highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
   expirationDate: string;       // The expiration date being analyzed
 }
@@ -636,6 +674,40 @@ function findNearestChainStrike(targetPrice: number, availableStrikes: number[])
   return nearest;
 }
 
+function getMoneyness(
+  strike: number,
+  price: number,
+  type: 'call' | 'put'
+): 'ITM' | 'ATM' | 'OTM' {
+  if (!price || price <= 0) return 'ATM';
+  const distance = Math.abs(strike - price) / price;
+  if (distance < 0.01) return 'ATM';
+  const isITM = type === 'call' ? strike < price : strike > price;
+  return isITM ? 'ITM' : 'OTM';
+}
+
+function getSpreadLeg(
+  centerStrike: number,
+  direction: 'up' | 'down',
+  availableStrikes: number[]
+): number {
+  const uniqueSorted = [...new Set(availableStrikes)].filter(s => s > 0).sort((a, b) => a - b);
+  if (uniqueSorted.length < 2) {
+    const fallbackWidth = Math.max(1, Math.round(centerStrike * 0.02));
+    return direction === 'up' ? centerStrike + fallbackWidth : centerStrike - fallbackWidth;
+  }
+  const nearest = findNearestChainStrike(centerStrike, uniqueSorted);
+  const index = uniqueSorted.findIndex(s => s === nearest);
+  if (index < 0) {
+    const fallbackWidth = Math.max(1, Math.round(centerStrike * 0.02));
+    return direction === 'up' ? centerStrike + fallbackWidth : centerStrike - fallbackWidth;
+  }
+  const targetIndex = direction === 'up'
+    ? Math.min(uniqueSorted.length - 1, index + 1)
+    : Math.max(0, index - 1);
+  return uniqueSorted[targetIndex];
+}
+
 async function fetchOptionsChain(symbol: string, targetExpiration?: string): Promise<{
   calls: AVOptionContract[];
   puts: AVOptionContract[];
@@ -793,6 +865,13 @@ function analyzeOpenInterest(
       sentiment: 'neutral',
       sentimentReason: 'Unable to analyze - invalid price data',
       maxPainStrike: null,
+      maxPainReliability: {
+        score: 0,
+        strikesUsed: 0,
+        nonZeroCoverage: 0,
+        totalOI: 0,
+        reliable: false,
+      },
       highOIStrikes: [],
       expirationDate,
     };
@@ -967,6 +1046,21 @@ function analyzeOpenInterest(
     }
   }
   
+  const strikesWithNonZeroOI = maxPainUniverse.filter(strike => {
+    const data = strikeOI.get(strike);
+    return !!data && (data.callOI > 0 || data.putOI > 0);
+  }).length;
+  const nonZeroCoverage = maxPainUniverse.length > 0 ? strikesWithNonZeroOI / maxPainUniverse.length : 0;
+  const totalOI = totalCallOI + totalPutOI;
+  const reliabilityScore = Math.round(
+    Math.min(100,
+      (Math.min(maxPainUniverse.length, 20) / 20) * 40 +
+      nonZeroCoverage * 35 +
+      (Math.min(totalOI, 10000) / 10000) * 25
+    )
+  );
+  const isReliableMaxPain = maxPainUniverse.length >= 6 && nonZeroCoverage >= 0.5 && totalOI >= 500;
+
   // Final validation: max pain must be within reasonable range of current price
   if (maxPainStrike !== null) {
     const maxPainDistance = Math.abs(maxPainStrike - currentPrice) / currentPrice;
@@ -974,6 +1068,10 @@ function analyzeOpenInterest(
       console.warn(`⚠️ Max pain $${maxPainStrike} is ${(maxPainDistance * 100).toFixed(1)}% away from price $${currentPrice} - likely bad data, nullifying`);
       maxPainStrike = null;
     }
+  }
+
+  if (!isReliableMaxPain) {
+    maxPainStrike = null;
   }
   
   // Sort contracts: prioritize by OI, but if OI is 0 for all, sort by proximity to ATM
@@ -1014,6 +1112,13 @@ function analyzeOpenInterest(
     sentiment,
     sentimentReason,
     maxPainStrike,
+    maxPainReliability: {
+      score: reliabilityScore,
+      strikesUsed: maxPainUniverse.length,
+      nonZeroCoverage,
+      totalOI,
+      reliable: isReliableMaxPain,
+    },
     highOIStrikes: topStrikes,
     expirationDate,
   };
@@ -1130,8 +1235,12 @@ function detectUnusualActivity(
     const bid = getNumericField(opt as unknown as Record<string, unknown>, ['bid'], 0);
     const ask = getNumericField(opt as unknown as Record<string, unknown>, ['ask'], 0);
     
-    // Store mark price for later premium calculation
-    const markPrice = getNumericField(opt as unknown as Record<string, unknown>, ['mark', 'mid', 'last'], 0);
+    // Prefer midpoint when spread is sane; fallback to mark/last
+    const spreadIsSane = bid > 0 && ask > 0 && ask / bid <= 1.25;
+    const midPrice = spreadIsSane ? (bid + ask) / 2 : 0;
+    const markPrice = midPrice > 0
+      ? midPrice
+      : getNumericField(opt as unknown as Record<string, unknown>, ['mark', 'mid', 'last'], 0);
     const key = `${strike}-${opt.type}`;
     if (markPrice > 0) markPriceMap.set(key, markPrice);
     
@@ -1425,10 +1534,10 @@ function calculateTradeLevels(
  */
 function calculateCompositeScore(
   confluenceResult: HierarchicalScanResult,
-  oiAnalysis: any,
-  unusualActivity: any,
-  ivRank: any,
-  tradeLevels: any,
+  oiAnalysis: OISummary | null,
+  unusualActivity: UnusualActivity | null,
+  ivAnalysis: IVAnalysis | null,
+  tradeLevels: TradeLevels | null,
   maxPainData?: { maxPain: number; currentPrice: number },
   dte?: number  // Days to expiration for dynamic weighting
 ): CompositeScore {
@@ -1520,8 +1629,8 @@ function calculateCompositeScore(
   let oiScore = 0;
   let oiDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
-  if (oiAnalysis && oiAnalysis.avgPCRatio) {
-    const pcRatio = oiAnalysis.avgPCRatio;
+  if (oiAnalysis && Number.isFinite(oiAnalysis.pcRatio)) {
+    const pcRatio = oiAnalysis.pcRatio;
     
     // Use z-score-like mapping:
     // P/C 0.5 or less = strongly bullish (+80)
@@ -1666,32 +1775,32 @@ function calculateCompositeScore(
   const ivQualityWeight = 0.35;
   let ivScore = 0;
   
-  if (ivRank) {
-    const ivPercentile = ivRank.rank || 50;
+  if (ivAnalysis) {
+    const ivRankValue = ivAnalysis.ivRankHeuristic ?? ivAnalysis.ivRank ?? 50;
     
     // Quality scoring for IV:
     // Low IV (<30) = great for buying premium = high quality
     // High IV (>70) = great for selling premium = high quality  
     // Mid IV (30-70) = either works, moderate quality
     
-    if (ivPercentile <= 30) {
-      ivScore = 80 + (30 - ivPercentile); // 80-110 → capped at 100
-    } else if (ivPercentile >= 70) {
-      ivScore = 80 + (ivPercentile - 70); // 80-110 → capped at 100
+    if (ivRankValue <= 30) {
+      ivScore = 80 + (30 - ivRankValue); // 80-110 → capped at 100
+    } else if (ivRankValue >= 70) {
+      ivScore = 80 + (ivRankValue - 70); // 80-110 → capped at 100
     } else {
       // Mid IV: moderate quality
       ivScore = 50;
     }
     ivScore = Math.min(100, ivScore);
     
-    const ivStrategy = ivPercentile > 70 ? 'SELL premium (spreads)' : ivPercentile < 30 ? 'BUY premium (directional)' : 'Either approach';
+    const ivStrategy = ivRankValue > 70 ? 'SELL premium (spreads)' : ivRankValue < 30 ? 'BUY premium (directional)' : 'Either approach';
     
     components.push({
       name: 'IV Environment',
       direction: 'neutral', // IV is never directional
       weight: ivQualityWeight,
       score: ivScore,
-      reason: `IV Rank: ${ivPercentile.toFixed(0)}% → ${ivStrategy}`
+      reason: `IV Rank: ${ivRankValue.toFixed(0)}% → ${ivStrategy}`
     });
     
     qualityScore += ivScore * ivQualityWeight;
@@ -1739,9 +1848,8 @@ function calculateCompositeScore(
       reason: `R:R ${rr.toFixed(1)}:1 - ${rrGrade}`
     });
     
-    // FIX: Let bad R:R PENALIZE quality (don't ignore negative scores)
-    // Normalize to 0-100 scale: -50 → 0, 0 → 50, +95 → 97.5
-    const normalizedRRScore = (rrScore + 50) / 1.5; // Maps -50..+100 to 0..100
+    // Normalize R:R score from [-50..95] to [0..100]
+    const normalizedRRScore = Math.max(0, Math.min(100, (rrScore + 50) * (100 / 145)));
     qualityScore += normalizedRRScore * rrQualityWeight;
     qualityMaxScore += 100 * rrQualityWeight;
   }
@@ -1826,8 +1934,9 @@ function calculateCompositeScore(
   }
   
   // IV warning
-  if (ivRank && ivRank.rank > 70 && finalDirection !== 'neutral') {
-    conflicts.push(`⚠️ HIGH IV (${ivRank.rank.toFixed(0)}%): Consider spreads instead of naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
+  const ivRankValue = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  if (ivAnalysis && ivRankValue > 70 && finalDirection !== 'neutral') {
+    conflicts.push(`⚠️ HIGH IV (${ivRankValue.toFixed(0)}%): Consider spreads instead of naked ${finalDirection === 'bullish' ? 'calls' : 'puts'}`);
   }
   
   // Poor R:R warning
@@ -1875,7 +1984,7 @@ function calculateAIMarketState(
   const regimeCharacteristics: string[] = [];
   
   const dirStrength = Math.abs(compositeScore.directionScore);
-  const ivRank = ivAnalysis?.ivRank || 50;
+  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
   const signalAlignment = compositeScore.confidence;
   
   // TREND: Strong directional signals + aligned
@@ -2155,16 +2264,20 @@ function calculateAIMarketState(
 
 function recommendStrategy(
   compositeScore: CompositeScore,
-  ivRank: any,
+  ivAnalysis: IVAnalysis | null,
   currentPrice: number,
-  atmStrike?: number
+  atmStrike?: number,
+  availableStrikes: number[] = []
 ): StrategyRecommendation {
   const direction = compositeScore.finalDirection;
-  const ivPercentile = ivRank?.rank || 50;
+  const ivPercentile = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
   const confidence = compositeScore.confidence;
   
   const strike = atmStrike || Math.round(currentPrice);
-  const spreadWidth = Math.round(currentPrice * 0.02); // ~2% width for spreads
+  const downLeg = getSpreadLeg(strike, 'down', availableStrikes);
+  const upLeg = getSpreadLeg(strike, 'up', availableStrikes);
+  const downWidth = Math.max(0.01, Math.abs(strike - downLeg));
+  const upWidth = Math.max(0.01, Math.abs(upLeg - strike));
 
   // High IV environment (>70%) - SELL premium
   if (ivPercentile > 70) {
@@ -2173,9 +2286,9 @@ function recommendStrategy(
         strategy: 'Bull Put Spread',
         strategyType: 'sell_premium',
         reason: `High IV (${ivPercentile.toFixed(0)}%) + Bullish bias → Sell put spreads to collect premium`,
-        strikes: { short: strike, long: strike - spreadWidth },
+        strikes: { short: strike, long: downLeg },
         riskProfile: 'defined',
-        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxRisk: `$${(downWidth * 100).toFixed(0)} per contract (spread width)`,
         maxReward: `Premium collected (typically 30-40% of width)`
       };
     } else if (direction === 'bearish') {
@@ -2183,9 +2296,9 @@ function recommendStrategy(
         strategy: 'Bear Call Spread',
         strategyType: 'sell_premium',
         reason: `High IV (${ivPercentile.toFixed(0)}%) + Bearish bias → Sell call spreads to collect premium`,
-        strikes: { short: strike, long: strike + spreadWidth },
+        strikes: { short: strike, long: upLeg },
         riskProfile: 'defined',
-        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxRisk: `$${(upWidth * 100).toFixed(0)} per contract (spread width)`,
         maxReward: `Premium collected (typically 30-40% of width)`
       };
     } else {
@@ -2219,10 +2332,10 @@ function recommendStrategy(
           strategy: 'Call Debit Spread',
           strategyType: 'buy_premium',
           reason: `Low IV (${ivPercentile.toFixed(0)}%) + Moderate Bullish → Reduced cost spread`,
-          strikes: { long: strike, short: strike + spreadWidth },
+          strikes: { long: strike, short: upLeg },
           riskProfile: 'defined',
           maxRisk: `Net debit paid`,
-          maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+          maxReward: `$${(upWidth * 100).toFixed(0)} per contract minus debit`
         };
       }
     } else if (direction === 'bearish') {
@@ -2241,10 +2354,10 @@ function recommendStrategy(
           strategy: 'Put Debit Spread',
           strategyType: 'buy_premium',
           reason: `Low IV (${ivPercentile.toFixed(0)}%) + Moderate Bearish → Reduced cost spread`,
-          strikes: { long: strike, short: strike - spreadWidth },
+          strikes: { long: strike, short: downLeg },
           riskProfile: 'defined',
           maxRisk: `Net debit paid`,
-          maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+          maxReward: `$${(downWidth * 100).toFixed(0)} per contract minus debit`
         };
       }
     } else {
@@ -2267,19 +2380,19 @@ function recommendStrategy(
         strategy: 'Call Debit Spread',
         strategyType: 'buy_premium',
         reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bullish → Balanced risk/reward with spread`,
-        strikes: { long: strike, short: strike + spreadWidth },
+        strikes: { long: strike, short: upLeg },
         riskProfile: 'defined',
         maxRisk: `Net debit paid`,
-        maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+        maxReward: `$${(upWidth * 100).toFixed(0)} per contract minus debit`
       };
     } else {
       return {
         strategy: 'Bull Put Spread',
         strategyType: 'sell_premium',
         reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bullish → Collect some premium while bullish`,
-        strikes: { short: strike, long: strike - spreadWidth },
+        strikes: { short: strike, long: downLeg },
         riskProfile: 'defined',
-        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxRisk: `$${(downWidth * 100).toFixed(0)} per contract (spread width)`,
         maxReward: `Premium collected`
       };
     }
@@ -2289,19 +2402,19 @@ function recommendStrategy(
         strategy: 'Put Debit Spread',
         strategyType: 'buy_premium',
         reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Bearish → Balanced risk/reward with spread`,
-        strikes: { long: strike, short: strike - spreadWidth },
+        strikes: { long: strike, short: downLeg },
         riskProfile: 'defined',
         maxRisk: `Net debit paid`,
-        maxReward: `$${(spreadWidth * 100).toFixed(0)} per contract minus debit`
+        maxReward: `$${(downWidth * 100).toFixed(0)} per contract minus debit`
       };
     } else {
       return {
         strategy: 'Bear Call Spread',
         strategyType: 'sell_premium',
         reason: `Medium IV (${ivPercentile.toFixed(0)}%) + Weak Bearish → Collect some premium while bearish`,
-        strikes: { short: strike, long: strike + spreadWidth },
+        strikes: { short: strike, long: upLeg },
         riskProfile: 'defined',
-        maxRisk: `$${(spreadWidth * 100).toFixed(0)} per contract (spread width)`,
+        maxRisk: `$${(upWidth * 100).toFixed(0)} per contract (spread width)`,
         maxReward: `Premium collected`
       };
     }
@@ -2378,7 +2491,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Strike at 50% cluster (${clusters[0].tfs.join('/')} converging)`,
         distanceFromPrice: distPct,
-        moneyness: Math.abs(distPct) < 1 ? 'ATM' : distPct > 0 ? 'OTM' : 'ITM',
+        moneyness: getMoneyness(clusterStrike, currentPrice, isCallDirection ? 'call' : 'put'),
         estimatedDelta: clusterGreeks.delta,
         confidenceScore: Math.min(100, prediction.confidence + clusters[0].tfs.length * 5),
         targetLevel: clusterLevel,
@@ -2400,7 +2513,7 @@ function selectStrikesFromConfluence(
         type: isCallDirection ? 'call' : 'put',
         reason: `Target: ${primaryDecomp.tf} 50% level (actively decompressing)`,
         distanceFromPrice: distPct,
-        moneyness: Math.abs(distPct) < 1 ? 'ATM' : distPct > 0 ? 'OTM' : 'ITM',
+        moneyness: getMoneyness(decompStrike, currentPrice, isCallDirection ? 'call' : 'put'),
         estimatedDelta: decompGreeks.delta,
         confidenceScore: prediction.confidence,
         targetLevel: primaryDecomp.level,
@@ -2417,7 +2530,8 @@ function selectStrikesFromConfluence(
 
 function selectExpirationFromConfluence(
   confluenceResult: HierarchicalScanResult,
-  scanMode: ScanMode
+  scanMode: ScanMode,
+  assetType: AssetType
 ): ExpirationRecommendation[] {
   const expirationConfig = EXPIRATION_MAP[scanMode] || EXPIRATION_MAP.intraday_1h;
   const recommendations: ExpirationRecommendation[] = [];
@@ -2436,14 +2550,16 @@ function selectExpirationFromConfluence(
     }
     
     const dateStr = expDate.toISOString().split('T')[0];
+    const marketDTE = calculateMarketDTE(today, expDate, assetType);
+
     let thetaRisk: 'low' | 'moderate' | 'high' = 'low';
-    if (dte <= 2) thetaRisk = 'high';
-    else if (dte <= 7) thetaRisk = 'moderate';
+    if (marketDTE <= 2) thetaRisk = 'high';
+    else if (marketDTE <= 7) thetaRisk = 'moderate';
     
     let timeframe: 'scalping' | 'intraday' | 'swing' | 'position' = 'intraday';
-    if (dte <= 2) timeframe = 'scalping';
-    else if (dte <= 7) timeframe = 'intraday';
-    else if (dte <= 30) timeframe = 'swing';
+    if (marketDTE <= 2) timeframe = 'scalping';
+    else if (marketDTE <= 7) timeframe = 'intraday';
+    else if (marketDTE <= 30) timeframe = 'swing';
     else timeframe = 'position';
     
     // Adjust confidence based on decompression timing
@@ -2457,7 +2573,7 @@ function selectExpirationFromConfluence(
       : `Alternative: More time for move to develop`;
     
     recommendations.push({
-      dte,
+      dte: marketDTE,
       expirationDate: dateStr,
       reason,
       thetaRisk,
@@ -2826,6 +2942,8 @@ export class OptionsConfluenceAnalyzer {
       hasMeaningfulOI: false,
       contractsCount: { calls: 0, puts: 0 },
       availableStrikes: [],
+      chainExpiryUsed: null,
+      underlyingAsOf: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
     };
     
@@ -2856,6 +2974,7 @@ export class OptionsConfluenceAnalyzer {
             ...optionsChain.calls.map(c => parseFloat(c.strike || '0')),
             ...optionsChain.puts.map(p => parseFloat(p.strike || '0'))
           ])].filter(s => s > 0).sort((a, b) => a - b);
+          dataQuality.chainExpiryUsed = optionsChain.selectedExpiry;
           dataQuality.lastUpdated = optionsChain.dataDate || 'UNKNOWN_EOD';
           
           // Check if API provided Greeks
@@ -2875,14 +2994,18 @@ export class OptionsConfluenceAnalyzer {
           
           // PRO TRADER: Expected Move Calculation
           const avgIV = ivAnalysis.currentIV;
-          const selectedDTE = expirationDate 
-            ? Math.max(1, Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+          const selectedDTE = expirationDate
+            ? calculateMarketDTE(new Date(), new Date(expirationDate), assetType)
             : 7;
           expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedDTE);
           
           // Add EOD data confidence cap
           dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
-          executionNotes.push('DTE is calendar-based; holidays not accounted for');
+          executionNotes.push('DTE uses weekend-adjusted market days for listed assets');
+          if (!openInterestAnalysis.maxPainReliability.reliable) {
+            executionNotes.push(`Max pain reliability low (${openInterestAnalysis.maxPainReliability.score}/100) - max pain excluded`);
+            dataConfidenceCaps.push('Max pain unreliable due to weak OI/strike coverage');
+          }
           
           // Add execution notes based on data quality
           if (!dataQuality.hasMeaningfulOI) {
@@ -2900,23 +3023,14 @@ export class OptionsConfluenceAnalyzer {
       dataConfidenceCaps.push(`Asset type ${assetType} - no options analysis available`);
     }
     
-    // Determine trade direction
+    // Determine baseline confluence direction
     const direction = decompression.netPullDirection;
-    const isCallDirection = direction === 'bullish';
     
     // Grade trade quality (now includes O/I sentiment alignment)
     const { grade, reasons: qualityReasons } = gradeTradeQuality(confluenceResult, openInterestAnalysis);
     
-    // Select strikes based on 50% levels (using actual chain strikes when available)
-    const allStrikes = direction !== 'neutral' 
-      ? selectStrikesFromConfluence(confluenceResult, isCallDirection, dataQuality.availableStrikes)
-      : [];
-    
-    const primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
-    const alternativeStrikes = allStrikes.slice(1);
-    
     // Select expirations based on confluence timing
-    const allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode);
+    const allExpirations = selectExpirationFromConfluence(confluenceResult, scanMode, assetType);
     const primaryExpiration = allExpirations.length > 0 ? allExpirations[0] : null;
     const alternativeExpirations = allExpirations.slice(1);
     
@@ -2962,11 +3076,11 @@ export class OptionsConfluenceAnalyzer {
     const compositeScore = calculateCompositeScore(
       confluenceResult,
       openInterestAnalysis ? {
-        avgPCRatio: openInterestAnalysis.pcRatio,
+        pcRatio: openInterestAnalysis.pcRatio,
         sentiment: openInterestAnalysis.sentiment
       } : null,
-      unusualActivity || { hasUnusualActivity: false, callPremiumTotal: 0, putPremiumTotal: 0 },
-      ivAnalysis ? { rank: ivAnalysis.ivRank } : null,
+      unusualActivity,
+      ivAnalysis,
       tradeLevels,
       openInterestAnalysis ? { 
         maxPain: openInterestAnalysis.maxPainStrike || 0, 
@@ -2978,14 +3092,6 @@ export class OptionsConfluenceAnalyzer {
     const confidenceCap = dataQuality.freshness === 'EOD' ? 75 : 95;
     compositeScore.confidence = Math.min(compositeScore.confidence, confidenceCap);
     
-    // PRO TRADER: Get strategy recommendation based on IV environment and composite score
-    let strategyRecommendation = recommendStrategy(
-      compositeScore,
-      ivAnalysis ? { rank: ivAnalysis.ivRank } : null,
-      currentPrice,
-      primaryStrike?.strike
-    );
-    
     // Use composite direction - if composite says neutral, respect it (don't force a direction)
     // Only fall back to confluence direction if composite has very low confidence
     let finalDirection: 'bullish' | 'bearish' | 'neutral';
@@ -2996,6 +3102,26 @@ export class OptionsConfluenceAnalyzer {
     } else {
       finalDirection = compositeScore.finalDirection || direction;
     }
+
+    const isCallDirection = finalDirection === 'bullish';
+
+    // Select strikes after final direction is resolved
+    const allStrikes = finalDirection !== 'neutral'
+      ? selectStrikesFromConfluence(confluenceResult, isCallDirection, dataQuality.availableStrikes)
+      : [];
+    let primaryStrike = allStrikes.length > 0 ? allStrikes[0] : null;
+    let alternativeStrikes = allStrikes.slice(1);
+
+    const effectiveCompositeScore: CompositeScore = { ...compositeScore, finalDirection };
+
+    // PRO TRADER: Get strategy recommendation after final direction resolution
+    let strategyRecommendation = recommendStrategy(
+      effectiveCompositeScore,
+      ivAnalysis,
+      currentPrice,
+      primaryStrike?.strike,
+      dataQuality.availableStrikes
+    );
     
     // Use clusteredCount (TFs closing together) instead of activeCount (all decompressing)
     // This reflects REAL temporal confluence, not just "how many TFs exist"
@@ -3009,7 +3135,7 @@ export class OptionsConfluenceAnalyzer {
     
     // INSTITUTIONAL AI MARKET STATE - Hedge Fund Decision Model
     const aiMarketState = calculateAIMarketState(
-      compositeScore,
+      effectiveCompositeScore,
       ivAnalysis,
       strategyRecommendation,
       tradeLevels,
@@ -3034,6 +3160,25 @@ export class OptionsConfluenceAnalyzer {
       optionsQualityScore >= 70 ? 'A' :
       optionsQualityScore >= 55 ? 'B' :
       optionsQualityScore >= 40 ? 'C' : 'F';
+
+    const shouldGateWait =
+      finalDirection === 'neutral' ||
+      aiMarketState.tradeQualityGate === 'WAIT' ||
+      grade === 'C' || grade === 'F' ||
+      optionsGrade === 'C' || optionsGrade === 'F';
+
+    if (shouldGateWait) {
+      primaryStrike = null;
+      alternativeStrikes = [];
+      strategyRecommendation = {
+        strategy: 'WAIT',
+        strategyType: 'neutral',
+        reason: 'Trade quality/directional gate not met. Wait for stronger alignment.',
+        riskProfile: 'defined',
+        maxRisk: '0',
+        maxReward: '0',
+      };
+    }
     
     // PRODUCTION FIX: Add confidence caps based on data freshness
     if (dataQuality.freshness === 'EOD') {
@@ -3044,30 +3189,33 @@ export class OptionsConfluenceAnalyzer {
     }
     
     // PRODUCTION FIX: Disclaimer flags for risk events
-    // Check earnings calendar (async but don't block on it)
-    try {
-      const earningsCheck = await checkUpcomingEarnings(symbol, 14);
-      if (earningsCheck?.hasEarnings) {
-        const daysText = earningsCheck.daysUntil === 0 ? 'TODAY' : 
-                        earningsCheck.daysUntil === 1 ? 'TOMORROW' :
-                        `in ${earningsCheck.daysUntil} days (${earningsCheck.earningsDate})`;
-        disclaimerFlags.push(`⚠️ EARNINGS ${daysText} - IV crush risk!`);
-        if (earningsCheck.daysUntil && earningsCheck.daysUntil <= 3) {
-          executionNotes.push('🔴 CRITICAL: Earnings imminent - undefined IV risk');
+    // Run earnings check only when relevant (equity/ETF and near-term options focus)
+    if ((assetType === 'equity' || assetType === 'etf') && (primaryExpiration?.dte || 999) <= 30) {
+      try {
+        const earningsCheck = await checkUpcomingEarnings(symbol, 14);
+        if (earningsCheck?.hasEarnings) {
+          const daysText = earningsCheck.daysUntil === 0 ? 'TODAY' : 
+                          earningsCheck.daysUntil === 1 ? 'TOMORROW' :
+                          `in ${earningsCheck.daysUntil} days (${earningsCheck.earningsDate})`;
+          disclaimerFlags.push(`⚠️ EARNINGS ${daysText} - IV crush risk!`);
+          if (earningsCheck.daysUntil && earningsCheck.daysUntil <= 3) {
+            executionNotes.push('🔴 CRITICAL: Earnings imminent - undefined IV risk');
+          }
         }
+      } catch (e) {
+        console.warn('Earnings check skipped:', e);
       }
-    } catch (e) {
-      console.warn('Earnings check skipped:', e);
     }
     
     // TODO: Hook into FOMC/CPI calendar
     // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
     
     // Add execution notes based on market conditions
-    if (ivAnalysis && ivAnalysis.ivRank > 70) {
+    const ivRankHeuristic = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+    if (ivAnalysis && ivRankHeuristic > 70) {
       executionNotes.push('High IV - consider credit strategies or wait for pullback');
     }
-    if (ivAnalysis && ivAnalysis.ivRank < 30) {
+    if (ivAnalysis && ivRankHeuristic < 30) {
       executionNotes.push('Low IV - debit strategies favorable, consider longer DTE');
     }
     if (openInterestAnalysis && openInterestAnalysis.pcRatio > 1.5) {
@@ -3111,7 +3259,7 @@ export class OptionsConfluenceAnalyzer {
       unusualActivity,
       expectedMove,
       tradeLevels,
-      compositeScore,
+      compositeScore: effectiveCompositeScore,
       strategyRecommendation,
       candleCloseConfluence,
       // INSTITUTIONAL AI MARKET STATE
