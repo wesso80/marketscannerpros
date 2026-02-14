@@ -37,7 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools/market-movers',
     '/tools/macro',
     '/tools/earnings',
-    '/tools/earnings-calendar',
     '/tools/economic-calendar',
     '/tools/company-overview',
     '/tools/commodities',

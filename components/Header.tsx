@@ -12,9 +12,10 @@ interface DropdownItem {
 interface DropdownProps {
   label: string;
   items: DropdownItem[];
+  align?: 'left' | 'right';
 }
 
-function Dropdown({ label, items }: DropdownProps) {
+function Dropdown({ label, items, align = 'left' }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +41,7 @@ function Dropdown({ label, items }: DropdownProps) {
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-50">
+        <div className={`absolute top-full mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-[110] ${align === 'right' ? 'right-0' : 'left-0'}`}>
           {items.map((item) => (
             <Link key={item.href} href={item.href} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors" onClick={() => setIsOpen(false)}>
               {item.icon && <span>{item.icon}</span>}
@@ -138,7 +139,7 @@ export default function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-black/70 backdrop-blur">
+    <header className="sticky top-0 z-[100] w-full border-b border-white/10 bg-black/70 backdrop-blur overflow-visible">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-emerald-300 flex-shrink-0 mr-6">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
@@ -146,12 +147,12 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation with Dropdowns */}
-        <nav className="flex items-center gap-5 text-sm text-emerald-300/90 max-md:hidden">
+        <nav className="flex items-center gap-5 text-sm text-emerald-300/90 max-md:hidden overflow-visible">
           <Dropdown label="Tools" items={toolsItems} />
           <Dropdown label="AI" items={aiItems} />
           <Dropdown label="Markets" items={marketItems} />
-          <Dropdown label="Calendar" items={calendarItems} />
-          <Dropdown label="Resources" items={resourceItems} />
+          <Dropdown label="Calendar" items={calendarItems} align="right" />
+          <Dropdown label="Resources" items={resourceItems} align="right" />
           <Link href="/pricing" className="hover:text-emerald-300 whitespace-nowrap">Pricing</Link>
           <Link href="/dashboard" className="hover:text-emerald-300 whitespace-nowrap">Dashboard</Link>
           <Link href="/account" className="hover:text-emerald-300 whitespace-nowrap">Account</Link>
