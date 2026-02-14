@@ -125,7 +125,7 @@ export default function EarningsCalendarPage() {
   if (!canAccessPortfolioInsights(tier)) {
     return (
       <div className="min-h-screen text-white">
-        <div className="max-w-6xl mx-auto px-4 py-8 pt-24">
+        <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-emerald-400 to-amber-400 bg-clip-text text-transparent">
@@ -189,15 +189,15 @@ export default function EarningsCalendarPage() {
 
   return (
     <div className="min-h-screen text-white">
-      <div className="max-w-6xl mx-auto px-4 py-8 pt-24">
+      <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">
             <span className="bg-gradient-to-r from-emerald-400 to-amber-400 bg-clip-text text-transparent">
               Earnings Calendar
             </span>
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-400 text-base max-w-2xl mx-auto">
             Track upcoming earnings reports and recent results. See which companies beat or missed estimates.
           </p>
         </div>
@@ -279,30 +279,30 @@ export default function EarningsCalendarPage() {
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               📊 Recent Earnings Results
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
               {data.recentResults.map((result) => (
                 <div
                   key={result.symbol}
-                  className={`bg-[#0a1628]/80 border rounded-xl p-4 ${
+                  className={`bg-[#0a1628]/80 border rounded-lg p-2 sm:p-3 ${
                     result.beat 
                       ? 'border-emerald-500/30' 
                       : 'border-red-500/30'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-white">{result.symbol}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-white text-sm">{result.symbol}</span>
                     <SurpriseBadge percentage={result.surprisePercentage} />
                   </div>
-                  <div className="text-xs text-gray-400 mb-2 truncate">{result.name}</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="text-[10px] sm:text-xs text-gray-400 mb-1 truncate">{result.name}</div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] sm:text-xs">
                     <div>
-                      <span className="text-gray-500">Reported</span>
+                      <span className="text-gray-500">Rpt</span>
                       <div className={result.beat ? 'text-emerald-400' : 'text-red-400'}>
                         ${result.reportedEPS?.toFixed(2) || 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <span className="text-gray-500">Estimate</span>
+                      <span className="text-gray-500">Est</span>
                       <div className="text-gray-300">
                         ${result.estimatedEPS?.toFixed(2) || 'N/A'}
                       </div>

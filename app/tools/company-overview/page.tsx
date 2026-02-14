@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import DataComingSoon from "@/components/DataComingSoon";
 
 interface CompanyData {
   symbol: string;
@@ -38,7 +37,7 @@ interface CompanyData {
 }
 
 function CompanyOverviewContent() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,9 +80,13 @@ function CompanyOverviewContent() {
     }
   };
 
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="🏢 Company Overview" description="Comprehensive company fundamentals and financials" />;
+  // Gate for Pro+ users
+  if (!canAccessPortfolioInsights(tier)) {
+    return (
+      <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
+        <UpgradeGate feature="Company Overview" requiredTier="pro" />
+      </div>
+    );
   }
 
   const handleSearch = async () => {

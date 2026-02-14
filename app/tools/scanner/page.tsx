@@ -716,7 +716,7 @@ function ScannerContent() {
         backHref="/dashboard"
       />
       <main style={{ padding: "24px 16px" }}>
-        <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0" }}>
+        <div className="max-w-7xl mx-auto">
 
         {/* Orientation */}
         <div style={{

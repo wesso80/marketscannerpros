@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useUserTier } from '@/lib/useUserTier';
-import DataComingSoon from '@/components/DataComingSoon';
+import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
 import TopMoversWidget from '@/components/TopMoversWidget';
@@ -49,7 +49,7 @@ interface DashboardData {
 }
 
 export default function CryptoDashboard() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,
     longShort: null,
@@ -149,10 +149,14 @@ export default function CryptoDashboard() {
     }
   }, [data, setPageData]);
   
-  // OKX liquidation data - admin-only testing while negotiating commercial licenses
+  // Gate for Pro+ users
   // Must be after ALL hooks to comply with React rules
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📊 Crypto Derivatives Dashboard" description="Real-time funding rates, long/short ratios, open interest, and liquidation data" />;
+  if (!canAccessCryptoCommandCenter(tier)) {
+    return (
+      <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
+        <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" />
+      </div>
+    );
   }
 
   const getMarketBias = (): { bias: string; confidence: number; signals: string[] } => {

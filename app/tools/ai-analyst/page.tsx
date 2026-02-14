@@ -260,11 +260,7 @@ function AiAnalystContent() {
         padding: '24px 16px'
       }}>
         <div
-          style={{
-            maxWidth: 1120,
-            margin: '0 auto',
-            width: '100%',
-          }}
+          className="max-w-7xl mx-auto w-full"
         >
           <div style={{
             marginBottom: 16,

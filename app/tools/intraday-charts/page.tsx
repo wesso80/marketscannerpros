@@ -938,8 +938,8 @@ export default function IntradayChartsPage() {
               </div>
             </div>
 
-            {/* Data Table */}
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+            {/* Data Table - Desktop */}
+            <div className="hidden md:block bg-slate-800/50 rounded-xl border border-slate-700">
               <div className="px-4 py-3 border-b border-slate-700">
                 <h3 className="font-semibold">Recent Bars (Latest 20)</h3>
               </div>
@@ -984,6 +984,49 @@ export default function IntradayChartsPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Data Cards - Mobile */}
+            <div className="md:hidden">
+              <div className="px-4 py-3 border-b border-slate-700 bg-slate-800/50">
+                <h3 className="font-semibold">Recent Bars (Latest 20)</h3>
+              </div>
+              <div className="space-y-2 p-2">
+                {data.data.slice(-20).reverse().map((bar, i) => {
+                  const change = bar.close - bar.open;
+                  const changePercent = (change / bar.open) * 100;
+                  const isUp = change >= 0;
+                  return (
+                    <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-400 text-sm">{formatTime(bar.timestamp)} {formatDate(bar.timestamp)}</span>
+                        <span className={`text-sm font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+                          {isUp ? '+' : ''}{changePercent.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-sm">
+                        <div>
+                          <div className="text-gray-500 text-xs">Open</div>
+                          <div className="text-white">${formatPrice(bar.open)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs">High</div>
+                          <div className="text-green-400">${formatPrice(bar.high)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs">Low</div>
+                          <div className="text-red-400">${formatPrice(bar.low)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs">Close</div>
+                          <div className={isUp ? 'text-green-400' : 'text-red-400'}>${formatPrice(bar.close)}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">Vol: {formatVolume(bar.volume)}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>

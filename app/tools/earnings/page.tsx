@@ -224,51 +224,83 @@ export default function EarningsCalendarPage() {
               </div>
             </div>
 
-            {/* Earnings Table */}
-            <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-800/50">
-                  <tr>
-                    <th className="text-left text-xs font-medium text-slate-400 uppercase px-4 py-3">Symbol</th>
-                    <th className="text-left text-xs font-medium text-slate-400 uppercase px-4 py-3">Company</th>
-                    <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Report Date</th>
-                    <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Time Until</th>
-                    <th className="text-right text-xs font-medium text-slate-400 uppercase px-4 py-3">Est. EPS</th>
-                    <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700/50">
-                  {getActiveData().slice(0, 50).map((event, idx) => (
-                    <tr key={`${event.symbol}-${idx}`} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-white">{event.symbol}</span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-400 text-sm">
-                        {event.name || '-'}
-                      </td>
-                      <td className="text-center px-4 py-3 text-white">
-                        {formatDate(event.reportDate)}
-                      </td>
-                      <td className="text-center px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded border ${getUrgencyColor(event.reportDate)}`}>
-                          {getDaysUntil(event.reportDate)}
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3 text-slate-400">
-                        {event.estimate ? `$${event.estimate.toFixed(2)}` : '-'}
-                      </td>
-                      <td className="text-center px-4 py-3">
-                        <a
-                          href={`/tools/company-overview?symbol=${event.symbol}`}
-                          className="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
-                        >
-                          Analyze
-                        </a>
-                      </td>
+            {/* Earnings Table - Desktop */}
+            <div className="hidden md:block bg-slate-900/50 border border-slate-700/50 rounded-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="text-left text-xs font-medium text-slate-400 uppercase px-4 py-3">Symbol</th>
+                      <th className="text-left text-xs font-medium text-slate-400 uppercase px-4 py-3">Company</th>
+                      <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Report Date</th>
+                      <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Time Until</th>
+                      <th className="text-right text-xs font-medium text-slate-400 uppercase px-4 py-3">Est. EPS</th>
+                      <th className="text-center text-xs font-medium text-slate-400 uppercase px-4 py-3">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/50">
+                    {getActiveData().slice(0, 50).map((event, idx) => (
+                      <tr key={`${event.symbol}-${idx}`} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="font-semibold text-white">{event.symbol}</span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-400 text-sm truncate max-w-[200px]">
+                          {event.name || '-'}
+                        </td>
+                        <td className="text-center px-4 py-3 text-white">
+                          {formatDate(event.reportDate)}
+                        </td>
+                        <td className="text-center px-4 py-3">
+                          <span className={`text-xs px-2 py-1 rounded border ${getUrgencyColor(event.reportDate)}`}>
+                            {getDaysUntil(event.reportDate)}
+                          </span>
+                        </td>
+                        <td className="text-right px-4 py-3 text-slate-400">
+                          {event.estimate ? `$${event.estimate.toFixed(2)}` : '-'}
+                        </td>
+                        <td className="text-center px-4 py-3">
+                          <a
+                            href={`/tools/company-overview?symbol=${event.symbol}`}
+                            className="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
+                          >
+                            Analyze
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {getActiveData().length === 0 && (
+                <div className="text-center py-12 text-slate-500">
+                  No earnings found matching your criteria
+                </div>
+              )}
+            </div>
+
+            {/* Earnings Cards - Mobile */}
+            <div className="md:hidden space-y-2">
+              {getActiveData().slice(0, 50).map((event, idx) => (
+                <div key={`${event.symbol}-${idx}`} className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-white text-lg">{event.symbol}</span>
+                    <span className={`text-xs px-2 py-1 rounded border ${getUrgencyColor(event.reportDate)}`}>
+                      {getDaysUntil(event.reportDate)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">{formatDate(event.reportDate)}</span>
+                    <span className="text-slate-400">{event.estimate ? `Est: $${event.estimate.toFixed(2)}` : ''}</span>
+                  </div>
+                  <a
+                    href={`/tools/company-overview?symbol=${event.symbol}`}
+                    className="block text-center text-xs px-3 py-2 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
+                  >
+                    Analyze
+                  </a>
+                </div>
+              ))}
               
               {getActiveData().length === 0 && (
                 <div className="text-center py-12 text-slate-500">

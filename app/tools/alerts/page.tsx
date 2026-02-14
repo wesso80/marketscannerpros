@@ -28,7 +28,7 @@ function AlertsContent() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse">
           <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
           <div className="h-64 bg-slate-800 rounded"></div>
@@ -38,7 +38,7 @@ function AlertsContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
@@ -196,7 +196,7 @@ export default function AlertsPage() {
         icon="🔔"
       />
       <Suspense fallback={
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
             <div className="h-64 bg-slate-800 rounded"></div>
