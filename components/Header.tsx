@@ -127,7 +127,7 @@ export default function Header() {
   ];
 
   const calendarItems: DropdownItem[] = [
-    { href: '/tools/earnings', label: 'Earnings Calendar', icon: '📅' },
+    { href: '/tools/news?tab=earnings', label: 'Earnings Calendar', icon: '📅' },
     { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📊' },
     { href: '/tools/news', label: 'Market News', icon: '📰' },
   ];

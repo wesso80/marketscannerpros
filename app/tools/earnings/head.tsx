@@ -6,7 +6,8 @@ export default function Head() {
         name="description"
         content="Monitor upcoming earnings and risk events with technical context to avoid low-quality entries and time better setups."
       />
-      <link rel="canonical" href="https://marketscannerpros.app/tools/earnings" />
+      <meta name="robots" content="noindex,follow" />
+      <link rel="canonical" href="https://marketscannerpros.app/tools/news" />
     </>
   );
 }

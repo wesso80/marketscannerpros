@@ -886,7 +886,7 @@ export default function ToolsPage() {
               </Link>
 
               {/* Earnings Calendar */}
-              <Link href="/tools/earnings" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Link href="/tools/news?tab=earnings" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{
                   background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
                   borderRadius: 'var(--radius-md)',

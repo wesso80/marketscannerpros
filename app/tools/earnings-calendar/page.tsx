@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function EarningsCalendarLegacyRoute() {
-  redirect('/tools/earnings');
+  redirect('/tools/news?tab=earnings');
 }
