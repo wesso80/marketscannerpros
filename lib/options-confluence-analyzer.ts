@@ -92,6 +92,9 @@ export interface OptionsSetup {
   
   // CANDLE CLOSE CONFLUENCE (NEW) - When multiple TFs close together
   candleCloseConfluence: CandleCloseConfluence | null;
+  
+  // INSTITUTIONAL AI MARKET STATE (HEDGE FUND MODEL)
+  aiMarketState: AIMarketState | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -127,6 +130,73 @@ export interface StrategyRecommendation {
   riskProfile: 'defined' | 'undefined';
   maxRisk: string;
   maxReward: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTITUTIONAL AI MARKET STATE (HEDGE FUND MODEL)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type MarketRegimeType = 'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL';
+
+export interface MarketRegime {
+  regime: MarketRegimeType;
+  confidence: number;           // 0-100%
+  reason: string;
+  characteristics: string[];    // What makes this regime
+}
+
+export interface EdgeAnalysis {
+  directionEdge: {
+    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
+    score: number;              // 0-100
+    bias: 'bullish' | 'bearish' | 'neutral';
+    factors: string[];
+  };
+  volatilityEdge: {
+    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
+    score: number;              // 0-100
+    signal: 'SELL_VOL' | 'BUY_VOL' | 'NEUTRAL';
+    factors: string[];
+  };
+  timeEdge: {
+    strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE';
+    score: number;              // 0-100
+    factors: string[];
+  };
+}
+
+export interface TradeThesis {
+  primaryEdge: string;          // "Volatility decay" or "Directional momentum"
+  thesis: string;               // Full thesis explanation
+  keyFactors: string[];         // Bullet points
+  notEdge: string;              // What this trade is NOT about
+}
+
+export interface ScenarioMap {
+  baseCase: {
+    description: string;
+    outcome: string;
+    probability: number;
+  };
+  bullCase: {
+    trigger: string;
+    outcome: string;
+    adjustment: string;
+  };
+  bearCase: {
+    trigger: string;
+    outcome: string;
+    adjustment: string;
+  };
+}
+
+export interface AIMarketState {
+  regime: MarketRegime;
+  edges: EdgeAnalysis;
+  thesis: TradeThesis;
+  scenarios: ScenarioMap;
+  strategyMatchScore: number;   // 0-100% how well strategy fits regime
+  tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
 }
 
 export interface OpenInterestData {
@@ -1547,6 +1617,301 @@ function calculateCompositeScore(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// INSTITUTIONAL AI MARKET STATE CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function calculateAIMarketState(
+  compositeScore: CompositeScore,
+  ivAnalysis: IVAnalysis | null,
+  strategy: StrategyRecommendation | null,
+  tradeLevels: TradeLevels | null,
+  confluenceResult: HierarchicalScanResult
+): AIMarketState {
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 1: DETERMINE MARKET REGIME
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let regime: MarketRegimeType = 'RANGE';
+  let regimeConfidence = 50;
+  let regimeReason = '';
+  const regimeCharacteristics: string[] = [];
+  
+  const dirStrength = Math.abs(compositeScore.directionScore);
+  const ivRank = ivAnalysis?.ivRank || 50;
+  const signalAlignment = compositeScore.confidence;
+  
+  // TREND: Strong directional signals + aligned
+  if (dirStrength > 40 && signalAlignment > 60) {
+    regime = 'TREND';
+    regimeConfidence = Math.min(95, 50 + dirStrength * 0.5 + signalAlignment * 0.3);
+    regimeReason = 'Strong directional alignment across multiple factors';
+    regimeCharacteristics.push('Directional momentum detected');
+    regimeCharacteristics.push(`${compositeScore.alignedCount}/${compositeScore.totalSignals} signals aligned`);
+    if (compositeScore.finalDirection === 'bullish') {
+      regimeCharacteristics.push('Bullish trend structure');
+    } else {
+      regimeCharacteristics.push('Bearish trend structure');
+    }
+  }
+  // EXPANSION: High IV + mixed signals = volatility breakout
+  else if (ivRank > 70 && signalAlignment < 50) {
+    regime = 'EXPANSION';
+    regimeConfidence = Math.min(90, 40 + ivRank * 0.4);
+    regimeReason = 'High volatility with uncertain direction = potential breakout';
+    regimeCharacteristics.push('Elevated implied volatility');
+    regimeCharacteristics.push('Conflicting directional signals');
+    regimeCharacteristics.push('Volatility expansion likely');
+  }
+  // REVERSAL: Strong opposite signals from flow vs structure
+  else if (compositeScore.conflicts.length >= 2 && dirStrength > 25) {
+    regime = 'REVERSAL';
+    regimeConfidence = Math.min(80, 30 + compositeScore.conflicts.length * 15);
+    regimeReason = 'Conflicting signals suggest potential trend change';
+    regimeCharacteristics.push('Price/flow divergence');
+    regimeCharacteristics.push('Multiple signal conflicts');
+  }
+  // RANGE: Default - low directional edge, moderate IV
+  else {
+    regime = 'RANGE';
+    regimeConfidence = Math.min(85, 60 + (100 - dirStrength) * 0.3);
+    regimeReason = 'No strong directional edge detected';
+    regimeCharacteristics.push('Low directional momentum');
+    regimeCharacteristics.push('Price likely range-bound');
+    if (ivRank > 50) {
+      regimeCharacteristics.push('Elevated IV favors premium selling');
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 2: CALCULATE EDGE ANALYSIS
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  // Direction Edge
+  const dirEdgeScore = Math.min(100, Math.abs(compositeScore.directionScore));
+  const dirEdgeStrength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE' = 
+    dirEdgeScore >= 60 ? 'STRONG' :
+    dirEdgeScore >= 35 ? 'MODERATE' :
+    dirEdgeScore >= 15 ? 'WEAK' : 'NONE';
+  
+  const dirEdgeFactors: string[] = [];
+  for (const comp of compositeScore.components) {
+    if (comp.direction !== 'neutral' && Math.abs(comp.score) > 20) {
+      dirEdgeFactors.push(`${comp.name}: ${comp.direction} (${comp.score > 0 ? '+' : ''}${comp.score.toFixed(0)})`);
+    }
+  }
+  
+  // Volatility Edge
+  let volEdgeScore = 0;
+  let volEdgeSignal: 'SELL_VOL' | 'BUY_VOL' | 'NEUTRAL' = 'NEUTRAL';
+  const volEdgeFactors: string[] = [];
+  
+  if (ivAnalysis) {
+    // High IV rank = strong sell vol edge
+    // Low IV rank = strong buy vol edge
+    if (ivRank >= 70) {
+      volEdgeScore = Math.min(100, 50 + (ivRank - 70) * 1.5);
+      volEdgeSignal = 'SELL_VOL';
+      volEdgeFactors.push(`IV Rank: ${ivRank}% (elevated)`);
+      volEdgeFactors.push('Premium overpriced vs realized');
+    } else if (ivRank <= 30) {
+      volEdgeScore = Math.min(100, 50 + (30 - ivRank) * 1.5);
+      volEdgeSignal = 'BUY_VOL';
+      volEdgeFactors.push(`IV Rank: ${ivRank}% (depressed)`);
+      volEdgeFactors.push('Options cheap relative to history');
+    } else {
+      volEdgeScore = 30;
+      volEdgeSignal = 'NEUTRAL';
+      volEdgeFactors.push(`IV Rank: ${ivRank}% (neutral zone)`);
+    }
+  }
+  
+  const volEdgeStrength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE' = 
+    volEdgeScore >= 70 ? 'STRONG' :
+    volEdgeScore >= 50 ? 'MODERATE' :
+    volEdgeScore >= 30 ? 'WEAK' : 'NONE';
+  
+  // Time Edge (from confluence)
+  const timeEdgeScore = Math.min(100, compositeScore.confidence * 0.8 + 
+    (confluenceResult.candleCloseConfluence?.confluenceScore || 0) * 0.2);
+  const timeEdgeStrength: 'STRONG' | 'MODERATE' | 'WEAK' | 'NONE' = 
+    timeEdgeScore >= 65 ? 'STRONG' :
+    timeEdgeScore >= 45 ? 'MODERATE' :
+    timeEdgeScore >= 25 ? 'WEAK' : 'NONE';
+  
+  const timeEdgeFactors: string[] = [];
+  if (confluenceResult.candleCloseConfluence) {
+    const cc = confluenceResult.candleCloseConfluence;
+    timeEdgeFactors.push(`${cc.closingNow.count} TFs closing now`);
+    if (cc.closingSoon.count > 0) {
+      timeEdgeFactors.push(`${cc.closingSoon.count} TFs closing soon`);
+    }
+    timeEdgeFactors.push(`Confluence rating: ${cc.confluenceRating}`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 3: GENERATE TRADE THESIS
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let primaryEdge = '';
+  let thesis = '';
+  let notEdge = '';
+  const keyFactors: string[] = [];
+  
+  // Determine primary edge based on strongest signal
+  if (volEdgeScore > dirEdgeScore && volEdgeScore > timeEdgeScore) {
+    primaryEdge = volEdgeSignal === 'SELL_VOL' ? 'Volatility Decay (Theta)' : 'Volatility Expansion (Vega)';
+    thesis = volEdgeSignal === 'SELL_VOL'
+      ? 'IV is elevated relative to historical levels. The primary edge comes from selling overpriced premium and collecting theta decay.'
+      : 'IV is depressed relative to historical levels. Options are cheap and positioned for volatility expansion.';
+    notEdge = 'This setup is NOT primarily about directional movement. Direction is secondary to volatility.';
+    keyFactors.push(`IV Rank at ${ivRank}%`);
+    keyFactors.push(volEdgeSignal === 'SELL_VOL' ? 'Premium elevated vs realized vol' : 'Premium cheap vs realized vol');
+  } else if (dirEdgeScore > volEdgeScore && dirEdgeScore > timeEdgeScore) {
+    primaryEdge = compositeScore.finalDirection === 'bullish' ? 'Bullish Momentum' : 'Bearish Momentum';
+    thesis = `Multiple factors align for ${compositeScore.finalDirection} direction. The primary edge comes from directional movement probability.`;
+    notEdge = 'This setup is NOT primarily about volatility. Focus on directional targets.';
+    keyFactors.push(`Direction score: ${compositeScore.directionScore > 0 ? '+' : ''}${compositeScore.directionScore.toFixed(0)}`);
+    keyFactors.push(`${compositeScore.alignedCount}/${compositeScore.totalSignals} signals aligned`);
+  } else {
+    primaryEdge = 'Time Confluence';
+    thesis = 'Multiple timeframes are aligning for a potential move. The edge comes from temporal confluence rather than a single dominant factor.';
+    notEdge = 'This setup relies on timing alignment. No single signal dominates.';
+    keyFactors.push(`Time edge score: ${timeEdgeScore.toFixed(0)}%`);
+  }
+  
+  // Add strategy-specific factors
+  if (strategy) {
+    keyFactors.push(`Strategy: ${strategy.strategy}`);
+    keyFactors.push(`Risk profile: ${strategy.riskProfile}`);
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 4: BUILD SCENARIO MAP
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  const scenarios: ScenarioMap = {
+    baseCase: {
+      description: regime === 'RANGE' 
+        ? 'Price stays within expected range'
+        : regime === 'TREND'
+        ? `${compositeScore.finalDirection.toUpperCase()} trend continues`
+        : 'Volatility plays out as expected',
+      outcome: regime === 'RANGE'
+        ? 'Theta decay benefits premium sellers'
+        : regime === 'TREND'
+        ? 'Directional move reaches target'
+        : 'Position profits from vol expansion/contraction',
+      probability: Math.min(75, regimeConfidence)
+    },
+    bullCase: {
+      trigger: tradeLevels 
+        ? `Price breaks above $${tradeLevels.target1?.price.toFixed(2) || 'resistance'}`
+        : 'Price breaks above resistance',
+      outcome: compositeScore.finalDirection === 'bullish'
+        ? 'Accelerated profit on long calls/bull spreads'
+        : 'Adjustment needed on short calls',
+      adjustment: compositeScore.finalDirection === 'bullish'
+        ? 'Consider rolling up strikes'
+        : 'Close or roll short calls higher'
+    },
+    bearCase: {
+      trigger: tradeLevels
+        ? `Price breaks below $${tradeLevels.stopLoss.toFixed(2)}`
+        : 'Price breaks below support',
+      outcome: compositeScore.finalDirection === 'bearish'
+        ? 'Accelerated profit on long puts/bear spreads'
+        : 'Adjustment needed on short puts',
+      adjustment: compositeScore.finalDirection === 'bearish'
+        ? 'Consider rolling down strikes'
+        : 'Close or roll short puts lower'
+    }
+  };
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 5: CALCULATE STRATEGY MATCH SCORE
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let strategyMatchScore = 50;
+  
+  if (strategy) {
+    // Score how well the recommended strategy fits the regime
+    if (regime === 'RANGE' && strategy.strategyType === 'sell_premium') {
+      strategyMatchScore = 85 + (volEdgeScore * 0.15);
+    } else if (regime === 'TREND' && strategy.strategyType === 'buy_premium') {
+      strategyMatchScore = 80 + (dirEdgeScore * 0.2);
+    } else if (regime === 'EXPANSION' && (strategy.strategy.includes('Straddle') || strategy.strategy.includes('Strangle'))) {
+      strategyMatchScore = 90;
+    } else if (regime === 'REVERSAL') {
+      strategyMatchScore = 40; // Reversals are risky
+    } else {
+      strategyMatchScore = 60;
+    }
+  }
+  
+  strategyMatchScore = Math.min(99, Math.max(10, strategyMatchScore));
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 6: DETERMINE TRADE QUALITY GATE
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  let tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT' = 'MODERATE';
+  
+  const bestEdge = Math.max(dirEdgeScore, volEdgeScore, timeEdgeScore);
+  
+  if (bestEdge >= 70 && strategyMatchScore >= 80 && compositeScore.conflicts.length === 0) {
+    tradeQualityGate = 'HIGH';
+  } else if (bestEdge >= 50 && strategyMatchScore >= 60) {
+    tradeQualityGate = 'MODERATE';
+  } else if (bestEdge >= 30 || strategyMatchScore >= 50) {
+    tradeQualityGate = 'LOW';
+  } else {
+    tradeQualityGate = 'WAIT';
+  }
+  
+  // Force WAIT if too many conflicts
+  if (compositeScore.conflicts.length >= 3) {
+    tradeQualityGate = 'WAIT';
+  }
+  
+  return {
+    regime: {
+      regime,
+      confidence: regimeConfidence,
+      reason: regimeReason,
+      characteristics: regimeCharacteristics
+    },
+    edges: {
+      directionEdge: {
+        strength: dirEdgeStrength,
+        score: dirEdgeScore,
+        bias: compositeScore.finalDirection,
+        factors: dirEdgeFactors
+      },
+      volatilityEdge: {
+        strength: volEdgeStrength,
+        score: volEdgeScore,
+        signal: volEdgeSignal,
+        factors: volEdgeFactors
+      },
+      timeEdge: {
+        strength: timeEdgeStrength,
+        score: timeEdgeScore,
+        factors: timeEdgeFactors
+      }
+    },
+    thesis: {
+      primaryEdge,
+      thesis,
+      keyFactors,
+      notEdge
+    },
+    scenarios,
+    strategyMatchScore,
+    tradeQualityGate
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STRATEGY RECOMMENDATION BASED ON IV ENVIRONMENT
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -2357,6 +2722,15 @@ export class OptionsConfluenceAnalyzer {
       .filter(d => d.isDecompressing && clusteredTFSet.has(d.tf))
       .map(d => d.tf);
     
+    // INSTITUTIONAL AI MARKET STATE - Hedge Fund Decision Model
+    const aiMarketState = calculateAIMarketState(
+      compositeScore,
+      ivAnalysis,
+      strategyRecommendation,
+      tradeLevels,
+      confluenceResult
+    );
+    
     return {
       symbol,
       currentPrice,
@@ -2387,6 +2761,8 @@ export class OptionsConfluenceAnalyzer {
       compositeScore,
       strategyRecommendation,
       candleCloseConfluence,
+      // INSTITUTIONAL AI MARKET STATE
+      aiMarketState,
     };
   }
   
