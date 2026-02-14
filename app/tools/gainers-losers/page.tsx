@@ -120,7 +120,7 @@ type SortField = "ticker" | "price" | "change" | "percent" | "volume";
 type SortDirection = "asc" | "desc";
 
 export default function GainersLosersPage() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -169,8 +169,8 @@ export default function GainersLosersPage() {
   };
 
   useEffect(() => {
-    if (isAdmin) fetchData();
-  }, [isAdmin]);
+    if (canAccessPortfolioInsights(tier)) fetchData();
+  }, [tier]);
 
   // Compute rawData BEFORE any conditional returns
   const rawData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
@@ -234,10 +234,7 @@ export default function GainersLosersPage() {
   
   const insight = generateMoverInsight(rawData, activeTab);
 
-  // Data licensing gate - only admins can access for now (AFTER all hooks)
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📈 Market Movers" description="Top Gainers, Losers & Most Active stocks" />;
-  }
+  // Removed admin-only gate - now using Pro+ tier gate below
   
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -435,99 +432,176 @@ export default function GainersLosersPage() {
             Loading market data...
           </div>
         ) : (
-          <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
-            <div style={{ minWidth: 700, width: '100%' }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                    <th onClick={() => handleSort("ticker")} style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                      Symbol <SortIcon field="ticker" />
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: "600" }}>Risk</th>
-                    <th onClick={() => handleSort("price")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                      Price <SortIcon field="price" />
-                    </th>
-                    <th onClick={() => handleSort("change")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                      Change <SortIcon field="change" />
-                    </th>
-                    <th onClick={() => handleSort("percent")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                      Change % <SortIcon field="percent" />
-                    </th>
-                    <th onClick={() => handleSort("volume")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                      Volume <SortIcon field="volume" />
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600" }}>Tags</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentData.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#64748B" }}>
-                        No results match your filters. Try adjusting the filter settings.
-                      </td>
-                    </tr>
-                  ) : currentData.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
-                      <td style={{ padding: "1rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ color: "#fff", fontWeight: "600" }}>{item.ticker}</span>
-                          {item.assetType !== "Stock" && (
-                            <span style={{ 
-                              padding: "2px 6px", 
-                              background: "rgba(100, 116, 139, 0.2)", 
-                              borderRadius: "4px", 
-                              fontSize: "10px", 
-                              color: "#94A3B8" 
-                            }}>
-                              {item.assetType}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
-                        <span style={getRiskBadgeStyle(item.riskLevel)}>{item.riskLevel}</span>
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                        ${parseFloat(item.price).toFixed(2)}
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444" }}>
+          <>
+            {/* Mobile Cards */}
+            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {currentData.length === 0 ? (
+                <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", background: "rgba(15,23,42,0.8)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.6)" }}>
+                  No results match your filters. Try adjusting the filter settings.
+                </div>
+              ) : currentData.map((item, index) => (
+                <div key={index} style={{
+                  background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(51,65,85,0.8)",
+                  padding: "16px"
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: '#fff', fontWeight: '700', fontSize: '18px' }}>{item.ticker}</span>
+                      {item.assetType !== "Stock" && (
+                        <span style={{ padding: "2px 6px", background: "rgba(100, 116, 139, 0.2)", borderRadius: "4px", fontSize: "10px", color: "#94A3B8" }}>
+                          {item.assetType}
+                        </span>
+                      )}
+                    </div>
+                    <span style={getRiskBadgeStyle(item.riskLevel)}>{item.riskLevel}</span>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Price</div>
+                      <div style={{ color: '#fff', fontWeight: '600' }}>${parseFloat(item.price).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Change</div>
+                      <div style={{ color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444", fontWeight: '600' }}>
                         {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Change %</div>
+                      <div style={{ color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: '700' }}>
                         {item.change_percentage}
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                        {parseInt(item.volume).toLocaleString()}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                          {item.tags.slice(0, 3).map((tag, i) => (
-                            <span key={i} style={{ 
-                              padding: "2px 6px", 
-                              background: tag.includes("Extreme") || tag.includes("Sub-$1") 
-                                ? "rgba(239, 68, 68, 0.15)" 
-                                : tag.includes("Extended") 
-                                  ? "rgba(249, 115, 22, 0.15)"
-                                  : "rgba(100, 116, 139, 0.15)", 
-                              borderRadius: "4px", 
-                              fontSize: "10px", 
-                              color: tag.includes("Extreme") || tag.includes("Sub-$1")
-                                ? "#EF4444"
-                                : tag.includes("Extended")
-                                  ? "#F97316"
-                                  : "#94A3B8"
-                            }}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ color: '#94A3B8', fontSize: '12px' }}>
+                      Vol: {parseInt(item.volume).toLocaleString()}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: 'flex-end' }}>
+                      {item.tags.slice(0, 2).map((tag, i) => (
+                        <span key={i} style={{ 
+                          padding: "2px 6px", 
+                          background: tag.includes("Extreme") || tag.includes("Sub-$1") 
+                            ? "rgba(239, 68, 68, 0.15)" 
+                            : tag.includes("Extended") 
+                              ? "rgba(249, 115, 22, 0.15)"
+                              : "rgba(100, 116, 139, 0.15)", 
+                          borderRadius: "4px", 
+                          fontSize: "10px", 
+                          color: tag.includes("Extreme") || tag.includes("Sub-$1")
+                            ? "#EF4444"
+                            : tag.includes("Extended")
+                              ? "#F97316"
+                              : "#94A3B8"
+                        }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block" style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
+              <div style={{ minWidth: 700, width: '100%' }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                      <th onClick={() => handleSort("ticker")} style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
+                        Symbol <SortIcon field="ticker" />
+                      </th>
+                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: "600" }}>Risk</th>
+                      <th onClick={() => handleSort("price")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
+                        Price <SortIcon field="price" />
+                      </th>
+                      <th onClick={() => handleSort("change")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
+                        Change <SortIcon field="change" />
+                      </th>
+                      <th onClick={() => handleSort("percent")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
+                        Change % <SortIcon field="percent" />
+                      </th>
+                      <th onClick={() => handleSort("volume")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
+                        Volume <SortIcon field="volume" />
+                      </th>
+                      <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600" }}>Tags</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentData.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#64748B" }}>
+                          No results match your filters. Try adjusting the filter settings.
+                        </td>
+                      </tr>
+                    ) : currentData.map((item, index) => (
+                      <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
+                        <td style={{ padding: "1rem" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ color: "#fff", fontWeight: "600" }}>{item.ticker}</span>
+                            {item.assetType !== "Stock" && (
+                              <span style={{ 
+                                padding: "2px 6px", 
+                                background: "rgba(100, 116, 139, 0.2)", 
+                                borderRadius: "4px", 
+                                fontSize: "10px", 
+                                color: "#94A3B8" 
+                              }}>
+                                {item.assetType}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: "1rem", textAlign: "center" }}>
+                          <span style={getRiskBadgeStyle(item.riskLevel)}>{item.riskLevel}</span>
+                        </td>
+                        <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
+                          ${parseFloat(item.price).toFixed(2)}
+                        </td>
+                        <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444" }}>
+                          {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
+                        </td>
+                        <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: "600" }}>
+                          {item.change_percentage}
+                        </td>
+                        <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
+                          {parseInt(item.volume).toLocaleString()}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {item.tags.slice(0, 3).map((tag, i) => (
+                              <span key={i} style={{ 
+                                padding: "2px 6px", 
+                                background: tag.includes("Extreme") || tag.includes("Sub-$1") 
+                                  ? "rgba(239, 68, 68, 0.15)" 
+                                  : tag.includes("Extended") 
+                                    ? "rgba(249, 115, 22, 0.15)"
+                                    : "rgba(100, 116, 139, 0.15)", 
+                                borderRadius: "4px", 
+                                fontSize: "10px", 
+                                color: tag.includes("Extreme") || tag.includes("Sub-$1")
+                                  ? "#EF4444"
+                                  : tag.includes("Extended")
+                                    ? "#F97316"
+                                    : "#94A3B8"
+                              }}>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
         
         {/* Results count */}

@@ -964,7 +964,47 @@ function CryptoDetailPageContent() {
             {coinData.tickers && coinData.tickers.length > 0 && (
               <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold mb-4">🏦 Exchange Tickers</h3>
-                <div className="overflow-x-auto">
+                
+                {/* Mobile Cards */}
+                <div className="md:hidden flex flex-col gap-3">
+                  {coinData.tickers.slice(0, 10).map((ticker, i) => (
+                    <div key={i} className="bg-slate-700/30 rounded-lg p-4 border border-slate-600/30">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-semibold text-white">{ticker.exchange}</div>
+                          <div className="text-sm text-gray-400">{ticker.pair}</div>
+                        </div>
+                        {ticker.trade_url && (
+                          <a 
+                            href={ticker.trade_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-emerald-400 hover:text-emerald-300 text-sm px-3 py-1 bg-emerald-500/10 rounded"
+                          >
+                            Trade →
+                          </a>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <div className="text-gray-500 text-xs">Price</div>
+                          <div className="text-white font-medium">{formatPrice(ticker.price)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs">Volume</div>
+                          <div className="text-gray-300">{formatNumber(ticker.volume_usd)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500 text-xs">Spread</div>
+                          <div className="text-gray-300">{ticker.spread ? `${ticker.spread.toFixed(3)}%` : '-'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="text-left text-gray-400 text-sm border-b border-slate-600">
