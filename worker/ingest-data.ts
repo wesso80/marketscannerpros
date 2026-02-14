@@ -20,6 +20,7 @@ import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
+import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC } from '../lib/coingecko';
 
 // ============================================================================
 // Signal Detection Types
@@ -244,6 +245,53 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
   return results;
 }
 
+/**
+ * Fetch crypto OHLC from CoinGecko (preferred - no rate limit issues)
+ * Returns 30 days of daily candles
+ */
+async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
+  // Map symbol to CoinGecko ID
+  const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[symbol.toUpperCase().replace('USDT', '')];
+  
+  if (!coinId) {
+    console.warn(`[worker] No CoinGecko mapping for ${symbol}`);
+    return [];
+  }
+
+  try {
+    // Get 30 days of OHLC data
+    const ohlcData = await getCoinGeckoOHLC(coinId, 30);
+    
+    if (!ohlcData || ohlcData.length === 0) {
+      console.warn(`[worker] No CoinGecko OHLC data for ${symbol} (${coinId})`);
+      return [];
+    }
+
+    // CoinGecko returns [timestamp, open, high, low, close]
+    const bars: AVBar[] = ohlcData.map(candle => ({
+      timestamp: new Date(candle[0]).toISOString().slice(0, 10),
+      open: candle[1],
+      high: candle[2],
+      low: candle[3],
+      close: candle[4],
+      volume: 0, // CoinGecko OHLC doesn't include volume
+    }));
+
+    // Sort oldest first
+    bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol}`);
+    return bars;
+
+  } catch (err: any) {
+    console.error(`[worker] CoinGecko fetch error for ${symbol}:`, err?.message || err);
+    return [];
+  }
+}
+
+/**
+ * Fallback: Fetch crypto OHLC from Alpha Vantage (rate limited)
+ */
 async function fetchAVCryptoDaily(symbol: string): Promise<AVBar[]> {
   await getRateLimiter().take(1);
 
@@ -790,8 +838,15 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
   let apiCalls = 0;
   
   try {
-    const bars = await fetchAVCryptoDaily(symbol);
-    apiCalls++;
+    // Try CoinGecko first (faster, more generous rate limits)
+    let bars = await fetchCoinGeckoDaily(symbol);
+    
+    // Fallback to Alpha Vantage if CoinGecko fails
+    if (bars.length === 0) {
+      console.log(`[worker] Falling back to Alpha Vantage for ${symbol}`);
+      bars = await fetchAVCryptoDaily(symbol);
+      apiCalls++;
+    }
 
     if (bars.length > 0) {
       await upsertBars(symbol, 'daily', bars);
