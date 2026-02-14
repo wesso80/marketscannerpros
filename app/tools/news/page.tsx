@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import { useSearchParams } from "next/navigation";
 
 interface TickerSentiment {
   ticker: string;
@@ -168,15 +167,14 @@ type TabType = "news" | "earnings";
 
 export default function NewsSentimentPage() {
   const { tier } = useUserTier();
-  const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabType>(searchParams.get('tab') === 'earnings' ? 'earnings' : 'news');
+  const [activeTab, setActiveTab] = useState<TabType>("news");
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
+    const tab = new URLSearchParams(window.location.search).get('tab');
     if (tab === 'earnings') {
       setActiveTab('earnings');
     }
-  }, [searchParams]);
+  }, []);
   
   // News state
   const [tickers, setTickers] = useState("AAPL,MSFT,GOOGL");
