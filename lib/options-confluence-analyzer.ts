@@ -12,6 +12,41 @@
 import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseConfluence } from './confluence-learning-agent';
 
 // ═══════════════════════════════════════════════════════════════════════════
+// HELPER UTILITIES (Production-grade parsing)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Safely get a numeric value from an object with multiple possible field names
+ * Handles vendor-specific field name variations
+ */
+function getNumericField(obj: Record<string, unknown>, keys: string[], fallback = 0): number {
+  for (const key of keys) {
+    const val = obj?.[key];
+    if (val !== null && val !== undefined) {
+      const num = typeof val === 'number' ? val : parseFloat(String(val));
+      if (!isNaN(num)) return num;
+    }
+  }
+  return fallback;
+}
+
+/**
+ * Normalize IV from API (handles both decimal 0.25 and percent 25 formats)
+ */
+function normalizeIV(rawIV: number | string | undefined, fallback = 0.25): number {
+  if (rawIV === null || rawIV === undefined) return fallback;
+  const parsed = typeof rawIV === 'number' ? rawIV : parseFloat(String(rawIV));
+  if (isNaN(parsed) || parsed <= 0) return fallback;
+  // If > 3, assume it's in percent format (e.g., 25 instead of 0.25)
+  return parsed > 3 ? parsed / 100 : parsed;
+}
+
+/**
+ * Asset type for proper handling (don't infer from symbol string)
+ */
+export type AssetType = 'equity' | 'crypto' | 'index' | 'etf' | 'forex';
+
+// ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -47,6 +82,7 @@ export interface OptionsSetup {
   symbol: string;
   currentPrice: number;
   direction: 'bullish' | 'bearish' | 'neutral';
+  assetType: AssetType;      // Explicit asset type (not inferred from symbol)
   
   // Confluence data
   confluenceStack: number;
@@ -57,6 +93,10 @@ export interface OptionsSetup {
   // Trade quality assessment
   tradeQuality: 'A+' | 'A' | 'B' | 'C' | 'F';
   qualityReasons: string[];
+  
+  // OPTIONS COMPOSITE QUALITY (separate from confluence grade)
+  optionsQualityScore: number;  // 0-100 from composite scoring
+  optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F';  // Derived from optionsQualityScore
   
   // Recommended strikes
   primaryStrike: StrikeRecommendation | null;
@@ -95,6 +135,41 @@ export interface OptionsSetup {
   
   // INSTITUTIONAL AI MARKET STATE (HEDGE FUND MODEL)
   aiMarketState: AIMarketState | null;
+  
+  // DATA QUALITY TRACKING (Production critical)
+  dataQuality: DataQuality;
+  
+  // EXECUTION NOTES (Production warnings)
+  executionNotes: string[];
+  
+  // CONFIDENCE CAPS (Why confidence was limited)
+  dataConfidenceCaps: string[];
+  
+  // DISCLAIMER FLAGS (Risk events)
+  disclaimerFlags: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA QUALITY TRACKING (Production critical)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface DataQuality {
+  optionsChainSource: 'alpha_vantage' | 'cboe' | 'none';
+  freshness: 'REALTIME' | 'DELAYED' | 'EOD' | 'STALE';
+  hasGreeksFromAPI: boolean;
+  hasMeaningfulOI: boolean;
+  contractsCount: { calls: number; puts: number };
+  availableStrikes: number[];  // Actual strikes from chain
+  lastUpdated: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIGHTWEIGHT OI SUMMARY (for composite scoring)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface OISummary {
+  pcRatio: number;
+  sentiment: 'bullish' | 'bearish' | 'neutral';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -113,6 +188,7 @@ export interface CompositeScore {
   finalDirection: 'bullish' | 'bearish' | 'neutral';
   directionScore: number;   // -100 to +100
   confidence: number;       // 0-100% based on signal alignment
+  qualityScore: number;     // 0-100 from quality track (now exposed)
   components: SignalComponent[];
   conflicts: string[];      // List of conflicting signals
   alignedCount: number;     // How many signals agree
@@ -418,19 +494,20 @@ interface AVOptionContract {
   rho?: string;
 }
 
-// Get this week's Friday for weekly options expiry
-// Get the nearest/current week's Friday for weekly options expiry
+// Get the NEAREST coming Friday for weekly options expiry
+// - Friday: use today (0 days)
+// - Saturday: use next Friday (6 days) 
+// - Sunday-Thursday: use this coming Friday (5 to 1 days)
 function getThisWeekFriday(): Date {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
   
-  // If today is Friday (5), use today. Otherwise find days until Friday.
-  // For Saturday (6) and Sunday (0), get NEXT Friday
+  // Calculate days until nearest coming Friday
   let daysUntilFriday: number;
   if (dayOfWeek === 5) {
     daysUntilFriday = 0; // Today is Friday
   } else if (dayOfWeek === 6) {
-    daysUntilFriday = 6; // Saturday -> next Friday
+    daysUntilFriday = 6; // Saturday -> next Friday (6 days)
   } else {
     daysUntilFriday = (5 - dayOfWeek + 7) % 7; // Sunday-Thursday -> this Friday
   }
@@ -635,7 +712,8 @@ function analyzeOpenInterest(
         const apiGamma = call.gamma ? parseFloat(call.gamma) : undefined;
         const apiTheta = call.theta ? parseFloat(call.theta) : undefined;
         const apiVega = call.vega ? parseFloat(call.vega) : undefined;
-        const iv = call.implied_volatility ? parseFloat(call.implied_volatility) : 0.25;  // Default 25% IV
+        // Use normalized IV (handles both 0.25 and 25 formats)
+        const iv = normalizeIV(call.implied_volatility, 0.25);
         
         // Use estimateGreeks as fallback when API doesn't provide Greeks
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
@@ -662,10 +740,9 @@ function analyzeOpenInterest(
   }
   
   for (const put of puts) {
-    const oiValue = put.open_interest || (put as unknown as Record<string, string>).openInterest || '0';
-    const oi = parseInt(String(oiValue), 10) || 0;
-    const strikeValue = put.strike || '0';
-    const strike = parseFloat(String(strikeValue)) || 0;
+    // Use helper for field variations (open_interest vs openInterest)
+    const oi = getNumericField(put as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    const strike = getNumericField(put as unknown as Record<string, unknown>, ['strike'], 0);
     
     if (strike > 0) allRawStrikes.push(strike);
     
@@ -683,7 +760,8 @@ function analyzeOpenInterest(
         const apiGamma = put.gamma ? parseFloat(put.gamma) : undefined;
         const apiTheta = put.theta ? parseFloat(put.theta) : undefined;
         const apiVega = put.vega ? parseFloat(put.vega) : undefined;
-        const iv = put.implied_volatility ? parseFloat(put.implied_volatility) : 0.25;  // Default 25% IV
+        // Use normalized IV (handles both 0.25 and 25 formats)
+        const iv = normalizeIV(put.implied_volatility, 0.25);
         
         // Use estimateGreeks as fallback when API doesn't provide Greeks
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
@@ -827,12 +905,13 @@ function analyzeIV(
     return Math.abs(strike - currentPrice) <= atmRange;
   });
   
-  // Calculate average IV from ATM options
+  // Calculate average IV from ATM options using normalized IV
   let totalIV = 0;
   let ivCount = 0;
   for (const opt of atmOptions) {
-    const iv = parseFloat(opt.implied_volatility || '0');
-    if (iv > 0 && iv < 5) {  // Sanity check: IV between 0 and 500%
+    // Use normalized IV (handles both 0.25 and 25 formats)
+    const iv = normalizeIV(opt.implied_volatility, 0);
+    if (iv > 0 && iv < 5) {  // Sanity check: IV between 0 and 500% (in decimal)
       totalIV += iv;
       ivCount++;
     }
@@ -905,14 +984,22 @@ function detectUnusualActivity(
   const VOLUME_OI_THRESHOLD = 2.0;  // Volume > 2x Open Interest = unusual
   const MIN_VOLUME = 500;           // Minimum volume to consider
   
+  // Build map of mark prices for premium calculation
+  const markPriceMap = new Map<string, number>();
+  
   // Check all options for unusual activity
   const allOptions = [...calls.map(c => ({ ...c, type: 'call' as const })), 
                       ...puts.map(p => ({ ...p, type: 'put' as const }))];
   
   for (const opt of allOptions) {
     const strike = parseFloat(opt.strike || '0');
-    const volume = parseInt(opt.volume || '0', 10);
-    const openInterest = parseInt(opt.open_interest || '0', 10);
+    const volume = getNumericField(opt as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
+    const openInterest = getNumericField(opt as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    
+    // Store mark price for later premium calculation
+    const markPrice = getNumericField(opt as unknown as Record<string, unknown>, ['mark', 'mid', 'last'], 0);
+    const key = `${strike}-${opt.type}`;
+    if (markPrice > 0) markPriceMap.set(key, markPrice);
     
     // Filter to reasonable strike range (within 15% of price)
     const distancePercent = Math.abs((strike - currentPrice) / currentPrice);
@@ -952,9 +1039,21 @@ function detectUnusualActivity(
   
   for (const strike of unusualStrikes) {
     const weight = strike.volumeOIRatio * (strike.volume / 1000);  // Weight by ratio and size
-    // Estimate premium as volume * average premium (rough estimate based on distance from price)
-    const distanceFromPrice = Math.abs(strike.strike - currentPrice);
-    const estimatedPremium = Math.max(0.50, currentPrice * 0.02 - distanceFromPrice * 0.1) * strike.volume;
+    
+    // Calculate premium from mark price when available, fallback to rough estimate
+    const key = `${strike.strike}-${strike.type}`;
+    const markPrice = markPriceMap.get(key);
+    let estimatedPremium: number;
+    
+    if (markPrice && markPrice > 0) {
+      // Use mark price: premium = mark * volume * 100 (contract multiplier)
+      estimatedPremium = markPrice * strike.volume * 100;
+    } else {
+      // Fallback: rough estimate (less reliable)
+      const distanceFromPrice = Math.abs(strike.strike - currentPrice);
+      const roughPremium = Math.max(0.50, currentPrice * 0.02 - distanceFromPrice * 0.1);
+      estimatedPremium = roughPremium * strike.volume * 100;
+    }
     
     if (strike.type === 'call') {
       bullishWeight += weight;
@@ -1510,7 +1609,10 @@ function calculateCompositeScore(
       reason: `R:R ${rr.toFixed(1)}:1 - ${rrGrade}`
     });
     
-    qualityScore += Math.max(0, rrScore) * rrQualityWeight; // Only positive contributes to quality
+    // FIX: Let bad R:R PENALIZE quality (don't ignore negative scores)
+    // Normalize to 0-100 scale: -50 → 0, 0 → 50, +95 → 97.5
+    const normalizedRRScore = (rrScore + 50) / 1.5; // Maps -50..+100 to 0..100
+    qualityScore += normalizedRRScore * rrQualityWeight;
     qualityMaxScore += 100 * rrQualityWeight;
   }
 
@@ -1603,12 +1705,16 @@ function calculateCompositeScore(
     conflicts.push(`⚠️ POOR R:R (${tradeLevels.riskRewardRatio.toFixed(1)}:1): Risk exceeds potential reward`);
   }
 
-  console.log(`🎯 Direction: ${normalizedDirectionScore.toFixed(1)} → ${finalDirection.toUpperCase()} | Quality: ${(qualityScore/qualityMaxScore*100).toFixed(0)}% | Confidence: ${confidence.toFixed(0)}%`);
+  // Calculate final quality percentage
+  const finalQualityScore = qualityMaxScore > 0 ? (qualityScore / qualityMaxScore) * 100 : 50;
+
+  console.log(`🎯 Direction: ${normalizedDirectionScore.toFixed(1)} → ${finalDirection.toUpperCase()} | Quality: ${finalQualityScore.toFixed(0)}% | Confidence: ${confidence.toFixed(0)}%`);
 
   return {
     finalDirection,
     directionScore: normalizedDirectionScore,
     confidence,
+    qualityScore: finalQualityScore,  // Now exposed for optionsGrade calculation
     components,
     conflicts,
     alignedCount: finalDirection === 'bullish' ? bullishSignals.length : bearishSignals.length,
@@ -2574,29 +2680,66 @@ export class OptionsConfluenceAnalyzer {
   /**
    * Analyze a symbol for options trading using Time Confluence
    * @param expirationDate Optional specific expiration date (YYYY-MM-DD) to use instead of auto-selecting
+   * @param assetType Explicit asset type (don't infer from symbol string)
    */
   async analyzeForOptions(
     symbol: string,
     scanMode: ScanMode,
-    expirationDate?: string
+    expirationDate?: string,
+    assetType: AssetType = 'equity'  // Default to equity, but pass explicitly when known
   ): Promise<OptionsSetup> {
     // Get confluence analysis
     const confluenceResult = await this.confluenceAgent.scanHierarchical(symbol, scanMode);
     
     const { currentPrice, decompression, prediction, signalStrength, clusters, mid50Levels, candleCloseConfluence } = confluenceResult;
     
-    // Fetch options chain for O/I analysis (stocks only, not crypto)
+    // Initialize data quality tracking
+    const dataQuality: DataQuality = {
+      optionsChainSource: 'none',
+      freshness: 'STALE',
+      hasGreeksFromAPI: false,
+      hasMeaningfulOI: false,
+      contractsCount: { calls: 0, puts: 0 },
+      availableStrikes: [],
+      lastUpdated: new Date().toISOString(),
+    };
+    
+    // Initialize production tracking arrays - declared early for use throughout function
+    const executionNotes: string[] = [];
+    const dataConfidenceCaps: string[] = [];
+    const disclaimerFlags: string[] = [];
+    
+    // Fetch options chain for O/I analysis (non-crypto only - use explicit assetType)
     let openInterestAnalysis: OpenInterestData | null = null;
     let ivAnalysis: IVAnalysis | null = null;
     let unusualActivity: UnusualActivity | null = null;
     let expectedMove: ExpectedMove | null = null;
-    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
     
-    if (!isCrypto) {
+    // Only fetch options for equity/etf/index (not crypto/forex)
+    if (assetType === 'equity' || assetType === 'etf' || assetType === 'index') {
       try {
         const optionsChain = await fetchOptionsChain(symbol, expirationDate);
         if (optionsChain) {
+          // Update data quality
+          dataQuality.optionsChainSource = 'alpha_vantage';
+          dataQuality.freshness = 'EOD';  // Alpha Vantage historical is EOD
+          dataQuality.contractsCount = { 
+            calls: optionsChain.calls.length, 
+            puts: optionsChain.puts.length 
+          };
+          dataQuality.availableStrikes = [...new Set([
+            ...optionsChain.calls.map(c => parseFloat(c.strike || '0')),
+            ...optionsChain.puts.map(p => parseFloat(p.strike || '0'))
+          ])].filter(s => s > 0).sort((a, b) => a - b);
+          dataQuality.lastUpdated = new Date().toISOString();
+          
+          // Check if API provided Greeks
+          const sampleContract = optionsChain.calls[0] || optionsChain.puts[0];
+          dataQuality.hasGreeksFromAPI = !!(sampleContract?.delta);
+          
           openInterestAnalysis = analyzeOpenInterest(optionsChain.calls, optionsChain.puts, currentPrice, optionsChain.selectedExpiry);
+          dataQuality.hasMeaningfulOI = openInterestAnalysis.totalCallOI > 100 || openInterestAnalysis.totalPutOI > 100;
+          
           console.log(`📊 O/I Analysis (${optionsChain.selectedExpiry}): P/C=${openInterestAnalysis.pcRatio.toFixed(2)}, Sentiment=${openInterestAnalysis.sentiment}, Max Pain=$${openInterestAnalysis.maxPainStrike || 'N/A'}`);
           
           // PRO TRADER: IV Analysis
@@ -2611,10 +2754,24 @@ export class OptionsConfluenceAnalyzer {
             ? Math.max(1, Math.ceil((new Date(expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
             : 7;
           expectedMove = calculateExpectedMove(currentPrice, avgIV, selectedDTE);
+          
+          // Add EOD data confidence cap
+          dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
+          
+          // Add execution notes based on data quality
+          if (!dataQuality.hasMeaningfulOI) {
+            executionNotes.push('⚠️ Low OI detected - liquidity may be poor');
+          }
+          if (!dataQuality.hasGreeksFromAPI) {
+            executionNotes.push('Greeks estimated via Black-Scholes (not from API)');
+          }
         }
       } catch (err) {
         console.warn('O/I analysis failed:', err);
+        dataConfidenceCaps.push('Options chain fetch failed - no OI/IV data');
       }
+    } else {
+      dataConfidenceCaps.push(`Asset type ${assetType} - no options analysis available`);
     }
     
     // Determine trade direction
@@ -2731,6 +2888,45 @@ export class OptionsConfluenceAnalyzer {
       confluenceResult
     );
     
+    // PRODUCTION FIX: Calculate options quality score and grade
+    const optionsQualityScore = compositeScore.qualityScore ?? 50;
+    const optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F' = 
+      optionsQualityScore >= 85 ? 'A+' :
+      optionsQualityScore >= 70 ? 'A' :
+      optionsQualityScore >= 55 ? 'B' :
+      optionsQualityScore >= 40 ? 'C' : 'F';
+    
+    // PRODUCTION FIX: Add confidence caps based on data freshness
+    if (dataQuality.freshness === 'EOD') {
+      dataConfidenceCaps.push('EOD data - intraday moves not reflected');
+    }
+    if (dataQuality.freshness === 'STALE') {
+      dataConfidenceCaps.push('Stale data - refresh recommended');
+    }
+    
+    // PRODUCTION FIX: Disclaimer flags for risk events
+    // TODO: Hook into earnings calendar API
+    // if (hasUpcomingEarnings(symbol, 7)) disclaimerFlags.push('⚠️ Earnings within 7 days - IV crush risk');
+    // TODO: Hook into FOMC/CPI calendar
+    // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
+    
+    // Add execution notes based on market conditions
+    if (ivAnalysis && ivAnalysis.ivPercentile > 70) {
+      executionNotes.push('High IV - consider credit strategies or wait for pullback');
+    }
+    if (ivAnalysis && ivAnalysis.ivPercentile < 30) {
+      executionNotes.push('Low IV - debit strategies favorable, consider longer DTE');
+    }
+    if (openInterestAnalysis && openInterestAnalysis.pcRatio > 1.5) {
+      executionNotes.push('Heavy put positioning - contrarian bullish or hedge activity');
+    }
+    if (openInterestAnalysis && openInterestAnalysis.pcRatio < 0.5) {
+      executionNotes.push('Heavy call positioning - contrarian bearish or FOMO activity');
+    }
+    if (dataQuality.freshness === 'EOD') {
+      executionNotes.push('Using EOD data - verify levels at market open');
+    }
+    
     return {
       symbol,
       currentPrice,
@@ -2763,6 +2959,14 @@ export class OptionsConfluenceAnalyzer {
       candleCloseConfluence,
       // INSTITUTIONAL AI MARKET STATE
       aiMarketState,
+      // PRODUCTION ADDITIONS - Data Quality & Compliance
+      assetType,
+      optionsQualityScore,
+      optionsGrade,
+      dataQuality,
+      executionNotes,
+      dataConfidenceCaps,
+      disclaimerFlags,
     };
   }
   
