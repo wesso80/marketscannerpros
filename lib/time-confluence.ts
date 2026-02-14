@@ -256,6 +256,7 @@ const DECOMPRESSION_WINDOW_START: Record<string, number> = {
 export interface DecompressionWindowStatus {
   timeframe: string;
   isInWindow: boolean;        // Renamed from isDecompressing (clarity)
+  inMainCluster: boolean;     // Whether this TF belongs to dominant temporal cluster
   minutesToClose: number;
   windowStartMins: number;    // Renamed from startedDecompressingAt
   phase: 'not_started' | 'active' | 'imminent';
@@ -402,19 +403,44 @@ export interface MarketClock {
 // Simple trading day index calculation (days since Jan 2, 2020)
 // For accurate macro cycles, increment only on actual trading days
 const EPOCH_DATE = new Date('2020-01-02T00:00:00Z');
+const EPOCH_DATE_STR = '2020-01-02';
+const tradingDayIndexCache = new Map<string, number>([[EPOCH_DATE_STR, 0]]);
 
-function getTradingDayIndex(dateStr: string, dayOfWeek: number): number {
-  // Rough approximation: ~252 trading days per year
-  // For perfect accuracy, use a full trading calendar
+function getNextDateStr(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
-  const daysSinceEpoch = Math.floor(
-    (new Date(year, month - 1, day).getTime() - EPOCH_DATE.getTime()) / (24 * 60 * 60 * 1000)
-  );
-  
-  // Approximate trading days (exclude ~104 weekends + ~10 holidays per year)
-  // ~252/365 = 0.69
-  const tradingDays = Math.floor(daysSinceEpoch * 0.69);
-  return Math.max(0, tradingDays);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  utc.setUTCDate(utc.getUTCDate() + 1);
+  return `${utc.getUTCFullYear()}-${String(utc.getUTCMonth() + 1).padStart(2, '0')}-${String(utc.getUTCDate()).padStart(2, '0')}`;
+}
+
+function getDayOfWeekFromDateStr(dateStr: string): number {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+function getTradingDayIndex(dateStr: string): number {
+  if (tradingDayIndexCache.has(dateStr)) {
+    return tradingDayIndexCache.get(dateStr) ?? 0;
+  }
+
+  if (dateStr < EPOCH_DATE_STR) {
+    return 0;
+  }
+
+  let cursor = EPOCH_DATE_STR;
+  let index = tradingDayIndexCache.get(EPOCH_DATE_STR) ?? 0;
+
+  while (cursor < dateStr) {
+    const nextDate = getNextDateStr(cursor);
+    const dayInfo = getMarketDayInfo(nextDate, getDayOfWeekFromDateStr(nextDate));
+    if (dayInfo.isTradingDay) {
+      index += 1;
+    }
+    tradingDayIndexCache.set(nextDate, index);
+    cursor = nextDate;
+  }
+
+  return tradingDayIndexCache.get(dateStr) ?? 0;
 }
 
 /**
@@ -462,7 +488,7 @@ export function createMarketClock(date: Date = new Date()): MarketClock {
     minutesSinceMidnight,
     minutesSinceOpen,
     minutesToClose,
-    tradingDayIndex: getTradingDayIndex(et.dateStr, et.dayOfWeek),
+    tradingDayIndex: getTradingDayIndex(et.dateStr),
   };
 }
 
@@ -660,8 +686,6 @@ export interface TemporalCompressionState {
  * Finds the true maximum-density cluster with weighted TF importance
  */
 export function calcTemporalCompression(date: Date, windowMinutes: number = 5): TemporalCompressionState {
-  const clock = createMarketClock(date);
-  
   // Get minutes-to-close for all timeframes
   const closeTimings: { tf: string; minsToClose: number; weight: number }[] = [];
   
@@ -687,87 +711,73 @@ export function calcTemporalCompression(date: Date, windowMinutes: number = 5): 
   const clusters: TemporalCluster[] = [];
   
   if (closeTimings.length > 0) {
-    let bestStart = 0;
-    let bestEnd = 0;
-    let bestWeightedScore = 0;
-    
-    let windowStart = 0;
-    let currentWeightedScore = closeTimings[0].weight;
-    
-    // Slide end pointer across all timings
-    for (let windowEnd = 0; windowEnd < closeTimings.length; windowEnd++) {
-      // If this is not the first element, add its weight
-      if (windowEnd > 0) {
-        currentWeightedScore += closeTimings[windowEnd].weight;
+    let windowEnd = 0;
+    const seen = new Set<string>();
+
+    for (let windowStart = 0; windowStart < closeTimings.length; windowStart++) {
+      if (windowEnd < windowStart) windowEnd = windowStart;
+      while (
+        windowEnd + 1 < closeTimings.length &&
+        closeTimings[windowEnd + 1].minsToClose - closeTimings[windowStart].minsToClose <= windowMinutes
+      ) {
+        windowEnd++;
       }
-      
-      // Shrink window from start if it exceeds windowMinutes
-      while (closeTimings[windowEnd].minsToClose - closeTimings[windowStart].minsToClose > windowMinutes) {
-        currentWeightedScore -= closeTimings[windowStart].weight;
-        windowStart++;
+
+      const slice = closeTimings.slice(windowStart, windowEnd + 1);
+      const clusterTFs = slice.map(s => s.tf);
+      const weightedSum = slice.reduce((sum, s) => sum + s.weight, 0);
+      const centerTime = Math.round(slice.reduce((sum, s) => sum + s.minsToClose, 0) / slice.length);
+      const size = clusterTFs.length;
+
+      const key = `${centerTime}|${clusterTFs.join(',')}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      let score: number;
+      let intensity: TemporalCluster['intensity'];
+      let label: string;
+
+      if (weightedSum >= 25) {
+        score = 95;
+        intensity = 'explosive';
+        label = '🔥 Explosive Compression';
+      } else if (weightedSum >= 18) {
+        score = 80;
+        intensity = 'very_strong';
+        label = '⚡ Very Strong';
+      } else if (weightedSum >= 12) {
+        score = 65;
+        intensity = 'strong';
+        label = '💪 Strong';
+      } else if (weightedSum >= 7) {
+        score = 40;
+        intensity = 'moderate';
+        label = '📊 Moderate';
+      } else if (weightedSum >= 3) {
+        score = 25;
+        intensity = 'low';
+        label = '📉 Low';
+      } else {
+        score = 10;
+        intensity = 'low';
+        label = '⏸️ Quiet';
       }
-      
-      // Track best cluster by weighted score
-      if (currentWeightedScore > bestWeightedScore) {
-        bestWeightedScore = currentWeightedScore;
-        bestStart = windowStart;
-        bestEnd = windowEnd;
-      }
+
+      clusters.push({
+        minutesToClose: centerTime,
+        timeframes: clusterTFs,
+        size,
+        weightedScore: weightedSum,
+        intensity,
+        score,
+        label,
+      });
     }
-    
-    // Build the best cluster
-    const clusterTFs: string[] = [];
-    let weightedSum = 0;
-    for (let i = bestStart; i <= bestEnd; i++) {
-      clusterTFs.push(closeTimings[i].tf);
-      weightedSum += closeTimings[i].weight;
-    }
-    
-    // Calculate cluster center (average minsToClose)
-    const centerTime = closeTimings[bestStart].minsToClose;
-    const size = clusterTFs.length;
-    
-    // Score based on weighted sum (calibrated: max realistic ~35 points)
-    // 4H+2H+1H+30m+15m+5m = 6+4+3+2+1.5+1 = 17.5
-    // Explosive would be 4H+2H+1H+30m+RTH+1D = 6+4+3+2+8+10 = 33
-    let score: number;
-    let intensity: TemporalCluster['intensity'];
-    let label: string;
-    
-    if (weightedSum >= 25) {
-      score = 95;
-      intensity = 'explosive';
-      label = '🔥 Explosive Compression';
-    } else if (weightedSum >= 18) {
-      score = 80;
-      intensity = 'very_strong';
-      label = '⚡ Very Strong';
-    } else if (weightedSum >= 12) {
-      score = 65;
-      intensity = 'strong';
-      label = '💪 Strong';
-    } else if (weightedSum >= 7) {
-      score = 40;
-      intensity = 'moderate';
-      label = '📊 Moderate';
-    } else if (weightedSum >= 3) {
-      score = 25;
-      intensity = 'low';
-      label = '📉 Low';
-    } else {
-      score = 10;
-      intensity = 'low';
-      label = '⏸️ Quiet';
-    }
-    
-    clusters.push({
-      minutesToClose: centerTime,
-      timeframes: clusterTFs,
-      size,
-      weightedScore: weightedSum,
-      intensity,
-      score,
-      label,
+
+    clusters.sort((a, b) => {
+      if (b.weightedScore !== a.weightedScore) return b.weightedScore - a.weightedScore;
+      if (b.size !== a.size) return b.size - a.size;
+      return a.minutesToClose - b.minutesToClose;
     });
   }
   
@@ -783,7 +793,9 @@ export function calcTemporalCompression(date: Date, windowMinutes: number = 5): 
   };
   
   // Find next meaningful cluster (weighted score >= 7)
-  const meaningfulClusters = clusters.filter(c => c.weightedScore >= 7);
+  const meaningfulClusters = clusters
+    .filter(c => c.weightedScore >= 7)
+    .sort((a, b) => a.minutesToClose - b.minutesToClose);
   const nextMeaningful = meaningfulClusters.find(c => c.minutesToClose > 0) || mainCluster;
   
   // Check if closing right now
@@ -835,24 +847,24 @@ export function getDecompressionStatus(date: Date): DecompressionWindowStatus[] 
       continue;
     }
     
-    // Only include if part of the main cluster (actual confluence)
-    if (!mainClusterTFs.has(tf) && compression.mainCluster.size >= 2) {
-      continue;
-    }
-    
     // This timeframe is in decompression window
     const phase = minsToClose <= windowStartMins * 0.25 ? 'imminent' : 'active';
+    const inMainCluster = mainClusterTFs.has(tf);
     
     results.push({
       timeframe: tf,
       isInWindow: true,
+      inMainCluster,
       minutesToClose: minsToClose,
       windowStartMins,
       phase,
     });
   }
-  
-  return results;
+
+  return results.sort((a, b) => {
+    if (a.inMainCluster !== b.inMainCluster) return a.inMainCluster ? -1 : 1;
+    return a.minutesToClose - b.minutesToClose;
+  });
 }
 
 /**
@@ -880,9 +892,11 @@ export function getDecompressionSummary(statuses: DecompressionStatus[]): string
  * Get all intraday confluences for a given time
  */
 export function getIntradayConfluence(date: Date): TimeConfluence {
+  const clock = createMarketClock(date);
   const minutesSinceOpen = getMinutesSinceOpen(date);
+  const sessionLength = clock.dayInfo.sessionLengthMins || RTH_SESSION_MINS;
   
-  const standardClosing = getStandardCandlesClosing(minutesSinceOpen);
+  const standardClosing = getStandardCandlesClosing(minutesSinceOpen, sessionLength);
   const fibClosing = getFibonacciCandlesClosing(minutesSinceOpen);
   
   // Remove duplicates (1m, 2m, 3m, 5m appear in both)
@@ -910,7 +924,7 @@ export function getIntradayConfluence(date: Date): TimeConfluence {
   else if (minutesSinceOpen === 60) desc = 'First hour close - key pivot';
   else if (minutesSinceOpen === 180) desc = '3-hour close';
   else if (minutesSinceOpen === 360) desc = '6-hour close - major confluence';
-  else if (minutesSinceOpen === 390) desc = 'Market close - RTH + daily candle';
+  else if (minutesSinceOpen === sessionLength) desc = 'Market close - RTH + daily candle';
   else if (allClosing.length >= 5) desc = `${allClosing.length}-way confluence`;
   else desc = `${allClosing.length} candles closing`;
   
@@ -932,15 +946,20 @@ export function getIntradayConfluence(date: Date): TimeConfluence {
  * Get all major intraday confluences for today
  */
 export function getTodayConfluences(date: Date): TimeConfluence[] {
-  const etParts = getETParts(date);
+  const clock = createMarketClock(date);
   const confluences: TimeConfluence[] = [];
+
+  if (!clock.dayInfo.isTradingDay) {
+    return confluences;
+  }
+
+  const openMins = clock.dayInfo.openMinsET;
+  const closeMins = clock.dayInfo.closeMinsET;
   
-  // Start from 9:30 AM
-  const start = new Date(`${etParts.dateStr}T${String(NYSE_OPEN_HOUR).padStart(2, '0')}:${String(NYSE_OPEN_MIN).padStart(2, '0')}:00`);
-  
-  // Go through every 5-minute mark until 4:00 PM
-  for (let mins = 5; mins <= 390; mins += 5) {
-    const checkTime = new Date(start.getTime() + mins * 60000);
+  // Go through every 5-minute mark until today's ET close (half-day aware)
+  for (let targetMins = openMins + 5; targetMins <= closeMins; targetMins += 5) {
+    const deltaMins = targetMins - clock.minutesSinceMidnight;
+    const checkTime = new Date(date.getTime() + deltaMins * 60000);
     const confluence = getIntradayConfluence(checkTime);
     
     // Only include medium+ impact
@@ -957,32 +976,29 @@ export function getTodayConfluences(date: Date): TimeConfluence[] {
  */
 export function getNextMajorConfluence(date: Date): { confluence: TimeConfluence | null; minutesAway: number } {
   const clock = createMarketClock(date);
+
+  if (!clock.dayInfo.isTradingDay) {
+    return { confluence: null, minutesAway: 0 };
+  }
+
   const currentMins = clock.minutesSinceMidnight;
-  const openMins = NYSE_OPEN_HOUR * 60 + NYSE_OPEN_MIN;
-  const closeMins = NYSE_CLOSE_MINS;
+  const openMins = clock.dayInfo.openMinsET;
+  const closeMins = clock.dayInfo.closeMinsET;
+  const sessionLength = clock.dayInfo.sessionLengthMins;
   
-  // Key confluence times (minutes since midnight)
-  const keyTimes = [
-    openMins + 30,   // 10:00 AM
-    openMins + 60,   // 10:30 AM
-    openMins + 90,   // 11:00 AM
-    openMins + 120,  // 11:30 AM
-    openMins + 150,  // 12:00 PM
-    openMins + 180,  // 12:30 PM
-    openMins + 210,  // 1:00 PM
-    openMins + 240,  // 1:30 PM
-    openMins + 270,  // 2:00 PM
-    openMins + 300,  // 2:30 PM
-    openMins + 330,  // 3:00 PM
-    openMins + 360,  // 3:30 PM - QUADRUPLE
-    openMins + 390,  // 4:00 PM - CLOSE
-  ];
+  // Key confluence times (minutes since midnight), half-day aware
+  const keyTimes: number[] = [];
+  for (let offset = 30; offset <= sessionLength; offset += 30) {
+    keyTimes.push(openMins + offset);
+  }
+  if (keyTimes[keyTimes.length - 1] !== closeMins) {
+    keyTimes.push(closeMins);
+  }
   
   for (const targetMins of keyTimes) {
     if (targetMins > currentMins && targetMins <= closeMins) {
-      const etParts = getETParts(date);
-      const checkTime = new Date(`${etParts.dateStr}T12:00:00`);
-      checkTime.setHours(Math.floor(targetMins / 60), targetMins % 60, 0, 0);
+      const deltaMins = targetMins - currentMins;
+      const checkTime = new Date(date.getTime() + deltaMins * 60000);
       const confluence = getIntradayConfluence(checkTime);
       
       if (confluence.confluenceScore >= 5) {
