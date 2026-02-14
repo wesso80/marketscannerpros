@@ -30,6 +30,23 @@ function getNumericField(obj: Record<string, unknown>, keys: string[], fallback 
   return fallback;
 }
 
+function getIntField(obj: Record<string, unknown>, keys: string[], fallback = 0): number {
+  const value = getNumericField(obj, keys, fallback);
+  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
+}
+
+function getNYTimeParts(date: Date = new Date()): { hour: number; minute: number } {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => Number(parts.find(p => p.type === type)?.value || '0');
+  return { hour: get('hour'), minute: get('minute') };
+}
+
 /**
  * Normalize IV from API (handles both decimal 0.25 and percent 25 formats)
  */
@@ -359,6 +376,7 @@ export interface GreeksAdvice {
 export interface IVAnalysis {
   currentIV: number;              // Current implied volatility (avg across ATM options)
   ivRank: number;                 // 0-100: Where is IV vs last 52 weeks
+  ivRankHeuristic: number;        // Alias to make explicit this is heuristic (no historical series)
   ivPercentile: number;           // 0-100: % of days IV was lower
   ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
   ivReason: string;
@@ -622,6 +640,7 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
   calls: AVOptionContract[];
   puts: AVOptionContract[];
   selectedExpiry: string;
+  dataDate: string | null;
 } | null> {
   if (!ALPHA_VANTAGE_KEY) {
     console.warn('No Alpha Vantage API key - skipping options chain fetch');
@@ -720,8 +739,16 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       }
     }
     
+    const dataDate = typeof data?.date === 'string'
+      ? data.date
+      : typeof data?.lastRefreshed === 'string'
+      ? data.lastRefreshed
+      : typeof data?.last_refreshed === 'string'
+      ? data.last_refreshed
+      : null;
+
     console.log(`✅ Filtered to ${bestExpiry}: ${calls.length} calls, ${puts.length} puts`);
-    return { calls, puts, selectedExpiry: bestExpiry };
+    return { calls, puts, selectedExpiry: bestExpiry, dataDate };
   } catch (err) {
     console.error('Options chain fetch failed:', err);
     return null;
@@ -782,11 +809,8 @@ function analyzeOpenInterest(
   let debugFirstCall = true;
   
   for (const call of calls) {
-    // Alpha Vantage may use 'open_interest' or 'openInterest'
-    const oiValue = call.open_interest || (call as unknown as Record<string, string>).openInterest || '0';
-    const oi = parseInt(String(oiValue), 10) || 0;
-    const strikeValue = call.strike || '0';
-    const strike = parseFloat(String(strikeValue)) || 0;
+    const oi = getIntField(call as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    const strike = getNumericField(call as unknown as Record<string, unknown>, ['strike'], 0);
     
     // Debug first call contract
     if (debugFirstCall && calls.length > 0) {
@@ -841,7 +865,7 @@ function analyzeOpenInterest(
   
   for (const put of puts) {
     // Use helper for field variations (open_interest vs openInterest)
-    const oi = getNumericField(put as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    const oi = getIntField(put as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
     const strike = getNumericField(put as unknown as Record<string, unknown>, ['strike'], 0);
     
     if (strike > 0) allRawStrikes.push(strike);
@@ -917,10 +941,16 @@ function analyzeOpenInterest(
   let maxPainStrike: number | null = null;
   let minPain = Infinity;
   
-  for (const [potentialSettlement] of strikeOI.entries()) {
+  const maxPainUniverse = [...strikeOI.keys()]
+    .sort((a, b) => Math.abs(a - currentPrice) - Math.abs(b - currentPrice))
+    .slice(0, 60);
+
+  for (const potentialSettlement of maxPainUniverse) {
     let totalPain = 0;
     
-    for (const [contractStrike, data] of strikeOI.entries()) {
+    for (const contractStrike of maxPainUniverse) {
+      const data = strikeOI.get(contractStrike);
+      if (!data) continue;
       // Calls are ITM when strike < settlement price
       if (contractStrike < potentialSettlement) {
         totalPain += (potentialSettlement - contractStrike) * data.callOI * 100; // *100 for contract size
@@ -1022,26 +1052,26 @@ function analyzeIV(
   // IV Rank approximation based on typical stock IV ranges
   // Without historical data, we estimate based on absolute levels
   // < 15% = very low, 15-25% = low, 25-40% = normal, 40-60% = elevated, > 60% = high
-  let ivRank: number;
+  let ivRankHeuristic: number;
   let ivPercentile: number;
   
   if (currentIV < 0.15) {
-    ivRank = 10;
+    ivRankHeuristic = 10;
     ivPercentile = 15;
   } else if (currentIV < 0.25) {
-    ivRank = 25;
+    ivRankHeuristic = 25;
     ivPercentile = 30;
   } else if (currentIV < 0.35) {
-    ivRank = 45;
+    ivRankHeuristic = 45;
     ivPercentile = 50;
   } else if (currentIV < 0.50) {
-    ivRank = 65;
+    ivRankHeuristic = 65;
     ivPercentile = 70;
   } else if (currentIV < 0.70) {
-    ivRank = 80;
+    ivRankHeuristic = 80;
     ivPercentile = 85;
   } else {
-    ivRank = 95;
+    ivRankHeuristic = 95;
     ivPercentile = 95;
   }
   
@@ -1049,22 +1079,23 @@ function analyzeIV(
   let ivSignal: 'sell_premium' | 'buy_premium' | 'neutral';
   let ivReason: string;
   
-  if (ivRank >= 70) {
+  if (ivRankHeuristic >= 70) {
     ivSignal = 'sell_premium';
-    ivReason = `IV Rank ${ivRank}% is elevated. Consider credit spreads, iron condors, or selling premium.`;
-  } else if (ivRank <= 30) {
+    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is elevated. Consider credit spreads, iron condors, or selling premium.`;
+  } else if (ivRankHeuristic <= 30) {
     ivSignal = 'buy_premium';
-    ivReason = `IV Rank ${ivRank}% is low. Buying options is relatively cheap. Consider long calls/puts or debit spreads.`;
+    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is low. Buying options is relatively cheap. Consider long calls/puts or debit spreads.`;
   } else {
     ivSignal = 'neutral';
-    ivReason = `IV Rank ${ivRank}% is in normal range. Both buying and selling strategies viable.`;
+    ivReason = `IV Rank (heuristic) ${ivRankHeuristic}% is in normal range. Both buying and selling strategies viable.`;
   }
   
-  console.log(`📊 IV Analysis: Current IV=${(currentIV * 100).toFixed(1)}%, Rank=${ivRank}%, Signal=${ivSignal}`);
+  console.log(`📊 IV Analysis: Current IV=${(currentIV * 100).toFixed(1)}%, Rank(heuristic)=${ivRankHeuristic}%, Signal=${ivSignal}`);
   
   return {
     currentIV,
-    ivRank,
+    ivRank: ivRankHeuristic,
+    ivRankHeuristic,
     ivPercentile,
     ivSignal,
     ivReason,
@@ -1083,6 +1114,7 @@ function detectUnusualActivity(
   const unusualStrikes: UnusualActivity['unusualStrikes'] = [];
   const VOLUME_OI_THRESHOLD = 2.0;  // Volume > 2x Open Interest = unusual
   const MIN_VOLUME = 500;           // Minimum volume to consider
+  const MIN_OI = 200;               // Avoid false positives on tiny OI
   
   // Build map of mark prices for premium calculation
   const markPriceMap = new Map<string, number>();
@@ -1094,7 +1126,9 @@ function detectUnusualActivity(
   for (const opt of allOptions) {
     const strike = parseFloat(opt.strike || '0');
     const volume = getNumericField(opt as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
-    const openInterest = getNumericField(opt as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    const openInterest = getIntField(opt as unknown as Record<string, unknown>, ['open_interest', 'openInterest'], 0);
+    const bid = getNumericField(opt as unknown as Record<string, unknown>, ['bid'], 0);
+    const ask = getNumericField(opt as unknown as Record<string, unknown>, ['ask'], 0);
     
     // Store mark price for later premium calculation
     const markPrice = getNumericField(opt as unknown as Record<string, unknown>, ['mark', 'mid', 'last'], 0);
@@ -1106,7 +1140,8 @@ function detectUnusualActivity(
     if (distancePercent > 0.15) continue;
     
     // Check for unusual volume
-    if (volume >= MIN_VOLUME && openInterest > 0) {
+    if (volume >= MIN_VOLUME && openInterest >= MIN_OI) {
+      if (bid <= 0 || ask <= 0 || ask / bid > 1.25) continue;
       const volumeOIRatio = volume / openInterest;
       
       if (volumeOIRatio >= VOLUME_OI_THRESHOLD) {
@@ -1408,11 +1443,6 @@ function calculateCompositeScore(
   let directionTotalWeight = 0;
   
   // Helper: Smooth score mapping with clamping
-  const smoothMap = (value: number, inMin: number, inMax: number, outMin: number, outMax: number): number => {
-    const clamped = Math.max(inMin, Math.min(inMax, value));
-    return outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin);
-  };
-  
   // 1. UNUSUAL ACTIVITY (30% of direction) - Smart money signal
   // Reduced from 35% to prevent flow dominance on big names during news
   const unusualWeight = 0.30;
@@ -1807,6 +1837,8 @@ function calculateCompositeScore(
 
   // Calculate final quality percentage
   const finalQualityScore = qualityMaxScore > 0 ? (qualityScore / qualityMaxScore) * 100 : 50;
+  const directionalNames = new Set(['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position']);
+  const directionalTotal = components.filter(c => directionalNames.has(c.name)).length;
 
   console.log(`🎯 Direction: ${normalizedDirectionScore.toFixed(1)} → ${finalDirection.toUpperCase()} | Quality: ${finalQualityScore.toFixed(0)}% | Confidence: ${confidence.toFixed(0)}%`);
 
@@ -1818,7 +1850,7 @@ function calculateCompositeScore(
     components,
     conflicts,
     alignedCount: finalDirection === 'bullish' ? bullishSignals.length : bearishSignals.length,
-    totalSignals: components.length
+    totalSignals: directionalTotal
   };
 }
 
@@ -2324,7 +2356,7 @@ function selectStrikesFromConfluence(
   recommendations.push({
     strike: atmStrike,
     type: isCallDirection ? 'call' : 'put',
-    reason: 'ATM strike - highest gamma, balanced delta',
+    reason: 'Nearest-to-price strike (best liquidity, balanced delta/gamma)',
     distanceFromPrice: ((atmStrike - currentPrice) / currentPrice) * 100,
     moneyness: 'ATM',
     estimatedDelta: atmGreeks.delta,
@@ -2562,17 +2594,8 @@ function calculateEntryTiming(
   candleCloseConfluence?: CandleCloseConfluence | null
 ): EntryTimingAdvice {
   const now = new Date();
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  const currentHourDecimal = hour + minute / 60;
-  
-  // Convert to EST (Eastern Standard Time)
-  // Note: This is a simplified conversion - in production you'd use a timezone library
-  const estOffset = -5; // EST is UTC-5 (or -4 during DST)
-  const utcHour = now.getUTCHours();
-  const utcMin = now.getUTCMinutes();
-  const estHour = (utcHour + 24 + estOffset) % 24;
-  const estTimeDecimal = estHour + utcMin / 60;
+  const nyTime = getNYTimeParts(now);
+  const estTimeDecimal = nyTime.hour + nyTime.minute / 60;
   
   // Use clusteredCount (TFs closing together) for real confluence
   const decompCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
@@ -2833,7 +2856,7 @@ export class OptionsConfluenceAnalyzer {
             ...optionsChain.calls.map(c => parseFloat(c.strike || '0')),
             ...optionsChain.puts.map(p => parseFloat(p.strike || '0'))
           ])].filter(s => s > 0).sort((a, b) => a - b);
-          dataQuality.lastUpdated = new Date().toISOString();
+          dataQuality.lastUpdated = optionsChain.dataDate || 'UNKNOWN_EOD';
           
           // Check if API provided Greeks
           const sampleContract = optionsChain.calls[0] || optionsChain.puts[0];
@@ -2859,6 +2882,7 @@ export class OptionsConfluenceAnalyzer {
           
           // Add EOD data confidence cap
           dataConfidenceCaps.push('EOD options data - confidence capped (not realtime)');
+          executionNotes.push('DTE is calendar-based; holidays not accounted for');
           
           // Add execution notes based on data quality
           if (!dataQuality.hasMeaningfulOI) {
@@ -2950,9 +2974,12 @@ export class OptionsConfluenceAnalyzer {
       } : undefined,
       primaryExpiration?.dte || 14  // Pass DTE for dynamic max pain weighting
     );
+
+    const confidenceCap = dataQuality.freshness === 'EOD' ? 75 : 95;
+    compositeScore.confidence = Math.min(compositeScore.confidence, confidenceCap);
     
     // PRO TRADER: Get strategy recommendation based on IV environment and composite score
-    const strategyRecommendation = recommendStrategy(
+    let strategyRecommendation = recommendStrategy(
       compositeScore,
       ivAnalysis ? { rank: ivAnalysis.ivRank } : null,
       currentPrice,
@@ -2962,11 +2989,10 @@ export class OptionsConfluenceAnalyzer {
     // Use composite direction - if composite says neutral, respect it (don't force a direction)
     // Only fall back to confluence direction if composite has very low confidence
     let finalDirection: 'bullish' | 'bearish' | 'neutral';
-    if (compositeScore.confidence >= 50) {
-      finalDirection = compositeScore.finalDirection;
-    } else if (compositeScore.conflicts.length >= 2) {
-      // Too many conflicts - show neutral even if composite picked a direction
+    if (Math.abs(compositeScore.directionScore) < 15 || compositeScore.conflicts.length >= 2) {
       finalDirection = 'neutral';
+    } else if (compositeScore.confidence >= 50) {
+      finalDirection = compositeScore.finalDirection;
     } else {
       finalDirection = compositeScore.finalDirection || direction;
     }
@@ -2989,6 +3015,17 @@ export class OptionsConfluenceAnalyzer {
       tradeLevels,
       confluenceResult
     );
+
+    if (aiMarketState.tradeQualityGate === 'WAIT') {
+      strategyRecommendation = {
+        strategy: 'WAIT',
+        strategyType: 'neutral',
+        reason: 'Conflicts/high-risk market conditions. Wait for alignment.',
+        riskProfile: 'defined',
+        maxRisk: '0',
+        maxReward: '0',
+      };
+    }
     
     // PRODUCTION FIX: Calculate options quality score and grade
     const optionsQualityScore = compositeScore.qualityScore ?? 50;
@@ -3027,10 +3064,10 @@ export class OptionsConfluenceAnalyzer {
     // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
     
     // Add execution notes based on market conditions
-    if (ivAnalysis && ivAnalysis.ivPercentile > 70) {
+    if (ivAnalysis && ivAnalysis.ivRank > 70) {
       executionNotes.push('High IV - consider credit strategies or wait for pullback');
     }
-    if (ivAnalysis && ivAnalysis.ivPercentile < 30) {
+    if (ivAnalysis && ivAnalysis.ivRank < 30) {
       executionNotes.push('Low IV - debit strategies favorable, consider longer DTE');
     }
     if (openInterestAnalysis && openInterestAnalysis.pcRatio > 1.5) {
@@ -3041,6 +3078,10 @@ export class OptionsConfluenceAnalyzer {
     }
     if (dataQuality.freshness === 'EOD') {
       executionNotes.push('Using EOD data - verify levels at market open');
+    }
+    if (finalDirection === 'neutral') {
+      entryTiming.urgency = 'wait';
+      entryTiming.reason = 'Directional edge is weak or conflicted - wait for stronger alignment';
     }
     
     return {
