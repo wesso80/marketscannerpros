@@ -1066,10 +1066,12 @@ export async function POST(req: NextRequest) {
             throw new Error(`Alpha Vantage error: ${j["Error Message"]}`);
           }
           
-          // Find the time series data
-          const possibleKeys = [tsKey, "Time Series FX (Daily)", "Time Series FX (Intraday)"];
-          const foundKey = possibleKeys.find(k => j[k]);
-          const ts = j[foundKey || tsKey] || {};
+          // Find the time series data (AV returns dynamic intraday key, e.g. "Time Series FX (60min)")
+          const foundKey = Object.keys(j).find((k) =>
+            k === tsKey ||
+            k.startsWith("Time Series FX (")
+          );
+          const ts = (foundKey ? j[foundKey] : undefined) || {};
           
           const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
             t: date as string,
@@ -1191,45 +1193,85 @@ export async function POST(req: NextRequest) {
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
             
           } else if (canFallbackToAV()) {
-            // Fallback to Alpha Vantage (legacy behavior)
-            console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval}) - ${getCacheMode()} mode`);
-          
-            // Get price from pre-fetched bulk quotes (saves 1 API call per symbol!)
-            // Fall back to individual fetch if bulk didn't have this symbol
-            let price = bulkPriceMap.get(sym.toUpperCase()) ?? NaN;
-          
-            // Alpha Vantage enforces max 5 requests/second - batch with delays
-            // Batch 1: First 5 indicators
-            const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
-              fetchRSI(sym),
-              fetchMACD(sym),
-              fetchEMA200(sym),
-              fetchATR(sym),
-              fetchADX(sym),
-            ]);
-          
-            // Wait 250ms before second batch to respect rate limit
-            await new Promise(resolve => setTimeout(resolve, 250));
-          
-            // Batch 2: Remaining 3 indicators (price already from bulk!)
-            const [stochObj, cciVal, aroonObj] = await Promise.all([
-              fetchSTOCH(sym),
-              fetchCCI(sym),
-              fetchAROON(sym),
-            ]);
-          
-            // Only fetch individual price if bulk failed for this symbol
-            if (!Number.isFinite(price)) {
-              console.info(`[scanner] Bulk quote missing for ${sym}, fetching individually`);
-              const priceData = await fetchEquityPrice(sym);
-              price = priceData.price;
+            // Fallback to Alpha Vantage with ONE candle-series call, then compute indicators locally.
+            // This avoids per-indicator API fanout and dramatically reduces rate-limit failures.
+            console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage candles (${avInterval}) - ${getCacheMode()} mode`);
+
+            const seriesUrl = avInterval === "daily"
+              ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=full&entitlement=delayed&apikey=${ALPHA_KEY}`
+              : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_KEY}`;
+
+            const seriesJson = await fetchAlphaJson(seriesUrl, `EQUITY_SERIES ${sym}`);
+            const expectedTsKey = avInterval === "daily" ? "Time Series (Daily)" : `Time Series (${avInterval})`;
+            const foundTsKey = Object.keys(seriesJson).find((k) =>
+              k === expectedTsKey ||
+              k.startsWith("Time Series (")
+            );
+            const ts = (foundTsKey ? seriesJson[foundTsKey] : undefined) || {};
+
+            const candles: Candle[] = Object.entries(ts)
+              .map(([date, v]: any) => ({
+                t: String(date),
+                open: Number(v["1. open"] ?? NaN),
+                high: Number(v["2. high"] ?? NaN),
+                low: Number(v["3. low"] ?? NaN),
+                close: Number(v["4. close"] ?? NaN),
+                volume: Number(v["5. volume"] ?? 0),
+              }))
+              .filter((c) => Number.isFinite(c.close))
+              .sort((a, b) => a.t.localeCompare(b.t));
+
+            if (!candles.length) throw new Error(`No equity candles returned for ${sym}`);
+
+            const closes = candles.map((c) => c.close);
+            const highs = candles.map((c) => c.high);
+            const lows = candles.map((c) => c.low);
+            const volumes = candles.map((c) => (Number.isFinite(c.volume) && c.volume > 0 ? c.volume : 1000));
+
+            const rsiArr = rsi(closes, 14);
+            const macObj = macd(closes, 12, 26, 9);
+            const emaArr = ema(closes, 200);
+            const atrArr = atr(highs, lows, closes, 14);
+            const adxObj = adx(highs, lows, closes, 14);
+            const stochObj = stochastic(highs, lows, closes, 14, 3);
+            const cciVal = cci(highs, lows, closes, 20);
+            const aroonObj = aroon(highs, lows, 25);
+            const obvArr = obv(closes, volumes);
+
+            const last = closes.length - 1;
+            let price = closes[last];
+            const bulkPrice = bulkPriceMap.get(sym.toUpperCase());
+            if (Number.isFinite(bulkPrice)) {
+              price = bulkPrice as number;
             }
-          
-            const macHist = macObj.hist;
-            const macLine = macObj.macd;
-            const sigLine = macObj.sig;
-          
-            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, 0, 0);
+
+            const rsiVal = rsiArr[last];
+            const macHist = macObj.hist[last];
+            const macLine = macObj.macdLine[last];
+            const sigLine = macObj.signalLine[last];
+            const ema200Val = emaArr[last];
+            const atrVal = atrArr[last - 1];
+            const obvCurrent = obvArr[last];
+            const obvPrev = obvArr[last - 1];
+            const lastCandleTime = candles[last]?.t;
+
+            const scoreResult = computeScore(
+              price,
+              ema200Val,
+              rsiVal,
+              macLine,
+              sigLine,
+              macHist,
+              atrVal,
+              adxObj.adx,
+              stochObj.k,
+              aroonObj.up,
+              aroonObj.down,
+              cciVal,
+              obvCurrent,
+              obvPrev
+            );
+
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
               score: scoreResult.score,
@@ -1248,9 +1290,10 @@ export async function POST(req: NextRequest) {
               cci: cciVal,
               aroon_up: aroonObj.up,
               aroon_down: aroonObj.down,
-              obv: NaN,
-              lastCandleTime: new Date().toISOString(),
+              obv: obvCurrent,
+              lastCandleTime,
             };
+
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
           } else {
             // cache_only mode but no cached data
