@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { 
@@ -12,7 +12,6 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
 import EvolutionStatusCard from "@/components/EvolutionStatusCard";
-import { AIDeskFeedStrip, DeskTopStrip, FocusSummaryCard } from "@/components/CockpitPrimitives";
 import { deriveCopilotPresence } from "@/lib/copilot/derive-copilot-presence";
 import type { OptionsSetup as AnalyzerOptionsSetup } from "@/lib/options-confluence-analyzer";
 
@@ -448,7 +447,6 @@ type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 export default function OptionsConfluenceScanner() {
   const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
-  const lastPageDataKeyRef = useRef<string | null>(null);
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<OptionsSetup | null>(null);
@@ -505,12 +503,6 @@ export default function OptionsConfluenceScanner() {
   // Push scan results to AI Copilot context
   useEffect(() => {
     if (result) {
-      const pageDataKey = `${result.symbol}|${selectedTF}|${result.currentPrice}|${result.direction}|${result.signalStrength}|${result.confluenceStack}|${result.tradeQuality}`;
-      if (lastPageDataKeyRef.current === pageDataKey) {
-        return;
-      }
-      lastPageDataKeyRef.current = pageDataKey;
-
       setPageData({
         skill: 'options',
         symbols: [result.symbol],
@@ -540,7 +532,7 @@ export default function OptionsConfluenceScanner() {
         summary: `Options scan for ${result.symbol} at $${result.currentPrice}: ${result.direction.toUpperCase()} bias (${result.tradeQuality}) with ${result.signalStrength} strength. Confluence: ${result.confluenceStack}/8.`,
       });
     }
-  }, [result, selectedTF, setPageData]);
+  }, [result, setPageData]);
 
   useEffect(() => {
     let mounted = true;
@@ -1749,16 +1741,40 @@ export default function OptionsConfluenceScanner() {
           const breadth = result.direction === 'bullish' ? 'RISK ON' : result.direction === 'bearish' ? 'RISK OFF' : 'MIXED';
           const regimeLabel = institutionalMarketRegime || 'UNKNOWN';
 
+          const stripTag = (label: string, value: string, color: string) => (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: 'rgba(15,23,42,0.55)',
+              border: '1px solid rgba(148,163,184,0.24)',
+              borderRadius: '999px',
+              padding: '0.2rem 0.55rem',
+              fontSize: '0.67rem',
+            }}>
+              <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
+              <span style={{ color, fontWeight: 800 }}>{value}</span>
+            </div>
+          );
+
           return (
-            <DeskTopStrip
-              items={[
-                { label: 'Regime', value: regimeLabel, color: '#10B981' },
-                { label: 'Global Risk', value: riskState, color: riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981' },
-                { label: 'Breadth', value: breadth, color: breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B' },
-                { label: 'Event Risk', value: 'NONE', color: '#10B981' },
-                { label: 'Session', value: (result.entryTiming.marketSession || 'n/a').toUpperCase(), color: '#93C5FD' },
-              ]}
-            />
+            <div style={{
+              marginBottom: '0.65rem',
+              background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
+              border: '1px solid rgba(56,189,248,0.3)',
+              borderRadius: '10px',
+              padding: '0.48rem 0.6rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+              alignItems: 'center',
+            }}>
+              {stripTag('Regime', regimeLabel, '#10B981')}
+              {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
+              {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
+              {stripTag('Event Risk', 'NONE', '#10B981')}
+              {stripTag('Session', (result.entryTiming.marketSession || 'n/a').toUpperCase(), '#93C5FD')}
+            </div>
           );
         })()}
 
@@ -1798,7 +1814,23 @@ export default function OptionsConfluenceScanner() {
           const msg = messages[deskFeedIndex % messages.length];
 
           return (
-            <AIDeskFeedStrip message={msg} />
+            <div style={{
+              marginTop: '-0.45rem',
+              marginBottom: '0.8rem',
+              background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+              border: '1px solid rgba(59,130,246,0.28)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ color: '#93C5FD', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                🧠 AI Desk Feed
+              </div>
+              <div style={{ color: '#CBD5E1', fontSize: '0.74rem', flex: 1 }}>{msg}</div>
+            </div>
           );
         })()}
 
@@ -1951,24 +1983,21 @@ export default function OptionsConfluenceScanner() {
           <div style={{ display: 'grid', gap: '1.5rem' }}>
 
             {focusMode && (
-              <FocusSummaryCard
-                fields={[
-                  {
-                    label: 'Direction',
-                    value: thesisDirection.toUpperCase(),
-                    color: thesisDirection === 'bullish' ? '#10B981' : thesisDirection === 'bearish' ? '#EF4444' : '#F59E0B',
-                  },
-                  { label: 'Confidence', value: `${(result.compositeScore?.confidence ?? 0).toFixed(0)}%`, color: '#E2E8F0' },
-                  { label: 'Entry', value: result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A', color: '#93C5FD' },
-                  { label: 'Invalidation', value: result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A', color: '#FCA5A5' },
-                  {
-                    label: 'Targets',
-                    value: result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A',
-                    color: '#6EE7B7',
-                    spanFull: true,
-                  },
-                ]}
-              />
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
+                border: '1px solid rgba(16,185,129,0.32)',
+                borderRadius: '10px',
+                padding: '0.72rem 0.82rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.45rem',
+              }}>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: thesisDirection === 'bullish' ? '#10B981' : thesisDirection === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{thesisDirection.toUpperCase()}</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
+                <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
+              </div>
             )}
 
             {terminalDecisionCard && (
