@@ -10,6 +10,7 @@
  */
 
 import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseConfluence } from './confluence-learning-agent';
+import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER UTILITIES (Production-grade parsing)
@@ -38,6 +39,108 @@ function getIntField(obj: Record<string, unknown>, keys: string[], fallback = 0)
 function getOptionalNumericField(obj: Record<string, unknown>, keys: string[]): number | undefined {
   const value = getNumericField(obj, keys, Number.NaN);
   return Number.isFinite(value) ? value : undefined;
+}
+
+function aggregatePatternCandles(candles: PatternCandle[], factor: number): PatternCandle[] {
+  if (!candles.length || factor <= 1) return candles;
+  const sorted = [...candles].sort((a, b) => a.ts - b.ts);
+  const aggregated: PatternCandle[] = [];
+
+  for (let i = 0; i < sorted.length; i += factor) {
+    const bucket = sorted.slice(i, i + factor);
+    if (!bucket.length) continue;
+    const first = bucket[0];
+    const last = bucket[bucket.length - 1];
+    aggregated.push({
+      ts: first.ts,
+      open: first.open,
+      high: Math.max(...bucket.map(c => c.high)),
+      low: Math.min(...bucket.map(c => c.low)),
+      close: last.close,
+      volume: bucket.reduce((sum, c) => sum + (Number(c.volume) || 0), 0),
+    });
+  }
+
+  return aggregated;
+}
+
+function parseAvTimeSeriesToPatternCandles(series: Record<string, any> | undefined): PatternCandle[] {
+  if (!series || typeof series !== 'object') return [];
+  return Object.entries(series)
+    .map(([timestamp, values]) => ({
+      ts: Date.parse(timestamp),
+      open: Number(values?.['1. open']),
+      high: Number(values?.['2. high']),
+      low: Number(values?.['3. low']),
+      close: Number(values?.['4. close']),
+      volume: Number(values?.['5. volume'] ?? 0),
+    }))
+    .filter(c => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
+    .sort((a, b) => a.ts - b.ts);
+}
+
+async function fetchPatternCandlesFallback(
+  symbol: string,
+  assetType: AssetType
+): Promise<{ '1H': PatternCandle[]; '4H': PatternCandle[]; '1D': PatternCandle[] }> {
+  if (!ALPHA_VANTAGE_KEY) {
+    return { '1H': [], '4H': [], '1D': [] };
+  }
+
+  const base = 'https://www.alphavantage.co/query';
+
+  try {
+    let intradayUrl = '';
+    if (assetType === 'crypto') {
+      intradayUrl = `${base}?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(symbol)}&market=USD&interval=60min&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+    } else if (assetType === 'forex' && symbol.length >= 6) {
+      const from = symbol.slice(0, 3);
+      const to = symbol.slice(3, 6);
+      intradayUrl = `${base}?function=FX_INTRADAY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&interval=60min&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+    } else {
+      intradayUrl = `${base}?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    }
+
+    const intradayRes = await fetch(intradayUrl);
+    const intradayData = await intradayRes.json();
+    const intradaySeries = intradayData['Time Series (60min)'] || intradayData['Time Series FX (60min)'] || intradayData['Time Series Crypto (60min)'];
+    const oneHour = parseAvTimeSeriesToPatternCandles(intradaySeries);
+    const fourHour = aggregatePatternCandles(oneHour, 4);
+
+    let dailyUrl = '';
+    if (assetType === 'crypto') {
+      dailyUrl = `${base}?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(symbol)}&market=USD&apikey=${ALPHA_VANTAGE_KEY}`;
+    } else if (assetType === 'forex' && symbol.length >= 6) {
+      const from = symbol.slice(0, 3);
+      const to = symbol.slice(3, 6);
+      dailyUrl = `${base}?function=FX_DAILY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+    } else {
+      dailyUrl = `${base}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    }
+
+    const dailyRes = await fetch(dailyUrl);
+    const dailyData = await dailyRes.json();
+    const dailySeries = dailyData['Time Series (Daily)'] || dailyData['Time Series FX (Daily)'] || dailyData['Time Series (Digital Currency Daily)'];
+
+    const oneDay = dailySeries === dailyData['Time Series (Digital Currency Daily)']
+      ? Object.entries(dailySeries || {})
+          .map(([timestamp, values]: [string, any]) => ({
+            ts: Date.parse(timestamp),
+            open: Number(values?.['1a. open (USD)'] ?? values?.['1. open']),
+            high: Number(values?.['2a. high (USD)'] ?? values?.['2. high']),
+            low: Number(values?.['3a. low (USD)'] ?? values?.['3. low']),
+            close: Number(values?.['4a. close (USD)'] ?? values?.['4. close']),
+            volume: Number(values?.['5. volume'] ?? 0),
+          }))
+          .filter(c => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
+          .sort((a, b) => a.ts - b.ts)
+      : parseAvTimeSeriesToPatternCandles(dailySeries);
+
+    return { '1H': oneHour, '4H': fourHour, '1D': oneDay };
+  } catch (error) {
+    console.warn('[patterns] Fallback candle fetch failed:', error);
+    return { '1H': [], '4H': [], '1D': [] };
+  }
 }
 
 function getNYTimeParts(date: Date = new Date()): { hour: number; minute: number } {
@@ -239,6 +342,48 @@ export interface ExpirationRecommendation {
   confidenceScore: number;
 }
 
+export type EdgeVerdict = 'BULLISH_EDGE' | 'BEARISH_EDGE' | 'WAIT';
+
+export interface LocationContext {
+  regime: 'TREND' | 'RANGE' | 'REVERSAL' | 'UNKNOWN';
+  keyZones: Array<{
+    type: 'demand' | 'supply' | 'liquidity_high' | 'liquidity_low' | 'support' | 'resistance';
+    level: number;
+    strength: 'strong' | 'moderate' | 'weak';
+    reason: string;
+  }>;
+  patterns: Array<{
+    name: string;
+    bias: 'bullish' | 'bearish' | 'neutral';
+    confidence: number;
+    reason: string;
+  }>;
+  reflection: {
+    nearest: number | null;
+    reason: string;
+  };
+}
+
+export interface TradeSnapshot {
+  verdict: EdgeVerdict;
+  setupGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  oneLine: string;
+  why: string[];
+  risk: {
+    invalidationLevel: number | null;
+    invalidationReason: string;
+  };
+  action: {
+    entryTrigger: string;
+    entryZone?: { low: number; high: number };
+    targets?: { price: number; reason: string }[];
+  };
+  timing: {
+    urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade';
+    catalyst: string;
+  };
+}
+
 export interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -296,6 +441,15 @@ export interface OptionsSetup {
   
   // INSTITUTIONAL AI MARKET STATE (HEDGE FUND MODEL)
   aiMarketState: AIMarketState | null;
+
+  // PROFESSIONAL DECISION STACK (trader-native presentation)
+  professionalTradeStack: ProfessionalTradeStack | null;
+
+  // 3-second brain view (always present)
+  tradeSnapshot: TradeSnapshot;
+
+  // Location layer (zones/patterns)
+  locationContext: LocationContext | null;
   
   // DATA QUALITY TRACKING (Production critical)
   dataQuality: DataQuality;
@@ -438,6 +592,24 @@ export interface AIMarketState {
   scenarios: ScenarioMap;
   strategyMatchScore: number;   // 0-100% how well strategy fits regime
   tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
+}
+
+export interface ProfessionalStackLayer {
+  label: string;
+  state: string;
+  score: number;
+  status: 'ready' | 'caution' | 'waiting';
+  reason: string;
+}
+
+export interface ProfessionalTradeStack {
+  structureState: ProfessionalStackLayer;
+  liquidityContext: ProfessionalStackLayer;
+  timeEdge: ProfessionalStackLayer;
+  optionsEdge: ProfessionalStackLayer;
+  executionPlan: ProfessionalStackLayer;
+  overallEdgeScore: number;
+  overallState: 'A+' | 'A' | 'B' | 'C' | 'WAIT';
 }
 
 export interface OpenInterestData {
@@ -1574,11 +1746,12 @@ function calculateTradeLevels(
  * Split into two independent tracks:
  * 
  * TRACK A - DIRECTION SCORE (determines Bull/Bear/Neutral)
- * Only includes signals that are genuinely directional:
- * - Unusual Activity: 35% (smart money premium flow)
- * - O/I Sentiment (P/C ratio): 25%  
- * - Time Confluence: 25%
- * - Max Pain Position: 15% (dynamic by DTE)
+ * Structure-first weighting model (trader execution order):
+ * - Structure Score: 40% (HTF/LTF directional structure + cluster quality)
+ * - Pattern State: 25% (compression/expansion momentum state)
+ * - Flow Confirmation: 20% (unusual flow + OI sentiment)
+ * - Time Alignment: 15% (candle-close confluence timing accelerator)
+ * Max Pain remains a dynamic micro-structure modifier on short DTE.
  * 
  * TRACK B - SETUP QUALITY SCORE (determines A+/A/B/C grade)
  * Includes factors that affect trade quality, not direction:
@@ -1595,10 +1768,13 @@ function calculateCompositeScore(
   ivAnalysis: IVAnalysis | null,
   tradeLevels: TradeLevels | null,
   maxPainData?: { maxPain: number; currentPrice: number },
-  dte?: number  // Days to expiration for dynamic weighting
+  dte?: number,  // Days to expiration for dynamic weighting
+  qualityContext?: { hasMeaningfulOI?: boolean }
 ): CompositeScore {
   const components: SignalComponent[] = [];
   const conflicts: string[] = [];
+
+  const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
   
   // ═══════════════════════════════════════════════════════════════════════
   // TRACK A: DIRECTION SCORE (only directional signals)
@@ -1606,11 +1782,102 @@ function calculateCompositeScore(
   
   let directionWeightedScore = 0;
   let directionTotalWeight = 0;
+
+  // 0. STRUCTURE SCORE (40% of direction) - primary directional layer
+  const structureWeight = 0.40;
+  let structureScore = 0;
+  let structureDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  const directionScore = confluenceResult?.scoreBreakdown?.directionScore ?? 0;
+  const clusterScore = confluenceResult?.scoreBreakdown?.clusterScore ?? 50;
+  const activeTFs = confluenceResult?.scoreBreakdown?.activeTFs ?? 0;
+  const hasHigherTF = confluenceResult?.scoreBreakdown?.hasHigherTF ?? false;
+  const dominantClusterRatio = confluenceResult?.scoreBreakdown?.dominantClusterRatio ?? 0;
+
+  const structureQualityMultiplier = clamp(
+    (0.6 + (clusterScore / 100) * 0.25 + (hasHigherTF ? 0.15 : 0.05)),
+    0.65,
+    1.0
+  );
+
+  const derivedStructureScore = clamp(directionScore * structureQualityMultiplier, -100, 100);
+  const upstreamStructureScore = confluenceResult?.structure?.structureScore;
+  const blendedStructureAbs = typeof upstreamStructureScore === 'number'
+    ? clamp((Math.abs(derivedStructureScore) * 0.65) + (upstreamStructureScore * 0.35), 0, 100)
+    : Math.abs(derivedStructureScore);
+
+  if (derivedStructureScore > 12) {
+    structureDirection = 'bullish';
+    structureScore = blendedStructureAbs;
+  } else if (derivedStructureScore < -12) {
+    structureDirection = 'bearish';
+    structureScore = -blendedStructureAbs;
+  } else {
+    const patternVotes = confluenceResult?.structure?.patterns ?? [];
+    const bullishVotes = patternVotes.filter(p => p.bias === 'bullish').length;
+    const bearishVotes = patternVotes.filter(p => p.bias === 'bearish').length;
+    if (bullishVotes > bearishVotes && bullishVotes > 0) {
+      structureDirection = 'bullish';
+      structureScore = blendedStructureAbs * 0.5;
+    } else if (bearishVotes > bullishVotes && bearishVotes > 0) {
+      structureDirection = 'bearish';
+      structureScore = -blendedStructureAbs * 0.5;
+    } else {
+      structureDirection = 'neutral';
+      structureScore = 0;
+    }
+  }
+
+  structureScore = clamp(structureScore, -100, 100);
+
+  components.push({
+    name: 'Structure Score',
+    direction: structureDirection,
+    weight: structureWeight,
+    score: structureScore,
+    reason: `Dir ${directionScore.toFixed(0)}, cluster ${clusterScore.toFixed(0)}, structure ${typeof upstreamStructureScore === 'number' ? upstreamStructureScore.toFixed(0) : 'n/a'}, active TFs ${activeTFs}, dominant ${(dominantClusterRatio * 100).toFixed(0)}%`
+  });
+
+  directionWeightedScore += structureScore * structureWeight;
+  directionTotalWeight += structureWeight;
+
+  // 0b. PATTERN STATE (25% of direction) - compression/expansion momentum layer
+  const patternWeight = 0.25;
+  let patternScore = 0;
+  let patternDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  const decompScore = confluenceResult?.scoreBreakdown?.decompressionScore ?? 0;
+  const predictionDirection = confluenceResult?.prediction?.direction ?? 'neutral';
+
+  if (predictionDirection === 'bullish') {
+    patternDirection = 'bullish';
+    patternScore = decompScore;
+  } else if (predictionDirection === 'bearish') {
+    patternDirection = 'bearish';
+    patternScore = -decompScore;
+  }
+
+  const signalStrength = confluenceResult?.signalStrength ?? 'weak';
+  if (signalStrength === 'weak' || signalStrength === 'no_signal') {
+    patternScore *= 0.7;
+  } else if (signalStrength === 'strong') {
+    patternScore *= 1.05;
+  }
+
+  patternScore = clamp(patternScore, -100, 100);
+
+  components.push({
+    name: 'Pattern State',
+    direction: patternDirection,
+    weight: patternWeight,
+    score: patternScore,
+    reason: `${signalStrength.toUpperCase()} state, decompression ${decompScore.toFixed(0)}`
+  });
+
+  directionWeightedScore += patternScore * patternWeight;
+  directionTotalWeight += patternWeight;
   
   // Helper: Smooth score mapping with clamping
-  // 1. UNUSUAL ACTIVITY (30% of direction) - Smart money signal
-  // Reduced from 35% to prevent flow dominance on big names during news
-  const unusualWeight = 0.30;
+  // 1. UNUSUAL ACTIVITY (12% of direction) - Flow confirmation, not primary trigger
+  const unusualWeight = 0.12;
   let unusualScore = 0;
   let unusualDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
@@ -1680,8 +1947,10 @@ function calculateCompositeScore(
     });
   }
 
-  // 2. O/I SENTIMENT - Put/Call Ratio (25% of direction)
-  const oiWeight = 0.25;
+  const meaningfulOI = qualityContext?.hasMeaningfulOI ?? true;
+
+  // 2. O/I SENTIMENT - Put/Call Ratio (8% of direction, near-zero when OI quality is weak)
+  const oiWeight = meaningfulOI ? 0.08 : 0.02;
   let oiScore = 0;
   let oiDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   
@@ -1722,49 +1991,34 @@ function calculateCompositeScore(
     directionTotalWeight += oiWeight;
   }
 
-  // 3. TIME CONFLUENCE (30% of direction)
-  // Increased from 25% - price action confirmation is co-equal king with flow
-  const confluenceWeight = 0.30;
+  // 3. TIME CONFLUENCE (non-directional) - timing accelerator only
+  const confluenceWeight = 0.15;
   let confluenceScore = 0;
   let confluenceDirection: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  
-  if (confluenceResult && confluenceResult.prediction) {
-    const pred = confluenceResult.prediction;
-    confluenceDirection = pred.direction;
-    
-    // Map confidence (0-100) to score based on direction
-    if (pred.direction === 'bullish') {
-      confluenceScore = pred.confidence; // 0 to +100
-    } else if (pred.direction === 'bearish') {
-      confluenceScore = -pred.confidence; // 0 to -100
-    } else {
-      confluenceScore = 0;
-    }
-    
-    components.push({
-      name: 'Time Confluence',
-      direction: confluenceDirection,
-      weight: confluenceWeight,
-      score: confluenceScore,
-      reason: `${pred.direction.toUpperCase()} alignment (${pred.confidence.toFixed(0)}% conf)`
-    });
-    
-    directionWeightedScore += confluenceScore * confluenceWeight;
-    directionTotalWeight += confluenceWeight;
-  }
+  const candleConfluenceScore = confluenceResult?.candleCloseConfluence?.confluenceScore ?? 0;
+  const clusteredCount = confluenceResult?.decompression?.clusteredCount ?? 0;
+  const timingActivation = clamp(candleConfluenceScore * 0.8 + Math.min(20, clusteredCount * 5), 0, 100);
 
-  // 4. MAX PAIN POSITION (15% of direction, DYNAMIC by DTE)
+  components.push({
+    name: 'Time Confluence',
+    direction: confluenceDirection,
+    weight: confluenceWeight,
+    score: 0,
+    reason: `Timing activation ${timingActivation.toFixed(0)} (candle close ${candleConfluenceScore.toFixed(0)}, clustered TFs ${clusteredCount})`
+  });
+
+  // 4. MAX PAIN POSITION (dynamic micro-structure modifier by DTE)
   // Pinning effects are strongest 0-7 DTE, weak beyond 14 DTE
   const effectiveDte = dte ?? 14; // Default to 14 if not provided
-  let maxPainWeight = 0.15;
+  let maxPainWeight = meaningfulOI ? 0.10 : 0;
   
   // Dynamic weight: full weight at DTE 0-3, half at 7, near-zero at 14+
   if (effectiveDte <= 3) {
-    maxPainWeight = 0.15;
+    maxPainWeight = 0.10;
   } else if (effectiveDte <= 7) {
-    maxPainWeight = 0.15 * (1 - (effectiveDte - 3) / 8); // Linear decay
+    maxPainWeight = 0.10 * (1 - (effectiveDte - 3) / 8); // Linear decay
   } else if (effectiveDte <= 14) {
-    maxPainWeight = 0.05 * (1 - (effectiveDte - 7) / 14);
+    maxPainWeight = 0.03 * (1 - (effectiveDte - 7) / 14);
   } else {
     maxPainWeight = 0; // Ignore max pain for longer-dated
   }
@@ -1809,10 +2063,16 @@ function calculateCompositeScore(
   const normalizedDirectionScore = directionTotalWeight > 0 
     ? directionWeightedScore / directionTotalWeight 
     : 0;
+
+  const directionalEvidenceStrength = components
+    .filter(c => ['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Max Pain Position'].includes(c.name) && c.direction !== 'neutral')
+    .reduce((sum, c) => sum + c.weight * (Math.abs(c.score) / 100), 0);
   
   // Determine final direction based on direction score only
   let finalDirection: 'bullish' | 'bearish' | 'neutral';
-  if (normalizedDirectionScore > 15) {
+  if (directionalEvidenceStrength < 0.25) {
+    finalDirection = 'neutral';
+  } else if (normalizedDirectionScore > 15) {
     finalDirection = 'bullish';
   } else if (normalizedDirectionScore < -15) {
     finalDirection = 'bearish';
@@ -1916,7 +2176,7 @@ function calculateCompositeScore(
   
   // Get directional components only (exclude neutral signals)
   const directionalComponents = components.filter(c => 
-    ['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position'].includes(c.name)
+    ['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position'].includes(c.name)
     && c.direction !== 'neutral'
   );
   
@@ -1938,9 +2198,13 @@ function calculateCompositeScore(
   }
   
   // Agreement = aligned / total (handles missing data gracefully)
-  const normalizedAgreement = totalWeightedStrength > 0 
+  let normalizedAgreement = totalWeightedStrength > 0 
     ? (alignedWeightedStrength / totalWeightedStrength) * 100 
     : 50; // Default to 50% if no directional signals
+
+  if (directionalComponents.length < 3) {
+    normalizedAgreement = Math.max(0, normalizedAgreement - (3 - directionalComponents.length) * 10);
+  }
   
   qualityScore += normalizedAgreement * agreementWeight;
   qualityMaxScore += 100 * agreementWeight;
@@ -1970,6 +2234,14 @@ function calculateCompositeScore(
   let confidence = confidenceDenominator > 0 
     ? Math.max(0, Math.min(100, (confidenceNumerator / confidenceDenominator) * 100))
     : 50;
+
+  const structureEdge = typeof upstreamStructureScore === 'number'
+    ? clamp(upstreamStructureScore, 0, 100)
+    : clamp(Math.abs(structureScore), 0, 100);
+  const timeEdge = clamp(timingActivation, 0, 100);
+  const flowEdge = clamp((Math.abs(unusualScore) + Math.abs(oiScore)) / 2, 0, 100);
+  const edgeBlendConfidence = (timeEdge * 0.40) + (structureEdge * 0.35) + (flowEdge * 0.25);
+  confidence = clamp(confidence * 0.60 + edgeBlendConfidence * 0.40, 0, 100);
   
   // If neutral direction, confidence is low by definition
   if (finalDirection === 'neutral') {
@@ -2002,7 +2274,7 @@ function calculateCompositeScore(
 
   // Calculate final quality percentage
   const finalQualityScore = qualityMaxScore > 0 ? (qualityScore / qualityMaxScore) * 100 : 50;
-  const directionalNames = new Set(['Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position']);
+  const directionalNames = new Set(['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position']);
   const directionalTotal = components.filter(c => directionalNames.has(c.name) && c.weight > 0).length;
   const alignedSignalsCount = directionalComponents.filter(c => c.weight > 0 && c.direction === finalDirection).length;
   const alignedWeight = directionalComponents
@@ -2333,6 +2605,324 @@ function calculateAIMarketState(
     scenarios,
     strategyMatchScore,
     tradeQualityGate
+  };
+}
+
+function buildProfessionalTradeStack(
+  compositeScore: CompositeScore,
+  confluenceResult: HierarchicalScanResult,
+  candleCloseConfluence: CandleCloseConfluence | null,
+  openInterestAnalysis: OpenInterestData | null,
+  ivAnalysis: IVAnalysis | null,
+  unusualActivity: UnusualActivity | null,
+  tradeLevels: TradeLevels | null,
+  strategyRecommendation: StrategyRecommendation | null,
+  currentPrice: number
+): ProfessionalTradeStack {
+  const clamp = (v: number, min = 0, max = 100) => Math.max(min, Math.min(max, v));
+  const toStatus = (score: number): 'ready' | 'caution' | 'waiting' =>
+    score >= 70 ? 'ready' : score >= 45 ? 'caution' : 'waiting';
+
+  const structureComponent = compositeScore.components.find(c => c.name === 'Structure Score');
+  const patternComponent = compositeScore.components.find(c => c.name === 'Pattern State');
+
+  const structureScore = clamp(
+    (Math.abs(structureComponent?.score ?? compositeScore.directionScore) * 0.7) +
+    (Math.abs(patternComponent?.score ?? 0) * 0.3)
+  );
+
+  let structureState = 'Compression / Balance';
+  if (confluenceResult.signalStrength === 'strong' && compositeScore.finalDirection !== 'neutral') {
+    structureState = compositeScore.finalDirection === 'bullish' ? 'Trend Expansion (Bullish)' : 'Trend Expansion (Bearish)';
+  } else if (confluenceResult.signalStrength === 'moderate' && compositeScore.finalDirection !== 'neutral') {
+    structureState = compositeScore.finalDirection === 'bullish' ? 'Pullback in Trend (Bullish)' : 'Pullback in Trend (Bearish)';
+  } else if (compositeScore.conflicts.length >= 2) {
+    structureState = 'Reversal Attempt';
+  }
+
+  const targetLevel = confluenceResult?.prediction?.targetLevel ?? currentPrice;
+  const distanceToTargetPct = targetLevel > 0 ? Math.abs((currentPrice - targetLevel) / targetLevel) * 100 : 0;
+  const maxPainDistPct = openInterestAnalysis?.maxPainStrike
+    ? Math.abs((currentPrice - openInterestAnalysis.maxPainStrike) / openInterestAnalysis.maxPainStrike) * 100
+    : 6;
+  const liquidityScore = clamp(100 - (distanceToTargetPct * 8 + maxPainDistPct * 4));
+  const liquidityState = liquidityScore >= 70
+    ? 'Near reflection / reaction zone'
+    : liquidityScore >= 45
+      ? 'Between zones'
+      : 'Far from key reaction zones';
+
+  const timeBase = candleCloseConfluence?.confluenceScore ?? 0;
+  const clusteredBonus = Math.min(20, (confluenceResult.decompression.clusteredCount ?? 0) * 5);
+  const timeScore = clamp(timeBase * 0.8 + clusteredBonus);
+  const timeState = timeScore >= 75
+    ? 'TIME EDGE ACTIVATED'
+    : timeScore >= 45
+      ? 'Timing building'
+      : 'No timing activation';
+
+  const unusualComponent = compositeScore.components.find(c => c.name === 'Unusual Activity');
+  const oiComponent = compositeScore.components.find(c => c.name === 'O/I Sentiment');
+  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  const ivSuitability = ivRank >= 70 || ivRank <= 30 ? 80 : 55;
+  const optionsScore = clamp(
+    (Math.abs(unusualComponent?.score ?? 0) * 0.4) +
+    (Math.abs(oiComponent?.score ?? 0) * 0.3) +
+    (ivSuitability * 0.3)
+  );
+  const optionsState = unusualActivity?.hasUnusualActivity
+    ? `Flow ${unusualActivity.smartMoneyDirection.toUpperCase()} + IV ${ivRank.toFixed(0)}`
+    : `OI ${openInterestAnalysis?.sentiment ?? 'neutral'} + IV ${ivRank.toFixed(0)}`;
+
+  const rr = tradeLevels?.riskRewardRatio ?? 0;
+  const rrScore = rr <= 0 ? 0 : rr <= 1 ? 35 : rr <= 2 ? 60 : rr <= 3 ? 80 : 92;
+  const strategyReady = !!strategyRecommendation && strategyRecommendation.strategy !== 'WAIT';
+  const executionScore = clamp((rrScore * 0.6) + (strategyReady ? 25 : 0) + (compositeScore.finalDirection !== 'neutral' ? 15 : 0));
+  const executionState = strategyReady
+    ? `Ready: ${strategyRecommendation?.strategy || 'defined plan'}`
+    : 'Wait for cleaner trigger / invalidation';
+
+  const overallEdgeScore = Math.round(clamp(
+    structureScore * 0.35 +
+    liquidityScore * 0.20 +
+    timeScore * 0.20 +
+    optionsScore * 0.20 +
+    executionScore * 0.05
+  ));
+
+  const overallState: 'A+' | 'A' | 'B' | 'C' | 'WAIT' =
+    strategyRecommendation?.strategy === 'WAIT' || compositeScore.finalDirection === 'neutral'
+      ? 'WAIT'
+      : overallEdgeScore >= 85
+        ? 'A+'
+        : overallEdgeScore >= 70
+          ? 'A'
+          : overallEdgeScore >= 55
+            ? 'B'
+            : 'C';
+
+  return {
+    structureState: {
+      label: 'Structure',
+      state: structureState,
+      score: Math.round(structureScore),
+      status: toStatus(structureScore),
+      reason: structureComponent?.reason || 'Structure derived from direction + pattern components',
+    },
+    liquidityContext: {
+      label: 'Liquidity',
+      state: liquidityState,
+      score: Math.round(liquidityScore),
+      status: toStatus(liquidityScore),
+      reason: `Dist to target zone ${distanceToTargetPct.toFixed(2)}%, max pain dist ${maxPainDistPct.toFixed(2)}%`,
+    },
+    timeEdge: {
+      label: 'Time Edge',
+      state: timeState,
+      score: Math.round(timeScore),
+      status: toStatus(timeScore),
+      reason: `Confluence ${timeBase.toFixed(0)} + clustered TF bonus ${clusteredBonus.toFixed(0)}`,
+    },
+    optionsEdge: {
+      label: 'Options Flow',
+      state: optionsState,
+      score: Math.round(optionsScore),
+      status: toStatus(optionsScore),
+      reason: 'Flow/OI + IV suitability composite',
+    },
+    executionPlan: {
+      label: 'Execution',
+      state: executionState,
+      score: Math.round(executionScore),
+      status: toStatus(executionScore),
+      reason: `R:R ${rr.toFixed(1)} with strategy readiness ${strategyReady ? 'yes' : 'no'}`,
+    },
+    overallEdgeScore,
+    overallState,
+  };
+}
+
+async function buildLocationContext(
+  confluence: HierarchicalScanResult,
+  symbol: string,
+  assetType: AssetType
+): Promise<LocationContext> {
+  const { currentPrice, mid50Levels, clusters, prediction } = confluence;
+
+  const nearest50 = [...mid50Levels]
+    .sort((a, b) => Math.abs(a.level - currentPrice) - Math.abs(b.level - currentPrice))[0];
+
+  const keyZones: LocationContext['keyZones'] = [
+    ...(nearest50 ? [{
+      type: nearest50.level < currentPrice ? 'support' as const : 'resistance' as const,
+      level: nearest50.level,
+      strength: nearest50.isDecompressing ? 'strong' as const : 'moderate' as const,
+      reason: `${nearest50.tf} 50% reflection level${nearest50.isDecompressing ? ' (decompressing)' : ''}`,
+    }] : []),
+    ...clusters.slice(0, 2).map((cluster) => ({
+      type: cluster.avgLevel < currentPrice ? 'demand' as const : 'supply' as const,
+      level: cluster.avgLevel,
+      strength: cluster.tfs.length >= 3 ? 'strong' as const : 'moderate' as const,
+      reason: `Cluster magnet (${cluster.tfs.join('/')})`,
+    })),
+  ];
+
+  let candles1H: PatternCandle[] = [...(confluence.candlesByTf?.['1H'] ?? [])];
+  let candles4H: PatternCandle[] = [...(confluence.candlesByTf?.['4H'] ?? [])];
+  let candles1D: PatternCandle[] = [...(confluence.candlesByTf?.['1D'] ?? [])];
+
+  if (candles1H.length < 50 || candles4H.length < 50 || candles1D.length < 50) {
+    const fallback = await fetchPatternCandlesFallback(symbol, assetType);
+    if (candles1H.length < 50) candles1H = fallback['1H'];
+    if (candles4H.length < 50) candles4H = fallback['4H'];
+    if (candles1D.length < 50) candles1D = fallback['1D'];
+  }
+
+  const patternResults = [
+    candles1H.length ? scanPatterns({ candles: candles1H, timeframeLabel: '1H' }) : null,
+    candles4H.length ? scanPatterns({ candles: candles4H, timeframeLabel: '4H' }) : null,
+    candles1D.length ? scanPatterns({ candles: candles1D, timeframeLabel: '1D' }) : null,
+  ].filter(Boolean) as ReturnType<typeof scanPatterns>[];
+
+  const patterns = patternResults
+    .flatMap(result => result.patterns)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 6)
+    .map(pattern => ({
+      name: pattern.name,
+      bias: pattern.bias,
+      confidence: pattern.confidence,
+      reason: pattern.reason,
+    }));
+
+  const topSummary = patternResults[0]?.summary ?? {
+    bias: prediction?.direction ?? 'neutral',
+    confidence: prediction?.confidence ?? 30,
+    reason: 'No pattern summary'
+  };
+
+  let regime: LocationContext['regime'] = 'UNKNOWN';
+  if (topSummary.bias === 'neutral') {
+    regime = prediction?.confidence && prediction.confidence >= 45 ? 'RANGE' : 'UNKNOWN';
+  } else {
+    regime = 'TREND';
+  }
+
+  return {
+    regime,
+    keyZones,
+    patterns,
+    reflection: {
+      nearest: nearest50?.level ?? null,
+      reason: nearest50 ? `${nearest50.tf} 50%` : 'No reflection level found',
+    },
+  };
+}
+
+function buildTradeSnapshot(args: {
+  symbol: string;
+  confluence: HierarchicalScanResult;
+  finalDirection: 'bullish' | 'bearish' | 'neutral';
+  tradeQuality: 'A+' | 'A' | 'B' | 'C' | 'F';
+  optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  composite: CompositeScore;
+  entryTiming: EntryTimingAdvice;
+  tradeLevels: TradeLevels | null;
+  location: LocationContext | null;
+}): TradeSnapshot {
+  const {
+    confluence,
+    finalDirection,
+    tradeQuality,
+    optionsGrade,
+    composite,
+    entryTiming,
+    tradeLevels,
+    location,
+  } = args;
+
+  const verdict: EdgeVerdict =
+    finalDirection === 'neutral' ? 'WAIT' : finalDirection === 'bullish' ? 'BULLISH_EDGE' : 'BEARISH_EDGE';
+
+  const gradeRank: Record<'A+' | 'A' | 'B' | 'C' | 'F', number> = { 'A+': 5, A: 4, B: 3, C: 2, F: 1 };
+  const setupGrade: TradeSnapshot['setupGrade'] = gradeRank[tradeQuality] <= gradeRank[optionsGrade] ? tradeQuality : optionsGrade;
+
+  const why: string[] = [];
+
+  const nearestZone = location?.keyZones?.[0];
+  if (nearestZone) {
+    why.push(`${nearestZone.type.toUpperCase()} @ ${nearestZone.level.toFixed(2)} — ${nearestZone.reason}`);
+  }
+
+  const topPattern = location?.patterns?.sort((a, b) => b.confidence - a.confidence)[0];
+  if (topPattern && topPattern.confidence >= 65) {
+    why.push(`PATTERN: ${topPattern.name} (${topPattern.bias}, ${topPattern.confidence}%) — ${topPattern.reason}`);
+  }
+
+  const decompCount = confluence.decompression.clusteredCount ?? confluence.decompression.activeCount;
+  if (decompCount >= 2) {
+    why.push(`TIME EDGE: ${decompCount} TFs clustered (timing advantage)`);
+  } else {
+    why.push(`TIME: weak clustering (${decompCount} TF)`);
+  }
+
+  const flowComp = composite.components.find(component => component.name === 'Unusual Activity' && component.direction !== 'neutral');
+  if (flowComp) why.push(`FLOW: ${flowComp.reason}`);
+
+  const oiComp = composite.components.find(component => component.name === 'O/I Sentiment' && component.direction !== 'neutral');
+  if (oiComp) why.push(`POSITIONING: ${oiComp.reason}`);
+
+  const whyTrimmed = why.slice(0, 4);
+
+  const invalidationLevel = tradeLevels?.stopLoss ?? null;
+  const invalidationReason =
+    invalidationLevel !== null
+      ? `Invalid if price breaches stop structure (${invalidationLevel.toFixed(2)})`
+      : 'Invalidation unavailable (no reliable levels)';
+
+  const entryTrigger =
+    verdict === 'WAIT'
+      ? 'Wait for alignment / confirmation'
+      : tradeLevels
+        ? (finalDirection === 'bullish'
+            ? `Entry on reclaim/hold above ${tradeLevels.entryZone.high.toFixed(2)}`
+            : `Entry on breakdown/hold below ${tradeLevels.entryZone.low.toFixed(2)}`)
+        : 'Entry trigger unavailable';
+
+  const targets = tradeLevels
+    ? [
+        { price: tradeLevels.target1.price, reason: tradeLevels.target1.reason },
+        ...(tradeLevels.target2 ? [{ price: tradeLevels.target2.price, reason: tradeLevels.target2.reason }] : []),
+        ...(tradeLevels.target3 ? [{ price: tradeLevels.target3.price, reason: tradeLevels.target3.reason }] : []),
+      ]
+    : [];
+
+  const clusterMins = confluence.decompression.temporalCluster?.clusterCenter;
+  const catalyst =
+    typeof clusterMins === 'number' && clusterMins > 0
+      ? `Time edge active: ~${Math.round(clusterMins)}m to clustered closes`
+      : `Timing: ${entryTiming.reason}`;
+
+  const oneLine =
+    verdict === 'WAIT'
+      ? 'No clean edge — signals conflicted'
+      : `${finalDirection.toUpperCase()} edge near ${nearestZone ? `${nearestZone.type} zone` : 'key level'} with time activation`;
+
+  return {
+    verdict,
+    setupGrade,
+    oneLine,
+    why: whyTrimmed,
+    risk: { invalidationLevel, invalidationReason },
+    action: {
+      entryTrigger,
+      entryZone: tradeLevels?.entryZone,
+      targets,
+    },
+    timing: {
+      urgency: entryTiming.urgency,
+      catalyst,
+    },
   };
 }
 
@@ -3179,6 +3769,7 @@ export class OptionsConfluenceAnalyzer {
     // PRO TRADER: Calculate composite score from all signals
     let compositeScoreRaw: CompositeScore | null = null;
     try {
+      const includeMaxPain = !!openInterestAnalysis && dataQuality.hasMeaningfulOI && openInterestAnalysis.maxPainReliability.reliable;
       compositeScoreRaw = calculateCompositeScore(
         confluenceResult,
         openInterestAnalysis ? {
@@ -3188,11 +3779,12 @@ export class OptionsConfluenceAnalyzer {
         unusualActivity,
         ivAnalysis,
         tradeLevels,
-        openInterestAnalysis ? {
+        includeMaxPain && openInterestAnalysis ? {
           maxPain: openInterestAnalysis.maxPainStrike || 0,
           currentPrice
         } : undefined,
-        primaryExpiration?.dte || 14  // Pass DTE for dynamic max pain weighting
+        primaryExpiration?.dte || 14,  // Pass DTE for dynamic max pain weighting
+        { hasMeaningfulOI: dataQuality.hasMeaningfulOI }
       );
     } catch (error) {
       console.warn('Composite score calculation failed:', error);
@@ -3200,7 +3792,20 @@ export class OptionsConfluenceAnalyzer {
 
     const compositeScore = compositeScoreRaw ?? createFallbackCompositeScore('Composite score unavailable');
 
-    const confidenceCap = dataQuality.freshness === 'EOD' ? 75 : 95;
+    let confidenceCap = 95;
+    if ((assetType === 'equity' || assetType === 'etf' || assetType === 'index') && dataQuality.freshness !== 'REALTIME') {
+      confidenceCap = 70;
+      dataConfidenceCaps.push('Options chain is non-realtime; confidence capped at 70');
+    }
+    if (!dataQuality.hasMeaningfulOI) {
+      confidenceCap = Math.min(confidenceCap, 60);
+      dataConfidenceCaps.push('Meaningful OI unavailable; confidence capped at 60 and OI/max-pain influence reduced');
+    }
+    const totalContracts = (dataQuality.contractsCount.calls || 0) + (dataQuality.contractsCount.puts || 0);
+    if (totalContracts > 0 && totalContracts < 60) {
+      confidenceCap = Math.min(confidenceCap, 65);
+      dataConfidenceCaps.push(`Sparse chain depth (${totalContracts} contracts) - confidence capped at 65`);
+    }
     compositeScore.confidence = Math.min(compositeScore.confidence, confidenceCap);
 
     const domains = [
@@ -3287,11 +3892,26 @@ export class OptionsConfluenceAnalyzer {
     
     // PRODUCTION FIX: Calculate options quality score and grade
     const optionsQualityScore = compositeScore.qualityScore ?? 50;
-    const optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F' = 
+    let optionsGrade: 'A+' | 'A' | 'B' | 'C' | 'F' = 
       optionsQualityScore >= 85 ? 'A+' :
       optionsQualityScore >= 70 ? 'A' :
       optionsQualityScore >= 55 ? 'B' :
       optionsQualityScore >= 40 ? 'C' : 'F';
+
+    const gradeRank: Record<'A+' | 'A' | 'B' | 'C' | 'F', number> = { 'A+': 5, A: 4, B: 3, C: 2, F: 1 };
+    const capGrade = (maxGrade: 'A+' | 'A' | 'B' | 'C' | 'F', reason: string) => {
+      if (gradeRank[optionsGrade] > gradeRank[maxGrade]) {
+        optionsGrade = maxGrade;
+        dataConfidenceCaps.push(reason);
+      }
+    };
+
+    if ((assetType === 'equity' || assetType === 'etf' || assetType === 'index') && dataQuality.freshness !== 'REALTIME') {
+      capGrade('B', 'Non-realtime options chain: options grade capped at B');
+    }
+    if (!dataQuality.hasMeaningfulOI) {
+      capGrade('C', 'Weak OI quality: options grade capped at C');
+    }
 
     const shouldGateWait =
       finalDirection === 'neutral' ||
@@ -3368,10 +3988,49 @@ export class OptionsConfluenceAnalyzer {
       entryTiming.urgency = 'wait';
       entryTiming.reason = 'Directional edge is weak or conflicted - wait for stronger alignment';
     }
+
+    const professionalTradeStack = buildProfessionalTradeStack(
+      effectiveCompositeScore,
+      confluenceResult,
+      candleCloseConfluence,
+      openInterestAnalysis,
+      ivAnalysis,
+      unusualActivity,
+      tradeLevels,
+      strategyRecommendation,
+      currentPrice
+    );
+
+    const locationContext = await buildLocationContext(confluenceResult, symbol, assetType);
+
+    const topPattern = locationContext?.patterns?.[0];
+    if (topPattern && finalDirection !== 'neutral') {
+      const patternConflicts =
+        (finalDirection === 'bullish' && topPattern.bias === 'bearish') ||
+        (finalDirection === 'bearish' && topPattern.bias === 'bullish');
+      if (patternConflicts) {
+        effectiveCompositeScore.conflicts.push(`⚠️ Pattern conflicts direction: ${topPattern.name} (${topPattern.bias})`);
+        effectiveCompositeScore.confidence = Math.min(effectiveCompositeScore.confidence, 65);
+      }
+    }
+
+    const tradeSnapshot = buildTradeSnapshot({
+      symbol,
+      confluence: confluenceResult,
+      finalDirection,
+      tradeQuality: grade,
+      optionsGrade,
+      composite: effectiveCompositeScore,
+      entryTiming,
+      tradeLevels,
+      location: locationContext,
+    });
     
     return {
       symbol,
       currentPrice,
+      tradeSnapshot,
+      locationContext,
       direction: finalDirection,
       confluenceStack: realConfluenceCount,
       decompressingTFs: clusteredDecompressingTFs.length > 0 
@@ -3401,6 +4060,7 @@ export class OptionsConfluenceAnalyzer {
       candleCloseConfluence,
       // INSTITUTIONAL AI MARKET STATE
       aiMarketState,
+      professionalTradeStack,
       // PRODUCTION ADDITIONS - Data Quality & Compliance
       assetType,
       optionsQualityScore,

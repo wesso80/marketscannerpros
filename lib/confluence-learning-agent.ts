@@ -343,6 +343,15 @@ export interface CandleCloseConfluence {
   };
 }
 
+export interface ScanCandle {
+  ts: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
 export interface HierarchicalScanResult {
   mode: ScanMode;
   modeLabel: string;
@@ -410,6 +419,16 @@ export interface HierarchicalScanResult {
     
     // Banners (deterministic rules)
     banners: string[];                // e.g., "MEGA CONFLUENCE", "EXTREME BULLISH"
+  };
+
+  // Used by pattern engine and structure modules
+  candlesByTf?: Record<string, ScanCandle[]>;
+
+  // Optional structure layer for downstream scoring/UX
+  structure?: {
+    zones: { type: 'supply' | 'demand'; top: number; bottom: number; tf: string; strength: number }[];
+    patterns: { name: string; tf: string; bias: 'bullish' | 'bearish'; confidence: number }[];
+    structureScore: number;
   };
 }
 
@@ -572,6 +591,17 @@ export class ConfluenceLearningAgent {
   // Get HL2 (midpoint) of a bar
   hl2(bar: OHLCV): number {
     return (bar.high + bar.low) / 2;
+  }
+
+  private normalizeBars(bars: OHLCV[]): ScanCandle[] {
+    return (bars || []).map((bar) => ({
+      ts: Number(bar.time),
+      open: Number(bar.open),
+      high: Number(bar.high),
+      low: Number(bar.low),
+      close: Number(bar.close),
+      volume: Number(bar.volume),
+    }));
   }
 
   // Get previous bar's 50% level
@@ -1773,6 +1803,7 @@ export class ConfluenceLearningAgent {
     // Analyze decompression for included TFs only
     const allDecomps: DecompressionPull[] = [];
     const mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[] = [];
+    const resampledBarsByTf: Record<string, OHLCV[]> = {};
     
     // Detect if this is likely a stock (not crypto) - crypto symbols contain USD
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
@@ -1785,7 +1816,9 @@ export class ConfluenceLearningAgent {
       if (minsToClose === null) continue;
       
       // Resample for 50% level
+      const tfId = this.getCanonicalTimeframeId(tfConfig);
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
+      resampledBarsByTf[tfId] = tfBars;
       if (tfBars.length < 2) continue;
       
       const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
@@ -2274,6 +2307,74 @@ export class ConfluenceLearningAgent {
     if (candleCloseConfluence.specialEvents.isQuarterEnd) {
       reasoningParts.push('📅 QUARTER-END - major rebalancing');
     }
+
+    const candlesByTf: Record<string, ScanCandle[]> = {
+      '30M': this.normalizeBars(baseBars),
+    };
+
+    const wantedTfKeys = new Set<string>(['30M', '1H', '4H', '1D']);
+    const primaryTfKey = modeConfig.primaryTF.toUpperCase();
+    wantedTfKeys.add(primaryTfKey);
+
+    const ensureCandles = (tfKey: string) => {
+      if (tfKey === '30M') {
+        candlesByTf['30M'] = this.normalizeBars(baseBars);
+        return;
+      }
+
+      const tfConfig = TIMEFRAMES.find((tf) => tf.label.toUpperCase() === tfKey);
+      if (!tfConfig) return;
+
+      const tfId = this.getCanonicalTimeframeId(tfConfig);
+      const bars = resampledBarsByTf[tfId] ?? this.resampleBars(baseBars, tfConfig.minutes);
+      candlesByTf[tfKey] = this.normalizeBars(bars);
+    };
+
+    for (const tfKey of wantedTfKeys) {
+      ensureCandles(tfKey);
+    }
+
+    const structureScore = Math.round(Math.max(0, Math.min(100,
+      Math.abs(directionScore) * 0.5 +
+      clusterScore * 0.3 +
+      decompressionScore * 0.2
+    )));
+
+    const structureZones = [
+      ...clusters.slice(0, 4).map((cluster) => ({
+        type: cluster.avgLevel >= currentPrice ? 'supply' as const : 'demand' as const,
+        top: cluster.avgLevel + atr * 0.15,
+        bottom: cluster.avgLevel - atr * 0.15,
+        tf: cluster.tfs[0] || 'cluster',
+        strength: Math.min(100, 45 + cluster.tfs.length * 15),
+      })),
+      ...mid50Levels
+        .slice(0, 2)
+        .map((level) => ({
+          type: level.level >= currentPrice ? 'supply' as const : 'demand' as const,
+          top: level.level + atr * 0.08,
+          bottom: level.level - atr * 0.08,
+          tf: level.tf,
+          strength: level.isDecompressing ? 70 : 50,
+        })),
+    ].slice(0, 6);
+
+    const primaryTfForStructure = primaryTFConfig ? this.getCanonicalTimeframeId(primaryTFConfig) : modeConfig.primaryTF.toUpperCase();
+    const structurePatterns: { name: string; tf: string; bias: 'bullish' | 'bearish'; confidence: number }[] =
+      direction === 'neutral'
+        ? []
+        : [{
+            name: signalStrength === 'strong' ? 'Structure Expansion' : 'Directional Structure Bias',
+            tf: primaryTfForStructure,
+            bias: direction,
+            confidence: Math.round(Math.max(35, Math.min(95, (Math.abs(directionScore) * 0.45) + (decompressionScore * 0.55)))),
+          }];
+
+    const structure = {
+      zones: structureZones,
+      patterns: structurePatterns,
+      structureScore,
+    };
     
     return {
       mode: scanMode,
@@ -2296,6 +2397,8 @@ export class ConfluenceLearningAgent {
       tradeSetup,
       signalStrength,
       scoreBreakdown,
+      candlesByTf,
+      structure,
     };
   }
 

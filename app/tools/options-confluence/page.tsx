@@ -214,6 +214,66 @@ interface AIMarketState {
   };
 }
 
+interface ProfessionalStackLayer {
+  label: string;
+  state: string;
+  score: number;
+  status: 'ready' | 'caution' | 'waiting';
+  reason: string;
+}
+
+interface ProfessionalTradeStack {
+  structureState: ProfessionalStackLayer;
+  liquidityContext: ProfessionalStackLayer;
+  timeEdge: ProfessionalStackLayer;
+  optionsEdge: ProfessionalStackLayer;
+  executionPlan: ProfessionalStackLayer;
+  overallEdgeScore: number;
+  overallState: 'A+' | 'A' | 'B' | 'C' | 'WAIT';
+}
+
+type EdgeVerdict = 'BULLISH_EDGE' | 'BEARISH_EDGE' | 'WAIT';
+
+interface LocationContext {
+  regime: 'TREND' | 'RANGE' | 'REVERSAL' | 'UNKNOWN';
+  keyZones: Array<{
+    type: 'demand' | 'supply' | 'liquidity_high' | 'liquidity_low' | 'support' | 'resistance';
+    level: number;
+    strength: 'strong' | 'moderate' | 'weak';
+    reason: string;
+  }>;
+  patterns: Array<{
+    name: string;
+    bias: 'bullish' | 'bearish' | 'neutral';
+    confidence: number;
+    reason: string;
+  }>;
+  reflection: {
+    nearest: number | null;
+    reason: string;
+  };
+}
+
+interface TradeSnapshot {
+  verdict: EdgeVerdict;
+  setupGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  oneLine: string;
+  why: string[];
+  risk: {
+    invalidationLevel: number | null;
+    invalidationReason: string;
+  };
+  action: {
+    entryTrigger: string;
+    entryZone?: { low: number; high: number };
+    targets?: { price: number; reason: string }[];
+  };
+  timing: {
+    urgency: 'immediate' | 'within_hour' | 'wait' | 'no_trade';
+    catalyst: string;
+  };
+}
+
 interface OptionsSetup {
   symbol: string;
   currentPrice: number;
@@ -248,6 +308,9 @@ interface OptionsSetup {
   candleCloseConfluence?: CandleCloseConfluence;
   // INSTITUTIONAL AI MARKET STATE
   aiMarketState?: AIMarketState | null;
+  professionalTradeStack?: ProfessionalTradeStack | null;
+  tradeSnapshot?: TradeSnapshot;
+  locationContext?: LocationContext | null;
   // DATA QUALITY & COMPLIANCE
   dataQuality?: DataQuality;
   executionNotes?: string[];
@@ -325,6 +388,9 @@ export default function OptionsConfluenceScanner() {
           tradeLevels: result.tradeLevels,
           compositeScore: result.compositeScore,
           strategyRecommendation: result.strategyRecommendation,
+          professionalTradeStack: result.professionalTradeStack,
+          tradeSnapshot: result.tradeSnapshot,
+          locationContext: result.locationContext,
         },
         summary: `Options scan for ${result.symbol} at $${result.currentPrice}: ${result.direction.toUpperCase()} bias (${result.tradeQuality}) with ${result.signalStrength} strength. Confluence: ${result.confluenceStack}/8.`,
       });
@@ -943,6 +1009,86 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             )}
+
+            {/* 3-SECOND VIEW - Trade Snapshot */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(59,130,246,0.10))',
+              border: `2px solid ${result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#F59E0B'}`,
+              borderRadius: '16px',
+              padding: '1rem 1.1rem',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.20)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.95rem', letterSpacing: '0.4px' }}>
+                  🚨 TRADE SNAPSHOT (3-SECOND VIEW)
+                </div>
+                <div style={{
+                  color: result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#F59E0B',
+                  fontWeight: '800',
+                  fontSize: '0.9rem',
+                }}>
+                  {result.symbol} — {result.tradeSnapshot?.verdict ? result.tradeSnapshot.verdict.replace('_', ' ') : (result.direction === 'bullish' ? 'BULLISH EDGE' : result.direction === 'bearish' ? 'BEARISH EDGE' : 'WAIT / NEUTRAL')} ({result.tradeSnapshot?.setupGrade || result.tradeQuality})
+                </div>
+              </div>
+
+              {((result.tradeSnapshot?.timing?.catalyst && result.tradeSnapshot.timing.catalyst.length > 0) ||
+                (result.candleCloseConfluence && result.candleCloseConfluence.bestEntryWindow.endMins > 0)) && (
+                <div style={{
+                  marginBottom: '0.75rem',
+                  color: '#FBBF24',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  background: 'rgba(251,191,36,0.10)',
+                  border: '1px solid rgba(251,191,36,0.35)',
+                  borderRadius: '10px',
+                  padding: '0.45rem 0.6rem',
+                }}>
+                  🔥 {result.tradeSnapshot?.timing?.catalyst || (`TIME EDGE ACTIVE: ${result.candleCloseConfluence?.bestEntryWindow.startMins === 0 ? 'NOW' : `${result.candleCloseConfluence?.bestEntryWindow.startMins} min`} until TF compression release`)}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gap: '0.45rem' }}>
+                {result.tradeSnapshot?.oneLine && (
+                  <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
+                    <span style={{ color: '#A7F3D0', fontWeight: '700' }}>WHAT:</span>{' '}
+                    {result.tradeSnapshot.oneLine}
+                  </div>
+                )}
+
+                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
+                  <span style={{ color: '#93C5FD', fontWeight: '700' }}>WHY:</span>{' '}
+                  {result.tradeSnapshot?.why?.length
+                    ? result.tradeSnapshot.why.join(' • ')
+                    : result.professionalTradeStack
+                      ? `${result.professionalTradeStack.structureState.state} + ${result.professionalTradeStack.liquidityContext.state} + ${result.professionalTradeStack.timeEdge.state} + ${result.professionalTradeStack.optionsEdge.state}`
+                      : `${result.signalStrength.toUpperCase()} signal with ${result.confluenceStack} TF confluence and ${result.openInterestAnalysis?.sentiment || 'neutral'} options sentiment`}
+                </div>
+
+                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
+                  <span style={{ color: '#FCA5A5', fontWeight: '700' }}>RISK:</span>{' '}
+                  {result.tradeSnapshot?.risk?.invalidationReason
+                    ? result.tradeSnapshot.risk.invalidationReason
+                    : result.tradeLevels
+                    ? `Lose $${result.tradeLevels.stopLoss.toFixed(2)} → setup invalid`
+                    : result.aiMarketState?.thesis?.invalidationLevel
+                      ? `Lose $${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} → setup invalid`
+                      : 'Directional invalidation not clear yet — reduce size / wait'}
+                </div>
+
+                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
+                  <span style={{ color: '#6EE7B7', fontWeight: '700' }}>ACTION:</span>{' '}
+                  {result.tradeSnapshot?.action?.entryTrigger
+                    ? `${result.tradeSnapshot.action.entryTrigger}${result.tradeSnapshot.action.targets?.[0] ? ` • Target ${result.tradeSnapshot.action.targets[0].price.toFixed(2)}` : ''}`
+                    : result.tradeLevels
+                    ? result.direction === 'bullish'
+                      ? `Entry above $${result.tradeLevels.entryZone.high.toFixed(2)} • Target $${result.tradeLevels.target1.price.toFixed(2)}`
+                      : result.direction === 'bearish'
+                        ? `Entry below $${result.tradeLevels.entryZone.low.toFixed(2)} • Target $${result.tradeLevels.target1.price.toFixed(2)}`
+                        : `Wait for breakout from $${result.tradeLevels.entryZone.low.toFixed(2)} - $${result.tradeLevels.entryZone.high.toFixed(2)}`
+                    : 'Wait for cleaner trigger, then execute with defined invalidation'}
+                </div>
+              </div>
+            </div>
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
