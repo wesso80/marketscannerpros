@@ -3,6 +3,7 @@
 import { useEffect, Suspense } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import AlertsWidget from "@/components/AlertsWidget";
+import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -39,6 +40,13 @@ function AlertsContent() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      <AdaptivePersonalityCard
+        skill="alerts"
+        setupText="Alerts workflow with regime and momentum trigger monitoring"
+        baseScore={50}
+        compact
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">

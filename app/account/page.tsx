@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PortalButton from "@/components/PortalButton";
+import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 import { useUserTier } from "@/lib/useUserTier";
 
 interface ReferralInfo {
@@ -77,6 +78,12 @@ export default function AccountPage() {
       </div>
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px" }}>
+        <AdaptivePersonalityCard
+          skill="account"
+          setupText={`Account page ${tier} plan and lifecycle context`}
+          baseScore={50}
+        />
+
         {isLoading ? (
           <div style={{ textAlign: "center", padding: 40 }}>
             <div style={{ fontSize: 24 }}>Loading...</div>

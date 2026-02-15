@@ -10,6 +10,9 @@ import {
   ProbabilityResult 
 } from "@/lib/signals/probability-engine";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import CapitalFlowCard from "@/components/CapitalFlowCard";
+import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
+import EvolutionStatusCard from "@/components/EvolutionStatusCard";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -316,6 +319,30 @@ interface OptionsSetup {
   executionNotes?: string[];
   dataConfidenceCaps?: string[];
   disclaimerFlags?: string[];
+  institutionalFilter?: {
+    finalScore: number;
+    finalGrade: string;
+    recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
+    noTrade: boolean;
+    filters: Array<{
+      label: string;
+      status: 'pass' | 'warn' | 'block';
+      reason: string;
+    }>;
+  };
+  capitalFlow?: {
+    market_mode: 'pin' | 'launch' | 'chop';
+    gamma_state: 'Positive' | 'Negative' | 'Mixed';
+    bias: 'bullish' | 'bearish' | 'neutral';
+    conviction: number;
+    dominant_expiry: '0DTE' | 'weekly' | 'monthly' | 'long_dated' | 'unknown';
+    pin_strike: number | null;
+    key_strikes: Array<{ strike: number; gravity: number; type: 'call-heavy' | 'put-heavy' | 'mixed' }>;
+    flip_zones: Array<{ level: number; direction: 'bullish_above' | 'bearish_below' }>;
+    liquidity_levels: Array<{ level: number; label: string; prob: number }>;
+    most_likely_path: string[];
+    risk: string[];
+  };
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -345,6 +372,35 @@ interface ExpirationOption {
   totalOI: number;
 }
 
+type TraderStyleBias = 'momentum' | 'mean_reversion' | 'breakout' | 'options_flow' | 'macro_swing';
+type TraderRiskDNA = 'aggressive' | 'balanced' | 'defensive';
+type TraderTiming = 'early' | 'confirmation' | 'late_momentum';
+type TraderEnvironment = 'trend' | 'range' | 'reversal' | 'unknown';
+
+interface PersonalityJournalEntry {
+  id: number;
+  date: string;
+  exitDate?: string;
+  strategy?: string;
+  setup?: string;
+  notes?: string;
+  tags?: string[];
+  outcome?: 'win' | 'loss' | 'breakeven' | 'open';
+  isOpen?: boolean;
+  pl?: number;
+  plPercent?: number;
+  rMultiple?: number;
+}
+
+interface AdaptiveProfile {
+  sampleSize: number;
+  wins: number;
+  styleBias: TraderStyleBias;
+  riskDNA: TraderRiskDNA;
+  decisionTiming: TraderTiming;
+  environmentRates: Record<TraderEnvironment, number>;
+}
+
 export default function OptionsConfluenceScanner() {
   const { tier } = useUserTier();
   const { setPageData } = useAIPageContext();
@@ -362,6 +418,8 @@ export default function OptionsConfluenceScanner() {
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
   const [showProMode, setShowProMode] = useState(true); // Toggle for Pro Mode dashboard
+  const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
+  const [personalityLoaded, setPersonalityLoaded] = useState(false);
 
   // Push scan results to AI Copilot context
   useEffect(() => {
@@ -396,6 +454,24 @@ export default function OptionsConfluenceScanner() {
       });
     }
   }, [result, setPageData]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadJournalForPersonality = async () => {
+      try {
+        const response = await fetch('/api/journal', { method: 'GET' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!mounted) return;
+        setPersonalityEntries(Array.isArray(data?.entries) ? data.entries : []);
+      } catch {
+      } finally {
+        if (mounted) setPersonalityLoaded(true);
+      }
+    };
+    loadJournalForPersonality();
+    return () => { mounted = false; };
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROBABILITY ENGINE - Institutional-Grade Win Probability Calculation
@@ -626,6 +702,405 @@ export default function OptionsConfluenceScanner() {
     return 'LOW';
   };
 
+  const bestPattern = result?.locationContext?.patterns
+    ?.slice()
+    .sort((a, b) => b.confidence - a.confidence)?.[0] ?? null;
+  const hasConfirmedPattern = !!bestPattern && bestPattern.confidence >= 55;
+  const hasPatternData = (result?.locationContext?.patterns?.length ?? 0) > 0;
+
+  const marketStateLabel = result
+    ? result.aiMarketState?.regime?.type === 'trending'
+      ? `${result.direction === 'bearish' ? 'Bearish' : result.direction === 'bullish' ? 'Bullish' : 'Neutral'} Trend`
+      : result.aiMarketState?.regime?.type === 'ranging'
+      ? 'Range / Rotation'
+      : result.aiMarketState?.regime?.type === 'breakout'
+      ? 'Breakout Regime'
+      : result.aiMarketState?.regime?.type === 'reversal'
+      ? 'Reversal Regime'
+      : 'Uncertain Regime'
+    : null;
+
+  const thesisDirection = result?.compositeScore?.finalDirection || result?.direction || 'neutral';
+  const isCountertrend = !!(result && bestPattern && bestPattern.bias !== 'neutral' && thesisDirection !== 'neutral' && bestPattern.bias !== thesisDirection);
+  const setupLabel = result
+    ? isCountertrend
+      ? 'Countertrend Bounce'
+      : (hasConfirmedPattern ? 'Trend Continuation' : 'Awaiting Confirmation')
+    : null;
+
+  const dataHealth = result?.dataQuality?.freshness || (isCached ? 'CACHED' : 'LIVE');
+
+  type LadderState = 'valid' | 'partial' | 'fail';
+  const stateVisual = (state: LadderState) => {
+    if (state === 'valid') return { label: 'VALID', color: '#10B981', bg: 'rgba(16,185,129,0.16)', border: 'rgba(16,185,129,0.42)', icon: '✔' };
+    if (state === 'partial') return { label: 'PARTIAL', color: '#F59E0B', bg: 'rgba(245,158,11,0.16)', border: 'rgba(245,158,11,0.42)', icon: '⚠' };
+    return { label: 'FAIL', color: '#EF4444', bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.42)', icon: '✖' };
+  };
+
+  const ladderSteps = result ? (() => {
+    const sessionClosed = result.entryTiming.marketSession === 'closed';
+    const dataIsFresh = dataHealth === 'REALTIME' || dataHealth === 'LIVE';
+    const dataIsUsable = dataIsFresh || dataHealth === 'DELAYED' || dataHealth === 'CACHED';
+    const regimeKnown = result.aiMarketState?.regime?.type && result.aiMarketState.regime.type !== 'uncertain';
+
+    const marketState: LadderState = (!dataIsUsable || sessionClosed)
+      ? 'fail'
+      : (regimeKnown ? 'valid' : 'partial');
+
+    const setupConfidence = result.compositeScore?.confidence ?? 0;
+    const setupValidation: LadderState = hasConfirmedPattern && setupConfidence >= 60
+      ? 'valid'
+      : (hasPatternData || setupConfidence >= 45 ? 'partial' : 'fail');
+
+    const unusual = result.unusualActivity?.hasUnusualActivity;
+    const oiSentiment = result.openInterestAnalysis?.sentiment;
+    const direction = result.direction;
+    const oiAligned = oiSentiment
+      ? (oiSentiment === 'neutral' || oiSentiment === direction)
+      : false;
+    const flowConfirmation: LadderState = unusual && oiAligned
+      ? 'valid'
+      : ((unusual || oiSentiment) ? 'partial' : 'fail');
+
+    const hasExecutionLevels = !!result.tradeLevels;
+    const hasEntryZone = !!result.tradeLevels?.entryZone;
+    const isNoTrade = result.entryTiming.urgency === 'no_trade';
+    const executionZone: LadderState = (isNoTrade || !hasExecutionLevels)
+      ? 'fail'
+      : (hasEntryZone ? 'valid' : 'partial');
+
+    const hasManagementHooks = !!(result.tradeSnapshot || result.executionNotes?.length || result.candleCloseConfluence);
+    const management: LadderState = hasManagementHooks ? 'valid' : 'partial';
+
+    return [
+      {
+        title: 'Market State',
+        state: marketState,
+        detail: `${marketStateLabel || 'Unknown'} • ${dataHealth} • ${result.entryTiming.marketSession || 'session n/a'}`,
+      },
+      {
+        title: 'Setup Validation',
+        state: setupValidation,
+        detail: `${hasConfirmedPattern ? (bestPattern?.name || 'Pattern confirmed') : 'Pattern pending'} • ${setupConfidence.toFixed(0)}% alignment`,
+      },
+      {
+        title: 'Options Flow',
+        state: flowConfirmation,
+        detail: `${unusual ? 'Unusual activity present' : 'No unusual flow'} • OI ${oiSentiment || 'n/a'}`,
+      },
+      {
+        title: 'Execution Zone',
+        state: executionZone,
+        detail: result.tradeLevels
+          ? `Entry ${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)} • Stop ${result.tradeLevels.stopLoss.toFixed(2)}`
+          : 'No clear execution map yet',
+      },
+      {
+        title: 'Management',
+        state: management,
+        detail: result.tradeSnapshot?.timing?.catalyst || 'Monitoring + outcome tagging active',
+      },
+    ];
+  })() : [];
+
+  const pipelineComplete = ladderSteps.filter((step) => step.state === 'valid').length;
+  const pipelineStatus: 'READY' | 'WAITING' | 'NO_TRADE' = pipelineComplete >= 4
+    ? 'READY'
+    : ladderSteps[0]?.state === 'fail'
+      ? 'NO_TRADE'
+      : 'WAITING';
+
+  const trendStrength = !result
+    ? 'WEAK'
+    : (result.compositeScore?.confidence ?? 0) >= 70
+      ? 'STRONG'
+      : (result.compositeScore?.confidence ?? 0) >= 50
+        ? 'MODERATE'
+        : 'WEAK';
+
+  const executionState = !result
+    ? 'WAIT'
+    : result.entryTiming.urgency === 'no_trade'
+      ? 'NO TRADE'
+      : result.tradeLevels
+        ? 'READY'
+        : 'WAIT';
+
+  const heatSignalStrip = result ? [
+    {
+      label: 'TREND',
+      state: thesisDirection === 'bullish' ? '🟢' : thesisDirection === 'bearish' ? '🔴' : '🟡',
+      value: thesisDirection.toUpperCase(),
+    },
+    {
+      label: 'FLOW',
+      state: result.unusualActivity?.hasUnusualActivity ? '🟢' : '🟡',
+      value: result.unusualActivity?.hasUnusualActivity ? 'ACTIVE' : 'QUIET',
+    },
+    {
+      label: 'VOL',
+      state: result.expectedMove && result.expectedMove.selectedExpiryPercent > 4 ? '🔴' : result.expectedMove ? '🟡' : '⚪',
+      value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A',
+    },
+    {
+      label: 'LIQ',
+      state: result.openInterestAnalysis?.highOIStrikes?.length ? '🟢' : '🟡',
+      value: result.openInterestAnalysis?.highOIStrikes?.length ? 'SUPPORTED' : 'THIN',
+    },
+    {
+      label: 'EXEC',
+      state: executionState === 'READY' ? '🟢' : executionState === 'WAIT' ? '🟡' : '❌',
+      value: executionState,
+    },
+  ] : [];
+
+  const commandStatus: 'ACTIVE' | 'WAIT' | 'NO TRADE' = !result
+    ? 'WAIT'
+    : result.entryTiming.urgency === 'no_trade'
+      ? 'NO TRADE'
+      : (result.tradeLevels && (result.compositeScore?.confidence ?? 0) >= 60)
+        ? 'ACTIVE'
+        : 'WAIT';
+
+  const commandStatusColor = commandStatus === 'ACTIVE' ? '#10B981' : commandStatus === 'WAIT' ? '#F59E0B' : '#EF4444';
+  const commandUpdatedAgo = lastUpdated
+    ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
+    : null;
+
+  const decisionReasons = result
+    ? [
+        ...(result.tradeSnapshot?.why || []),
+        ...(result.compositeScore?.conflicts || []),
+        ...(result.qualityReasons || []),
+      ].filter(Boolean).slice(0, 3)
+    : [];
+
+  const decisionTrigger = result
+    ? (result.tradeSnapshot?.action?.entryTrigger
+      || (result.tradeLevels
+        ? (result.direction === 'bullish'
+          ? `Price > ${result.tradeLevels.entryZone.high.toFixed(2)}`
+          : result.direction === 'bearish'
+            ? `Price < ${result.tradeLevels.entryZone.low.toFixed(2)}`
+            : `Break ${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}`)
+        : 'Await cleaner trigger + liquidity confirmation'))
+    : 'Await trigger';
+
+  const riskState = !result
+    ? 'UNKNOWN'
+    : (result.maxRiskPercent <= 2 ? 'NORMAL' : result.maxRiskPercent <= 4 ? 'ELEVATED' : 'HIGH');
+
+  const liveLatencySeconds = result?.dataQuality?.lastUpdated
+    ? Math.max(0, (Date.now() - new Date(result.dataQuality.lastUpdated).getTime()) / 1000)
+    : null;
+
+  const primaryWhyItems = decisionReasons.length
+    ? decisionReasons
+    : [
+        `${trendStrength} trend alignment`,
+        `${result?.unusualActivity?.hasUnusualActivity ? 'Options flow confirms direction' : 'Options flow not confirming yet'}`,
+        `${result?.expectedMove ? 'Volatility expansion detected' : 'Volatility expansion not detected'}`,
+      ];
+
+  const adaptiveProfile = useMemo<AdaptiveProfile | null>(() => {
+    const closed = personalityEntries.filter((trade) => !trade.isOpen && trade.outcome !== 'open');
+    if (closed.length < 6) return null;
+
+    const isWin = (trade: PersonalityJournalEntry) => trade.outcome === 'win' || ((trade.pl ?? 0) > 0);
+    const wins = closed.filter(isWin);
+    const safeWins = wins.length ? wins : closed;
+
+    const textOf = (trade: PersonalityJournalEntry) => {
+      return `${trade.strategy || ''} ${trade.setup || ''} ${trade.notes || ''} ${(trade.tags || []).join(' ')}`.toLowerCase();
+    };
+
+    const styleCounts: Record<TraderStyleBias, number> = {
+      momentum: 0,
+      mean_reversion: 0,
+      breakout: 0,
+      options_flow: 0,
+      macro_swing: 0,
+    };
+
+    const timingCounts: Record<TraderTiming, number> = {
+      early: 0,
+      confirmation: 0,
+      late_momentum: 0,
+    };
+
+    const envWins: Record<TraderEnvironment, number> = { trend: 0, range: 0, reversal: 0, unknown: 0 };
+    const envTotal: Record<TraderEnvironment, number> = { trend: 0, range: 0, reversal: 0, unknown: 0 };
+
+    const inferEnvironment = (trade: PersonalityJournalEntry): TraderEnvironment => {
+      const txt = textOf(trade);
+      if (/trend|momentum|continuation|breakout/.test(txt)) return 'trend';
+      if (/range|chop|mean|reversion|pullback/.test(txt)) return 'range';
+      if (/reversal|fade|exhaust/.test(txt)) return 'reversal';
+      return 'unknown';
+    };
+
+    safeWins.forEach((trade) => {
+      const txt = textOf(trade);
+      if (/breakout|break/.test(txt)) styleCounts.breakout += 1;
+      if (/pullback|mean|reversion|dip|bounce/.test(txt)) styleCounts.mean_reversion += 1;
+      if (/momentum|trend|continuation/.test(txt)) styleCounts.momentum += 1;
+      if (/flow|oi|options|gamma|delta/.test(txt)) styleCounts.options_flow += 1;
+      if (/macro|swing|position|weekly|monthly|leaps/.test(txt)) styleCounts.macro_swing += 1;
+
+      if (/early|anticipat|pre-break/.test(txt)) timingCounts.early += 1;
+      if (/confirm|confirmation|retest/.test(txt)) timingCounts.confirmation += 1;
+      if (/late|chase|follow-through/.test(txt)) timingCounts.late_momentum += 1;
+    });
+
+    closed.forEach((trade) => {
+      const env = inferEnvironment(trade);
+      envTotal[env] += 1;
+      if (isWin(trade)) envWins[env] += 1;
+    });
+
+    const pickTop = <T extends string>(map: Record<T, number>, fallback: T): T => {
+      const entries = Object.entries(map) as Array<[T, number]>;
+      const best = entries.sort((a, b) => b[1] - a[1])[0];
+      return best && best[1] > 0 ? best[0] : fallback;
+    };
+
+    const styleBias = pickTop(styleCounts, 'momentum');
+    const decisionTiming = pickTop(timingCounts, 'confirmation');
+
+    const avgAbsR = closed
+      .map((trade) => Math.abs(Number(trade.rMultiple ?? 0)))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .reduce((sum, value, _, arr) => sum + value / arr.length, 0);
+
+    const avgAbsPct = closed
+      .map((trade) => Math.abs(Number(trade.plPercent ?? 0)))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .reduce((sum, value, _, arr) => sum + value / arr.length, 0);
+
+    const riskDNA: TraderRiskDNA = (avgAbsR >= 2 || avgAbsPct >= 6)
+      ? 'aggressive'
+      : (avgAbsR >= 1.1 || avgAbsPct >= 3)
+        ? 'balanced'
+        : 'defensive';
+
+    const environmentRates: Record<TraderEnvironment, number> = {
+      trend: envTotal.trend > 0 ? (envWins.trend / envTotal.trend) * 100 : 50,
+      range: envTotal.range > 0 ? (envWins.range / envTotal.range) * 100 : 50,
+      reversal: envTotal.reversal > 0 ? (envWins.reversal / envTotal.reversal) * 100 : 50,
+      unknown: envTotal.unknown > 0 ? (envWins.unknown / envTotal.unknown) * 100 : 50,
+    };
+
+    return {
+      sampleSize: closed.length,
+      wins: wins.length,
+      styleBias,
+      riskDNA,
+      decisionTiming,
+      environmentRates,
+    };
+  }, [personalityEntries]);
+
+  const adaptiveMatch = useMemo(() => {
+    if (!result) return null;
+
+    const baseSignalScore = result.compositeScore?.confidence ?? 50;
+    if (!adaptiveProfile) {
+      return {
+        hasProfile: false,
+        personalityMatch: 50,
+        adaptiveScore: baseSignalScore,
+        reasons: ['Build profile: close at least 6 journal trades for adaptive matching'],
+        noTradeBias: false,
+      };
+    }
+
+    const currentStyle: TraderStyleBias = (() => {
+      const patternName = (bestPattern?.name || '').toLowerCase();
+      if (/breakout|break/.test(patternName)) return 'breakout';
+      if (isCountertrend || /pullback|reversion|mean/.test(patternName)) return 'mean_reversion';
+      if (result.unusualActivity?.hasUnusualActivity) return 'options_flow';
+      if (selectedTF.startsWith('macro_') || selectedTF === 'swing_1w') return 'macro_swing';
+      return 'momentum';
+    })();
+
+    const currentRisk: TraderRiskDNA = result.maxRiskPercent > 4
+      ? 'aggressive'
+      : result.maxRiskPercent > 2
+        ? 'balanced'
+        : 'defensive';
+
+    const currentTiming: TraderTiming = result.entryTiming.urgency === 'immediate'
+      ? 'early'
+      : result.entryTiming.urgency === 'within_hour'
+        ? 'confirmation'
+        : 'late_momentum';
+
+    const currentEnvironment: TraderEnvironment = result.aiMarketState?.regime?.type === 'trending'
+      ? 'trend'
+      : result.aiMarketState?.regime?.type === 'ranging'
+        ? 'range'
+        : result.aiMarketState?.regime?.type === 'reversal'
+          ? 'reversal'
+          : 'unknown';
+
+    const styleScore = adaptiveProfile.styleBias === currentStyle
+      ? 95
+      : ((adaptiveProfile.styleBias === 'momentum' && currentStyle === 'breakout') || (adaptiveProfile.styleBias === 'breakout' && currentStyle === 'momentum'))
+        ? 78
+        : 45;
+
+    const riskDistance = Math.abs(
+      (adaptiveProfile.riskDNA === 'defensive' ? 0 : adaptiveProfile.riskDNA === 'balanced' ? 1 : 2) -
+      (currentRisk === 'defensive' ? 0 : currentRisk === 'balanced' ? 1 : 2)
+    );
+    const riskScore = riskDistance === 0 ? 92 : riskDistance === 1 ? 68 : 42;
+
+    const timingScore = adaptiveProfile.decisionTiming === currentTiming ? 90 : 55;
+    const envWinRate = adaptiveProfile.environmentRates[currentEnvironment] ?? 50;
+    const environmentScore = Math.max(30, Math.min(95, envWinRate));
+
+    const personalityMatch = Math.round(
+      (styleScore * 0.35) +
+      (riskScore * 0.2) +
+      (timingScore * 0.2) +
+      (environmentScore * 0.25)
+    );
+
+    const adaptiveScore = Math.round((baseSignalScore * 0.6) + (personalityMatch * 0.4));
+
+    const styleLabel: Record<TraderStyleBias, string> = {
+      momentum: 'momentum continuation',
+      mean_reversion: 'pullback / mean reversion',
+      breakout: 'breakout expansion',
+      options_flow: 'options flow-following',
+      macro_swing: 'macro swing',
+    };
+
+    const reasons: string[] = [];
+    if (styleScore >= 70) {
+      reasons.push(`Matches your ${styleLabel[adaptiveProfile.styleBias]} win profile`);
+    }
+    if (riskScore >= 70) {
+      reasons.push(`Risk profile aligns with your ${adaptiveProfile.riskDNA} execution DNA`);
+    }
+    if (timingScore >= 70) {
+      reasons.push(`Entry timing fits your ${adaptiveProfile.decisionTiming.replace('_', ' ')} profile`);
+    }
+    reasons.push(`Similar ${currentEnvironment} conditions: ${envWinRate.toFixed(0)}% historical win rate`);
+
+    const noTradeBias = adaptiveProfile.sampleSize >= 8 && environmentScore < 40;
+
+    return {
+      hasProfile: true,
+      personalityMatch,
+      adaptiveScore,
+      reasons: reasons.slice(0, 3),
+      noTradeBias,
+      sampleSize: adaptiveProfile.sampleSize,
+      wins: adaptiveProfile.wins,
+    };
+  }, [adaptiveProfile, bestPattern?.name, isCountertrend, result, selectedTF]);
+
   return (
     <div className="options-page-container" style={{ 
       minHeight: '100vh', 
@@ -651,6 +1126,73 @@ export default function OptionsConfluenceScanner() {
             Uses 50% levels, decompression timing, and Greeks-aware risk assessment.
           </p>
         </div>
+
+        {/* Command Strip */}
+        {result && (
+          <div style={{
+            position: 'sticky',
+            top: '0.4rem',
+            zIndex: 40,
+            marginBottom: '1rem',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.96))',
+            border: `2px solid ${result.direction === 'bullish' ? 'rgba(16,185,129,0.6)' : result.direction === 'bearish' ? 'rgba(239,68,68,0.6)' : 'rgba(245,158,11,0.6)'}`,
+            borderRadius: '12px',
+            boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
+            backdropFilter: 'blur(6px)',
+            padding: '0.58rem 0.75rem',
+          }}>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.65rem',
+              alignItems: 'center',
+              fontSize: '0.76rem',
+              lineHeight: 1.25,
+            }}>
+              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{result.symbol}</span>
+              <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#CBD5E1' }}>BIAS:</span>
+              <span style={{ color: '#F8FAFC', fontWeight: 700 }}>{thesisDirection.toUpperCase()}</span>
+              <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#CBD5E1' }}>STATUS:</span>
+              <span style={{
+                background: `${commandStatusColor}25`,
+                border: `1px solid ${commandStatusColor}70`,
+                color: commandStatusColor,
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+              }}>
+                {commandStatus}
+              </span>
+              <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#CBD5E1' }}>CONF:</span>
+              <span style={{
+                color: (result.compositeScore?.confidence ?? 0) >= 70 ? '#10B981' : (result.compositeScore?.confidence ?? 0) >= 50 ? '#F59E0B' : '#EF4444',
+                fontWeight: 800,
+              }}>
+                {(result.compositeScore?.confidence ?? 0).toFixed(0)}%
+              </span>
+              <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#CBD5E1' }}>DATA:</span>
+              <span style={{
+                color: dataHealth === 'REALTIME' || dataHealth === 'LIVE' ? '#10B981' : dataHealth === 'DELAYED' || dataHealth === 'CACHED' ? '#F59E0B' : '#EF4444',
+                fontWeight: 700,
+              }}>
+                {dataHealth} {(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? '✔' : ''}
+              </span>
+              <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#93C5FD', fontWeight: 700 }}>LIVE BX + FMV OPTIONS</span>
+              {commandUpdatedAgo !== null && (
+                <>
+                  <span style={{ color: '#64748B' }}>•</span>
+                  <span style={{ color: '#94A3B8' }}>Updated {commandUpdatedAgo}s ago</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Input Section */}
         <div className="options-form-controls" style={{ 
@@ -799,6 +1341,431 @@ export default function OptionsConfluenceScanner() {
         {/* Results */}
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
+
+            {/* Primary Intelligence Panel (Cognitive Anchor) */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.92))',
+              border: `2px solid ${commandStatusColor}`,
+              borderRadius: '18px',
+              padding: '1.1rem 1.2rem',
+              minHeight: 'clamp(220px, 32vh, 380px)',
+              boxShadow: `0 0 36px ${commandStatusColor}2A`,
+              display: 'grid',
+              gap: '0.8rem',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}>
+                <div style={{ color: '#F8FAFC', fontWeight: 900, fontSize: '0.95rem', letterSpacing: '0.4px' }}>
+                  ⭐ MSP AI SIGNAL
+                </div>
+                <div style={{
+                  fontSize: '0.72rem',
+                  color: '#93C5FD',
+                  background: 'rgba(59,130,246,0.15)',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                  borderRadius: '999px',
+                  padding: '2px 8px',
+                  fontWeight: 700,
+                }}>
+                  Powered by Nasdaq BX + FMV Options (LIVE)
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '0.5rem',
+                alignItems: 'start',
+              }}>
+                <div style={{ color: '#CBD5E1', fontSize: '0.83rem', lineHeight: 1.5 }}>
+                  <div><span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Market Mode:</span> <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{marketStateLabel || 'Unknown'} {thesisDirection === 'bullish' ? '↑' : thesisDirection === 'bearish' ? '↓' : '→'}</span></div>
+                  <div><span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Setup Type:</span> <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{setupLabel || 'Awaiting Confirmation'}</span></div>
+                </div>
+                <div style={{
+                  justifySelf: 'end',
+                  textAlign: 'right',
+                  background: `${commandStatusColor}1F`,
+                  border: `1px solid ${commandStatusColor}55`,
+                  borderRadius: '10px',
+                  padding: '0.45rem 0.6rem',
+                  minWidth: '190px',
+                }}>
+                  <div style={{ color: '#64748B', textTransform: 'uppercase', fontSize: '0.66rem', fontWeight: 700 }}>Confidence Score</div>
+                  <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1.15rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                </div>
+              </div>
+
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(2,132,199,0.12), rgba(16,185,129,0.1))',
+                border: '1px solid rgba(56,189,248,0.35)',
+                borderRadius: '12px',
+                padding: '0.72rem',
+                display: 'grid',
+                gap: '0.45rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                    MSP AI Personality Match
+                  </div>
+                  {adaptiveMatch?.hasProfile && (
+                    <div style={{
+                      color: adaptiveMatch.noTradeBias ? '#EF4444' : '#10B981',
+                      fontWeight: 800,
+                      fontSize: '0.74rem',
+                      textTransform: 'uppercase',
+                    }}>
+                      {adaptiveMatch.noTradeBias ? 'NO-TRADE FILTER ACTIVE' : 'PROFILE ALIGNED'}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                  gap: '0.4rem',
+                  alignItems: 'center',
+                }}>
+                  <div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.67rem', textTransform: 'uppercase', fontWeight: 700 }}>Setup Fit Score</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '1.02rem', fontWeight: 900 }}>
+                      {adaptiveMatch?.personalityMatch ?? 50}%
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.67rem', textTransform: 'uppercase', fontWeight: 700 }}>Adaptive Confidence</div>
+                    <div style={{
+                      color: (adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? '#10B981' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? '#F59E0B' : '#EF4444',
+                      fontSize: '1.02rem',
+                      fontWeight: 900,
+                    }}>
+                      {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}%
+                    </div>
+                  </div>
+                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textAlign: 'right' }}>
+                    {adaptiveMatch?.hasProfile
+                      ? `Profile from ${adaptiveMatch.sampleSize} closed trades (${adaptiveMatch.wins} wins)`
+                      : (personalityLoaded ? 'Profile warming up from Journal data' : 'Loading Journal profile...')}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '0.25rem' }}>
+                  {(adaptiveMatch?.reasons || ['Build profile by logging and closing trades in Trade Journal']).map((reason, idx) => (
+                    <div key={idx} style={{ color: '#E2E8F0', fontSize: '0.78rem' }}>✔ {reason}</div>
+                  ))}
+                </div>
+              </div>
+
+              {result.institutionalFilter && (
+                <div style={{
+                  background: 'rgba(2,6,23,0.28)',
+                  border: `1px solid ${result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.45)' : 'rgba(148,163,184,0.35)'}`,
+                  borderRadius: '12px',
+                  padding: '0.65rem 0.72rem',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+                    <div style={{ color: '#93C5FD', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
+                      Institutional Filters
+                    </div>
+                    <div style={{
+                      color: result.institutionalFilter.noTrade ? '#EF4444' : '#10B981',
+                      fontWeight: 800,
+                      fontSize: '0.76rem',
+                    }}>
+                      FINAL QUALITY: {result.institutionalFilter.finalGrade} ({result.institutionalFilter.finalScore.toFixed(0)})
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '0.2rem' }}>
+                    {result.institutionalFilter.filters.slice(0, 4).map((filter, idx) => (
+                      <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
+                        {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <CapitalFlowCard flow={result.capitalFlow} compact />
+              <StateMachineTraderEyeCard
+                symbol={result.symbol}
+                direction={result.direction === 'bearish' ? 'short' : 'long'}
+                playbook={result.strategyRecommendation?.strategy?.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'momentum_pullback'}
+                compact
+              />
+              <EvolutionStatusCard compact />
+
+              <div style={{
+                background: 'rgba(0,0,0,0.2)',
+                border: '1px solid rgba(148,163,184,0.2)',
+                borderRadius: '12px',
+                padding: '0.75rem',
+              }}>
+                <div style={{ color: '#A7F3D0', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.45rem' }}>
+                  Why This Exists
+                </div>
+                <div style={{ display: 'grid', gap: '0.32rem' }}>
+                  {primaryWhyItems.slice(0, 3).map((reason, idx) => (
+                    <div key={idx} style={{ color: '#E2E8F0', fontSize: '0.8rem' }}>✔ {reason}</div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '0.5rem',
+                alignItems: 'center',
+              }}>
+                <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Risk State:</span>{' '}
+                  <span style={{ color: riskState === 'NORMAL' ? '#10B981' : riskState === 'ELEVATED' ? '#F59E0B' : '#EF4444', fontWeight: 800 }}>{riskState}</span>
+                </div>
+                <div style={{ color: '#CBD5E1', fontSize: '0.8rem', textAlign: 'right' }}>
+                  <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Primary Action:</span>{' '}
+                  <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{decisionTrigger.toUpperCase()}</span>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                fontSize: '0.72rem',
+              }}>
+                <div style={{ color: '#A7F3D0' }}>LIVE DATA STATUS: Nasdaq BX ✔ • FMV Options ✔</div>
+                <div style={{ color: '#94A3B8' }}>
+                  {liveLatencySeconds !== null ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
+                </div>
+              </div>
+            </div>
+
+            {/* Decision Ladder - Institutional validation pipeline */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.90))',
+              border: '1px solid rgba(99,102,241,0.35)',
+              borderRadius: '14px',
+              padding: '0.9rem 1rem',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '0.75rem',
+                flexWrap: 'wrap',
+                marginBottom: '0.8rem',
+              }}>
+                <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.4px' }}>
+                  🪜 DECISION LADDER
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.74rem',
+                }}>
+                  <span style={{ color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700 }}>Trade Pipeline:</span>
+                  <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{pipelineComplete} / {ladderSteps.length} Complete</span>
+                  <span style={{ color: '#64748B' }}>•</span>
+                  <span style={{
+                    color: pipelineStatus === 'READY' ? '#10B981' : pipelineStatus === 'WAITING' ? '#F59E0B' : '#EF4444',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                  }}>
+                    {pipelineStatus}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                {ladderSteps.map((step, index) => {
+                  const visual = stateVisual(step.state);
+                  return (
+                    <div key={step.title} style={{ display: 'grid', gap: '0.45rem' }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.5rem',
+                        background: visual.bg,
+                        border: `1px solid ${visual.border}`,
+                        borderRadius: '10px',
+                        padding: '0.55rem 0.7rem',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                          <span style={{ color: visual.color, fontSize: '0.85rem', fontWeight: 800 }}>{visual.icon}</span>
+                          <span style={{ color: '#E2E8F0', fontSize: '0.78rem', fontWeight: 700 }}>{step.title}</span>
+                        </div>
+                        <span style={{ color: visual.color, fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{visual.label}</span>
+                      </div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.74rem', paddingLeft: '0.35rem' }}>{step.detail}</div>
+                      {index < ladderSteps.length - 1 && (
+                        <div style={{ color: '#64748B', fontSize: '0.74rem', paddingLeft: '0.35rem' }}>↓</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Trader Eye Path Layout (Z-Flow) */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.86))',
+              border: '1px solid rgba(59,130,246,0.35)',
+              borderRadius: '16px',
+              padding: '1rem',
+              display: 'grid',
+              gap: '0.9rem',
+            }}>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+                <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.4px' }}>
+                  👁️ TRADER EYE PATH
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.72rem' }}>Left → Center → Right → Down</div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '0.45rem',
+              }}>
+                {heatSignalStrip.map((item) => (
+                  <div key={item.label} style={{
+                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid rgba(148,163,184,0.25)',
+                    borderRadius: '8px',
+                    padding: '0.42rem 0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.45rem',
+                    fontSize: '0.7rem',
+                  }}>
+                    <span style={{ color: '#94A3B8', fontWeight: 700 }}>{item.label}</span>
+                    <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{item.state} {item.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Z-Flow 2x2: info-left/action-right */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '0.7rem',
+              }}>
+                {/* Top Left: Bias / Regime / Trend */}
+                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
+                  <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Left • Market Condition</div>
+                  <div style={{ color: '#F8FAFC', fontWeight: 900, fontSize: '1rem', marginBottom: '0.3rem' }}>
+                    {result.symbol} — {thesisDirection.toUpperCase()} BIAS
+                  </div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                    <div>Regime: {marketStateLabel || 'Unknown'}</div>
+                    <div>Trend Alignment: {trendStrength}</div>
+                    <div>Session: {result.entryTiming.marketSession || 'n/a'}</div>
+                  </div>
+                </div>
+
+                {/* Top Right: Setup Status */}
+                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
+                  <div style={{ color: '#FCD34D', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Right • Setup Status</div>
+                  <div style={{
+                    background: `${commandStatusColor}20`,
+                    border: `1px solid ${commandStatusColor}66`,
+                    borderRadius: '10px',
+                    padding: '0.55rem 0.65rem',
+                    marginBottom: '0.4rem',
+                  }}>
+                    <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1rem' }}>{commandStatus}</div>
+                    <div style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>Pipeline {pipelineComplete}/{ladderSteps.length} complete</div>
+                  </div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>
+                    Confidence {(result.compositeScore?.confidence ?? 0).toFixed(0)}% • Data {dataHealth}
+                  </div>
+                </div>
+
+                {/* Bottom Left: Pattern + Confluence */}
+                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
+                  <div style={{ color: '#A7F3D0', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Bottom Left • Pattern + Confluence</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                    <div>Pattern: {hasConfirmedPattern && bestPattern ? bestPattern.name : 'No clean pattern'}</div>
+                    <div>HTF: {result.confluenceStack >= 3 ? 'Aligned' : 'Mixed'}</div>
+                    <div>Confluence: {(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                    <div>Direction Score: {result.compositeScore?.directionScore?.toFixed(0) ?? '0'}</div>
+                  </div>
+                </div>
+
+                {/* Bottom Right: Execution + Risk */}
+                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
+                  <div style={{ color: '#C4B5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Bottom Right • Execution + Risk</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', lineHeight: 1.45 }}>
+                    <div>ENTRY: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'WAIT'}</div>
+                    <div>STOP: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
+                    <div>R:R: {result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'N/A'}</div>
+                    <div>Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dominant Trader Decision Block */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.88))',
+                border: `2px solid ${commandStatusColor}`,
+                boxShadow: `0 0 28px ${commandStatusColor}33`,
+                borderRadius: '12px',
+                padding: '0.8rem 0.9rem',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.69rem', textTransform: 'uppercase', letterSpacing: '0.45px', marginBottom: '0.3rem' }}>
+                  Trader Decision
+                </div>
+                <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.45rem' }}>
+                  SETUP STATUS: {commandStatus}
+                </div>
+
+                <div style={{ color: '#CBD5E1', fontSize: '0.77rem', marginBottom: '0.35rem' }}>
+                  <span style={{ color: '#F8FAFC', fontWeight: 700 }}>Reason:</span>
+                </div>
+                <div style={{ display: 'grid', gap: '0.25rem', marginBottom: '0.55rem' }}>
+                  {(decisionReasons.length ? decisionReasons : ['Momentum divergence', 'Liquidity below ideal threshold', 'Confluence below activation threshold']).map((reason, idx) => (
+                    <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>• {reason}</div>
+                  ))}
+                </div>
+
+                <div style={{ color: '#CBD5E1', fontSize: '0.77rem' }}>
+                  <span style={{ color: '#F8FAFC', fontWeight: 700 }}>Next Trigger:</span> {decisionTrigger}
+                </div>
+                <div style={{ color: '#93C5FD', fontSize: '0.72rem', marginTop: '0.45rem' }}>
+                  Powered by Nasdaq BX + FMV Options (LIVE)
+                </div>
+              </div>
+
+              {/* Lower Why Panel */}
+              <div style={{
+                background: 'rgba(0,0,0,0.18)',
+                border: '1px solid rgba(148,163,184,0.24)',
+                borderRadius: '10px',
+                padding: '0.65rem',
+              }}>
+                <div style={{ color: '#C4B5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.4rem', textTransform: 'uppercase' }}>🧠 Why Panel</div>
+                <div style={{ color: '#CBD5E1', fontSize: '0.76rem', lineHeight: 1.5 }}>
+                  {(result.tradeSnapshot?.why && result.tradeSnapshot.why.length > 0)
+                    ? result.tradeSnapshot.why.slice(0, 4).join(' • ')
+                    : `${result.unusualActivity?.hasUnusualActivity ? 'Unusual activity detected' : 'No unusual options flow'} • OI sentiment ${result.openInterestAnalysis?.sentiment || 'neutral'} • ${hasConfirmedPattern && bestPattern ? `Pattern ${bestPattern.name}` : 'Pattern not confirmed'} • ${result.aiMarketState?.thesis?.summary || 'Awaiting stronger thesis confirmation'}`}
+                </div>
+              </div>
+            </div>
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
@@ -1297,14 +2264,9 @@ export default function OptionsConfluenceScanner() {
               </details>
             </div>
 
-            {/* 📈 PATTERN CONFIRMATION - Promoted for trader visual scan order */}
+            {/* 📈 PATTERN CONFIRMATION - Core decision driver */}
             {(() => {
-              const bestPattern = result.locationContext?.patterns
-                ?.slice()
-                .sort((a, b) => b.confidence - a.confidence)?.[0];
-              const hasConfirmedPattern = !!bestPattern && bestPattern.confidence >= 55;
-              const hasPatternData = (result.locationContext?.patterns?.length ?? 0) > 0;
-              const confirmationColor = hasConfirmedPattern
+              const confirmationColor = hasConfirmedPattern && bestPattern
                 ? patternBiasColor(bestPattern.bias)
                 : '#F59E0B';
               const biasAligned = !!bestPattern && (
@@ -1312,16 +2274,19 @@ export default function OptionsConfluenceScanner() {
                 bestPattern.bias === result.direction
               );
               const volumeAligned = !!bestPattern && /volume|vol\.?\s*/i.test(bestPattern.reason);
+              const trendStateLabel = isCountertrend
+                ? 'Countertrend Bounce'
+                : `${result.direction === 'bullish' ? 'Bullish' : result.direction === 'bearish' ? 'Bearish' : 'Neutral'} Macro`;
 
               return (
                 <div style={{
                   background: hasConfirmedPattern
-                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.20)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.20)' : 'rgba(245,158,11,0.18)'}, rgba(15,23,42,0.95))`
-                    : 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(15,23,42,0.95))',
+                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.24)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.24)' : 'rgba(245,158,11,0.22)'}, rgba(15,23,42,0.95))`
+                    : 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(15,23,42,0.95))',
                   border: `2px solid ${confirmationColor}`,
                   borderRadius: '16px',
                   padding: '1rem 1.1rem',
-                  boxShadow: `0 0 24px ${confirmationColor}35`,
+                  boxShadow: `0 0 28px ${confirmationColor}42`,
                 }}>
                   <div style={{
                     display: 'flex',
@@ -1331,12 +2296,12 @@ export default function OptionsConfluenceScanner() {
                     gap: '0.5rem',
                     marginBottom: '0.75rem',
                   }}>
-                    <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.92rem', letterSpacing: '0.4px' }}>
-                      📈 PATTERN CONFIRMATION
+                    <div style={{ color: '#E2E8F0', fontWeight: '900', fontSize: '0.95rem', letterSpacing: '0.4px' }}>
+                      🧩 PATTERN FORMATION
                     </div>
                     <span style={{
-                      background: hasConfirmedPattern ? `${confirmationColor}25` : 'rgba(245,158,11,0.25)',
-                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}80`,
+                      background: hasConfirmedPattern ? `${confirmationColor}30` : 'rgba(245,158,11,0.25)',
+                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}90`,
                       color: hasConfirmedPattern ? confirmationColor : '#FCD34D',
                       padding: '4px 10px',
                       borderRadius: '999px',
@@ -1344,25 +2309,39 @@ export default function OptionsConfluenceScanner() {
                       fontWeight: '700',
                       textTransform: 'uppercase',
                     }}>
-                      {hasConfirmedPattern ? '✔ Confirmed Pattern' : '⚠ No Clean Pattern'}
+                      {hasConfirmedPattern ? '✔ Core Driver Confirmed' : '⚠ Awaiting Confirmation'}
                     </span>
+                  </div>
+
+                  <div style={{
+                    background: 'rgba(0,0,0,0.20)',
+                    border: `1px solid ${confirmationColor}55`,
+                    borderRadius: '10px',
+                    padding: '0.55rem 0.65rem',
+                    marginBottom: '0.6rem',
+                    color: '#E2E8F0',
+                    fontSize: '0.83rem',
+                  }}>
+                    <span style={{ color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>Trend State:</span>{' '}
+                    <span style={{ color: isCountertrend ? '#F59E0B' : '#10B981', fontWeight: 800 }}>{trendStateLabel}</span>
                   </div>
 
                   {hasConfirmedPattern && bestPattern ? (
                     <>
                       <div style={{
                         color: confirmationColor,
-                        fontSize: '1.05rem',
-                        fontWeight: '800',
+                        fontSize: '1.1rem',
+                        fontWeight: '900',
                         marginBottom: '0.45rem',
+                        textTransform: 'uppercase',
                       }}>
                         {bestPattern.name}
                       </div>
                       <div className="decision-grid-mobile" style={{ gap: '0.6rem' }}>
                         <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Confidence</div>
-                          <div style={{ color: '#E2E8F0', fontWeight: '700', fontSize: '0.85rem' }}>
-                            {patternConfidenceLabel(bestPattern.confidence)} ({bestPattern.confidence.toFixed(0)}%)
+                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Pattern Strength</div>
+                          <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.9rem' }}>
+                            {bestPattern.confidence.toFixed(0)}%
                           </div>
                         </div>
                         <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>

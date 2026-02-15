@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 
@@ -1159,6 +1160,14 @@ function PortfolioContent() {
           </>
         }
       />
+
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 16px 0 16px' }}>
+        <AdaptivePersonalityCard
+          skill="portfolio"
+          setupText={`Portfolio return ${totalReturn.toFixed(2)}% with ${positions.length} open positions`}
+          baseScore={Math.max(20, Math.min(90, 50 + totalReturn))}
+        />
+      </div>
 
       {/* Manual entry modal (fallback when API has no price) */}
       {manualOpen && manualPosition && (

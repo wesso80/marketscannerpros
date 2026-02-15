@@ -12,6 +12,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { adx, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
+import { getSessionFromCookie } from '@/lib/auth';
+import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
+import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -1013,6 +1016,60 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
   };
 }
 
+function applyInstitutionalFilterToTopPicks(
+  topPicks: any[],
+  params: { type: 'equity' | 'crypto'; timeframe: string; traderRiskDNA?: 'aggressive' | 'balanced' | 'defensive' }
+) {
+  const withFilter = topPicks.map((pick) => {
+    const atrPercent = Number.isFinite(pick?.indicators?.atr) && Number.isFinite(pick?.indicators?.price) && pick.indicators.price > 0
+      ? (pick.indicators.atr / pick.indicators.price) * 100
+      : undefined;
+
+    const neutralSignals = Number(pick?.signals?.neutral || 0);
+    const bullishSignals = Number(pick?.signals?.bullish || 0);
+    const bearishSignals = Number(pick?.signals?.bearish || 0);
+    const regime = neutralSignals >= Math.max(bullishSignals, bearishSignals)
+      ? 'ranging'
+      : (pick?.score ?? 0) >= 70
+        ? 'trending'
+        : 'unknown';
+
+    const institutionalFilter = computeInstitutionalFilter({
+      baseScore: Number(pick?.score ?? 50),
+      strategy: inferStrategyFromText(`${params.type} ${pick?.direction || 'neutral'} ${params.timeframe}`),
+      regime,
+      liquidity: {
+        session: 'regular',
+      },
+      volatility: {
+        atrPercent,
+        state: typeof atrPercent === 'number'
+          ? (atrPercent > 7 ? 'extreme' : atrPercent > 4 ? 'expanded' : atrPercent < 1 ? 'compressed' : 'normal')
+          : 'normal',
+      },
+      dataHealth: {
+        freshness: params.type === 'crypto' ? 'LIVE' : 'DELAYED',
+      },
+      riskEnvironment: {
+        traderRiskDNA: params.traderRiskDNA,
+        stressLevel: typeof atrPercent === 'number' && atrPercent > 6 ? 'high' : 'medium',
+      },
+    });
+
+    return {
+      ...pick,
+      institutionalFilter,
+    };
+  });
+
+  const filtered = withFilter.filter((pick) => !pick.institutionalFilter.noTrade);
+  const blockedCount = withFilter.length - filtered.length;
+  return {
+    topPicks: filtered.length > 0 ? filtered : (withFilter.length > 0 ? [withFilter.sort((a, b) => b.score - a.score)[0]] : []),
+    blockedCount,
+  };
+}
+
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
     // Convert BTC -> BTCUSDT for Binance
@@ -1077,6 +1134,11 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
   
   try {
+    const session = await getSessionFromCookie();
+    const adaptive = session?.workspaceId
+      ? await getAdaptiveLayer(session.workspaceId, { skill: 'scanner' }, 50)
+      : null;
+
     const body = await req.json();
     const { type, timeframe = '1d' } = body; // 'equity' or 'crypto', timeframe: '15m', '30m', '1h', '1d'
     const mode: BulkScanMode = body?.mode === 'light' ? 'light' : 'deep';
@@ -1096,6 +1158,11 @@ export async function POST(req: NextRequest) {
       console.log(`[bulk-scan/light] Scanning up to ${universeSize} crypto assets using market-data ranking...`);
       const lightResult = await runLightCryptoScan(universeSize, startTime, selectedTimeframe);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
+        type,
+        timeframe: selectedTimeframe,
+        traderRiskDNA: adaptive?.profile?.riskDNA,
+      });
 
       return NextResponse.json({
         success: true,
@@ -1104,8 +1171,9 @@ export async function POST(req: NextRequest) {
         mode,
         scanned: lightResult.scanned,
         duration: `${duration}s`,
-        topPicks: lightResult.topPicks,
+        topPicks: institutional.topPicks,
         sourceCoinsFetched: lightResult.sourceCoinsFetched,
+        blockedByInstitutionalFilter: institutional.blockedCount,
         apiCallsUsed: lightResult.apiCallsUsed,
         apiCallsCap: lightResult.apiCallsCap,
         effectiveUniverseSize: lightResult.effectiveUniverseSize,
@@ -1117,6 +1185,11 @@ export async function POST(req: NextRequest) {
       console.log(`[bulk-scan/light] Scanning up to ${universeSize} equities using hybrid movers + bulk quotes...`);
       const lightResult = await runLightEquityScan(startTime, selectedTimeframe, universeSize);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
+        type,
+        timeframe: selectedTimeframe,
+        traderRiskDNA: adaptive?.profile?.riskDNA,
+      });
 
       return NextResponse.json({
         success: true,
@@ -1125,8 +1198,9 @@ export async function POST(req: NextRequest) {
         mode,
         scanned: lightResult.scanned,
         duration: `${duration}s`,
-        topPicks: lightResult.topPicks,
+        topPicks: institutional.topPicks,
         sourceSymbols: lightResult.sourceSymbols,
+        blockedByInstitutionalFilter: institutional.blockedCount,
         apiCallsUsed: lightResult.apiCallsUsed,
         apiCallsCap: lightResult.apiCallsCap,
         effectiveUniverseSize: lightResult.effectiveUniverseSize,
@@ -1209,6 +1283,11 @@ export async function POST(req: NextRequest) {
     const topPicks = results
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
+    const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
+      type,
+      timeframe: selectedTimeframe,
+      traderRiskDNA: adaptive?.profile?.riskDNA,
+    });
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[bulk-scan] Complete in ${duration}s. Top: ${topPicks.map(p => `${p.symbol}:${p.score}`).join(', ')}`);
@@ -1220,7 +1299,8 @@ export async function POST(req: NextRequest) {
       mode,
       scanned: results.length,
       duration: `${duration}s`,
-      topPicks,
+      topPicks: institutional.topPicks,
+      blockedByInstitutionalFilter: institutional.blockedCount,
       errors: errors.slice(0, 5)
     });
     

@@ -1,6 +1,7 @@
 'use client';
 
 import MSPCopilot from '@/components/MSPCopilot';
+import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
 import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -46,6 +47,9 @@ export default function ToolsLayoutClient({
 
   return (
     <AIPageProvider>
+      <ErrorBoundary fallback={null}>
+        <AdaptiveTraderPersonalityBar skill={skill} />
+      </ErrorBoundary>
       <ErrorBoundary>{children}</ErrorBoundary>
       <ErrorBoundary fallback={null}>
         <CopilotWithContext fallbackSkill={skill} />

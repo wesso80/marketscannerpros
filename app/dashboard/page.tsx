@@ -10,6 +10,7 @@ import FearGreedHistory from '@/components/FearGreedHistory';
 import TimeConfluenceWidget from '@/components/TimeConfluenceWidget';
 import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
 import TopMoversWidget from '@/components/TopMoversWidget';
+import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,13 @@ export default function DashboardPage(){
 <ProCta />
         <SessionBadge/>
       </div>
+
+      <AdaptivePersonalityCard
+        skill="dashboard"
+        setupText="Dashboard market pulse and trade planning workflow"
+        baseScore={50}
+      />
+
       <Suspense fallback={null}><DashboardInner/></Suspense>
       
       {/* Crypto Market Pulse - Trending & Movers */}

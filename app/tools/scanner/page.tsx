@@ -7,6 +7,10 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
+import CapitalFlowCard from "@/components/CapitalFlowCard";
+import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
+import EvolutionStatusCard from "@/components/EvolutionStatusCard";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -49,6 +53,30 @@ interface ScanResult {
     openInterestCoin: number;
     fundingRate?: number;
     longShortRatio?: number;
+  };
+  institutionalFilter?: {
+    finalScore: number;
+    finalGrade: string;
+    recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
+    noTrade: boolean;
+    filters: Array<{
+      label: string;
+      status: 'pass' | 'warn' | 'block';
+      reason: string;
+    }>;
+  };
+  capitalFlow?: {
+    market_mode: 'pin' | 'launch' | 'chop';
+    gamma_state: 'Positive' | 'Negative' | 'Mixed';
+    bias: 'bullish' | 'bearish' | 'neutral';
+    conviction: number;
+    dominant_expiry: '0DTE' | 'weekly' | 'monthly' | 'long_dated' | 'unknown';
+    pin_strike: number | null;
+    key_strikes: Array<{ strike: number; gravity: number; type: 'call-heavy' | 'put-heavy' | 'mixed' }>;
+    flip_zones: Array<{ level: number; direction: 'bullish_above' | 'bearish_below' }>;
+    liquidity_levels: Array<{ level: number; label: string; prob: number }>;
+    most_likely_path: string[];
+    risk: string[];
   };
 }
 
@@ -467,6 +495,7 @@ function ScannerContent() {
   const [aiExpanded, setAiExpanded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
+  const [capitalFlow, setCapitalFlow] = useState<ScanResult['capitalFlow'] | null>(null);
   
   // Bulk scan state
   const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
@@ -610,6 +639,29 @@ function ScannerContent() {
     fetchDailyPicks();
   }, []);
 
+  useEffect(() => {
+    const fetchFlow = async () => {
+      if (!result?.symbol || assetType !== 'equity') {
+        setCapitalFlow(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/flow?symbol=${encodeURIComponent(result.symbol)}&scanMode=intraday_1h`, { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data?.success && data?.data) {
+          setCapitalFlow(data.data);
+        } else {
+          setCapitalFlow(result.capitalFlow ?? null);
+        }
+      } catch {
+        setCapitalFlow(result.capitalFlow ?? null);
+      }
+    };
+
+    fetchFlow();
+  }, [result?.symbol, assetType, result?.capitalFlow]);
+
   // Get filtered suggestions based on input
   const getSuggestions = () => {
     if (assetType === "crypto") {
@@ -627,6 +679,7 @@ function ScannerContent() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setCapitalFlow(null);
     setAiText(null);
     setAiError(null);
     setAiLoading(false);
@@ -768,6 +821,25 @@ function ScannerContent() {
       />
       <main style={{ padding: "24px 16px" }}>
         <div className="max-w-7xl mx-auto">
+        <AdaptivePersonalityCard
+          skill="scanner"
+          setupText={`${assetType} ${timeframe} scan ${ticker}`}
+          direction={result?.direction}
+          timeframe={timeframe}
+          baseScore={result?.score ?? 50}
+          compact
+        />
+
+        <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
+
+        <StateMachineTraderEyeCard
+          symbol={(capitalFlow as any)?.symbol || result?.symbol || ticker}
+          direction={result?.direction === 'bearish' ? 'short' : 'long'}
+          playbook="momentum_pullback"
+          compact
+        />
+
+        <EvolutionStatusCard compact />
 
         {/* Orientation */}
         <div style={{
@@ -803,6 +875,30 @@ function ScannerContent() {
             </ul>
           </div>
         </div>
+
+        {result?.institutionalFilter && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(2,6,23,0.85), rgba(15,23,42,0.8))',
+            border: `1px solid ${result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.35)'}`,
+            borderRadius: '12px',
+            padding: '0.7rem 0.85rem',
+            marginBottom: '1rem',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
+              <div style={{ color: '#93C5FD', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Filter Engine</div>
+              <div style={{ color: result.institutionalFilter.noTrade ? '#EF4444' : '#10B981', fontSize: '0.76rem', fontWeight: 800 }}>
+                {result.institutionalFilter.finalGrade} • {result.institutionalFilter.finalScore.toFixed(0)} • {result.institutionalFilter.recommendation.replace('_', ' ')}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: '0.2rem' }}>
+              {result.institutionalFilter.filters.slice(0, 4).map((filter, idx) => (
+                <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
+                  {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
         <div style={{

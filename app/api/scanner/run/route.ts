@@ -3,12 +3,16 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
+import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
+import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
+import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
+import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from "@/lib/coingecko";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
 export const revalidate = 0; // Disable ISR caching
 
-// Scanner API - Binance for crypto (free commercial use)
+// Scanner API - CoinGecko commercial feed for crypto
 // Equity & Forex require commercial data licenses - admin-only testing with Alpha Vantage
 // v3.0 - Added cache mode support for reduced AV calls
 const SCANNER_VERSION = 'v3.0';
@@ -64,6 +68,8 @@ interface DerivativesData {
   openInterestCoin: number;    // OI in native coin
   fundingRate?: number;        // Current funding rate as percentage
   longShortRatio?: number;     // L/S ratio
+  oiChangePercent?: number;    // 5m OI change percent
+  basisPercent?: number;       // Perp basis vs index/spot
 }
 
 interface ScanResult {
@@ -99,64 +105,127 @@ interface ScanResult {
   };
   // Derivatives data for crypto (OI, Funding Rate, L/S)
   derivatives?: DerivativesData;
+  capitalFlow?: any;
 }
 
-// Fetch derivatives data from Binance Futures API
+// Fetch derivatives data from CoinGecko commercial derivatives endpoint
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
-    // Convert BTC -> BTCUSDT for Binance
-    const binanceSymbol = `${symbol}USDT`;
-    
-    const [oiRes, fundingRes, lsRes] = await Promise.all([
-      // Open Interest
-      fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${binanceSymbol}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      // Funding Rate
-      fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${binanceSymbol}&limit=1`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      // Long/Short Ratio
-      fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${binanceSymbol}&period=1h&limit=1`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null)
-    ]);
-    
-    let openInterestCoin = 0;
-    let fundingRate: number | undefined;
-    let longShortRatio: number | undefined;
-    
-    if (oiRes?.ok) {
-      const oi = await oiRes.json();
-      openInterestCoin = parseFloat(oi.openInterest || '0');
-    }
-    
-    if (fundingRes?.ok) {
-      const funding = await fundingRes.json();
-      if (funding?.[0]?.fundingRate) {
-        fundingRate = parseFloat(funding[0].fundingRate) * 100; // Convert to %
-      }
-    }
-    
-    if (lsRes?.ok) {
-      const ls = await lsRes.json();
-      if (ls?.[0]?.longShortRatio) {
-        longShortRatio = parseFloat(ls[0].longShortRatio);
-      }
-    }
-    
-    if (openInterestCoin === 0) return null;
-    
+    const baseSymbol = symbol.replace(/[-]?(USD|USDT)$/i, '').toUpperCase();
+    const source = await getDerivativesForSymbols([baseSymbol]);
+    if (!source.length) return null;
+
+    const best = [...source].sort((a, b) => (b.volume_24h || 0) - (a.volume_24h || 0))[0];
+    const markPrice = Number(best.price || 0);
+    const openInterestUsd = Number(best.open_interest || 0);
+    const openInterestCoin = markPrice > 0 ? openInterestUsd / markPrice : 0;
+    const fundingRate = Number.isFinite(best.funding_rate) ? best.funding_rate * 100 : undefined;
+    const basisPercent = Number.isFinite(best.basis) && Number.isFinite(best.index) && best.index > 0
+      ? (best.basis / best.index) * 100
+      : undefined;
+
+    if (!Number.isFinite(openInterestUsd) || openInterestUsd <= 0) return null;
+
     return {
-      openInterest: 0, // Will calculate with price
+      openInterest: openInterestUsd,
       openInterestCoin,
       fundingRate,
-      longShortRatio
+      longShortRatio: undefined,
+      oiChangePercent: undefined,
+      basisPercent,
     };
   } catch (err) {
     console.warn('[scanner] Failed to fetch derivatives for', symbol, err);
     return null;
   }
+}
+
+function inferStructureHigherHighs(candles: Array<{ h?: number; l?: number; c?: number }>): boolean {
+  if (!candles.length) return false;
+  const recent = candles.slice(-12);
+  if (recent.length < 4) return false;
+  const highs = recent.map((c) => Number(c.h)).filter(Number.isFinite);
+  const lows = recent.map((c) => Number(c.l)).filter(Number.isFinite);
+  if (highs.length < 4 || lows.length < 4) return false;
+  const firstHigh = highs.slice(0, Math.floor(highs.length / 2));
+  const secondHigh = highs.slice(Math.floor(highs.length / 2));
+  const firstLow = lows.slice(0, Math.floor(lows.length / 2));
+  const secondLow = lows.slice(Math.floor(lows.length / 2));
+  return (Math.max(...secondHigh) > Math.max(...firstHigh)) && (Math.min(...secondLow) > Math.min(...firstLow));
+}
+
+function buildScannerLiquidityLevels(
+  candles: Array<{ t: string; o: number; h: number; l: number; c: number; volume?: number }> | undefined,
+  spot: number
+): { levels: Array<{ level: number; label: string }>; vwap?: number; structureHigherHighs: boolean } {
+  if (!candles || candles.length === 0 || !Number.isFinite(spot)) {
+    return { levels: [], structureHigherHighs: false };
+  }
+
+  const sorted = [...candles].sort((a, b) => a.t.localeCompare(b.t));
+  const recent = sorted.slice(-96);
+  const levels: Array<{ level: number; label: string }> = [];
+
+  const byDay = new Map<string, typeof recent>();
+  for (const candle of recent) {
+    const key = candle.t.slice(0, 10);
+    const bucket = byDay.get(key) ?? [];
+    bucket.push(candle);
+    byDay.set(key, bucket);
+  }
+  const dayKeys = Array.from(byDay.keys()).sort();
+  const latestDayKey = dayKeys[dayKeys.length - 1];
+  const prevDayKey = dayKeys[dayKeys.length - 2];
+
+  if (prevDayKey) {
+    const prevDay = byDay.get(prevDayKey) || [];
+    if (prevDay.length) {
+      levels.push({ level: Math.max(...prevDay.map((c) => c.h)), label: 'PDH' });
+      levels.push({ level: Math.min(...prevDay.map((c) => c.l)), label: 'PDL' });
+    }
+  }
+
+  if (latestDayKey) {
+    const latestDay = byDay.get(latestDayKey) || [];
+    const overnight = latestDay.filter((c) => {
+      const hour = Number(c.t.slice(11, 13));
+      return Number.isFinite(hour) && hour < 9;
+    });
+    if (overnight.length) {
+      levels.push({ level: Math.max(...overnight.map((c) => c.h)), label: 'ONH' });
+      levels.push({ level: Math.min(...overnight.map((c) => c.l)), label: 'ONL' });
+    }
+  }
+
+  const week = recent.slice(-35);
+  if (week.length) {
+    levels.push({ level: Math.max(...week.map((c) => c.h)), label: 'WEEK_HIGH' });
+    levels.push({ level: Math.min(...week.map((c) => c.l)), label: 'WEEK_LOW' });
+  }
+
+  for (let i = 0; i < recent.length - 1; i += 1) {
+    const current = recent[i];
+    const next = recent[i + 1];
+    const eqh = Math.abs(current.h - next.h) / Math.max(0.0001, current.h);
+    const eql = Math.abs(current.l - next.l) / Math.max(0.0001, current.l);
+    if (eqh <= 0.0015) levels.push({ level: (current.h + next.h) / 2, label: 'EQH' });
+    if (eql <= 0.0015) levels.push({ level: (current.l + next.l) / 2, label: 'EQL' });
+  }
+
+  const sumPv = recent.reduce((acc, bar) => acc + (((bar.h + bar.l + bar.c) / 3) * Math.max(1, bar.volume ?? 1)), 0);
+  const sumVol = recent.reduce((acc, bar) => acc + Math.max(1, bar.volume ?? 1), 0);
+  const vwap = sumVol > 0 ? sumPv / sumVol : undefined;
+
+  const roundLevel = spot >= 1000 ? Math.round(spot / 100) * 100 : spot >= 100 ? Math.round(spot / 10) * 10 : spot >= 10 ? Math.round(spot) : Number((Math.round(spot * 10) / 10).toFixed(1));
+  levels.push({ level: roundLevel, label: 'ROUND' });
+
+  const structureHigherHighs = inferStructureHigherHighs(recent);
+
+  return {
+    levels,
+    vwap,
+    structureHigherHighs,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -217,7 +286,7 @@ export async function POST(req: NextRequest) {
 
     // Check API keys based on market type
     if (type === "crypto") {
-      // Crypto uses Binance - no key needed
+      // Crypto uses CoinGecko commercial feed
     } else if (type === "equity" || type === "forex") {
       // Equity & Forex use Alpha Vantage (admin-only testing, requires commercial license for production)
       if (!ALPHA_KEY) {
@@ -377,43 +446,15 @@ export async function POST(req: NextRequest) {
     // Crypto support: fetch OHLC and compute indicators locally when type === "crypto"
     type Candle = { t: string; open: number; high: number; low: number; close: number; volume: number; };
 
-    // USDT Dominance - fetch from CoinCap.io (more generous rate limits than CoinGecko)
+    // USDT Dominance from CoinGecko global market cap percentages
     async function fetchUSDTDominance(timeframe: string): Promise<Candle[]> {
       try {
-        console.info(`[scanner] Fetching USDT dominance from CoinCap.io...`);
-        
-        // CoinCap.io - free, no API key, generous rate limits
-        const [usdtRes, btcRes] = await Promise.all([
-          fetch('https://api.coincap.io/v2/assets/tether', {
-            headers: { 'Accept': 'application/json' }
-          }),
-          fetch('https://api.coincap.io/v2/assets/bitcoin', {
-            headers: { 'Accept': 'application/json' }
-          })
-        ]);
-        
-        if (!usdtRes.ok) {
-          console.error(`[scanner] CoinCap USDT API error: ${usdtRes.status}`);
-          throw new Error(`CoinCap API error: ${usdtRes.status}`);
+        console.info(`[scanner] Fetching USDT dominance from CoinGecko global data...`);
+        const global = await getGlobalData();
+        const usdtDominance = Number(global?.market_cap_percentage?.usdt || 0);
+        if (!Number.isFinite(usdtDominance) || usdtDominance <= 0) {
+          throw new Error('CoinGecko global dominance unavailable');
         }
-        
-        const usdtData = await usdtRes.json();
-        const btcData = btcRes.ok ? await btcRes.json() : null;
-        
-        // Get market cap percentages
-        const usdtMarketCap = parseFloat(usdtData.data?.marketCapUsd || '0');
-        const btcMarketCap = btcData ? parseFloat(btcData.data?.marketCapUsd || '0') : 0;
-        
-        // Estimate total market cap (USDT is typically ~4-5% of total)
-        // We can use USDT's supply * price as proxy
-        const usdtSupply = parseFloat(usdtData.data?.supply || '0');
-        const usdtPrice = parseFloat(usdtData.data?.priceUsd || '1');
-        
-        // Calculate dominance - USDT market cap / estimated total (BTC is ~50-60% usually)
-        const estimatedTotal = btcMarketCap > 0 ? btcMarketCap / 0.55 : usdtMarketCap * 20;
-        const usdtDominance = (usdtMarketCap / estimatedTotal) * 100;
-        
-        console.info(`[scanner] CoinCap data - USDT mcap: $${(usdtMarketCap/1e9).toFixed(1)}B, dominance: ~${usdtDominance.toFixed(2)}%`);
         
         // Create synthetic candles based on current dominance
         const now = Date.now();
@@ -438,7 +479,7 @@ export async function POST(req: NextRequest) {
           });
         }
         
-        console.info(`[scanner] USDT Dominance: Generated ${candles.length} candles, current: ${usdtDominance.toFixed(2)}%`);
+        console.info(`[scanner] USDT Dominance (CoinGecko): Generated ${candles.length} candles, current: ${usdtDominance.toFixed(2)}%`);
         return candles;
         
       } catch (err: any) {
@@ -447,10 +488,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Binance klines - FREE, no API key needed, reliable
-    // v2.4 - USDT dominance check BEFORE Binance call
-    async function fetchCryptoBinance(symbol: string, timeframe: string): Promise<Candle[]> {
-      console.info(`[scanner v2.4] fetchCryptoBinance called with symbol=${symbol}, timeframe=${timeframe}`);
+    // CoinGecko OHLC candles (commercial plan)
+    async function fetchCryptoCoinGecko(symbol: string, timeframe: string): Promise<Candle[]> {
+      console.info(`[scanner] fetchCryptoCoinGecko called with symbol=${symbol}, timeframe=${timeframe}`);
       
       // FIRST: Check for USDT and handle specially
       const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
@@ -459,23 +499,11 @@ export async function POST(req: NextRequest) {
         return await fetchUSDTDominance(timeframe);
       }
       
-      // Map timeframe to Binance interval
-      const intervalMap: Record<string, string> = {
-        '15m': '15m',
-        '15min': '15m',
-        '30m': '30m',
-        '30min': '30m', 
-        '1h': '1h',
-        '1hour': '1h',
-        '4h': '4h',
-        '4hour': '4h',
-        '1d': '1d',
-        'daily': '1d',
-      };
-      const interval = intervalMap[timeframe] || '1d';
-      
-      // Convert symbol: BTC -> BTCUSDT, BTC-USD -> BTCUSDT
-      const binanceSymbol = baseSymbol + 'USDT';
+      const days = timeframe === '1d' || timeframe === 'daily'
+        ? 30
+        : timeframe === '4h' || timeframe === '4hour'
+          ? 7
+          : 1;
       
       // Skip other stablecoins - they don't have trading pairs
       const stablecoins = ['USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD'];
@@ -484,94 +512,30 @@ export async function POST(req: NextRequest) {
         throw new Error(`${baseSymbol} is a stablecoin (pegged to $1) - technical analysis not applicable`);
       }
       
-      const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=500`;
-      console.info(`[scanner v2.4] Fetching Binance: ${binanceSymbol} ${interval}`);
-      
-      try {
-        const res = await fetch(url, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          cache: 'no-store'
-        });
-        
-        if (!res.ok) {
-          console.error(`[scanner v2.4] Binance error ${res.status} for ${binanceSymbol}`);
-          throw new Error(`Binance API error: ${res.status}`);
-        }
-        
-        const data = await res.json();
-        
-        if (!Array.isArray(data) || data.length === 0) {
-          throw new Error(`No data from Binance for ${binanceSymbol}`);
-        }
-        
-        const candles: Candle[] = data.map((k: any[]) => ({
-          t: new Date(k[0]).toISOString(),
-          open: parseFloat(k[1]),
-          high: parseFloat(k[2]),
-          low: parseFloat(k[3]),
-          close: parseFloat(k[4]),
-          volume: parseFloat(k[5]) || 0,
-        })).filter((c: Candle) => Number.isFinite(c.close));
-        
-        console.info(`[scanner] Binance ${binanceSymbol}: ${candles.length} candles`);
-        return candles;
-      } catch (err: any) {
-        console.error(`[scanner] Binance fetch failed for ${binanceSymbol}:`, err.message);
-        throw err;
+      const coinId = await resolveSymbolToId(baseSymbol);
+      if (!coinId) {
+        throw new Error(`No CoinGecko mapping for ${baseSymbol}`);
       }
-    }
 
-    // Legacy Alpha Vantage fallback (rarely used)
-    async function fetchCryptoDaily(symbol: string, market = "USD"): Promise<Candle[]> {
-      const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(symbol)}&market=${market}&apikey=${ALPHA_KEY}`;
-      const j = await fetchAlphaJson(url, `CRYPTO_DAILY ${symbol}`);
-      const ts = j["Time Series (Digital Currency Daily)"] || {};
-      const candles: Candle[] = Object.entries(ts).map(([date, v]: any) => ({
-        t: date as string,
-        open: Number(v["1a. open (USD)"] ?? v["1. open"] ?? NaN),
-        high: Number(v["2a. high (USD)"] ?? v["2. high"] ?? NaN),
-        low: Number(v["3a. low (USD)"] ?? v["3. low"] ?? NaN),
-        close: Number(v["4a. close (USD)"] ?? v["4. close"] ?? NaN),
-        volume: Number(v["5. volume"] ?? 0),
-      })).filter(c => Number.isFinite(c.close)).sort((a,b) => a.t.localeCompare(b.t));
-      console.debug("[scanner] crypto daily candles", { symbol, count: candles.length, latestDate: candles[candles.length-1]?.t });
+      const ohlc = await getOHLC(coinId, days as 1 | 7 | 14 | 30 | 90 | 180 | 365);
+      if (!ohlc || ohlc.length === 0) {
+        throw new Error(`No CoinGecko OHLC data for ${baseSymbol}`);
+      }
+
+      const candles: Candle[] = ohlc
+        .map((row: number[]) => ({
+          t: new Date(row[0]).toISOString(),
+          open: Number(row[1]),
+          high: Number(row[2]),
+          low: Number(row[3]),
+          close: Number(row[4]),
+          volume: 0,
+        }))
+        .filter((c: Candle) => Number.isFinite(c.close))
+        .sort((a, b) => a.t.localeCompare(b.t));
+
+      console.info(`[scanner] CoinGecko ${baseSymbol}: ${candles.length} candles`);
       return candles;
-    }
-
-    async function fetchCryptoIntraday(symbol: string, market = "USD", interval = "60min"): Promise<Candle[]> {
-      // Use CRYPTO_INTRADAY for Premium Alpha Vantage
-      // Map our intervals to AV intervals
-      const avCryptoInterval = interval === "30min" ? "30min" : "60min";
-      const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(symbol)}&market=${market}&interval=${avCryptoInterval}&outputsize=full&apikey=${ALPHA_KEY}`;
-      
-      console.info(`[scanner] Fetching CRYPTO_INTRADAY for ${symbol} (${avCryptoInterval})`);
-      
-      try {
-        const j = await fetchAlphaJson(url, `CRYPTO_INTRADAY ${symbol}`);
-        const tsKey = `Time Series Crypto (${avCryptoInterval})`;
-        const ts = j[tsKey] || {};
-        
-        if (Object.keys(ts).length === 0) {
-          console.warn(`[scanner] No intraday data for ${symbol}, falling back to daily`);
-          return await fetchCryptoDaily(symbol, market);
-        }
-        
-        const candles: Candle[] = Object.entries(ts).map(([datetime, v]: any) => ({
-          t: datetime as string,
-          open: Number(v["1. open"] ?? NaN),
-          high: Number(v["2. high"] ?? NaN),
-          low: Number(v["3. low"] ?? NaN),
-          close: Number(v["4. close"] ?? NaN),
-          volume: Number(v["5. volume"] ?? 0),
-        })).filter(c => Number.isFinite(c.close)).sort((a, b) => a.t.localeCompare(b.t));
-        
-        console.info(`[scanner] CRYPTO_INTRADAY ${symbol}: Got ${candles.length} candles, latest: ${candles[candles.length-1]?.t}`);
-        return candles;
-      } catch (err: any) {
-        // If premium endpoint fails, fall back to daily
-        console.warn(`[scanner] CRYPTO_INTRADAY failed for ${symbol}, falling back to daily:`, err?.message);
-        return await fetchCryptoDaily(symbol, market);
-      }
     }
 
     function ema(values: number[], period: number): number[] {
@@ -948,16 +912,14 @@ export async function POST(req: NextRequest) {
     for (const sym of limited) {
       try {
         if (type === "crypto") {
-          const market = "USD";
           const baseSym = sym;
           
-          // Use Binance for crypto (free, reliable, supports all timeframes)
+          // CoinGecko-only crypto candles (commercial license)
           let candles: Candle[];
           try {
-            candles = await fetchCryptoBinance(baseSym, timeframe);
-          } catch (binanceErr: any) {
-            // If Binance fails (e.g., stablecoin), return clear error
-            errors.push(`${baseSym}: ${binanceErr.message}`);
+            candles = await fetchCryptoCoinGecko(baseSym, timeframe);
+          } catch (cgErr: any) {
+            errors.push(`${baseSym}: ${cgErr.message}`);
             continue;
           }
           
@@ -1014,7 +976,7 @@ export async function POST(req: NextRequest) {
           
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
-            symbol: `${baseSym}-${market}`,
+            symbol: `${baseSym}-USD`,
             score: scoreResult.score,
             direction: scoreResult.direction,
             signals: scoreResult.signals,
@@ -1048,10 +1010,14 @@ export async function POST(req: NextRequest) {
               if (derivData) {
                 // Calculate OI in USD using current price
                 item.derivatives = {
-                  openInterest: derivData.openInterestCoin * price,
+                  openInterest: Number.isFinite(derivData.openInterest) && derivData.openInterest > 0
+                    ? derivData.openInterest
+                    : derivData.openInterestCoin * price,
                   openInterestCoin: derivData.openInterestCoin,
                   fundingRate: derivData.fundingRate,
-                  longShortRatio: derivData.longShortRatio
+                  longShortRatio: derivData.longShortRatio,
+                  oiChangePercent: derivData.oiChangePercent,
+                  basisPercent: derivData.basisPercent,
                 };
               }
             } catch (derivErr) {
@@ -1302,6 +1268,117 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const adaptiveBase = await getAdaptiveLayer(
+      session.workspaceId,
+      {
+        skill: 'scanner',
+        setupText: `${type} ${timeframe} scan`,
+        timeframe,
+      },
+      50
+    );
+
+    // Institutional Filter Engine: downgrade/block low-quality environments before trader sees setup
+    const enriched = results.map((result) => {
+      const adxValue = Number(result.adx ?? Number.NaN);
+      const atrPct = Number.isFinite(result.atr) && Number.isFinite(result.price) && result.price && result.price > 0
+        ? (result.atr! / result.price) * 100
+        : undefined;
+      const regime = Number.isFinite(adxValue)
+        ? (adxValue >= 22 ? 'trending' : adxValue <= 18 ? 'ranging' : 'unknown')
+        : 'unknown';
+      const volatilityState = typeof atrPct === 'number'
+        ? (atrPct > 7 ? 'extreme' : atrPct > 4 ? 'expanded' : atrPct < 1 ? 'compressed' : 'normal')
+        : 'normal';
+
+      const institutionalFilter = computeInstitutionalFilter({
+        baseScore: result.score,
+        strategy: inferStrategyFromText(`${type} ${result.direction || 'neutral'} ${timeframe}`),
+        regime,
+        liquidity: {
+          session: 'regular',
+        },
+        volatility: {
+          atrPercent: atrPct,
+          state: volatilityState,
+        },
+        dataHealth: {
+          freshness: 'LIVE',
+        },
+        riskEnvironment: {
+          traderRiskDNA: adaptiveBase.profile?.riskDNA,
+          stressLevel: volatilityState === 'extreme' ? 'high' : 'medium',
+        },
+      });
+
+      const spot = Number(result.price ?? Number.NaN);
+      const liquidityContext = buildScannerLiquidityLevels(result.chartData?.candles as any, spot);
+      const longShortRatio = result.derivatives?.longShortRatio;
+      const liquidationLevels = Number.isFinite(spot) && Number.isFinite(longShortRatio)
+        ? [
+            {
+              level: spot * (longShortRatio! > 1 ? 0.985 : 1.015),
+              side: (longShortRatio! > 1 ? 'long_liq' : 'short_liq') as 'long_liq' | 'short_liq',
+              weight: 0.85,
+            },
+            {
+              level: spot * (longShortRatio! > 1 ? 1.015 : 0.985),
+              side: (longShortRatio! > 1 ? 'short_liq' : 'long_liq') as 'long_liq' | 'short_liq',
+              weight: 0.65,
+            },
+          ]
+        : undefined;
+
+      const capitalFlow = Number.isFinite(spot)
+        ? computeCapitalFlowEngine({
+            symbol: result.symbol,
+            marketType: type === 'crypto' ? 'crypto' : 'equity',
+            spot,
+            vwap: liquidityContext.vwap,
+            atr: result.atr,
+            liquidityLevels: liquidityContext.levels,
+            cryptoPositioning: type === 'crypto'
+              ? {
+                  openInterestUsd: result.derivatives?.openInterest,
+                  oiChangePercent: result.derivatives?.oiChangePercent,
+                  fundingRate: result.derivatives?.fundingRate,
+                  basisPercent: result.derivatives?.basisPercent,
+                  longShortRatio: result.derivatives?.longShortRatio,
+                  liquidationLevels,
+                }
+              : undefined,
+            trendMetrics: {
+              adx: result.adx,
+              emaAligned: Number.isFinite(result.price) && Number.isFinite(result.ema200)
+                ? (result.price! >= result.ema200!)
+                : undefined,
+              structureHigherHighs: liquidityContext.structureHigherHighs,
+            },
+            dataHealth: {
+              freshness: 'LIVE',
+              fallbackActive: false,
+              lastUpdatedIso: result.lastCandleTime,
+            },
+          })
+        : null;
+
+      return {
+        ...result,
+        institutionalFilter,
+        capitalFlow: capitalFlow ?? undefined,
+      };
+    });
+
+    const tradeable = enriched.filter((item) => !item.institutionalFilter.noTrade);
+    const blockedCount = enriched.length - tradeable.length;
+
+    const finalResults = tradeable.length > 0
+      ? tradeable
+      : (enriched.length > 0 ? [enriched.sort((a, b) => b.score - a.score)[0]] : []);
+
+    results.length = 0;
+    results.push(...finalResults);
+
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0) {
       const signalsToRecord: RecordSignalParams[] = results
@@ -1335,6 +1412,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const topResultScore = results[0]?.score ?? 50;
+    const adaptive = await getAdaptiveLayer(
+      session.workspaceId,
+      {
+        skill: 'scanner',
+        setupText: `${type} ${timeframe} scan`,
+        direction: results[0]?.direction,
+        timeframe,
+      },
+      topResultScore
+    );
+
     // Return results with cache-prevention headers
     return NextResponse.json({
       success: true,
@@ -1347,7 +1436,12 @@ export async function POST(req: NextRequest) {
         count: results.length,
         minScore,
         timeframe,
-        type
+        type,
+        blockedByInstitutionalFilter: blockedCount,
+        adaptiveTrader: {
+          profile: adaptive.profile,
+          match: adaptive.match,
+        },
       },
     }, {
       headers: {

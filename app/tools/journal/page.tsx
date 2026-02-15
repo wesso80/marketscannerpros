@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, canAccessAdvancedJournal } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 
@@ -579,6 +580,14 @@ function JournalContent() {
         backHref="/dashboard"
         actions={headerActions}
       />
+
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+        <AdaptivePersonalityCard
+          skill="journal"
+          setupText={`Journal entries ${entries.length}, closed ${closedEntries.length}, win rate ${winRate.toFixed(1)}%`}
+          baseScore={Math.max(20, Math.min(90, winRate))}
+        />
+      </div>
 
       {/* Navigation Tabs */}
       <div style={{ 

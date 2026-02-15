@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 
 type AssetType = "crypto" | "stock" | "fx";
 
@@ -262,6 +263,16 @@ function AiAnalystContent() {
         <div
           className="max-w-7xl mx-auto w-full"
         >
+          <AdaptivePersonalityCard
+            skill="ai_analyst"
+            setupText={`${symbol} ${timeframe} ${query.slice(0, 80)}`}
+            direction={scannerMeta.direction?.toLowerCase() === 'bullish' || scannerMeta.direction?.toLowerCase() === 'bearish' || scannerMeta.direction?.toLowerCase() === 'neutral'
+              ? scannerMeta.direction.toLowerCase() as 'bullish' | 'bearish' | 'neutral'
+              : undefined}
+            timeframe={timeframe}
+            baseScore={scannerMeta.score ? Number(scannerMeta.score) : 50}
+          />
+
           <div style={{
             marginBottom: 16,
             color: '#e2e8f0',

@@ -11,6 +11,7 @@ import { q } from '@/lib/db';
 import { buildUnifiedContext } from '@/lib/ai/context';
 import { getToolsForSkill, generateIdempotencyKey } from '@/lib/ai/tools';
 import type { PageSkill, PageContext, UnifiedAIContext } from '@/lib/ai/types';
+import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 
 interface Suggestion {
   id: string;
@@ -214,6 +215,41 @@ async function generateSuggestions(
   const tools = getToolsForSkill(skill);
   const now = new Date();
   const validFor24h = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+  const adaptive = await getAdaptiveLayer(
+    workspaceId,
+    {
+      skill,
+      setupText: `${pageData?.symbol || ''} ${pageData?.signalStrength || ''} ${pageData?.tradeQuality || ''}`,
+      direction: pageData?.direction as 'bullish' | 'bearish' | 'neutral' | undefined,
+      urgency: pageData?.entryTiming && typeof pageData.entryTiming === 'object'
+        ? (pageData.entryTiming as { urgency?: 'immediate' | 'within_hour' | 'wait' | 'no_trade' }).urgency
+        : undefined,
+      riskPercent: typeof pageData?.maxRiskPercent === 'number' ? pageData.maxRiskPercent : undefined,
+      hasOptionsFlow: !!pageData?.unusualActivity,
+    },
+    typeof pageData?.confidence === 'number' ? pageData.confidence : 50
+  );
+
+  if (adaptive.match.noTradeBias) {
+    suggestions.push({
+      id: crypto.randomUUID(),
+      type: 'warning',
+      title: 'Adaptive profile says skip this regime',
+      description: adaptive.match.reasons[adaptive.match.reasons.length - 1] || 'Current market environment historically underperforms for your profile',
+      priority: 'high',
+      validUntil: validFor24h,
+    });
+  } else if (adaptive.match.personalityMatch >= 75) {
+    suggestions.push({
+      id: crypto.randomUUID(),
+      type: 'opportunity',
+      title: `High profile-fit setup (${adaptive.match.personalityMatch}%)`,
+      description: adaptive.match.reasons[0] || 'This setup aligns strongly with your historical edge profile',
+      priority: 'high',
+      validUntil: validFor24h,
+    });
+  }
 
   // Scanner-specific suggestions
   if (skill === 'scanner' && pageData.signals) {

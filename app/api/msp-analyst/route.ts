@@ -37,6 +37,8 @@ import { analystRequestSchema } from "../../../lib/validation";
 import { ZodError } from "zod";
 import { runMigrations } from "@/lib/migrations";
 import { aiLimiter, getClientIP } from "@/lib/rateLimit";
+import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
+import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 
 export const runtime = "nodejs";
 
@@ -152,6 +154,37 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = session!.workspaceId;
     const tier = session!.tier;
+
+    const adaptive = await getAdaptiveLayer(
+      workspaceId,
+      {
+        skill: mode || 'ai_analyst',
+        setupText: `${query} ${context?.symbol || ''} ${context?.timeframe || ''}`,
+        direction: scanner?.direction || undefined,
+        timeframe: context?.timeframe || undefined,
+      },
+      Number(scanner?.score ?? 50)
+    );
+
+    const institutionalFilter = computeInstitutionalFilter({
+      baseScore: Number(scanner?.score ?? 50),
+      strategy: inferStrategyFromText(`${query} ${mode || ''}`),
+      regime: /range|chop/.test(query.toLowerCase()) ? 'ranging' : 'unknown',
+      liquidity: {
+        session: 'regular',
+      },
+      volatility: {
+        state: /extreme|chaos|shock/.test(query.toLowerCase()) ? 'extreme' : 'normal',
+      },
+      dataHealth: {
+        freshness: scanner?.source === 'msp-web-scanner' ? 'LIVE' : 'DELAYED',
+      },
+      riskEnvironment: {
+        traderRiskDNA: adaptive.profile?.riskDNA,
+        stressLevel: /fomc|cpi|nfp|earnings|news/.test(query.toLowerCase()) ? 'high' : 'medium',
+      },
+      newsEventSoon: /fomc|cpi|nfp|earnings|news/.test(query.toLowerCase()),
+    });
 
     // Define tier limits (fair-use caps to prevent abuse)
     const tierLimits: Record<string, number> = {
@@ -300,6 +333,42 @@ If information is missing, say so explicitly instead of guessing.
         `.trim(),
       });
     }
+
+    messages.push({
+      role: "system",
+      content: `
+Adaptive Trader Personality Layer (ATPL):
+- Profile Status: ${adaptive.profile ? 'READY' : 'WARMING_UP'}
+- Style Bias: ${adaptive.profile?.styleBias || 'unknown'}
+- Risk DNA: ${adaptive.profile?.riskDNA || 'unknown'}
+- Decision Timing: ${adaptive.profile?.decisionTiming || 'unknown'}
+- Setup Fit Score: ${adaptive.match.personalityMatch}%
+- Adaptive Confidence: ${adaptive.match.adaptiveScore}%
+- No-Trade Bias: ${adaptive.match.noTradeBias ? 'ACTIVE' : 'INACTIVE'}
+- Reasons: ${adaptive.match.reasons.join(' | ')}
+
+Instruction:
+- Personalize recommendations to this profile.
+- If No-Trade Bias is ACTIVE, prioritize wait/skip language unless very strong counter-evidence exists.
+- If profile is warming up, clearly state lower personalization confidence.
+      `.trim(),
+    });
+
+    messages.push({
+      role: "system",
+      content: `
+Institutional Filter Engine (IFE):
+- Final Quality Score: ${institutionalFilter.finalScore}
+- Final Grade: ${institutionalFilter.finalGrade}
+- Recommendation: ${institutionalFilter.recommendation}
+- No-Trade Trigger: ${institutionalFilter.noTrade ? 'ACTIVE' : 'INACTIVE'}
+- Filter States: ${institutionalFilter.filters.map(f => `${f.label}=${f.status}`).join(' | ')}
+
+Instruction:
+- If No-Trade Trigger is ACTIVE, your default recommendation should be WAIT / NO TRADE unless there is exceptional contradictory evidence.
+- Always surface which institutional filters pass, warn, or block before giving execution guidance.
+      `.trim(),
+    });
 
     // NEW: Inject derivatives context if crypto-related query
     const cryptoKeywords = ['btc', 'eth', 'bitcoin', 'ethereum', 'crypto', 'sol', 'xrp', 'doge', 'bnb', 'ada', 'avax', 'link', 'matic', 'ltc'];
