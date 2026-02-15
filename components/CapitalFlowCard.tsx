@@ -120,6 +120,29 @@ export default function CapitalFlowCard({
 }) {
   if (!flow) return null;
 
+  const toNum = (value: unknown, fallback = 0) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  };
+
+  const likelyPath = Array.isArray(flow.most_likely_path) ? flow.most_likely_path : [];
+  const keyStrikes = Array.isArray(flow.key_strikes) ? flow.key_strikes : [];
+  const liquidityLevels = Array.isArray(flow.liquidity_levels) ? flow.liquidity_levels : [];
+  const flipZones = Array.isArray(flow.flip_zones) ? flow.flip_zones : [];
+  const riskLines = Array.isArray(flow.risk) ? flow.risk : [];
+
+  const brainAllowed = Array.isArray(flow.brain_decision?.allowed) ? flow.brain_decision.allowed : [];
+  const brainBlocked = Array.isArray(flow.brain_decision?.blocked) ? flow.brain_decision.blocked : [];
+
+  const ftpAllowed = Array.isArray(flow.flow_trade_permission?.allowed) ? flow.flow_trade_permission.allowed : [];
+  const ftpBlocked = Array.isArray(flow.flow_trade_permission?.blockedTrades) ? flow.flow_trade_permission.blockedTrades : [];
+
+  const irgAllowed = Array.isArray(flow.institutional_risk_governor?.allowed) ? flow.institutional_risk_governor.allowed : [];
+  const irgBlocked = Array.isArray(flow.institutional_risk_governor?.blocked) ? flow.institutional_risk_governor.blocked : [];
+  const irgHardBlockReasons = Array.isArray(flow.institutional_risk_governor?.hardBlockReasons)
+    ? flow.institutional_risk_governor.hardBlockReasons
+    : [];
+
   const modeColor = flow.market_mode === 'pin' ? '#10B981' : flow.market_mode === 'launch' ? '#F59E0B' : '#94A3B8';
   const biasColor = flow.bias === 'bullish' ? '#10B981' : flow.bias === 'bearish' ? '#EF4444' : '#94A3B8';
 
@@ -191,13 +214,13 @@ export default function CapitalFlowCard({
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
-              {flow.brain_decision.allowed.slice(0, 2).map((entry, index) => (
+              {brainAllowed.slice(0, 2).map((entry, index) => (
                 <div key={`brain-allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Blocked</strong>
-              {flow.brain_decision.blocked.slice(0, 2).map((entry, index) => (
+              {brainBlocked.slice(0, 2).map((entry, index) => (
                 <div key={`brain-block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
@@ -207,7 +230,7 @@ export default function CapitalFlowCard({
 
       <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.55rem' }}>
         <div style={{ color: '#A7F3D0', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Most Likely Path</div>
-        {flow.most_likely_path.slice(0, 3).map((step, index) => (
+        {likelyPath.slice(0, 3).map((step, index) => (
           <div key={step + index} style={{ color: '#E2E8F0', fontSize: '0.78rem' }}>
             {index + 1}. {step}
           </div>
@@ -246,7 +269,7 @@ export default function CapitalFlowCard({
           ))}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', color: '#94A3B8', fontSize: '0.68rem' }}>
-            <span>Expansion Shift: {flow.probability_matrix.deltaExpansion > 0 ? '+' : ''}{flow.probability_matrix.deltaExpansion.toFixed(1)}%</span>
+            <span>Expansion Shift: {toNum(flow.probability_matrix.deltaExpansion) > 0 ? '+' : ''}{toNum(flow.probability_matrix.deltaExpansion).toFixed(1)}%</span>
             <span style={{ color: flow.probability_matrix.acceleration === 'rising' ? '#10B981' : flow.probability_matrix.acceleration === 'falling' ? '#EF4444' : '#94A3B8' }}>
               {flow.probability_matrix.acceleration.toUpperCase()}
             </span>
@@ -275,7 +298,7 @@ export default function CapitalFlowCard({
             <span><strong>Risk:</strong> {flow.flow_state.riskMode.toUpperCase()}</span>
             <span>
               <strong>Next:</strong>{' '}
-              {flow.flow_state.nextLiquidity.above ? `↑ ${flow.flow_state.nextLiquidity.above.toFixed(2)}` : '↑ n/a'} / {flow.flow_state.nextLiquidity.below ? `↓ ${flow.flow_state.nextLiquidity.below.toFixed(2)}` : '↓ n/a'}
+              {flow.flow_state.nextLiquidity?.above ? `↑ ${toNum(flow.flow_state.nextLiquidity.above).toFixed(2)}` : '↑ n/a'} / {flow.flow_state.nextLiquidity?.below ? `↓ ${toNum(flow.flow_state.nextLiquidity.below).toFixed(2)}` : '↓ n/a'}
             </span>
           </div>
           <div style={{ color: '#A7F3D0', fontSize: '0.72rem' }}>
@@ -297,32 +320,32 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
             <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Trade Permission Matrix</div>
             <div style={{ color: flow.flow_trade_permission.blocked ? '#EF4444' : '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
-              TPS {flow.flow_trade_permission.tps.toFixed(0)} • {flow.flow_trade_permission.blocked ? 'BLOCKED' : 'PERMITTED'}
+              TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? 'BLOCKED' : 'PERMITTED'}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
             <span><strong>Risk:</strong> {flow.flow_trade_permission.riskMode.toUpperCase()}</span>
-            <span><strong>Size:</strong> {Math.round(flow.flow_trade_permission.sizeMultiplier * 100)}%</span>
+            <span><strong>Size:</strong> {Math.round(toNum(flow.flow_trade_permission.sizeMultiplier) * 100)}%</span>
             <span><strong>Stop:</strong> {flow.flow_trade_permission.stopStyle.replace('_', ' ')}</span>
           </div>
 
-          {flow.flow_trade_permission.noTradeMode.active && (
+          {flow.flow_trade_permission.noTradeMode?.active && (
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              ⚠ {flow.flow_trade_permission.noTradeMode.reason}
+              ⚠ {flow.flow_trade_permission.noTradeMode.reason || 'No-trade mode active'}
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
-              {flow.flow_trade_permission.allowed.slice(0, 3).map((entry, index) => (
+              {ftpAllowed.slice(0, 3).map((entry, index) => (
                 <div key={`allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Blocked</strong>
-              {flow.flow_trade_permission.blockedTrades.slice(0, 3).map((entry, index) => (
+              {ftpBlocked.slice(0, 3).map((entry, index) => (
                 <div key={`block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
@@ -349,37 +372,37 @@ export default function CapitalFlowCard({
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
             <span><strong>Risk Mode:</strong> {flow.institutional_risk_governor.riskMode.replace('_', ' ')}</span>
-            <span><strong>IRS:</strong> {flow.institutional_risk_governor.irs.toFixed(2)}</span>
-            <span><strong>Capital:</strong> {Math.round(flow.institutional_risk_governor.capital.usedPercent * 100)}% used</span>
-            <span><strong>Correlation:</strong> {flow.institutional_risk_governor.correlation.severity}</span>
-            <span><strong>Drawdown:</strong> {flow.institutional_risk_governor.drawdown.dailyR.toFixed(1)}R</span>
+            <span><strong>IRS:</strong> {toNum(flow.institutional_risk_governor.irs).toFixed(2)}</span>
+            <span><strong>Capital:</strong> {Math.round(toNum(flow.institutional_risk_governor.capital?.usedPercent) * 100)}% used</span>
+            <span><strong>Correlation:</strong> {flow.institutional_risk_governor.correlation?.severity || 'N/A'}</span>
+            <span><strong>Drawdown:</strong> {toNum(flow.institutional_risk_governor.drawdown?.dailyR).toFixed(1)}R</span>
           </div>
 
           <div style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
-            <strong>Volatility:</strong> {flow.institutional_risk_governor.volatility.regime} • <strong>Behavior:</strong> {flow.institutional_risk_governor.behavior.reason}
+            <strong>Volatility:</strong> {flow.institutional_risk_governor.volatility?.regime || 'N/A'} • <strong>Behavior:</strong> {flow.institutional_risk_governor.behavior?.reason || 'N/A'}
           </div>
 
           {!flow.institutional_risk_governor.executionAllowed && (
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              ⚠ {flow.institutional_risk_governor.hardBlockReasons[0] || 'Risk governor lockout active'}
+              ⚠ {irgHardBlockReasons[0] || 'Risk governor lockout active'}
             </div>
           )}
 
           <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
             <strong>Size Formula:</strong>{' '}
-            {flow.institutional_risk_governor.sizing.baseSize.toFixed(2)} × {flow.institutional_risk_governor.sizing.flowStateMultiplier.toFixed(2)} × {flow.institutional_risk_governor.sizing.riskGovernorMultiplier.toFixed(2)} × {flow.institutional_risk_governor.sizing.personalPerformanceMultiplier.toFixed(2)} = {flow.institutional_risk_governor.sizing.finalSize.toFixed(2)}
+            {toNum(flow.institutional_risk_governor.sizing?.baseSize).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.flowStateMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.riskGovernorMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.personalPerformanceMultiplier).toFixed(2)} = {toNum(flow.institutional_risk_governor.sizing?.finalSize).toFixed(2)}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
-              {flow.institutional_risk_governor.allowed.slice(0, 3).map((entry, index) => (
+              {irgAllowed.slice(0, 3).map((entry, index) => (
                 <div key={`irg-allow-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
               <strong>✖ Blocked</strong>
-              {flow.institutional_risk_governor.blocked.slice(0, 3).map((entry, index) => (
+              {irgBlocked.slice(0, 3).map((entry, index) => (
                 <div key={`irg-block-${index}`} style={{ color: '#CBD5E1' }}>• {entry}</div>
               ))}
             </div>
@@ -394,24 +417,24 @@ export default function CapitalFlowCard({
       }}>
         <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
           <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Key Strikes</div>
-          {flow.key_strikes.slice(0, 3).map((strike, index) => (
-            <div key={strike.strike + index}>• {strike.strike} ({strike.type}, g={strike.gravity.toFixed(2)})</div>
+          {keyStrikes.slice(0, 3).map((strike, index) => (
+            <div key={strike.strike + index}>• {strike.strike} ({strike.type}, g={toNum(strike.gravity).toFixed(2)})</div>
           ))}
         </div>
 
         <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
           <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Liquidity Magnets</div>
-          {flow.liquidity_levels.slice(0, 3).map((level, index) => (
-            <div key={level.label + index}>• {level.label} {level.level.toFixed(2)} ({Math.round(level.prob * 100)}%)</div>
+          {liquidityLevels.slice(0, 3).map((level, index) => (
+            <div key={level.label + index}>• {level.label} {toNum(level.level).toFixed(2)} ({Math.round(toNum(level.prob) * 100)}%)</div>
           ))}
         </div>
 
         <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>
           <div style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>Risk / Flip</div>
-          {flow.flip_zones.slice(0, 2).map((zone, index) => (
-            <div key={zone.level + index}>• {zone.direction === 'bullish_above' ? 'Bullish above' : 'Bearish below'} {zone.level.toFixed(2)}</div>
+          {flipZones.slice(0, 2).map((zone, index) => (
+            <div key={zone.level + index}>• {zone.direction === 'bullish_above' ? 'Bullish above' : 'Bearish below'} {toNum(zone.level).toFixed(2)}</div>
           ))}
-          {flow.risk.slice(0, 1).map((line, index) => (
+          {riskLines.slice(0, 1).map((line, index) => (
             <div key={index}>• {line}</div>
           ))}
         </div>
