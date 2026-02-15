@@ -654,6 +654,137 @@ interface DerivativesData {
   longShortRatio?: number;     // L/S ratio
 }
 
+type BulkScanMode = 'deep' | 'light';
+
+const STABLECOINS = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
+const LIGHT_SCAN_PER_PAGE = 250;
+const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function scoreLightCryptoCandidate(coin: {
+  symbol: string;
+  current_price: number;
+  market_cap: number;
+  market_cap_rank: number;
+  total_volume: number;
+  price_change_percentage_24h: number;
+}): {
+  symbol: string;
+  score: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  change24h: number;
+  signals: { bullish: number; bearish: number; neutral: number };
+  indicators: { price: number };
+} | null {
+  const symbol = coin.symbol.toUpperCase();
+  const price = Number(coin.current_price);
+  const marketCap = Number(coin.market_cap);
+  const volume = Number(coin.total_volume);
+  const rank = Number(coin.market_cap_rank || 99999);
+  const change24h = Number(coin.price_change_percentage_24h || 0);
+
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (!Number.isFinite(marketCap) || marketCap <= 0) return null;
+  if (!Number.isFinite(volume) || volume <= 0) return null;
+
+  const momentumScore = clamp(((change24h + 20) / 40) * 100, 0, 100);
+  const turnover = volume / marketCap;
+  const liquidityScore = clamp((Math.log10(volume + 1) / 11) * 100, 0, 100);
+  const turnoverScore = clamp(turnover * 250, 0, 100);
+  const rankScore = clamp(((1200 - rank) / 1200) * 100, 0, 100);
+
+  const scoreRaw =
+    momentumScore * 0.45 +
+    liquidityScore * 0.25 +
+    turnoverScore * 0.20 +
+    rankScore * 0.10;
+
+  const score = Math.round(clamp(scoreRaw, 0, 100));
+
+  let bullish = 0;
+  let bearish = 0;
+  let neutral = 0;
+
+  if (change24h >= 2) bullish += 1; else if (change24h <= -2) bearish += 1; else neutral += 1;
+  if (turnover >= 0.08) bullish += 1; else if (turnover < 0.025) bearish += 1; else neutral += 1;
+  if (rank <= 250) bullish += 1; else if (rank > 1200) bearish += 1; else neutral += 1;
+
+  let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (bullish > bearish) direction = 'bullish';
+  if (bearish > bullish) direction = 'bearish';
+
+  return {
+    symbol,
+    score,
+    direction,
+    change24h,
+    signals: { bullish, bearish, neutral },
+    indicators: { price }
+  };
+}
+
+async function runLightCryptoScan(maxCoins: number, startTime: number) {
+  const maxCoinsByApiCap = LIGHT_SCAN_MAX_API_CALLS * LIGHT_SCAN_PER_PAGE;
+  const cappedCoins = clamp(maxCoins, 100, Math.min(15000, maxCoinsByApiCap));
+  const pageCount = Math.ceil(cappedCoins / LIGHT_SCAN_PER_PAGE);
+  const markets: any[] = [];
+  let apiCallsUsed = 0;
+
+  for (let page = 1; page <= pageCount; page++) {
+    if (Date.now() - startTime > 55000) {
+      console.log('[bulk-scan/light] Time limit reached while fetching CoinGecko pages');
+      break;
+    }
+
+    const remaining = cappedCoins - markets.length;
+    if (remaining <= 0) break;
+
+    const pageData = await getMarketData({
+      order: 'market_cap_desc',
+      per_page: Math.min(LIGHT_SCAN_PER_PAGE, remaining),
+      page,
+      sparkline: false,
+    });
+    apiCallsUsed += 1;
+
+    if (!pageData || pageData.length === 0) {
+      break;
+    }
+
+    markets.push(...pageData);
+
+    if (pageData.length < Math.min(LIGHT_SCAN_PER_PAGE, remaining)) {
+      break;
+    }
+  }
+
+  const dedupedBySymbol = new Map<string, any>();
+  for (const coin of markets) {
+    const symbol = String(coin.symbol || '').toUpperCase();
+    if (!symbol || STABLECOINS.includes(symbol)) continue;
+    if (!dedupedBySymbol.has(symbol)) {
+      dedupedBySymbol.set(symbol, coin);
+    }
+  }
+
+  const ranked = Array.from(dedupedBySymbol.values())
+    .map(scoreLightCryptoCandidate)
+    .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
+    .sort((a, b) => b.score - a.score);
+
+  return {
+    scanned: ranked.length,
+    topPicks: ranked.slice(0, 10),
+    sourceCoinsFetched: markets.length,
+    apiCallsUsed,
+    apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
+    effectiveUniverseSize: cappedCoins,
+  };
+}
+
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
     // Convert BTC -> BTCUSDT for Binance
@@ -720,6 +851,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { type, timeframe = '1d' } = body; // 'equity' or 'crypto', timeframe: '15m', '30m', '1h', '1d'
+    const mode: BulkScanMode = body?.mode === 'light' ? 'light' : 'deep';
+    const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
+    const universeSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
+      ? Math.floor(universeSizeRaw)
+      : 500;
     
     if (!type || !['equity', 'crypto'].includes(type)) {
       return NextResponse.json({ error: "Type must be 'equity' or 'crypto'" }, { status: 400 });
@@ -727,6 +863,27 @@ export async function POST(req: NextRequest) {
     
     const validTimeframes = ['15m', '30m', '1h', '1d'];
     const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
+
+    if (type === 'crypto' && mode === 'light') {
+      console.log(`[bulk-scan/light] Scanning up to ${universeSize} crypto assets using market-data ranking...`);
+      const lightResult = await runLightCryptoScan(universeSize, startTime);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      return NextResponse.json({
+        success: true,
+        type,
+        timeframe: selectedTimeframe,
+        mode,
+        scanned: lightResult.scanned,
+        duration: `${duration}s`,
+        topPicks: lightResult.topPicks,
+        sourceCoinsFetched: lightResult.sourceCoinsFetched,
+        apiCallsUsed: lightResult.apiCallsUsed,
+        apiCallsCap: lightResult.apiCallsCap,
+        effectiveUniverseSize: lightResult.effectiveUniverseSize,
+        errors: [],
+      });
+    }
     
     const universe = type === 'equity' ? EQUITY_UNIVERSE : CRYPTO_UNIVERSE;
     const results: any[] = [];
@@ -811,6 +968,7 @@ export async function POST(req: NextRequest) {
       success: true,
       type,
       timeframe: selectedTimeframe,
+      mode,
       scanned: results.length,
       duration: `${duration}s`,
       topPicks,

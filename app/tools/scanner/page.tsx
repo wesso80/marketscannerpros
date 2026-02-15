@@ -472,9 +472,13 @@ function ScannerContent() {
   const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
   const [bulkScanLoading, setBulkScanLoading] = useState(false);
   const [bulkScanTimeframe, setBulkScanTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
+  const [bulkCryptoScanMode, setBulkCryptoScanMode] = useState<'deep' | 'light'>('light');
+  const [bulkCryptoUniverseSize, setBulkCryptoUniverseSize] = useState<number>(500);
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
     timeframe: string;
+    mode?: 'deep' | 'light';
+    sourceCoinsFetched?: number;
     topPicks: any[];
     scanned: number;
     duration: string;
@@ -489,10 +493,18 @@ function ScannerContent() {
     setBulkScanResults(null);
     
     try {
+      const payload: any = { type, timeframe: bulkScanTimeframe };
+      if (type === 'crypto') {
+        payload.mode = bulkCryptoScanMode;
+        if (bulkCryptoScanMode === 'light') {
+          payload.universeSize = bulkCryptoUniverseSize;
+        }
+      }
+
       const res = await fetch('/api/scanner/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, timeframe: bulkScanTimeframe })
+        body: JSON.stringify(payload)
       });
       
       const data = await res.json();
@@ -508,6 +520,8 @@ function ScannerContent() {
         setBulkScanResults({
           type: data.type,
           timeframe: data.timeframe,
+          mode: data.mode,
+          sourceCoinsFetched: data.sourceCoinsFetched,
           topPicks: data.topPicks,
           scanned: data.scanned,
           duration: data.duration
@@ -876,6 +890,73 @@ function ScannerContent() {
           </div>
 
           {/* Scan Buttons */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            marginBottom: "14px",
+            padding: "12px",
+            borderRadius: "10px",
+            border: "1px solid rgba(148,163,184,0.25)",
+            background: "rgba(15,23,42,0.35)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ color: "#94a3b8", fontSize: "13px", fontWeight: 600 }}>Crypto scan depth:</span>
+              <div style={{ display: "flex", gap: "6px", background: "rgba(30,41,59,0.6)", padding: "4px", borderRadius: "8px" }}>
+                {(['light', 'deep'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setBulkCryptoScanMode(mode)}
+                    disabled={bulkScanLoading}
+                    style={{
+                      padding: "7px 12px",
+                      background: bulkCryptoScanMode === mode ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
+                      border: "none",
+                      borderRadius: "6px",
+                      color: bulkCryptoScanMode === mode ? "#fff" : "#94a3b8",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                      opacity: bulkScanLoading ? 0.5 : 1
+                    }}
+                  >
+                    {mode === 'light' ? 'Fast Wide Rank' : 'Deep Indicators'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {bulkCryptoScanMode === 'light' && (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ color: "#94a3b8", fontSize: "13px", fontWeight: 600 }}>Universe size:</span>
+                <input
+                  type="number"
+                  min={100}
+                  max={15000}
+                  step={50}
+                  value={bulkCryptoUniverseSize}
+                  onChange={(e) => {
+                    const value = Number(e.target.value || 0);
+                    setBulkCryptoUniverseSize(Math.max(100, Math.min(15000, Number.isFinite(value) ? value : 500)));
+                  }}
+                  disabled={bulkScanLoading}
+                  style={{
+                    width: "120px",
+                    background: "rgba(30,41,59,0.7)",
+                    border: "1px solid rgba(148,163,184,0.35)",
+                    borderRadius: "8px",
+                    padding: "8px 10px",
+                    color: "#f1f5f9",
+                    fontSize: "13px"
+                  }}
+                />
+                <span style={{ color: "#64748b", fontSize: "12px" }}>
+                  Quick ranking with market data (no full indicator stack)
+                </span>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
             <button
               onClick={() => runBulkScan('crypto')}
@@ -904,12 +985,12 @@ function ScannerContent() {
               {bulkScanLoading && bulkScanType === 'crypto' ? (
                 <>
                   <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  Finding Crypto Setups...
+                  {bulkCryptoScanMode === 'light' ? 'Ranking Crypto Universe...' : 'Finding Crypto Setups...'}
                 </>
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>🪙</span>
-                  Find Top 10 Crypto Setups
+                  {bulkCryptoScanMode === 'light' ? 'Find Fast Top 10 Crypto' : 'Find Top 10 Crypto Setups'}
                 </>
               )}
             </button>
@@ -1017,7 +1098,10 @@ function ScannerContent() {
                   🏆 Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
                 </h4>
                 <span style={{ color: "#64748b", fontSize: "12px" }}>
-                  {bulkScanResults.scanned} scanned • {bulkScanResults.duration}
+                  {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
+                  {bulkScanResults.type === 'crypto' && bulkScanResults.mode === 'light' && bulkScanResults.sourceCoinsFetched
+                    ? ` • source ${bulkScanResults.sourceCoinsFetched}`
+                    : ''}
                 </span>
               </div>
               
