@@ -584,7 +584,7 @@ function JournalContent() {
       <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
         <AdaptivePersonalityCard
           skill="journal"
-          setupText={`Journal entries ${entries.length}, closed ${closedEntries.length}, win rate ${winRate.toFixed(1)}%`}
+          setupText={`Journal entries ${entries.length}, closed ${closedTrades.length}, win rate ${winRate.toFixed(1)}%`}
           baseScore={Math.max(20, Math.min(90, winRate))}
         />
       </div>
