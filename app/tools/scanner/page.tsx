@@ -520,6 +520,7 @@ function ScannerContent() {
   const showLegacyTopAnalysis = false;
   const [focusMode, setFocusMode] = useState(false);
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
+  const [orientationCollapsed, setOrientationCollapsed] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const flowFetchAbortRef = React.useRef<AbortController | null>(null);
   const lastFlowSymbolRef = React.useRef<string | null>(null);
@@ -747,6 +748,7 @@ function ScannerContent() {
         // Create new object reference to force React re-render
         setResult({ ...data.results[0] });
         setScannerCollapsed(true);
+        setOrientationCollapsed(true);
         setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
       } else if (data.errors?.length > 0) {
         // Surface Alpha Vantage errors
@@ -869,6 +871,7 @@ function ScannerContent() {
         </div>
 
         {/* Orientation */}
+        {!orientationCollapsed && (
         <div style={{
           background: "linear-gradient(145deg, rgba(2,6,23,0.94), rgba(15,23,42,0.9))",
           border: "1px solid rgba(56,189,248,0.24)",
@@ -902,6 +905,7 @@ function ScannerContent() {
             </ul>
           </div>
         </div>
+        )}
 
         {result?.institutionalFilter && (
           <div style={{
