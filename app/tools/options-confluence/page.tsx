@@ -756,6 +756,46 @@ export default function OptionsConfluenceScanner() {
     return 'LOW';
   };
 
+  const lowerTerminalShell = {
+    background: 'linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.86) 100%)',
+    border: '1px solid rgba(148,163,184,0.26)',
+    borderRadius: '16px',
+    padding: '1.15rem',
+    boxShadow: '0 10px 28px rgba(0,0,0,0.20)',
+  };
+
+  const lowerTerminalSection = (accentBorder: string) => ({
+    ...lowerTerminalShell,
+    border: `1px solid ${accentBorder}`,
+  });
+
+  const lowerTerminalSummary = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    cursor: 'pointer',
+    listStyle: 'none',
+    margin: '0 0 1rem 0',
+    paddingBottom: '0.75rem',
+    borderBottom: '1px solid rgba(148,163,184,0.22)',
+  };
+
+  const lowerTerminalTitle = {
+    margin: '0 0 1rem 0',
+    fontSize: '0.98rem',
+    fontWeight: 800,
+    letterSpacing: '0.3px',
+  };
+
+  const lowerTerminalPill = {
+    padding: '3px 10px',
+    borderRadius: '999px',
+    fontSize: '0.68rem',
+    fontWeight: 700,
+    letterSpacing: '0.3px',
+    textTransform: 'uppercase' as const,
+  };
+
   const bestPattern = result?.locationContext?.patterns
     ?.slice()
     .sort((a, b) => b.confidence - a.confidence)?.[0] ?? null;
@@ -3371,10 +3411,7 @@ export default function OptionsConfluenceScanner() {
             {/* PRO TRADER SECTION - Collapsible */}
             {institutionalLensMode === 'OBSERVE' && (
             <details style={{
-              background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(59,130,246,0.15) 100%)',
-              border: '2px solid rgba(168,85,247,0.5)',
-              borderRadius: '20px',
-              padding: '1.5rem',
+              ...lowerTerminalSection('rgba(168,85,247,0.5)'),
               marginBottom: '1rem',
             }}>
               <summary style={{ 
@@ -3860,19 +3897,11 @@ export default function OptionsConfluenceScanner() {
             {/* Confluence Info - Collapsible */}
             {institutionalLensMode === 'OBSERVE' && (
             <details style={{
-              background: 'rgba(30,41,59,0.6)',
-              border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              ...lowerTerminalSection('rgba(168,85,247,0.32)'),
             }}>
               <summary style={{ 
-                margin: '0 0 1rem 0', 
+                ...lowerTerminalSummary,
                 color: '#A78BFA', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                listStyle: 'none',
               }}>
                 <span style={{ color: '#A855F7' }}>🔮</span>
                 <span>Confluence Analysis</span>
@@ -3937,29 +3966,24 @@ export default function OptionsConfluenceScanner() {
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
             {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
               <div style={{
-                background: result.candleCloseConfluence.confluenceRating === 'extreme' 
-                  ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(168,85,247,0.15) 100%)'
-                  : result.candleCloseConfluence.confluenceRating === 'high'
-                  ? 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(168,85,247,0.15) 100%)'
-                  : 'rgba(30,41,59,0.6)',
-                border: `2px solid ${
-                  result.candleCloseConfluence.confluenceRating === 'extreme' ? 'rgba(239,68,68,0.5)' :
-                  result.candleCloseConfluence.confluenceRating === 'high' ? 'rgba(245,158,11,0.5)' :
-                  'rgba(168,85,247,0.3)'
-                }`,
-                borderRadius: '16px',
-                padding: '1.5rem',
+                ...lowerTerminalSection(
+                  result.candleCloseConfluence.confluenceRating === 'extreme'
+                    ? 'rgba(239,68,68,0.5)'
+                    : result.candleCloseConfluence.confluenceRating === 'high'
+                    ? 'rgba(245,158,11,0.5)'
+                    : 'rgba(168,85,247,0.32)'
+                ),
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, color: '#F59E0B' }}>
+                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#F59E0B' }}>
                     🕐 Candle Close Confluence
                     {result.candleCloseConfluence.confluenceRating === 'extreme' && (
-                      <span style={{ marginLeft: '0.5rem', background: 'rgba(239,68,68,0.3)', color: '#FCA5A5', padding: '3px 10px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                      <span style={{ ...lowerTerminalPill, marginLeft: '0.5rem', background: 'rgba(239,68,68,0.3)', color: '#FCA5A5' }}>
                         🔥 EXTREME
                       </span>
                     )}
                     {result.candleCloseConfluence.confluenceRating === 'high' && (
-                      <span style={{ marginLeft: '0.5rem', background: 'rgba(245,158,11,0.3)', color: '#FCD34D', padding: '3px 10px', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                      <span style={{ ...lowerTerminalPill, marginLeft: '0.5rem', background: 'rgba(245,158,11,0.3)', color: '#FCD34D' }}>
                         ⚡ HIGH
                       </span>
                     )}
@@ -4104,12 +4128,9 @@ export default function OptionsConfluenceScanner() {
                 
                 {/* Strike Recommendation */}
                 <div style={{
-                  background: 'rgba(30,41,59,0.6)',
-                  border: '2px solid rgba(16,185,129,0.4)',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
+                  ...lowerTerminalSection('rgba(16,185,129,0.4)'),
                 }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#10B981' }}>🎯 Recommended Strike</h3>
+                  <h3 style={{ ...lowerTerminalTitle, color: '#10B981' }}>🎯 Recommended Strike</h3>
                   
                   {result.primaryStrike ? (
                     <>
@@ -4202,12 +4223,9 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Expiration Recommendation */}
                 <div style={{
-                  background: 'rgba(30,41,59,0.6)',
-                  border: '2px solid rgba(59,130,246,0.4)',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
+                  ...lowerTerminalSection('rgba(59,130,246,0.4)'),
                 }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#3B82F6' }}>📅 Recommended Expiration</h3>
+                  <h3 style={{ ...lowerTerminalTitle, color: '#3B82F6' }}>📅 Recommended Expiration</h3>
                   
                   {result.primaryExpiration ? (
                     <>
@@ -4288,28 +4306,21 @@ export default function OptionsConfluenceScanner() {
             {/* Open Interest Analysis */}
             {institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
               <div style={{
-                background: 'rgba(30,41,59,0.6)',
-                border: '1px solid rgba(139,92,246,0.4)',
-                borderRadius: '16px',
-                padding: '1.5rem',
+                ...lowerTerminalSection('rgba(139,92,246,0.4)'),
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ 
                       background: 'rgba(245,158,11,0.2)', 
-                      padding: '4px 8px', 
-                      borderRadius: '12px', 
-                      fontSize: '0.75rem',
+                      ...lowerTerminalPill,
                       color: '#F59E0B'
                     }}>
                       📅 EOD Data
                     </span>
                     <span style={{ 
                       background: 'rgba(139,92,246,0.2)', 
-                      padding: '4px 12px', 
-                      borderRadius: '20px', 
-                      fontSize: '0.85rem',
+                      ...lowerTerminalPill,
                       color: '#A78BFA'
                     }}>
                       Expiry: {result.openInterestAnalysis.expirationDate}
@@ -4532,18 +4543,13 @@ export default function OptionsConfluenceScanner() {
             ) : (
               /* No Options Data Available - Show Placeholder */
               <div style={{
-                background: 'rgba(30,41,59,0.6)',
-                border: '1px solid rgba(139,92,246,0.4)',
-                borderRadius: '16px',
-                padding: '1.5rem',
+                ...lowerTerminalSection('rgba(139,92,246,0.4)'),
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
                   <span style={{ 
                     background: 'rgba(245,158,11,0.2)', 
-                    padding: '4px 12px', 
-                    borderRadius: '20px', 
-                    fontSize: '0.85rem',
+                    ...lowerTerminalPill,
                     color: '#F59E0B'
                   }}>
                     ⚠️ Data Unavailable
@@ -4582,24 +4588,16 @@ export default function OptionsConfluenceScanner() {
             {/* Greeks Advice - Collapsible (advanced) */}
             {institutionalLensMode === 'OBSERVE' && (
             <details style={{
-              background: 'rgba(30,41,59,0.6)',
-              border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              ...lowerTerminalSection('rgba(245,158,11,0.34)'),
             }}>
               <summary style={{ 
-                margin: '0 0 1rem 0', 
+                ...lowerTerminalSummary,
                 color: '#F59E0B', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                listStyle: 'none',
                 fontWeight: '600',
               }}>
                 📊 Greeks & Risk Advice
                 <span style={{ 
-                  fontSize: '0.7rem', 
+                  fontSize: '0.72rem', 
                   color: '#64748B',
                   marginLeft: 'auto',
                   fontWeight: '400',
@@ -4639,24 +4637,16 @@ export default function OptionsConfluenceScanner() {
             {/* Risk Management - Collapsible (advanced) */}
             {institutionalLensMode === 'OBSERVE' && (
             <details style={{
-              background: 'rgba(30,41,59,0.6)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              ...lowerTerminalSection('rgba(239,68,68,0.34)'),
             }}>
               <summary style={{ 
-                margin: '0 0 1rem 0', 
+                ...lowerTerminalSummary,
                 color: '#EF4444', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                listStyle: 'none',
                 fontWeight: '600',
               }}>
                 ⚠️ Risk Management
                 <span style={{ 
-                  fontSize: '0.7rem', 
+                  fontSize: '0.72rem', 
                   color: '#64748B',
                   marginLeft: 'auto',
                   fontWeight: '400',
@@ -4695,12 +4685,9 @@ export default function OptionsConfluenceScanner() {
             {/* Summary Trade Setup */}
             {institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.15))',
-                border: '2px solid rgba(16,185,129,0.5)',
-                borderRadius: '16px',
-                padding: '1.5rem',
+                ...lowerTerminalSection('rgba(16,185,129,0.5)'),
               }}>
-                <h3 style={{ margin: '0 0 1rem 0', color: '#10B981' }}>📋 Trade Summary</h3>
+                <h3 style={{ ...lowerTerminalTitle, color: '#10B981' }}>📋 Trade Summary</h3>
                 
                 <div style={{
                   background: 'rgba(0,0,0,0.3)',
