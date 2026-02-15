@@ -519,6 +519,7 @@ function ScannerContent() {
   const showAdvancedEngineeringPanels = false;
   const showLegacyTopAnalysis = false;
   const [focusMode, setFocusMode] = useState(false);
+  const [scannerCollapsed, setScannerCollapsed] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const flowFetchAbortRef = React.useRef<AbortController | null>(null);
   const lastFlowSymbolRef = React.useRef<string | null>(null);
@@ -745,6 +746,7 @@ function ScannerContent() {
         console.log('Candle time:', data.results[0].lastCandleTime);
         // Create new object reference to force React re-render
         setResult({ ...data.results[0] });
+        setScannerCollapsed(true);
         setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
       } else if (data.errors?.length > 0) {
         // Surface Alpha Vantage errors
@@ -910,8 +912,45 @@ function ScannerContent() {
           </div>
         )}
 
+        {result && scannerCollapsed && (
+          <div style={{
+            background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
+            border: "1px solid rgba(56,189,248,0.38)",
+            borderRadius: "12px",
+            padding: "0.7rem 0.85rem",
+            marginBottom: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.7rem",
+            flexWrap: "wrap",
+          }}>
+            <div style={{ color: "#E2E8F0", fontSize: "0.8rem", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              Mini Scanner Bar • {assetType.toUpperCase()} • {ticker.toUpperCase()} • {timeframe.toUpperCase()}
+            </div>
+            <button
+              onClick={() => setScannerCollapsed(false)}
+              style={{
+                background: "rgba(16,185,129,0.15)",
+                border: "1px solid rgba(16,185,129,0.42)",
+                borderRadius: "999px",
+                color: "#10B981",
+                fontSize: "0.74rem",
+                fontWeight: 800,
+                padding: "0.34rem 0.78rem",
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              Expand Scanner
+            </button>
+          </div>
+        )}
+
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
         <div style={{
+          display: result && scannerCollapsed ? "none" : "block",
           background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
           border: "1px solid rgba(251,191,36,0.3)",
           borderRadius: "16px",
@@ -1552,6 +1591,7 @@ function ScannerContent() {
 
         {/* Scanner Panel */}
         <div style={{
+          display: result && scannerCollapsed ? "none" : "block",
           background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
           borderRadius: "16px",
           border: "1px solid rgba(51,65,85,0.8)",
@@ -1748,6 +1788,27 @@ function ScannerContent() {
             >
               {loading ? "⏳ Finding Best Setup..." : "🔎 Find Best Setup"}
             </button>
+            {result && (
+              <button
+                onClick={() => setScannerCollapsed(true)}
+                style={{
+                  padding: "0.5rem 0.9rem",
+                  background: "rgba(30,41,59,0.75)",
+                  border: "1px solid rgba(148,163,184,0.38)",
+                  borderRadius: "8px",
+                  color: "#CBD5E1",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  alignSelf: "end",
+                  marginTop: "1.75rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                Minimize Scanner
+              </button>
+            )}
           </div>
         </div>
 
@@ -1942,10 +2003,37 @@ function ScannerContent() {
           <div key={scanKey} style={{
             background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
             borderRadius: "16px",
-            border: "1px solid rgba(51,65,85,0.8)",
+            border: "1px solid rgba(71,85,105,0.95)",
             padding: "2rem",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
           }}>
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const quality = result.score >= 70 ? 'HIGH' : result.score >= 55 ? 'MEDIUM' : 'LOW';
+              const action = direction === 'bullish'
+                ? 'BUY PULLBACKS'
+                : direction === 'bearish'
+                ? 'SELL RIPS'
+                : 'WAIT FOR TRIGGER';
+
+              return (
+                <div style={{
+                  marginBottom: '1rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92))',
+                  border: '1px solid rgba(56,189,248,0.42)',
+                  borderRadius: '12px',
+                  padding: '0.8rem 0.95rem',
+                  color: '#E2E8F0',
+                  fontSize: '0.86rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}>
+                  🔥 Trader Mode Header • {result.symbol} — {timeframe.toUpperCase()} • Edge: {direction.toUpperCase()} • Quality: {quality} • Action: {action}
+                </div>
+              );
+            })()}
+
             {(() => {
               const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
               const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
@@ -1976,42 +2064,68 @@ function ScannerContent() {
               return (
                 <div style={{
                   background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-                  border: '1px solid rgba(56,189,248,0.28)',
+                  border: '1px solid rgba(56,189,248,0.42)',
                   borderRadius: '14px',
-                  padding: '0.85rem 0.95rem',
-                  marginBottom: '1rem',
+                  padding: '1.15rem 1.2rem',
+                  marginBottom: '1.2rem',
                 }}>
                   <div style={{
                     color: '#67E8F9',
-                    fontSize: '0.7rem',
+                    fontSize: '0.78rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
-                    marginBottom: '0.55rem',
+                    marginBottom: '0.75rem',
                   }}>
-                    3-Second Decision Row
+                    Command Bar
                   </div>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: '0.5rem',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                    gap: '0.75rem',
                   }}>
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
-                      <div style={{ color: directionColor, fontSize: '0.9rem', fontWeight: 900 }}>{directionLabel}</div>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
+                      <div style={{ color: directionColor, fontSize: '1.12rem', fontWeight: 900 }}>{directionLabel}</div>
                     </div>
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
-                      <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '0.9rem', fontWeight: 900 }}>{confidence}%</div>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
+                      <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '1.12rem', fontWeight: 900 }}>{confidence}%</div>
                     </div>
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.86rem', fontWeight: 800 }}>{strategyLabel}</div>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '1rem', fontWeight: 900 }}>{strategyLabel}</div>
                     </div>
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
-                      <div style={{ color: riskColor, fontSize: '0.86rem', fontWeight: 800 }}>{riskLabel}{atrPercent != null ? ` • ATR ${atrPercent.toFixed(2)}%` : ''}</div>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
+                      <div style={{ color: riskColor, fontSize: '0.96rem', fontWeight: 900 }}>{riskLabel}{atrPercent != null ? ` • ATR ${atrPercent.toFixed(2)}%` : ''}</div>
                     </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const heatColor = confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444';
+              const heatLabel = confidence >= 70 ? 'Strong' : confidence >= 50 ? 'Moderate' : 'Weak';
+
+              return (
+                <div style={{
+                  marginBottom: '1rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
+                  border: '1px solid rgba(148,163,184,0.3)',
+                  borderRadius: '10px',
+                  padding: '0.85rem 0.9rem',
+                }}>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '0.08em' }}>
+                    Edge Temperature
+                  </div>
+                  <div style={{ height: '10px', background: 'rgba(51,65,85,0.7)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.4rem' }}>
+                    <div style={{ width: `${confidence}%`, height: '100%', background: `linear-gradient(90deg, ${heatColor}, ${confidence >= 70 ? '#34D399' : confidence >= 50 ? '#FCD34D' : '#F87171'})` }} />
+                  </div>
+                  <div style={{ color: heatColor, fontSize: '0.8rem', fontWeight: 800 }}>
+                    {heatLabel} Edge • {confidence}% confidence
                   </div>
                 </div>
               );
@@ -2201,14 +2315,14 @@ function ScannerContent() {
                       <div style={{ color: '#FCA5A5', fontSize: '0.74rem' }}><strong>Not Edge:</strong> {notEdgeSentence}</div>
                     </div>
 
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.72rem' }}>
-                      <div style={{ color: '#FCA5A5', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🔴 Execution Plan</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
-                        <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
-                        <div>Grade: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{grade}</span></div>
-                        <div style={{ marginTop: '0.35rem' }}>🎯 Entry: <span style={{ color: '#93C5FD', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-                        <div>❌ Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                        <div>🚀 Targets: <span style={{ color: '#6EE7B7', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.85rem' }}>
+                      <div style={{ color: '#FCA5A5', fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.08em' }}>TRADE PLAN (EXECUTION)</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.84rem', lineHeight: 1.52 }}>
+                        <div style={{ marginBottom: '0.2rem' }}>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
+                        <div style={{ marginBottom: '0.2rem' }}>Grade: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{grade}</span></div>
+                        <div style={{ marginTop: '0.45rem' }}>Entry: <span style={{ color: '#93C5FD', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+                        <div>Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                        <div>Targets: <span style={{ color: '#6EE7B7', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
                         <div>R:R: <span style={{ color: rr != null && rr >= 1.5 ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
                       </div>
                     </div>
@@ -2915,11 +3029,16 @@ function ScannerContent() {
                 </div>
                 {/* Condensed Summary (always visible) */}
                 {(() => {
-                  // Extract Final Verdict line or first meaningful paragraph
-                  const lines = aiText.split('\n').filter(l => l.trim());
-                  const verdictLine = lines.find(l => l.includes('✅') || l.includes('⚠️') || l.includes('❌') || l.toLowerCase().includes('verdict'));
-                  const phaseLine = lines.find(l => l.toLowerCase().includes('phase'));
-                  const summary = verdictLine || phaseLine || lines[0] || '';
+                  const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+                  const trendLine = `Trend = ${direction === 'bullish' ? 'Bullish structure' : direction === 'bearish' ? 'Bearish structure' : 'Mixed structure'}`;
+                  const momentumLine = `Momentum = ${result.rsi != null && result.macd_hist != null
+                    ? (direction === 'bullish'
+                      ? (result.rsi >= 50 && result.macd_hist >= 0 ? 'Confirmed' : 'Weak confirmation')
+                      : direction === 'bearish'
+                      ? (result.rsi <= 50 && result.macd_hist <= 0 ? 'Confirmed' : 'Weak confirmation')
+                      : 'Mixed')
+                    : 'Limited data'}`;
+                  const edgeLine = `Edge = ${result.score >= 70 ? 'High quality' : result.score >= 55 ? 'Moderate quality' : 'Low quality'} (${Math.round(result.score ?? 50)}%)`;
                   
                   return (
                     <div style={{ 
@@ -2928,7 +3047,10 @@ function ScannerContent() {
                       borderRadius: "8px",
                       marginBottom: aiExpanded ? "0.75rem" : 0
                     }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{summary}</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#34d399", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>AI Thesis</div>
+                      <div style={{ fontSize: "0.88rem" }}>• {trendLine}</div>
+                      <div style={{ fontSize: "0.88rem" }}>• {momentumLine}</div>
+                      <div style={{ fontSize: "0.88rem" }}>• {edgeLine}</div>
                     </div>
                   );
                 })()}
