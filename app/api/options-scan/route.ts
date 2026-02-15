@@ -21,6 +21,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Options Scanner' }, { status: 403 });
     }
 
+    const workspaceId = session.workspaceId;
+
     const body = await request.json();
     const { symbol, scanMode = 'intraday_1h', expirationDate } = body;
     const playbook = String(body?.playbook || 'momentum_pullback').toLowerCase().trim();
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
           : 'unknown';
 
     const adaptive = await getAdaptiveLayer(
-      session.workspaceId,
+      workspaceId,
       {
         skill: 'options',
         setupText: `${analysis.tradeSnapshot?.oneLine || ''} ${analysis.tradeQuality} ${analysis.signalStrength}`,
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest) {
       })),
     ];
 
-    const previousState = await getLatestStateMachine(session.workspaceId, symbol.toUpperCase(), playbook, direction)
+    const previousState = await getLatestStateMachine(workspaceId, symbol.toUpperCase(), playbook, direction)
       .catch((error) => {
         console.warn('[options-scan] state-machine load failed:', error);
         return null;
@@ -194,7 +196,7 @@ export async function POST(request: NextRequest) {
       };
 
       await upsertStateMachine({
-        workspaceId: session.workspaceId,
+        workspaceId,
         symbol: symbol.toUpperCase(),
         playbook,
         direction,
