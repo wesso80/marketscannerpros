@@ -499,9 +499,11 @@ export interface OISummary {
 
 export interface SignalComponent {
   name: string;
+  kind?: 'directional' | 'quality' | 'meta';
   direction: 'bullish' | 'bearish' | 'neutral';
   weight: number;           // 0-1 how much this factor contributes
   score: number;           // -100 to +100 (negative=bearish, positive=bullish)
+  rawScore?: number;
   reason: string;
 }
 
@@ -1876,6 +1878,7 @@ function calculateCompositeScore(
 
   components.push({
     name: 'Structure Score',
+    kind: 'directional',
     direction: structureDirection,
     weight: structureWeight,
     score: structureScore,
@@ -1911,6 +1914,7 @@ function calculateCompositeScore(
 
   components.push({
     name: 'Pattern State',
+    kind: 'directional',
     direction: patternDirection,
     weight: patternWeight,
     score: patternScore,
@@ -1965,6 +1969,7 @@ function calculateCompositeScore(
       
       components.push({
         name: 'Unusual Activity',
+        kind: 'directional',
         direction: unusualDirection,
         weight: unusualWeight,
         score: unusualScore,
@@ -1976,6 +1981,7 @@ function calculateCompositeScore(
     } else {
       components.push({
         name: 'Unusual Activity',
+        kind: 'directional',
         direction: 'neutral',
         weight: unusualWeight,
         score: 0,
@@ -1985,6 +1991,7 @@ function calculateCompositeScore(
   } else {
     components.push({
       name: 'Unusual Activity',
+      kind: 'directional',
       direction: 'neutral',
       weight: unusualWeight,
       score: 0,
@@ -2026,6 +2033,7 @@ function calculateCompositeScore(
     
     components.push({
       name: 'O/I Sentiment',
+      kind: 'directional',
       direction: oiDirection,
       weight: oiWeight,
       score: oiScore,
@@ -2046,6 +2054,7 @@ function calculateCompositeScore(
 
   components.push({
     name: 'Time Confluence',
+    kind: 'meta',
     direction: confluenceDirection,
     weight: confluenceWeight,
     score: 0,
@@ -2092,6 +2101,7 @@ function calculateCompositeScore(
     
     components.push({
       name: 'Max Pain Position',
+      kind: 'directional',
       direction: maxPainDirection,
       weight: maxPainWeight,
       score: maxPainScore,
@@ -2110,7 +2120,7 @@ function calculateCompositeScore(
     : 0;
 
   const directionalEvidenceStrength = components
-    .filter(c => ['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Max Pain Position'].includes(c.name) && c.direction !== 'neutral')
+    .filter(c => c.kind === 'directional' && c.direction !== 'neutral')
     .reduce((sum, c) => sum + c.weight * (Math.abs(c.score) / 100), 0);
   
   // Determine final direction based on direction score only
@@ -2138,26 +2148,18 @@ function calculateCompositeScore(
   
   if (ivAnalysis) {
     const ivRankValue = ivAnalysis.ivRankHeuristic ?? ivAnalysis.ivRank ?? 50;
-    
-    // Quality scoring for IV:
-    // Low IV (<30) = great for buying premium = high quality
-    // High IV (>70) = great for selling premium = high quality  
-    // Mid IV (30-70) = either works, moderate quality
-    
-    if (ivRankValue <= 30) {
-      ivScore = 80 + (30 - ivRankValue); // 80-110 → capped at 100
-    } else if (ivRankValue >= 70) {
-      ivScore = 80 + (ivRankValue - 70); // 80-110 → capped at 100
-    } else {
-      // Mid IV: moderate quality
-      ivScore = 50;
-    }
-    ivScore = Math.min(100, ivScore);
+
+    const iv = clamp(ivRankValue, 0, 100);
+    const dist = Math.abs(iv - 50) / 50;
+    const minQuality = 55;
+    const maxQuality = 95;
+    ivScore = minQuality + (maxQuality - minQuality) * Math.pow(dist, 0.85);
     
     const ivStrategy = ivRankValue > 70 ? 'SELL premium (spreads)' : ivRankValue < 30 ? 'BUY premium (directional)' : 'Either approach';
     
     components.push({
       name: 'IV Environment',
+      kind: 'quality',
       direction: 'neutral', // IV is never directional
       weight: ivQualityWeight,
       score: ivScore,
@@ -2200,17 +2202,18 @@ function calculateCompositeScore(
     }
     
     const rrGrade = rr >= 2.5 ? 'Excellent' : rr >= 1.5 ? 'Good' : rr >= 1 ? 'Acceptable' : 'POOR';
+    const normalizedRRScore = Math.max(0, Math.min(100, (rrScore + 50) * (100 / 145)));
     
     components.push({
       name: 'Risk:Reward',
+      kind: 'quality',
       direction: 'neutral', // R:R is quality, not direction
       weight: rrQualityWeight,
-      score: rrScore,
+      score: normalizedRRScore,
+      rawScore: rrScore,
       reason: `R:R ${rr.toFixed(1)}:1 - ${rrGrade}`
     });
     
-    // Normalize R:R score from [-50..95] to [0..100]
-    const normalizedRRScore = Math.max(0, Math.min(100, (rrScore + 50) * (100 / 145)));
     qualityScore += normalizedRRScore * rrQualityWeight;
     qualityMaxScore += 100 * rrQualityWeight;
   }
@@ -2220,10 +2223,7 @@ function calculateCompositeScore(
   const agreementWeight = 0.30;
   
   // Get directional components only (exclude neutral signals)
-  const directionalComponents = components.filter(c => 
-    ['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position'].includes(c.name)
-    && c.direction !== 'neutral'
-  );
+  const directionalComponents = components.filter(c => c.kind === 'directional' && c.direction !== 'neutral');
   
   // Calculate weighted agreement with final direction using strength-weighted formula
   let alignedWeightedStrength = 0;
@@ -2301,9 +2301,18 @@ function calculateCompositeScore(
   const bearishSignals = directionalComponents.filter(c => c.direction === 'bearish');
   
   if (bullishSignals.length > 0 && bearishSignals.length > 0) {
-    const bullNames = bullishSignals.map(c => c.name).join(', ');
-    const bearNames = bearishSignals.map(c => c.name).join(', ');
-    conflicts.push(`⚠️ CONFLICT: ${bullNames} → BULLISH but ${bearNames} → BEARISH`);
+    const weightedSideStrength = (signals: SignalComponent[]) =>
+      signals.reduce((sum, comp) => sum + comp.weight * Math.min(1, Math.abs(comp.score) / 100), 0);
+
+    const bullWeight = weightedSideStrength(bullishSignals);
+    const bearWeight = weightedSideStrength(bearishSignals);
+    const conflictSeverity = Math.min(bullWeight, bearWeight) / Math.max(1e-6, Math.max(bullWeight, bearWeight));
+
+    if (conflictSeverity > 0.35) {
+      const bullNames = bullishSignals.map(c => c.name).join(', ');
+      const bearNames = bearishSignals.map(c => c.name).join(', ');
+      conflicts.push(`⚠️ MATERIAL CONFLICT: ${bullNames} → BULLISH vs ${bearNames} → BEARISH (severity ${(conflictSeverity * 100).toFixed(0)}%)`);
+    }
   }
   
   // IV warning
@@ -2319,8 +2328,7 @@ function calculateCompositeScore(
 
   // Calculate final quality percentage
   const finalQualityScore = qualityMaxScore > 0 ? (qualityScore / qualityMaxScore) * 100 : 50;
-  const directionalNames = new Set(['Structure Score', 'Pattern State', 'Unusual Activity', 'O/I Sentiment', 'Time Confluence', 'Max Pain Position']);
-  const directionalTotal = components.filter(c => directionalNames.has(c.name) && c.weight > 0).length;
+  const directionalTotal = components.filter(c => c.kind === 'directional' && c.weight > 0).length;
   const alignedSignalsCount = directionalComponents.filter(c => c.weight > 0 && c.direction === finalDirection).length;
   const alignedWeight = directionalComponents
     .filter(c => c.direction === finalDirection)

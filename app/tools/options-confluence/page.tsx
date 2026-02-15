@@ -13,6 +13,8 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
 import EvolutionStatusCard from "@/components/EvolutionStatusCard";
+import { deriveCopilotPresence } from "@/lib/copilot/derive-copilot-presence";
+import type { OptionsSetup as AnalyzerOptionsSetup } from "@/lib/options-confluence-analyzer";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -1423,6 +1425,114 @@ export default function OptionsConfluenceScanner() {
     expectedMove: result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A',
   } : null;
 
+  type AdaptiveTerminalMode = 'TREND_MODE' | 'CHOP_RANGE_MODE' | 'HIGH_VOL_EVENT_MODE' | 'TRANSITION_MODE';
+
+  const adaptiveTerminalMode: AdaptiveTerminalMode = !result
+    ? 'TRANSITION_MODE'
+    : (() => {
+      const directionScoreAbs = Math.abs(result.compositeScore?.directionScore ?? 0);
+      const confidence = result.compositeScore?.confidence ?? 0;
+      const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
+      const ivRank = result.ivAnalysis?.ivRank ?? 50;
+      const flowBurst = result.unusualActivity?.alertLevel === 'high';
+      const hasEventFlag = (result.disclaimerFlags || []).some((flag) => /earnings|fomc|fed|cpi|news|event|halt|gap/i.test(flag));
+      const conflictCount = result.compositeScore?.conflicts?.length ?? 0;
+
+      const highVol = movePct >= 4.8 || ivRank >= 72 || flowBurst || hasEventFlag;
+      const trendStrong = result.direction !== 'neutral' && directionScoreAbs >= 35 && confidence >= 62 && result.confluenceStack >= 3;
+      const chop = result.direction === 'neutral' || directionScoreAbs < 22 || conflictCount >= 2 || result.signalStrength === 'no_signal';
+
+      if (highVol) return 'HIGH_VOL_EVENT_MODE';
+      if (trendStrong) return 'TREND_MODE';
+      if (chop) return 'CHOP_RANGE_MODE';
+      return 'TRANSITION_MODE';
+    })();
+
+  const adaptiveModeMeta = {
+    TREND_MODE: {
+      label: 'TREND ACCELERATION',
+      color: '#10B981',
+      reason: 'Directional structure + confluence alignment dominate.',
+      layout: { columns: 'minmax(240px, 0.95fr) minmax(360px, 1.5fr) minmax(240px, 1fr)', signalOrder: 1, marketOrder: 2, execOrder: 3, execOpacity: 1 },
+    },
+    CHOP_RANGE_MODE: {
+      label: 'CHOP / RANGE',
+      color: '#F59E0B',
+      reason: 'Low directional edge; prioritize boundaries and risk control.',
+      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 1, marketOrder: 2, execOrder: 3, execOpacity: 0.78 },
+    },
+    HIGH_VOL_EVENT_MODE: {
+      label: 'VOLATILITY EXPANSION',
+      color: '#EF4444',
+      reason: 'IV/expected-move expansion detected; risk and flow prioritized.',
+      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 1, marketOrder: 3, execOrder: 2, execOpacity: 1 },
+    },
+    TRANSITION_MODE: {
+      label: 'REGIME TRANSITION',
+      color: '#38BDF8',
+      reason: 'Momentum/flow shift underway; confirmation sequencing in focus.',
+      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 2, marketOrder: 1, execOrder: 3, execOpacity: 1 },
+    },
+  }[adaptiveTerminalMode];
+
+  const copilotDerived = result
+    ? deriveCopilotPresence(result as unknown as AnalyzerOptionsSetup)
+    : null;
+
+  const copilotPresence = result && copilotDerived ? (() => {
+    const watching = [copilotDerived.focus.primary, copilotDerived.focus.secondary].filter(Boolean).join(' + ');
+
+    const notices = copilotDerived.events.slice(0, 3).map((event) => ({
+      level: event.type === 'WARNING' || event.type === 'RISK_SPIKE'
+        ? 'warn'
+        : event.type === 'OPPORTUNITY'
+          ? 'action'
+          : 'info',
+      title: event.title,
+      message: event.message,
+    }));
+
+    const suggestion = copilotDerived.attentionState === 'RISK'
+      ? {
+          action: 'Favor reduced size or defined-risk structure',
+          reason: 'Attention state is RISK — preserve optionality until edge improves.',
+        }
+      : copilotDerived.attentionState === 'ACTIVE'
+        ? {
+            action: 'Execution window open — follow trigger + invalidation strictly',
+            reason: 'Edge and confidence are aligned in ACTIVE state.',
+          }
+        : {
+            action: 'Wait for additional confirmation before scaling risk',
+            reason: `Attention state ${copilotDerived.attentionState} indicates setup is still forming.`,
+          };
+
+    const focusMap: Record<string, string> = {
+      FLOW: 'Options Flow',
+      CHART: 'Trend Structure',
+      STRUCTURE: 'Trend Structure',
+      VOLATILITY: 'Volatility Regime',
+      EXECUTION: 'Momentum',
+      LEVELS: 'Sentiment',
+      TIMING: 'Momentum',
+      NEWS: 'Volatility Regime',
+    };
+
+    const watchSet = [copilotDerived.focus.primary, copilotDerived.focus.secondary]
+      .filter(Boolean)
+      .map((target) => focusMap[String(target)] || 'Momentum');
+
+    return {
+      confidence: Math.round(copilotDerived.focus.intensity),
+      watching,
+      notices,
+      suggestion,
+      watchSet,
+      statusLine: copilotDerived.statusLine,
+      notes: copilotDerived.notes,
+    };
+  })() : null;
+
   // Avoid premature gating while tier is still resolving
   if (isTierLoading) {
     return (
@@ -1546,6 +1656,15 @@ export default function OptionsConfluenceScanner() {
                 {dataHealth} {(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? '✔' : ''}
               </span>
               <span style={{ color: '#64748B' }}>│</span>
+              <span style={{ color: '#CBD5E1' }}>TERMINAL MODE:</span>
+              <span style={{
+                color: adaptiveModeMeta.color,
+                fontWeight: 900,
+                letterSpacing: '0.2px',
+              }}>
+                {adaptiveModeMeta.label}
+              </span>
+              <span style={{ color: '#64748B' }}>│</span>
               <span style={{ color: '#93C5FD', fontWeight: 700 }}>LIVE BX + FMV OPTIONS</span>
               {commandUpdatedAgo !== null && (
                 <>
@@ -1554,6 +1673,33 @@ export default function OptionsConfluenceScanner() {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {result && copilotPresence && (
+          <div style={{
+            marginTop: '-0.25rem',
+            marginBottom: '0.85rem',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85))',
+            border: `1px solid ${adaptiveModeMeta.color}66`,
+            borderRadius: '10px',
+            padding: '0.48rem 0.65rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap', fontSize: '0.72rem' }}>
+              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>AI Co-Pilot</span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: adaptiveModeMeta.color, fontWeight: 800 }}>Market State: {adaptiveModeMeta.label}</span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: '#CBD5E1' }}>Confidence: {copilotPresence.confidence}%</span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: '#94A3B8' }}>Watching: {copilotPresence.watching}</span>
+            </div>
+            {copilotPresence.statusLine && (
+              <div style={{ marginTop: '0.28rem', color: '#94A3B8', fontSize: '0.68rem' }}>
+                {copilotPresence.statusLine}
+                {copilotPresence.notes?.length ? ` • ${copilotPresence.notes[0]}` : ''}
+              </div>
+            )}
           </div>
         )}
 
@@ -1708,14 +1854,20 @@ export default function OptionsConfluenceScanner() {
             {terminalDecisionCard && (
               <div style={{
                 background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95))',
-                border: `2px solid ${modeAccent}`,
+                border: `2px solid ${adaptiveModeMeta.color}`,
                 borderRadius: '14px',
                 padding: '0.95rem 1rem',
-                boxShadow: `0 10px 30px ${modeAccent}26`,
+                boxShadow: `0 10px 30px ${adaptiveModeMeta.color}26`,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>AI Trade Command Card</div>
                   <div style={{ color: '#E2E8F0', fontSize: '0.86rem', fontWeight: 800 }}>Conviction {terminalDecisionCard.conviction}%</div>
+                </div>
+
+                <div style={{ marginTop: '0.35rem', color: '#CBD5E1', fontSize: '0.74rem' }}>
+                  <span style={{ color: adaptiveModeMeta.color, fontWeight: 800 }}>TERMINAL MODE: {adaptiveModeMeta.label}</span>
+                  <span style={{ color: '#64748B' }}> • </span>
+                  <span style={{ color: '#94A3B8' }}>{adaptiveModeMeta.reason}</span>
                 </div>
 
                 <div style={{
@@ -1745,28 +1897,49 @@ export default function OptionsConfluenceScanner() {
                 <div style={{ marginTop: '0.5rem', color: '#CBD5E1', fontSize: '0.78rem' }}>
                   <span style={{ color: '#A7F3D0', fontWeight: 700 }}>Key Trigger:</span> {terminalDecisionCard.trigger}
                 </div>
+
+                {adaptiveTerminalMode === 'TRANSITION_MODE' && (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: '8px',
+                    padding: '0.45rem 0.55rem',
+                    color: '#93C5FD',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                  }}>
+                    SIGNAL TIMELINE: Flow shift → Momentum confirmation → Trigger validation
+                  </div>
+                )}
               </div>
             )}
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gridTemplateColumns: adaptiveModeMeta.layout.columns,
               gap: '0.85rem',
               alignItems: 'stretch',
             }}>
               <div style={{
                 background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8))',
-                border: '1px solid rgba(148,163,184,0.25)',
+                border: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '2px solid rgba(239,68,68,0.45)' : '1px solid rgba(148,163,184,0.25)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
                 gap: '0.45rem',
+                order: adaptiveModeMeta.layout.signalOrder,
               }}>
                 <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Signal Stack</div>
                 {terminalSignalStack.map((item) => (
                   <div key={item.label} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem 0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.74rem', fontWeight: 800 }}>{item.label}</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.74rem', fontWeight: 800 }}>
+                        {item.label}
+                        {copilotPresence?.watchSet.includes(item.label) && (
+                          <span style={{ marginLeft: '6px', color: '#67E8F9', fontSize: '0.66rem', fontWeight: 700 }}>★ AI Watching</span>
+                        )}
+                      </div>
                       <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 800 }}>{item.score}%</div>
                     </div>
                     <div style={{ height: '5px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.25rem' }}>
@@ -1779,11 +1952,13 @@ export default function OptionsConfluenceScanner() {
 
               <div style={{
                 background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.88))',
-                border: '1px solid rgba(59,130,246,0.35)',
+                border: adaptiveTerminalMode === 'TREND_MODE' ? '2px solid rgba(16,185,129,0.5)' : adaptiveTerminalMode === 'TRANSITION_MODE' ? '2px solid rgba(56,189,248,0.5)' : '1px solid rgba(59,130,246,0.35)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
                 gap: '0.6rem',
+                order: adaptiveModeMeta.layout.marketOrder,
+                transform: adaptiveTerminalMode === 'TREND_MODE' ? 'scale(1.015)' : 'scale(1)',
               }}>
                 <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Surface</div>
                 {confluenceRadar && (
@@ -1806,7 +1981,9 @@ export default function OptionsConfluenceScanner() {
                   </div>
                   <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
                     <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>{result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                    <div style={{ color: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '#FCA5A5' : '#F8FAFC', fontSize: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '1rem' : '0.8rem', fontWeight: 800 }}>
+                      {result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1818,6 +1995,8 @@ export default function OptionsConfluenceScanner() {
                 padding: '0.75rem',
                 display: 'grid',
                 gap: '0.45rem',
+                order: adaptiveModeMeta.layout.execOrder,
+                opacity: adaptiveModeMeta.layout.execOpacity,
               }}>
                 <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Execution Panel</div>
                 <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
@@ -1833,8 +2012,48 @@ export default function OptionsConfluenceScanner() {
                   <div style={{ color: '#A7F3D0', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
                 <div style={{ color: '#94A3B8', fontSize: '0.7rem' }}>Permission: <span style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontWeight: 800 }}>{tradePermission}</span></div>
+
+                {copilotPresence && (
+                  <div style={{
+                    marginTop: '0.25rem',
+                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: '8px',
+                    padding: '0.45rem 0.5rem',
+                  }}>
+                    <div style={{ color: '#67E8F9', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase' }}>Co-Pilot Suggestion</div>
+                    <div style={{ color: '#E2E8F0', fontSize: '0.74rem', marginTop: '0.2rem', fontWeight: 700 }}>{copilotPresence.suggestion.action}</div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '0.15rem' }}>{copilotPresence.suggestion.reason}</div>
+                  </div>
+                )}
               </div>
             </div>
+
+            {copilotPresence && copilotPresence.notices.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))',
+                border: '1px solid rgba(148,163,184,0.26)',
+                borderRadius: '12px',
+                padding: '0.65rem 0.75rem',
+                display: 'grid',
+                gap: '0.42rem',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>Co-Pilot Notices</div>
+                {copilotPresence.notices.map((notice, index) => (
+                  <div key={`${notice.title}-${index}`} style={{
+                    background: notice.level === 'warn' ? 'rgba(239,68,68,0.08)' : notice.level === 'action' ? 'rgba(16,185,129,0.08)' : 'rgba(56,189,248,0.08)',
+                    border: `1px solid ${notice.level === 'warn' ? 'rgba(239,68,68,0.25)' : notice.level === 'action' ? 'rgba(16,185,129,0.25)' : 'rgba(56,189,248,0.25)'}`,
+                    borderRadius: '8px',
+                    padding: '0.4rem 0.48rem',
+                  }}>
+                    <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
+                      {notice.level === 'warn' ? '⚠️' : notice.level === 'action' ? '✅' : '⚡'} Co-Pilot Notice • {notice.title}
+                    </div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '0.14rem' }}>{notice.message}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {confluenceRadar && (
               <div style={{
