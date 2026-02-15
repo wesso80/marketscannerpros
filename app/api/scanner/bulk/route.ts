@@ -671,7 +671,9 @@ function scoreLightCryptoCandidate(coin: {
   market_cap_rank: number;
   total_volume: number;
   price_change_percentage_24h: number;
-}): {
+  price_change_percentage_1h_in_currency?: number;
+  price_change_percentage_7d_in_currency?: number;
+}, timeframe: string): {
   symbol: string;
   score: number;
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -684,13 +686,23 @@ function scoreLightCryptoCandidate(coin: {
   const marketCap = Number(coin.market_cap);
   const volume = Number(coin.total_volume);
   const rank = Number(coin.market_cap_rank || 99999);
+  const change1h = Number(coin.price_change_percentage_1h_in_currency || 0);
   const change24h = Number(coin.price_change_percentage_24h || 0);
+  const change7d = Number(coin.price_change_percentage_7d_in_currency || 0);
+
+  const momentumChange = timeframe === '1d'
+    ? change7d
+    : (timeframe === '1h' ? change24h : change1h);
+
+  const momentumRange = timeframe === '1d' ? 60 : (timeframe === '1h' ? 30 : 15);
+  const bullishThreshold = timeframe === '1d' ? 4 : (timeframe === '1h' ? 2 : 0.7);
+  const bearishThreshold = -bullishThreshold;
 
   if (!Number.isFinite(price) || price <= 0) return null;
   if (!Number.isFinite(marketCap) || marketCap <= 0) return null;
   if (!Number.isFinite(volume) || volume <= 0) return null;
 
-  const momentumScore = clamp(((change24h + 20) / 40) * 100, 0, 100);
+  const momentumScore = clamp(((momentumChange + momentumRange) / (momentumRange * 2)) * 100, 0, 100);
   const turnover = volume / marketCap;
   const liquidityScore = clamp((Math.log10(volume + 1) / 11) * 100, 0, 100);
   const turnoverScore = clamp(turnover * 250, 0, 100);
@@ -708,7 +720,9 @@ function scoreLightCryptoCandidate(coin: {
   let bearish = 0;
   let neutral = 0;
 
-  if (change24h >= 2) bullish += 1; else if (change24h <= -2) bearish += 1; else neutral += 1;
+  if (momentumChange >= bullishThreshold) bullish += 1;
+  else if (momentumChange <= bearishThreshold) bearish += 1;
+  else neutral += 1;
   if (turnover >= 0.08) bullish += 1; else if (turnover < 0.025) bearish += 1; else neutral += 1;
   if (rank <= 250) bullish += 1; else if (rank > 1200) bearish += 1; else neutral += 1;
 
@@ -726,7 +740,7 @@ function scoreLightCryptoCandidate(coin: {
   };
 }
 
-async function runLightCryptoScan(maxCoins: number, startTime: number) {
+async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe: string) {
   const maxCoinsByApiCap = LIGHT_SCAN_MAX_API_CALLS * LIGHT_SCAN_PER_PAGE;
   const cappedCoins = clamp(maxCoins, 100, Math.min(15000, maxCoinsByApiCap));
   const pageCount = Math.ceil(cappedCoins / LIGHT_SCAN_PER_PAGE);
@@ -747,6 +761,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number) {
       per_page: Math.min(LIGHT_SCAN_PER_PAGE, remaining),
       page,
       sparkline: false,
+      price_change_percentage: ['1h', '24h', '7d'],
     });
     apiCallsUsed += 1;
 
@@ -771,7 +786,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number) {
   }
 
   const ranked = Array.from(dedupedBySymbol.values())
-    .map(scoreLightCryptoCandidate)
+    .map((coin) => scoreLightCryptoCandidate(coin, timeframe))
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
     .sort((a, b) => b.score - a.score);
 
@@ -866,7 +881,7 @@ export async function POST(req: NextRequest) {
 
     if (type === 'crypto' && mode === 'light') {
       console.log(`[bulk-scan/light] Scanning up to ${universeSize} crypto assets using market-data ranking...`);
-      const lightResult = await runLightCryptoScan(universeSize, startTime);
+      const lightResult = await runLightCryptoScan(universeSize, startTime, selectedTimeframe);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
       return NextResponse.json({

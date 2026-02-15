@@ -228,6 +228,8 @@ export interface CoinGeckoMarketData {
   market_cap: number;
   market_cap_rank: number;
   price_change_percentage_24h: number;
+  price_change_percentage_1h_in_currency?: number;
+  price_change_percentage_7d_in_currency?: number;
   price_change_24h: number;
   total_volume: number;
   high_24h: number;
@@ -283,6 +285,7 @@ export async function getMarketData(
     page?: number;
     order?: 'market_cap_desc' | 'market_cap_asc' | 'volume_desc' | 'volume_asc';
     sparkline?: boolean;
+    price_change_percentage?: Array<'1h' | '24h' | '7d' | '14d' | '30d' | '200d' | '1y'>;
   }
 ): Promise<CoinGeckoMarketData[] | null> {
   try {
@@ -293,6 +296,10 @@ export async function getMarketData(
       page: String(options?.page ?? 1),
       sparkline: String(options?.sparkline ?? false),
     });
+
+    if (options?.price_change_percentage?.length) {
+      params.set('price_change_percentage', options.price_change_percentage.join(','));
+    }
 
     if (options?.ids?.length) {
       params.set('ids', options.ids.join(','));
