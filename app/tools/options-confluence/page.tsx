@@ -1288,6 +1288,141 @@ export default function OptionsConfluenceScanner() {
           ? '#EF4444'
           : '#3B82F6';
 
+  const confluenceRadar = result ? (() => {
+    const clampScore = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+
+    const trendScore = clampScore(
+      ((result.compositeScore?.confidence ?? 45) * 0.65) +
+      (Math.abs(result.compositeScore?.directionScore ?? 0) * 0.35)
+    );
+
+    const flowAlignment = result.unusualActivity?.smartMoneyDirection || result.openInterestAnalysis?.sentiment || 'neutral';
+    const directionAligned = flowAlignment === 'neutral' || flowAlignment === 'mixed' || flowAlignment === result.direction;
+    const flowScore = clampScore(
+      (result.unusualActivity?.alertLevel === 'high' ? 82 :
+       result.unusualActivity?.alertLevel === 'moderate' ? 68 :
+       result.unusualActivity?.hasUnusualActivity ? 54 : 36) +
+      (directionAligned ? 12 : -10)
+    );
+
+    const momentumScore = clampScore(
+      (result.signalStrength === 'strong' ? 84 :
+       result.signalStrength === 'moderate' ? 66 :
+       result.signalStrength === 'weak' ? 48 : 30) +
+      Math.min(14, Math.max(0, result.confluenceStack * 2))
+    );
+
+    const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
+    const ivRank = result.ivAnalysis?.ivRank ?? 50;
+    const volatilityScore = clampScore((movePct * 11) + (Math.abs(ivRank - 50) * 0.9) + 26);
+
+    const sentimentScore = clampScore(
+      (result.openInterestAnalysis?.sentiment === 'bullish' || result.openInterestAnalysis?.sentiment === 'bearish' ? 62 : 44) +
+      (result.capitalFlow?.conviction ? Math.min(28, result.capitalFlow.conviction * 0.28) : 8)
+    );
+
+    const axes = [
+      { key: 'TREND', value: Math.round(trendScore) },
+      { key: 'FLOW', value: Math.round(flowScore) },
+      { key: 'MOMENTUM', value: Math.round(momentumScore) },
+      { key: 'VOLATILITY', value: Math.round(volatilityScore) },
+      { key: 'SENTIMENT', value: Math.round(sentimentScore) },
+    ];
+
+    const size = 220;
+    const center = size / 2;
+    const radius = 78;
+    const levels = [20, 40, 60, 80, 100];
+    const angleStep = (Math.PI * 2) / axes.length;
+
+    const pointAt = (axisIndex: number, normalized: number) => {
+      const angle = -Math.PI / 2 + (axisIndex * angleStep);
+      const r = radius * normalized;
+      return {
+        x: center + Math.cos(angle) * r,
+        y: center + Math.sin(angle) * r,
+      };
+    };
+
+    const ringPolygons = levels.map((level) => {
+      const norm = level / 100;
+      return axes.map((_, axisIndex) => {
+        const point = pointAt(axisIndex, norm);
+        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      }).join(' ');
+    });
+
+    const dataPolygon = axes.map((axis, axisIndex) => {
+      const point = pointAt(axisIndex, axis.value / 100);
+      return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+    }).join(' ');
+
+    const axisLines = axes.map((_, axisIndex) => {
+      const point = pointAt(axisIndex, 1);
+      return { x1: center, y1: center, x2: point.x, y2: point.y };
+    });
+
+    const axisLabels = axes.map((axis, axisIndex) => {
+      const point = pointAt(axisIndex, 1.17);
+      return { ...axis, x: point.x, y: point.y };
+    });
+
+    const composite = Math.round(axes.reduce((sum, axis) => sum + axis.value, 0) / axes.length);
+
+    return {
+      axes,
+      composite,
+      size,
+      center,
+      ringPolygons,
+      dataPolygon,
+      axisLines,
+      axisLabels,
+    };
+  })() : null;
+
+  const terminalSignalStack = result ? [
+    {
+      label: 'Trend Structure',
+      score: Math.round(Math.max(0, Math.min(100, ((result.compositeScore?.confidence ?? 45) * 0.6) + (Math.abs(result.compositeScore?.directionScore ?? 0) * 0.4)))),
+      state: trendStrength,
+      summary: `${thesisDirection.toUpperCase()} bias • ${result.compositeScore?.confidence?.toFixed(0) || '0'}% confidence`,
+    },
+    {
+      label: 'Momentum',
+      score: result.signalStrength === 'strong' ? 84 : result.signalStrength === 'moderate' ? 66 : result.signalStrength === 'weak' ? 48 : 30,
+      state: result.signalStrength.toUpperCase(),
+      summary: `${result.confluenceStack} TFs aligned • ${result.entryTiming.urgency.replace('_', ' ')}`,
+    },
+    {
+      label: 'Options Flow',
+      score: result.unusualActivity?.alertLevel === 'high' ? 86 : result.unusualActivity?.alertLevel === 'moderate' ? 68 : result.unusualActivity?.hasUnusualActivity ? 52 : 34,
+      state: (result.unusualActivity?.smartMoneyDirection || result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(),
+      summary: `PCR ${result.openInterestAnalysis?.pcRatio?.toFixed(2) || 'n/a'} • ${result.unusualActivity?.alertLevel || 'none'} alert`,
+    },
+    {
+      label: 'Volatility Regime',
+      score: Math.round(Math.max(0, Math.min(100, ((result.expectedMove?.selectedExpiryPercent ?? 0) * 11) + (Math.abs((result.ivAnalysis?.ivRank ?? 50) - 50) * 0.8) + 24))),
+      state: `${result.ivAnalysis?.ivRank != null ? `IV ${result.ivAnalysis.ivRank}%` : 'IV N/A'}`,
+      summary: result.expectedMove ? `Expected ±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'Expected move unavailable',
+    },
+    {
+      label: 'Sentiment',
+      score: result.capitalFlow?.conviction ? Math.max(35, Math.min(100, Math.round(result.capitalFlow.conviction))) : 52,
+      state: (result.capitalFlow?.bias || result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(),
+      summary: `${result.capitalFlow?.market_mode || 'market mode n/a'} • ${result.institutionalFilter?.recommendation || 'no filter'}`,
+    },
+  ] : [];
+
+  const terminalDecisionCard = result ? {
+    direction: thesisDirection.toUpperCase(),
+    conviction: Math.round(adaptiveConfidenceScore),
+    setup: result.strategyRecommendation?.strategy || (result.direction === 'bullish' ? 'Call Debit Spread' : result.direction === 'bearish' ? 'Put Debit Spread' : 'WAIT'),
+    trigger: decisionTrigger,
+    invalidation: result.tradeLevels?.stopLoss ? `${result.tradeLevels.stopLoss.toFixed(2)}` : (result.tradeSnapshot?.risk?.invalidationReason || 'Await cleaner invalidation'),
+    expectedMove: result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A',
+  } : null;
+
   // Avoid premature gating while tier is still resolving
   if (isTierLoading) {
     return (
@@ -1569,6 +1704,216 @@ export default function OptionsConfluenceScanner() {
         {/* Results */}
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
+
+            {terminalDecisionCard && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95))',
+                border: `2px solid ${modeAccent}`,
+                borderRadius: '14px',
+                padding: '0.95rem 1rem',
+                boxShadow: `0 10px 30px ${modeAccent}26`,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>AI Trade Command Card</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.86rem', fontWeight: 800 }}>Conviction {terminalDecisionCard.conviction}%</div>
+                </div>
+
+                <div style={{
+                  marginTop: '0.55rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
+                  gap: '0.4rem',
+                }}>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 900 }}>{terminalDecisionCard.direction}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Best Setup</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.setup}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.expectedMove}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div>
+                    <div style={{ color: '#FCA5A5', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.invalidation}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.5rem', color: '#CBD5E1', fontSize: '0.78rem' }}>
+                  <span style={{ color: '#A7F3D0', fontWeight: 700 }}>Key Trigger:</span> {terminalDecisionCard.trigger}
+                </div>
+              </div>
+            )}
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: '0.85rem',
+              alignItems: 'stretch',
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8))',
+                border: '1px solid rgba(148,163,184,0.25)',
+                borderRadius: '12px',
+                padding: '0.75rem',
+                display: 'grid',
+                gap: '0.45rem',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Signal Stack</div>
+                {terminalSignalStack.map((item) => (
+                  <div key={item.label} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem 0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.74rem', fontWeight: 800 }}>{item.label}</div>
+                      <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 800 }}>{item.score}%</div>
+                    </div>
+                    <div style={{ height: '5px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.25rem' }}>
+                      <div style={{ height: '100%', width: `${item.score}%`, background: 'linear-gradient(90deg, #38BDF8, #10B981)' }} />
+                    </div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.68rem', marginTop: '0.18rem' }}>{item.state} • {item.summary}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.88))',
+                border: '1px solid rgba(59,130,246,0.35)',
+                borderRadius: '12px',
+                padding: '0.75rem',
+                display: 'grid',
+                gap: '0.6rem',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Surface</div>
+                {confluenceRadar && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <svg width="190" height="190" viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar Mini">
+                      {confluenceRadar.ringPolygons.map((ring, idx) => (
+                        <polygon key={`mini-ring-${idx}`} points={ring} fill="none" stroke="rgba(148,163,184,0.24)" strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.15 : 0.85} />
+                      ))}
+                      {confluenceRadar.axisLines.map((line, idx) => (
+                        <line key={`mini-axis-${idx}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="rgba(100,116,139,0.36)" strokeWidth={1} />
+                      ))}
+                      <polygon points={confluenceRadar.dataPolygon} fill="rgba(56,189,248,0.22)" stroke="rgba(56,189,248,0.88)" strokeWidth={2} />
+                    </svg>
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.35rem' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Current Price</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>${formatPrice(result.currentPrice)}</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
+                    <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>{result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.82))',
+                border: '1px solid rgba(16,185,129,0.3)',
+                borderRadius: '12px',
+                padding: '0.75rem',
+                display: 'grid',
+                gap: '0.45rem',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Execution Panel</div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry Zone</div>
+                  <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await setup'}</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Stop / Invalidation</div>
+                  <div style={{ color: '#FCA5A5', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : (result.tradeSnapshot?.risk?.invalidationReason || 'N/A')}</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Target / R:R</div>
+                  <div style={{ color: '#A7F3D0', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
+                </div>
+                <div style={{ color: '#94A3B8', fontSize: '0.7rem' }}>Permission: <span style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontWeight: 800 }}>{tradePermission}</span></div>
+              </div>
+            </div>
+
+            {confluenceRadar && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
+                border: '2px solid rgba(56,189,248,0.45)',
+                borderRadius: '14px',
+                padding: '0.9rem 1rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>MSP Signature • Confluence Radar</div>
+                  <div style={{ color: '#67E8F9', fontWeight: 900, fontSize: '0.9rem' }}>Composite {confluenceRadar.composite}%</div>
+                </div>
+
+                <div style={{
+                  marginTop: '0.55rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(220px, 260px) minmax(0, 1fr)',
+                  gap: '0.75rem',
+                  alignItems: 'center',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <svg width={confluenceRadar.size} height={confluenceRadar.size} viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar">
+                      {confluenceRadar.ringPolygons.map((ring, idx) => (
+                        <polygon
+                          key={`ring-${idx}`}
+                          points={ring}
+                          fill="none"
+                          stroke="rgba(148,163,184,0.28)"
+                          strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.3 : 0.9}
+                        />
+                      ))}
+
+                      {confluenceRadar.axisLines.map((line, idx) => (
+                        <line
+                          key={`axis-${idx}`}
+                          x1={line.x1}
+                          y1={line.y1}
+                          x2={line.x2}
+                          y2={line.y2}
+                          stroke="rgba(100,116,139,0.4)"
+                          strokeWidth={1}
+                        />
+                      ))}
+
+                      <polygon
+                        points={confluenceRadar.dataPolygon}
+                        fill="rgba(56,189,248,0.24)"
+                        stroke="rgba(56,189,248,0.9)"
+                        strokeWidth={2}
+                      />
+
+                      {confluenceRadar.axisLabels.map((label) => (
+                        <text
+                          key={label.key}
+                          x={label.x}
+                          y={label.y}
+                          fill="#CBD5E1"
+                          fontSize="10"
+                          fontWeight="700"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                        >
+                          {label.key}
+                        </text>
+                      ))}
+                    </svg>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.35rem' }}>
+                    {confluenceRadar.axes.map((axis) => (
+                      <div key={axis.key} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>{axis.key}</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.8rem', fontWeight: 800 }}>{axis.value}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{
               background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
