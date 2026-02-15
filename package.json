@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "node server.js",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
+    "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:outcomes": "npx tsx worker/label-outcomes.ts"
   },
   "dependencies": {

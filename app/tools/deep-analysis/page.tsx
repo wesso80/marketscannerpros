@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import DataComingSoon from "@/components/DataComingSoon";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 
 interface PriceData {
@@ -540,7 +539,7 @@ function getNewsImpact(title: string, summary: string): { tag: string; color: st
 }
 
 export default function DeepAnalysisPage() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -577,17 +576,12 @@ export default function DeepAnalysisPage() {
   if (!canAccessBacktest(tier)) {
     return (
       <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-        <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-powered comprehensive market analysis" icon="🥚" />
+        <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem" }}>
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
       </div>
     );
-  }
-
-  // Data licensing gate - only admins can access stock data for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="🥚 Golden Egg Deep Analysis" description="AI-powered comprehensive market analysis for any stock or crypto" />;
   }
 
   const handleAnalyze = async () => {
@@ -618,7 +612,7 @@ export default function DeepAnalysisPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-      <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-powered comprehensive market analysis" icon="🥚" />
+      <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
       
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem 1rem" }}>
         {/* Hero Header */}
@@ -685,9 +679,9 @@ export default function DeepAnalysisPage() {
               }}
             >
               {loading ? (
-                <>⏳ Analyzing...</>
+                <>⏳ Finding Market Edge...</>
               ) : (
-                <>🔍 Analyze</>
+                <>🔍 Find Market Edge</>
               )}
             </button>
           </div>
@@ -1416,7 +1410,7 @@ export default function DeepAnalysisPage() {
             )}
 
             {/* Options Flow - Show data for admins, Coming Soon for others */}
-            {result.assetType === 'stock' && (isAdmin && result.optionsData ? (
+            {result.assetType === 'stock' && (result.optionsData ? (
               <div style={{ 
                 background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
                 borderRadius: "16px",

@@ -132,7 +132,7 @@ export default function EconomicCalendarPage() {
             </span>
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Track market-moving economic events. FOMC decisions, jobs reports, inflation data, and more.
+            Find market-moving events fast—FOMC decisions, jobs reports, inflation data, and more.
           </p>
         </div>
 
@@ -229,7 +229,7 @@ export default function EconomicCalendarPage() {
         {loading && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading economic calendar...</p>
+            <p className="text-gray-400">Finding upcoming economic events...</p>
           </div>
         )}
 
@@ -252,7 +252,7 @@ export default function EconomicCalendarPage() {
             {data.count === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 <p className="text-xl mb-2">📅</p>
-                <p>No events found in this time period</p>
+                <p>No events found in this range. Try expanding your timeframe.</p>
               </div>
             ) : (
               Object.entries(data.grouped).map(([date, events]) => {

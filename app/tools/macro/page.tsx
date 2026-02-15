@@ -136,7 +136,7 @@ export default function MacroDashboardPage() {
     <div className="min-h-screen bg-[#0B1120] text-white">
       <ToolsPageHeader
         title="Macro Dashboard"
-        subtitle="Economic indicators, rates, and market regime"
+        subtitle="Find economic indicators, rates, and market regime context fast"
         badge="Economic Data"
         icon="🏛️"
       />
@@ -148,8 +148,9 @@ export default function MacroDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center justify-center h-64 gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+            <p className="text-slate-400">Finding macro regime data...</p>
           </div>
         ) : error ? (
           <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-6 text-center">

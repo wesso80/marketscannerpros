@@ -77,6 +77,25 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
               {title}
             </h1>
             <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "12px" }}>{subtitle}</p>
+            <div
+              style={{
+                marginTop: "8px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "4px 10px",
+                borderRadius: "999px",
+                background: "rgba(245,158,11,0.12)",
+                border: "1px solid rgba(245,158,11,0.35)",
+                color: "#FBBF24",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              Educational Only • Not Financial Advice
+            </div>
           </div>
         </div>
         <div

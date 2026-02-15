@@ -574,7 +574,7 @@ function JournalContent() {
       <ToolsPageHeader
         badge="TRADE JOURNAL"
         title="Trade Journal"
-        subtitle="Track and analyze your trading performance."
+        subtitle="Find performance patterns and improve your trading process."
         icon="📔"
         backHref="/dashboard"
         actions={headerActions}
@@ -879,7 +879,7 @@ function JournalContent() {
                     animation: 'spin 1s linear infinite',
                     display: 'inline-block'
                   }}>⏳</span>
-                  Analyzing...
+                  Analyzing Journal Patterns...
                 </>
               ) : (
                 <>
@@ -1818,11 +1818,11 @@ function JournalContent() {
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📔</div>
             <h3 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-              {entries.length === 0 ? 'No Journal Entries Yet' : 'No Entries Match Filters'}
+              {entries.length === 0 ? 'Ready to log your first trade?' : 'No Entries Match Filters'}
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '20px' }}>
               {entries.length === 0 
-                ? 'Start tracking your trades to analyze performance and improve over time.'
+                ? 'Add your first entry to start tracking performance, execution, and discipline.'
                 : 'Try adjusting your filters to see more entries.'}
             </p>
             {entries.length === 0 && (
@@ -2142,7 +2142,7 @@ export default function JournalPage() {
         justifyContent: 'center',
         background: '#0f172a'
       }}>
-        <div style={{ color: '#9ca3af' }}>Loading journal...</div>
+        <div style={{ color: '#9ca3af' }}>Preparing journal workspace...</div>
       </div>
     }>
       <JournalContent />

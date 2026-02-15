@@ -57,7 +57,9 @@ let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
     const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '70', 10);
-    rateLimiter = new TokenBucket(rpm, rpm / 60);
+    const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
+    const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
+    rateLimiter = new TokenBucket(burstCapacity, rpm / 60);
   }
   return rateLimiter;
 }
@@ -303,6 +305,33 @@ async function getSymbolsToFetch(tier?: number): Promise<Array<{ symbol: string;
   return result.rows;
 }
 
+function normalizeBarTimestamp(timestamp: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(timestamp)) {
+    return `${timestamp}T00:00:00.000Z`;
+  }
+
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return timestamp;
+  }
+
+  return parsed.toISOString();
+}
+
+async function ensureIngestionSchema(): Promise<void> {
+  const db = getPool();
+
+  await db.query(`
+    ALTER TABLE indicators_latest
+    ADD COLUMN IF NOT EXISTS warmup_json JSONB
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_indicators_latest_warmup_json
+    ON indicators_latest USING GIN (warmup_json)
+  `);
+}
+
 async function upsertQuote(symbol: string, quote: any): Promise<void> {
   const db = getPool();
   await db.query(`
@@ -339,11 +368,22 @@ async function upsertBars(symbol: string, timeframe: string, bars: AVBar[]): Pro
   // Use batch insert
   if (bars.length === 0) return;
 
+  const dedupedByTs = new Map<string, AVBar>();
+  for (const bar of bars.slice(-500)) {
+    const normalizedTs = normalizeBarTimestamp(bar.timestamp);
+    dedupedByTs.set(normalizedTs, { ...bar, timestamp: normalizedTs });
+  }
+
+  const dedupedBars = Array.from(dedupedByTs.values())
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  if (dedupedBars.length === 0) return;
+
   const values: any[] = [];
   const placeholders: string[] = [];
   let paramIndex = 1;
 
-  for (const bar of bars.slice(-500)) { // Keep last 500 bars
+  for (const bar of dedupedBars) {
     placeholders.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7})`);
     // Ensure volume is a valid integer for BIGINT
     const volumeInt = Math.round(Number(bar.volume) || 0);
@@ -928,6 +968,11 @@ async function runIngestionCycle(): Promise<{ symbolsProcessed: number; apiCalls
 
 async function main(): Promise<void> {
   console.log('[worker] MSP Data Ingestion Worker starting...');
+
+  const cliOnce = process.argv.includes('--once');
+  const envOnce = ['1', 'true', 'yes'].includes((getEnv('WORKER_RUN_ONCE') || '').toLowerCase());
+  const runOnce = cliOnce || envOnce;
+  const failOnErrors = ['1', 'true', 'yes'].includes((getEnv('WORKER_FAIL_ON_ERRORS') || '').toLowerCase());
   
   if (!getEnv('ALPHA_VANTAGE_API_KEY')) {
     console.error('[worker] ALPHA_VANTAGE_API_KEY not set');
@@ -940,8 +985,14 @@ async function main(): Promise<void> {
   }
 
   const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '70', 10);
+  const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
   console.log(`[worker] Rate limit: ${rpm} requests/minute`);
+  console.log(`[worker] Burst cap: ${burstPerSecond} requests/second`);
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);
+  console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
+
+  await ensureIngestionSchema();
+  console.log('[worker] Schema compatibility checks complete');
 
   let cycleCount = 0;
   const CYCLE_INTERVAL_MS = 60000; // Run full cycle every 60 seconds
@@ -960,9 +1011,22 @@ async function main(): Promise<void> {
 
       await logWorkerRun('ingest-main', stats, 'completed');
 
+      if (runOnce) {
+        if (failOnErrors && stats.errors > 0) {
+          console.error(`[worker] One-cycle mode completed with ${stats.errors} errors (WORKER_FAIL_ON_ERRORS enabled)`);
+          process.exit(1);
+        }
+        console.log('[worker] One-cycle mode complete, exiting');
+        process.exit(0);
+      }
+
     } catch (err: any) {
       console.error(`[worker] Cycle ${cycleCount} failed:`, err?.message || err);
       await logWorkerRun('ingest-main', {}, 'failed', err?.message || String(err));
+
+      if (runOnce) {
+        process.exit(1);
+      }
     }
 
     // Wait for next cycle

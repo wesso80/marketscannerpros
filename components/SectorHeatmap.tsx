@@ -23,6 +23,7 @@ type TimeFrame = 'realtime' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yt
 export default function SectorHeatmap() {
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('realtime');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -35,17 +36,21 @@ export default function SectorHeatmap() {
   }, []);
 
   async function fetchSectorData() {
+    if (sectors.length > 0) {
+      setRefreshing(true);
+    }
     try {
       const res = await fetch('/api/sectors/heatmap');
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      setSectors(data.sectors);
+      setSectors(Array.isArray(data.sectors) ? data.sectors : []);
       setLastUpdate(data.timestamp);
       setError(null);
     } catch (err) {
       setError('Failed to load sector data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -155,7 +160,7 @@ export default function SectorHeatmap() {
     );
   }
 
-  if (error) {
+  if (error && sectors.length === 0) {
     return (
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
         <p className="text-red-400">{error}</p>
@@ -164,6 +169,21 @@ export default function SectorHeatmap() {
           className="mt-2 text-emerald-400 hover:text-emerald-300 text-sm"
         >
           Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!loading && sectors.length === 0) {
+    return (
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 text-center">
+        <p className="text-slate-300 font-medium">No sector data available right now.</p>
+        <p className="text-slate-500 text-sm mt-1">Try refreshing in a few seconds.</p>
+        <button
+          onClick={fetchSectorData}
+          className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm hover:bg-emerald-500/30"
+        >
+          Refresh Sector Data
         </button>
       </div>
     );
@@ -189,6 +209,21 @@ export default function SectorHeatmap() {
             <p className="text-xs text-slate-400 mt-1">
               Hover for details • Size = market weight • <span className="text-amber-400">Data updates every 60s</span>
             </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {error && (
+              <span className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-2 py-1">
+                Showing cached view
+              </span>
+            )}
+            <button
+              onClick={fetchSectorData}
+              className="text-xs px-3 py-1.5 rounded border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
+              disabled={refreshing}
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
           </div>
           
           {/* Time Frame Selector */}

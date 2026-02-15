@@ -323,7 +323,7 @@ function CompanyOverviewContent() {
         <ToolsPageHeader
           badge="FUNDAMENTALS"
           title="Company Overview"
-          subtitle="Key fundamentals, technicals, and valuation metrics."
+          subtitle="Find key fundamentals, technical levels, and valuation context fast."
           icon="🏢"
           backHref="/dashboard"
         />
@@ -339,7 +339,7 @@ function CompanyOverviewContent() {
       <ToolsPageHeader
         badge="FUNDAMENTALS"
         title="Company Overview"
-        subtitle="Key fundamentals, technicals, and valuation metrics."
+        subtitle="Find key fundamentals, technical levels, and valuation context fast."
         icon="🏢"
         backHref="/dashboard"
       />

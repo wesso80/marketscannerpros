@@ -1,17 +1,8 @@
 'use client';
 
 import SectorHeatmap from '@/components/SectorHeatmap';
-import DataComingSoon from '@/components/DataComingSoon';
-import { useUserTier } from '@/lib/useUserTier';
 
 export default function HeatmapPage() {
-  const { isAdmin } = useUserTier();
-  
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="📊 Sector Heat Map" description="Visualize S&P 500 sector performance at a glance" />;
-  }
-  
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -21,8 +12,7 @@ export default function HeatmapPage() {
             📊 Sector Heat Map
           </h1>
           <p className="text-slate-400 max-w-2xl">
-            Visualize S&P 500 sector performance at a glance. Green indicates gains, 
-            red indicates losses. Larger boxes represent sectors with more market weight.
+            Spot risk-on vs risk-off in seconds. Green sectors show leadership, red sectors show weakness, and larger boxes carry more index impact.
           </p>
         </div>
 
@@ -51,7 +41,7 @@ export default function HeatmapPage() {
               <li>• Sector rotation signals market shifts</li>
               <li>• Defensive sectors up = risk-off sentiment</li>
               <li>• Tech & discretionary up = risk-on</li>
-              <li>• Compare multiple timeframes</li>
+              <li>• Confirm directional bets with sector leadership</li>
             </ul>
           </div>
 

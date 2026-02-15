@@ -109,6 +109,31 @@ function corsHeaders(origin: string | null) {
   }
   return headers;
 }
+
+function getAuthCookieOptions(req: NextRequest) {
+  const host = req.headers.get("host") || "";
+  const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+
+  if (isLocalhost) {
+    return {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax" as const,
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    };
+  }
+
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none" as const,
+    domain: ".marketscannerpros.app",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  };
+}
+
 export async function POST(req: NextRequest) {
   // Rate limit: 5 login attempts per minute per IP
   const ip = getClientIP(req);
@@ -162,14 +187,7 @@ export async function POST(req: NextRequest) {
       };
       
       const res = NextResponse.json(body);
-      res.cookies.set("ms_auth", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        domain: ".marketscannerpros.app",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
     
       const originHeader = req.headers.get("origin");
       const headers = corsHeaders(originHeader);
@@ -233,14 +251,7 @@ export async function POST(req: NextRequest) {
       };
     }
     const res = NextResponse.json(body);
-    res.cookies.set("ms_auth", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      domain: ".marketscannerpros.app",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
     const originHeader = req.headers.get("origin");
     const headers = corsHeaders(originHeader);
     for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);

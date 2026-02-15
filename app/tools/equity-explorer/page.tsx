@@ -405,7 +405,7 @@ export default function EquityExplorerPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">📈 Equity Explorer</h1>
-          <p className="text-gray-400">Comprehensive stock analysis powered by Alpha Vantage</p>
+          <p className="text-gray-400">Find complete stock context in seconds with live market data</p>
         </div>
 
         {/* Search Bar */}
@@ -425,7 +425,7 @@ export default function EquityExplorerPage() {
               disabled={loading || !searchInput.trim()}
               className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-semibold rounded-lg transition-colors"
             >
-              {loading ? 'Loading...' : 'Search'}
+              {loading ? 'Finding Stock Setup...' : 'Find Stock Setup'}
             </button>
             {data && (
               <button
@@ -864,8 +864,8 @@ export default function EquityExplorerPage() {
         {!data && !loading && !error && (
           <div className="text-center py-20">
             <p className="text-6xl mb-4">📊</p>
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">Search for a Stock</h3>
-            <p className="text-gray-500">Enter a ticker symbol to view comprehensive analysis</p>
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">Ready to find a stock setup?</h3>
+            <p className="text-gray-500">Enter a ticker to unlock valuation, momentum, and risk context</p>
           </div>
         )}
       </div>

@@ -138,7 +138,7 @@ export default function MarketMoversPage() {
     <div className="min-h-screen bg-[#0B1120] text-white">
       <ToolsPageHeader
         title="Market Movers"
-        subtitle="Top gainers, losers, and most actively traded stocks"
+        subtitle="Find top gainers, losers, and most-active stocks with clear momentum context"
         badge="Live"
         icon="📈"
       />
@@ -266,7 +266,7 @@ export default function MarketMoversPage() {
                             href={`/tools/options-confluence?symbol=${mover.ticker}`}
                             className="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 transition-colors"
                           >
-                            Scan
+                            Find Setup
                           </a>
                         </td>
                       </tr>

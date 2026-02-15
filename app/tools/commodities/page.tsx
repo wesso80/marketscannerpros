@@ -138,7 +138,7 @@ export default function CommoditiesPage() {
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
-          subtitle="Real-time commodity prices powered by Alpha Vantage"
+          subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
           icon="🛢️"
         />
         <main style={{ padding: '24px 16px', display: 'flex', justifyContent: 'center' }}>
@@ -154,7 +154,7 @@ export default function CommoditiesPage() {
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
-          subtitle="Real-time commodity prices powered by Alpha Vantage"
+          subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
           icon="🛢️"
         />
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -173,7 +173,7 @@ export default function CommoditiesPage() {
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
-          subtitle="Real-time commodity prices powered by Alpha Vantage"
+          subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
           icon="🛢️"
         />
         <div style={{ 
@@ -211,7 +211,7 @@ export default function CommoditiesPage() {
       <ToolsPageHeader 
         badge="Commodities"
         title="Commodities Dashboard" 
-        subtitle="Real-time commodity prices • Energy, Metals & Agriculture"
+        subtitle="Find real-time commodity prices across energy, metals, and agriculture"
         icon="🛢️"
       />
 

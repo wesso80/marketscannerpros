@@ -267,7 +267,7 @@ export default function GainersLosersPage() {
         <ToolsPageHeader
           badge="MARKET MOVERS"
           title="Top Gainers & Losers"
-          subtitle="Live gainers, losers, and most active tickers with risk context."
+          subtitle="Find live gainers, losers, and most-active tickers with risk context."
           icon="📊"
           backHref="/dashboard"
         />
@@ -283,7 +283,7 @@ export default function GainersLosersPage() {
       <ToolsPageHeader
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"
-        subtitle="Live gainers, losers, and most active tickers with risk context."
+        subtitle="Find live gainers, losers, and most-active tickers with risk context."
         icon="📊"
         backHref="/dashboard"
       />
@@ -429,7 +429,7 @@ export default function GainersLosersPage() {
 
         {loading ? (
           <div style={{ textAlign: "center", padding: "3rem", color: "#94A3B8" }}>
-            Loading market data...
+            Finding market movers...
           </div>
         ) : (
           <>
@@ -437,7 +437,7 @@ export default function GainersLosersPage() {
             <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {currentData.length === 0 ? (
                 <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", background: "rgba(15,23,42,0.8)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.6)" }}>
-                  No results match your filters. Try adjusting the filter settings.
+                  No movers match these filters yet. Adjust filters to broaden results.
                 </div>
               ) : currentData.map((item, index) => (
                 <div key={index} style={{
@@ -536,7 +536,7 @@ export default function GainersLosersPage() {
                     {currentData.length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#64748B" }}>
-                          No results match your filters. Try adjusting the filter settings.
+                          No movers match these filters yet. Adjust filters to broaden results.
                         </td>
                       </tr>
                     ) : currentData.map((item, index) => (

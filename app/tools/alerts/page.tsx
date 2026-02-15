@@ -45,7 +45,7 @@ function AlertsContent() {
           🔔 Price Alerts
         </h1>
         <p className="text-slate-400">
-          Get notified when prices hit your targets. Set alerts for crypto, stocks, and forex.
+          Find key price moves faster with alerts for crypto, stocks, and forex.
         </p>
       </div>
 
@@ -192,7 +192,7 @@ export default function AlertsPage() {
       <ToolsPageHeader 
         badge="TOOLS"
         title="Price Alerts"
-        subtitle="Get notified when prices hit your targets"
+        subtitle="Find key price moves fast with target alerts"
         icon="🔔"
       />
       <Suspense fallback={

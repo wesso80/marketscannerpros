@@ -418,7 +418,7 @@ export default function NewsSentimentPage() {
         <ToolsPageHeader
           badge="INTELLIGENCE"
           title="Market Intelligence"
-          subtitle="News sentiment, earnings calendar, and insider activity."
+          subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
           icon="📰"
           backHref="/dashboard"
         />
@@ -434,7 +434,7 @@ export default function NewsSentimentPage() {
       <ToolsPageHeader
         badge="INTELLIGENCE"
         title="Market Intelligence"
-        subtitle="News sentiment, earnings calendar, and insider activity."
+        subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
         icon="📰"
         backHref="/dashboard"
       />
@@ -534,7 +534,7 @@ export default function NewsSentimentPage() {
                 disabled={loading}
                 style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, height: "fit-content" }}
               >
-                {loading ? "Loading..." : "Search"}
+                {loading ? "Finding News Setup..." : "Find News Setup"}
               </button>
             </div>
           </div>
@@ -624,7 +624,7 @@ export default function NewsSentimentPage() {
           }}>
             <span style={{ fontSize: "2rem", marginBottom: "0.5rem", display: "block" }}>🤖📰</span>
             <p style={{ color: "#94A3B8", margin: 0 }}>
-              Search for a ticker to see AI-powered news analysis
+              Enter a ticker to unlock AI-powered news analysis
             </p>
           </div>
         )}

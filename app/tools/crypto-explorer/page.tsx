@@ -477,7 +477,7 @@ function CryptoDetailPageContent() {
             🔍 Crypto Asset Explorer
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Deep dive into any cryptocurrency with comprehensive market data, on-chain metrics, exchange tickers, and derivatives information.
+            Find complete crypto context fast with market data, on-chain metrics, exchange tickers, and derivatives signals.
           </p>
         </div>
         
@@ -538,8 +538,9 @@ function CryptoDetailPageContent() {
         
         {/* Loading State */}
         {loading && (
-          <div className="flex justify-center items-center py-20">
+          <div className="flex flex-col justify-center items-center py-20 gap-4">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-400">Finding crypto setup data...</p>
           </div>
         )}
         
@@ -1075,8 +1076,8 @@ function CryptoDetailPageContent() {
         {!selectedCoin && !loading && (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🔎</div>
-            <h3 className="text-xl font-semibold text-gray-300">Select a cryptocurrency to explore</h3>
-            <p className="text-gray-500 mt-2">Search above or click a popular coin to get started</p>
+            <h3 className="text-xl font-semibold text-gray-300">Ready to find a crypto setup?</h3>
+            <p className="text-gray-500 mt-2">Search above or choose a popular coin to unlock full context</p>
           </div>
         )}
         

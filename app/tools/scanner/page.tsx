@@ -7,6 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 
@@ -95,6 +96,12 @@ const QUICK_PICKS: Record<AssetType, string[]> = {
   forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"],
 };
 
+const TRUSTED_CRYPTO_LIST = [
+  "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "DOT", "LINK",
+  "TRX", "LTC", "BCH", "ATOM", "MATIC", "NEAR", "HBAR", "ARB", "OP", "INJ",
+  "SUI", "TIA", "SEI", "AAVE", "UNI", "MKR", "CRV", "JUP", "ONDO", "WLD"
+];
+
 // Enhanced Chart Component with Real Data + Indicators
 interface ChartData {
   candles: { t: string; o: number; h: number; l: number; c: number }[];
@@ -157,7 +164,7 @@ function TradingViewChart({
           macdLine = chartData.macd.map(m => Number.isFinite(m.macd) ? m.macd : 0);
           signalLine = chartData.macd.map(m => Number.isFinite(m.signal) ? m.signal : 0);
         } else {
-          // Placeholder data
+          // No live bars available yet -> deterministic flat placeholder (avoid synthetic/random market action)
           const basePrice = price || 45000;
           const now = new Date();
           labels = Array.from({ length: 20 }, (_, i) => {
@@ -165,12 +172,12 @@ function TradingViewChart({
             d.setDate(d.getDate() - (19 - i));
             return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           });
-          closes = Array.from({ length: 20 }, (_, i) => basePrice * (1 + (Math.random() - 0.5) * 0.02));
-          ema200Data = closes.map(c => c * 0.98);
-          rsiData = Array.from({ length: 20 }, () => 40 + Math.random() * 30);
-          macdHist = Array.from({ length: 20 }, () => (Math.random() - 0.5) * 100);
-          macdLine = Array.from({ length: 20 }, (_, i) => (i - 10) * 5);
-          signalLine = macdLine.map(v => v * 0.9);
+          closes = Array.from({ length: 20 }, () => basePrice);
+          ema200Data = Array.from({ length: 20 }, () => basePrice);
+          rsiData = Array.from({ length: 20 }, () => 50);
+          macdHist = Array.from({ length: 20 }, () => 0);
+          macdLine = Array.from({ length: 20 }, () => 0);
+          signalLine = Array.from({ length: 20 }, () => 0);
         }
 
         // === PRICE CHART with EMA200 ===
@@ -438,7 +445,7 @@ function TradingViewChart({
         color: chartData ? '#10B981' : '#64748B',
         marginTop: '4px'
       }}>
-        {chartData ? '● Live Data' : '○ Placeholder Data'}
+        {chartData ? '● Live Data' : '○ No Live Bars'}
       </div>
     </div>
   );
@@ -578,7 +585,7 @@ function ScannerContent() {
   // Get filtered suggestions based on input
   const getSuggestions = () => {
     if (assetType === "crypto") {
-      return CRYPTO_LIST.filter(c => c.startsWith(ticker.toUpperCase())).slice(0, 8);
+      return TRUSTED_CRYPTO_LIST.filter(c => c.startsWith(ticker.toUpperCase())).slice(0, 8);
     }
     return [];
   };
@@ -647,6 +654,22 @@ function ScannerContent() {
     }
   };
 
+  const quickRecoverySymbols = QUICK_PICKS[assetType].slice(0, 4);
+
+  const getFreshnessMeta = (timestamp?: string | null) => {
+    if (!timestamp) {
+      return { label: 'Unknown', status: 'neutral' as const };
+    }
+    const ageMs = Date.now() - new Date(timestamp).getTime();
+    if (!Number.isFinite(ageMs) || ageMs < 0) {
+      return { label: 'Unknown', status: 'neutral' as const };
+    }
+    const ageMinutes = ageMs / 60000;
+    if (ageMinutes <= 2) return { label: 'Fresh', status: 'good' as const };
+    if (ageMinutes <= 15) return { label: `${Math.round(ageMinutes)}m old`, status: 'warn' as const };
+    return { label: 'Stale', status: 'bad' as const };
+  };
+
   const explainScan = async () => {
     if (!result) return;
     setAiLoading(true);
@@ -711,7 +734,7 @@ function ScannerContent() {
       <ToolsPageHeader
         badge="MARKET SCANNER"
         title="Market Scanner Pro"
-        subtitle="Scan any crypto, stock, or forex pair for confluence signals."
+        subtitle="Find high-probability setups in seconds with multi-factor confluence."
         icon="🧭"
         backHref="/dashboard"
       />
@@ -781,7 +804,7 @@ function ScannerContent() {
                 Discover Top 10 Opportunities
               </h3>
               <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
-                Scan 50+ assets using 7 technical indicators • Powered by CoinGecko & Alpha Vantage
+                Start here for fastest wins: scan broad market leaders, then deep dive your best chart
               </p>
             </div>
           </div>
@@ -799,8 +822,8 @@ function ScannerContent() {
           }}>
             <span style={{ fontSize: "20px" }}>💡</span>
             <p style={{ color: "#10b981", fontSize: "13px", margin: 0 }}>
-              <strong>Step 1:</strong> Click a scan button to find today's top 10 opportunities → 
-              <strong>Step 2:</strong> Click any result to deep dive with the full scanner below
+              <strong>Step 1:</strong> Run a Top 10 scan to shortlist high-confluence charts → 
+              <strong>Step 2:</strong> Click a winner to load full breakdown below
             </p>
           </div>
 
@@ -881,12 +904,12 @@ function ScannerContent() {
               {bulkScanLoading && bulkScanType === 'crypto' ? (
                 <>
                   <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  Scanning Crypto...
+                  Finding Crypto Setups...
                 </>
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>🪙</span>
-                  Scan Top 10 Crypto
+                  Find Top 10 Crypto Setups
                 </>
               )}
             </button>
@@ -918,12 +941,12 @@ function ScannerContent() {
               {bulkScanLoading && bulkScanType === 'equity' ? (
                 <>
                   <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  Scanning Stocks...
+                  Finding Stock Setups...
                 </>
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>📈</span>
-                  Scan Top 10 Stocks
+                  Find Top 10 Stock Setups
                 </>
               )}
             </button>
@@ -1306,7 +1329,7 @@ function ScannerContent() {
                       setTicker(QUICK_PICKS[type][0]);
                     }}
                     disabled={isDisabled}
-                    title={isDisabled ? "Coming Soon - Forex data requires commercial licensing" : undefined}
+                    title={isDisabled ? "Stocks/Forex are in licensed beta access" : undefined}
                     style={{
                       padding: "0.5rem 1rem",
                       borderRadius: "8px",
@@ -1327,7 +1350,7 @@ function ScannerContent() {
             </div>
             {!isAdmin && (
               <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "#64748B" }}>
-                📊 Crypto data powered by CoinGecko. Stocks by Alpha Vantage.
+                📊 Crypto is fully available. Stocks/Forex are currently limited-beta due to licensing.
               </p>
             )}
           </div>
@@ -1335,7 +1358,7 @@ function ScannerContent() {
           {/* Ticker Input */}
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{ display: "block", color: "#10B981", fontWeight: "600", marginBottom: "0.75rem" }}>
-              Ticker Symbol {assetType === "crypto" && CRYPTO_LIST.includes(ticker.toUpperCase()) && <span style={{ fontSize: "0.8rem", color: "#059669" }}>✓</span>}
+              Ticker Symbol {assetType === "crypto" && TRUSTED_CRYPTO_LIST.includes(ticker.toUpperCase()) && <span style={{ fontSize: "0.8rem", color: "#059669" }}>✓</span>}
             </label>
             <div style={{ position: "relative", marginBottom: "0.5rem" }}>
               <input
@@ -1474,7 +1497,7 @@ function ScannerContent() {
                 marginTop: "1.75rem",
               }}
             >
-              {loading ? "⏳ Scanning..." : "🔎 Run Scanner"}
+              {loading ? "⏳ Finding Best Setup..." : "🔎 Find Best Setup"}
             </button>
           </div>
         </div>
@@ -1523,6 +1546,51 @@ function ScannerContent() {
                 <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "#94A3B8" }}>
                   Free accounts get full scanner access!
                 </p>
+              </div>
+            )}
+            {!error.toLowerCase().includes("log in") && (
+              <div style={{ marginTop: "0.9rem" }}>
+                <div style={{ color: "#94A3B8", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
+                  Quick recover:
+                </div>
+                <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+                  <button
+                    onClick={runScan}
+                    style={{
+                      padding: "0.4rem 0.7rem",
+                      borderRadius: "999px",
+                      border: "1px solid rgba(16,185,129,0.35)",
+                      background: "rgba(16,185,129,0.12)",
+                      color: "#34D399",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Retry scan
+                  </button>
+                  {quickRecoverySymbols.map((sym) => (
+                    <button
+                      key={sym}
+                      onClick={() => {
+                        setTicker(sym);
+                        setError(null);
+                      }}
+                      style={{
+                        padding: "0.4rem 0.7rem",
+                        borderRadius: "999px",
+                        border: "1px solid rgba(148,163,184,0.35)",
+                        background: "rgba(30,41,59,0.7)",
+                        color: "#CBD5E1",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Try {sym}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1710,6 +1778,83 @@ function ScannerContent() {
                     </div>
                   </div>
                 </div>
+              );
+            })()}
+
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const trendAligned = result.price != null && result.ema200 != null
+                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : true)
+                : null;
+              const momentumAligned = result.rsi != null && result.macd_hist != null
+                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : true)
+                : null;
+              const strengthAligned = result.adx != null ? result.adx >= 20 : null;
+
+              const reasons: string[] = [];
+              if (trendAligned === true) reasons.push('Trend aligned with EMA200 structure');
+              if (momentumAligned === true) reasons.push('Momentum alignment confirmed (RSI + MACD)');
+              if (strengthAligned === true) reasons.push('Trend strength supports continuation (ADX ≥ 20)');
+              if (result.signals && result.signals.bullish + result.signals.bearish + result.signals.neutral > 0) {
+                reasons.push(`Signal mix: ${result.signals.bullish} bull / ${result.signals.bearish} bear`);
+              }
+              if (reasons.length === 0) reasons.push('Core indicators available for directional read');
+
+              const blockers: string[] = [];
+              if (trendAligned === false) blockers.push('Price and primary trend structure are misaligned');
+              if (momentumAligned === false) blockers.push('Momentum does not confirm current directional bias');
+              if (strengthAligned === false) blockers.push('Low trend strength (ADX < 20) increases chop risk');
+              if (direction === 'neutral') blockers.push('Direction is mixed; wait for cleaner alignment');
+
+              const freshnessSource = lastUpdated || result.fetchedAt || null;
+              const freshnessMeta = getFreshnessMeta(freshnessSource);
+              const sourceLabel = assetType === 'crypto' ? 'AV + derivatives' : assetType === 'forex' ? 'Alpha Vantage FX' : 'Alpha Vantage';
+
+              const noTradeReasons: string[] = [];
+              if (direction === 'neutral') noTradeReasons.push('Directional bias is mixed');
+              if (strengthAligned === false) noTradeReasons.push('Trend strength is weak (ADX below threshold)');
+              if (trendAligned === false && momentumAligned === false) noTradeReasons.push('Trend and momentum are both misaligned');
+              if (freshnessMeta.status === 'bad') noTradeReasons.push('Data freshness is stale; wait for updated bars');
+              const showNoTrade = noTradeReasons.length > 0;
+
+              return (
+                <>
+                  <SetupConfidenceCard
+                    confidence={Math.max(1, Math.min(99, Math.round(result.score ?? 50)))}
+                    reasons={reasons}
+                    blockers={blockers}
+                    title="Setup Confidence"
+                  />
+                  <DataHealthBadges
+                    items={[
+                      { label: 'Freshness', value: freshnessMeta.label, status: freshnessMeta.status },
+                      { label: 'Feed', value: sourceLabel, status: 'good' },
+                      { label: 'Candle', value: result.lastCandleTime || 'Unavailable', status: result.lastCandleTime ? 'good' : 'warn' },
+                    ]}
+                    updatedAtText={lastUpdated ? new Date(lastUpdated).toLocaleString('en-US', { hour12: false }) : undefined}
+                  />
+                  {showNoTrade && (
+                    <div style={{
+                      background: 'rgba(245,158,11,0.12)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                      borderRadius: '12px',
+                      padding: '0.9rem 1rem',
+                      marginBottom: '1rem',
+                    }}>
+                      <div style={{ color: '#FBBF24', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.45rem' }}>
+                        🛑 No-Trade Environment Detected (Educational)
+                      </div>
+                      <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.45rem' }}>
+                        {noTradeReasons.map((reason, idx) => (
+                          <div key={idx} style={{ color: '#FDE68A', fontSize: '0.82rem' }}>• {reason}</div>
+                        ))}
+                      </div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.75rem' }}>
+                        Educational signal state only — not financial advice, and not an execution instruction.
+                      </div>
+                    </div>
+                  )}
+                </>
               );
             })()}
 
@@ -2057,7 +2202,7 @@ function ScannerContent() {
                   fontSize: "0.95rem",
                 }}
               >
-                {aiLoading ? "Analyzing..." : result.direction === 'bullish' ? "Why is this Bullish?" : result.direction === 'bearish' ? "Why is this Bearish?" : "Explain this Verdict"}
+                {aiLoading ? "Finding Trade Rationale..." : result.direction === 'bullish' ? "Why is this Bullish?" : result.direction === 'bearish' ? "Why is this Bearish?" : "Explain this Verdict"}
               </button>
               {aiError && <span style={{ color: "#fca5a5", fontSize: "0.9rem" }}>{aiError}</span>}
             </div>
@@ -2631,10 +2776,10 @@ function ScannerContent() {
             border: "1px solid rgba(16, 185, 129, 0.2)",
           }}>
             <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>
-              Ready to scan
+              Ready to find your next setup
             </p>
             <p style={{ fontSize: "0.875rem" }}>
-              Select an asset class, choose a ticker, and click "Run Scanner"
+              Pick an asset, choose a symbol, then click "Find Best Setup"
             </p>
           </div>
         )}

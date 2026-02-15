@@ -346,7 +346,7 @@ interface ExpirationOption {
 }
 
 export default function OptionsConfluenceScanner() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -459,8 +459,9 @@ export default function OptionsConfluenceScanner() {
       } : { triggered: false, confidence: 0 },
     };
     
-    // Calculate probability with the R:R ratio from trade levels if available
-    const rr = result.tradeLevels?.riskRewardRatio || 2.0;
+    // Only calculate probability when trade levels exist (avoid synthetic edge from fallback R:R)
+    if (!result.tradeLevels) return null;
+    const rr = result.tradeLevels.riskRewardRatio;
     return calculateOptionsProbability(signals, result.direction, rr);
   }, [result]);
 
@@ -495,129 +496,6 @@ export default function OptionsConfluenceScanner() {
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
           <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
         </main>
-      </div>
-    );
-  }
-
-  // Coming Soon gate for non-admins (options data requires commercial license)
-  if (!isAdmin) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
-        padding: '2rem',
-        color: 'white'
-      }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <span style={{ 
-              background: "linear-gradient(135deg, #10B981, #3B82F6)", 
-              padding: "4px 12px", 
-              borderRadius: "999px", 
-              fontSize: "11px", 
-              fontWeight: "600",
-              color: "#fff",
-              display: 'inline-block',
-              marginBottom: '1rem'
-            }}>PRO TRADER</span>
-            <h1 style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #10B981, #3B82F6)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              marginBottom: '0.5rem'
-            }}>
-              🎯 Options Confluence Scanner
-            </h1>
-            <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto' }}>
-              Get intelligent strike & expiration recommendations based on Time Confluence analysis.
-            </p>
-          </div>
-
-          <div style={{ 
-            background: 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(30,41,59,0.5))',
-            borderRadius: '24px',
-            border: '1px solid rgba(16,185,129,0.3)',
-            padding: '4rem 2rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '5rem', marginBottom: '1.5rem' }}>🚀</div>
-            <h2 style={{ 
-              fontSize: '2rem', 
-              fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #10B981, #3B82F6, #10B981)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              marginBottom: '1rem'
-            }}>
-              Coming Soon
-            </h2>
-            <p style={{ 
-              color: '#94A3B8', 
-              fontSize: '1.1rem',
-              maxWidth: '500px',
-              margin: '0 auto 2rem',
-              lineHeight: '1.6'
-            }}>
-              We&apos;re upgrading our options data infrastructure to bring you even better real-time analysis with Greeks, IV tracking, and unusual activity detection.
-            </p>
-            <div style={{
-              display: 'flex',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              marginBottom: '2rem'
-            }}>
-              {["Strike Recommendations", "Expiration Analysis", "Greeks Integration", "Max Pain Levels", "Open Interest Flow", "IV Rank & Percentile", "Unusual Activity Alerts", "Time Confluence Signals"].map((feature) => (
-                <span key={feature} style={{
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(16,185,129,0.15)',
-                  border: '1px solid rgba(16,185,129,0.3)',
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
-                  color: '#10B981'
-                }}>
-                  {feature}
-                </span>
-              ))}
-            </div>
-            <a href="/tools" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              background: 'linear-gradient(135deg, #10B981, #059669)',
-              color: '#fff',
-              borderRadius: '12px',
-              textDecoration: 'none',
-              fontWeight: '600',
-              fontSize: '0.95rem'
-            }}>
-              ← Back to Tools
-            </a>
-          </div>
-
-          <div style={{
-            marginTop: '2rem',
-            padding: '1.5rem',
-            background: 'rgba(59,130,246,0.1)',
-            border: '1px solid rgba(59,130,246,0.3)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '1rem'
-          }}>
-            <span style={{ fontSize: '1.5rem' }}>💡</span>
-            <div>
-              <h4 style={{ color: '#3B82F6', marginBottom: '0.5rem', fontWeight: '600' }}>In the meantime...</h4>
-              <p style={{ color: '#94A3B8', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                You can still use the <strong style={{ color: '#F59E0B' }}>Golden Egg Deep Analysis</strong> for comprehensive technical analysis, 
-                AI insights, news sentiment, and earnings data. Options flow data will be added there too once available.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     );
   }
@@ -732,6 +610,20 @@ export default function OptionsConfluenceScanner() {
       case 'moderate': return '#F59E0B';
       default: return '#EF4444';
     }
+  };
+
+  const patternBiasColor = (bias: 'bullish' | 'bearish' | 'neutral') => {
+    switch (bias) {
+      case 'bullish': return '#10B981';
+      case 'bearish': return '#EF4444';
+      default: return '#F59E0B';
+    }
+  };
+
+  const patternConfidenceLabel = (confidence: number) => {
+    if (confidence >= 75) return 'HIGH';
+    if (confidence >= 55) return 'MEDIUM';
+    return 'LOW';
   };
 
   return (
@@ -859,7 +751,7 @@ export default function OptionsConfluenceScanner() {
               transition: 'transform 0.2s, box-shadow 0.2s',
             }}
           >
-            {loading ? '🔄 Analyzing...' : '🎯 Scan for Options'}
+            {loading ? '🔄 Finding Best Options Setup...' : '🎯 Find Best Options Setup'}
           </button>
 
           {result && (
@@ -1404,6 +1296,109 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </details>
             </div>
+
+            {/* 📈 PATTERN CONFIRMATION - Promoted for trader visual scan order */}
+            {(() => {
+              const bestPattern = result.locationContext?.patterns
+                ?.slice()
+                .sort((a, b) => b.confidence - a.confidence)?.[0];
+              const hasConfirmedPattern = !!bestPattern && bestPattern.confidence >= 55;
+              const hasPatternData = (result.locationContext?.patterns?.length ?? 0) > 0;
+              const confirmationColor = hasConfirmedPattern
+                ? patternBiasColor(bestPattern.bias)
+                : '#F59E0B';
+              const biasAligned = !!bestPattern && (
+                bestPattern.bias === 'neutral' ||
+                bestPattern.bias === result.direction
+              );
+              const volumeAligned = !!bestPattern && /volume|vol\.?\s*/i.test(bestPattern.reason);
+
+              return (
+                <div style={{
+                  background: hasConfirmedPattern
+                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.20)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.20)' : 'rgba(245,158,11,0.18)'}, rgba(15,23,42,0.95))`
+                    : 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(15,23,42,0.95))',
+                  border: `2px solid ${confirmationColor}`,
+                  borderRadius: '16px',
+                  padding: '1rem 1.1rem',
+                  boxShadow: `0 0 24px ${confirmationColor}35`,
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    marginBottom: '0.75rem',
+                  }}>
+                    <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.92rem', letterSpacing: '0.4px' }}>
+                      📈 PATTERN CONFIRMATION
+                    </div>
+                    <span style={{
+                      background: hasConfirmedPattern ? `${confirmationColor}25` : 'rgba(245,158,11,0.25)',
+                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}80`,
+                      color: hasConfirmedPattern ? confirmationColor : '#FCD34D',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                    }}>
+                      {hasConfirmedPattern ? '✔ Confirmed Pattern' : '⚠ No Clean Pattern'}
+                    </span>
+                  </div>
+
+                  {hasConfirmedPattern && bestPattern ? (
+                    <>
+                      <div style={{
+                        color: confirmationColor,
+                        fontSize: '1.05rem',
+                        fontWeight: '800',
+                        marginBottom: '0.45rem',
+                      }}>
+                        {bestPattern.name}
+                      </div>
+                      <div className="decision-grid-mobile" style={{ gap: '0.6rem' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Confidence</div>
+                          <div style={{ color: '#E2E8F0', fontWeight: '700', fontSize: '0.85rem' }}>
+                            {patternConfidenceLabel(bestPattern.confidence)} ({bestPattern.confidence.toFixed(0)}%)
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Bias Align</div>
+                          <div style={{ color: biasAligned ? '#10B981' : '#F59E0B', fontWeight: '700', fontSize: '0.85rem' }}>
+                            {biasAligned ? 'YES' : 'MIXED'}
+                          </div>
+                        </div>
+                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Volume Align</div>
+                          <div style={{ color: volumeAligned ? '#10B981' : '#94A3B8', fontWeight: '700', fontSize: '0.85rem' }}>
+                            {volumeAligned ? 'YES' : 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ color: '#CBD5E1', fontSize: '0.82rem', marginTop: '0.55rem' }}>
+                        {bestPattern.reason}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{
+                      background: 'rgba(0,0,0,0.22)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                      borderRadius: '10px',
+                      padding: '0.7rem 0.75rem',
+                      color: '#FCD34D',
+                      fontSize: '0.84rem',
+                    }}>
+                      {hasPatternData
+                        ? 'Pattern signals are present but confidence is below confirmation threshold. Wait for cleaner structure before sizing up.'
+                        : 'No clear structure pattern detected yet. Keep focus on direction, timing, and risk until pattern confirmation appears.'}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🏦 INSTITUTIONAL-GRADE PRO MODE DASHBOARD - PROBABILITY ENGINE */}

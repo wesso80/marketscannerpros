@@ -645,7 +645,7 @@ export default function IntradayChartsPage() {
                 disabled={loading}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 rounded-lg font-medium transition"
               >
-                {loading ? '...' : 'Load'}
+                {loading ? 'Finding Intraday Setup...' : 'Find Intraday Setup'}
               </button>
             </form>
           </div>
@@ -754,7 +754,7 @@ export default function IntradayChartsPage() {
         {loading && !data && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-400">Loading intraday data...</p>
+            <p className="text-gray-400">Finding intraday setup data...</p>
           </div>
         )}
 

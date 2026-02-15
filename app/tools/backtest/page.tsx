@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
-import DataComingSoon from '@/components/DataComingSoon';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 
@@ -51,7 +50,7 @@ interface EquityPoint {
 
 function BacktestContent() {
   const searchParams = useSearchParams();
-  const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
   
   // Query params from Options Scanner
   const urlSymbol = searchParams.get('symbol');
@@ -70,6 +69,7 @@ function BacktestContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiText, setAiText] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [backtestError, setBacktestError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
 
   // AI Page Context - share backtest results with copilot
@@ -139,13 +139,57 @@ function BacktestContent() {
     );
   }
 
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="🧪 Strategy Backtester" description="Test and iterate trading ideas with historical data" />;
-  }
+  const timeframeMinimumDays: Record<'1min' | '5min' | '15min' | '30min' | '60min' | 'daily', number> = {
+    '1min': 3,
+    '5min': 5,
+    '15min': 10,
+    '30min': 14,
+    '60min': 21,
+    'daily': 120,
+  };
+
+  const getRangeDays = (from: string, to: string) => {
+    const start = new Date(`${from}T00:00:00Z`).getTime();
+    const end = new Date(`${to}T00:00:00Z`).getTime();
+    return Math.floor((end - start) / 86400000) + 1;
+  };
+
+  const applySuggestedDateRange = () => {
+    const minDays = timeframeMinimumDays[timeframe];
+    const end = new Date(`${endDate}T00:00:00Z`);
+    if (Number.isNaN(end.getTime())) return;
+    end.setUTCDate(end.getUTCDate() - (minDays - 1));
+    const suggestedStart = end.toISOString().slice(0, 10);
+    setStartDate(suggestedStart);
+    setBacktestError(null);
+  };
 
   const runBacktest = async () => {
+    const rangeDays = getRangeDays(startDate, endDate);
+    const minDays = timeframeMinimumDays[timeframe];
+
+    if (Number.isNaN(rangeDays)) {
+      setBacktestError('Please select valid start and end dates.');
+      return;
+    }
+
+    if (rangeDays <= 0) {
+      setBacktestError('Start date must be before end date.');
+      return;
+    }
+
+    if (!Number.isFinite(parseFloat(initialCapital)) || parseFloat(initialCapital) <= 0) {
+      setBacktestError('Initial capital must be greater than 0.');
+      return;
+    }
+
+    if (rangeDays < minDays) {
+      setBacktestError(`Selected range is too short for ${timeframe}. Use at least ${minDays} days for reliable results.`);
+      return;
+    }
+
     setIsLoading(true);
+    setBacktestError(null);
     setResults(null);
     setAiText(null);
     setAiError(null);
@@ -179,7 +223,7 @@ function BacktestContent() {
     } catch (error) {
       console.error('Backtest error:', error);
       const errMsg = error instanceof Error ? error.message : 'Failed to run backtest';
-      alert(`Backtest error: ${errMsg}`);
+      setBacktestError(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -231,7 +275,7 @@ function BacktestContent() {
       <ToolsPageHeader
         badge="ELITE STRATEGY LAB"
         title="Strategy Backtester"
-        subtitle="Pro Trader exclusive: Test 25+ strategies across multiple timeframes with real market data."
+        subtitle="Validate strategy edge before risking capital with real historical market data."
         icon="🧪"
         backHref="/dashboard"
       />
@@ -595,8 +639,44 @@ function BacktestContent() {
               opacity: isLoading ? 0.6 : 1
             }}
           >
-            {isLoading ? '⏳ Running Backtest...' : '🚀 Run Backtest'}
+            {isLoading ? '⏳ Validating Strategy...' : '🚀 Validate Strategy'}
           </button>
+
+          {backtestError && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px 14px',
+              borderRadius: '10px',
+              border: '1px solid rgba(239,68,68,0.35)',
+              background: 'rgba(239,68,68,0.08)',
+              color: '#fca5a5',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+              flexWrap: 'wrap',
+            }}>
+              <span>⚠️ {backtestError}</span>
+              {(backtestError.toLowerCase().includes('insufficient data') || backtestError.toLowerCase().includes('too short')) && (
+                <button
+                  onClick={applySuggestedDateRange}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16,185,129,0.45)',
+                    background: 'rgba(16,185,129,0.12)',
+                    color: '#34d399',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Auto-fix date range
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Results */}
@@ -617,7 +697,7 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                {aiLoading ? 'Asking AI...' : 'AI summary'}
+                {aiLoading ? 'Finding AI Summary...' : 'AI summary'}
               </button>
               {aiError && <span style={{ color: '#fca5a5', fontSize: '13px' }}>{aiError}</span>}
             </div>
@@ -1181,10 +1261,10 @@ function BacktestContent() {
           }}>
             <div style={{ fontSize: '64px', marginBottom: '20px' }}>📈</div>
             <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#f9fafb', marginBottom: '12px' }}>
-              Ready to Backtest
+              Ready to validate your edge
             </h2>
             <p style={{ color: '#9ca3af', fontSize: '16px', maxWidth: '500px', margin: '0 auto' }}>
-              Configure your strategy parameters above and click "Run Backtest" to see how it would have performed.
+              Set symbol, timeframe, and date range, then click "Validate Strategy" for performance, drawdown, and trade-by-trade results.
             </p>
           </div>
         )}

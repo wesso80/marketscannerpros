@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
-import DataComingSoon from "@/components/DataComingSoon";
+import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 
 // Hierarchical Scan Result type
 interface HierarchicalResult {
@@ -104,7 +104,7 @@ const HOLDING_PERIOD_OPTIONS = [
 ];
 
 export default function AIConfluenceScanner() {
-  const { tier, isAdmin } = useUserTier();
+  const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [hierarchicalResult, setHierarchicalResult] = useState<HierarchicalResult | null>(null);
@@ -141,11 +141,6 @@ export default function AIConfluenceScanner() {
         </main>
       </div>
     );
-  }
-
-  // Data licensing gate - only admins can access for now
-  if (!isAdmin) {
-    return <DataComingSoon toolName="🔮 AI Confluence Scanner" description="Full History Learning + Decompression Timing Analysis" />;
   }
 
   const handleScan = async (forceRefresh = false) => {
@@ -434,10 +429,10 @@ export default function AIConfluenceScanner() {
             {loading ? (
               <>
                 <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                Analyzing decompressions...
+                Finding Confluence Setup...
               </>
             ) : (
-              <>🎯 Scan</>
+              <>🎯 Find Confluence Setup</>
             )}
           </button>
 
@@ -737,6 +732,96 @@ export default function AIConfluenceScanner() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {hierarchicalResult && (
           <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
+            {(() => {
+              const clusteredCount = hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount;
+              const baseConfidence = hierarchicalResult.prediction.confidence || 50;
+              const strengthBoost = hierarchicalResult.signalStrength === 'strong'
+                ? 8
+                : hierarchicalResult.signalStrength === 'moderate'
+                ? 3
+                : hierarchicalResult.signalStrength === 'weak'
+                ? -8
+                : -15;
+              const clusterBoost = Math.min(10, Math.max(0, clusteredCount * 2));
+              const setupConfidence = Math.max(1, Math.min(99, Math.round(baseConfidence + strengthBoost + clusterBoost)));
+
+              const reasons: string[] = [
+                `${clusteredCount} timeframe${clusteredCount === 1 ? '' : 's'} are closing in confluence`,
+                `${hierarchicalResult.prediction.direction.toUpperCase()} bias with ${hierarchicalResult.prediction.confidence}% prediction confidence`,
+              ];
+              if (hierarchicalResult.scoreBreakdown?.hasHigherTF) {
+                reasons.push('Higher timeframe participation supports setup context');
+              }
+              if (hierarchicalResult.clusters.length > 0) {
+                reasons.push(`${hierarchicalResult.clusters.length} price cluster${hierarchicalResult.clusters.length === 1 ? '' : 's'} create target magnet context`);
+              }
+
+              const blockers: string[] = [];
+              if (hierarchicalResult.signalStrength === 'weak' || hierarchicalResult.signalStrength === 'no_signal') {
+                blockers.push('Signal strength is weak; wait for stronger decompression alignment');
+              }
+              if (clusteredCount <= 1) {
+                blockers.push('Low confluence cluster count increases false-break risk');
+              }
+              if (hierarchicalResult.prediction.direction === 'neutral') {
+                blockers.push('Directional edge is neutral; no clear setup bias');
+              }
+
+              const noTradeReasons: string[] = [];
+              if (hierarchicalResult.signalStrength === 'weak' || hierarchicalResult.signalStrength === 'no_signal') {
+                noTradeReasons.push('Confluence strength is not high enough');
+              }
+              if (clusteredCount <= 1) {
+                noTradeReasons.push('Too few clustered timeframe closes');
+              }
+              if (hierarchicalResult.prediction.direction === 'neutral') {
+                noTradeReasons.push('Prediction direction is neutral');
+              }
+              if (!hierarchicalResult.isLivePrice && isCached) {
+                noTradeReasons.push('Price context is delayed and cached');
+              }
+              const showNoTrade = noTradeReasons.length > 0;
+
+              return (
+                <>
+                  <SetupConfidenceCard
+                    confidence={setupConfidence}
+                    reasons={reasons}
+                    blockers={blockers}
+                    title="Confluence Confidence"
+                  />
+                  <DataHealthBadges
+                    items={[
+                      { label: 'Price Feed', value: hierarchicalResult.isLivePrice ? 'Live' : 'Delayed', status: hierarchicalResult.isLivePrice ? 'good' : 'warn' },
+                      { label: 'Cache', value: isCached ? 'Cached' : 'Fresh', status: isCached ? 'warn' : 'good' },
+                      { label: 'Coverage', value: `${hierarchicalResult.includedTFs.length} TFs`, status: hierarchicalResult.includedTFs.length >= 4 ? 'good' : 'warn' },
+                    ]}
+                    updatedAtText={lastUpdated ? lastUpdated.toLocaleString('en-US', { hour12: false }) : undefined}
+                  />
+                  {showNoTrade && (
+                    <div style={{
+                      background: 'rgba(245,158,11,0.12)',
+                      border: '1px solid rgba(245,158,11,0.35)',
+                      borderRadius: '12px',
+                      padding: '0.9rem 1rem',
+                    }}>
+                      <div style={{ color: '#FBBF24', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.45rem' }}>
+                        🛑 No-Trade Environment Detected (Educational)
+                      </div>
+                      <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.45rem' }}>
+                        {noTradeReasons.map((reason, idx) => (
+                          <div key={idx} style={{ color: '#FDE68A', fontSize: '0.82rem' }}>• {reason}</div>
+                        ))}
+                      </div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.75rem' }}>
+                        Educational signal state only — not financial advice, and not an execution instruction.
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
             {/* Signal Card */}
             <div style={{
               background: `linear-gradient(145deg, ${

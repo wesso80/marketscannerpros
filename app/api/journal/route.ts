@@ -31,6 +31,46 @@ interface JournalEntry {
   exitDate?: string;
 }
 
+async function ensureJournalSchema() {
+  await q(`
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id SERIAL PRIMARY KEY,
+      workspace_id VARCHAR(100) NOT NULL,
+      trade_date DATE NOT NULL,
+      symbol VARCHAR(20) NOT NULL,
+      side VARCHAR(10) NOT NULL CHECK (side IN ('LONG', 'SHORT')),
+      trade_type VARCHAR(20) NOT NULL CHECK (trade_type IN ('Spot', 'Options', 'Futures', 'Margin')),
+      option_type VARCHAR(10),
+      strike_price DECIMAL(18, 8),
+      expiration_date DATE,
+      quantity DECIMAL(18, 8) NOT NULL,
+      entry_price DECIMAL(18, 8) NOT NULL,
+      exit_price DECIMAL(18, 8),
+      exit_date DATE,
+      pl DECIMAL(18, 8),
+      pl_percent DECIMAL(10, 4),
+      strategy VARCHAR(100),
+      setup VARCHAR(100),
+      notes TEXT,
+      emotions TEXT,
+      outcome VARCHAR(20) CHECK (outcome IN ('win', 'loss', 'breakeven', 'open')),
+      tags TEXT[],
+      is_open BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await q(`CREATE INDEX IF NOT EXISTS idx_journal_entries_workspace ON journal_entries (workspace_id)`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries (workspace_id, trade_date DESC)`);
+
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS stop_loss DECIMAL(20,8)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS target DECIMAL(20,8)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_amount DECIMAL(20,8)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS r_multiple DECIMAL(10,4)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS planned_rr DECIMAL(10,4)`);
+}
+
 // GET - Load journal entries
 export async function GET(req: NextRequest) {
   try {
@@ -41,11 +81,10 @@ export async function GET(req: NextRequest) {
 
     const workspaceId = session.workspaceId;
 
+    await ensureJournalSchema();
+
     const entriesRaw = await q(
-      `SELECT id, trade_date, symbol, side, trade_type, option_type, strike_price, expiration_date,
-              quantity, entry_price, exit_price, exit_date, pl, pl_percent, strategy, setup, 
-              notes, emotions, outcome, tags, is_open,
-              stop_loss, target, risk_amount, r_multiple, planned_rr
+      `SELECT *
        FROM journal_entries 
        WHERE workspace_id = $1 
        ORDER BY trade_date DESC, created_at DESC`,
@@ -99,6 +138,8 @@ export async function POST(req: NextRequest) {
     const workspaceId = session.workspaceId;
     const body = await req.json();
     const { entries } = body;
+
+    await ensureJournalSchema();
 
     // Clear existing and insert new (simple sync approach)
     await q(`DELETE FROM journal_entries WHERE workspace_id = $1`, [workspaceId]);

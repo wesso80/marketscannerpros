@@ -138,7 +138,7 @@ function AiAnalystContent() {
 
       const params = new URLSearchParams({
         symbol: cleanSymbol,
-        type: assetType,
+        type: assetType === "stock" ? "stock" : assetType,
         market: "USD",
       });
 
@@ -568,7 +568,7 @@ function AiAnalystContent() {
                     boxShadow: loading || !query.trim() ? 'none' : '0 4px 15px rgba(34,197,94,0.3)'
                   }}
                 >
-                  {loading ? "🤔 Thinking…" : "✨ Ask MSP Analyst"}
+                  {loading ? "✨ Finding AI Trade Breakdown..." : "✨ Get AI Trade Breakdown"}
                 </button>
 
                 {loading && (

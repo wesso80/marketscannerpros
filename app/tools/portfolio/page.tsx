@@ -1773,11 +1773,11 @@ function PortfolioContent() {
                         animation: 'spin 1s linear infinite',
                         display: 'inline-block'
                       }}>⏳</span>
-                      Analyzing...
+                      Finding Portfolio Edge...
                     </>
                   ) : (
                     <>
-                      ✨ Analyze My Portfolio
+                      ✨ Find Portfolio Edge
                     </>
                   )}
                 </button>
@@ -2532,10 +2532,10 @@ function PortfolioContent() {
               }}>
                 <div style={{ fontSize: '64px', marginBottom: '16px' }}>📊</div>
                 <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
-                  No open positions
+                  Ready to track your first position?
                 </div>
                 <div style={{ fontSize: '14px', marginBottom: '24px' }}>
-                  Click "Add Position" to start tracking your portfolio
+                  Add a position to start tracking P&L, risk, and performance trends
                 </div>
                 <button
                   onClick={() => setActiveTab('add position')}
