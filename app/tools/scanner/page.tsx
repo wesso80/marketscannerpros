@@ -2039,7 +2039,7 @@ function ScannerContent() {
               const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
               const directionLabel = direction === 'bullish' ? 'BULLISH EDGE' : direction === 'bearish' ? 'BEARISH EDGE' : 'NEUTRAL EDGE';
               const directionColor = direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B';
-              const quality = confidence >= 70 ? 'HIGH QUALITY' : confidence >= 55 ? 'MEDIUM QUALITY' : 'LOW QUALITY';
+              const quality = confidence >= 70 ? 'HIGH Q' : confidence >= 55 ? 'MED Q' : 'LOW Q';
               const qualityColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
               return (
@@ -2050,21 +2050,22 @@ function ScannerContent() {
                   padding: '1rem 1.1rem',
                   marginBottom: '1.2rem',
                 }}>
+                  <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
+                    Command Bar
+                  </div>
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '0.8rem',
-                    flexWrap: 'wrap',
+                    flexWrap: 'nowrap',
+                    overflowX: 'auto',
                   }}>
-                    <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Command Bar
-                    </div>
-                    <div style={{ color: directionColor, fontSize: '1.26rem', fontWeight: 900, letterSpacing: '0.03em' }}>{directionLabel}</div>
-                    <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '1.26rem', fontWeight: 900, letterSpacing: '0.03em' }}>
+                    <div style={{ color: directionColor, fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
+                    <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
                       {confidence}% CONF
                     </div>
-                    <div style={{ color: qualityColor, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.03em' }}>{quality}</div>
+                    <div style={{ color: qualityColor, fontSize: 'clamp(0.9rem, 3.6vw, 1.2rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{quality}</div>
                   </div>
                 </div>
               );
@@ -2233,12 +2234,8 @@ function ScannerContent() {
                   <div style={{ color: '#F8FAFC', fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
                     Risk + Execution
                   </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: '0.7rem',
-                  }}>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.8rem' }}>
+                  <div className="grid-equal-2-col-responsive" style={{ gap: '0.7rem' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.8rem', minHeight: '185px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div style={{ color: '#FCA5A5', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Risk Panel</div>
                       <div style={{ color: '#E2E8F0', fontSize: '0.82rem', lineHeight: 1.48 }}>
                         <div>Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
@@ -2248,7 +2245,7 @@ function ScannerContent() {
                       </div>
                     </div>
 
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.8rem' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.8rem', minHeight: '185px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Execution Plan</div>
                       <div style={{ color: '#E2E8F0', fontSize: '0.84rem', lineHeight: 1.52 }}>
                         <div>Entry: <span style={{ color: '#93C5FD', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
