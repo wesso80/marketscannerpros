@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface TriggeredAlert {
   id: string;
@@ -13,8 +13,8 @@ interface TriggeredAlert {
 
 export default function AlertToast() {
   const [toasts, setToasts] = useState<TriggeredAlert[]>([]);
-  const [lastCheck, setLastCheck] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const lastCheckRef = useRef<string | null>(null);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -37,8 +37,8 @@ export default function AlertToast() {
     if (!isAuthenticated) return;
 
     try {
-      const url = lastCheck 
-        ? `/api/alerts/recent?since=${encodeURIComponent(lastCheck)}`
+      const url = lastCheckRef.current
+        ? `/api/alerts/recent?since=${encodeURIComponent(lastCheckRef.current)}`
         : '/api/alerts/recent';
       
       const res = await fetch(url);
@@ -56,11 +56,11 @@ export default function AlertToast() {
       }
 
       // Update last check time
-      setLastCheck(new Date().toISOString());
+      lastCheckRef.current = new Date().toISOString();
     } catch (error) {
       console.error('Error checking alerts:', error);
     }
-  }, [isAuthenticated, lastCheck]);
+  }, [isAuthenticated]);
 
   // Poll every 30 seconds
   useEffect(() => {

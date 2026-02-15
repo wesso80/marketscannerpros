@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 
 interface AlertTrigger {
   id: string;
@@ -137,13 +137,13 @@ function AlertToast({
 
 export function AlertToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<AlertTrigger[]>([]);
-  const [lastCheck, setLastCheck] = useState<string | null>(null);
+  const lastCheckRef = useRef<string | null>(null);
 
   // Fetch unacknowledged alerts
   const checkForNewAlerts = useCallback(async () => {
     try {
-      const url = lastCheck 
-        ? `/api/alerts/unread?since=${encodeURIComponent(lastCheck)}`
+      const url = lastCheckRef.current
+        ? `/api/alerts/unread?since=${encodeURIComponent(lastCheckRef.current)}`
         : '/api/alerts/unread';
       
       const res = await fetch(url);
@@ -159,11 +159,11 @@ export function AlertToastProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      setLastCheck(new Date().toISOString());
+      lastCheckRef.current = new Date().toISOString();
     } catch (err) {
       // Silently fail - user might not be logged in
     }
-  }, [lastCheck]);
+  }, []);
 
   // Poll every 30 seconds
   useEffect(() => {
