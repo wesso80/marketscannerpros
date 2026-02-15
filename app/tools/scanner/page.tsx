@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
+import { AIDeskFeedStrip, DeskTopStrip, FocusSummaryCard } from "@/components/CockpitPrimitives";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -516,7 +517,7 @@ function ScannerContent() {
   } | null>(null);
   const [bulkScanError, setBulkScanError] = useState<string | null>(null);
   const showDeskPreludePanels = false;
-  const showAdvancedEngineeringPanels = false;
+  const [showAdvancedEngineeringPanels, setShowAdvancedEngineeringPanels] = useState(false);
   const showLegacyTopAnalysis = false;
   const [focusMode, setFocusMode] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
@@ -604,9 +605,16 @@ function ScannerContent() {
 
   // AI Page Context - share scan results with copilot
   const { setPageData } = useAIPageContext();
+  const lastPageDataKeyRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (result) {
+      const pageDataKey = `${result.symbol}|${timeframe}|${assetType}|${result.score}|${result.direction || 'neutral'}|${result.price ?? ''}`;
+      if (lastPageDataKeyRef.current === pageDataKey) {
+        return;
+      }
+      lastPageDataKeyRef.current = pageDataKey;
+
       setPageData({
         skill: 'scanner',
         symbols: [result.symbol],
@@ -707,6 +715,7 @@ function ScannerContent() {
     setAiText(null);
     setAiError(null);
     setAiLoading(false);
+    setShowAdvancedEngineeringPanels(false);
     setLastUpdated(null);
     setScanKey(prev => prev + 1); // Force new render
 
@@ -1848,54 +1857,28 @@ function ScannerContent() {
         {/* Active Symbol Cockpit Header */}
         {result && (
           <>
-            <div style={{
-              background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.90))",
-              border: "1px solid rgba(56,189,248,0.3)",
-              borderRadius: "12px",
-              padding: "0.55rem 0.75rem",
-              marginBottom: "0.55rem",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.55rem",
-              alignItems: "center",
-            }}>
-              {(() => {
-                const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-                const adx = result.adx ?? 0;
-                const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-                const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-                const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
-                const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
-                const breadth = direction === 'bullish' ? 'RISK ON' : direction === 'bearish' ? 'RISK OFF' : 'MIXED';
-                const sessionLabel = timeframe === '1d' ? 'DAILY' : 'INTRADAY';
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const adx = result.adx ?? 0;
+              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
+              const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
+              const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
+              const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
+              const breadth = direction === 'bullish' ? 'RISK ON' : direction === 'bearish' ? 'RISK OFF' : 'MIXED';
+              const sessionLabel = timeframe === '1d' ? 'DAILY' : 'INTRADAY';
 
-                const stripTag = (label: string, value: string, color: string) => (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    background: 'rgba(15,23,42,0.55)',
-                    border: '1px solid rgba(148,163,184,0.24)',
-                    borderRadius: '999px',
-                    padding: '0.22rem 0.55rem',
-                    fontSize: '0.68rem',
-                  }}>
-                    <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
-                    <span style={{ color, fontWeight: 800 }}>{value}</span>
-                  </div>
-                );
-
-                return (
-                  <>
-                    {stripTag('Regime', regime, regimeColor)}
-                    {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
-                    {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
-                    {stripTag('Event Risk', 'NONE', '#10B981')}
-                    {stripTag('Session', sessionLabel, '#93C5FD')}
-                  </>
-                );
-              })()}
-            </div>
+              return (
+                <DeskTopStrip
+                  items={[
+                    { label: 'Regime', value: regime, color: regimeColor },
+                    { label: 'Global Risk', value: riskState, color: riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981' },
+                    { label: 'Breadth', value: breadth, color: breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B' },
+                    { label: 'Event Risk', value: 'NONE', color: '#10B981' },
+                    { label: 'Session', value: sessionLabel, color: '#93C5FD' },
+                  ]}
+                />
+              );
+            })()}
 
             <div style={{
               background: "linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))",
@@ -1932,6 +1915,23 @@ function ScannerContent() {
                 }}
               >
                 {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
+              </button>
+              <button
+                onClick={() => setShowAdvancedEngineeringPanels((prev) => !prev)}
+                style={{
+                  background: showAdvancedEngineeringPanels ? 'rgba(59,130,246,0.2)' : 'rgba(30,41,59,0.7)',
+                  border: `1px solid ${showAdvancedEngineeringPanels ? 'rgba(59,130,246,0.45)' : 'rgba(148,163,184,0.3)'}`,
+                  borderRadius: '999px',
+                  color: showAdvancedEngineeringPanels ? '#60A5FA' : '#94A3B8',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.28rem 0.65rem',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {showAdvancedEngineeringPanels ? 'Advanced Panels: On' : 'Load Advanced Panels'}
               </button>
             </div>
           </>
@@ -2029,23 +2029,7 @@ function ScannerContent() {
               const msg = messages[deskFeedIndex % messages.length];
 
               return (
-                <div style={{
-                  marginBottom: '0.7rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-                  border: '1px solid rgba(59,130,246,0.28)',
-                  borderRadius: '10px',
-                  padding: '0.55rem 0.7rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.6rem',
-                  flexWrap: 'wrap',
-                }}>
-                  <div style={{ color: '#93C5FD', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    🧠 AI Desk Feed
-                  </div>
-                  <div style={{ color: '#CBD5E1', fontSize: '0.76rem', flex: 1 }}>{msg}</div>
-                </div>
+                <AIDeskFeedStrip message={msg} />
               );
             })()}
 
@@ -2066,21 +2050,25 @@ function ScannerContent() {
                 : null;
 
               return (
-                <div style={{
-                  marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
-                  border: '1px solid rgba(16,185,129,0.32)',
-                  borderRadius: '10px',
-                  padding: '0.75rem 0.8rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: '0.45rem',
-                }}>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</div></div>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</div></div>
-                  <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <FocusSummaryCard
+                    fields={[
+                      {
+                        label: 'Direction',
+                        value: direction.toUpperCase(),
+                        color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B',
+                      },
+                      { label: 'Confidence', value: `${confidence}%`, color: '#E2E8F0' },
+                      { label: 'Entry', value: entry != null ? entry.toFixed(2) : 'N/A', color: '#93C5FD' },
+                      { label: 'Invalidation', value: invalidation != null ? invalidation.toFixed(2) : 'N/A', color: '#FCA5A5' },
+                      {
+                        label: 'Targets',
+                        value: `${target1 != null ? target1.toFixed(2) : 'N/A'}${target2 != null ? ` / ${target2.toFixed(2)}` : ''}`,
+                        color: '#6EE7B7',
+                        spanFull: true,
+                      },
+                    ]}
+                  />
                 </div>
               );
             })()}
@@ -2938,6 +2926,42 @@ function ScannerContent() {
                     {aiText}
                   </div>
                 )}
+              </div>
+            )}
+
+            {!showAdvancedEngineeringPanels && (
+              <div style={{
+                marginBottom: "2rem",
+                background: "rgba(15, 23, 42, 0.55)",
+                border: "1px dashed rgba(148, 163, 184, 0.35)",
+                borderRadius: "12px",
+                padding: "0.9rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.9rem",
+                flexWrap: "wrap",
+              }}>
+                <div style={{ color: "#94A3B8", fontSize: "0.78rem", fontWeight: 600 }}>
+                  Advanced chart + engineering panels are paused to keep scanner performance fast.
+                </div>
+                <button
+                  onClick={() => setShowAdvancedEngineeringPanels(true)}
+                  style={{
+                    background: "rgba(59,130,246,0.18)",
+                    border: "1px solid rgba(59,130,246,0.4)",
+                    borderRadius: "999px",
+                    color: "#60A5FA",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    padding: "0.32rem 0.72rem",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  Load Advanced Panels
+                </button>
               </div>
             )}
 
