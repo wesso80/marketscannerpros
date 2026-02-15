@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import { ProModeDashboard, ConfluenceMap, PhaseStrip } from "@/components/ProModeDashboard";
 import { 
   calculateOptionsProbability, 
   OptionsSignals, 
@@ -461,7 +460,6 @@ export default function OptionsConfluenceScanner() {
   const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
   const [loadingExpirations, setLoadingExpirations] = useState(false);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
-  const [showProMode, setShowProMode] = useState(true); // Toggle for Pro Mode dashboard
   const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
 
@@ -619,16 +617,6 @@ export default function OptionsConfluenceScanner() {
     const rr = result.tradeLevels.riskRewardRatio;
     return calculateOptionsProbability(signals, result.direction, rr);
   }, [result]);
-
-  // Determine market phase for phase strip
-  const marketPhase = useMemo(() => {
-    if (!result) return 'consolidation';
-    if (result.direction === 'bullish' && result.signalStrength === 'strong') return 'bullish_trend';
-    if (result.direction === 'bullish' && result.signalStrength === 'moderate') return 'bullish_pullback';
-    if (result.direction === 'bearish' && result.signalStrength === 'strong') return 'bearish_trend';
-    if (result.direction === 'bearish' && result.signalStrength === 'moderate') return 'bearish_pullback';
-    return 'consolidation';
-  }, [result]) as 'bearish_trend' | 'bearish_pullback' | 'consolidation' | 'bullish_pullback' | 'bullish_trend';
 
   // Fetch available expiration dates when symbol changes
   const fetchExpirations = async (sym: string) => {
@@ -3276,138 +3264,6 @@ export default function OptionsConfluenceScanner() {
 
             {/* Pattern panel intentionally rendered above Decision Engine */}
 
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {/* 🏦 INSTITUTIONAL-GRADE PRO MODE DASHBOARD - PROBABILITY ENGINE */}
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {institutionalLensMode === 'OBSERVE' && probabilityResult && (
-              <div style={{ marginBottom: '1.5rem' }}>
-                {/* Pro Mode Toggle */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1rem',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{
-                      background: 'linear-gradient(135deg, #10B981, #3B82F6)',
-                      padding: '4px 12px',
-                      borderRadius: '8px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      color: '#fff',
-                      letterSpacing: '0.5px',
-                    }}>
-                      🏦 INSTITUTIONAL EDGE
-                    </span>
-                    <span style={{ color: '#94A3B8', fontSize: '13px' }}>
-                      Probability-based analysis
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setShowProMode(!showProMode)}
-                    style={{
-                      background: showProMode ? 'rgba(16,185,129,0.2)' : 'rgba(100,116,139,0.2)',
-                      border: `1px solid ${showProMode ? 'rgba(16,185,129,0.5)' : 'rgba(100,116,139,0.5)'}`,
-                      borderRadius: '8px',
-                      padding: '6px 12px',
-                      color: showProMode ? '#10B981' : '#94A3B8',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {showProMode ? '✓ Pro Mode' : 'Basic Mode'}
-                  </button>
-                </div>
-
-                {showProMode && (
-                  <div style={{ display: 'grid', gap: '1rem' }}>
-                    {/* Main Pro Dashboard */}
-                    <ProModeDashboard
-                      probability={probabilityResult}
-                      tradeLevels={result.tradeLevels}
-                      currentPrice={result.currentPrice}
-                      symbol={symbol.toUpperCase()}
-                    />
-
-                    {/* Phase Strip + Confluence Map Row */}
-                    <div className="card-grid-mobile">
-                      {/* Market Phase */}
-                      <PhaseStrip currentPhase={marketPhase} />
-                      
-                      {/* Signal Confluence Map */}
-                      <ConfluenceMap components={probabilityResult.components} />
-                    </div>
-
-                    {/* Quick Action Buttons */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '0.75rem',
-                      flexWrap: 'wrap',
-                      justifyContent: 'center',
-                    }}>
-                      <a
-                        href={`/tools/journal?symbol=${symbol.toUpperCase()}&type=${result.direction === 'bullish' ? 'call' : 'put'}&entry=${result.currentPrice}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1.25rem',
-                          background: 'linear-gradient(135deg, #10B981, #059669)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          textDecoration: 'none',
-                          fontWeight: '600',
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        📊 Log to Journal
-                      </a>
-                      <a
-                        href={`/tools/backtest?symbol=${symbol.toUpperCase()}&direction=${result.direction}&strategy=${encodeURIComponent(result.strategyRecommendation?.strategy || '')}&from=options-scanner`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1.25rem',
-                          background: 'rgba(59,130,246,0.2)',
-                          border: '1px solid rgba(59,130,246,0.5)',
-                          borderRadius: '12px',
-                          color: '#60A5FA',
-                          textDecoration: 'none',
-                          fontWeight: '600',
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        📈 Backtest This Setup
-                      </a>
-                      <a
-                        href={`/tools/deep-analysis?symbol=${symbol.toUpperCase()}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1.25rem',
-                          background: 'rgba(168,85,247,0.2)',
-                          border: '1px solid rgba(168,85,247,0.5)',
-                          borderRadius: '12px',
-                          color: '#C084FC',
-                          textDecoration: 'none',
-                          fontWeight: '600',
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        🥚 Deep Analysis
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* PRO TRADER SECTION - Collapsible */}
             {institutionalLensMode === 'OBSERVE' && (
             <details style={{
@@ -3448,7 +3304,6 @@ export default function OptionsConfluenceScanner() {
               }}>
                 <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>State</div>
                 <div style={{ color: commandStatusColor, fontSize: '0.95rem', fontWeight: 900 }}>{commandStatus}</div>
-                <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>Market Mode: {marketStateLabel || 'Unknown'}</div>
                 <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>Institutional Flow: {institutionalFlowState}</div>
                 <div style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontSize: '0.78rem', fontWeight: 800 }}>
                   Trade Permission: {tradePermission}

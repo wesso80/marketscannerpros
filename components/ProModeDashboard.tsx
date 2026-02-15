@@ -577,104 +577,8 @@ interface ConfluenceMapProps {
 }
 
 export function ConfluenceMap({ components }: ConfluenceMapProps) {
-  const triggeredComponents = components.filter(c => c.triggered);
-  
-  return (
-    <div style={{
-      background: 'rgba(30,41,59,0.5)',
-      borderRadius: '12px',
-      padding: '1rem',
-    }}>
-      <div style={{
-        fontSize: '11px',
-        fontWeight: '600',
-        color: '#94A3B8',
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-      }}>
-        <span>🎯</span> SIGNAL CONFLUENCE MAP
-      </div>
-      
-      {/* Visual node map */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: '0.75rem',
-        padding: '1rem',
-      }}>
-        {triggeredComponents.map((c, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              background: c.direction === 'bullish'
-                ? 'linear-gradient(135deg, #10B981, #059669)'
-                : c.direction === 'bearish'
-                ? 'linear-gradient(135deg, #EF4444, #DC2626)'
-                : 'linear-gradient(135deg, #64748B, #475569)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 0 20px ${
-                c.direction === 'bullish'
-                  ? 'rgba(16,185,129,0.4)'
-                  : c.direction === 'bearish'
-                  ? 'rgba(239,68,68,0.4)'
-                  : 'rgba(100,116,139,0.4)'
-              }`,
-            }}>
-              <span style={{ color: 'white', fontSize: '14px' }}>
-                {c.direction === 'bullish' ? '●' : c.direction === 'bearish' ? '●' : '○'}
-              </span>
-            </div>
-            <span style={{
-              fontSize: '9px',
-              color: '#94A3B8',
-              textAlign: 'center',
-              maxWidth: '60px',
-            }}>
-              {c.name.split(' ')[0]}
-            </span>
-          </div>
-        ))}
-      </div>
-      
-      {/* Legend */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '1.5rem',
-        marginTop: '0.5rem',
-        paddingTop: '0.75rem',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10B981' }} />
-          <span style={{ fontSize: '10px', color: '#94A3B8' }}>Bullish</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#64748B' }} />
-          <span style={{ fontSize: '10px', color: '#94A3B8' }}>Neutral</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#EF4444' }} />
-          <span style={{ fontSize: '10px', color: '#94A3B8' }}>Bearish</span>
-        </div>
-      </div>
-    </div>
-  );
+  void components;
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -686,68 +590,8 @@ interface PhaseStripProps {
 }
 
 export function PhaseStrip({ currentPhase }: PhaseStripProps) {
-  const phases = [
-    { key: 'bearish_trend', label: 'Bearish Trend', color: '#EF4444' },
-    { key: 'bearish_pullback', label: 'Bear Pullback', color: '#F97316' },
-    { key: 'consolidation', label: 'Consolidation', color: '#64748B' },
-    { key: 'bullish_pullback', label: 'Bull Pullback', color: '#F59E0B' },
-    { key: 'bullish_trend', label: 'Bullish Trend', color: '#10B981' },
-  ];
-  
-  return (
-    <div style={{
-      background: 'rgba(30,41,59,0.5)',
-      borderRadius: '12px',
-      padding: '1rem',
-    }}>
-      <div style={{
-        fontSize: '11px',
-        fontWeight: '600',
-        color: '#94A3B8',
-        marginBottom: '0.75rem',
-      }}>
-        MARKET PHASE
-      </div>
-      
-      <div style={{
-        display: 'flex',
-        gap: '0.25rem',
-      }}>
-        {phases.map((phase) => {
-          const isActive = phase.key === currentPhase;
-          return (
-            <div
-              key={phase.key}
-              style={{
-                flex: 1,
-                padding: '0.5rem 0.25rem',
-                background: isActive ? phase.color : 'rgba(255,255,255,0.05)',
-                borderRadius: '8px',
-                textAlign: 'center',
-                transition: 'all 0.3s ease',
-                transform: isActive ? 'scale(1.05)' : 'scale(1)',
-                boxShadow: isActive ? `0 0 15px ${phase.color}40` : 'none',
-              }}
-            >
-              <div style={{
-                fontSize: '16px',
-                marginBottom: '2px',
-              }}>
-                {isActive ? '●' : '○'}
-              </div>
-              <div style={{
-                fontSize: '9px',
-                color: isActive ? 'white' : '#64748B',
-                fontWeight: isActive ? '600' : '400',
-              }}>
-                {phase.label.split(' ')[0]}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  void currentPhase;
+  return null;
 }
 
 export default ProModeDashboard;
