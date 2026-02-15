@@ -421,6 +421,41 @@ export default function OptionsConfluenceScanner() {
   const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
 
+  const normalizeOptionsSetup = (payload: any): OptionsSetup => {
+    const safeTradeLevels = payload?.tradeLevels
+      && payload.tradeLevels.entryZone
+      && Number.isFinite(Number(payload.tradeLevels.entryZone.low))
+      && Number.isFinite(Number(payload.tradeLevels.entryZone.high))
+      ? payload.tradeLevels
+      : null;
+
+    const safeInstitutionalFilter = payload?.institutionalFilter
+      ? {
+          ...payload.institutionalFilter,
+          finalScore: Number(payload.institutionalFilter.finalScore ?? 0),
+          filters: Array.isArray(payload.institutionalFilter.filters) ? payload.institutionalFilter.filters : [],
+        }
+      : undefined;
+
+    const safeCapitalFlow = payload?.capitalFlow
+      ? {
+          ...payload.capitalFlow,
+          key_strikes: Array.isArray(payload.capitalFlow.key_strikes) ? payload.capitalFlow.key_strikes : [],
+          flip_zones: Array.isArray(payload.capitalFlow.flip_zones) ? payload.capitalFlow.flip_zones : [],
+          liquidity_levels: Array.isArray(payload.capitalFlow.liquidity_levels) ? payload.capitalFlow.liquidity_levels : [],
+          most_likely_path: Array.isArray(payload.capitalFlow.most_likely_path) ? payload.capitalFlow.most_likely_path : [],
+          risk: Array.isArray(payload.capitalFlow.risk) ? payload.capitalFlow.risk : [],
+        }
+      : undefined;
+
+    return {
+      ...payload,
+      tradeLevels: safeTradeLevels,
+      institutionalFilter: safeInstitutionalFilter,
+      capitalFlow: safeCapitalFlow,
+    } as OptionsSetup;
+  };
+
   // Push scan results to AI Copilot context
   useEffect(() => {
     if (result) {
@@ -627,7 +662,7 @@ export default function OptionsConfluenceScanner() {
         setError(data.error || 'Scan failed');
       } else {
         setLastUpdated(data.timestamp ? new Date(data.timestamp) : new Date());
-        setResult(data.data as OptionsSetup);
+        setResult(normalizeOptionsSetup(data.data));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');
@@ -1476,12 +1511,12 @@ export default function OptionsConfluenceScanner() {
                       fontWeight: 800,
                       fontSize: '0.76rem',
                     }}>
-                      FINAL QUALITY: {result.institutionalFilter.finalGrade} ({result.institutionalFilter.finalScore.toFixed(0)})
+                      FINAL QUALITY: {result.institutionalFilter.finalGrade} ({Number(result.institutionalFilter.finalScore ?? 0).toFixed(0)})
                     </div>
                   </div>
 
                   <div style={{ display: 'grid', gap: '0.2rem' }}>
-                    {result.institutionalFilter.filters.slice(0, 4).map((filter, idx) => (
+                    {(result.institutionalFilter.filters || []).slice(0, 4).map((filter, idx) => (
                       <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
                         {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
                       </div>
