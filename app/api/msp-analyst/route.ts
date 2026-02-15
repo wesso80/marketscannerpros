@@ -155,12 +155,18 @@ export async function POST(req: NextRequest) {
     const workspaceId = session!.workspaceId;
     const tier = session!.tier;
 
+    const directionValue = String(scanner?.direction || '').toLowerCase();
+    const adaptiveDirection: 'bullish' | 'bearish' | 'neutral' | undefined =
+      directionValue === 'bullish' || directionValue === 'bearish' || directionValue === 'neutral'
+        ? directionValue
+        : undefined;
+
     const adaptive = await getAdaptiveLayer(
       workspaceId,
       {
         skill: mode || 'ai_analyst',
         setupText: `${query} ${context?.symbol || ''} ${context?.timeframe || ''}`,
-        direction: scanner?.direction || undefined,
+        direction: adaptiveDirection,
         timeframe: context?.timeframe || undefined,
       },
       Number(scanner?.score ?? 50)
