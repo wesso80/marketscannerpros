@@ -462,6 +462,8 @@ export default function OptionsConfluenceScanner() {
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
   const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [deskFeedIndex, setDeskFeedIndex] = useState(0);
 
   const normalizeOptionsSetup = (payload: any): OptionsSetup => {
     const safeTradeLevels = payload?.tradeLevels
@@ -549,6 +551,14 @@ export default function OptionsConfluenceScanner() {
     loadJournalForPersonality();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = setInterval(() => {
+      setDeskFeedIndex((prev) => prev + 1);
+    }, 180000);
+    return () => clearInterval(timer);
+  }, [result?.symbol]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROBABILITY ENGINE - Institutional-Grade Win Probability Calculation
@@ -1700,9 +1710,73 @@ export default function OptionsConfluenceScanner() {
                   <span style={{ color: '#94A3B8' }}>Updated {commandUpdatedAgo}s ago</span>
                 </>
               )}
+              <span style={{ color: '#64748B' }}>│</span>
+              <button
+                onClick={() => setFocusMode((prev) => !prev)}
+                style={{
+                  background: focusMode ? 'rgba(16,185,129,0.2)' : 'rgba(30,41,59,0.75)',
+                  border: `1px solid ${focusMode ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.35)'}`,
+                  color: focusMode ? '#10B981' : '#94A3B8',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                }}
+              >
+                {focusMode ? 'Focus On' : 'Focus'}
+              </button>
             </div>
           </div>
         )}
+
+        {result && (() => {
+          const riskState = (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4
+            ? 'HIGH'
+            : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2
+            ? 'MODERATE'
+            : 'LOW';
+          const breadth = result.direction === 'bullish' ? 'RISK ON' : result.direction === 'bearish' ? 'RISK OFF' : 'MIXED';
+          const regimeLabel = institutionalMarketRegime || 'UNKNOWN';
+
+          const stripTag = (label: string, value: string, color: string) => (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: 'rgba(15,23,42,0.55)',
+              border: '1px solid rgba(148,163,184,0.24)',
+              borderRadius: '999px',
+              padding: '0.2rem 0.55rem',
+              fontSize: '0.67rem',
+            }}>
+              <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
+              <span style={{ color, fontWeight: 800 }}>{value}</span>
+            </div>
+          );
+
+          return (
+            <div style={{
+              marginBottom: '0.65rem',
+              background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
+              border: '1px solid rgba(56,189,248,0.3)',
+              borderRadius: '10px',
+              padding: '0.48rem 0.6rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+              alignItems: 'center',
+            }}>
+              {stripTag('Regime', regimeLabel, '#10B981')}
+              {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
+              {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
+              {stripTag('Event Risk', 'NONE', '#10B981')}
+              {stripTag('Session', (result.entryTiming.marketSession || 'n/a').toUpperCase(), '#93C5FD')}
+            </div>
+          );
+        })()}
 
         {result && copilotPresence && (
           <div style={{
@@ -1730,6 +1804,35 @@ export default function OptionsConfluenceScanner() {
             )}
           </div>
         )}
+
+        {result && (() => {
+          const messages = [
+            `${result.direction === 'bullish' ? 'Buying' : result.direction === 'bearish' ? 'Selling' : 'Two-way'} pressure near key structure — watch confirmation trigger.`,
+            `${result.candleCloseConfluence?.bestEntryWindow?.startMins === 0 ? 'Time cluster active now' : `Time cluster in ${result.candleCloseConfluence?.bestEntryWindow?.startMins ?? 'n/a'}m`} — prepare execution plan.`,
+            `${result.unusualActivity?.hasUnusualActivity ? 'Unusual options flow detected' : 'Flow remains moderate'} — keep invalidation discipline.`
+          ];
+          const msg = messages[deskFeedIndex % messages.length];
+
+          return (
+            <div style={{
+              marginTop: '-0.45rem',
+              marginBottom: '0.8rem',
+              background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+              border: '1px solid rgba(59,130,246,0.28)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.65rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.55rem',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ color: '#93C5FD', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                🧠 AI Desk Feed
+              </div>
+              <div style={{ color: '#CBD5E1', fontSize: '0.74rem', flex: 1 }}>{msg}</div>
+            </div>
+          );
+        })()}
 
         {/* Input Section */}
         <div className="options-form-controls" style={{ 
@@ -1878,6 +1981,24 @@ export default function OptionsConfluenceScanner() {
         {/* Results */}
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
+
+            {focusMode && (
+              <div style={{
+                background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
+                border: '1px solid rgba(16,185,129,0.32)',
+                borderRadius: '10px',
+                padding: '0.72rem 0.82rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.45rem',
+              }}>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: thesisDirection === 'bullish' ? '#10B981' : thesisDirection === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{thesisDirection.toUpperCase()}</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
+                <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
+              </div>
+            )}
 
             {terminalDecisionCard && (
               <div style={{
