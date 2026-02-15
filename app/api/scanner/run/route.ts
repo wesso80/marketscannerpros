@@ -7,7 +7,6 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from "@/lib/coingecko";
-import { getFullSymbolData } from "@/lib/onDemandFetch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -1192,50 +1191,45 @@ export async function POST(req: NextRequest) {
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
             
           } else if (canFallbackToAV()) {
-            // Rate-limit-safe fallback: use single on-demand pipeline (quote + one OHLC fetch + local indicators)
-            console.info(`[scanner] Fetching EQUITY ${sym} via onDemand pipeline (${getCacheMode()} mode)`);
-
-            const fullData = await getFullSymbolData(sym);
-            const quote = fullData.quote;
-            const ind = fullData.indicators;
-
-            const price = Number.isFinite(quote?.price)
-              ? Number(quote?.price)
-              : (bulkPriceMap.get(sym.toUpperCase()) ?? NaN);
-
+            // Fallback to Alpha Vantage (legacy behavior)
+            console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage (${avInterval}) - ${getCacheMode()} mode`);
+          
+            // Get price from pre-fetched bulk quotes (saves 1 API call per symbol!)
+            // Fall back to individual fetch if bulk didn't have this symbol
+            let price = bulkPriceMap.get(sym.toUpperCase()) ?? NaN;
+          
+            // Alpha Vantage enforces max 5 requests/second - batch with delays
+            // Batch 1: First 5 indicators
+            const [rsiVal, macObj, ema200Val, atrVal, adxObj] = await Promise.all([
+              fetchRSI(sym),
+              fetchMACD(sym),
+              fetchEMA200(sym),
+              fetchATR(sym),
+              fetchADX(sym),
+            ]);
+          
+            // Wait 250ms before second batch to respect rate limit
+            await new Promise(resolve => setTimeout(resolve, 250));
+          
+            // Batch 2: Remaining 3 indicators (price already from bulk!)
+            const [stochObj, cciVal, aroonObj] = await Promise.all([
+              fetchSTOCH(sym),
+              fetchCCI(sym),
+              fetchAROON(sym),
+            ]);
+          
+            // Only fetch individual price if bulk failed for this symbol
             if (!Number.isFinite(price)) {
-              errors.push(`${sym}: price unavailable (provider throttled)`);
-              continue;
+              console.info(`[scanner] Bulk quote missing for ${sym}, fetching individually`);
+              const priceData = await fetchEquityPrice(sym);
+              price = priceData.price;
             }
-
-            const rsiVal = Number(ind?.rsi14 ?? NaN);
-            const macLine = Number(ind?.macdLine ?? NaN);
-            const sigLine = Number(ind?.macdSignal ?? NaN);
-            const macHist = Number(ind?.macdHist ?? NaN);
-            const ema200Val = Number(ind?.ema200 ?? NaN);
-            const atrVal = Number(ind?.atr14 ?? NaN);
-            const adxVal = Number(ind?.adx14 ?? NaN);
-            const stochK = Number(ind?.stochK ?? NaN);
-            const stochD = Number(ind?.stochD ?? NaN);
-            const cciVal = Number(ind?.cci20 ?? NaN);
-
-            const scoreResult = computeScore(
-              price,
-              ema200Val,
-              rsiVal,
-              macLine,
-              sigLine,
-              macHist,
-              atrVal,
-              adxVal,
-              stochK,
-              NaN,
-              NaN,
-              cciVal,
-              0,
-              0
-            );
-
+          
+            const macHist = macObj.hist;
+            const macLine = macObj.macd;
+            const sigLine = macObj.sig;
+          
+            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, 0, 0);
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
               score: scoreResult.score,
@@ -1248,16 +1242,15 @@ export async function POST(req: NextRequest) {
               macd_hist: macHist,
               ema200: ema200Val,
               atr: atrVal,
-              adx: adxVal,
-              stoch_k: stochK,
-              stoch_d: stochD,
+              adx: adxObj.adx,
+              stoch_k: stochObj.k,
+              stoch_d: stochObj.d,
               cci: cciVal,
-              aroon_up: NaN,
-              aroon_down: NaN,
-              obv: Number(ind?.obv ?? NaN),
-              lastCandleTime: ind?.computedAt || quote?.fetchedAt || new Date().toISOString(),
+              aroon_up: aroonObj.up,
+              aroon_down: aroonObj.down,
+              obv: NaN,
+              lastCandleTime: new Date().toISOString(),
             };
-
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
           } else {
             // cache_only mode but no cached data
