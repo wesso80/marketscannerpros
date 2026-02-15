@@ -853,12 +853,27 @@ function ScannerContent() {
           </>
         )}
 
+        <div style={{
+          background: "linear-gradient(145deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92))",
+          border: "1px solid rgba(56,189,248,0.34)",
+          borderRadius: "12px",
+          padding: "0.65rem 0.9rem",
+          marginBottom: "0.8rem",
+          color: "#67E8F9",
+          fontSize: "0.78rem",
+          fontWeight: 800,
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+        }}>
+          Decision Cockpit Mode • You’ve crossed from feature dashboard → decision cockpit
+        </div>
+
         {/* Orientation */}
         <div style={{
-          background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
-          border: "1px solid rgba(51,65,85,0.8)",
-          borderRadius: "16px",
-          padding: "20px 24px",
+          background: "linear-gradient(145deg, rgba(2,6,23,0.94), rgba(15,23,42,0.9))",
+          border: "1px solid rgba(56,189,248,0.24)",
+          borderRadius: "14px",
+          padding: "18px 20px",
           marginBottom: "1.5rem",
           color: "#e2e8f0",
           fontSize: 14,
@@ -951,10 +966,10 @@ function ScannerContent() {
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
         <div style={{
           display: result && scannerCollapsed ? "none" : "block",
-          background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
-          border: "1px solid rgba(251,191,36,0.3)",
-          borderRadius: "16px",
-          padding: "24px",
+          background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
+          border: "1px solid rgba(56,189,248,0.28)",
+          borderRadius: "14px",
+          padding: "20px",
           marginBottom: "1.5rem",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
           position: "relative",
@@ -967,13 +982,13 @@ function ScannerContent() {
             left: 0,
             right: 0,
             height: "3px",
-            background: "linear-gradient(90deg, #fbbf24, #f59e0b, #fbbf24)"
+            background: "linear-gradient(90deg, #38BDF8, #10B981, #38BDF8)"
           }} />
           
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <span style={{ fontSize: "28px" }}>🔍</span>
             <div>
-              <h3 style={{ color: "#fbbf24", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <h3 style={{ color: "#67E8F9", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Live Edge Scanner (Market-Wide)
               </h3>
               <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
@@ -1592,9 +1607,9 @@ function ScannerContent() {
         {/* Scanner Panel */}
         <div style={{
           display: result && scannerCollapsed ? "none" : "block",
-          background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
-          borderRadius: "16px",
-          border: "1px solid rgba(51,65,85,0.8)",
+          background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
+          borderRadius: "14px",
+          border: "1px solid rgba(56,189,248,0.28)",
           padding: "2rem",
           marginBottom: "2rem",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
@@ -2041,6 +2056,16 @@ function ScannerContent() {
               const directionColor = direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B';
               const quality = confidence >= 70 ? 'HIGH Q' : confidence >= 55 ? 'MED Q' : 'LOW Q';
               const qualityColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
+              const trendAligned = result.price != null && result.ema200 != null
+                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+                : false;
+              const momentumAligned = result.rsi != null && result.macd_hist != null
+                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
+                : false;
+              const tradeState = direction === 'neutral'
+                ? 'WAITING FOR ENTRY'
+                : (trendAligned && momentumAligned ? 'EXECUTION WINDOW OPEN' : 'SETUP BUILDING');
+              const tradeStateColor = tradeState === 'EXECUTION WINDOW OPEN' ? '#10B981' : tradeState === 'SETUP BUILDING' ? '#F59E0B' : '#94A3B8';
 
               return (
                 <div style={{
@@ -2061,11 +2086,23 @@ function ScannerContent() {
                     flexWrap: 'nowrap',
                     overflowX: 'auto',
                   }}>
-                    <div style={{ color: directionColor, fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
+                    <div style={{ color: directionColor, fontSize: 'clamp(1.08rem, 4.4vw, 1.5rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
                     <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
                       {confidence}% CONF
                     </div>
                     <div style={{ color: qualityColor, fontSize: 'clamp(0.9rem, 3.6vw, 1.2rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{quality}</div>
+                  </div>
+                  <div style={{
+                    marginTop: '0.6rem',
+                    borderTop: '1px solid rgba(148,163,184,0.2)',
+                    paddingTop: '0.55rem',
+                    color: tradeStateColor,
+                    fontSize: '0.76rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}>
+                    🎯 Trade State: {tradeState}
                   </div>
                 </div>
               );
@@ -2074,7 +2111,7 @@ function ScannerContent() {
             {(() => {
               const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
               const heatColor = confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444';
-              const heatLabel = confidence >= 70 ? 'Strong' : confidence >= 50 ? 'Moderate' : 'Weak';
+              const heatLabel = confidence >= 75 ? 'HOT' : confidence >= 55 ? 'BUILDING' : 'EXHAUSTED';
 
               return (
                 <div style={{
@@ -2091,7 +2128,7 @@ function ScannerContent() {
                     <div style={{ width: `${confidence}%`, height: '100%', background: `linear-gradient(90deg, ${heatColor}, ${confidence >= 70 ? '#34D399' : confidence >= 50 ? '#FCD34D' : '#F87171'})` }} />
                   </div>
                   <div style={{ color: heatColor, fontSize: '0.8rem', fontWeight: 800 }}>
-                    {heatLabel} Edge • {confidence}% confidence
+                    Edge State: {heatLabel} • {confidence}% confidence
                   </div>
                 </div>
               );
@@ -2999,7 +3036,7 @@ function ScannerContent() {
                   alignItems: "center",
                   marginBottom: "0.75rem"
                 }}>
-                  <div style={{ fontWeight: 700, color: "#34d399" }}>AI Insight</div>
+                  <div style={{ fontWeight: 700, color: "#34d399" }}>AI Thesis</div>
                   <button
                     onClick={() => setAiExpanded(!aiExpanded)}
                     style={{
