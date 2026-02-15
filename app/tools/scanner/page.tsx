@@ -7,6 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
+import CapitalFlowCard from "@/components/CapitalFlowCard";
 import { AIDeskFeedStrip, DeskTopStrip, FocusSummaryCard } from "@/components/CockpitPrimitives";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import { useUserTier } from "@/lib/useUserTier";
@@ -492,6 +493,7 @@ function ScannerContent() {
   const [aiExpanded, setAiExpanded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
+  const [capitalFlow, setCapitalFlow] = useState<ScanResult['capitalFlow'] | null>(null);
   
   // Bulk scan state
   const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
@@ -516,9 +518,11 @@ function ScannerContent() {
   const [bulkScanError, setBulkScanError] = useState<string | null>(null);
   const showDeskPreludePanels = false;
   const [showAdvancedEngineeringPanels, setShowAdvancedEngineeringPanels] = useState(false);
-  const showLegacyTopAnalysis = true;
+  const showLegacyTopAnalysis = false;
   const [focusMode, setFocusMode] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
+  const flowFetchAbortRef = React.useRef<AbortController | null>(null);
+  const lastFlowSymbolRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     if (!result) return;
@@ -638,6 +642,56 @@ function ScannerContent() {
     setDailyPicksLoading(false);
   }, []);
 
+  useEffect(() => {
+    const fetchFlow = async () => {
+      if (!result?.symbol || assetType !== 'equity') {
+        setCapitalFlow(null);
+        lastFlowSymbolRef.current = null;
+        if (flowFetchAbortRef.current) {
+          flowFetchAbortRef.current.abort();
+          flowFetchAbortRef.current = null;
+        }
+        return;
+      }
+
+      if (lastFlowSymbolRef.current === result.symbol) {
+        return;
+      }
+      lastFlowSymbolRef.current = result.symbol;
+
+      if (flowFetchAbortRef.current) {
+        flowFetchAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      flowFetchAbortRef.current = controller;
+
+      try {
+        const response = await fetch(`/api/flow?symbol=${encodeURIComponent(result.symbol)}&scanMode=intraday_1h`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (response.ok && data?.success && data?.data) {
+          setCapitalFlow(data.data);
+        } else {
+          setCapitalFlow(result.capitalFlow ?? null);
+        }
+      } catch (error: any) {
+        if (error?.name === 'AbortError') return;
+        setCapitalFlow(result.capitalFlow ?? null);
+      } finally {
+        flowFetchAbortRef.current = null;
+      }
+    };
+
+    fetchFlow();
+    return () => {
+      if (flowFetchAbortRef.current) {
+        flowFetchAbortRef.current.abort();
+      }
+    };
+  }, [result?.symbol, assetType]);
+
   // Get filtered suggestions based on input
   const getSuggestions = () => {
     if (assetType === "crypto") {
@@ -657,6 +711,7 @@ function ScannerContent() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setCapitalFlow(null);
     setAiText(null);
     setAiError(null);
     setAiLoading(false);
@@ -799,6 +854,12 @@ function ScannerContent() {
       />
       <main style={{ padding: "24px 16px" }}>
         <div className="max-w-7xl mx-auto">
+        {showDeskPreludePanels && (
+          <>
+            <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
+          </>
+        )}
+
         {/* Orientation */}
         <div style={{
           background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
@@ -1837,49 +1898,47 @@ function ScannerContent() {
               <div style={{ color: "#10B981", fontSize: "0.76rem", fontWeight: 700 }}>
                 All panels below are for {result.symbol} only
               </div>
+              <button
+                onClick={() => setFocusMode((prev) => !prev)}
+                style={{
+                  marginLeft: 'auto',
+                  background: focusMode ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.7)',
+                  border: `1px solid ${focusMode ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.3)'}`,
+                  borderRadius: '999px',
+                  color: focusMode ? '#10B981' : '#94A3B8',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.28rem 0.65rem',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
+              </button>
+              <button
+                onClick={() => setShowAdvancedEngineeringPanels((prev) => !prev)}
+                style={{
+                  background: showAdvancedEngineeringPanels ? 'rgba(59,130,246,0.2)' : 'rgba(30,41,59,0.7)',
+                  border: `1px solid ${showAdvancedEngineeringPanels ? 'rgba(59,130,246,0.45)' : 'rgba(148,163,184,0.3)'}`,
+                  borderRadius: '999px',
+                  color: showAdvancedEngineeringPanels ? '#60A5FA' : '#94A3B8',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.28rem 0.65rem',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {showAdvancedEngineeringPanels ? 'Advanced Panels: On' : 'Load Advanced Panels'}
+              </button>
             </div>
           </>
         )}
 
-        {result && (
-          <div style={{
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
-            borderRadius: "16px",
-            border: "1px solid rgba(51,65,85,0.8)",
-            padding: "1.25rem",
-            marginBottom: "1rem",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
-          }}>
-            <div style={{ color: '#67E8F9', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
-              Top Result
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
-              <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Symbol</div>
-                <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900 }}>{result.symbol} ({timeframe.toUpperCase()})</div>
-              </div>
-              <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
-                <div style={{ color: (result.direction || 'neutral') === 'bullish' ? '#10B981' : (result.direction || 'neutral') === 'bearish' ? '#EF4444' : '#F59E0B', fontSize: '0.95rem', fontWeight: 900 }}>
-                  {(result.direction || 'neutral').toUpperCase()}
-                </div>
-              </div>
-              <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Score</div>
-                <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900 }}>{Math.max(1, Math.min(99, Math.round(result.score ?? 50)))}%</div>
-              </div>
-              <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Price</div>
-                <div style={{ color: '#10B981', fontSize: '0.95rem', fontWeight: 900 }}>
-                  {typeof result.price === 'number' ? `$${result.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}` : 'N/A'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Results Card */}
-        {false && result && (
+        {result && (
           <div key={scanKey} style={{
             background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
             borderRadius: "16px",
