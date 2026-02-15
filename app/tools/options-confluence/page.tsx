@@ -628,47 +628,6 @@ export default function OptionsConfluenceScanner() {
     return 'consolidation';
   }, [result]) as 'bearish_trend' | 'bearish_pullback' | 'consolidation' | 'bullish_pullback' | 'bullish_trend';
 
-  // Avoid premature gating while tier is still resolving
-  if (isTierLoading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", color: "#e2e8f0" }}>
-          <h1 style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)", fontWeight: 700, marginBottom: "0.5rem" }}>
-            🎯 Loading Options Confluence Scanner...
-          </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>
-            Checking account access and initializing scanner state.
-          </p>
-        </main>
-      </div>
-    );
-  }
-
-  // Pro Trader feature gate
-  if (!canAccessBacktest(tier)) {
-    return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
-        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
-          <span style={{ 
-            background: "linear-gradient(135deg, #10B981, #3B82F6)", 
-            padding: "4px 12px", 
-            borderRadius: "999px", 
-            fontSize: "11px", 
-            fontWeight: "600",
-            color: "#fff"
-          }}>PRO TRADER</span>
-          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
-            🎯 Options Confluence Scanner
-          </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Strike & Expiration Recommendations Based on Time Confluence</p>
-        </header>
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
-          <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
-        </main>
-      </div>
-    );
-  }
-
   // Fetch available expiration dates when symbol changes
   const fetchExpirations = async (sym: string) => {
     if (!sym.trim() || sym.trim() === lastSymbolFetched) return;
@@ -1328,6 +1287,47 @@ export default function OptionsConfluenceScanner() {
         : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
           ? '#EF4444'
           : '#3B82F6';
+
+  // Avoid premature gating while tier is still resolving
+  if (isTierLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", color: "#e2e8f0" }}>
+          <h1 style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)", fontWeight: 700, marginBottom: "0.5rem" }}>
+            🎯 Loading Options Confluence Scanner...
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "14px" }}>
+            Checking account access and initializing scanner state.
+          </p>
+        </main>
+      </div>
+    );
+  }
+
+  // Pro Trader feature gate
+  if (!canAccessBacktest(tier)) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
+          <span style={{ 
+            background: "linear-gradient(135deg, #10B981, #3B82F6)", 
+            padding: "4px 12px", 
+            borderRadius: "999px", 
+            fontSize: "11px", 
+            fontWeight: "600",
+            color: "#fff"
+          }}>PRO TRADER</span>
+          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
+            🎯 Options Confluence Scanner
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Strike & Expiration Recommendations Based on Time Confluence</p>
+        </header>
+        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
+          <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="options-page-container" style={{ 
