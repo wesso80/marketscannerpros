@@ -659,6 +659,7 @@ type BulkScanMode = 'deep' | 'light';
 const STABLECOINS = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
 const LIGHT_SCAN_PER_PAGE = 250;
 const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
+const LIGHT_EQUITY_MAX_API_CALLS = Math.max(2, Number(process.env.SCANNER_LIGHT_MAX_AV_CALLS || 8));
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -800,6 +801,218 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
   };
 }
 
+function parseAlphaNumber(value: unknown): number {
+  const parsed = Number(String(value ?? '').replace(/,/g, '').replace('%', ''));
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function normalizeTicker(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+async function fetchAlphaTopMovers(): Promise<{
+  gainers: any[];
+  losers: any[];
+  active: any[];
+  apiCallsUsed: number;
+}> {
+  if (!ALPHA_KEY) {
+    return { gainers: [], losers: [], active: [], apiCallsUsed: 0 };
+  }
+
+  try {
+    const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_KEY}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    const data = await response.json();
+
+    if (data?.Note || data?.Information || data?.['Error Message']) {
+      return { gainers: [], losers: [], active: [], apiCallsUsed: 1 };
+    }
+
+    return {
+      gainers: data?.top_gainers || [],
+      losers: data?.top_losers || [],
+      active: data?.most_actively_traded || [],
+      apiCallsUsed: 1,
+    };
+  } catch {
+    return { gainers: [], losers: [], active: [], apiCallsUsed: 1 };
+  }
+}
+
+async function fetchAlphaBulkQuotes(
+  symbols: string[],
+  maxApiCalls: number
+): Promise<{ priceMap: Map<string, any>; apiCallsUsed: number }> {
+  const priceMap = new Map<string, any>();
+  if (!ALPHA_KEY || symbols.length === 0 || maxApiCalls <= 0) {
+    return { priceMap, apiCallsUsed: 0 };
+  }
+
+  const batchSize = 100;
+  let apiCallsUsed = 0;
+
+  for (let index = 0; index < symbols.length; index += batchSize) {
+    if (apiCallsUsed >= maxApiCalls) break;
+    const batch = symbols.slice(index, index + batchSize);
+    const symbolList = batch.join(',');
+    const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      const data = await response.json();
+      apiCallsUsed += 1;
+
+      if (data?.Note || data?.Information || data?.['Error Message']) {
+        break;
+      }
+
+      const rows = Array.isArray(data?.data) ? data.data : [];
+      for (const row of rows) {
+        const ticker = normalizeTicker(row?.['01. symbol'] || row?.symbol);
+        if (!ticker) continue;
+        priceMap.set(ticker, row);
+      }
+    } catch {
+      apiCallsUsed += 1;
+    }
+  }
+
+  return { priceMap, apiCallsUsed };
+}
+
+function scoreLightEquityCandidate(
+  symbol: string,
+  quote: any,
+  timeframe: string,
+  moverBias: number
+): {
+  symbol: string;
+  score: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  change24h: number;
+  signals: { bullish: number; bearish: number; neutral: number };
+  indicators: { price: number };
+} | null {
+  const price = parseAlphaNumber(quote?.['05. price'] || quote?.price);
+  const open = parseAlphaNumber(quote?.['02. open'] || quote?.open);
+  const prevClose = parseAlphaNumber(quote?.['08. previous close'] || quote?.['previous_close']);
+  const dayChangePercent = parseAlphaNumber(quote?.['10. change percent'] || quote?.['change_percent']);
+  const volume = parseAlphaNumber(quote?.['06. volume'] || quote?.volume);
+
+  if (!Number.isFinite(price) || price <= 0) return null;
+
+  const intradayChange = Number.isFinite(open) && open > 0
+    ? ((price - open) / open) * 100
+    : (Number.isFinite(dayChangePercent) ? dayChangePercent : 0);
+  const dailyChange = Number.isFinite(dayChangePercent)
+    ? dayChangePercent
+    : (Number.isFinite(prevClose) && prevClose > 0 ? ((price - prevClose) / prevClose) * 100 : 0);
+
+  const momentumChange = timeframe === '1d'
+    ? dailyChange
+    : (timeframe === '1h' ? intradayChange * 0.8 + dailyChange * 0.6 : intradayChange * 1.2 + dailyChange * 0.35);
+
+  const momentumRange = timeframe === '1d' ? 12 : (timeframe === '1h' ? 8 : 5);
+  const momentumScore = clamp(((momentumChange + momentumRange) / (momentumRange * 2)) * 100, 0, 100);
+  const liquidityScore = Number.isFinite(volume) && volume > 0
+    ? clamp((Math.log10(volume + 1) / 9) * 100, 0, 100)
+    : 35;
+  const moverBiasScore = clamp(50 + moverBias * 25, 0, 100);
+
+  const scoreRaw = momentumScore * 0.55 + liquidityScore * 0.3 + moverBiasScore * 0.15;
+  const score = Math.round(clamp(scoreRaw, 0, 100));
+
+  const bullishThreshold = timeframe === '1d' ? 1.0 : (timeframe === '1h' ? 0.7 : 0.35);
+  const bearishThreshold = -bullishThreshold;
+
+  let bullish = 0;
+  let bearish = 0;
+  let neutral = 0;
+
+  if (momentumChange >= bullishThreshold) bullish += 1;
+  else if (momentumChange <= bearishThreshold) bearish += 1;
+  else neutral += 1;
+
+  if (Number.isFinite(volume) && volume > 2_000_000) bullish += 1;
+  else if (Number.isFinite(volume) && volume < 300_000) bearish += 1;
+  else neutral += 1;
+
+  if (moverBias > 0) bullish += 1;
+  else if (moverBias < 0) bearish += 1;
+  else neutral += 1;
+
+  let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (bullish > bearish) direction = 'bullish';
+  if (bearish > bullish) direction = 'bearish';
+
+  return {
+    symbol,
+    score,
+    direction,
+    change24h: dailyChange,
+    signals: { bullish, bearish, neutral },
+    indicators: { price },
+  };
+}
+
+async function runLightEquityScan(startTime: number, timeframe: string, universeSize: number) {
+  const moverData = await fetchAlphaTopMovers();
+
+  const moverBiasMap = new Map<string, number>();
+  for (const row of moverData.gainers) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker) moverBiasMap.set(ticker, 1);
+  }
+  for (const row of moverData.losers) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker) moverBiasMap.set(ticker, -1);
+  }
+  for (const row of moverData.active) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
+  }
+
+  const candidateSymbols = new Set<string>(EQUITY_UNIVERSE);
+  for (const ticker of moverBiasMap.keys()) candidateSymbols.add(ticker);
+  const maxCandidates = Math.max(30, Math.floor(universeSize || 200));
+  const prioritized = [
+    ...Array.from(moverBiasMap.keys()),
+    ...EQUITY_UNIVERSE.filter((symbol) => !moverBiasMap.has(symbol)),
+  ];
+  const candidates = Array.from(new Set(prioritized)).slice(0, maxCandidates);
+
+  if (Date.now() - startTime > 55000) {
+    return {
+      scanned: 0,
+      topPicks: [] as any[],
+      sourceSymbols: candidates.length,
+      apiCallsUsed: moverData.apiCallsUsed,
+      apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
+      effectiveUniverseSize: candidates.length,
+    };
+  }
+
+  const quoteResult = await fetchAlphaBulkQuotes(
+    candidates,
+    Math.max(0, LIGHT_EQUITY_MAX_API_CALLS - moverData.apiCallsUsed)
+  );
+
+  const ranked = candidates
+    .map((symbol) => scoreLightEquityCandidate(symbol, quoteResult.priceMap.get(symbol), timeframe, moverBiasMap.get(symbol) ?? 0))
+    .filter((item): item is NonNullable<ReturnType<typeof scoreLightEquityCandidate>> => item !== null)
+    .sort((left, right) => right.score - left.score);
+
+  return {
+    scanned: ranked.length,
+    topPicks: ranked.slice(0, 10),
+    sourceSymbols: candidates.length,
+    apiCallsUsed: moverData.apiCallsUsed + quoteResult.apiCallsUsed,
+    apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
+    effectiveUniverseSize: candidates.length,
+  };
+}
+
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
     // Convert BTC -> BTCUSDT for Binance
@@ -893,6 +1106,27 @@ export async function POST(req: NextRequest) {
         duration: `${duration}s`,
         topPicks: lightResult.topPicks,
         sourceCoinsFetched: lightResult.sourceCoinsFetched,
+        apiCallsUsed: lightResult.apiCallsUsed,
+        apiCallsCap: lightResult.apiCallsCap,
+        effectiveUniverseSize: lightResult.effectiveUniverseSize,
+        errors: [],
+      });
+    }
+
+    if (type === 'equity' && mode === 'light') {
+      console.log(`[bulk-scan/light] Scanning up to ${universeSize} equities using hybrid movers + bulk quotes...`);
+      const lightResult = await runLightEquityScan(startTime, selectedTimeframe, universeSize);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      return NextResponse.json({
+        success: true,
+        type,
+        timeframe: selectedTimeframe,
+        mode,
+        scanned: lightResult.scanned,
+        duration: `${duration}s`,
+        topPicks: lightResult.topPicks,
+        sourceSymbols: lightResult.sourceSymbols,
         apiCallsUsed: lightResult.apiCallsUsed,
         apiCallsCap: lightResult.apiCallsCap,
         effectiveUniverseSize: lightResult.effectiveUniverseSize,

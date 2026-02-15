@@ -473,12 +473,17 @@ function ScannerContent() {
   const [bulkScanLoading, setBulkScanLoading] = useState(false);
   const [bulkScanTimeframe, setBulkScanTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
   const [bulkCryptoScanMode, setBulkCryptoScanMode] = useState<'deep' | 'light'>('light');
+  const [bulkEquityScanMode, setBulkEquityScanMode] = useState<'deep' | 'light'>('light');
   const [bulkCryptoUniverseSize, setBulkCryptoUniverseSize] = useState<number>(500);
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
     timeframe: string;
     mode?: 'deep' | 'light';
     sourceCoinsFetched?: number;
+    sourceSymbols?: number;
+    apiCallsUsed?: number;
+    apiCallsCap?: number;
+    effectiveUniverseSize?: number;
     topPicks: any[];
     scanned: number;
     duration: string;
@@ -498,6 +503,11 @@ function ScannerContent() {
         payload.mode = bulkCryptoScanMode;
         if (bulkCryptoScanMode === 'light') {
           payload.universeSize = bulkCryptoUniverseSize;
+        }
+      } else {
+        payload.mode = bulkEquityScanMode;
+        if (bulkEquityScanMode === 'light') {
+          payload.universeSize = 500;
         }
       }
 
@@ -522,6 +532,10 @@ function ScannerContent() {
           timeframe: data.timeframe,
           mode: data.mode,
           sourceCoinsFetched: data.sourceCoinsFetched,
+          sourceSymbols: data.sourceSymbols,
+          apiCallsUsed: data.apiCallsUsed,
+          apiCallsCap: data.apiCallsCap,
+          effectiveUniverseSize: data.effectiveUniverseSize,
           topPicks: data.topPicks,
           scanned: data.scanned,
           duration: data.duration
@@ -821,6 +835,32 @@ function ScannerContent() {
                 Start here for fastest wins: scan broad market leaders, then deep dive your best chart
               </p>
             </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ color: "#94a3b8", fontSize: "13px", fontWeight: 600 }}>Equity scan depth:</span>
+              <div style={{ display: "flex", gap: "6px", background: "rgba(30,41,59,0.6)", padding: "4px", borderRadius: "8px" }}>
+                {(['light', 'deep'] as const).map((mode) => (
+                  <button
+                    key={`equity-${mode}`}
+                    onClick={() => setBulkEquityScanMode(mode)}
+                    disabled={bulkScanLoading}
+                    style={{
+                      padding: "7px 12px",
+                      background: bulkEquityScanMode === mode ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
+                      border: "none",
+                      borderRadius: "6px",
+                      color: bulkEquityScanMode === mode ? "#fff" : "#94a3b8",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: bulkScanLoading ? "not-allowed" : "pointer",
+                      opacity: bulkScanLoading ? 0.5 : 1
+                    }}
+                  >
+                    {mode === 'light' ? 'Fast Hybrid Rank' : 'Deep Indicators'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           
           {/* How It Works Explainer */}
@@ -1022,12 +1062,12 @@ function ScannerContent() {
               {bulkScanLoading && bulkScanType === 'equity' ? (
                 <>
                   <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  Finding Stock Setups...
+                  {bulkEquityScanMode === 'light' ? 'Ranking Stock Universe...' : 'Finding Stock Setups...'}
                 </>
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>📈</span>
-                  Find Top 10 Stock Setups
+                  {bulkEquityScanMode === 'light' ? 'Find Fast Top 10 Stocks' : 'Find Top 10 Stock Setups'}
                 </>
               )}
             </button>
@@ -1101,6 +1141,12 @@ function ScannerContent() {
                   {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
                   {bulkScanResults.type === 'crypto' && bulkScanResults.mode === 'light' && bulkScanResults.sourceCoinsFetched
                     ? ` • source ${bulkScanResults.sourceCoinsFetched}`
+                    : ''}
+                  {bulkScanResults.type === 'equity' && bulkScanResults.mode === 'light' && bulkScanResults.sourceSymbols
+                    ? ` • source ${bulkScanResults.sourceSymbols}`
+                    : ''}
+                  {bulkScanResults.mode === 'light' && Number.isFinite(bulkScanResults.apiCallsUsed) && Number.isFinite(bulkScanResults.apiCallsCap)
+                    ? ` • API ${bulkScanResults.apiCallsUsed}/${bulkScanResults.apiCallsCap}`
                     : ''}
                 </span>
               </div>
