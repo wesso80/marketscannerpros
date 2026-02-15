@@ -7,10 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
-import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
-import EvolutionStatusCard from "@/components/EvolutionStatusCard";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -518,6 +515,21 @@ function ScannerContent() {
     duration: string;
   } | null>(null);
   const [bulkScanError, setBulkScanError] = useState<string | null>(null);
+  const showDeskPreludePanels = false;
+  const showAdvancedEngineeringPanels = false;
+  const showLegacyTopAnalysis = false;
+  const [focusMode, setFocusMode] = useState(false);
+  const [deskFeedIndex, setDeskFeedIndex] = useState(0);
+  const flowFetchAbortRef = React.useRef<AbortController | null>(null);
+  const lastFlowSymbolRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = setInterval(() => {
+      setDeskFeedIndex((prev) => prev + 1);
+    }, 180000);
+    return () => clearInterval(timer);
+  }, [result?.symbol]);
 
   // Run bulk scan
   const runBulkScan = async (type: 'equity' | 'crypto') => {
@@ -617,50 +629,60 @@ function ScannerContent() {
     }
   }, [result, timeframe, assetType, setPageData]);
 
-  // Fetch daily top picks on mount (disabled - using bulk scan instead)
+  // Daily picks call intentionally disabled to avoid background API load
   useEffect(() => {
-    // Skip fetching - we're using bulk scan buttons now
-    const fetchDailyPicks = async () => {
-      try {
-        const res = await fetch('/api/scanner/daily-picks');
-        const data = await res.json();
-        if (data.success) {
-          setDailyPicks({
-            scanDate: data.scanDate,
-            topPicks: data.topPicks
-          });
-        }
-      } catch (e) {
-        console.error('Failed to fetch daily picks:', e);
-      } finally {
-        setDailyPicksLoading(false);
-      }
-    };
-    fetchDailyPicks();
+    setDailyPicksLoading(false);
   }, []);
 
   useEffect(() => {
     const fetchFlow = async () => {
       if (!result?.symbol || assetType !== 'equity') {
         setCapitalFlow(null);
+        lastFlowSymbolRef.current = null;
+        if (flowFetchAbortRef.current) {
+          flowFetchAbortRef.current.abort();
+          flowFetchAbortRef.current = null;
+        }
         return;
       }
 
+      if (lastFlowSymbolRef.current === result.symbol) {
+        return;
+      }
+      lastFlowSymbolRef.current = result.symbol;
+
+      if (flowFetchAbortRef.current) {
+        flowFetchAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      flowFetchAbortRef.current = controller;
+
       try {
-        const response = await fetch(`/api/flow?symbol=${encodeURIComponent(result.symbol)}&scanMode=intraday_1h`, { cache: 'no-store' });
+        const response = await fetch(`/api/flow?symbol=${encodeURIComponent(result.symbol)}&scanMode=intraday_1h`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
         const data = await response.json();
         if (response.ok && data?.success && data?.data) {
           setCapitalFlow(data.data);
         } else {
           setCapitalFlow(result.capitalFlow ?? null);
         }
-      } catch {
+      } catch (error: any) {
+        if (error?.name === 'AbortError') return;
         setCapitalFlow(result.capitalFlow ?? null);
+      } finally {
+        flowFetchAbortRef.current = null;
       }
     };
 
     fetchFlow();
-  }, [result?.symbol, assetType, result?.capitalFlow]);
+    return () => {
+      if (flowFetchAbortRef.current) {
+        flowFetchAbortRef.current.abort();
+      }
+    };
+  }, [result?.symbol, assetType]);
 
   // Get filtered suggestions based on input
   const getSuggestions = () => {
@@ -671,6 +693,8 @@ function ScannerContent() {
   };
 
   const runScan = async () => {
+    if (loading) return;
+
     if (!ticker.trim()) {
       setError("Please enter or select a ticker");
       return;
@@ -821,25 +845,11 @@ function ScannerContent() {
       />
       <main style={{ padding: "24px 16px" }}>
         <div className="max-w-7xl mx-auto">
-        <AdaptivePersonalityCard
-          skill="scanner"
-          setupText={`${assetType} ${timeframe} scan ${ticker}`}
-          direction={result?.direction}
-          timeframe={timeframe}
-          baseScore={result?.score ?? 50}
-          compact
-        />
-
-        <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
-
-        <StateMachineTraderEyeCard
-          symbol={(capitalFlow as any)?.symbol || result?.symbol || ticker}
-          direction={result?.direction === 'bearish' ? 'short' : 'long'}
-          playbook="momentum_pullback"
-          compact
-        />
-
-        <EvolutionStatusCard compact />
+        {showDeskPreludePanels && (
+          <>
+            <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
+          </>
+        )}
 
         {/* Orientation */}
         <div style={{
@@ -860,7 +870,7 @@ function ScannerContent() {
               padding: "4px 6px",
               fontSize: "12px"
             }}>🎯</span>
-            Why you're here
+            AI TRADE BRIEF
           </div>
           <div style={{ marginBottom: 10 }}>
             Find high-probability phases with multi-timeframe alignment. Start with the phase, confirm alignment, then look for a clean entry trigger.
@@ -1837,25 +1847,94 @@ function ScannerContent() {
 
         {/* Active Symbol Cockpit Header */}
         {result && (
-          <div style={{
-            background: "linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))",
-            border: "1px solid rgba(16,185,129,0.35)",
-            borderRadius: "14px",
-            padding: "0.8rem 1rem",
-            marginBottom: "0.85rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "0.75rem",
-            flexWrap: "wrap",
-          }}>
-            <div style={{ color: "#E2E8F0", fontSize: "0.88rem", fontWeight: 800, letterSpacing: "0.35px" }}>
-              🎯 ACTIVE SYMBOL COCKPIT — {result.symbol} ({timeframe.toUpperCase()})
+          <>
+            <div style={{
+              background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.90))",
+              border: "1px solid rgba(56,189,248,0.3)",
+              borderRadius: "12px",
+              padding: "0.55rem 0.75rem",
+              marginBottom: "0.55rem",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.55rem",
+              alignItems: "center",
+            }}>
+              {(() => {
+                const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+                const adx = result.adx ?? 0;
+                const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
+                const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
+                const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
+                const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
+                const breadth = direction === 'bullish' ? 'RISK ON' : direction === 'bearish' ? 'RISK OFF' : 'MIXED';
+                const sessionLabel = timeframe === '1d' ? 'DAILY' : 'INTRADAY';
+
+                const stripTag = (label: string, value: string, color: string) => (
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    background: 'rgba(15,23,42,0.55)',
+                    border: '1px solid rgba(148,163,184,0.24)',
+                    borderRadius: '999px',
+                    padding: '0.22rem 0.55rem',
+                    fontSize: '0.68rem',
+                  }}>
+                    <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
+                    <span style={{ color, fontWeight: 800 }}>{value}</span>
+                  </div>
+                );
+
+                return (
+                  <>
+                    {stripTag('Regime', regime, regimeColor)}
+                    {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
+                    {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
+                    {stripTag('Event Risk', 'NONE', '#10B981')}
+                    {stripTag('Session', sessionLabel, '#93C5FD')}
+                  </>
+                );
+              })()}
             </div>
-            <div style={{ color: "#10B981", fontSize: "0.76rem", fontWeight: 700 }}>
-              All panels below are for {result.symbol} only
+
+            <div style={{
+              background: "linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))",
+              border: "1px solid rgba(16,185,129,0.35)",
+              borderRadius: "14px",
+              padding: "0.8rem 1rem",
+              marginBottom: "0.85rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+            }}>
+              <div style={{ color: "#E2E8F0", fontSize: "0.88rem", fontWeight: 800, letterSpacing: "0.35px" }}>
+                🎯 ACTIVE SYMBOL COCKPIT — {result.symbol} ({timeframe.toUpperCase()})
+              </div>
+              <div style={{ color: "#10B981", fontSize: "0.76rem", fontWeight: 700 }}>
+                All panels below are for {result.symbol} only
+              </div>
+              <button
+                onClick={() => setFocusMode((prev) => !prev)}
+                style={{
+                  marginLeft: 'auto',
+                  background: focusMode ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.7)',
+                  border: `1px solid ${focusMode ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.3)'}`,
+                  borderRadius: '999px',
+                  color: focusMode ? '#10B981' : '#94A3B8',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.28rem 0.65rem',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
+              </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* Results Card */}
@@ -1938,6 +2017,259 @@ function ScannerContent() {
               );
             })()}
 
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const adx = result.adx ?? 0;
+              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
+              const messages = [
+                `${direction === 'bullish' ? 'Buying' : direction === 'bearish' ? 'Selling' : 'Two-way'} pressure ${direction === 'neutral' ? 'is mixed' : 'is building'} near key structure.`,
+                `${adx >= 25 ? 'Trend strength is improving' : 'Trend strength remains moderate'} — watch for confirmation candle.`,
+                `${atrPercent >= 3 ? 'Volatility is elevated' : 'Volatility remains controlled'}; size risk accordingly.`,
+              ];
+              const msg = messages[deskFeedIndex % messages.length];
+
+              return (
+                <div style={{
+                  marginBottom: '0.7rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                  border: '1px solid rgba(59,130,246,0.28)',
+                  borderRadius: '10px',
+                  padding: '0.55rem 0.7rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.6rem',
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ color: '#93C5FD', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    🧠 AI Desk Feed
+                  </div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.76rem', flex: 1 }}>{msg}</div>
+                </div>
+              );
+            })()}
+
+            {focusMode && (() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const entry = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 0.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 0.2 : result.price)
+                : null;
+              const invalidation = result.price != null
+                ? (direction === 'bullish' ? result.price - (result.atr ?? 0) * 0.8 : direction === 'bearish' ? result.price + (result.atr ?? 0) * 0.8 : result.price)
+                : null;
+              const target1 = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 1.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 1.2 : result.price)
+                : null;
+              const target2 = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 2.0 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 2.0 : result.price)
+                : null;
+
+              return (
+                <div style={{
+                  marginBottom: '1rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
+                  border: '1px solid rgba(16,185,129,0.32)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 0.8rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '0.45rem',
+                }}>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</div></div>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</div></div>
+                  <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
+                </div>
+              );
+            })()}
+
+            {!focusMode && (() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const score = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const adx = result.adx ?? 0;
+              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
+              const trendAligned = result.price != null && result.ema200 != null
+                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+                : false;
+              const momentumActive = result.rsi != null && result.macd_hist != null
+                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
+                : false;
+
+              const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
+              const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
+              const institutionalIntent = result.institutionalFilter?.recommendation === 'TRADE_READY'
+                ? 'REPRICE_TREND'
+                : result.institutionalFilter?.recommendation === 'CAUTION'
+                ? 'WAIT_CONFIRMATION'
+                : 'NO_TRADE';
+              const ivEnvironment = atrPercent >= 3 ? 'HIGH IV (CAUTION)' : atrPercent <= 1.5 ? 'LOW IV (BUY PREMIUM)' : 'MID IV (NEUTRAL)';
+              const directionColor = direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B';
+              const grade = score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 45 ? 'C' : 'D';
+
+              const structureEdge = trendAligned ? Math.min(90, score + 10) : Math.max(20, score - 20);
+              const timingEdge = Math.min(90, Math.max(20, Math.round((result.rsi != null ? 100 - Math.abs(result.rsi - 50) * 2 : 50))));
+              const flowEdge = result.signals ? Math.min(90, Math.max(20, Math.round((result.signals.bullish + result.signals.bearish) * 10))) : 45;
+              const executionEdge = Math.min(90, Math.max(20, Math.round(score * 0.9)));
+
+              const entry = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 0.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 0.2 : result.price)
+                : null;
+              const invalidation = result.price != null
+                ? (direction === 'bullish' ? result.price - (result.atr ?? 0) * 0.8 : direction === 'bearish' ? result.price + (result.atr ?? 0) * 0.8 : result.price)
+                : null;
+              const target1 = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 1.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 1.2 : result.price)
+                : null;
+              const target2 = result.price != null
+                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 2.0 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 2.0 : result.price)
+                : null;
+              const rr = entry != null && invalidation != null && target1 != null
+                ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - invalidation)))
+                : null;
+
+              const edgeSentence = trendAligned && momentumActive
+                ? 'High probability trend continuation — edge comes from structure + momentum alignment.'
+                : trendAligned
+                ? 'Moderate edge — structure is aligned, momentum needs confirmation.'
+                : 'Low-quality edge — wait for structure and momentum alignment.';
+              const notEdgeSentence = atrPercent >= 3 ? 'Not a volatility-compression play.' : 'Not an event-driven volatility breakout.';
+
+              return (
+                <>
+                <div style={{
+                  marginBottom: '0.7rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.86))',
+                  border: '1px solid rgba(56,189,248,0.24)',
+                  borderRadius: '10px',
+                  padding: '0.9rem',
+                }}>
+                  <div style={{
+                    marginBottom: '0.7rem',
+                    color: '#67E8F9',
+                    fontWeight: 800,
+                    fontSize: '0.76rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}>
+                    🧠 AI Verdict: {edgeSentence}
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    gap: '0.7rem',
+                  }}>
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: '8px', padding: '0.72rem' }}>
+                      <div style={{ color: '#6EE7B7', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🟢 Market Context</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                        <div>Regime: <span style={{ color: regimeColor, fontWeight: 800 }}>{regime}</span> ({direction.toUpperCase()})</div>
+                        <div>Institutional Intent: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{institutionalIntent}</span></div>
+                        <div>Volatility State: <span style={{ color: '#F8FAFC', fontWeight: 700 }}>{ivEnvironment}</span></div>
+                      </div>
+                      <div style={{ display: 'grid', gap: '0.22rem', marginTop: '0.5rem', color: '#CBD5E1', fontSize: '0.75rem' }}>
+                        <div>{trendAligned ? '✔' : '⚠'} Trend {trendAligned ? 'aligned' : 'misaligned'}</div>
+                        <div>{momentumActive ? '✔' : '⚠'} Momentum {momentumActive ? 'active' : 'not confirmed'}</div>
+                        <div>{atrPercent >= 3 ? '⚠' : '✔'} {atrPercent >= 3 ? 'Elevated volatility risk' : 'Volatility manageable'}</div>
+                        <div>{result.signals && (result.signals.bullish > result.signals.bearish) ? '✔' : '⚠'} Flow: {result.signals ? `${result.signals.bullish}/${result.signals.bearish} (B/B)` : 'limited data'}</div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '0.72rem' }}>
+                      <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🔵 AI Decision Core</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem' }}>
+                        <div style={{ color: directionColor, fontWeight: 900, fontSize: '1rem' }}>{direction.toUpperCase()}</div>
+                        <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.82rem' }}>Confidence {confidence}% • Grade {grade}</div>
+                      </div>
+                      {[
+                        { label: 'Structure', value: structureEdge },
+                        { label: 'Timing', value: timingEdge },
+                        { label: 'Options Flow', value: flowEdge },
+                        { label: 'Execution', value: executionEdge },
+                      ].map((row) => (
+                        <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 34px', gap: '0.4rem', alignItems: 'center', marginBottom: '0.28rem' }}>
+                          <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{row.label}</div>
+                          <div style={{ height: '6px', background: 'rgba(100,116,139,0.35)', borderRadius: '999px', overflow: 'hidden' }}>
+                            <div style={{ width: `${row.value}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #34D399)' }} />
+                          </div>
+                          <div style={{ color: '#CBD5E1', fontSize: '0.7rem', textAlign: 'right' }}>{row.value}</div>
+                        </div>
+                      ))}
+                      <div style={{ marginTop: '0.45rem', color: '#A7F3D0', fontSize: '0.75rem' }}><strong>Primary Edge:</strong> {edgeSentence.replace('High probability ', '').replace('Moderate edge — ', '').replace('Low-quality edge — ', '')}</div>
+                      <div style={{ color: '#FCA5A5', fontSize: '0.74rem' }}><strong>Not Edge:</strong> {notEdgeSentence}</div>
+                    </div>
+
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.72rem' }}>
+                      <div style={{ color: '#FCA5A5', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🔴 Execution Plan</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                        <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
+                        <div>Grade: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{grade}</span></div>
+                        <div style={{ marginTop: '0.35rem' }}>🎯 Entry: <span style={{ color: '#93C5FD', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+                        <div>❌ Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                        <div>🚀 Targets: <span style={{ color: '#6EE7B7', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
+                        <div>R:R: <span style={{ color: rr != null && rr >= 1.5 ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{
+                  marginBottom: '1rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
+                  border: '1px solid rgba(245,158,11,0.28)',
+                  borderRadius: '8px',
+                  padding: '0.8rem 0.85rem',
+                }}>
+                  {(() => {
+                    const baseProb = Math.max(5, Math.min(85, confidence));
+                    const bullProb = direction === 'bullish' ? Math.max(15, Math.round(baseProb * 0.4)) : Math.max(10, Math.round((100 - baseProb) * 0.2));
+                    const bearProb = Math.max(5, 100 - baseProb - bullProb);
+                    const conflictLevel = Math.abs((result.signals?.bullish ?? 0) - (result.signals?.bearish ?? 0)) <= 1 ? 'MEDIUM' : 'LOW';
+                    const qualityGate = score >= 70 ? 'HIGH' : score >= 55 ? 'MODERATE' : 'WEAK';
+                    const riskStatus = atrPercent >= 3 ? 'ELEVATED' : atrPercent >= 1.5 ? 'MODERATE' : 'CONTROLLED';
+
+                    return (
+                      <>
+                        <div style={{
+                          color: '#FCD34D',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          marginBottom: '0.5rem',
+                        }}>
+                          🔥 Risk & Scenario Intelligence
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.55rem', marginBottom: '0.55rem' }}>
+                          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
+                            <div style={{ color: '#10B981', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>Base Case ({baseProb}%)</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Trend continuation lower → Target 1 likely' : 'Trend continuation higher → Target 1 likely'}</div>
+                          </div>
+                          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
+                            <div style={{ color: '#60A5FA', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{direction === 'bearish' ? 'Bull' : 'Bull'} Case ({bullProb}%)</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Momentum reversal up → trim shorts quickly' : 'Momentum acceleration → add on clean pullback'}</div>
+                          </div>
+                          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
+                            <div style={{ color: '#F87171', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{direction === 'bearish' ? 'Bear' : 'Bear'} Case ({bearProb}%)</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Structure failure above invalidation → exit immediately' : 'Structure failure below invalidation → exit immediately'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: riskStatus === 'ELEVATED' ? '#EF4444' : riskStatus === 'MODERATE' ? '#F59E0B' : '#10B981', fontSize: '0.68rem', fontWeight: 800 }}>Risk Status: {riskStatus}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontSize: '0.68rem', fontWeight: 800 }}>Trade Quality Gate: {qualityGate}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: conflictLevel === 'LOW' ? '#10B981' : '#F59E0B', fontSize: '0.68rem', fontWeight: 800 }}>Conflict Level: {conflictLevel}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                </>
+              );
+            })()}
+
+            {showLegacyTopAnalysis && (
+              <>
             {/* NEW: Clear Verdict Tile - The WOW Factor */}
             {(() => {
               // Use direction from API if available, otherwise calculate from score
@@ -2487,6 +2819,8 @@ function ScannerContent() {
                 </div>
               </div>
             )}
+              </>
+            )}
 
             <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
               {result.symbol} — {timeframe.toUpperCase()}
@@ -2607,24 +2941,26 @@ function ScannerContent() {
               </div>
             )}
 
-            {/* TradingView Chart */}
-            <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-              <TradingViewChart 
-                symbol={result.symbol.replace("-USD", "")} 
-                interval={timeframe} 
-                price={result.price} 
-                chartData={result.chartData}
-              />
-            </div>
+            {showAdvancedEngineeringPanels && (
+              <>
+                {/* TradingView Chart */}
+                <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                  <TradingViewChart 
+                    symbol={result.symbol.replace("-USD", "")} 
+                    interval={timeframe} 
+                    price={result.price} 
+                    chartData={result.chartData}
+                  />
+                </div>
 
-            {/* Score Explanation */}
-            <div style={{
-              marginBottom: "2rem",
-              background: "rgba(59, 130, 246, 0.1)",
-              border: "1px solid rgba(59, 130, 246, 0.3)",
-              borderRadius: "12px",
-              padding: "1.25rem",
-            }}>
+                {/* Score Explanation */}
+                <div style={{
+                  marginBottom: "2rem",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: "12px",
+                  padding: "1.25rem",
+                }}>
               <div style={{ color: "#60A5FA", fontWeight: "600", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
                 📊 How Your Score is Calculated
               </div>
@@ -2705,12 +3041,12 @@ function ScannerContent() {
               <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid rgba(59, 130, 246, 0.2)", color: "#94A3B8", fontSize: "0.8rem" }}>
                 <strong style={{ color: "#60A5FA" }}>Confluence Score:</strong> Percentage of indicators showing bullish signals | 🟢 Bullish: majority agree | 🟡 Neutral: mixed signals | 🔴 Bearish: majority bearish
               </div>
-            </div>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
-              gap: "1rem",
-            }}>
+                </div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                  gap: "1rem",
+                }}>
               {/* Score */}
               <div style={{
                 background: "rgba(30, 41, 59, 0.5)",
@@ -3094,7 +3430,9 @@ function ScannerContent() {
                   </div>
                 </div>
               )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
