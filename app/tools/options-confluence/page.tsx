@@ -235,6 +235,43 @@ interface ProfessionalTradeStack {
   overallState: 'A+' | 'A' | 'B' | 'C' | 'WAIT';
 }
 
+type InstitutionalIntentState =
+  | 'ACCUMULATION'
+  | 'DISTRIBUTION'
+  | 'LIQUIDITY_HUNT_UP'
+  | 'LIQUIDITY_HUNT_DOWN'
+  | 'TRAP_UP'
+  | 'TRAP_DOWN'
+  | 'REPRICE_TREND';
+
+interface InstitutionalIntentOutput {
+  engine: 'institutional_intent_engine';
+  version: '1.0';
+  symbol: string;
+  timeframe: string;
+  asof: string;
+  features: {
+    sbq: number;
+    srs: number;
+    ces: number;
+    ops: number;
+    pwp: number;
+    rc: number;
+  };
+  intent_probabilities: Record<InstitutionalIntentState, number>;
+  primary_intent: InstitutionalIntentState | 'UNKNOWN';
+  intent_confidence: number;
+  expected_path: 'expand' | 'mean-revert' | 'chop' | 'expansion_continuation';
+  permission_bias: 'LONG' | 'SHORT' | 'NONE';
+  key_levels: {
+    liquidity_pools: string[];
+    oi_walls: Array<{ strike: number; side: 'CALL' | 'PUT' | 'MIXED'; strength: number }>;
+    invalidation: string;
+  };
+  notes: string[];
+  reason?: 'DATA_INSUFFICIENT';
+}
+
 type EdgeVerdict = 'BULLISH_EDGE' | 'BEARISH_EDGE' | 'WAIT';
 
 interface LocationContext {
@@ -311,6 +348,7 @@ interface OptionsSetup {
   candleCloseConfluence?: CandleCloseConfluence;
   // INSTITUTIONAL AI MARKET STATE
   aiMarketState?: AIMarketState | null;
+  institutionalIntent?: InstitutionalIntentOutput | null;
   professionalTradeStack?: ProfessionalTradeStack | null;
   tradeSnapshot?: TradeSnapshot;
   locationContext?: LocationContext | null;
@@ -400,6 +438,10 @@ interface AdaptiveProfile {
   decisionTiming: TraderTiming;
   environmentRates: Record<TraderEnvironment, number>;
 }
+
+type InstitutionalLensMode = 'OBSERVE' | 'WATCH' | 'ARMED' | 'EXECUTE';
+type MRIRegime = 'TREND_EXPANSION' | 'ROTATIONAL_RANGE' | 'VOLATILITY_EXPANSION' | 'CHAOTIC_NEWS';
+type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 
 export default function OptionsConfluenceScanner() {
   const { tier } = useUserTier();
@@ -897,6 +939,22 @@ export default function OptionsConfluenceScanner() {
         ? 'ACTIVE'
         : 'WAIT';
 
+  const institutionalFlowState = !result
+    ? 'UNKNOWN'
+    : result.capitalFlow?.bias
+      ? `${result.capitalFlow.bias.toUpperCase()} • ${result.capitalFlow.market_mode.toUpperCase()}`
+      : (result.unusualActivity?.smartMoneyDirection || 'neutral').toUpperCase();
+
+  const institutionalMarketRegime = !result
+    ? 'UNKNOWN'
+    : (marketStateLabel || 'Uncertain Regime').toUpperCase();
+
+  const tradePermission = !result
+    ? 'WAIT'
+    : result.institutionalFilter?.noTrade
+      ? 'BLOCKED'
+      : (commandStatus === 'ACTIVE' ? 'ALLOWED' : 'WAIT');
+
   const commandStatusColor = commandStatus === 'ACTIVE' ? '#10B981' : commandStatus === 'WAIT' ? '#F59E0B' : '#EF4444';
   const commandUpdatedAgo = lastUpdated
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
@@ -1135,6 +1193,125 @@ export default function OptionsConfluenceScanner() {
       wins: adaptiveProfile.wins,
     };
   })();
+
+  const hasActiveTradeForSymbol = useMemo(() => {
+    if (!result || !personalityEntries.length) return false;
+    const upperSymbol = result.symbol.toUpperCase();
+    return personalityEntries.some((trade) => {
+      if (!trade.isOpen) return false;
+      const textBlob = `${trade.strategy || ''} ${trade.setup || ''} ${trade.notes || ''} ${(trade.tags || []).join(' ')}`.toUpperCase();
+      return textBlob.includes(upperSymbol);
+    });
+  }, [personalityEntries, result]);
+
+  const marketRegimeIntel = useMemo(() => {
+    if (!result) return null;
+
+    const ivRank = result.ivAnalysis?.ivRank ?? 50;
+    const movePct = result.expectedMove?.selectedExpiryPercent ?? 0;
+    const directionScoreAbs = Math.abs(result.compositeScore?.directionScore ?? 0);
+    const confidenceScore = result.compositeScore?.confidence ?? 0;
+    const unusualLevel = result.unusualActivity?.alertLevel ?? 'none';
+    const noTradeFlag = !!result.institutionalFilter?.noTrade;
+    const freshness = result.dataQuality?.freshness ?? 'DELAYED';
+    const hasCriticalFlag = (result.disclaimerFlags || []).some((flag) =>
+      /earnings|fomc|fed|cpi|news|event|halt|gap/i.test(flag)
+    );
+    const flowAlignment = (result.unusualActivity?.smartMoneyDirection || result.openInterestAnalysis?.sentiment || 'neutral') as 'bullish' | 'bearish' | 'neutral' | 'mixed';
+    const flowMatchesDirection = flowAlignment === 'neutral' || flowAlignment === 'mixed' || flowAlignment === result.direction;
+
+    const volatilityState: 'normal' | 'elevated' | 'extreme' =
+      ivRank >= 85 || movePct >= 7 || unusualLevel === 'high'
+        ? 'extreme'
+        : ivRank >= 70 || movePct >= 4.5 || unusualLevel === 'moderate'
+          ? 'elevated'
+          : 'normal';
+
+    const trendExpansionSignal = directionScoreAbs >= 35 && confidenceScore >= 65 && flowMatchesDirection;
+    const volatilityExpansionSignal = volatilityState !== 'normal';
+    const chaoticSignal = noTradeFlag && (hasCriticalFlag || volatilityState === 'extreme' || freshness === 'STALE');
+
+    let regime: MRIRegime = 'ROTATIONAL_RANGE';
+    if (chaoticSignal) regime = 'CHAOTIC_NEWS';
+    else if (volatilityExpansionSignal) regime = 'VOLATILITY_EXPANSION';
+    else if (trendExpansionSignal) regime = 'TREND_EXPANSION';
+
+    const confidencePct =
+      regime === 'CHAOTIC_NEWS'
+        ? Math.max(70, confidenceScore)
+        : regime === 'TREND_EXPANSION'
+          ? Math.min(95, Math.max(55, confidenceScore + 10))
+          : regime === 'VOLATILITY_EXPANSION'
+            ? Math.min(90, Math.max(50, confidenceScore + 5))
+            : Math.max(40, Math.min(80, confidenceScore));
+
+    const riskModifier =
+      regime === 'TREND_EXPANSION' ? 1.1 :
+      regime === 'ROTATIONAL_RANGE' ? 0.95 :
+      regime === 'VOLATILITY_EXPANSION' ? 0.75 : 0;
+
+    return {
+      regime,
+      confidence: Number((confidencePct / 100).toFixed(2)),
+      volatility_state: volatilityState,
+      flow_alignment: flowAlignment,
+      risk_modifier: riskModifier,
+    };
+  }, [result]);
+
+  const institutionalProbability = result
+    ? (probabilityResult?.winProbability ?? result.compositeScore?.confidence ?? 0)
+    : 0;
+  const adaptiveConfidenceScore = result
+    ? (adaptiveMatch?.adaptiveScore ?? institutionalProbability)
+    : 0;
+  const adaptiveConfidenceBand: AdaptiveConfidenceBand = adaptiveConfidenceScore < 40
+    ? 'LOW'
+    : adaptiveConfidenceScore < 65
+      ? 'MEDIUM'
+      : adaptiveConfidenceScore < 80
+        ? 'HIGH'
+        : 'EXTREME';
+  const flowDirection = result?.unusualActivity?.smartMoneyDirection || result?.openInterestAnalysis?.sentiment || 'neutral';
+  const flowAligned = !!result && (
+    flowDirection === 'neutral' ||
+    flowDirection === 'mixed' ||
+    flowDirection === result.direction
+  );
+  const riskGovernorAllows = !!result && (
+    tradePermission === 'ALLOWED' &&
+    !result.institutionalFilter?.noTrade &&
+    !adaptiveMatch?.noTradeBias
+  );
+  const watchThreshold = 55;
+
+  const institutionalLensMode: InstitutionalLensMode = !result
+    ? 'OBSERVE'
+    : hasActiveTradeForSymbol
+      ? 'EXECUTE'
+      : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
+        ? 'OBSERVE'
+        : adaptiveConfidenceBand === 'LOW'
+          ? 'OBSERVE'
+          : adaptiveConfidenceBand === 'MEDIUM'
+            ? 'WATCH'
+            : adaptiveConfidenceBand === 'HIGH'
+              ? (flowAligned && riskGovernorAllows ? 'ARMED' : 'WATCH')
+              : (flowAligned && riskGovernorAllows ? 'EXECUTE' : ((result.compositeScore?.confidence ?? 0) >= watchThreshold ? 'WATCH' : 'OBSERVE'));
+
+  const lensDisplayMode = institutionalLensMode === 'EXECUTE' && !hasActiveTradeForSymbol
+    ? 'EXECUTE_FOCUS'
+    : institutionalLensMode;
+
+  const modeAccent = institutionalLensMode === 'ARMED'
+    ? '#10B981'
+    : institutionalLensMode === 'EXECUTE'
+      ? '#F97316'
+      : institutionalLensMode === 'WATCH'
+        ? '#F59E0B'
+        : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
+          ? '#EF4444'
+          : '#3B82F6';
 
   return (
     <div className="options-page-container" style={{ 
@@ -1377,6 +1554,246 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
 
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
+              border: `2px solid ${modeAccent}`,
+              borderRadius: '14px',
+              padding: '0.8rem 0.95rem',
+              boxShadow: `0 0 22px ${modeAccent}2A`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Lens State</div>
+                <div style={{ color: modeAccent, fontSize: '0.92rem', fontWeight: 900, letterSpacing: '0.4px' }}>{lensDisplayMode}</div>
+              </div>
+              <div style={{ color: '#CBD5E1', fontSize: '0.78rem', marginTop: '0.4rem' }}>
+                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 NO TRADE ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and wait for stability.'}
+                {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Execution intentionally de-emphasized.'}
+                {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
+                {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Execution panel prioritized; non-essential analysis collapsed.'}
+                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Live management mode active. Focus on risk, flow shifts, and exit discipline.' : 'Extreme confidence focus mode active. Only execution-critical data remains visible.')}
+              </div>
+              <div style={{
+                marginTop: '0.5rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))',
+                gap: '0.35rem',
+              }}>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>MRI Regime</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel?.regime || 'UNKNOWN'}</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>MRI Confidence</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel ? `${Math.round(marketRegimeIntel.confidence * 100)}%` : '—'}</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Adaptive Confidence</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{Math.round(adaptiveConfidenceScore)}% ({adaptiveConfidenceBand})</div>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk Modifier</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel?.risk_modifier?.toFixed(2) ?? '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            {result.institutionalIntent && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.90))',
+                border: `2px solid ${result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#EF4444' : '#38BDF8'}`,
+                borderRadius: '14px',
+                padding: '0.85rem 0.95rem',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Intent</div>
+                  <div style={{
+                    color: result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#FCA5A5' : '#67E8F9',
+                    fontSize: '0.84rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.3px',
+                  }}>
+                    {result.institutionalIntent.primary_intent}
+                  </div>
+                </div>
+
+                {result.institutionalIntent.primary_intent === 'UNKNOWN' ? (
+                  <div style={{ color: '#FCA5A5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                    🚫 {result.institutionalIntent.reason === 'DATA_INSUFFICIENT' ? 'Intent unavailable — DATA_INSUFFICIENT' : 'Intent unavailable'}
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ marginTop: '0.45rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#94A3B8', marginBottom: '0.2rem' }}>
+                        <span>Confidence</span>
+                        <span>{Math.round(result.institutionalIntent.intent_confidence * 100)}%</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${Math.round(result.institutionalIntent.intent_confidence * 100)}%`,
+                          background: 'linear-gradient(90deg, #38BDF8, #10B981)',
+                        }} />
+                      </div>
+                    </div>
+
+                    <div style={{
+                      marginTop: '0.55rem',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                      gap: '0.35rem',
+                    }}>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Path</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>
+                          {result.institutionalIntent.expected_path === 'chop' ? '↔ CHOP' :
+                           result.institutionalIntent.expected_path === 'mean-revert' ? '↩ MEAN REVERT' :
+                           result.institutionalIntent.expected_path === 'expand' ? '↗ EXPAND' :
+                           '🚀 EXPANSION CONTINUATION'}
+                        </div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Permission Bias</div>
+                        <div style={{
+                          color: result.institutionalIntent.permission_bias === 'LONG' ? '#10B981' : result.institutionalIntent.permission_bias === 'SHORT' ? '#EF4444' : '#F59E0B',
+                          fontSize: '0.77rem',
+                          fontWeight: 900,
+                        }}>
+                          {result.institutionalIntent.permission_bias}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.2rem' }}>
+                      {(result.institutionalIntent.notes || []).slice(0, 3).map((note, idx) => (
+                        <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>• {note}</div>
+                      ))}
+                    </div>
+
+                    <details style={{ marginTop: '0.45rem' }}>
+                      <summary style={{ color: '#94A3B8', fontSize: '0.72rem', cursor: 'pointer' }}>Show intent probabilities</summary>
+                      <div style={{ marginTop: '0.4rem', display: 'grid', gap: '0.2rem' }}>
+                        {(Object.entries(result.institutionalIntent.intent_probabilities) as Array<[InstitutionalIntentState, number]>)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([intent, probability]) => (
+                            <div key={intent} style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{intent}</span>
+                              <span>{(probability * 100).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                      </div>
+                    </details>
+                  </>
+                )}
+              </div>
+            )}
+
+            {(institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.9))',
+                border: `3px solid ${modeAccent}`,
+                borderRadius: '18px',
+                padding: '1rem 1.1rem',
+                display: 'grid',
+                gap: '0.9rem',
+              }}>
+                {institutionalLensMode === 'ARMED' ? (
+                  <>
+                    <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.35px' }}>████ EXECUTION CARD ████</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.55rem' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Entry Zone</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await trigger'}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Invalidation</div>
+                        <div style={{ color: '#FCA5A5', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.stopLoss.toFixed(2)}` : 'N/A'}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Targets</div>
+                        <div style={{ color: '#6EE7B7', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} / ${result.tradeLevels.target2?.price?.toFixed(2) || '—'}` : 'N/A'}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>R:R + Size</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : '—'} • {result.maxRiskPercent}%</div>
+                      </div>
+                    </div>
+                    <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
+                      <span style={{ color: '#A7F3D0', fontWeight: 700 }}>Why this trade:</span> {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
+                    </div>
+                    <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
+                      <span style={{ color: '#FCA5A5', fontWeight: 700 }}>Risk summary:</span> {riskState} • {decisionTrigger}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.35px' }}>████ LIVE MANAGEMENT ████</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.55rem' }}>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Live PnL</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>Track in Journal / Broker</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Risk Exposure</div>
+                        <div style={{ color: '#FCA5A5', fontSize: '0.88rem', fontWeight: 800 }}>{result.maxRiskPercent}% max risk • {riskState}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Flow Changes</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{institutionalFlowState}</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
+                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Exit Conditions</div>
+                        <div style={{ color: '#6EE7B7', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeSnapshot?.risk?.invalidationReason || 'Stop/invalidation breached'}</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {institutionalLensMode !== 'ARMED' && institutionalLensMode !== 'EXECUTE' && (
+              <>
+
+            {/* Institutional Header Layer (3-second trader test) */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))',
+              border: `2px solid ${tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B'}`,
+              borderRadius: '16px',
+              padding: '0.9rem 1rem',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
+            }}>
+              <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.45px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
+                Institutional State
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                gap: '0.45rem',
+              }}>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Flow State</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{institutionalFlowState}</div>
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Regime</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{institutionalMarketRegime}</div>
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Trade Permission</div>
+                  <div style={{
+                    color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B',
+                    fontWeight: 900,
+                    fontSize: '0.9rem',
+                  }}>
+                    {tradePermission}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                </div>
+              </div>
+            </div>
+
             {/* Primary Intelligence Panel (Cognitive Anchor) */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.92))',
@@ -1582,6 +1999,7 @@ export default function OptionsConfluenceScanner() {
             </div>
 
             {/* Decision Ladder - Institutional validation pipeline */}
+            {institutionalLensMode === 'OBSERVE' && (
             <div style={{
               background: 'linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.90))',
               border: '1px solid rgba(99,102,241,0.35)',
@@ -1648,8 +2066,10 @@ export default function OptionsConfluenceScanner() {
                 })}
               </div>
             </div>
+            )}
 
             {/* Trader Eye Path Layout (Z-Flow) */}
+            {institutionalLensMode === 'OBSERVE' && (
             <div style={{
               background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.86))',
               border: '1px solid rgba(59,130,246,0.35)',
@@ -1801,6 +2221,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </div>
+            )}
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
@@ -1844,21 +2265,21 @@ export default function OptionsConfluenceScanner() {
             {/* Data Quality & Execution Notes */}
             {((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
-              <div style={{
+              <details style={{
                 background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.08))',
                 border: '1px solid rgba(245,158,11,0.4)',
                 borderRadius: '12px',
                 padding: '0.875rem 1rem',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <summary style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', listStyle: 'none' }}>
                   <span style={{ fontSize: '1rem' }}>📋</span>
                   <span style={{ 
                     color: '#F59E0B', 
-                    fontWeight: '600', 
+                    fontWeight: '700', 
                     fontSize: '0.8rem',
                     textTransform: 'uppercase',
                   }}>
-                    Execution Notes
+                    System Diagnostics (Advanced)
                   </span>
                   {result.dataQuality && (
                     <span style={{
@@ -1876,8 +2297,8 @@ export default function OptionsConfluenceScanner() {
                       {result.dataQuality.freshness} DATA
                     </span>
                   )}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                </summary>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.6rem' }}>
                   {result.dataConfidenceCaps?.map((cap, idx) => (
                     <span key={`cap-${idx}`} style={{ 
                       color: '#FBBF24', 
@@ -1901,7 +2322,7 @@ export default function OptionsConfluenceScanner() {
                     </span>
                   ))}
                 </div>
-              </div>
+              </details>
             )}
 
             {/* 3-SECOND VIEW - Trade Snapshot */}
@@ -1983,6 +2404,62 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </div>
+
+            {/* 📈 PATTERN FORMATION - moved before Decision Engine (WHY before ACT) */}
+            {(() => {
+              const confirmationColor = hasConfirmedPattern && bestPattern
+                ? patternBiasColor(bestPattern.bias)
+                : '#F59E0B';
+              const biasAligned = !!bestPattern && (
+                bestPattern.bias === 'neutral' ||
+                bestPattern.bias === result.direction
+              );
+
+              return (
+                <div style={{
+                  background: hasConfirmedPattern
+                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.18)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.18)' : 'rgba(245,158,11,0.16)'}, rgba(15,23,42,0.95))`
+                    : 'linear-gradient(135deg, rgba(148,163,184,0.14), rgba(15,23,42,0.95))',
+                  border: `2px solid ${confirmationColor}`,
+                  borderRadius: '16px',
+                  padding: '0.85rem 1rem',
+                  boxShadow: `0 0 20px ${confirmationColor}2A`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                    <div style={{ color: '#E2E8F0', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '0.35px' }}>
+                      🧩 PATTERN FORMATION
+                    </div>
+                    <span style={{
+                      background: hasConfirmedPattern ? `${confirmationColor}30` : 'rgba(245,158,11,0.22)',
+                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}80`,
+                      color: hasConfirmedPattern ? confirmationColor : '#FCD34D',
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.68rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                    }}>
+                      {hasConfirmedPattern ? 'Confirmed' : 'Pending'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.45rem' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Pattern</div>
+                      <div style={{ color: confirmationColor, fontWeight: 800, fontSize: '0.86rem' }}>{bestPattern?.name || 'No clear pattern yet'}</div>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Strength</div>
+                      <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.86rem' }}>{bestPattern ? `${bestPattern.confidence.toFixed(0)}%` : '—'}</div>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Bias Align</div>
+                      <div style={{ color: biasAligned ? '#10B981' : '#F59E0B', fontWeight: 800, fontSize: '0.86rem' }}>{biasAligned ? 'YES' : 'MIXED'}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
@@ -2048,154 +2525,32 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
 
-              {/* Main Decision Grid */}
-              <div className="decision-grid-mobile" style={{
-                marginBottom: '1.5rem',
+              {/* Compressed KPI Strip */}
+              <div style={{
+                marginBottom: '1.2rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
               }}>
-                {/* Trade Score - Weighted setup quality */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ 
-                    fontSize: '0.75rem', 
-                    color: '#64748B', 
-                    marginBottom: '4px', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.5px',
-                  }}>
-                    Setup Quality
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(1.5rem, 5vw, 2.5rem)',
-                    fontWeight: '800',
-                    color: gradeColor(result.tradeQuality),
-                    lineHeight: 1,
-                  }}>
-                    {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    Weighted Score
-                  </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Edge</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</div>
                 </div>
-
-                {/* Bias / Direction */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Bias
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
-                    fontWeight: '700',
-                    color: result.direction === 'bullish' ? '#10B981' 
-                      : result.direction === 'bearish' ? '#EF4444' 
-                      : '#F59E0B',
-                  }}>
-                    {result.direction === 'bullish' ? '🟢 BULLISH' 
-                      : result.direction === 'bearish' ? '🔴 BEARISH' 
-                      : '⚖️ NEUTRAL'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
-                    Pull: {result.pullBias > 0 ? '+' : ''}{result.pullBias.toFixed(1)}%
-                  </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Probability</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
-
-                {/* Strategy */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Strategy
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(0.9rem, 3vw, 1.25rem)',
-                    fontWeight: '700',
-                    color: result.strategyRecommendation?.strategyType === 'buy_premium' ? '#3B82F6'
-                      : result.strategyRecommendation?.strategyType === 'sell_premium' ? '#8B5CF6'
-                      : '#F59E0B',
-                  }}>
-                    {result.strategyRecommendation?.strategy || 
-                      (result.direction === 'bullish' ? 'Buy Calls' : 
-                       result.direction === 'bearish' ? 'Buy Puts' : 'Iron Condor')}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px' }}>
-                    {result.strategyRecommendation?.riskProfile === 'defined' ? '✓ Defined Risk' : '⚠️ Undefined Risk'}
-                  </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</div>
                 </div>
-
-                {/* Edge Score - Signal-based edge calculation */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    EDGE
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
-                    fontWeight: '700',
-                    color: probabilityResult?.winProbability && probabilityResult.winProbability >= 55 ? '#10B981' 
-                      : probabilityResult?.winProbability && probabilityResult.winProbability >= 45 ? '#F59E0B' 
-                      : '#6B7280',
-                  }}>
-                    {probabilityResult?.winProbability 
-                      ? `${probabilityResult.winProbability.toFixed(0)}%`
-                      : '—'}
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    Signal Edge
-                  </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Flow</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</div>
                 </div>
-
-                {/* Kelly Size - Shows optimal position or "No Edge" */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Kelly Size
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(1.1rem, 4vw, 1.75rem)',
-                    fontWeight: '700',
-                    color: probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 ? '#10B981' : '#EF4444',
-                  }}>
-                    {probabilityResult 
-                      ? (probabilityResult.kellySizePercent > 0 
-                          ? `${probabilityResult.kellySizePercent.toFixed(1)}%`
-                          : '0%')
-                      : '—'}
-                  </div>
-                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '4px' }}>
-                    {probabilityResult?.kellySizePercent && probabilityResult.kellySizePercent > 0 
-                      ? 'Optimal Position' 
-                      : 'No Edge (Skip)'}
-                  </div>
-                </div>
-
-                {/* Risk/Reward - Graded: <0.75=poor, 0.75-1=weak, 1-1.5=acceptable, 1.5+=strong */}
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Risk/Reward
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(1rem, 4vw, 1.75rem)',
-                    fontWeight: '700',
-                    color: result.tradeLevels 
-                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '#10B981'  // Strong (green)
-                      : result.tradeLevels.riskRewardRatio >= 1.0 ? '#F59E0B'  // Acceptable (amber)
-                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FB923C' // Weak (orange)
-                      : '#EF4444'  // Poor (red)
-                      : '#6B7280',
-                  }}>
-                    {result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}
-                  </div>
-                  <div style={{ 
-                    fontSize: '0.65rem', 
-                    color: result.tradeLevels 
-                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '#6EE7B7' 
-                      : result.tradeLevels.riskRewardRatio >= 1.0 ? '#FCD34D'
-                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FDBA74'
-                      : '#FCA5A5'
-                      : '#64748B',
-                    marginTop: '4px' 
-                  }}>
-                    {result.tradeLevels 
-                      ? result.tradeLevels.riskRewardRatio >= 1.5 ? '✓ Strong' 
-                      : result.tradeLevels.riskRewardRatio >= 1.0 ? 'Acceptable'
-                      : result.tradeLevels.riskRewardRatio >= 0.75 ? '⚠ Weak'
-                      : '✗ Poor'
-                      : 'Calculating...'}
-                  </div>
+                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
+                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
                 </div>
               </div>
 
@@ -2299,125 +2654,12 @@ export default function OptionsConfluenceScanner() {
               </details>
             </div>
 
-            {/* 📈 PATTERN CONFIRMATION - Core decision driver */}
-            {(() => {
-              const confirmationColor = hasConfirmedPattern && bestPattern
-                ? patternBiasColor(bestPattern.bias)
-                : '#F59E0B';
-              const biasAligned = !!bestPattern && (
-                bestPattern.bias === 'neutral' ||
-                bestPattern.bias === result.direction
-              );
-              const volumeAligned = !!bestPattern && /volume|vol\.?\s*/i.test(bestPattern.reason);
-              const trendStateLabel = isCountertrend
-                ? 'Countertrend Bounce'
-                : `${result.direction === 'bullish' ? 'Bullish' : result.direction === 'bearish' ? 'Bearish' : 'Neutral'} Macro`;
-
-              return (
-                <div style={{
-                  background: hasConfirmedPattern
-                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.24)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.24)' : 'rgba(245,158,11,0.22)'}, rgba(15,23,42,0.95))`
-                    : 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(15,23,42,0.95))',
-                  border: `2px solid ${confirmationColor}`,
-                  borderRadius: '16px',
-                  padding: '1rem 1.1rem',
-                  boxShadow: `0 0 28px ${confirmationColor}42`,
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    marginBottom: '0.75rem',
-                  }}>
-                    <div style={{ color: '#E2E8F0', fontWeight: '900', fontSize: '0.95rem', letterSpacing: '0.4px' }}>
-                      🧩 PATTERN FORMATION
-                    </div>
-                    <span style={{
-                      background: hasConfirmedPattern ? `${confirmationColor}30` : 'rgba(245,158,11,0.25)',
-                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}90`,
-                      color: hasConfirmedPattern ? confirmationColor : '#FCD34D',
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                    }}>
-                      {hasConfirmedPattern ? '✔ Core Driver Confirmed' : '⚠ Awaiting Confirmation'}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    background: 'rgba(0,0,0,0.20)',
-                    border: `1px solid ${confirmationColor}55`,
-                    borderRadius: '10px',
-                    padding: '0.55rem 0.65rem',
-                    marginBottom: '0.6rem',
-                    color: '#E2E8F0',
-                    fontSize: '0.83rem',
-                  }}>
-                    <span style={{ color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>Trend State:</span>{' '}
-                    <span style={{ color: isCountertrend ? '#F59E0B' : '#10B981', fontWeight: 800 }}>{trendStateLabel}</span>
-                  </div>
-
-                  {hasConfirmedPattern && bestPattern ? (
-                    <>
-                      <div style={{
-                        color: confirmationColor,
-                        fontSize: '1.1rem',
-                        fontWeight: '900',
-                        marginBottom: '0.45rem',
-                        textTransform: 'uppercase',
-                      }}>
-                        {bestPattern.name}
-                      </div>
-                      <div className="decision-grid-mobile" style={{ gap: '0.6rem' }}>
-                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Pattern Strength</div>
-                          <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.9rem' }}>
-                            {bestPattern.confidence.toFixed(0)}%
-                          </div>
-                        </div>
-                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Bias Align</div>
-                          <div style={{ color: biasAligned ? '#10B981' : '#F59E0B', fontWeight: '700', fontSize: '0.85rem' }}>
-                            {biasAligned ? 'YES' : 'MIXED'}
-                          </div>
-                        </div>
-                        <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                          <div style={{ color: '#64748B', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Volume Align</div>
-                          <div style={{ color: volumeAligned ? '#10B981' : '#94A3B8', fontWeight: '700', fontSize: '0.85rem' }}>
-                            {volumeAligned ? 'YES' : 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ color: '#CBD5E1', fontSize: '0.82rem', marginTop: '0.55rem' }}>
-                        {bestPattern.reason}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{
-                      background: 'rgba(0,0,0,0.22)',
-                      border: '1px solid rgba(245,158,11,0.35)',
-                      borderRadius: '10px',
-                      padding: '0.7rem 0.75rem',
-                      color: '#FCD34D',
-                      fontSize: '0.84rem',
-                    }}>
-                      {hasPatternData
-                        ? 'Pattern signals are present but confidence is below confirmation threshold. Wait for cleaner structure before sizing up.'
-                        : 'No clear structure pattern detected yet. Keep focus on direction, timing, and risk until pattern confirmation appears.'}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Pattern panel intentionally rendered above Decision Engine */}
 
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🏦 INSTITUTIONAL-GRADE PRO MODE DASHBOARD - PROBABILITY ENGINE */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {probabilityResult && (
+            {institutionalLensMode === 'OBSERVE' && probabilityResult && (
               <div style={{ marginBottom: '1.5rem' }}>
                 {/* Pro Mode Toggle */}
                 <div style={{
@@ -2547,7 +2789,8 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* PRO TRADER SECTION - Collapsible */}
-            <details open style={{
+            {institutionalLensMode === 'OBSERVE' && (
+            <details style={{
               background: 'linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(59,130,246,0.15) 100%)',
               border: '2px solid rgba(168,85,247,0.5)',
               borderRadius: '20px',
@@ -2565,10 +2808,10 @@ export default function OptionsConfluenceScanner() {
                 listStyle: 'none',
               }}>
                 <span style={{ fontSize: '1.5rem' }}>🎯</span>
-                <h2 style={{ margin: 0, color: '#E9D5FF', fontSize: '1.25rem', flex: 1 }}>Pro Trader Insights</h2>
+                <h2 style={{ margin: 0, color: '#E2E8F0', fontSize: '1.25rem', flex: 1 }}>Institutional Brain Summary</h2>
                 <span style={{ 
                   fontSize: '0.75rem', 
-                  color: '#A78BFA',
+                  color: '#93C5FD',
                   background: 'rgba(168,85,247,0.2)',
                   padding: '4px 10px',
                   borderRadius: '8px',
@@ -2576,6 +2819,24 @@ export default function OptionsConfluenceScanner() {
                   ▼ Show Details
                 </span>
               </summary>
+
+              <div style={{
+                background: 'rgba(15,23,42,0.45)',
+                border: '1px solid rgba(148,163,184,0.25)',
+                borderRadius: '12px',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                display: 'grid',
+                gap: '0.35rem',
+              }}>
+                <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>State</div>
+                <div style={{ color: commandStatusColor, fontSize: '0.95rem', fontWeight: 900 }}>{commandStatus}</div>
+                <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>Market Mode: {marketStateLabel || 'Unknown'}</div>
+                <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>Institutional Flow: {institutionalFlowState}</div>
+                <div style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontSize: '0.78rem', fontWeight: 800 }}>
+                  Trade Permission: {tradePermission}
+                </div>
+              </div>
 
               {/* COMPOSITE SCORE & STRATEGY - TOP OF PRO SECTION */}
               {result.compositeScore && (
@@ -3014,8 +3275,10 @@ export default function OptionsConfluenceScanner() {
 
               </div>
             </details>
+            )}
 
             {/* Confluence Info - Collapsible */}
+            {institutionalLensMode === 'OBSERVE' && (
             <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(168,85,247,0.3)',
@@ -3089,9 +3352,10 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </details>
+            )}
 
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
-            {result.candleCloseConfluence && (
+            {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
               <div style={{
                 background: result.candleCloseConfluence.confluenceRating === 'extreme' 
                   ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(168,85,247,0.15) 100%)'
@@ -3255,7 +3519,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Strike & Expiration Recommendations */}
-            {result.direction !== 'neutral' && (
+            {institutionalLensMode === 'OBSERVE' && result.direction !== 'neutral' && (
               <div className="card-grid-mobile">
                 
                 {/* Strike Recommendation */}
@@ -3442,7 +3706,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Open Interest Analysis */}
-            {result.openInterestAnalysis ? (
+            {institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
               <div style={{
                 background: 'rgba(30,41,59,0.6)',
                 border: '1px solid rgba(139,92,246,0.4)',
@@ -3733,9 +3997,10 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
               </div>
-            )}
+            ))}
 
             {/* Greeks Advice - Collapsible (advanced) */}
+            {institutionalLensMode === 'OBSERVE' && (
             <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(245,158,11,0.3)',
@@ -3789,8 +4054,10 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </details>
+            )}
 
             {/* Risk Management - Collapsible (advanced) */}
+            {institutionalLensMode === 'OBSERVE' && (
             <details style={{
               background: 'rgba(30,41,59,0.6)',
               border: '1px solid rgba(239,68,68,0.3)',
@@ -3843,9 +4110,10 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </details>
+            )}
 
             {/* Summary Trade Setup */}
-            {result.primaryStrike && result.primaryExpiration && (
+            {institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
               <div style={{
                 background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.15))',
                 border: '2px solid rgba(16,185,129,0.5)',
@@ -3914,6 +4182,9 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
               </div>
+            )}
+
+              </>
             )}
 
           </div>

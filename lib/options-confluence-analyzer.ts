@@ -442,6 +442,9 @@ export interface OptionsSetup {
   // INSTITUTIONAL AI MARKET STATE (HEDGE FUND MODEL)
   aiMarketState: AIMarketState | null;
 
+  // INSTITUTIONAL INTENT ENGINE
+  institutionalIntent: InstitutionalIntentOutput | null;
+
   // PROFESSIONAL DECISION STACK (trader-native presentation)
   professionalTradeStack: ProfessionalTradeStack | null;
 
@@ -592,6 +595,48 @@ export interface AIMarketState {
   scenarios: ScenarioMap;
   strategyMatchScore: number;   // 0-100% how well strategy fits regime
   tradeQualityGate: 'HIGH' | 'MODERATE' | 'LOW' | 'WAIT';
+}
+
+export type InstitutionalIntentState =
+  | 'ACCUMULATION'
+  | 'DISTRIBUTION'
+  | 'LIQUIDITY_HUNT_UP'
+  | 'LIQUIDITY_HUNT_DOWN'
+  | 'TRAP_UP'
+  | 'TRAP_DOWN'
+  | 'REPRICE_TREND';
+
+export type InstitutionalIntentPath = 'expand' | 'mean-revert' | 'chop' | 'expansion_continuation';
+export type InstitutionalPermissionBias = 'LONG' | 'SHORT' | 'NONE';
+
+export interface InstitutionalIntentFeatures {
+  sbq: number;
+  srs: number;
+  ces: number;
+  ops: number;
+  pwp: number;
+  rc: number;
+}
+
+export interface InstitutionalIntentOutput {
+  engine: 'institutional_intent_engine';
+  version: '1.0';
+  symbol: string;
+  timeframe: string;
+  asof: string;
+  features: InstitutionalIntentFeatures;
+  intent_probabilities: Record<InstitutionalIntentState, number>;
+  primary_intent: InstitutionalIntentState | 'UNKNOWN';
+  intent_confidence: number;
+  expected_path: InstitutionalIntentPath;
+  permission_bias: InstitutionalPermissionBias;
+  key_levels: {
+    liquidity_pools: string[];
+    oi_walls: Array<{ strike: number; side: 'CALL' | 'PUT' | 'MIXED'; strength: number }>;
+    invalidation: string;
+  };
+  notes: string[];
+  reason?: 'DATA_INSUFFICIENT';
 }
 
 export interface ProfessionalStackLayer {
@@ -2313,6 +2358,289 @@ function createFallbackCompositeScore(reason: string): CompositeScore {
   };
 }
 
+function clampIntentScore(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
+function softmaxIntentScores(rawScores: Record<InstitutionalIntentState, number>): Record<InstitutionalIntentState, number> {
+  const intents = Object.keys(rawScores) as InstitutionalIntentState[];
+  const scale = 0.09;
+  const values = intents.map(intent => rawScores[intent]);
+  const maxValue = Math.max(...values);
+  const exps = intents.map(intent => Math.exp((rawScores[intent] - maxValue) * scale));
+  const sumExp = exps.reduce((sum, value) => sum + value, 0) || 1;
+  return intents.reduce((acc, intent, idx) => {
+    acc[intent] = exps[idx] / sumExp;
+    return acc;
+  }, {} as Record<InstitutionalIntentState, number>);
+}
+
+function buildInsufficientIntent(symbol: string, timeframe: string, reason: 'DATA_INSUFFICIENT'): InstitutionalIntentOutput {
+  const zeroProbs: Record<InstitutionalIntentState, number> = {
+    ACCUMULATION: 0,
+    DISTRIBUTION: 0,
+    LIQUIDITY_HUNT_UP: 0,
+    LIQUIDITY_HUNT_DOWN: 0,
+    TRAP_UP: 0,
+    TRAP_DOWN: 0,
+    REPRICE_TREND: 0,
+  };
+
+  return {
+    engine: 'institutional_intent_engine',
+    version: '1.0',
+    symbol,
+    timeframe,
+    asof: new Date().toISOString(),
+    features: { sbq: 0, srs: 0, ces: 0, ops: 0, pwp: 0, rc: 0 },
+    intent_probabilities: zeroProbs,
+    primary_intent: 'UNKNOWN',
+    intent_confidence: 0,
+    expected_path: 'chop',
+    permission_bias: 'NONE',
+    key_levels: {
+      liquidity_pools: [],
+      oi_walls: [],
+      invalidation: 'Data insufficient',
+    },
+    notes: ['Intent engine blocked due to insufficient institutional-grade inputs'],
+    reason,
+  };
+}
+
+function computeInstitutionalIntent(args: {
+  symbol: string;
+  timeframe: string;
+  confluenceResult: HierarchicalScanResult;
+  compositeScore: CompositeScore;
+  finalDirection: 'bullish' | 'bearish' | 'neutral';
+  aiMarketState: AIMarketState | null;
+  dataQuality: DataQuality;
+  ivAnalysis: IVAnalysis | null;
+  unusualActivity: UnusualActivity | null;
+  openInterestAnalysis: OpenInterestData | null;
+  locationContext: LocationContext | null;
+  tradeSnapshot: TradeSnapshot;
+  disclaimerFlags: string[];
+}): InstitutionalIntentOutput {
+  const {
+    symbol,
+    timeframe,
+    confluenceResult,
+    compositeScore,
+    finalDirection,
+    aiMarketState,
+    dataQuality,
+    ivAnalysis,
+    unusualActivity,
+    openInterestAnalysis,
+    locationContext,
+    tradeSnapshot,
+    disclaimerFlags,
+  } = args;
+
+  const hasEventRisk = disclaimerFlags.some((flag) => /earnings|fomc|fed|cpi|news|event/i.test(flag));
+  const chaoticRegime = aiMarketState?.tradeQualityGate === 'WAIT' && (hasEventRisk || dataQuality.freshness === 'STALE');
+  const optionsDrivenInputsMissing = !ivAnalysis || !openInterestAnalysis;
+
+  if (dataQuality.freshness === 'STALE' || chaoticRegime || optionsDrivenInputsMissing) {
+    return buildInsufficientIntent(symbol, timeframe, 'DATA_INSUFFICIENT');
+  }
+
+  const clusteredCount = confluenceResult.decompression.clusteredCount ?? confluenceResult.decompression.activeCount;
+  const confluenceScore = confluenceResult.candleCloseConfluence?.confluenceScore ?? Math.min(100, clusteredCount * 18);
+  const directionScoreAbs = Math.abs(compositeScore.directionScore ?? 0);
+  const confidence = compositeScore.confidence ?? 0;
+
+  const sbq = clampIntentScore(directionScoreAbs * 0.6 + confidence * 0.35 + (finalDirection !== 'neutral' ? 8 : 0));
+
+  const conflictCount = compositeScore.conflicts?.length ?? 0;
+  const srsBase = conflictCount * 20 + (finalDirection === 'neutral' ? 15 : 0);
+  const unusualRejectionBoost = unusualActivity?.alertLevel === 'high' ? 20 : unusualActivity?.alertLevel === 'moderate' ? 12 : 4;
+  const srs = clampIntentScore(srsBase + unusualRejectionBoost + (clusteredCount >= 2 ? 10 : 0));
+
+  const ces = clampIntentScore(confluenceScore * 0.75 + Math.min(25, clusteredCount * 6));
+
+  const ivRank = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
+  const pcr = openInterestAnalysis?.pcRatio ?? 1;
+  const unusualWeight = unusualActivity?.alertLevel === 'high' ? 30 : unusualActivity?.alertLevel === 'moderate' ? 18 : 8;
+  const pcrSignal = Math.min(30, Math.abs(pcr - 0.85) * 55);
+  const ivSignal = ivRank >= 70 || ivRank <= 30 ? 22 : 10;
+  const ops = clampIntentScore(unusualWeight + pcrSignal + ivSignal + (unusualActivity?.hasUnusualActivity ? 12 : 0));
+
+  const nearestOiWall = openInterestAnalysis?.highOIStrikes?.slice(0, 1)?.[0] ?? null;
+  const pwpDistance = nearestOiWall ? Math.abs((nearestOiWall.strike - confluenceResult.currentPrice) / confluenceResult.currentPrice) * 100 : 100;
+  const pwp = clampIntentScore(nearestOiWall ? Math.max(0, 100 - pwpDistance * 20) : 35);
+
+  const regime = aiMarketState?.regime?.regime ?? 'RANGE';
+  const rc = clampIntentScore(
+    regime === 'TREND' ? 85 :
+    regime === 'RANGE' ? 78 :
+    regime === 'EXPANSION' ? 70 :
+    regime === 'REVERSAL' ? 65 : 55
+  );
+
+  const features: InstitutionalIntentFeatures = {
+    sbq: Math.round(sbq),
+    srs: Math.round(srs),
+    ces: Math.round(ces),
+    ops: Math.round(ops),
+    pwp: Math.round(pwp),
+    rc: Math.round(rc),
+  };
+
+  const regimeFeatureWeights: Record<'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL', { sbq: number; srs: number; ces: number; ops: number; pwp: number; rc: number }> = {
+    TREND: { sbq: 0.31, srs: 0.14, ces: 0.19, ops: 0.20, pwp: 0.06, rc: 0.10 },
+    RANGE: { sbq: 0.14, srs: 0.30, ces: 0.13, ops: 0.17, pwp: 0.16, rc: 0.10 },
+    EXPANSION: { sbq: 0.22, srs: 0.18, ces: 0.23, ops: 0.22, pwp: 0.06, rc: 0.09 },
+    REVERSAL: { sbq: 0.20, srs: 0.25, ces: 0.15, ops: 0.18, pwp: 0.10, rc: 0.12 },
+  };
+  const selectedRegimeWeights = regimeFeatureWeights[regime as 'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL'] || regimeFeatureWeights.RANGE;
+
+  const weightedCore = {
+    sbq: features.sbq * selectedRegimeWeights.sbq,
+    srs: features.srs * selectedRegimeWeights.srs,
+    ces: features.ces * selectedRegimeWeights.ces,
+    ops: features.ops * selectedRegimeWeights.ops,
+    pwp: features.pwp * selectedRegimeWeights.pwp,
+    rc: features.rc * selectedRegimeWeights.rc,
+  };
+  const coreScore = weightedCore.sbq + weightedCore.srs + weightedCore.ces + weightedCore.ops + weightedCore.pwp + weightedCore.rc;
+
+  const directionalLong = finalDirection === 'bullish';
+  const directionalShort = finalDirection === 'bearish';
+
+  const regimeIntentPrior: Record<'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL', Record<InstitutionalIntentState, number>> = {
+    TREND: {
+      ACCUMULATION: 6,
+      DISTRIBUTION: 6,
+      LIQUIDITY_HUNT_UP: 2,
+      LIQUIDITY_HUNT_DOWN: 2,
+      TRAP_UP: 1,
+      TRAP_DOWN: 1,
+      REPRICE_TREND: 18,
+    },
+    RANGE: {
+      ACCUMULATION: 12,
+      DISTRIBUTION: 12,
+      LIQUIDITY_HUNT_UP: 10,
+      LIQUIDITY_HUNT_DOWN: 10,
+      TRAP_UP: 11,
+      TRAP_DOWN: 11,
+      REPRICE_TREND: -4,
+    },
+    EXPANSION: {
+      ACCUMULATION: 4,
+      DISTRIBUTION: 4,
+      LIQUIDITY_HUNT_UP: 8,
+      LIQUIDITY_HUNT_DOWN: 8,
+      TRAP_UP: 5,
+      TRAP_DOWN: 5,
+      REPRICE_TREND: 14,
+    },
+    REVERSAL: {
+      ACCUMULATION: 8,
+      DISTRIBUTION: 8,
+      LIQUIDITY_HUNT_UP: 8,
+      LIQUIDITY_HUNT_DOWN: 8,
+      TRAP_UP: 13,
+      TRAP_DOWN: 13,
+      REPRICE_TREND: -2,
+    },
+  };
+  const regimePrior = regimeIntentPrior[regime as 'TREND' | 'RANGE' | 'EXPANSION' | 'REVERSAL'] || regimeIntentPrior.RANGE;
+
+  const rawScores: Record<InstitutionalIntentState, number> = {
+    ACCUMULATION: coreScore * 0.66 + (directionalLong ? 12 : 2) + (features.srs > 60 ? 8 : 0) + regimePrior.ACCUMULATION,
+    DISTRIBUTION: coreScore * 0.66 + (directionalShort ? 12 : 2) + (features.srs > 60 ? 8 : 0) + regimePrior.DISTRIBUTION,
+    LIQUIDITY_HUNT_UP: coreScore * 0.61 + (directionalShort ? 9 : 4) + (features.srs > 55 ? 10 : 0) + (features.ces > 60 ? 8 : 0) + regimePrior.LIQUIDITY_HUNT_UP,
+    LIQUIDITY_HUNT_DOWN: coreScore * 0.61 + (directionalLong ? 9 : 4) + (features.srs > 55 ? 10 : 0) + (features.ces > 60 ? 8 : 0) + regimePrior.LIQUIDITY_HUNT_DOWN,
+    TRAP_UP: coreScore * 0.57 + (directionalShort ? 11 : 3) + (features.srs > 65 && features.sbq < 75 ? 14 : 0) + (conflictCount > 0 ? 8 : 0) + regimePrior.TRAP_UP,
+    TRAP_DOWN: coreScore * 0.57 + (directionalLong ? 11 : 3) + (features.srs > 65 && features.sbq < 75 ? 14 : 0) + (conflictCount > 0 ? 8 : 0) + regimePrior.TRAP_DOWN,
+    REPRICE_TREND: coreScore * 0.76 + (features.sbq > 65 ? 14 : 0) + (features.ces > 60 ? 10 : 0) + (regime === 'TREND' || regime === 'EXPANSION' ? 12 : 0) + regimePrior.REPRICE_TREND,
+  };
+
+  if (features.sbq >= 70 && features.rc >= 70 && features.ops >= 60) {
+    rawScores.REPRICE_TREND += 20;
+  }
+  if (features.sbq >= 45 && features.sbq <= 75 && features.srs >= 65 && conflictCount >= 1) {
+    rawScores.TRAP_UP += 12;
+    rawScores.TRAP_DOWN += 12;
+  }
+  if (regime === 'RANGE' && features.srs >= 60 && features.sbq < 65) {
+    rawScores.TRAP_UP += 8;
+    rawScores.TRAP_DOWN += 8;
+    rawScores.LIQUIDITY_HUNT_UP += 6;
+    rawScores.LIQUIDITY_HUNT_DOWN += 6;
+  }
+  if ((regime === 'TREND' || regime === 'EXPANSION') && features.sbq >= 68 && features.ces >= 60) {
+    rawScores.REPRICE_TREND += 10;
+  }
+
+  const probabilities = softmaxIntentScores(rawScores);
+  const sorted = (Object.entries(probabilities) as Array<[InstitutionalIntentState, number]>).sort((a, b) => b[1] - a[1]);
+  const primaryIntent = sorted[0][0];
+  const primaryProb = sorted[0][1];
+  const secondProb = sorted[1]?.[1] ?? 0;
+  const intentConfidence = Math.max(0, Math.min(1, primaryProb - secondProb));
+
+  const expectedPath: InstitutionalIntentPath =
+    primaryIntent === 'REPRICE_TREND' ? 'expansion_continuation' :
+    primaryIntent === 'ACCUMULATION' || primaryIntent === 'DISTRIBUTION' ? 'chop' :
+    primaryIntent === 'TRAP_UP' || primaryIntent === 'TRAP_DOWN' ? 'mean-revert' :
+    'expand';
+
+  const permissionBias: InstitutionalPermissionBias =
+    primaryIntent === 'REPRICE_TREND' && directionalLong ? 'LONG' :
+    primaryIntent === 'REPRICE_TREND' && directionalShort ? 'SHORT' :
+    primaryIntent === 'TRAP_DOWN' || primaryIntent === 'ACCUMULATION' || primaryIntent === 'LIQUIDITY_HUNT_DOWN' ? 'LONG' :
+    primaryIntent === 'TRAP_UP' || primaryIntent === 'DISTRIBUTION' || primaryIntent === 'LIQUIDITY_HUNT_UP' ? 'SHORT' :
+    'NONE';
+
+  const keyLevels = {
+    liquidity_pools: (locationContext?.keyZones || [])
+      .slice(0, 3)
+      .map(zone => zone.type.toUpperCase()),
+    oi_walls: (openInterestAnalysis?.highOIStrikes || []).slice(0, 2).map(strike => ({
+      strike: strike.strike,
+      side: (strike.type === 'call' ? 'CALL' : 'PUT') as 'CALL' | 'PUT' | 'MIXED',
+      strength: Number(Math.min(1, strike.openInterest / Math.max(1, openInterestAnalysis.totalCallOI + openInterestAnalysis.totalPutOI)).toFixed(2)),
+    })),
+    invalidation: tradeSnapshot.risk.invalidationReason || 'Invalidation unavailable',
+  };
+
+  const notes: string[] = [];
+  if (features.sbq >= 65) notes.push('Structure break quality supports directional intent');
+  if (features.srs >= 60) notes.push('Sweep/rejection profile indicates active liquidity engineering');
+  if (features.ces >= 60) notes.push('Compression resolved toward expansion regime');
+  if (features.ops >= 60) notes.push('Options pressure aligns with institutional positioning shift');
+  if (notes.length === 0) notes.push('Intent remains mixed; wait for clearer structure-flow alignment');
+
+  return {
+    engine: 'institutional_intent_engine',
+    version: '1.0',
+    symbol,
+    timeframe,
+    asof: new Date().toISOString(),
+    features,
+    intent_probabilities: {
+      ACCUMULATION: Number(probabilities.ACCUMULATION.toFixed(4)),
+      DISTRIBUTION: Number(probabilities.DISTRIBUTION.toFixed(4)),
+      LIQUIDITY_HUNT_UP: Number(probabilities.LIQUIDITY_HUNT_UP.toFixed(4)),
+      LIQUIDITY_HUNT_DOWN: Number(probabilities.LIQUIDITY_HUNT_DOWN.toFixed(4)),
+      TRAP_UP: Number(probabilities.TRAP_UP.toFixed(4)),
+      TRAP_DOWN: Number(probabilities.TRAP_DOWN.toFixed(4)),
+      REPRICE_TREND: Number(probabilities.REPRICE_TREND.toFixed(4)),
+    },
+    primary_intent: primaryIntent,
+    intent_confidence: Number(intentConfidence.toFixed(4)),
+    expected_path: expectedPath,
+    permission_bias: permissionBias,
+    key_levels: keyLevels,
+    notes: notes.slice(0, 3),
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // INSTITUTIONAL AI MARKET STATE CALCULATION
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4025,6 +4353,22 @@ export class OptionsConfluenceAnalyzer {
       tradeLevels,
       location: locationContext,
     });
+
+    const institutionalIntent = computeInstitutionalIntent({
+      symbol,
+      timeframe: scanMode,
+      confluenceResult,
+      compositeScore: effectiveCompositeScore,
+      finalDirection,
+      aiMarketState,
+      dataQuality,
+      ivAnalysis,
+      unusualActivity,
+      openInterestAnalysis,
+      locationContext,
+      tradeSnapshot,
+      disclaimerFlags,
+    });
     
     return {
       symbol,
@@ -4060,6 +4404,7 @@ export class OptionsConfluenceAnalyzer {
       candleCloseConfluence,
       // INSTITUTIONAL AI MARKET STATE
       aiMarketState,
+      institutionalIntent,
       professionalTradeStack,
       // PRODUCTION ADDITIONS - Data Quality & Compliance
       assetType,

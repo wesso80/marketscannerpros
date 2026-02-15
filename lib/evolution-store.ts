@@ -22,6 +22,20 @@ function normalizeOutcome(outcome: string): OutcomeLabel {
   return 'NO_FOLLOW_THROUGH';
 }
 
+function classifyOutcome(row: { outcome?: string | null; setup?: string | null; strategy?: string | null; r_multiple?: number | string | null }): OutcomeLabel {
+  const base = normalizeOutcome(String(row.outcome || ''));
+  const setupText = String(row.setup || '').toLowerCase();
+  const strategyText = String(row.strategy || '').toLowerCase();
+  const text = `${setupText} ${strategyText}`;
+  const riskMultiple = Number.isFinite(Number(row.r_multiple)) ? Number(row.r_multiple) : 0;
+
+  if (/forced|fomo|revenge|chase/.test(text)) return 'FORCED_TRADE';
+  if (/late|chased|late_entry/.test(text)) return 'LATE_ENTRY';
+  if (/early|cut_early|early_exit/.test(text)) return 'EARLY_EXIT';
+  if (base === 'LOSS' && riskMultiple > -0.25) return 'NO_FOLLOW_THROUGH';
+  return base;
+}
+
 function inferTimeOfDay(timestamp: string | null): EvolutionSample['timeOfDay'] {
   if (!timestamp) return 'MIDDAY';
   const hour = new Date(timestamp).getUTCHours();
@@ -76,14 +90,23 @@ export async function loadEvolutionSamples(
   );
 
   const samples = rows.map((row) => {
-    const outcome = normalizeOutcome(row.outcome);
+    const outcome = classifyOutcome(row);
     const riskMultiple = Number.isFinite(Number(row.r_multiple)) ? Number(row.r_multiple) : (outcome === 'WIN' ? 1.2 : outcome === 'LOSS' ? -1 : 0);
+    const setupText = String(row.setup || '').toLowerCase();
+    const strategyText = String(row.strategy || '').toLowerCase();
+    const text = `${setupText} ${strategyText}`;
 
     const stateAlignment = Math.max(0, Math.min(1, 0.55 + (riskMultiple > 0 ? 0.2 : -0.12)));
-    const flowQuality = Math.max(0, Math.min(1, 0.52 + (/(flow|momentum|trend)/i.test(row.strategy || '') ? 0.2 : 0)));
-    const timingPrecision = Math.max(0, Math.min(1, 0.5 + (/(late)/i.test(row.setup || '') ? -0.2 : /(open|break)/i.test(row.setup || '') ? 0.12 : 0)));
-    const volatilityMatch = Math.max(0, Math.min(1, 0.55 + (/(reversion|range)/i.test(row.strategy || '') ? -0.05 : 0.08)));
-    const executionQuality = Math.max(0, Math.min(1, 0.5 + (riskMultiple * 0.15)));
+    const flowQuality = Math.max(0, Math.min(1, 0.52 + (/(flow|momentum|trend|gamma|oi)/i.test(strategyText) ? 0.2 : 0)));
+    const timingPrecision = Math.max(0, Math.min(1, 0.5 + (/late/.test(text) ? -0.2 : /(open|break|reclaim)/.test(text) ? 0.12 : 0)));
+    const volatilityMatch = Math.max(0, Math.min(1, 0.55 + (/(reversion|range)/i.test(strategyText) ? -0.05 : 0.08)));
+    const executionQuality = Math.max(0, Math.min(1, 0.5 + (riskMultiple * 0.15) + (/forced|fomo|revenge/.test(text) ? -0.2 : 0)));
+
+    const holdingMinutes = /scalp|0dte/.test(text)
+      ? 20
+      : /swing|weekly|position|leaps/.test(text)
+        ? 240
+        : 45;
 
     return {
       symbol: String(row.symbol || '').toUpperCase(),
@@ -93,7 +116,7 @@ export async function loadEvolutionSamples(
       playbook: inferPlaybook(row.strategy),
       outcome,
       riskMultiple,
-      holdingMinutes: 45,
+      holdingMinutes,
       timeOfDay: inferTimeOfDay(row.created_at || row.trade_date),
       stateAlignment,
       flowQuality,

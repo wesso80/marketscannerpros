@@ -76,10 +76,31 @@ export interface EvolutionCycleOutput {
       sweep_low_then_reclaim_level: number;
       range_break_after_compression: number;
     };
+    transitionPenalty: {
+      fastJumpPenalty: number;
+      fullPathBoost: number;
+    };
+  };
+  cadencePolicy: {
+    intraday: 'passive_learning_only';
+    daily: 'micro_adjustments';
+    weekly: 'medium_recalibration';
+    monthly: 'major_structural_update';
   };
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const MAX_WEIGHT_STEP = 0.10;
+const MAX_THRESHOLD_STEP = 0.05;
+const MAX_TRIGGER_STEP = 0.10;
+
+const CADENCE_POLICY: EvolutionCycleOutput['cadencePolicy'] = {
+  intraday: 'passive_learning_only',
+  daily: 'micro_adjustments',
+  weekly: 'medium_recalibration',
+  monthly: 'major_structural_update',
+};
 
 function isWin(outcome: OutcomeLabel): boolean {
   return outcome === 'WIN';
@@ -112,20 +133,31 @@ function computeIDQS(sample: EvolutionSample): number {
 }
 
 function windowBlend(samples: EvolutionSample[]): EvolutionSample[] {
-  const short = samples.slice(0, 30);
-  const mid = samples.slice(0, 100);
-  const long = samples.slice(0, 300);
+  const windows = [
+    { size: 30, blend: 0.5 },
+    { size: 100, blend: 0.3 },
+    { size: 300, blend: 0.2 },
+  ];
 
-  const shortWeight = 0.5;
-  const midWeight = 0.3;
-  const longWeight = 0.2;
+  const seen = new Set<string>();
+  const blended: EvolutionSample[] = [];
 
-  const scale = (arr: EvolutionSample[], weight: number): EvolutionSample[] => {
-    const count = Math.max(0, Math.round(arr.length * weight));
-    return arr.slice(0, count);
-  };
+  for (const window of windows) {
+    const bucket = samples.slice(0, window.size);
+    const takeCount = Math.max(0, Math.round(bucket.length * window.blend));
+    let added = 0;
 
-  return [...scale(short, shortWeight), ...scale(mid, midWeight), ...scale(long, longWeight)];
+    for (const sample of bucket) {
+      if (added >= takeCount) break;
+      const fingerprint = `${sample.symbol}:${sample.playbook}:${sample.outcome}:${sample.holdingMinutes}`;
+      if (seen.has(fingerprint)) continue;
+      seen.add(fingerprint);
+      blended.push(sample);
+      added += 1;
+    }
+  }
+
+  return blended.length ? blended : samples.slice(0, 30);
 }
 
 function computePredictivePower(samples: EvolutionSample[], key: keyof Pick<EvolutionSample, 'stateAlignment' | 'flowQuality' | 'timingPrecision' | 'volatilityMatch' | 'executionQuality'>): number {
@@ -190,12 +222,12 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
   };
 
   const nextWeightsRaw = {
-    regimeFit: clamp(input.baselineWeights.regimeFit * (1 + power.regimeFit), input.baselineWeights.regimeFit * 0.9, input.baselineWeights.regimeFit * 1.1),
-    capitalFlow: clamp(input.baselineWeights.capitalFlow * (1 + power.capitalFlow), input.baselineWeights.capitalFlow * 0.9, input.baselineWeights.capitalFlow * 1.1),
-    structureQuality: clamp(input.baselineWeights.structureQuality * (1 + power.structureQuality), input.baselineWeights.structureQuality * 0.9, input.baselineWeights.structureQuality * 1.1),
-    optionsAlignment: clamp(input.baselineWeights.optionsAlignment * (1 + power.optionsAlignment), input.baselineWeights.optionsAlignment * 0.9, input.baselineWeights.optionsAlignment * 1.1),
-    timing: clamp(input.baselineWeights.timing * (1 + power.timing), input.baselineWeights.timing * 0.9, input.baselineWeights.timing * 1.1),
-    dataHealth: clamp(input.baselineWeights.dataHealth * (1 + power.dataHealth), input.baselineWeights.dataHealth * 0.9, input.baselineWeights.dataHealth * 1.1),
+    regimeFit: clamp(input.baselineWeights.regimeFit * (1 + power.regimeFit), input.baselineWeights.regimeFit * (1 - MAX_WEIGHT_STEP), input.baselineWeights.regimeFit * (1 + MAX_WEIGHT_STEP)),
+    capitalFlow: clamp(input.baselineWeights.capitalFlow * (1 + power.capitalFlow), input.baselineWeights.capitalFlow * (1 - MAX_WEIGHT_STEP), input.baselineWeights.capitalFlow * (1 + MAX_WEIGHT_STEP)),
+    structureQuality: clamp(input.baselineWeights.structureQuality * (1 + power.structureQuality), input.baselineWeights.structureQuality * (1 - MAX_WEIGHT_STEP), input.baselineWeights.structureQuality * (1 + MAX_WEIGHT_STEP)),
+    optionsAlignment: clamp(input.baselineWeights.optionsAlignment * (1 + power.optionsAlignment), input.baselineWeights.optionsAlignment * (1 - MAX_WEIGHT_STEP), input.baselineWeights.optionsAlignment * (1 + MAX_WEIGHT_STEP)),
+    timing: clamp(input.baselineWeights.timing * (1 + power.timing), input.baselineWeights.timing * (1 - MAX_WEIGHT_STEP), input.baselineWeights.timing * (1 + MAX_WEIGHT_STEP)),
+    dataHealth: clamp(input.baselineWeights.dataHealth * (1 + power.dataHealth), input.baselineWeights.dataHealth * (1 - MAX_WEIGHT_STEP), input.baselineWeights.dataHealth * (1 + MAX_WEIGHT_STEP)),
   };
 
   const nextWeights = normalizeWeights(nextWeightsRaw);
@@ -204,8 +236,8 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
   const targetThreshold = clamp(winnerIdqs - 0.04, 0.55, 0.9);
   const armedThreshold = clamp(
     targetThreshold,
-    input.armedThreshold - 0.05,
-    input.armedThreshold + 0.05
+    input.armedThreshold - MAX_THRESHOLD_STEP,
+    input.armedThreshold + MAX_THRESHOLD_STEP
   );
 
   const triggerBase = {
@@ -221,11 +253,21 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
   const sessionDrift = openWinRate - middayWinRate;
 
   const triggerSensitivity = {
-    reclaim_vwap_and_hold_2m: clamp(triggerBase.reclaim_vwap_and_hold_2m + sessionDrift * 0.3, 0.85, 1.15),
-    break_prev_high_with_volume: clamp(triggerBase.break_prev_high_with_volume + sessionDrift * 0.35, 0.85, 1.15),
-    pullback_to_20ema_then_bounce: clamp(triggerBase.pullback_to_20ema_then_bounce + sessionDrift * 0.2, 0.85, 1.15),
-    sweep_low_then_reclaim_level: clamp(triggerBase.sweep_low_then_reclaim_level + sessionDrift * 0.15, 0.85, 1.15),
-    range_break_after_compression: clamp(triggerBase.range_break_after_compression + sessionDrift * 0.25, 0.85, 1.15),
+    reclaim_vwap_and_hold_2m: clamp(triggerBase.reclaim_vwap_and_hold_2m + sessionDrift * 0.3, 1 - MAX_TRIGGER_STEP, 1 + MAX_TRIGGER_STEP),
+    break_prev_high_with_volume: clamp(triggerBase.break_prev_high_with_volume + sessionDrift * 0.35, 1 - MAX_TRIGGER_STEP, 1 + MAX_TRIGGER_STEP),
+    pullback_to_20ema_then_bounce: clamp(triggerBase.pullback_to_20ema_then_bounce + sessionDrift * 0.2, 1 - MAX_TRIGGER_STEP, 1 + MAX_TRIGGER_STEP),
+    sweep_low_then_reclaim_level: clamp(triggerBase.sweep_low_then_reclaim_level + sessionDrift * 0.15, 1 - MAX_TRIGGER_STEP, 1 + MAX_TRIGGER_STEP),
+    range_break_after_compression: clamp(triggerBase.range_break_after_compression + sessionDrift * 0.25, 1 - MAX_TRIGGER_STEP, 1 + MAX_TRIGGER_STEP),
+  };
+
+  const fullPathWinRate = fullPath.length ? winRate(fullPath) : null;
+  const fastJumpWinRate = fastJump.length ? winRate(fastJump) : null;
+  const transitionGap = (fullPathWinRate !== null && fastJumpWinRate !== null)
+    ? fullPathWinRate - fastJumpWinRate
+    : 0;
+  const transitionPenalty = {
+    fastJumpPenalty: Number(clamp(1 + transitionGap * 0.4, 0.9, 1.1).toFixed(3)),
+    fullPathBoost: Number(clamp(1 + transitionGap * 0.3, 0.9, 1.1).toFixed(3)),
   };
 
   const changes: EvolutionChange[] = [];
@@ -256,6 +298,17 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
       old: Number(input.armedThreshold.toFixed(4)),
       new: Number(armedThreshold.toFixed(4)),
       reason: 'Threshold updated from observed decision quality outcomes',
+    });
+  }
+
+  if (transitionGap !== 0) {
+    changes.push({
+      parameter: 'fast_jump_penalty',
+      old: 1,
+      new: transitionPenalty.fastJumpPenalty,
+      reason: transitionGap > 0
+        ? 'Fast state jumps underperform full path transitions'
+        : 'Fast state jumps outperform full path transitions',
     });
   }
 
@@ -292,8 +345,8 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
       idqsWinAverage: Number(mean(idqsWin).toFixed(3)),
       idqsLossAverage: Number(mean(idqsLoss).toFixed(3)),
       transitionQuality: {
-        fullPathWinRate: fullPath.length ? Number(winRate(fullPath).toFixed(2)) : null,
-        fastJumpWinRate: fastJump.length ? Number(winRate(fastJump).toFixed(2)) : null,
+        fullPathWinRate: fullPathWinRate !== null ? Number(fullPathWinRate.toFixed(2)) : null,
+        fastJumpWinRate: fastJumpWinRate !== null ? Number(fastJumpWinRate.toFixed(2)) : null,
       },
     },
     adjustments: {
@@ -315,6 +368,8 @@ export function runEvolutionCycle(input: EvolutionCycleInput): EvolutionCycleOut
         sweep_low_then_reclaim_level: Number(triggerSensitivity.sweep_low_then_reclaim_level.toFixed(3)),
         range_break_after_compression: Number(triggerSensitivity.range_break_after_compression.toFixed(3)),
       },
+      transitionPenalty,
     },
+    cadencePolicy: CADENCE_POLICY,
   };
 }

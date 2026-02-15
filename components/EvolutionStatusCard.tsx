@@ -13,8 +13,28 @@ type EvolutionRow = {
     new: number;
     reason: string;
   }>;
+  metrics_json?: {
+    timeOfDayEdge?: Array<{ bucket: 'OPEN' | 'MIDDAY' | 'CLOSE' | 'AFTERHOURS'; winRate: number; sampleSize: number }>;
+  };
   created_at: string;
 };
+
+function formatAdaptationMessage(change: EvolutionRow['changes_json'][number]): string {
+  const deltaPct = Math.abs(change.new - change.old) * 100;
+  const direction = change.new > change.old ? 'increased' : 'decreased';
+
+  if (change.parameter === 'capital_flow_weight') {
+    return `Flow importance ${direction} ${deltaPct.toFixed(1)}%`;
+  }
+  if (change.parameter === 'armed_threshold') {
+    return `Setup quality threshold ${direction} ${deltaPct.toFixed(1)}%`;
+  }
+  if (change.parameter === 'fast_jump_penalty') {
+    return `Fast state jumps ${change.new > 1 ? 'penalized' : 'relaxed'} (${deltaPct.toFixed(1)}%)`;
+  }
+
+  return `${change.parameter.replace(/_/g, ' ')} ${direction} ${deltaPct.toFixed(1)}%`;
+}
 
 export default function EvolutionStatusCard({ compact = true }: { compact?: boolean }) {
   const [rows, setRows] = useState<EvolutionRow[]>([]);
@@ -49,6 +69,12 @@ export default function EvolutionStatusCard({ compact = true }: { compact?: bool
   if (!rows.length) return null;
 
   const latest = rows[0];
+  const sessionEdge = latest.metrics_json?.timeOfDayEdge || [];
+  const openEdge = sessionEdge.find((entry) => entry.bucket === 'OPEN');
+  const middayEdge = sessionEdge.find((entry) => entry.bucket === 'MIDDAY');
+  const openVsMidday = (openEdge && middayEdge)
+    ? openEdge.winRate - middayEdge.winRate
+    : null;
 
   return (
     <div style={{
@@ -69,11 +95,17 @@ export default function EvolutionStatusCard({ compact = true }: { compact?: bool
         </div>
       </div>
 
-      {latest.changes_json.slice(0, 3).map((change, index) => (
+      {latest.changes_json.slice(0, 2).map((change, index) => (
         <div key={index} style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
-          ✔ {change.parameter.replace(/_/g, ' ')} {change.new > change.old ? 'increased' : 'decreased'} ({(Math.abs(change.new - change.old) * 100).toFixed(1)}%)
+          ✔ {formatAdaptationMessage(change)}
         </div>
       ))}
+
+      {openVsMidday !== null && (
+        <div style={{ color: '#E2E8F0', fontSize: '0.7rem' }}>
+          ✔ Open session edge {openVsMidday >= 0 ? 'strengthening' : 'weakening'} ({Math.abs(openVsMidday * 100).toFixed(1)}%)
+        </div>
+      )}
     </div>
   );
 }
