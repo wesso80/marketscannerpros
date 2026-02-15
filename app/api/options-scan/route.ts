@@ -52,11 +52,12 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Options scan for ${symbol.toUpperCase()} (${scanMode})${expiryInfo} at ${new Date().toISOString()}`);
     
     const analysis = await optionsAnalyzer.analyzeForOptions(symbol.toUpperCase(), scanMode, expirationDate);
-    const regime = analysis.aiMarketState?.regime?.type === 'trending'
+    const marketRegime = analysis.aiMarketState?.regime?.regime;
+    const regime = marketRegime === 'TREND'
       ? 'trend'
-      : analysis.aiMarketState?.regime?.type === 'ranging'
+      : marketRegime === 'RANGE'
         ? 'range'
-        : analysis.aiMarketState?.regime?.type === 'reversal'
+        : marketRegime === 'REVERSAL'
           ? 'reversal'
           : 'unknown';
 
