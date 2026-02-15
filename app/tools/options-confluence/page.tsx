@@ -937,7 +937,7 @@ export default function OptionsConfluenceScanner() {
         `${result?.expectedMove ? 'Volatility expansion detected' : 'Volatility expansion not detected'}`,
       ];
 
-  const adaptiveProfile = useMemo<AdaptiveProfile | null>(() => {
+  const adaptiveProfile: AdaptiveProfile | null = (() => {
     const closed = personalityEntries.filter((trade) => !trade.isOpen && trade.outcome !== 'open');
     if (closed.length < 6) return null;
 
@@ -1033,9 +1033,9 @@ export default function OptionsConfluenceScanner() {
       decisionTiming,
       environmentRates,
     };
-  }, [personalityEntries]);
+  })();
 
-  const adaptiveMatch = useMemo(() => {
+  const adaptiveMatch = (() => {
     if (!result) return null;
 
     const baseSignalScore = result.compositeScore?.confidence ?? 50;
@@ -1134,7 +1134,7 @@ export default function OptionsConfluenceScanner() {
       sampleSize: adaptiveProfile.sampleSize,
       wins: adaptiveProfile.wins,
     };
-  }, [adaptiveProfile, bestPattern?.name, isCountertrend, result, selectedTF]);
+  })();
 
   return (
     <div className="options-page-container" style={{ 
