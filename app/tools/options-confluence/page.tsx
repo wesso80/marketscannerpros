@@ -444,7 +444,7 @@ type MRIRegime = 'TREND_EXPANSION' | 'ROTATIONAL_RANGE' | 'VOLATILITY_EXPANSION'
 type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 
 export default function OptionsConfluenceScanner() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -627,6 +627,22 @@ export default function OptionsConfluenceScanner() {
     if (result.direction === 'bearish' && result.signalStrength === 'moderate') return 'bearish_pullback';
     return 'consolidation';
   }, [result]) as 'bearish_trend' | 'bearish_pullback' | 'consolidation' | 'bullish_pullback' | 'bullish_trend';
+
+  // Avoid premature gating while tier is still resolving
+  if (isTierLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", color: "#e2e8f0" }}>
+          <h1 style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)", fontWeight: 700, marginBottom: "0.5rem" }}>
+            🎯 Loading Options Confluence Scanner...
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "14px" }}>
+            Checking account access and initializing scanner state.
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {

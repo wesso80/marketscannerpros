@@ -21,9 +21,13 @@ export function useUserTier(): TierInfo {
 
   useEffect(() => {
     async function checkTier() {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
       try {
         const res = await fetch("/api/me", {
           credentials: "include",
+          signal: controller.signal,
         });
         
         if (res.ok) {
@@ -44,6 +48,7 @@ export function useUserTier(): TierInfo {
         setIsAdmin(false);
         setEmail(null);
       } finally {
+        clearTimeout(timeout);
         setIsLoading(false);
       }
     }
