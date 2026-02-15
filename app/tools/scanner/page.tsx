@@ -2037,69 +2037,34 @@ function ScannerContent() {
             {(() => {
               const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
               const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : null;
-
-              const directionLabel = direction === 'bullish' ? 'Bullish Edge' : direction === 'bearish' ? 'Bearish Edge' : 'Neutral / Mixed';
+              const directionLabel = direction === 'bullish' ? 'BULLISH EDGE' : direction === 'bearish' ? 'BEARISH EDGE' : 'NEUTRAL EDGE';
               const directionColor = direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B';
-              const strategyLabel = direction === 'bullish'
-                ? 'Long Bias / Buy Pullbacks'
-                : direction === 'bearish'
-                ? 'Defensive / Sell Rips'
-                : 'Wait for Cleaner Trigger';
-              const riskLabel = atrPercent == null
-                ? 'Standard Risk'
-                : atrPercent >= 3
-                ? 'High Volatility'
-                : atrPercent >= 1.5
-                ? 'Elevated Risk'
-                : 'Controlled Risk';
-              const riskColor = atrPercent == null
-                ? '#94A3B8'
-                : atrPercent >= 3
-                ? '#EF4444'
-                : atrPercent >= 1.5
-                ? '#F59E0B'
-                : '#10B981';
+              const quality = confidence >= 70 ? 'HIGH QUALITY' : confidence >= 55 ? 'MEDIUM QUALITY' : 'LOW QUALITY';
+              const qualityColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
               return (
                 <div style={{
                   background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
                   border: '1px solid rgba(56,189,248,0.42)',
                   borderRadius: '14px',
-                  padding: '1.15rem 1.2rem',
+                  padding: '1rem 1.1rem',
                   marginBottom: '1.2rem',
                 }}>
                   <div style={{
-                    color: '#67E8F9',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.8rem',
+                    flexWrap: 'wrap',
                   }}>
-                    Command Bar
-                  </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                    gap: '0.75rem',
-                  }}>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
-                      <div style={{ color: directionColor, fontSize: '1.12rem', fontWeight: 900 }}>{directionLabel}</div>
+                    <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Command Bar
                     </div>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
-                      <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '1.12rem', fontWeight: 900 }}>{confidence}%</div>
+                    <div style={{ color: directionColor, fontSize: '1.26rem', fontWeight: 900, letterSpacing: '0.03em' }}>{directionLabel}</div>
+                    <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '1.26rem', fontWeight: 900, letterSpacing: '0.03em' }}>
+                      {confidence}% CONF
                     </div>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '1rem', fontWeight: 900 }}>{strategyLabel}</div>
-                    </div>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(148,163,184,0.35)', borderRadius: '10px', padding: '0.78rem 0.82rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
-                      <div style={{ color: riskColor, fontSize: '0.96rem', fontWeight: 900 }}>{riskLabel}{atrPercent != null ? ` • ATR ${atrPercent.toFixed(2)}%` : ''}</div>
-                    </div>
+                    <div style={{ color: qualityColor, fontSize: '1.2rem', fontWeight: 900, letterSpacing: '0.03em' }}>{quality}</div>
                   </div>
                 </div>
               );
@@ -2131,7 +2096,7 @@ function ScannerContent() {
               );
             })()}
 
-            {(() => {
+            {focusMode && (() => {
               const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
               const adx = result.adx ?? 0;
               const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
@@ -2250,11 +2215,54 @@ function ScannerContent() {
                 ? 'Moderate edge — structure is aligned, momentum needs confirmation.'
                 : 'Low-quality edge — wait for structure and momentum alignment.';
               const notEdgeSentence = atrPercent >= 3 ? 'Not a volatility-compression play.' : 'Not an event-driven volatility breakout.';
+              const riskStatus = atrPercent >= 3 ? 'HIGH VOL' : atrPercent >= 1.5 ? 'ELEVATED VOL' : 'CONTROLLED VOL';
+              const qualityGate = score >= 70 ? 'HIGH' : score >= 55 ? 'MODERATE' : 'LOW';
+              const baseProb = Math.max(5, Math.min(85, confidence));
+              const bullProb = direction === 'bullish' ? Math.max(15, Math.round(baseProb * 0.4)) : Math.max(10, Math.round((100 - baseProb) * 0.2));
+              const bearProb = Math.max(5, 100 - baseProb - bullProb);
 
               return (
                 <>
                 <div style={{
-                  marginBottom: '0.7rem',
+                  marginBottom: '0.95rem',
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                  border: '1px solid rgba(148,163,184,0.34)',
+                  borderRadius: '10px',
+                  padding: '0.95rem',
+                }}>
+                  <div style={{ color: '#F8FAFC', fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
+                    Risk + Execution
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                    gap: '0.7rem',
+                  }}>
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.8rem' }}>
+                      <div style={{ color: '#FCA5A5', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Risk Panel</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.82rem', lineHeight: 1.48 }}>
+                        <div>Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                        <div>Volatility: <span style={{ color: atrPercent >= 3 ? '#EF4444' : atrPercent >= 1.5 ? '#F59E0B' : '#10B981', fontWeight: 900 }}>{riskStatus}{result.atr != null && result.price != null ? ` • ATR ${(result.atr / result.price * 100).toFixed(2)}%` : ''}</span></div>
+                        <div>Quality Gate: <span style={{ color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontWeight: 900 }}>{qualityGate}</span></div>
+                        <div>Scenario: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>Base {baseProb}% • Bull {bullProb}% • Bear {bearProb}%</span></div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.8rem' }}>
+                      <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Execution Plan</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.84rem', lineHeight: 1.52 }}>
+                        <div>Entry: <span style={{ color: '#93C5FD', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+                        <div>Stop: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                        <div>Targets: <span style={{ color: '#6EE7B7', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
+                        <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
+                        <div>R:R: <span style={{ color: rr != null && rr >= 1.5 ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  marginBottom: '0.8rem',
                   background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.86))',
                   border: '1px solid rgba(56,189,248,0.24)',
                   borderRadius: '10px',
@@ -2268,7 +2276,7 @@ function ScannerContent() {
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                   }}>
-                    🧠 AI Verdict: {edgeSentence}
+                    🧠 AI Verdict + Structure: {edgeSentence}
                   </div>
 
                   <div style={{
@@ -2315,17 +2323,6 @@ function ScannerContent() {
                       <div style={{ color: '#FCA5A5', fontSize: '0.74rem' }}><strong>Not Edge:</strong> {notEdgeSentence}</div>
                     </div>
 
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.85rem' }}>
-                      <div style={{ color: '#FCA5A5', fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.08em' }}>TRADE PLAN (EXECUTION)</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.84rem', lineHeight: 1.52 }}>
-                        <div style={{ marginBottom: '0.2rem' }}>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
-                        <div style={{ marginBottom: '0.2rem' }}>Grade: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{grade}</span></div>
-                        <div style={{ marginTop: '0.45rem' }}>Entry: <span style={{ color: '#93C5FD', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-                        <div>Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                        <div>Targets: <span style={{ color: '#6EE7B7', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
-                        <div>R:R: <span style={{ color: rr != null && rr >= 1.5 ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
                 <div style={{
@@ -2336,12 +2333,7 @@ function ScannerContent() {
                   padding: '0.8rem 0.85rem',
                 }}>
                   {(() => {
-                    const baseProb = Math.max(5, Math.min(85, confidence));
-                    const bullProb = direction === 'bullish' ? Math.max(15, Math.round(baseProb * 0.4)) : Math.max(10, Math.round((100 - baseProb) * 0.2));
-                    const bearProb = Math.max(5, 100 - baseProb - bullProb);
                     const conflictLevel = Math.abs((result.signals?.bullish ?? 0) - (result.signals?.bearish ?? 0)) <= 1 ? 'MEDIUM' : 'LOW';
-                    const qualityGate = score >= 70 ? 'HIGH' : score >= 55 ? 'MODERATE' : 'WEAK';
-                    const riskStatus = atrPercent >= 3 ? 'ELEVATED' : atrPercent >= 1.5 ? 'MODERATE' : 'CONTROLLED';
 
                     return (
                       <>
@@ -2370,7 +2362,7 @@ function ScannerContent() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: riskStatus === 'ELEVATED' ? '#EF4444' : riskStatus === 'MODERATE' ? '#F59E0B' : '#10B981', fontSize: '0.68rem', fontWeight: 800 }}>Risk Status: {riskStatus}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: riskStatus === 'HIGH VOL' ? '#EF4444' : riskStatus === 'ELEVATED VOL' ? '#F59E0B' : '#10B981', fontSize: '0.68rem', fontWeight: 800 }}>Risk Status: {riskStatus}</span>
                           <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontSize: '0.68rem', fontWeight: 800 }}>Trade Quality Gate: {qualityGate}</span>
                           <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: conflictLevel === 'LOW' ? '#10B981' : '#F59E0B', fontSize: '0.68rem', fontWeight: 800 }}>Conflict Level: {conflictLevel}</span>
                         </div>
