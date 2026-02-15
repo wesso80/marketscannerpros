@@ -925,10 +925,10 @@ function ScannerContent() {
             <span style={{ fontSize: "28px" }}>🔍</span>
             <div>
               <h3 style={{ color: "#fbbf24", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Discover Top 10 Opportunities
+                Live Edge Scanner (Market-Wide)
               </h3>
               <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
-                Start here for fastest wins: scan broad market leaders, then deep dive your best chart
+                Scan broad market leaders first, then click one symbol to load your active-symbol cockpit below
               </p>
             </div>
 
@@ -1231,7 +1231,7 @@ function ScannerContent() {
                 borderBottom: "1px solid rgba(148,163,184,0.2)"
               }}>
                 <h4 style={{ color: "#f1f5f9", fontSize: "16px", fontWeight: "600", margin: 0 }}>
-                  🏆 Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
+                  🏆 Market-Wide Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
                 </h4>
                 <span style={{ color: "#64748b", fontSize: "12px" }}>
                   {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
@@ -1245,6 +1245,19 @@ function ScannerContent() {
                     ? ` • API ${bulkScanResults.apiCallsUsed}/${bulkScanResults.apiCallsCap}`
                     : ''}
                 </span>
+              </div>
+
+              <div style={{
+                marginBottom: "12px",
+                background: "rgba(59,130,246,0.10)",
+                border: "1px solid rgba(59,130,246,0.28)",
+                borderRadius: "10px",
+                padding: "8px 12px",
+                color: "#93C5FD",
+                fontSize: "12px",
+                fontWeight: 600,
+              }}>
+                Scope: this list is market-wide. Click a card to load that symbol as your active analysis below.
               </div>
               
               <div style={{ 
@@ -1822,6 +1835,29 @@ function ScannerContent() {
           </div>
         )}
 
+        {/* Active Symbol Cockpit Header */}
+        {result && (
+          <div style={{
+            background: "linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))",
+            border: "1px solid rgba(16,185,129,0.35)",
+            borderRadius: "14px",
+            padding: "0.8rem 1rem",
+            marginBottom: "0.85rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+          }}>
+            <div style={{ color: "#E2E8F0", fontSize: "0.88rem", fontWeight: 800, letterSpacing: "0.35px" }}>
+              🎯 ACTIVE SYMBOL COCKPIT — {result.symbol} ({timeframe.toUpperCase()})
+            </div>
+            <div style={{ color: "#10B981", fontSize: "0.76rem", fontWeight: 700 }}>
+              All panels below are for {result.symbol} only
+            </div>
+          </div>
+        )}
+
         {/* Results Card */}
         {result && (
           <div key={scanKey} style={{
@@ -1831,6 +1867,77 @@ function ScannerContent() {
             padding: "2rem",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
           }}>
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : null;
+
+              const directionLabel = direction === 'bullish' ? 'Bullish Edge' : direction === 'bearish' ? 'Bearish Edge' : 'Neutral / Mixed';
+              const directionColor = direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B';
+              const strategyLabel = direction === 'bullish'
+                ? 'Long Bias / Buy Pullbacks'
+                : direction === 'bearish'
+                ? 'Defensive / Sell Rips'
+                : 'Wait for Cleaner Trigger';
+              const riskLabel = atrPercent == null
+                ? 'Standard Risk'
+                : atrPercent >= 3
+                ? 'High Volatility'
+                : atrPercent >= 1.5
+                ? 'Elevated Risk'
+                : 'Controlled Risk';
+              const riskColor = atrPercent == null
+                ? '#94A3B8'
+                : atrPercent >= 3
+                ? '#EF4444'
+                : atrPercent >= 1.5
+                ? '#F59E0B'
+                : '#10B981';
+
+              return (
+                <div style={{
+                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                  border: '1px solid rgba(56,189,248,0.28)',
+                  borderRadius: '14px',
+                  padding: '0.85rem 0.95rem',
+                  marginBottom: '1rem',
+                }}>
+                  <div style={{
+                    color: '#67E8F9',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    marginBottom: '0.55rem',
+                  }}>
+                    3-Second Decision Row
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '0.5rem',
+                  }}>
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
+                      <div style={{ color: directionColor, fontSize: '0.9rem', fontWeight: 900 }}>{directionLabel}</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
+                      <div style={{ color: confidence >= 70 ? '#10B981' : confidence >= 50 ? '#F59E0B' : '#EF4444', fontSize: '0.9rem', fontWeight: 900 }}>{confidence}%</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
+                      <div style={{ color: '#E2E8F0', fontSize: '0.86rem', fontWeight: 800 }}>{strategyLabel}</div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
+                      <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
+                      <div style={{ color: riskColor, fontSize: '0.86rem', fontWeight: 800 }}>{riskLabel}{atrPercent != null ? ` • ATR ${atrPercent.toFixed(2)}%` : ''}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* NEW: Clear Verdict Tile - The WOW Factor */}
             {(() => {
               // Use direction from API if available, otherwise calculate from score
