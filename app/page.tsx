@@ -10,42 +10,15 @@ const actionLayer = [
 ];
 
 const trustMetrics = [
-  { label: 'Monitored Universe', value: '500+', note: 'Cross-asset symbols' },
-  { label: 'Terminal Modules', value: '20+', note: 'Decision and execution tooling' },
-  { label: 'Market Refresh', value: '60s', note: 'Live surface cadence' },
-  { label: 'Workflow Layers', value: '3', note: 'Home → Workspace → Terminal' },
-  { label: 'AI Context', value: 'Multi-TF', note: 'Structure-aware interpretation' },
-  { label: 'Desk State', value: 'Always-On', note: 'Institutional mission control' },
+  { label: 'Universe Coverage', value: '500 / 40', note: 'Equities / crypto actively monitored' },
+  { label: 'Signal Latency', value: '< 1200ms', note: 'Ingestion-to-surface response band' },
+  { label: 'Model Stack', value: '6', note: 'Scoring engines currently active' },
+  { label: 'Workflow Layers', value: '3', note: 'Discovery → validation → execution intelligence' },
+  { label: 'Confluence Engine', value: 'Multi-TF', note: 'Higher timeframe alignment enabled' },
+  { label: 'Regime Engine', value: 'ON', note: 'Risk state and rotation tracking live' },
 ];
 
 const ecosystem = ['Observe', 'Contextualize', 'Scanner', 'Options', 'Deep Analysis', 'Portfolio', 'Journal', 'Learn'];
-
-const pricingCards = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: 'forever',
-    href: '/tools/scanner',
-    cta: 'Start Command Mode',
-    bullets: ['Core scanner access', 'Baseline AI context', 'Watchlist + journal access'],
-  },
-  {
-    name: 'Pro',
-    price: '$39.99',
-    period: '/ month',
-    href: '/pricing',
-    cta: 'Upgrade to Pro',
-    bullets: ['Unlimited scanning', 'Expanded AI analyst usage', 'Advanced market surfaces'],
-  },
-  {
-    name: 'Pro Trader',
-    price: '$89.99',
-    period: '/ month',
-    href: '/pricing',
-    cta: 'Unlock Full Terminal',
-    bullets: ['Options + deep analysis stack', 'Backtesting and execution workflow', 'Institutional-grade toolkit'],
-  },
-];
 
 export default function HomePage() {
   return (
@@ -67,11 +40,11 @@ export default function HomePage() {
           }}
         >
           {[
-            ['Regime', 'Trend'],
-            ['Risk', 'Moderate'],
-            ['VIX', '13.8'],
-            ['DXY', '103.2'],
-            ['Data', 'Live'],
+            ['Regime', 'Risk-On Rotation'],
+            ['Volatility', 'Normal'],
+            ['Sector Flow', 'Tech Leading'],
+            ['Liquidity Bias', 'Positive'],
+            ['Data Integrity', 'Live'],
           ].map(([k, v]) => (
             <div key={k} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.18rem 0.5rem', fontSize: '0.72rem', color: 'var(--msp-text-muted)' }}>
               <strong style={{ color: 'var(--msp-text)' }}>{k}</strong> • {v}
@@ -96,10 +69,10 @@ export default function HomePage() {
                 Command Authority
               </div>
               <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 3.6vw, 2.35rem)', lineHeight: 1.12, fontWeight: 850 }}>
-                Home Command Screen. Institutional context before workspace.
+                Market State Command Center.
               </h1>
               <p style={{ margin: 0, color: 'var(--msp-text-muted)', maxWidth: 700, lineHeight: 1.55 }}>
-                MSP opens like a trading floor: market state first, then branching decisions into terminal-grade tools. Personal dashboard remains a secondary workspace.
+                Macro, flow, and risk context load first. Execution terminals branch from this command surface once bias and regime are defined.
               </p>
               <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
                 {actionLayer.map((item) => (
@@ -123,10 +96,10 @@ export default function HomePage() {
               </div>
               <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
                 <Link href="/tools/markets" style={{ textDecoration: 'none', padding: '0.58rem 0.86rem', borderRadius: 10, background: 'var(--msp-accent)', color: '#051017', fontWeight: 800, fontSize: '0.84rem' }}>
-                  Enter Markets Hub
+                  Launch Workspace
                 </Link>
                 <Link href="/dashboard" style={{ textDecoration: 'none', padding: '0.58rem 0.86rem', borderRadius: 10, border: '1px solid var(--msp-border)', color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.84rem', background: 'var(--msp-card)' }}>
-                  My Workspace
+                  Open Risk Console
                 </Link>
               </div>
             </div>
@@ -145,6 +118,9 @@ export default function HomePage() {
                 Live System Status
               </div>
               {[
+                ['Global Risk Bias', 'RISK-ON'],
+                ['Market Regime', 'EXPANSION'],
+                ['Volatility Condition', 'NORMAL'],
                 ['System State', 'ONLINE'],
                 ['Ingestion', 'ACTIVE'],
                 ['Signal Health', 'STABLE'],
@@ -237,42 +213,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          style={{
-            background: 'var(--msp-panel)',
-            border: '1px solid var(--msp-border-strong)',
-            borderRadius: 14,
-            padding: '1rem',
-          }}
-        >
-          <div style={{ marginBottom: '0.85rem' }}>
-            <div style={{ fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
-              Pricing
-            </div>
-            <p style={{ margin: '0.35rem 0 0', color: 'var(--msp-text-muted)', fontSize: '0.86rem' }}>
-              Flat institutional cards. Start with command visibility, scale into terminal execution.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-3">
-            {pricingCards.map((card) => (
-              <div key={card.name} style={{ border: '1px solid var(--msp-border)', borderRadius: 12, background: 'var(--msp-card)', padding: '0.8rem' }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.35rem' }}>{card.name}</div>
-                <div style={{ marginBottom: '0.6rem' }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 850, color: 'var(--msp-accent)' }}>{card.price}</span>
-                  <span style={{ color: 'var(--msp-text-muted)', marginLeft: 6, fontSize: '0.8rem' }}>{card.period}</span>
-                </div>
-                <div style={{ display: 'grid', gap: '0.28rem', marginBottom: '0.8rem' }}>
-                  {card.bullets.map((bullet) => (
-                    <div key={bullet} style={{ color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>• {bullet}</div>
-                  ))}
-                </div>
-                <Link href={card.href} style={{ display: 'inline-block', textDecoration: 'none', padding: '0.55rem 0.75rem', borderRadius: 10, border: '1px solid var(--msp-border)', background: 'var(--msp-panel)', color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.78rem' }}>
-                  {card.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </main>
   );

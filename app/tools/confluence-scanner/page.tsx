@@ -299,6 +299,68 @@ export default function AIConfluenceScanner() {
   const extremeConditions = hierarchicalResult ? getExtremeConditions() : null;
   const isGuidedMode = operatorViewMode === 'guided';
   const showAdvancedInvestigation = !isGuidedMode;
+  const clusteredCount = hierarchicalResult
+    ? (hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount)
+    : 0;
+  const nextThreeClusters = hierarchicalResult
+    ? [...hierarchicalResult.decompression.decompressions]
+        .filter((item) => item.minsToClose > 0)
+        .sort((a, b) => a.minsToClose - b.minsToClose)
+        .slice(0, 3)
+    : [];
+  const setupStateLabel = hierarchicalResult
+    ? hierarchicalResult.signalStrength === 'strong'
+      ? 'Clustered'
+      : hierarchicalResult.signalStrength === 'moderate'
+      ? 'Building'
+      : hierarchicalResult.signalStrength === 'weak'
+      ? 'Fragile'
+      : 'Dormant'
+    : 'Awaiting Scan';
+
+  const noTradeReasons = hierarchicalResult
+    ? [
+        ...(hierarchicalResult.signalStrength === 'weak' || hierarchicalResult.signalStrength === 'no_signal'
+          ? ['Confluence strength is not high enough']
+          : []),
+        ...(clusteredCount <= 1 ? ['Too few clustered timeframe closes'] : []),
+        ...(hierarchicalResult.prediction.direction === 'neutral' ? ['Prediction direction is neutral'] : []),
+        ...(!hierarchicalResult.isLivePrice && isCached ? ['Price context is delayed and cached'] : []),
+      ]
+    : [];
+  const showNoTrade = noTradeReasons.length > 0;
+  const tradeabilityLabel = !hierarchicalResult
+    ? 'Awaiting Scan'
+    : showNoTrade
+    ? 'No-Trade'
+    : hierarchicalResult.signalStrength === 'moderate'
+    ? 'Watchlist'
+    : 'Tradable';
+  const nextClusterLabel = nextThreeClusters.length > 0
+    ? `${nextThreeClusters[0].tf} in ${formatMins(nextThreeClusters[0].minsToClose)}`
+    : 'No imminent close cluster';
+  const activeWindowsLabel = hierarchicalResult
+    ? `${clusteredCount} close cluster${clusteredCount === 1 ? '' : 's'}${activeWindow ? ` • ${activeWindow.name}` : ''}`
+    : 'Awaiting Scan';
+  const riskLabel = hierarchicalResult?.tradeSetup
+    ? `${hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}% stop risk`
+    : 'No setup risk yet';
+  const actionLabel = !hierarchicalResult
+    ? 'Run scan'
+    : showNoTrade
+    ? 'Wait for denser close cluster'
+    : hierarchicalResult.prediction.direction === 'bullish'
+    ? 'Prepare long plan'
+    : hierarchicalResult.prediction.direction === 'bearish'
+    ? 'Prepare short plan'
+    : 'Stand by';
+  const expectedVolatilityImpact = !hierarchicalResult
+    ? 'N/A'
+    : Math.abs(hierarchicalResult.decompression.pullBias) >= 70 || clusteredCount >= 4
+    ? 'High'
+    : Math.abs(hierarchicalResult.decompression.pullBias) >= 45 || clusteredCount >= 2
+    ? 'Moderate'
+    : 'Low';
 
   return (
     <div style={{ 
@@ -857,11 +919,122 @@ export default function AIConfluenceScanner() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {hierarchicalResult && (
           <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{
+              maxWidth: '980px',
+              width: '100%',
+              margin: '0 auto',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '16px',
+              padding: '1rem 1.1rem',
+              background: 'rgba(15,23,42,0.92)',
+              boxShadow: '0 0 0 1px rgba(16,185,129,0.08) inset',
+            }}>
+              <div style={{
+                color: '#94A3B8',
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontWeight: 700,
+                marginBottom: '0.75rem',
+                textAlign: 'center',
+              }}>
+                Anchor Panel • Setup State First
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '0.6rem',
+              }}>
+                {[
+                  { label: 'Setup State', value: setupStateLabel },
+                  { label: 'Tradeability', value: tradeabilityLabel },
+                  { label: 'Next Cluster', value: nextClusterLabel },
+                  { label: 'Windows Active', value: activeWindowsLabel },
+                  { label: 'Risk', value: riskLabel },
+                  { label: 'Action', value: actionLabel },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    border: '1px solid var(--msp-border)',
+                    borderRadius: '10px',
+                    padding: '0.6rem 0.7rem',
+                    background: 'rgba(30,41,59,0.55)',
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                    <div style={{ color: '#E2E8F0', fontWeight: 600, fontSize: '0.88rem', marginTop: '0.2rem' }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                marginTop: '0.7rem',
+                color: '#94A3B8',
+                fontSize: '0.76rem',
+                textAlign: 'center',
+              }}>
+                Pre-close window is time-based only. Price gravitation to 50% levels is evaluated separately.
+              </div>
+            </div>
+
+            <div style={{
+              border: '1px solid var(--msp-border)',
+              borderRadius: '12px',
+              padding: '0.8rem 1rem',
+              background: 'rgba(30,41,59,0.55)',
+              display: 'grid',
+              gap: '0.65rem',
+            }}>
+              <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+                Next 3 Clusters
+              </div>
+              {nextThreeClusters.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.55rem' }}>
+                  {nextThreeClusters.map((cluster) => (
+                    <div key={`${cluster.tf}-${cluster.minsToClose}`} style={{
+                      borderRadius: '8px',
+                      border: '1px solid var(--msp-border)',
+                      background: 'rgba(15,23,42,0.7)',
+                      padding: '0.55rem 0.65rem',
+                    }}>
+                      <div style={{ color: '#E2E8F0', fontWeight: 700, fontSize: '0.86rem' }}>{cluster.tf}</div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.78rem' }}>Closes in {formatMins(cluster.minsToClose)}</div>
+                      <div style={{ color: cluster.pullDirection === 'up' ? '#10B981' : cluster.pullDirection === 'down' ? '#EF4444' : '#94A3B8', fontSize: '0.76rem' }}>
+                        Pull: {cluster.pullDirection} ({cluster.pullStrength.toFixed(0)}%)
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ color: '#64748B', fontSize: '0.82rem' }}>
+                  No near-term close clusters detected yet.
+                </div>
+              )}
+            </div>
+
+            {isGuidedMode && hierarchicalResult.scoreBreakdown && (
+              <div style={{
+                border: '1px solid var(--msp-border)',
+                borderRadius: '12px',
+                padding: '0.85rem 1rem',
+                background: 'rgba(30,41,59,0.55)',
+              }}>
+                <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.5rem' }}>
+                  Evidence Summary
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.83rem' }}>Cluster Score (weighted): <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{hierarchicalResult.scoreBreakdown.clusterScore}</span></div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.83rem' }}>Pre-Close Window Score: <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{hierarchicalResult.scoreBreakdown.decompressionScore}</span></div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.83rem' }}>Expected Volatility Impact: <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{expectedVolatilityImpact}</span></div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.83rem' }}>Session Context: <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{activeWindow ? activeWindow.name : 'Off-window'} model</span></div>
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.74rem', marginTop: '0.45rem' }}>
+                  Model weighting includes timeframe hierarchy and session/calendar context (including half-day/holiday handling when calendar flags are present).
+                </div>
+              </div>
+            )}
+
             <div style={{ color: '#64748B', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
               Decision Engine
             </div>
             {(() => {
-              const clusteredCount = hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount;
               const baseConfidence = hierarchicalResult.prediction.confidence || 50;
               const strengthBoost = hierarchicalResult.signalStrength === 'strong'
                 ? 8
@@ -894,21 +1067,6 @@ export default function AIConfluenceScanner() {
               if (hierarchicalResult.prediction.direction === 'neutral') {
                 blockers.push('Directional edge is neutral; no clear setup bias');
               }
-
-              const noTradeReasons: string[] = [];
-              if (hierarchicalResult.signalStrength === 'weak' || hierarchicalResult.signalStrength === 'no_signal') {
-                noTradeReasons.push('Confluence strength is not high enough');
-              }
-              if (clusteredCount <= 1) {
-                noTradeReasons.push('Too few clustered timeframe closes');
-              }
-              if (hierarchicalResult.prediction.direction === 'neutral') {
-                noTradeReasons.push('Prediction direction is neutral');
-              }
-              if (!hierarchicalResult.isLivePrice && isCached) {
-                noTradeReasons.push('Price context is delayed and cached');
-              }
-              const showNoTrade = noTradeReasons.length > 0;
 
               return (
                 <>
@@ -1105,7 +1263,7 @@ export default function AIConfluenceScanner() {
                     paddingBottom: '0.75rem',
                   }}>
                     <span style={{ fontSize: '1.1rem' }}>📐</span>
-                    <span style={{ fontWeight: 600, color: '#E2E8F0' }}>Score Breakdown</span>
+                    <span style={{ fontWeight: 600, color: '#E2E8F0' }}>Model Factors</span>
                     <span style={{ 
                       marginLeft: 'auto', 
                       fontSize: '0.7rem', 
@@ -1129,10 +1287,10 @@ export default function AIConfluenceScanner() {
                     }}>
                       <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
                       <div style={{ color: '#94A3B8', fontSize: '0.9rem', fontWeight: 500 }}>
-                        No Active Decompressions
+                        No Active Pre-Close Windows
                       </div>
                       <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                        Waiting for price to move toward 50% levels. Check back when TFs start decompressing.
+                        Waiting for price to move toward 50% levels. Check back when pre-close windows begin clustering.
                       </div>
                     </div>
                   ) : (
@@ -1154,7 +1312,7 @@ export default function AIConfluenceScanner() {
                       borderRadius: '8px',
                     }}>
                       <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                        Direction
+                        Directional Bias
                       </div>
                       <div style={{ 
                         fontSize: '1.25rem', 
@@ -1178,7 +1336,7 @@ export default function AIConfluenceScanner() {
                       borderRadius: '8px',
                     }}>
                       <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                        Cluster
+                        Cluster Score (weighted)
                       </div>
                       <div style={{ 
                         fontSize: '1.25rem', 
@@ -1200,7 +1358,7 @@ export default function AIConfluenceScanner() {
                       borderRadius: '8px',
                     }}>
                       <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                        Decomp
+                        Pre-Close Window
                       </div>
                       <div style={{ 
                         fontSize: '1.25rem', 
@@ -1404,7 +1562,7 @@ export default function AIConfluenceScanner() {
                   padding: '1.5rem',
                 }}>
                   <h3 style={{ margin: '0 0 1rem 0', color: '#F59E0B', fontSize: '1.1rem' }}>
-                    🔄 Decompression Pull Analysis
+                    🔄 Pre-Close Window Pull Analysis
                   </h3>
                   
                   {/* Pull Bias Meter */}

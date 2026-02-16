@@ -339,12 +339,13 @@ export default function WatchlistWidget() {
         {watchlists.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-3">📋</div>
-            <p className="text-slate-400 mb-4">No watchlists yet</p>
+            <p className="text-slate-400 mb-1">No Active Watchlists</p>
+            <p className="text-slate-500 mb-4 text-sm">Initialize Tracking Set</p>
             <button
               onClick={() => setShowCreate(true)}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
             >
-              Create Your First Watchlist
+              Initialize Tracking Set
             </button>
           </div>
         ) : selectedWatchlist ? (

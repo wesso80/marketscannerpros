@@ -38,18 +38,18 @@ const globalRows: Record<RegionTab, Array<{ name: string; last: string; chg: str
 
 const optionsPulse = [
   {
-    title: 'Unusual Volume Leaders',
+    title: 'Flow Concentration',
     subtitle: 'Flow concentration and unusual contracts',
     href: '/tools/options-confluence',
   },
   {
-    title: 'IV Rank / IV Crush',
+    title: 'Premium State',
     subtitle: 'Premium context and compression/expansion',
     href: '/tools/options-confluence',
   },
   {
-    title: 'Put/Call Extremes + Skew',
-    subtitle: 'Sentiment imbalance and tail-risk pricing',
+    title: 'Put/Call Skew Bias',
+    subtitle: 'Sentiment imbalance and defensive demand',
     href: '/tools/options-confluence',
   },
 ];
@@ -168,6 +168,9 @@ export default function MarketsPage() {
             <div style={{ display: 'grid', gap: '0.06rem' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 800 }}>Decision Plane</div>
               <div style={{ fontSize: '0.95rem', color: 'var(--msp-text)', fontWeight: 800 }}>Market Brain</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--msp-accent)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Current Regime: Neutral
+              </div>
             </div>
             <div style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.6rem', color: edgeStateColor, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Edge State: {edgeState}
@@ -268,7 +271,7 @@ export default function MarketsPage() {
           </div>
         </section>
 
-        <Card title="Options Pulse" right={<Link href="/tools/options-confluence" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Cockpit</Link>}>
+        <Card title="Flow Intelligence" right={<Link href="/tools/options-confluence" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Cockpit</Link>}>
           <Link
             href="/tools/options-confluence"
             style={{

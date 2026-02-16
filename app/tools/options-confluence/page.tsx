@@ -449,6 +449,7 @@ interface AdaptiveProfile {
 type InstitutionalLensMode = 'OBSERVE' | 'WATCH' | 'ARMED' | 'EXECUTE';
 type MRIRegime = 'TREND_EXPANSION' | 'ROTATIONAL_RANGE' | 'VOLATILITY_EXPANSION' | 'CHAOTIC_NEWS';
 type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
+type OperatorViewMode = 'guided' | 'advanced';
 
 export default function OptionsConfluenceScanner() {
   const { tier, isLoading: isTierLoading } = useUserTier();
@@ -471,6 +472,8 @@ export default function OptionsConfluenceScanner() {
   const [focusMode, setFocusMode] = useState(false);
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
+  const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
+  const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
   const [trapDoors, setTrapDoors] = useState<{
     evidence: boolean;
     contracts: boolean;
@@ -932,6 +935,24 @@ export default function OptionsConfluenceScanner() {
       ? 'BLOCKED'
       : (commandStatus === 'ACTIVE' ? 'ALLOWED' : 'WAIT');
 
+  const tradeabilityState: 'EXECUTABLE' | 'CONDITIONAL' | 'AVOID' = !result
+    ? 'CONDITIONAL'
+    : (commandStatus === 'ACTIVE' && tradePermission === 'ALLOWED')
+      ? 'EXECUTABLE'
+      : (commandStatus === 'NO TRADE' || tradePermission === 'BLOCKED')
+        ? 'AVOID'
+        : 'CONDITIONAL';
+
+  const tradeabilityToneClass = tradeabilityState === 'EXECUTABLE'
+    ? 'border-emerald-500/45 bg-emerald-500/15 text-emerald-300'
+    : tradeabilityState === 'CONDITIONAL'
+      ? 'border-amber-500/45 bg-amber-500/15 text-amber-300'
+      : 'border-red-500/45 bg-red-500/15 text-red-300';
+
+  const isGuidedMode = operatorViewMode === 'guided';
+  const narrativeVisible = !isGuidedMode && trapDoors.narrative;
+  const diagnosticsVisible = !isGuidedMode && trapDoors.logs;
+
   const commandStatusClass = commandStatus === 'ACTIVE' ? 'text-emerald-500' : commandStatus === 'WAIT' ? 'text-amber-500' : 'text-red-500';
   const commandStatusToneCardClass = commandStatus === 'ACTIVE'
     ? 'border border-emerald-500/35 bg-emerald-500/15'
@@ -1260,6 +1281,30 @@ export default function OptionsConfluenceScanner() {
     flowDirection === 'mixed' ||
     flowDirection === result.direction
   );
+
+  useEffect(() => {
+    if (operatorModeHydrated) return;
+    try {
+      const storedMode = window.localStorage.getItem('msp_options_operator_mode_v1');
+      if (storedMode === 'guided' || storedMode === 'advanced') {
+        setOperatorViewMode(storedMode);
+      } else {
+        setOperatorViewMode(tier === 'pro_trader' ? 'advanced' : 'guided');
+      }
+    } catch {
+      setOperatorViewMode(tier === 'pro_trader' ? 'advanced' : 'guided');
+    } finally {
+      setOperatorModeHydrated(true);
+    }
+  }, [operatorModeHydrated, tier]);
+
+  useEffect(() => {
+    if (!operatorModeHydrated) return;
+    try {
+      window.localStorage.setItem('msp_options_operator_mode_v1', operatorViewMode);
+    } catch {
+    }
+  }, [operatorViewMode, operatorModeHydrated]);
   const riskGovernorAllows = !!result && (
     tradePermission === 'ALLOWED' &&
     !result.institutionalFilter?.noTrade &&
@@ -1733,7 +1778,30 @@ export default function OptionsConfluenceScanner() {
           );
         })()}
 
-        {/* Input Section */}
+        {/* Operator Panel */}
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
+          <div className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">
+            Operator Panel
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[0.66rem] font-bold uppercase tracking-[0.05em] text-slate-500">View Mode</span>
+            <button
+              type="button"
+              onClick={() => setOperatorViewMode('guided')}
+              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] ${operatorViewMode === 'guided' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+            >
+              Guided
+            </button>
+            <button
+              type="button"
+              onClick={() => setOperatorViewMode('advanced')}
+              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] ${operatorViewMode === 'advanced' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+            >
+              Advanced
+            </button>
+          </div>
+        </div>
+
         <div className="options-form-controls mb-6 flex flex-wrap justify-center gap-3">
           <input
             type="text"
@@ -1819,6 +1887,13 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <div className="grid gap-6">
 
+            <div className="-mt-1 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Decision Engine</span>
+                <span className="text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500">Decision First • Evidence Second • Deep Analysis On Demand</span>
+              </div>
+            </div>
+
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
               <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
                 <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
@@ -1871,13 +1946,34 @@ export default function OptionsConfluenceScanner() {
               {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
             </div>
 
+            <div className={`-mt-[0.85rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[0.75rem]">
+                <span className="font-extrabold uppercase tracking-[0.05em]">Tradeability State</span>
+                <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 EXECUTABLE' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
+              </div>
+            </div>
+
+            {isGuidedMode && (
+              <div className="-mt-[0.85rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.55rem]">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[0.74rem]">
+                  <span className="text-slate-300">Guided mode keeps Analyst sections collapsed for faster decision flow.</span>
+                  <button
+                    type="button"
+                    onClick={() => setOperatorViewMode('advanced')}
+                    className="rounded-full border border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] px-3 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.05em] text-[var(--msp-accent)]"
+                  >
+                    Show Full Analysis
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="-mt-[0.85rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.72rem]">
-              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Display Map</div>
+              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Workflow Layers</div>
               <div className="mt-[0.35rem] grid gap-[0.25rem] text-[0.72rem] text-slate-300 md:grid-cols-2">
-                <div><span className="font-extrabold text-slate-200">1. Evidence:</span> confluence proof, decision context, structure</div>
-                <div><span className="font-extrabold text-slate-200">2. Contracts & Greeks:</span> strike/expiry, OI, greeks, risk plan</div>
-                <div><span className="font-extrabold text-slate-200">3. AI Narrative:</span> institutional interpretation and rationale</div>
-                <div><span className="font-extrabold text-slate-200">4. Logs/Diagnostics:</span> risk flags, quality caps, execution notes</div>
+                <div><span className="font-extrabold text-slate-200">Layer 1 — Decision Panel:</span> score, bias, risk, trigger, tradeability</div>
+                <div><span className="font-extrabold text-slate-200">Layer 2 — Evidence Stack:</span> confluence proof, contracts, greeks, validation</div>
+                <div><span className="font-extrabold text-slate-200">Layer 3 — Analyst Mode (Advanced):</span> narrative + diagnostics, collapsed by default</div>
               </div>
             </div>
 
@@ -1885,9 +1981,11 @@ export default function OptionsConfluenceScanner() {
               {([
                 { key: 'evidence', label: '1) Evidence', count: `${result.confluenceStack} TF` },
                 { key: 'contracts', label: '2) Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
-                { key: 'narrative', label: '3) AI Narrative', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
-                { key: 'logs', label: '4) Logs/Diagnostics', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
-              ] as const).map((section) => (
+                { key: 'narrative', label: '3) Analyst Narrative (Advanced)', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
+                { key: 'logs', label: '4) Execution Diagnostics (Advanced)', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
+              ] as const)
+                .filter((section) => !isGuidedMode || (section.key !== 'narrative' && section.key !== 'logs'))
+                .map((section) => (
                 <button
                   key={section.key}
                   onClick={() => setTrapDoors((previousState) => ({ ...previousState, [section.key]: !previousState[section.key] }))}
@@ -1903,9 +2001,10 @@ export default function OptionsConfluenceScanner() {
               {([
                 { key: 'evidence', title: '1) Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
                 { key: 'contracts', title: '2) Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
-                { key: 'narrative', title: '3) AI Narrative', subtitle: 'Institutional brain summary and long-form interpretation' },
-                { key: 'logs', title: '4) Logs/Diagnostics', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
+                { key: 'narrative', title: '3) Analyst Narrative (Advanced)', subtitle: 'Institutional brain summary and long-form interpretation' },
+                { key: 'logs', title: '4) Execution Diagnostics (Advanced)', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
               ] as const)
+                .filter((door) => !isGuidedMode || (door.key !== 'narrative' && door.key !== 'logs'))
                 .filter((door) => !trapDoors[door.key])
                 .map((door) => (
                   <button
@@ -2614,14 +2713,14 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {trapDoors.logs && (
+            {diagnosticsVisible && (
               <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
-                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Logs / Diagnostics</span>
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Execution Diagnostics (Advanced)</span>
                 <span className="ml-2 text-slate-500">Risk flags, data quality, confidence caps, execution notes</span>
               </div>
             )}
 
-            {trapDoors.logs && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
+            {diagnosticsVisible && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div className="rounded-2xl border-2 border-red-500 bg-[var(--msp-bear-tint)] p-[1rem_1.25rem]">
                 <div className="mb-3 flex items-center gap-3">
                   <span className="text-[1.25rem]">🚨</span>
@@ -2640,7 +2739,7 @@ export default function OptionsConfluenceScanner() {
             )}
             
             {/* Data Quality & Execution Notes */}
-            {trapDoors.logs && ((result.executionNotes && result.executionNotes.length > 0) || 
+            {diagnosticsVisible && ((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
               <details className="rounded-xl border border-amber-500/40 bg-[var(--msp-warn-tint)] p-[0.875rem_1rem]">
                 <summary className="flex cursor-pointer list-none items-center gap-2">
@@ -2885,14 +2984,14 @@ export default function OptionsConfluenceScanner() {
             {/* Pattern panel intentionally rendered above Decision Engine */}
 
             {/* PRO TRADER SECTION - Collapsible */}
-            {trapDoors.narrative && (
+            {narrativeVisible && (
               <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
-                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 3 — AI Narrative</span>
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 3 — Analyst Narrative (Advanced)</span>
                 <span className="ml-2 text-slate-500">Institutional interpretation and strategy rationale</span>
               </div>
             )}
 
-            {trapDoors.narrative && (
+            {narrativeVisible && (
             <details className="mb-4 rounded-[16px] border border-[var(--msp-border-strong)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-5 flex cursor-pointer list-none items-center gap-3 border-b border-violet-500/30 pb-3">
                 <span className="text-[1.5rem]">🎯</span>
