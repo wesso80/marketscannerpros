@@ -361,6 +361,25 @@ export default function AIConfluenceScanner() {
     : Math.abs(hierarchicalResult.decompression.pullBias) >= 45 || clusteredCount >= 2
     ? 'Moderate'
     : 'Low';
+  const setupToneColor =
+    setupStateLabel === 'Clustered' ? '#10B981' :
+    setupStateLabel === 'Building' ? '#F59E0B' :
+    setupStateLabel === 'Fragile' ? '#F97316' : '#64748B';
+  const tradeabilityToneColor =
+    tradeabilityLabel === 'Tradable' ? '#10B981' :
+    tradeabilityLabel === 'Watchlist' ? '#F59E0B' :
+    tradeabilityLabel === 'No-Trade' ? '#EF4444' : '#64748B';
+  const riskToneColor =
+    expectedVolatilityImpact === 'Low' ? '#10B981' :
+    expectedVolatilityImpact === 'Moderate' ? '#F59E0B' :
+    expectedVolatilityImpact === 'High' ? '#EF4444' : '#64748B';
+  const actionToneColor = showNoTrade
+    ? '#F59E0B'
+    : hierarchicalResult?.prediction.direction === 'bullish'
+    ? '#10B981'
+    : hierarchicalResult?.prediction.direction === 'bearish'
+    ? '#EF4444'
+    : '#94A3B8';
 
   return (
     <div style={{ 
@@ -637,7 +656,7 @@ export default function AIConfluenceScanner() {
               borderRadius: '16px',
               padding: '1rem 1.1rem',
               background: 'rgba(15,23,42,0.92)',
-              boxShadow: '0 0 0 1px rgba(16,185,129,0.08) inset',
+              boxShadow: '0 0 0 1px rgba(16,185,129,0.08) inset, 0 10px 28px rgba(2,6,23,0.35)',
             }}>
               <div style={{
                 color: '#94A3B8',
@@ -656,12 +675,12 @@ export default function AIConfluenceScanner() {
                 gap: '0.6rem',
               }}>
                 {[
-                  { label: 'Setup State', value: setupStateLabel },
-                  { label: 'Tradeability', value: tradeabilityLabel },
+                  { label: 'Setup State', value: setupStateLabel, tone: setupToneColor },
+                  { label: 'Tradeability', value: tradeabilityLabel, tone: tradeabilityToneColor },
                   { label: 'Next Cluster', value: nextClusterLabel },
                   { label: 'Active Windows', value: activeWindowsLabel },
-                  { label: 'Risk', value: riskLabel },
-                  { label: 'Action', value: actionLabel },
+                  { label: 'Risk', value: riskLabel, tone: riskToneColor },
+                  { label: 'Action', value: actionLabel, tone: actionToneColor },
                 ].map((item) => (
                   <div key={item.label} style={{
                     border: '1px solid var(--msp-border)',
@@ -670,7 +689,21 @@ export default function AIConfluenceScanner() {
                     background: 'rgba(30,41,59,0.55)',
                   }}>
                     <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
-                    <div style={{ color: '#E2E8F0', fontWeight: 600, fontSize: '0.88rem', marginTop: '0.2rem' }}>{item.value}</div>
+                    <div style={{ marginTop: '0.24rem' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        borderRadius: '999px',
+                        border: item.tone ? `1px solid ${item.tone}55` : '1px solid var(--msp-border)',
+                        background: item.tone ? `${item.tone}22` : 'rgba(15,23,42,0.45)',
+                        color: item.tone ?? '#E2E8F0',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '0.16rem 0.5rem',
+                      }}>
+                        {item.value}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -714,7 +747,7 @@ export default function AIConfluenceScanner() {
               borderRadius: '14px',
               padding: '0.9rem 1rem',
               display: 'grid',
-              gap: '0.45rem',
+              gap: '0.6rem',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
@@ -725,6 +758,24 @@ export default function AIConfluenceScanner() {
                   <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>{hierarchicalResult.signalStrength.toUpperCase()} • {hierarchicalResult.prediction.confidence}%</span>
                 </div>
                 <span style={{ color: '#E2E8F0', fontSize: '0.82rem', fontWeight: 600 }}>{actionLabel}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.45rem' }}>
+                {[
+                  { label: 'Bias', value: hierarchicalResult.prediction.direction.toUpperCase(), tone: directionColor(hierarchicalResult.prediction.direction) },
+                  { label: 'Tradeability', value: tradeabilityLabel.toUpperCase(), tone: tradeabilityToneColor },
+                  { label: 'Risk', value: expectedVolatilityImpact.toUpperCase(), tone: riskToneColor },
+                  { label: 'Action', value: actionLabel, tone: actionToneColor },
+                ].map((chip) => (
+                  <div key={chip.label} style={{
+                    borderRadius: '8px',
+                    border: '1px solid var(--msp-border)',
+                    background: 'rgba(15,23,42,0.55)',
+                    padding: '0.38rem 0.5rem',
+                  }}>
+                    <div style={{ fontSize: '0.62rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{chip.label}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: chip.tone }}>{chip.value}</div>
+                  </div>
+                ))}
               </div>
               <div style={{ color: '#64748B', fontSize: '0.78rem' }}>
                 Decision Snapshot • Close Cluster Density (weighted) + Pre-Close Window state
@@ -744,9 +795,9 @@ export default function AIConfluenceScanner() {
               <span style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
                 Trading Opportunities
               </span>
-              <span style={{ color: '#E2E8F0', fontSize: '0.8rem' }}>{tradeabilityLabel}</span>
+              <span style={{ color: tradeabilityToneColor, fontSize: '0.8rem', fontWeight: 700 }}>{tradeabilityLabel}</span>
               <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>{expectedVolatilityImpact} volatility impact</span>
+              <span style={{ color: riskToneColor, fontSize: '0.8rem', fontWeight: 700 }}>{expectedVolatilityImpact} volatility impact</span>
               <span style={{ color: '#64748B' }}>•</span>
               <span style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>{nextClusterLabel}</span>
             </div>
