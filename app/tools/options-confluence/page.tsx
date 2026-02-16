@@ -1580,7 +1580,7 @@ export default function OptionsConfluenceScanner() {
   if (isTierLoading) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
-        <main className="mx-auto max-w-[900px] px-4 py-8 text-slate-200">
+        <main className="max-w-none px-4 py-8 text-slate-200">
           <h1 className="mb-2 text-[clamp(1.25rem,3vw,1.75rem)] font-bold">
             🎯 Loading Options Confluence Scanner...
           </h1>
@@ -1596,14 +1596,14 @@ export default function OptionsConfluenceScanner() {
   if (!canAccessBacktest(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
-        <header className="mx-auto max-w-[900px] px-4 py-8 text-center">
+        <header className="max-w-none px-4 py-8 text-center">
           <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO TRADER</span>
           <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
             🎯 Options Confluence Scanner
           </h1>
           <p className="text-sm text-slate-400">Strike & Expiration Recommendations Based on Time Confluence</p>
         </header>
-        <main className="mx-auto max-w-[900px] px-4 pb-8">
+        <main className="max-w-none px-4 pb-8">
           <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
         </main>
       </div>

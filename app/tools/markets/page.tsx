@@ -86,6 +86,11 @@ export default function MarketsPage() {
   const [regionTab, setRegionTab] = useState<RegionTab>('americas');
   const rows = useMemo(() => globalRows[regionTab], [regionTab]);
   const edgeState: 'BUILDING' | 'ACTIVE' | 'DEFENSIVE' = 'BUILDING';
+  const edgeStateColor = {
+    BUILDING: 'var(--msp-warn)',
+    ACTIVE: 'var(--msp-bull)',
+    DEFENSIVE: 'var(--msp-bear)',
+  }[edgeState];
 
   return (
     <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', padding: '1rem' }}>
@@ -164,7 +169,7 @@ export default function MarketsPage() {
               <div style={{ fontSize: '0.72rem', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 800 }}>Decision Plane</div>
               <div style={{ fontSize: '0.95rem', color: 'var(--msp-text)', fontWeight: 800 }}>Market Brain</div>
             </div>
-            <div style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.6rem', color: edgeState === 'ACTIVE' ? 'var(--msp-bull)' : edgeState === 'DEFENSIVE' ? 'var(--msp-bear)' : 'var(--msp-warn)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.6rem', color: edgeStateColor, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Edge State: {edgeState}
             </div>
           </div>

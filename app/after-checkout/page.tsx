@@ -20,9 +20,9 @@ function AfterCheckoutContent() {
         });
         
         if (res.ok) {
-          // Cookie is set server-side, redirect to dashboard
+          // Cookie is set server-side, redirect to markets command center
           setTimeout(() => {
-            router.replace("/dashboard");
+            router.replace("/tools/markets");
           }, 1000);
         } else {
           console.error("Confirmation failed");

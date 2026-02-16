@@ -260,9 +260,7 @@ function AiAnalystContent() {
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         padding: '24px 16px'
       }}>
-        <div
-          className="max-w-7xl mx-auto w-full"
-        >
+        <div className="w-full max-w-none">
           <AdaptivePersonalityCard
             skill="ai_analyst"
             setupText={`${symbol} ${timeframe} ${query.slice(0, 80)}`}

@@ -991,7 +991,7 @@ function ScannerContent() {
         backHref="/tools/scanner"
       />
       <main className="px-4 py-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full max-w-none">
         {result && (
           <CommandStrip
             symbol={result.symbol}

@@ -1123,7 +1123,7 @@ function PortfolioContent() {
         }
       />
 
-      <div className="mx-auto max-w-[1600px] px-4 pt-3">
+      <div className="w-full max-w-none px-4 pt-3">
         <CommandStrip
           symbol={positions[0]?.symbol || 'PORT'}
           status={totalReturn >= 0 ? 'GAINING' : 'DRAWDOWN'}
@@ -1190,7 +1190,7 @@ function PortfolioContent() {
 
       {/* Top Stats Bar */}
       <div className="border-b border-slate-700/60 bg-[var(--msp-bg)] px-4 py-6">
-        <div className="mx-auto grid max-w-[1600px] gap-4 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+        <div className="grid w-full max-w-none gap-4 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
           <div className="rounded-xl border border-slate-700/50 bg-[var(--msp-panel)] p-4">
             <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Market Value</div>
             <div className="text-[22px] font-bold text-slate-200">

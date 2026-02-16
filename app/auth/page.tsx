@@ -30,9 +30,9 @@ function AuthContent() {
 
       if (res.ok) {
         setSuccess(true);
-        // Cookie is set, redirect to dashboard
+        // Cookie is set, redirect to markets command center
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/tools/markets");
         }, 1500);
       } else if (res.status === 404 && plan) {
         // No subscription found, but they came from pricing - redirect to checkout

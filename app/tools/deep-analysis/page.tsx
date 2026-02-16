@@ -581,7 +581,7 @@ export default function DeepAnalysisPage() {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
-        <main className="mx-auto max-w-[900px] px-4 py-8">
+        <main className="max-w-none px-4 py-8">
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
       </div>
@@ -618,7 +618,7 @@ export default function DeepAnalysisPage() {
     <div className="min-h-screen bg-[var(--msp-bg)]">
       <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
       
-      <main className="mx-auto max-w-[1200px] px-4 py-8">
+      <main className="max-w-none px-4 py-8">
         {result && (
           <CommandStrip
             symbol={result.symbol}

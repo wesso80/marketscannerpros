@@ -1,680 +1,280 @@
-"use client";
-import Testimonials from "../components/Testimonials";
-import Hero from "../components/Hero";
-import Why from "../components/Why";
-import HowItWorks from "../components/HowItWorks";
-import SocialProof from "../components/SocialProof";
-import ReferralBanner from "../components/ReferralBanner";
-import LiveMarketPulse from "../components/LiveMarketPulse";
-import WorkflowHero from "../components/WorkflowHero";
-import InstantDemo from "../components/InstantDemo";
-import MarketPulseHero from "../components/MarketPulseHero";
-import TrendingCoinsWidget from "../components/TrendingCoinsWidget";
-import TopMoversWidget from "../components/TopMoversWidget";
-import CategoryHeatmapWidget from "../components/CategoryHeatmapWidget";
-import Link from "next/link";
+import Link from 'next/link';
+import MarketStatusBadge from '@/components/MarketStatusBadge';
 
-import { useState } from "react";
-import { FaRobot, FaChartLine, FaSearch, FaBrain, FaBolt, FaCogs, FaComments } from "react-icons/fa";
-
-const features = [
-  {
-    icon: <FaRobot size={32} color="#60a5fa" />, title: "MSP AI Analyst", desc: "Understand the Signal — Not Just the Alert. The MSP AI Analyst is an AI-powered market interpretation engine built into MarketScanner Pros."
-  },
-  {
-    icon: <FaChartLine size={32} color="#22c55e" />, title: "Multi-Timeframe Scanning", desc: "Scan across multiple timeframes and get context, not just signals."
-  },
-  {
-    icon: <FaSearch size={32} color="#f59e0b" />, title: "Market Structure Logic", desc: "Explains why a signal appeared, what conditions align, and what risks exist — using professional market structure logic."
-  },
-  {
-    icon: <FaBrain size={32} color="var(--msp-accent)" />, title: "AI-Powered Insights", desc: "Think of it as a market analyst, not a signal bot."
-  },
-  {
-    icon: <FaBolt size={32} color="#ef4444" />, title: "Risk Awareness", desc: "Highlights potential fakeouts, late-stage moves, and volatility changes."
-  },
-  {
-    icon: <FaCogs size={32} color="var(--msp-accent)" />, title: "Structure & Liquidity Context", desc: "Shows key support/resistance, liquidity, and invalidation zones."
-  },
-  {
-    icon: <FaComments size={32} color="#22c55e" />, title: "Decision Support", desc: "Clear, structured, actionable explanations for decision-making." 
-  }
+const actionLayer = [
+  { title: 'Scanner', href: '/tools/scanner', desc: 'Signal discovery and qualification' },
+  { title: 'Options Confluence', href: '/tools/options-confluence', desc: 'Strike, expiry, and flow context' },
+  { title: 'Deep Analysis', href: '/tools/deep-analysis', desc: 'Regime and multi-factor diagnostics' },
+  { title: 'Portfolio', href: '/tools/portfolio', desc: 'Risk posture and performance state' },
 ];
 
-export default function Home() {
-  const [activeFeature, setActiveFeature] = useState(0);
+const trustMetrics = [
+  { label: 'Monitored Universe', value: '500+', note: 'Cross-asset symbols' },
+  { label: 'Terminal Modules', value: '20+', note: 'Decision and execution tooling' },
+  { label: 'Market Refresh', value: '60s', note: 'Live surface cadence' },
+  { label: 'Workflow Layers', value: '3', note: 'Home → Workspace → Terminal' },
+  { label: 'AI Context', value: 'Multi-TF', note: 'Structure-aware interpretation' },
+  { label: 'Desk State', value: 'Always-On', note: 'Institutional mission control' },
+];
+
+const ecosystem = ['Observe', 'Contextualize', 'Scanner', 'Options', 'Deep Analysis', 'Portfolio', 'Journal', 'Learn'];
+
+const pricingCards = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    href: '/tools/scanner',
+    cta: 'Start Command Mode',
+    bullets: ['Core scanner access', 'Baseline AI context', 'Watchlist + journal access'],
+  },
+  {
+    name: 'Pro',
+    price: '$39.99',
+    period: '/ month',
+    href: '/pricing',
+    cta: 'Upgrade to Pro',
+    bullets: ['Unlimited scanning', 'Expanded AI analyst usage', 'Advanced market surfaces'],
+  },
+  {
+    name: 'Pro Trader',
+    price: '$89.99',
+    period: '/ month',
+    href: '/pricing',
+    cta: 'Unlock Full Terminal',
+    bullets: ['Options + deep analysis stack', 'Backtesting and execution workflow', 'Institutional-grade toolkit'],
+  },
+];
+
+export default function HomePage() {
   return (
-    <>
-      {/* Top Announcement Banner */}
-      <div style={{
-        background: 'var(--msp-card)',
-        borderBottom: '1px solid rgba(34,197,94,0.3)',
-        padding: '12px 20px',
-        textAlign: 'center',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <p style={{ 
-          margin: 0, 
-          color: '#e5e7eb', 
-          fontSize: 14, 
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 12,
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ color: '#22c55e' }}>✨</span>
-          <span>AI-Powered Market Scanning — <strong style={{ color: '#22c55e' }}>500+ Assets</strong></span>
-          <Link href="/pricing" style={{ 
-            color: '#22c55e', 
-            textDecoration: 'underline', 
-            fontWeight: 600 
-          }}>
-            View Plans →
-          </Link>
-        </p>
-      </div>
-
-      {/* 🚀 NEW: Trading Workflow OS Hero */}
-      <WorkflowHero />
-
-      {/* 📊 Live Market Pulse - 4 Box Hero */}
-      <MarketPulseHero />
-
-      {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
-      <section style={{
-        width: '100%',
-        background: 'var(--msp-bg)',
-        color: '#f9fafb',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
-        borderBottom: '1px solid #1f2933',
-        padding: '64px 0 0 0',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: 520,
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 20px', width: '100%' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 32 }}>
-            {/* Left: Hero Text */}
-            <div style={{ flex: 1, minWidth: 320, textAlign: 'left', maxWidth: 600 }}>
-              <div style={{ marginBottom: 24 }}>
-                <img src="/logos/msp-logo.png" alt="MarketScannerPros" style={{ width: 64, height: 64, marginBottom: 12, objectFit: 'contain' }} />
-                <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 8, lineHeight: 1.2, color: '#f9fafb' }}>
-                  MarketScannerPros
-                </h1>
-                <p style={{ fontSize: 16, color: '#22c55e', fontWeight: 500, marginBottom: 0 }}>
-                  Phase-Based Market Intelligence
-                </p>
-              </div>
-              <h2 style={{ fontSize: 38, fontWeight: 800, marginBottom: 18, lineHeight: 1.2, color: '#f9fafb' }}>
-                Stop Guessing the Market.<br />
-                <span style={{ color: '#22c55e' }}>Start Understanding It.</span>
-              </h2>
-              <p style={{ fontSize: 16, color: '#cbd5e1', lineHeight: 1.6, marginBottom: 16 }}>
-                MarketScanner Pros is a phase-based market intelligence platform that scans markets, explains signals with AI, and teaches traders how to interpret structure using institutional logic.
-              </p>
-              <p style={{ fontSize: 16, color: '#f9fafb', fontWeight: 600, marginBottom: 16 }}>
-                Reduce noise, understand market context, and make decisions with structure — not emotion.
-              </p>
-              <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>
-                No hype. No black boxes. Just clarity across multiple timeframes.
-              </p>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>USED DAILY BY ACTIVE TRADERS ANALYSING:</p>
-                <p style={{ fontSize: 14, color: '#e5e7eb', marginBottom: 16 }}>Crypto • Stocks • Indices • FX</p>
-                <p style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 600, marginBottom: 8, letterSpacing: 1 }}>POWERED BY:</p>
-                <p style={{ fontSize: 14, color: '#e5e7eb' }}>Multi-Timeframe Analysis • Phase Logic • AI Signal Interpretation</p>
-              </div>
-              <div style={{ marginTop: 32 }}>
-                <Link
-                  href="/tools/scanner"
-                  style={{
-                    display: 'inline-block',
-                    borderRadius: 999,
-                    border: 'none',
-                    background: 'var(--msp-accent)',
-                    color: '#0b1120',
-                    padding: '16px 32px',
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                    boxShadow: 'var(--msp-shadow)',
-                    marginRight: 12,
-                    marginBottom: 12
-                  }}
-                >
-                  Start Free Scanner (No Card)
-                </Link>
-                <Link
-                  href="/guide"
-                  style={{
-                    display: 'inline-block',
-                    borderRadius: 999,
-                    border: '1px solid #334155',
-                    background: 'transparent',
-                    color: '#e5e7eb',
-                    padding: '16px 32px',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                    marginLeft: 8,
-                    marginBottom: 12
-                  }}
-                >
-                  See How the AI Analyst Works
-                </Link>
-              </div>
-              <p style={{ fontSize: 12, color: '#64748b', marginTop: 16 }}>Trusted by 1,000+ traders · Educational use only</p>
+    <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: 'var(--msp-text)' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0.8rem 1rem 2rem', display: 'grid', gap: '0.95rem' }}>
+        <div
+          style={{
+            position: 'sticky',
+            top: 10,
+            zIndex: 30,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.42rem',
+            alignItems: 'center',
+            padding: '0.42rem 0.6rem',
+            borderRadius: 12,
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border-strong)',
+          }}
+        >
+          {[
+            ['Regime', 'Trend'],
+            ['Risk', 'Moderate'],
+            ['VIX', '13.8'],
+            ['DXY', '103.2'],
+            ['Data', 'Live'],
+          ].map(([k, v]) => (
+            <div key={k} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.18rem 0.5rem', fontSize: '0.72rem', color: 'var(--msp-text-muted)' }}>
+              <strong style={{ color: 'var(--msp-text)' }}>{k}</strong> • {v}
             </div>
-            {/* Right: Feature Tabs (TrendSpider-style) */}
-            <div style={{ flex: 1, minWidth: 320, maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 12,
-                marginBottom: 24,
-                flexWrap: 'wrap',
-                marginTop: 12
-              }}>
-                {features.map((f, i) => (
-                  <button
-                    key={f.title}
-                    onClick={() => setActiveFeature(i)}
+          ))}
+          <div style={{ marginLeft: 'auto' }}>
+            <MarketStatusBadge compact showGlobal />
+          </div>
+        </div>
+
+        <section
+          style={{
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border-strong)',
+            borderRadius: 14,
+            padding: '1rem',
+          }}
+        >
+          <div className="grid lg:grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gap: '0.75rem' }}>
+              <div style={{ fontSize: '0.73rem', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 800 }}>
+                Command Authority
+              </div>
+              <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 3.6vw, 2.35rem)', lineHeight: 1.12, fontWeight: 850 }}>
+                Home Command Screen. Institutional context before workspace.
+              </h1>
+              <p style={{ margin: 0, color: 'var(--msp-text-muted)', maxWidth: 700, lineHeight: 1.55 }}>
+                MSP opens like a trading floor: market state first, then branching decisions into terminal-grade tools. Personal dashboard remains a secondary workspace.
+              </p>
+              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                {actionLayer.map((item) => (
+                  <Link
+                    key={item.title}
+                    href={item.href}
                     style={{
-                      background: activeFeature === i ? 'var(--msp-accent)' : 'rgba(30,41,59,0.7)',
-                      color: activeFeature === i ? '#0b1120' : '#e5e7eb',
-                      border: activeFeature === i ? '2px solid #22c55e' : '1px solid #334155',
-                      borderRadius: 999,
-                      padding: '10px 22px',
-                      fontWeight: 700,
-                      fontSize: 15,
-                      cursor: 'pointer',
-                      transition: 'all 0.18s',
-                      outline: 'none',
-                      marginBottom: 8
+                      textDecoration: 'none',
+                      border: '1px solid var(--msp-border)',
+                      borderRadius: 10,
+                      background: 'var(--msp-card)',
+                      padding: '0.65rem',
+                      display: 'grid',
+                      gap: '0.25rem',
                     }}
                   >
-                    <span style={{ marginRight: 8, verticalAlign: 'middle' }}>{f.icon}</span>
-                    {f.title}
-                  </button>
+                    <div style={{ color: 'var(--msp-accent)', fontWeight: 800, fontSize: '0.84rem' }}>▶ {item.title}</div>
+                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', lineHeight: 1.4 }}>{item.desc}</div>
+                  </Link>
                 ))}
               </div>
-              <div style={{
-                maxWidth: 420,
-                margin: '0 auto',
-                background: 'var(--msp-card)',
-                border: '1px solid var(--msp-border-strong)',
-                borderRadius: 18,
-                boxShadow: 'var(--msp-shadow)',
-                padding: '28px 24px',
-                minHeight: 120,
-                color: '#e5e7eb',
-                fontSize: 17,
-                fontWeight: 500,
-                textAlign: 'center',
-                marginBottom: 0
-              }}>
-                {features[activeFeature].desc}
+              <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap' }}>
+                <Link href="/tools/markets" style={{ textDecoration: 'none', padding: '0.58rem 0.86rem', borderRadius: 10, background: 'var(--msp-accent)', color: '#051017', fontWeight: 800, fontSize: '0.84rem' }}>
+                  Enter Markets Hub
+                </Link>
+                <Link href="/dashboard" style={{ textDecoration: 'none', padding: '0.58rem 0.86rem', borderRadius: 10, border: '1px solid var(--msp-border)', color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.84rem', background: 'var(--msp-card)' }}>
+                  My Workspace
+                </Link>
               </div>
             </div>
-          </div>
-        </div>
 
-      </section>
-
-      {/* How It Works Stepper */}
-      <section style={{
-        width: '100%',
-        background: 'var(--msp-bg)',
-        color: '#f9fafb',
-        borderBottom: '1px solid #1f2933',
-        padding: '40px 0'
-      }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>How It Works</h2>
-            <p style={{ color: '#94a3b8', fontSize: 14 }}>Scan → Explain → Act with confidence</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 1</div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Scan</div>
-              <div style={{ color: '#cbd5e1', fontSize: 14 }}>Multi‑timeframe sweeps find active confluence windows.</div>
-            </div>
-            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 2</div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Explain</div>
-              <div style={{ color: '#cbd5e1', fontSize: 14 }}>AI Analyst translates signals into clear market context.</div>
-            </div>
-            <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid #1f2933', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, marginBottom: 6 }}>STEP 3</div>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Act</div>
-              <div style={{ color: '#cbd5e1', fontSize: 14 }}>Targets, timing, and alerts help you plan the trade.</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 🚀 WOW FACTOR #2 - Try Before Signup Interactive Demo */}
-      <InstantDemo />
-
-      {/* Scan the Market Section (TrendSpider-style, user text) */}
-      <section style={{
-        width: '100%',
-        background: 'var(--msp-bg)',
-        color: '#f9fafb',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
-        borderBottom: '1px solid #1f2933',
-        padding: '48px 0 32px 0',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 10, color: '#f9fafb' }}>Scan the Market Instantly</h2>
-            <p style={{ fontSize: 17, color: '#9ca3af', maxWidth: 600, margin: '0 auto', lineHeight: 1.5 }}>
-              Enter a symbol or keyword to scan stocks, crypto, or ETFs. Or, jump to a quick scan below.
-            </p>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              placeholder="e.g. TSLA, BTC, S&P 500, AI stocks..."
+            <aside
               style={{
-                width: 320,
-                maxWidth: '90vw',
-                padding: '16px 20px',
-                borderRadius: 999,
-                border: '1.5px solid #334155',
-                background: '#0f172a',
-                color: '#f9fafb',
-                fontSize: 17,
-                fontWeight: 500,
-                outline: 'none',
-                marginRight: 8,
-                marginBottom: 8
-              }}
-            />
-            <Link
-              href="/tools/scanner"
-              style={{
-                display: 'inline-block',
-                borderRadius: 999,
-                border: 'none',
-                background: 'var(--msp-accent)',
-                color: '#0b1120',
-                padding: '16px 36px',
-                fontSize: 17,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: 'var(--msp-shadow)',
-                marginBottom: 8,
-                textDecoration: 'none'
+                border: '1px solid var(--msp-border)',
+                borderRadius: 12,
+                background: 'var(--msp-card)',
+                padding: '0.8rem',
+                display: 'grid',
+                gap: '0.52rem',
               }}
             >
-              Scan Now
-            </Link>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, color: 'var(--msp-text-faint)' }}>
+                Live System Status
+              </div>
+              {[
+                ['System State', 'ONLINE'],
+                ['Ingestion', 'ACTIVE'],
+                ['Signal Health', 'STABLE'],
+                ['Latency Band', '< 1200ms'],
+                ['Terminal Readiness', 'GREEN'],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--msp-divider)', paddingBottom: '0.32rem', fontSize: '0.82rem' }}>
+                  <span style={{ color: 'var(--msp-text-muted)' }}>{k}</span>
+                  <strong style={{ color: 'var(--msp-accent)' }}>{v}</strong>
+                </div>
+              ))}
+            </aside>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-            {[
-              { label: 'Top Gainers', href: '/tools/scanner?scan=gainers' },
-              { label: 'Crypto', href: '/tools/scanner?scan=crypto' },
-              { label: 'AI Stocks', href: '/tools/scanner?scan=ai' },
-              { label: 'ETFs', href: '/tools/scanner?scan=etf' },
-            ].map((q) => (
-              <Link
-                key={q.label}
-                href={q.href}
-                style={{
-                  display: 'inline-block',
-                  borderRadius: 999,
-                  border: '1px solid #334155',
-                  background: 'rgba(30,41,59,0.7)',
-                  color: '#e5e7eb',
-                  padding: '10px 22px',
-                  fontWeight: 600,
-                  fontSize: 15,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  marginBottom: 8,
-                  marginRight: 4
-                }}
-              >
-                {q.label}
-              </Link>
+        </section>
+
+        <section
+          style={{
+            background: 'var(--msp-card)',
+            border: '1px solid var(--msp-border)',
+            borderRadius: 14,
+            padding: '0.9rem',
+          }}
+        >
+          <div style={{ marginBottom: '0.75rem', fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
+            System Architecture
+          </div>
+          <div className="grid md:grid-cols-5 gap-2">
+            {['Observe', 'Contextualize', 'Decide', 'Execute', 'Learn'].map((stage, index) => (
+              <div key={stage} style={{ border: '1px solid var(--msp-border)', borderRadius: 10, background: index === 2 ? 'var(--msp-panel)' : 'var(--msp-panel-2)', padding: '0.65rem 0.7rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--msp-text-faint)', marginBottom: '0.2rem' }}>0{index + 1}</div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{stage}</div>
+              </div>
             ))}
           </div>
-        </div>
-      </section>
-      
-      {/* THE WOW FACTOR - Live Market Pulse */}
-      <LiveMarketPulse />
+        </section>
 
-      {/* Crypto Market Pulse - Trending, Movers, Sectors */}
-      <section style={{
-        width: '100%',
-        background: 'var(--msp-bg)',
-        padding: '48px 0',
-        borderBottom: '1px solid #1f2933'
-      }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <h2 style={{ 
-              fontSize: 28, 
-              fontWeight: 700, 
-              color: '#f1f5f9', 
-              marginBottom: 8 
-            }}>
-              🔥 Crypto Market Pulse
-            </h2>
-            <p style={{ 
-              fontSize: 14, 
-              color: '#64748b',
-              maxWidth: 500,
-              margin: '0 auto'
-            }}>
-              Real-time trending coins, top movers, and sector performance
+        <section
+          style={{
+            background: 'var(--msp-card)',
+            border: '1px solid var(--msp-border)',
+            borderRadius: 14,
+            padding: '0.9rem',
+          }}
+        >
+          <div style={{ marginBottom: '0.68rem', fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
+            Live Intelligence Snapshot
+          </div>
+          <div style={{ border: '1px solid var(--msp-border)', borderRadius: 12, overflow: 'hidden', background: 'var(--msp-panel)' }}>
+            <img src="/marketing/hero-dashboard.png" alt="MSP cockpit preview" style={{ width: '100%', display: 'block' }} />
+          </div>
+        </section>
+
+        <section
+          style={{
+            background: 'var(--msp-card)',
+            border: '1px solid var(--msp-border)',
+            borderRadius: 14,
+            padding: '0.9rem',
+          }}
+        >
+          <div style={{ marginBottom: '0.7rem', fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
+            Performance Metrics
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {trustMetrics.map((metric) => (
+              <div key={metric.label} style={{ border: '1px solid var(--msp-border)', borderRadius: 10, background: 'var(--msp-panel)', padding: '0.65rem 0.7rem' }}>
+                <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.69rem', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.2rem' }}>{metric.label}</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 850, color: 'var(--msp-accent)', marginBottom: '0.1rem' }}>{metric.value}</div>
+                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>{metric.note}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section
+          style={{
+            background: 'var(--msp-card)',
+            border: '1px solid var(--msp-border)',
+            borderRadius: 14,
+            padding: '0.9rem',
+          }}
+        >
+          <div style={{ marginBottom: '0.7rem', fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
+            Strategy Ecosystem
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+            {ecosystem.map((item) => (
+              <span key={item} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--msp-text-muted)', background: 'var(--msp-panel)' }}>
+                {item}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section
+          style={{
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border-strong)',
+            borderRadius: 14,
+            padding: '1rem',
+          }}
+        >
+          <div style={{ marginBottom: '0.85rem' }}>
+            <div style={{ fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
+              Pricing
+            </div>
+            <p style={{ margin: '0.35rem 0 0', color: 'var(--msp-text-muted)', fontSize: '0.86rem' }}>
+              Flat institutional cards. Start with command visibility, scale into terminal execution.
             </p>
           </div>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-            gap: 20 
-          }}>
-            <TrendingCoinsWidget />
-            <TopMoversWidget />
-            <CategoryHeatmapWidget />
+          <div className="grid md:grid-cols-3 gap-3">
+            {pricingCards.map((card) => (
+              <div key={card.name} style={{ border: '1px solid var(--msp-border)', borderRadius: 12, background: 'var(--msp-card)', padding: '0.8rem' }}>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.35rem' }}>{card.name}</div>
+                <div style={{ marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 850, color: 'var(--msp-accent)' }}>{card.price}</span>
+                  <span style={{ color: 'var(--msp-text-muted)', marginLeft: 6, fontSize: '0.8rem' }}>{card.period}</span>
+                </div>
+                <div style={{ display: 'grid', gap: '0.28rem', marginBottom: '0.8rem' }}>
+                  {card.bullets.map((bullet) => (
+                    <div key={bullet} style={{ color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>• {bullet}</div>
+                  ))}
+                </div>
+                <Link href={card.href} style={{ display: 'inline-block', textDecoration: 'none', padding: '0.55rem 0.75rem', borderRadius: 10, border: '1px solid var(--msp-border)', background: 'var(--msp-panel)', color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.78rem' }}>
+                  {card.cta}
+                </Link>
+              </div>
+            ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Link
-              href="/tools/crypto-dashboard"
-              style={{
-                display: 'inline-block',
-                padding: '12px 28px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                borderRadius: 8,
-                color: '#10b981',
-                fontSize: 14,
-                fontWeight: 600,
-                textDecoration: 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              View Full Crypto Dashboard →
-            </Link>
-          </div>
-        </div>
-      </section>
-      
-      <SocialProof />
-      <Why />
-      <HowItWorks />
-      <Testimonials />
-      
-      {/* Pricing Section */}
-      <section style={{
-        width: '100%',
-        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-        color: '#f9fafb',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
-        borderBottom: '1px solid #1f2933'
-      }}>
-        <div style={{ maxWidth: 1120, padding: '60px 20px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 11,
-              color: '#9ca3af',
-              padding: '4px 10px',
-              borderRadius: 999,
-              background: 'rgba(15,23,42,0.9)',
-              border: '1px solid rgba(148,163,184,0.25)',
-              marginBottom: 14
-            }}>
-              <span style={{ color: '#22c55e' }}>Simple pricing</span>
-              <span>Start free, upgrade anytime</span>
-            </div>
-            <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Professional Tools, Accessible Pricing</h2>
-            <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 520, margin: '0 auto' }}>
-              Start free with AI assistance. Upgrade for unlimited scanning, real backtesting, and professional features.
-            </p>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 20,
-            maxWidth: 1000,
-            margin: '0 auto'
-          }}>
-            {/* Free Tier */}
-            <div style={{
-              background: 'var(--msp-card)',
-              borderRadius: 18,
-              border: '1px solid var(--msp-border)',
-              boxShadow: 'var(--msp-shadow)',
-              padding: '28px 26px',
-              position: 'relative'
-            }}>
-              <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Free</h3>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 36, fontWeight: 700 }}>$0</span>
-                <span style={{ fontSize: 15, color: '#9ca3af', marginLeft: 6 }}>forever</span>
-              </div>
-              
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
-                {[
-                  { text: "Top 10 equities + Top 10 crypto", highlight: false },
-                  { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
-                  { text: "Multi-timeframe scanning", highlight: false },
-                  { text: "Portfolio tracker (3 positions)", highlight: false },
-                  { text: "Trade journal", highlight: false }
-                ].map((item, i) => (
-                  <li key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 0',
-                    borderBottom: i < 4 ? '1px solid rgba(15,23,42,0.85)' : 'none',
-                    background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
-                    borderRadius: item.highlight ? 6 : 0,
-                    marginLeft: item.highlight ? -8 : 0,
-                    paddingLeft: item.highlight ? 8 : 0,
-                    marginRight: item.highlight ? -8 : 0,
-                    paddingRight: item.highlight ? 8 : 0
-                  }}>
-                    <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                    <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <button
-                onClick={() => window.location.href = '/tools/scanner'}
-                style={{
-                  width: '100%',
-                  borderRadius: 999,
-                  border: '1px solid #1f2933',
-                  background: 'rgba(15,23,42,0.8)',
-                  color: '#e5e7eb',
-                  padding: '14px 20px',
-                  fontSize: 15,
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                Get Started Free
-              </button>
-            </div>
-
-            {/* Pro Tier */}
-            <div style={{
-              background: 'var(--msp-card)',
-              borderRadius: 18,
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: '3px solid rgba(34,197,94,0.65)',
-              boxShadow: 'var(--msp-shadow)',
-              padding: '28px 26px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                position: 'absolute',
-                right: -30,
-                top: -30,
-                width: 150,
-                height: 150,
-                background: 'radial-gradient(circle, rgba(34,197,94,0.2), transparent 60%)',
-                filter: 'blur(1px)'
-              }} aria-hidden="true"></div>
-              
-              <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8 }}>Pro</h3>
-              <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#22c55e' }}>$39.99</span>
-                <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
-              </div>
-              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#22c55e' }}>$399.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free)</span>
-              </div>
-              
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
-                {[
-                  { text: "Everything in Free", highlight: false },
-                  { text: "Unlimited symbol scanning", highlight: false },
-                  { text: "🤖 MSP Analyst AI (50/day)", highlight: true },
-                  { text: "📊 Market Movers & News", highlight: false },
-                  { text: "🏢 Company Overview", highlight: false },
-                  { text: "🤖 AI Tools & Insights", highlight: false },
-                  { text: "CSV exports (all tools)", highlight: false }
-                ].map((item, i) => (
-                  <li key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 0',
-                    borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none',
-                    background: item.highlight ? 'rgba(34,197,94,0.08)' : 'transparent',
-                    borderRadius: item.highlight ? 6 : 0,
-                    marginLeft: item.highlight ? -8 : 0,
-                    paddingLeft: item.highlight ? 8 : 0,
-                    marginRight: item.highlight ? -8 : 0,
-                    paddingRight: item.highlight ? 8 : 0
-                  }}>
-                    <span style={{ color: '#22c55e', fontSize: 16 }}>✓</span>
-                    <span style={{ color: item.highlight ? '#34d399' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <Link
-                href="/pricing"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: 'var(--msp-accent)',
-                  color: '#0b1120',
-                  padding: '14px 20px',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  textDecoration: 'none',
-                  boxShadow: 'var(--msp-shadow)'
-                }}
-              >
-                Upgrade to Pro
-              </Link>
-            </div>
-
-            {/* Pro Trader Tier */}
-            <div style={{
-              background: 'var(--msp-card)',
-              borderRadius: 18,
-              border: '1px solid var(--msp-border)',
-              boxShadow: 'var(--msp-shadow)',
-              padding: '28px 26px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <h3 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#60a5fa' }}>Pro Trader</h3>
-              <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 36, fontWeight: 700, color: '#60a5fa' }}>$89.99</span>
-                <span style={{ fontSize: 15, color: '#9ca3af' }}>/ month</span>
-              </div>
-              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 20 }}>
-                or <span style={{ color: '#60a5fa' }}>$899.99/year</span> <span style={{ color: '#fbbf24' }}>(2 months free)</span>
-              </div>
-              
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px', fontSize: 14 }}>
-                {[
-                  { text: "Everything in Pro", highlight: false },
-                  { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
-                  { text: "📈 Full backtesting engine", highlight: false },
-                  { text: "🥚 Golden Egg Deep Analysis", highlight: true },
-                  { text: "🔮 AI Confluence Scanner", highlight: false },
-                  { text: "🎯 Options Confluence Scanner", highlight: false },
-                  { text: "Premium support", highlight: false }
-                ].map((item, i) => (
-                  <li key={i} style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 0',
-                    background: item.highlight ? 'rgba(96,165,250,0.1)' : 'transparent',
-                    borderRadius: item.highlight ? 6 : 0,
-                    marginLeft: item.highlight ? -8 : 0,
-                    paddingLeft: item.highlight ? 8 : 0,
-                    marginRight: item.highlight ? -8 : 0,
-                    paddingRight: item.highlight ? 8 : 0,
-                    borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none'
-                  }}>
-                    <span style={{ color: '#60a5fa', fontSize: 16 }}>✓</span>
-                    <span style={{ color: item.highlight ? 'var(--msp-muted)' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <Link
-                href="/pricing"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  borderRadius: 999,
-                  border: 'none',
-                  background: 'var(--msp-accent)',
-                  color: '#fff',
-                  padding: '14px 20px',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  textDecoration: 'none',
-                  boxShadow: 'var(--msp-shadow)'
-                }}
-              >
-                Upgrade to Pro Trader
-              </Link>
-            </div>
-          </div>
-          
-          <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, marginTop: 24 }}>
-            All payments securely processed. Cancel anytime.
-          </p>
-        </div>
-      </section>
-      
-      <ReferralBanner />
-    </>
+        </section>
+      </div>
+    </main>
   );
 }

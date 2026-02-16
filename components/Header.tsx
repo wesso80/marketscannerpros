@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface DropdownItem {
   href: string;
@@ -13,9 +14,10 @@ interface DropdownProps {
   label: string;
   items: DropdownItem[];
   align?: 'left' | 'right';
+  compact?: boolean;
 }
 
-function Dropdown({ label, items, align = 'left' }: DropdownProps) {
+function Dropdown({ label, items, align = 'left', compact = false }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -33,7 +35,7 @@ function Dropdown({ label, items, align = 'left' }: DropdownProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 hover:text-teal-300 whitespace-nowrap transition-colors"
+        className={`flex items-center gap-1 hover:text-teal-300 whitespace-nowrap transition-colors ${compact ? 'py-0.5 text-[12px]' : ''}`}
       >
         {label}
         <svg className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,6 +90,18 @@ function MobileAccordion({ label, items, isOpen, onToggle, onLinkClick }: Mobile
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
+  const pathname = usePathname();
+  const terminalPrefixes = [
+    '/tools/options-confluence',
+    '/tools/scanner',
+    '/tools/deep-analysis',
+    '/tools/portfolio',
+    '/tools/ai-analyst',
+    '/tools/journal',
+    '/tools/backtest',
+    '/tools/confluence-scanner',
+  ];
+  const isTerminalMode = terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
 
   useEffect(() => {
     if (isOpen) {
@@ -141,23 +155,23 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur overflow-visible">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+      <div className={`mx-auto flex max-w-6xl items-center justify-between ${isTerminalMode ? 'h-12 px-3' : 'h-14 px-4'}`}>
         <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-6">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
           <span>MarketScannerPros</span>
         </Link>
 
         {/* Desktop Navigation with Dropdowns */}
-        <nav className="flex items-center gap-5 text-sm text-teal-300/90 max-md:hidden overflow-visible">
-          <Dropdown label="Tools" items={toolsItems} />
-          <Dropdown label="AI" items={aiItems} />
-          <Dropdown label="Markets" items={marketItems} />
-          <Dropdown label="Calendar" items={calendarItems} align="right" />
-          <Dropdown label="Resources" items={resourceItems} align="right" />
+        <nav className={`flex items-center max-md:hidden overflow-visible text-teal-300/90 ${isTerminalMode ? 'gap-3 text-xs' : 'gap-5 text-sm'}`}>
+          <Dropdown label="Tools" items={toolsItems} compact={isTerminalMode} />
+          <Dropdown label="AI" items={aiItems} compact={isTerminalMode} />
+          <Dropdown label="Markets" items={marketItems} compact={isTerminalMode} />
+          <Dropdown label="Calendar" items={calendarItems} align="right" compact={isTerminalMode} />
+          <Dropdown label="Resources" items={resourceItems} align="right" compact={isTerminalMode} />
           <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
           <Link href="/dashboard" className="hover:text-teal-300 whitespace-nowrap">Dashboard</Link>
           <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>
-          <Link href="/auth" className="ml-2 px-4 py-1.5 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium whitespace-nowrap transition-all">Sign In</Link>
+          <Link href="/auth" className={`ml-2 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium whitespace-nowrap transition-all ${isTerminalMode ? 'px-3 py-1' : 'px-4 py-1.5'}`}>Sign In</Link>
         </nav>
 
         {/* Mobile Hamburger Button */}
