@@ -627,29 +627,167 @@ export default function AIConfluenceScanner() {
           ))}
         </div>
 
+        {hierarchicalResult && (
+          <div style={{ display: 'grid', gap: '0.9rem', marginBottom: '1.1rem' }}>
+            <div style={{
+              maxWidth: '980px',
+              width: '100%',
+              margin: '0 auto',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '16px',
+              padding: '1rem 1.1rem',
+              background: 'rgba(15,23,42,0.92)',
+              boxShadow: '0 0 0 1px rgba(16,185,129,0.08) inset',
+            }}>
+              <div style={{
+                color: '#94A3B8',
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontWeight: 700,
+                marginBottom: '0.75rem',
+                textAlign: 'center',
+              }}>
+                Anchor Panel • Setup State First
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '0.6rem',
+              }}>
+                {[
+                  { label: 'Setup State', value: setupStateLabel },
+                  { label: 'Tradeability', value: tradeabilityLabel },
+                  { label: 'Next Cluster', value: nextClusterLabel },
+                  { label: 'Active Windows', value: activeWindowsLabel },
+                  { label: 'Risk', value: riskLabel },
+                  { label: 'Action', value: actionLabel },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    border: '1px solid var(--msp-border)',
+                    borderRadius: '10px',
+                    padding: '0.6rem 0.7rem',
+                    background: 'rgba(30,41,59,0.55)',
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
+                    <div style={{ color: '#E2E8F0', fontWeight: 600, fontSize: '0.88rem', marginTop: '0.2rem' }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                marginTop: '0.7rem',
+                color: '#94A3B8',
+                fontSize: '0.76rem',
+                textAlign: 'center',
+              }}>
+                Pre-close window is time-based only. Price gravitation to 50% levels is evaluated separately.
+              </div>
+              <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--msp-border)', paddingTop: '0.65rem' }}>
+                <div style={{ fontSize: '0.68rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                  Pine-Style Timing Table
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.45rem' }}>
+                  {nextThreeClusters.map((cluster) => (
+                    <div key={`${cluster.tf}-${cluster.minsToClose}`} style={{
+                      border: '1px solid var(--msp-border)',
+                      borderRadius: '8px',
+                      background: 'rgba(15,23,42,0.65)',
+                      padding: '0.5rem 0.6rem',
+                      fontSize: '0.8rem',
+                      color: '#CBD5E1',
+                    }}>
+                      <div style={{ fontWeight: 700 }}>{cluster.tf}</div>
+                      <div>Next Close: {formatMins(cluster.minsToClose)}</div>
+                      <div>Prev 50%: ${formatPrice(cluster.mid50Level)}</div>
+                    </div>
+                  ))}
+                  {nextThreeClusters.length === 0 && (
+                    <div style={{ color: '#64748B', fontSize: '0.8rem' }}>No imminent clusters available.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'rgba(30,41,59,0.7)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '14px',
+              padding: '0.9rem 1rem',
+              display: 'grid',
+              gap: '0.45rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#F1F5F9', fontSize: '1.1rem', fontWeight: 700 }}>{symbol}</span>
+                  <span style={{ color: directionColor(hierarchicalResult.prediction.direction), fontWeight: 700 }}>
+                    {directionEmoji(hierarchicalResult.prediction.direction)} {hierarchicalResult.prediction.direction.toUpperCase()}
+                  </span>
+                  <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>{hierarchicalResult.signalStrength.toUpperCase()} • {hierarchicalResult.prediction.confidence}%</span>
+                </div>
+                <span style={{ color: '#E2E8F0', fontSize: '0.82rem', fontWeight: 600 }}>{actionLabel}</span>
+              </div>
+              <div style={{ color: '#64748B', fontSize: '0.78rem' }}>
+                Decision Snapshot • Close Cluster Density (weighted) + Pre-Close Window state
+              </div>
+            </div>
+
+            <div style={{
+              border: '1px solid var(--msp-border)',
+              borderRadius: '10px',
+              padding: '0.6rem 0.8rem',
+              background: 'rgba(30,41,59,0.5)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.45rem',
+              alignItems: 'center',
+            }}>
+              <span style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                Trading Opportunities
+              </span>
+              <span style={{ color: '#E2E8F0', fontSize: '0.8rem' }}>{tradeabilityLabel}</span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>{expectedVolatilityImpact} volatility impact</span>
+              <span style={{ color: '#64748B' }}>•</span>
+              <span style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>{nextClusterLabel}</span>
+            </div>
+          </div>
+        )}
+
         {/* ⏰ Institutional Time Windows */}
-        <div style={{
-          background: activeWindow 
-            ? (isPowerHour ? 'rgba(239,68,68,0.2)' 
-              : isOpeningRange ? 'rgba(16,185,129,0.2)'
-               : isLunchLull ? 'rgba(100,116,139,0.15)'
-              : 'var(--msp-panel)')
-            : 'rgba(30,41,59,0.6)',
-          border: activeWindow
-            ? (isPowerHour ? '2px solid #EF4444' 
-               : isOpeningRange ? '2px solid #10B981'
-               : isLunchLull ? '1px solid #64748B'
-              : '1px solid var(--msp-accent)')
-            : '1px solid var(--msp-border)',
-          borderRadius: '12px',
-          padding: '1rem 1.5rem',
+        <details style={{
           marginBottom: '1.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
+          borderRadius: '12px',
+          border: '1px solid var(--msp-border)',
+          background: 'rgba(30,41,59,0.6)',
+          overflow: 'hidden',
         }}>
+          <summary style={{
+            cursor: 'pointer',
+            padding: '0.75rem 1rem',
+            color: '#94A3B8',
+            fontSize: '0.75rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            fontWeight: 700,
+            listStyle: 'none',
+          }}>
+            Institutional Time Windows (Collapsed)
+          </summary>
+          <div style={{
+            background: activeWindow 
+              ? (isPowerHour ? 'rgba(239,68,68,0.2)' 
+                : isOpeningRange ? 'rgba(16,185,129,0.2)'
+                 : isLunchLull ? 'rgba(100,116,139,0.15)'
+                : 'var(--msp-panel)')
+              : 'rgba(30,41,59,0.6)',
+            borderTop: '1px solid var(--msp-border)',
+            padding: '1rem 1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}>
           <div>
             <div style={{ 
               fontSize: '0.75rem', 
@@ -701,7 +839,8 @@ export default function AIConfluenceScanner() {
               );
             })}
           </div>
-        </div>
+          </div>
+        </details>
 
         {/* � Trade Window / Holding Period Display */}
         <div style={{
@@ -851,18 +990,23 @@ export default function AIConfluenceScanner() {
 
         {showAdvancedInvestigation ? (
           <>
-            <div style={{ color: '#64748B', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.6rem' }}>
-              Investigation Stack
-            </div>
-            <div style={{ marginBottom: '2rem' }}>
-              <TimeConfluenceWidget 
-                showMacro={true}
-                showMicro={true}
-                showTWAP={true}
-                showCalendar={true}
-                compact={false}
-              />
-            </div>
+            <details style={{ marginBottom: '1.2rem', border: '1px solid var(--msp-border)', borderRadius: '12px', background: 'rgba(30,41,59,0.55)' }}>
+              <summary style={{ cursor: 'pointer', padding: '0.75rem 0.9rem', color: '#94A3B8', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+                Time Confluence Engine (Collapsed)
+              </summary>
+              <div style={{ padding: '0.9rem', borderTop: '1px solid var(--msp-border)' }}>
+                <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.65rem' }}>
+                  Mini summary: {clusteredCount} close clusters • {nextClusterLabel} • {expectedVolatilityImpact} expected impact
+                </div>
+                <TimeConfluenceWidget 
+                  showMacro={true}
+                  showMicro={true}
+                  showTWAP={true}
+                  showCalendar={true}
+                  compact={false}
+                />
+              </div>
+            </details>
           </>
         ) : (
           <div style={{
@@ -919,96 +1063,6 @@ export default function AIConfluenceScanner() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {hierarchicalResult && (
           <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
-            <div style={{
-              maxWidth: '980px',
-              width: '100%',
-              margin: '0 auto',
-              border: '1px solid var(--msp-border-strong)',
-              borderRadius: '16px',
-              padding: '1rem 1.1rem',
-              background: 'rgba(15,23,42,0.92)',
-              boxShadow: '0 0 0 1px rgba(16,185,129,0.08) inset',
-            }}>
-              <div style={{
-                color: '#94A3B8',
-                fontSize: '0.72rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                fontWeight: 700,
-                marginBottom: '0.75rem',
-                textAlign: 'center',
-              }}>
-                Anchor Panel • Setup State First
-              </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '0.6rem',
-              }}>
-                {[
-                  { label: 'Setup State', value: setupStateLabel },
-                  { label: 'Tradeability', value: tradeabilityLabel },
-                  { label: 'Next Cluster', value: nextClusterLabel },
-                  { label: 'Windows Active', value: activeWindowsLabel },
-                  { label: 'Risk', value: riskLabel },
-                  { label: 'Action', value: actionLabel },
-                ].map((item) => (
-                  <div key={item.label} style={{
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '10px',
-                    padding: '0.6rem 0.7rem',
-                    background: 'rgba(30,41,59,0.55)',
-                  }}>
-                    <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</div>
-                    <div style={{ color: '#E2E8F0', fontWeight: 600, fontSize: '0.88rem', marginTop: '0.2rem' }}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{
-                marginTop: '0.7rem',
-                color: '#94A3B8',
-                fontSize: '0.76rem',
-                textAlign: 'center',
-              }}>
-                Pre-close window is time-based only. Price gravitation to 50% levels is evaluated separately.
-              </div>
-            </div>
-
-            <div style={{
-              border: '1px solid var(--msp-border)',
-              borderRadius: '12px',
-              padding: '0.8rem 1rem',
-              background: 'rgba(30,41,59,0.55)',
-              display: 'grid',
-              gap: '0.65rem',
-            }}>
-              <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
-                Next 3 Clusters
-              </div>
-              {nextThreeClusters.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.55rem' }}>
-                  {nextThreeClusters.map((cluster) => (
-                    <div key={`${cluster.tf}-${cluster.minsToClose}`} style={{
-                      borderRadius: '8px',
-                      border: '1px solid var(--msp-border)',
-                      background: 'rgba(15,23,42,0.7)',
-                      padding: '0.55rem 0.65rem',
-                    }}>
-                      <div style={{ color: '#E2E8F0', fontWeight: 700, fontSize: '0.86rem' }}>{cluster.tf}</div>
-                      <div style={{ color: '#94A3B8', fontSize: '0.78rem' }}>Closes in {formatMins(cluster.minsToClose)}</div>
-                      <div style={{ color: cluster.pullDirection === 'up' ? '#10B981' : cluster.pullDirection === 'down' ? '#EF4444' : '#94A3B8', fontSize: '0.76rem' }}>
-                        Pull: {cluster.pullDirection} ({cluster.pullStrength.toFixed(0)}%)
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ color: '#64748B', fontSize: '0.82rem' }}>
-                  No near-term close clusters detected yet.
-                </div>
-              )}
-            </div>
-
             {isGuidedMode && hierarchicalResult.scoreBreakdown && (
               <div style={{
                 border: '1px solid var(--msp-border)',
@@ -1555,15 +1609,16 @@ export default function AIConfluenceScanner() {
             {showAdvancedInvestigation && (
               <>
                 {/* Decompression Analysis Card */}
-                <div style={{
+                <details style={{
                   background: 'rgba(30,41,59,0.9)',
                   border: '1px solid rgba(245,158,11,0.3)',
                   borderRadius: '16px',
-                  padding: '1.5rem',
+                  overflow: 'hidden',
                 }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#F59E0B', fontSize: '1.1rem' }}>
-                    🔄 Pre-Close Window Pull Analysis
-                  </h3>
+                  <summary style={{ cursor: 'pointer', padding: '0.85rem 1rem', color: '#F59E0B', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Pre-Close Window Pull Analysis (Collapsed)
+                  </summary>
+                  <div style={{ padding: '1.1rem 1.5rem', borderTop: '1px solid rgba(245,158,11,0.2)' }}>
                   
                   {/* Pull Bias Meter */}
                   <div style={{ marginBottom: '1.5rem' }}>
@@ -1632,18 +1687,20 @@ export default function AIConfluenceScanner() {
                       </div>
                     ))}
                   </div>
-                </div>
+                  </div>
+                </details>
 
                 {/* 50% Levels & Clusters */}
-                <div style={{
+                <details style={{
                   background: 'rgba(30,41,59,0.9)',
                   border: '1px solid var(--msp-border)',
                   borderRadius: '16px',
-                  padding: '1.5rem',
+                  overflow: 'hidden',
                 }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--msp-accent)', fontSize: '1.1rem' }}>
-                    📏 50% Levels & Clusters
-                  </h3>
+                  <summary style={{ cursor: 'pointer', padding: '0.85rem 1rem', color: 'var(--msp-accent)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    50% Levels & Clusters (Collapsed)
+                  </summary>
+                  <div style={{ padding: '1.1rem 1.5rem', borderTop: '1px solid var(--msp-border)' }}>
                   
                   {/* Clusters */}
                   {hierarchicalResult.clusters.length > 0 && (
@@ -1697,7 +1754,8 @@ export default function AIConfluenceScanner() {
                       </div>
                     ))}
                   </div>
-                </div>
+                  </div>
+                </details>
               </>
             )}
           </div>
