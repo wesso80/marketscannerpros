@@ -2040,6 +2040,39 @@ export default function OptionsConfluenceScanner() {
               ))}
             </div>
 
+            <div style={{ display: 'grid', gap: '0.45rem', marginTop: '-0.65rem' }}>
+              {([
+                { key: 'evidence', title: 'Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
+                { key: 'contracts', title: 'Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
+                { key: 'narrative', title: 'AI Narrative', subtitle: 'Institutional brain summary and long-form interpretation' },
+                { key: 'logs', title: 'Logs/Diagnostics', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
+              ] as const)
+                .filter((door) => !trapDoors[door.key])
+                .map((door) => (
+                  <button
+                    key={`collapsed-${door.key}`}
+                    onClick={() => setTrapDoors((previousState) => ({ ...previousState, [door.key]: true }))}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'var(--msp-panel)',
+                      border: '1px dashed var(--msp-border)',
+                      borderRadius: '10px',
+                      padding: '0.58rem 0.7rem',
+                      cursor: 'pointer',
+                      display: 'grid',
+                      gap: '0.18rem',
+                    }}
+                  >
+                    <div style={{ color: '#E2E8F0', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {door.title} • Collapsed
+                    </div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{door.subtitle}</div>
+                    <div style={{ color: '#64748B', fontSize: '0.68rem', fontWeight: 700 }}>Click to expand</div>
+                  </button>
+                ))}
+            </div>
+
             {trapDoors.evidence && focusMode && (
               <div style={{
                 background: 'var(--msp-panel)',
