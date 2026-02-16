@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
@@ -380,6 +380,16 @@ export default function AIConfluenceScanner() {
     : hierarchicalResult?.prediction.direction === 'bearish'
     ? '#EF4444'
     : '#94A3B8';
+
+  const handlePanelToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
+    const panel = event.currentTarget;
+    if (!panel.open) return;
+
+    window.requestAnimationFrame(() => {
+      const targetTop = panel.getBoundingClientRect().top + window.scrollY - 88;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    });
+  };
 
   return (
     <div style={{ 
@@ -805,7 +815,9 @@ export default function AIConfluenceScanner() {
         )}
 
         {/* ⏰ Institutional Time Windows */}
-        <details style={{
+        <details
+          onToggle={handlePanelToggle}
+          style={{
           marginBottom: '1.5rem',
           borderRadius: '12px',
           border: '1px solid var(--msp-border)',
@@ -1041,7 +1053,7 @@ export default function AIConfluenceScanner() {
 
         {showAdvancedInvestigation ? (
           <>
-            <details style={{ marginBottom: '1.2rem', border: '1px solid var(--msp-border)', borderRadius: '12px', background: 'rgba(30,41,59,0.55)' }}>
+            <details onToggle={handlePanelToggle} style={{ marginBottom: '1.2rem', border: '1px solid var(--msp-border)', borderRadius: '12px', background: 'rgba(30,41,59,0.55)' }}>
               <summary style={{ cursor: 'pointer', padding: '0.75rem 0.9rem', color: '#94A3B8', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
                 Time Confluence Engine (Collapsed)
               </summary>
@@ -1660,7 +1672,9 @@ export default function AIConfluenceScanner() {
             {showAdvancedInvestigation && (
               <>
                 {/* Decompression Analysis Card */}
-                <details style={{
+                <details
+                  onToggle={handlePanelToggle}
+                  style={{
                   background: 'rgba(30,41,59,0.9)',
                   border: '1px solid rgba(245,158,11,0.3)',
                   borderRadius: '16px',
@@ -1742,7 +1756,9 @@ export default function AIConfluenceScanner() {
                 </details>
 
                 {/* 50% Levels & Clusters */}
-                <details style={{
+                <details
+                  onToggle={handlePanelToggle}
+                  style={{
                   background: 'rgba(30,41,59,0.9)',
                   border: '1px solid var(--msp-border)',
                   borderRadius: '16px',
