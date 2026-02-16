@@ -464,6 +464,17 @@ export default function OptionsConfluenceScanner() {
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
+  const [trapDoors, setTrapDoors] = useState<{
+    evidence: boolean;
+    contracts: boolean;
+    narrative: boolean;
+    logs: boolean;
+  }>({
+    evidence: true,
+    contracts: false,
+    narrative: false,
+    logs: false,
+  });
 
   const normalizeOptionsSetup = (payload: any): OptionsSetup => {
     const safeTradeLevels = payload?.tradeLevels
@@ -1922,7 +1933,114 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
 
-            {focusMode && (
+            <div style={{
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '14px',
+              padding: '0.85rem',
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr)',
+                gap: '0.65rem',
+              }}>
+                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Decision Core</div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.9rem', fontWeight: 900, marginTop: '0.2rem' }}>
+                    {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'ready for execution' : 'requires trigger confirmation'}`}
+                  </div>
+                  <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                    <span style={{ background: 'rgba(148,163,184,0.18)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: '#E2E8F0', fontWeight: 700 }}>
+                      Grade {result.tradeQuality}
+                    </span>
+                    <span style={{ background: commandStatus === 'ACTIVE' ? 'rgba(16,185,129,0.2)' : commandStatus === 'WAIT' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: commandStatus === 'ACTIVE' ? '#10B981' : commandStatus === 'WAIT' ? '#F59E0B' : '#EF4444', fontWeight: 800 }}>
+                      {commandStatus}
+                    </span>
+                    <span style={{ background: 'rgba(148,163,184,0.18)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: '#CBD5E1', fontWeight: 700 }}>
+                      Trigger: {decisionTrigger}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '0.35rem', color: '#94A3B8', fontSize: '0.72rem' }}>
+                    {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Risk + Execution</div>
+                  <div style={{ marginTop: '0.25rem', display: 'grid', gap: '0.25rem', fontSize: '0.76rem' }}>
+                    <div style={{ color: '#E2E8F0' }}>Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
+                    <div style={{ color: '#FCA5A5' }}>Stop: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
+                    <div style={{ color: '#6EE7B7' }}>Targets: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
+                    <div style={{ color: '#CBD5E1' }}>Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                    <div style={{ color: '#94A3B8' }}>Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
+                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Options Snapshot</div>
+                  <div style={{ marginTop: '0.25rem', display: 'grid', gap: '0.25rem', fontSize: '0.76rem' }}>
+                    <div style={{ color: '#E2E8F0' }}>P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
+                    <div style={{ color: '#E2E8F0' }}>IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
+                    <div style={{ color: '#E2E8F0' }}>Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
+                    <div style={{ color: '#CBD5E1' }}>Contract: {result.primaryStrike ? `${result.primaryStrike.strike}${result.primaryStrike.type === 'call' ? 'C' : 'P'}` : 'N/A'}</div>
+                    <div style={{ color: '#94A3B8' }}>Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: '-1rem',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
+              borderRadius: '10px',
+              padding: '0.5rem 0.65rem',
+              color: '#CBD5E1',
+              fontSize: '0.74rem',
+            }}>
+              <span style={{ color: '#64748B', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.64rem' }}>Trade Brief:</span>{' '}
+              {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
+            </div>
+
+            <div style={{
+              marginTop: '-0.95rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.45rem',
+              alignItems: 'center',
+            }}>
+              {([
+                { key: 'evidence', label: 'Evidence', count: `${result.confluenceStack} TF` },
+                { key: 'contracts', label: 'Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
+                { key: 'narrative', label: 'AI Narrative', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
+                { key: 'logs', label: 'Logs/Diagnostics', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
+              ] as const).map((section) => (
+                <button
+                  key={section.key}
+                  onClick={() => setTrapDoors((previousState) => ({ ...previousState, [section.key]: !previousState[section.key] }))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '999px',
+                    border: '1px solid var(--msp-border)',
+                    background: trapDoors[section.key] ? 'var(--msp-panel)' : 'var(--msp-panel-2)',
+                    color: trapDoors[section.key] ? 'var(--msp-text)' : 'var(--msp-text-muted)',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  <span>{section.label}</span>
+                  <span style={{ color: '#64748B', fontWeight: 700, textTransform: 'none' }}>({section.count})</span>
+                </button>
+              ))}
+            </div>
+
+            {trapDoors.evidence && focusMode && (
               <div style={{
                 background: 'var(--msp-panel)',
                 border: '1px solid var(--msp-border)',
@@ -1940,13 +2058,14 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {terminalDecisionCard && (
+            {trapDoors.evidence && terminalDecisionCard && (
               <div style={{
                 background: 'var(--msp-panel)',
-                border: `2px solid ${adaptiveModeMeta.color}`,
+                border: '1px solid var(--msp-border-strong)',
+                borderLeft: `3px solid ${adaptiveModeMeta.color}`,
                 borderRadius: '14px',
                 padding: '0.95rem 1rem',
-                boxShadow: `0 10px 30px ${adaptiveModeMeta.color}26`,
+                boxShadow: 'var(--msp-shadow)',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>AI Trade Command Card</div>
@@ -2004,6 +2123,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
+            {trapDoors.evidence && (
             <div style={{
               display: 'grid',
               gridTemplateColumns: adaptiveModeMeta.layout.columns,
@@ -2012,7 +2132,7 @@ export default function OptionsConfluenceScanner() {
             }}>
               <div style={{
                 background: 'var(--msp-panel)',
-                border: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '2px solid rgba(239,68,68,0.45)' : '1px solid rgba(148,163,184,0.25)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
@@ -2041,13 +2161,13 @@ export default function OptionsConfluenceScanner() {
 
               <div style={{
                 background: 'var(--msp-panel)',
-                border: adaptiveTerminalMode === 'TREND_MODE' ? '2px solid rgba(16,185,129,0.5)' : adaptiveTerminalMode === 'TRANSITION_MODE' ? '2px solid rgba(20,184,166,0.45)' : '1px solid var(--msp-border)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
                 gap: '0.6rem',
                 order: adaptiveModeMeta.layout.marketOrder,
-                transform: adaptiveTerminalMode === 'TREND_MODE' ? 'scale(1.015)' : 'scale(1)',
+                transform: 'scale(1)',
               }}>
                 <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Surface</div>
                 {confluenceRadar && (
@@ -2079,7 +2199,7 @@ export default function OptionsConfluenceScanner() {
 
               <div style={{
                 background: 'var(--msp-panel)',
-                border: '1px solid rgba(16,185,129,0.3)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
@@ -2117,8 +2237,9 @@ export default function OptionsConfluenceScanner() {
                 )}
               </div>
             </div>
+            )}
 
-            {copilotPresence && copilotPresence.notices.length > 0 && (
+            {trapDoors.evidence && copilotPresence && copilotPresence.notices.length > 0 && (
               <div style={{
                 background: 'var(--msp-panel)',
                 border: '1px solid rgba(148,163,184,0.26)',
@@ -2144,10 +2265,10 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {confluenceRadar && (
+            {trapDoors.evidence && confluenceRadar && (
               <div style={{
                 background: 'var(--msp-panel)',
-                border: '2px solid var(--msp-borderStrong)',
+                border: '1px solid var(--msp-border-strong)',
                 borderRadius: '14px',
                 padding: '0.9rem 1rem',
               }}>
@@ -2223,12 +2344,14 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
+            {trapDoors.evidence && (
             <div style={{
               background: 'var(--msp-panel)',
-              border: `2px solid ${modeAccent}`,
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: `3px solid ${modeAccent}`,
               borderRadius: '14px',
               padding: '0.8rem 0.95rem',
-              boxShadow: `0 0 22px ${modeAccent}2A`,
+              boxShadow: 'var(--msp-shadow)',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                 <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Lens State</div>
@@ -2265,11 +2388,12 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </div>
+            )}
 
-            {result.institutionalIntent && (
+            {trapDoors.evidence && result.institutionalIntent && (
               <div style={{
                 background: 'var(--msp-panel)',
-                border: `2px solid ${result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#EF4444' : '#38BDF8'}`,
+                border: '1px solid var(--msp-border-strong)',
                 borderRadius: '14px',
                 padding: '0.85rem 0.95rem',
               }}>
@@ -2356,10 +2480,11 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {(institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
+            {trapDoors.evidence && (institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
               <div style={{
                 background: 'var(--msp-panel)',
-                border: `3px solid ${modeAccent}`,
+                border: '1px solid var(--msp-border-strong)',
+                borderLeft: `3px solid ${modeAccent}`,
                 borderRadius: '18px',
                 padding: '1rem 1.1rem',
                 display: 'grid',
@@ -2425,10 +2550,11 @@ export default function OptionsConfluenceScanner() {
             {/* Institutional Header Layer (3-second trader test) */}
             <div style={{
               background: 'var(--msp-panel)',
-              border: `2px solid ${tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B'}`,
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: '3px solid var(--msp-border-strong)',
               borderRadius: '16px',
               padding: '0.9rem 1rem',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
+              boxShadow: 'var(--msp-shadow)',
             }}>
               <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.45px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
                 Institutional State
@@ -2466,11 +2592,12 @@ export default function OptionsConfluenceScanner() {
             {/* Primary Intelligence Panel (Cognitive Anchor) */}
             <div style={{
               background: 'var(--msp-panel)',
-              border: `2px solid ${commandStatusColor}`,
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: '3px solid var(--msp-border-strong)',
               borderRadius: '18px',
               padding: '1.1rem 1.2rem',
               minHeight: 'clamp(220px, 32vh, 380px)',
-              boxShadow: `0 0 36px ${commandStatusColor}2A`,
+              boxShadow: 'var(--msp-shadow)',
               display: 'grid',
               gap: '0.8rem',
             }}>
@@ -2671,7 +2798,7 @@ export default function OptionsConfluenceScanner() {
             {institutionalLensMode === 'OBSERVE' && (
             <div style={{
               background: 'var(--msp-panel)',
-              border: '1px solid rgba(99,102,241,0.35)',
+              border: '1px solid var(--msp-border-strong)',
               borderRadius: '14px',
               padding: '0.9rem 1rem',
             }}>
@@ -2846,8 +2973,9 @@ export default function OptionsConfluenceScanner() {
               {/* Dominant Trader Decision Block */}
               <div style={{
                 background: 'var(--msp-panel-2)',
-                border: `2px solid ${commandStatusColor}`,
-                boxShadow: `0 0 28px ${commandStatusColor}33`,
+                border: '1px solid var(--msp-border-strong)',
+                borderLeft: '3px solid var(--msp-border)',
+                boxShadow: 'var(--msp-shadow)',
                 borderRadius: '12px',
                 padding: '0.8rem 0.9rem',
               }}>
@@ -2895,7 +3023,7 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {(result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
+            {trapDoors.logs && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div style={{
                 background: 'var(--msp-bear-tint)',
                 border: '2px solid #EF4444',
@@ -2932,7 +3060,7 @@ export default function OptionsConfluenceScanner() {
             )}
             
             {/* Data Quality & Execution Notes */}
-            {((result.executionNotes && result.executionNotes.length > 0) || 
+            {trapDoors.logs && ((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
               <details style={{
                 background: 'var(--msp-warn-tint)',
@@ -2997,10 +3125,11 @@ export default function OptionsConfluenceScanner() {
             {/* 3-SECOND VIEW - Trade Snapshot */}
             <div style={{
               background: 'var(--msp-panel)',
-              border: `2px solid ${result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#F59E0B'}`,
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: '3px solid var(--msp-border-strong)',
               borderRadius: '16px',
               padding: '1rem 1.1rem',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.20)',
+              boxShadow: 'var(--msp-shadow)',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                 <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.95rem', letterSpacing: '0.4px' }}>
@@ -3086,13 +3215,12 @@ export default function OptionsConfluenceScanner() {
 
               return (
                 <div style={{
-                  background: hasConfirmedPattern
-                    ? `${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.18)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.18)' : 'rgba(245,158,11,0.16)'}`
-                    : 'rgba(148,163,184,0.14)',
-                  border: `2px solid ${confirmationColor}`,
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: '3px solid var(--msp-border-strong)',
                   borderRadius: '16px',
                   padding: '0.85rem 1rem',
-                  boxShadow: `0 0 20px ${confirmationColor}2A`,
+                  boxShadow: 'var(--msp-shadow)',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                     <div style={{ color: '#E2E8F0', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '0.35px' }}>
@@ -3135,10 +3263,11 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             <div style={{
               background: 'var(--msp-card)',
-              border: `3px solid ${gradeColor(result.tradeQuality)}`,
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: '3px solid var(--msp-border-strong)',
               borderRadius: '20px',
               padding: 'clamp(1rem, 3vw, 1.75rem)',
-              boxShadow: `0 0 40px ${gradeColor(result.tradeQuality)}25`,
+              boxShadow: 'var(--msp-shadow)',
             }}>
               {/* Header Row */}
               <div style={{
@@ -3326,7 +3455,7 @@ export default function OptionsConfluenceScanner() {
             {/* Pattern panel intentionally rendered above Decision Engine */}
 
             {/* PRO TRADER SECTION - Collapsible */}
-            {institutionalLensMode === 'OBSERVE' && (
+            {trapDoors.narrative && institutionalLensMode === 'OBSERVE' && (
             <details style={{
               ...lowerTerminalSection('rgba(168,85,247,0.5)'),
               marginBottom: '1rem',
@@ -3382,10 +3511,11 @@ export default function OptionsConfluenceScanner() {
                         : result.strategyRecommendation.strategyType === 'buy_premium'
                         ? 'rgba(16,185,129,0.2)'
                         : 'rgba(148,163,184,0.2)',
-                      border: `2px solid ${
-                        result.strategyRecommendation.strategyType === 'sell_premium' ? 'rgba(239,68,68,0.5)' :
-                        result.strategyRecommendation.strategyType === 'buy_premium' ? 'rgba(16,185,129,0.5)' :
-                        'rgba(100,116,139,0.5)'
+                      border: '1px solid var(--msp-border-strong)',
+                      borderLeft: `3px solid ${
+                        result.strategyRecommendation.strategyType === 'sell_premium' ? 'rgba(239,68,68,0.65)' :
+                        result.strategyRecommendation.strategyType === 'buy_premium' ? 'rgba(16,185,129,0.65)' :
+                        'rgba(100,116,139,0.65)'
                       }`,
                       borderRadius: '16px',
                       padding: '1.25rem',
@@ -4039,7 +4169,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Strike & Expiration Recommendations */}
-            {institutionalLensMode === 'OBSERVE' && result.direction !== 'neutral' && (
+            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && result.direction !== 'neutral' && (
               <div className="card-grid-mobile">
                 
                 {/* Strike Recommendation */}
@@ -4220,7 +4350,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Open Interest Analysis */}
-            {institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
+            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
               <div style={{
                 ...lowerTerminalSection('rgba(20,184,166,0.35)'),
               }}>
@@ -4502,7 +4632,7 @@ export default function OptionsConfluenceScanner() {
             ))}
 
             {/* Greeks Advice - Collapsible (advanced) */}
-            {institutionalLensMode === 'OBSERVE' && (
+            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
             <details style={{
               ...lowerTerminalSection('rgba(245,158,11,0.34)'),
             }}>
@@ -4551,7 +4681,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Risk Management - Collapsible (advanced) */}
-            {institutionalLensMode === 'OBSERVE' && (
+            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
             <details style={{
               ...lowerTerminalSection('rgba(239,68,68,0.34)'),
             }}>
@@ -4599,7 +4729,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Summary Trade Setup */}
-            {institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
+            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
               <div style={{
                 ...lowerTerminalSection('rgba(16,185,129,0.5)'),
               }}>
