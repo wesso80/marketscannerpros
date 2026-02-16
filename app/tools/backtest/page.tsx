@@ -7,6 +7,7 @@ import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import { writeOperatorState } from '@/lib/operatorState';
 
 interface BacktestResult {
   totalTrades: number;
@@ -71,6 +72,7 @@ function BacktestContent() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
+  const [showEvidenceLayer, setShowEvidenceLayer] = useState(false);
 
   // AI Page Context - share backtest results with copilot
   const { setPageData } = useAIPageContext();
@@ -98,6 +100,43 @@ function BacktestContent() {
       });
     }
   }, [results, symbol, strategy, timeframe, startDate, endDate, setPageData]);
+
+  useEffect(() => {
+    if (!results) return;
+
+    const edge = Math.max(
+      1,
+      Math.min(
+        99,
+        Math.round((results.profitFactor * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
+      )
+    );
+    const bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = results.totalReturn > 2
+      ? 'BULLISH'
+      : results.totalReturn < -2
+      ? 'BEARISH'
+      : 'NEUTRAL';
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = results.profitFactor >= 1.25 && results.maxDrawdown <= 20
+      ? 'EXECUTE'
+      : results.profitFactor >= 1
+      ? 'PREP'
+      : 'WAIT';
+    const risk: 'LOW' | 'MODERATE' | 'HIGH' = results.maxDrawdown <= 10
+      ? 'LOW'
+      : results.maxDrawdown <= 20
+      ? 'MODERATE'
+      : 'HIGH';
+
+    writeOperatorState({
+      symbol,
+      edge,
+      bias,
+      action,
+      risk,
+      next: action === 'EXECUTE' ? 'Deploy live with guardrails' : action === 'PREP' ? 'Refine and rerun sample' : 'Reject setup and iterate',
+      mode: 'EXECUTE',
+    });
+  }, [results, symbol]);
 
   // Update symbol if URL param changes
   useEffect(() => {
@@ -682,68 +721,166 @@ function BacktestContent() {
         {/* Results */}
         {results && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <button
-                onClick={summarizeBacktest}
-                disabled={aiLoading}
-                style={{
-                  padding: '10px 14px',
-                  background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  fontWeight: 600,
-                  cursor: aiLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                {aiLoading ? 'Finding AI Summary...' : 'AI summary'}
-              </button>
-              {aiError && <span style={{ color: '#fca5a5', fontSize: '13px' }}>{aiError}</span>}
+            <div style={{
+              background: 'var(--msp-card)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              boxShadow: 'var(--msp-shadow)'
+            }}>
+              <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                Command Layer
+              </div>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
+                  <div style={{ color: results.profitFactor >= 1.25 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#ef4444', fontSize: '14px', fontWeight: 700 }}>
+                    {results.profitFactor >= 1.25 ? 'Positive' : results.profitFactor >= 1 ? 'Marginal' : 'Negative'}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Risk State</div>
+                  <div style={{ color: results.maxDrawdown <= 10 ? '#10b981' : results.maxDrawdown <= 20 ? '#fbbf24' : '#ef4444', fontSize: '14px', fontWeight: 700 }}>
+                    {results.maxDrawdown <= 10 ? 'Controlled' : results.maxDrawdown <= 20 ? 'Moderate' : 'Elevated'}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Action</div>
+                  <div style={{ color: results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#94a3b8', fontSize: '14px', fontWeight: 700 }}>
+                    {results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? 'EXECUTE' : results.profitFactor >= 1 ? 'PREP' : 'WAIT'}
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Bias</div>
+                  <div style={{ color: results.totalReturn > 2 ? '#10b981' : results.totalReturn < -2 ? '#ef4444' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>
+                    {results.totalReturn > 2 ? 'Bullish' : results.totalReturn < -2 ? 'Bearish' : 'Neutral'}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {aiText && (
-              <div style={{
-                background: 'rgba(34, 197, 94, 0.08)',
-                border: '1px solid rgba(34, 197, 94, 0.35)',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '20px',
-                color: '#d1fae5',
-                lineHeight: 1.55,
-                fontSize: '14px'
-              }}>
-                {/* Strategy Verdict Badge */}
-                {(() => {
-                  const hasPositiveExpectancy = results && results.totalReturn > 0 && results.profitFactor > 1;
-                  const hasNeutralExpectancy = results && results.totalReturn >= -5 && results.totalReturn <= 5;
-                  const verdict = hasPositiveExpectancy 
-                    ? { label: '✅ Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
-                    : hasNeutralExpectancy
-                    ? { label: '⚠️ Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
-                    : { label: '❌ Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
-                  
-                  return (
-                    <div style={{ 
-                      display: 'inline-flex', 
-                      alignItems: 'center',
-                      padding: '6px 12px',
-                      background: verdict.bg,
-                      border: `1px solid ${verdict.color}40`,
-                      borderRadius: '20px',
-                      marginBottom: '12px',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      color: verdict.color
-                    }}>
-                      Strategy Verdict: {verdict.label}
-                    </div>
-                  );
-                })()}
-                <div style={{ fontWeight: 700, marginBottom: '6px', color: '#34d399' }}>AI Insight</div>
-                <div style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
+            <div style={{
+              background: 'var(--msp-card)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              boxShadow: 'var(--msp-shadow)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Narrative Layer
+                </div>
+                <button
+                  onClick={summarizeBacktest}
+                  disabled={aiLoading}
+                  style={{
+                    padding: '9px 12px',
+                    background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: aiLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  {aiLoading ? 'Building Brief...' : 'Generate AI Brief'}
+                </button>
               </div>
-            )}
+              {aiError && <div style={{ color: '#fca5a5', fontSize: '13px', marginBottom: '8px' }}>{aiError}</div>}
+
+              {aiText ? (
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.08)',
+                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  color: '#d1fae5',
+                  lineHeight: 1.55,
+                  fontSize: '14px'
+                }}>
+                  {(() => {
+                    const hasPositiveExpectancy = results.totalReturn > 0 && results.profitFactor > 1;
+                    const hasNeutralExpectancy = results.totalReturn >= -5 && results.totalReturn <= 5;
+                    const verdict = hasPositiveExpectancy 
+                      ? { label: '✅ Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
+                      : hasNeutralExpectancy
+                      ? { label: '⚠️ Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
+                      : { label: '❌ Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+
+                    return (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '6px 12px',
+                        background: verdict.bg,
+                        border: `1px solid ${verdict.color}40`,
+                        borderRadius: '20px',
+                        marginBottom: '12px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: verdict.color
+                      }}>
+                        Strategy Verdict: {verdict.label}
+                      </div>
+                    );
+                  })()}
+                  <div style={{ fontWeight: 700, marginBottom: '6px', color: '#34d399' }}>AI Insight</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{aiText}</div>
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(30,41,59,0.45)',
+                  border: '1px solid rgba(51,65,85,0.45)',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  color: '#94a3b8',
+                  fontSize: '13px'
+                }}>
+                  Generate the AI brief to get an operator summary before reviewing raw analytics.
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              background: 'var(--msp-card)',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              boxShadow: 'var(--msp-shadow)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Evidence Layer
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '12px' }}>Performance curve, metrics, and trade log</div>
+                </div>
+                <button
+                  onClick={() => setShowEvidenceLayer((prev) => !prev)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(16,185,129,0.4)',
+                    background: showEvidenceLayer ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)',
+                    color: '#10b981',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {showEvidenceLayer ? 'Hide Evidence' : 'Show Evidence'}
+                </button>
+              </div>
+            </div>
+
+            {showEvidenceLayer && (
+              <>
 
             {/* Equity Curve Chart */}
             <div style={{
@@ -1250,6 +1387,8 @@ function BacktestContent() {
                 </table>
               </div>
             </div>
+              </>
+            )}
           </>
         )}
 
