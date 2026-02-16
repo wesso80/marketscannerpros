@@ -719,7 +719,7 @@ function JournalContent() {
         actions={headerActions}
       />
 
-      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '12px 16px 0 16px' }}>
         <CommandCenterStateBar
           mode="MANAGE"
           actionableNow={openTrades.length > 0
@@ -731,7 +731,7 @@ function JournalContent() {
         />
       </div>
 
-      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '12px 16px 0 16px' }}>
         <AdaptivePersonalityCard
           skill="journal"
           setupText={`Journal entries ${entries.length}, closed ${closedTrades.length}, win rate ${winRate.toFixed(1)}%`}
@@ -742,10 +742,10 @@ function JournalContent() {
       {/* Navigation Tabs */}
       <div style={{ 
         background: '#0f172a',
-        padding: '0 24px',
+        padding: '0 16px',
         borderBottom: '1px solid #334155'
       }}>
-        <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '0' }}>
+        <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', display: 'flex', gap: '0' }}>
           <Link href="/tools/portfolio" style={{
             padding: '12px 24px',
             background: 'transparent',
@@ -787,7 +787,7 @@ function JournalContent() {
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '16px 24px 0 24px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '16px 16px 0 16px' }}>
         <div style={{
           background: 'var(--msp-card)',
           border: '1px solid var(--msp-border-strong)',
@@ -862,7 +862,7 @@ function JournalContent() {
       }}>
         <div style={{ 
           width: '100%',
-          maxWidth: '1280px', 
+          maxWidth: 'none', 
           margin: '0 auto', 
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -991,7 +991,7 @@ function JournalContent() {
         {smallSampleSize && (
           <div style={{
             width: '100%',
-            maxWidth: '1280px',
+            maxWidth: 'none',
             margin: '16px auto 0',
             padding: '12px 16px',
             background: 'rgba(251,191,36,0.1)',
@@ -1012,7 +1012,7 @@ function JournalContent() {
         {totalTrades > 0 && canAccessAdvancedJournal(tier) && (
           <div style={{
             width: '100%',
-            maxWidth: '1280px',
+            maxWidth: 'none',
             margin: '16px auto 0',
             padding: '16px 20px',
             background: 'var(--msp-panel)',
@@ -1041,7 +1041,7 @@ function JournalContent() {
         {/* AI Trading Coach Section */}
         <div style={{
           width: '100%',
-          maxWidth: '1280px',
+          maxWidth: 'none',
           margin: '16px auto 0',
           background: 'var(--msp-card)',
           border: '1px solid var(--msp-border)',
@@ -1266,7 +1266,7 @@ function JournalContent() {
             className={equityCurve.length >= 5 ? 'grid-equal-2-col-responsive' : ''}
             style={{ 
               width: '100%',
-              maxWidth: '1280px', 
+              maxWidth: 'none', 
               margin: '16px auto 0',
               display: equityCurve.length >= 5 ? undefined : 'grid',
               gridTemplateColumns: equityCurve.length >= 5 ? undefined : '1fr',
@@ -1434,7 +1434,7 @@ function JournalContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
         {/* Add Entry Form */}
         {showAddForm && (
           <div style={{

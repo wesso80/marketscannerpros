@@ -106,6 +106,7 @@ const HOLDING_PERIOD_OPTIONS = [
 
 export default function AIConfluenceScanner() {
   const { tier } = useUserTier();
+  const hasConfluenceAccess = canAccessBacktest(tier);
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [hierarchicalResult, setHierarchicalResult] = useState<HierarchicalResult | null>(null);
@@ -120,31 +121,6 @@ export default function AIConfluenceScanner() {
   // Get holding period info for display
   const selectedHolding = HOLDING_PERIOD_OPTIONS.find(h => h.value === holdingPeriod);
   const holdingHours = selectedHolding?.hours || 48;
-
-  // Pro Trader feature gate
-  if (!canAccessBacktest(tier)) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
-        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
-          <span style={{ 
-            background: "var(--msp-accent)", 
-            padding: "4px 12px", 
-            borderRadius: "999px", 
-            fontSize: "11px", 
-            fontWeight: "600",
-            color: "#fff"
-          }}>PRO TRADER</span>
-          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
-            🔮 AI Confluence Scanner
-          </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Full History Learning + Decompression Timing Analysis</p>
-        </header>
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
-          <UpgradeGate requiredTier="pro_trader" feature="AI Confluence Scanner" />
-        </main>
-      </div>
-    );
-  }
 
   useEffect(() => {
     try {
@@ -167,6 +143,31 @@ export default function AIConfluenceScanner() {
       // no-op
     }
   }, [operatorViewMode, operatorModeHydrated]);
+
+  // Pro Trader feature gate (must remain after hooks to preserve hook order)
+  if (!hasConfluenceAccess) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
+        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
+          <span style={{ 
+            background: "var(--msp-accent)", 
+            padding: "4px 12px", 
+            borderRadius: "999px", 
+            fontSize: "11px", 
+            fontWeight: "600",
+            color: "#fff"
+          }}>PRO TRADER</span>
+          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
+            🔮 AI Confluence Scanner
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Full History Learning + Decompression Timing Analysis</p>
+        </header>
+        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
+          <UpgradeGate requiredTier="pro_trader" feature="AI Confluence Scanner" />
+        </main>
+      </div>
+    );
+  }
 
   const handleScan = async (forceRefresh = false) => {
     if (!symbol.trim()) {

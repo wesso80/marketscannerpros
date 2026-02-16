@@ -761,6 +761,7 @@ function BacktestContent() {
               <select
                 value={edgeGroup}
                 onChange={(e) => setEdgeGroup(e.target.value as EdgeGroupId)}
+                onWheel={(e) => e.currentTarget.blur()}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -786,6 +787,7 @@ function BacktestContent() {
               <select
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -818,6 +820,7 @@ function BacktestContent() {
               <select
                 value={timeframe}
                 onChange={(e) => setTimeframe(e.target.value as BacktestTimeframe)}
+                onWheel={(e) => e.currentTarget.blur()}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
