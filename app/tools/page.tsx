@@ -21,8 +21,8 @@ export default function ToolsPage() {
           --danger: #f97373;
           --radius-lg: 18px;
           --radius-md: 12px;
-          --shadow-soft: 0 18px 45px rgba(0,0,0,0.75);
-          --shadow-small: 0 10px 25px rgba(0,0,0,0.5);
+          --shadow-soft: var(--msp-shadow);
+          --shadow-small: var(--msp-shadow);
         }
       `}</style>
 
@@ -127,7 +127,7 @@ export default function ToolsPage() {
                 top: -40,
                 width: 260,
                 height: 260,
-                background: 'radial-gradient(circle, rgba(20,184,166,0.16), transparent 60%)',
+                background: 'var(--msp-accent-glow)',
                 filter: 'blur(1px)',
                 opacity: 0.8
               }} aria-hidden="true"></div>
@@ -292,7 +292,7 @@ export default function ToolsPage() {
             }}>
               {/* Card 1 */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -319,7 +319,7 @@ export default function ToolsPage() {
 
               {/* Card 2 */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -346,7 +346,7 @@ export default function ToolsPage() {
 
               {/* Card 3 */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -373,7 +373,7 @@ export default function ToolsPage() {
 
               {/* Card 4 */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -400,7 +400,7 @@ export default function ToolsPage() {
 
               {/* Card 5 - Squeeze Strategy */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -434,7 +434,7 @@ export default function ToolsPage() {
 
               {/* Card 6 - Candlestick Pattern Strategy */}
               <article style={{
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                background: 'var(--card)',
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 boxShadow: 'var(--shadow-small)',
@@ -485,9 +485,10 @@ export default function ToolsPage() {
               {/* Time Confluence Scanner */}
               <Link href="/tools/confluence-scanner" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{
-                  background: 'radial-gradient(circle at top left, #1E1B4B, #0F0A1E 60%)',
+                  background: 'var(--card)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(168,85,247,0.4)',
+                  border: '1px solid var(--border-subtle)',
+                  borderLeft: '3px solid rgba(168,85,247,0.6)',
                   boxShadow: 'var(--shadow-small)',
                   overflow: 'hidden',
                   display: 'flex',
@@ -523,9 +524,10 @@ export default function ToolsPage() {
               {/* Options Confluence Scanner */}
               <Link href="/tools/options-confluence" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{
-                  background: 'radial-gradient(circle at top left, #0D3326, #071A12 60%)',
+                  background: 'var(--card)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(16,185,129,0.4)',
+                  border: '1px solid var(--border-subtle)',
+                  borderLeft: '3px solid rgba(16,185,129,0.6)',
                   boxShadow: 'var(--shadow-small)',
                   overflow: 'hidden',
                   display: 'flex',
@@ -576,7 +578,7 @@ export default function ToolsPage() {
               {/* Scanner Tool */}
               <Link href="/tools/scanner" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{
-                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  background: 'var(--card)',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--border-subtle)',
                   boxShadow: 'var(--shadow-small)',

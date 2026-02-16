@@ -19,14 +19,14 @@ export default function Hero() {
           --border-subtle: #1f2933;
           --radius-lg: 18px;
           --radius-md: 12px;
-          --shadow-soft: 0 18px 45px rgba(0,0,0,0.75);
-          --shadow-small: 0 10px 25px rgba(0,0,0,0.5);
+          --shadow-soft: var(--msp-shadow);
+          --shadow-small: var(--msp-shadow);
         }
       `}</style>
 
       <section style={{
         width: '100%',
-        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: 'var(--text-main)',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         borderBottom: '1px solid var(--border-subtle)'
@@ -41,7 +41,7 @@ export default function Hero() {
             <div 
               className="hero-section"
               style={{
-              background: 'radial-gradient(circle at top, #111827, #020617 60%)',
+              background: 'var(--msp-card)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-soft)',
@@ -55,7 +55,7 @@ export default function Hero() {
                 top: -40,
                 width: 280,
                 height: 280,
-                background: 'radial-gradient(circle, rgba(34,197,94,0.25), transparent 60%)',
+                background: 'var(--msp-accent-glow)',
                 filter: 'blur(1px)',
                 opacity: 0.8
               }} aria-hidden="true"></div>

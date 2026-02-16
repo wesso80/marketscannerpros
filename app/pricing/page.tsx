@@ -138,7 +138,7 @@ function PricingContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+      background: 'var(--msp-bg)',
       color: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
     }}>
@@ -275,7 +275,7 @@ function PricingContent() {
             background: 'var(--msp-card)',
             borderRadius: 18,
             border: '1px solid #1f2933',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+            boxShadow: 'var(--msp-shadow)',
             padding: '32px 28px'
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Free</h2>
@@ -329,10 +329,11 @@ function PricingContent() {
 
           {/* Pro Tier */}
           <div style={{
-            background: 'radial-gradient(circle at top, #111827, #020617 60%)',
+            background: 'var(--msp-card)',
             borderRadius: 18,
-            border: '2px solid rgba(34,197,94,0.4)',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75), 0 0 40px rgba(34,197,94,0.1)',
+            border: '1px solid var(--msp-border-strong)',
+            borderLeft: '3px solid rgba(34,197,94,0.65)',
+            boxShadow: 'var(--msp-shadow)',
             padding: '32px 28px',
             position: 'relative',
             overflow: 'hidden'
@@ -343,7 +344,7 @@ function PricingContent() {
               top: -30,
               width: 150,
               height: 150,
-              background: 'radial-gradient(circle, rgba(34,197,94,0.2), transparent 60%)',
+                background: 'var(--msp-accent-glow)',
               filter: 'blur(1px)'
             }} aria-hidden="true"></div>
             
@@ -398,7 +399,7 @@ function PricingContent() {
                 fontSize: 16,
                 fontWeight: 600,
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
+                boxShadow: 'var(--msp-shadow)',
                 opacity: loading === 'pro' ? 0.6 : 1
               }}
             >
@@ -414,7 +415,7 @@ function PricingContent() {
             background: 'var(--msp-card)',
             borderRadius: 18,
             border: '1px solid var(--msp-border)',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75), var(--msp-shadow)',
+            boxShadow: 'var(--msp-shadow)',
             padding: '32px 28px',
             position: 'relative',
             overflow: 'hidden'
@@ -492,7 +493,7 @@ function PricingContent() {
                 background: 'var(--msp-card)',
                 borderRadius: 12,
                 border: '1px solid #1f2933',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                boxShadow: 'var(--msp-shadow)',
                 padding: '20px 24px'
               }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: '#f9fafb' }}>{faq.q}</h3>

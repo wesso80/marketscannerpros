@@ -828,7 +828,8 @@ export default function AIConfluenceScanner() {
                 hierarchicalResult.signalStrength === 'weak' ? 'rgba(239,68,68,0.1)' :
                 'rgba(100,116,139,0.1)'
               }`,
-              border: `2px solid ${
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: `3px solid ${
                 hierarchicalResult.signalStrength === 'strong' ? '#10B981' :
                 hierarchicalResult.signalStrength === 'moderate' ? '#F59E0B' :
                 hierarchicalResult.signalStrength === 'weak' ? '#EF4444' :
@@ -1145,7 +1146,8 @@ export default function AIConfluenceScanner() {
                 background: hierarchicalResult.prediction.direction === 'bullish' 
                   ? 'rgba(16,185,129,0.15)'
                   : 'rgba(239,68,68,0.15)',
-                border: `2px solid ${hierarchicalResult.prediction.direction === 'bullish' ? '#10B981' : '#EF4444'}`,
+                border: '1px solid var(--msp-border-strong)',
+                borderLeft: `3px solid ${hierarchicalResult.prediction.direction === 'bullish' ? '#10B981' : '#EF4444'}`,
                 borderRadius: '16px',
                 padding: '1.5rem',
               }}>

@@ -22,7 +22,7 @@ export default function HowItWorks() {
   return (
     <section style={{
       width: '100%',
-      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+      background: 'var(--msp-bg)',
       color: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
       borderBottom: '1px solid #1f2933'
@@ -60,7 +60,7 @@ export default function HowItWorks() {
               background: 'var(--msp-card)',
               borderRadius: 12,
               border: '1px solid #1f2933',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--msp-shadow)',
               padding: '28px 24px',
               textAlign: 'center',
               position: 'relative',
@@ -72,7 +72,7 @@ export default function HowItWorks() {
                 right: -20,
                 width: 100,
                 height: 100,
-                background: 'radial-gradient(circle, rgba(20,184,166,0.15), transparent 60%)',
+                background: 'var(--msp-accent-glow)',
                 filter: 'blur(1px)'
               }} aria-hidden="true"></div>
               
@@ -88,7 +88,7 @@ export default function HowItWorks() {
                 fontWeight: 700,
                 color: '#0b1120',
                 margin: '0 auto 16px',
-                boxShadow: '0 4px 15px rgba(20,184,166,0.4)'
+                boxShadow: 'var(--msp-shadow)'
               }}>{step.num}</div>
               <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>{step.title}</h3>
               <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>{step.desc}</p>

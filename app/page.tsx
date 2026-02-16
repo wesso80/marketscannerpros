@@ -143,7 +143,7 @@ export default function Home() {
                     fontWeight: 700,
                     cursor: 'pointer',
                     textDecoration: 'none',
-                    boxShadow: '0 4px 15px rgba(20,184,166,0.4)',
+                    boxShadow: 'var(--msp-shadow)',
                     marginRight: 12,
                     marginBottom: 12
                   }}
@@ -209,9 +209,9 @@ export default function Home() {
                 maxWidth: 420,
                 margin: '0 auto',
                 background: 'var(--msp-card)',
-                border: '1.5px solid #334155',
+                border: '1px solid var(--msp-border-strong)',
                 borderRadius: 18,
-                boxShadow: '0 8px 32px rgba(16,185,129,0.08)',
+                boxShadow: 'var(--msp-shadow)',
                 padding: '28px 24px',
                 minHeight: 120,
                 color: '#e5e7eb',
@@ -313,7 +313,7 @@ export default function Home() {
                 fontSize: 17,
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(20,184,166,0.2)',
+                boxShadow: 'var(--msp-shadow)',
                 marginBottom: 8,
                 textDecoration: 'none'
               }}
@@ -460,8 +460,8 @@ export default function Home() {
             <div style={{
               background: 'var(--msp-card)',
               borderRadius: 18,
-              border: '1px solid #1f2933',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+              border: '1px solid var(--msp-border)',
+              boxShadow: 'var(--msp-shadow)',
               padding: '28px 26px',
               position: 'relative'
             }}>
@@ -518,10 +518,11 @@ export default function Home() {
 
             {/* Pro Tier */}
             <div style={{
-              background: 'radial-gradient(circle at top, #111827, #020617 60%)',
+              background: 'var(--msp-card)',
               borderRadius: 18,
-              border: '2px solid rgba(34,197,94,0.4)',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.75), 0 0 40px rgba(34,197,94,0.1)',
+              border: '1px solid var(--msp-border-strong)',
+              borderLeft: '3px solid rgba(34,197,94,0.65)',
+              boxShadow: 'var(--msp-shadow)',
               padding: '28px 26px',
               position: 'relative',
               overflow: 'hidden'
@@ -589,7 +590,7 @@ export default function Home() {
                   cursor: 'pointer',
                   textAlign: 'center',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 15px rgba(20,184,166,0.4)'
+                  boxShadow: 'var(--msp-shadow)'
                 }}
               >
                 Upgrade to Pro
@@ -601,7 +602,7 @@ export default function Home() {
               background: 'var(--msp-card)',
               borderRadius: 18,
               border: '1px solid var(--msp-border)',
-              boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
+              boxShadow: 'var(--msp-shadow)',
               padding: '28px 26px',
               position: 'relative',
               overflow: 'hidden'

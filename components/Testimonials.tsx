@@ -22,7 +22,7 @@ export default function Testimonials() {
   return (
     <section style={{
       width: '100%',
-      background: 'radial-gradient(circle at bottom, #111827 0, #020617 55%, #000 100%)',
+      background: 'var(--msp-bg)',
       color: '#f9fafb',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
       borderBottom: '1px solid #1f2933'
@@ -60,7 +60,7 @@ export default function Testimonials() {
               background: 'var(--msp-card)',
               borderRadius: 12,
               border: '1px solid #1f2933',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--msp-shadow)',
               padding: '24px 22px',
               display: 'flex',
               flexDirection: 'column',

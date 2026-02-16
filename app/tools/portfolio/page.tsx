@@ -1150,7 +1150,7 @@ function PortfolioContent() {
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(16,185,129,0.25)'
+                boxShadow: 'var(--msp-shadow)'
               }}
             >
               {showAddForm ? '✕ Cancel' : '+ Add Position'}
@@ -1181,7 +1181,7 @@ function PortfolioContent() {
               background: '#0b1220',
               border: '1px solid #334155',
               borderRadius: 12,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--msp-shadow)',
               padding: 20,
             }}
           >
@@ -1584,7 +1584,7 @@ function PortfolioContent() {
                     ? 'var(--msp-panel-2)'
                     : 'rgba(255,255,255,0.03)',
                   border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.2)',
-                  boxShadow: isActive ? '0 10px 30px rgba(16,185,129,0.25)' : 'none',
+                  boxShadow: isActive ? 'var(--msp-shadow)' : 'none',
                   color: isActive ? '#e2e8f0' : '#94a3b8',
                   fontSize: '12px',
                   fontWeight: 700,
@@ -1664,10 +1664,11 @@ function PortfolioContent() {
               return (
                 <div style={{
                   background: 'var(--msp-card)',
-                  border: `1px solid ${severeDrawdown ? 'rgba(239,68,68,0.4)' : inDrawdown ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.3)'}`,
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: `3px solid ${severeDrawdown ? 'rgba(239,68,68,0.65)' : inDrawdown ? 'rgba(245,158,11,0.65)' : 'rgba(16,185,129,0.65)'}`,
                   borderRadius: '16px',
                   padding: '20px 24px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                  boxShadow: 'var(--msp-shadow)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '20px' }}>🧠</span>
@@ -1718,7 +1719,7 @@ function PortfolioContent() {
               border: '1px solid var(--msp-border)',
               borderRadius: '16px',
               padding: '20px 24px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--msp-shadow)',
               position: 'relative',
               overflow: 'hidden'
             }}>
@@ -1943,7 +1944,7 @@ function PortfolioContent() {
                 border: '1px solid rgba(51,65,85,0.8)',
                 borderRadius: '16px',
                 padding: '24px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                boxShadow: 'var(--msp-shadow)'
               }}>
                 <h2 style={{ 
                   color: '#f1f5f9', 
@@ -2082,7 +2083,7 @@ function PortfolioContent() {
                 border: '1px solid rgba(51,65,85,0.8)',
                 borderRadius: '16px',
                 padding: '24px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                boxShadow: 'var(--msp-shadow)'
               }}>
                 <h2 style={{ 
                   color: '#f1f5f9', 
@@ -2257,7 +2258,7 @@ function PortfolioContent() {
               border: '1px solid rgba(51,65,85,0.8)',
               borderRadius: '16px',
               padding: '24px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+              boxShadow: 'var(--msp-shadow)'
             }}>
               <h2 style={{ 
                 color: '#f1f5f9', 

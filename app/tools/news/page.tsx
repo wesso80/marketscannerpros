@@ -491,7 +491,7 @@ export default function NewsSentimentPage() {
         {activeTab === "news" && (
           <>
             {/* Search Controls */}
-        <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+        <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border-strong)", padding: "2rem", marginBottom: "2rem", boxShadow: "var(--msp-shadow)" }}>
           <div
             style={{
               display: 'grid',
@@ -565,7 +565,8 @@ export default function NewsSentimentPage() {
           <div style={{ 
             background: "rgba(245,158,11,0.1)",
             borderRadius: "16px",
-            border: "2px solid rgba(245,158,11,0.3)",
+            border: "1px solid var(--msp-border-strong)",
+            borderLeft: "3px solid rgba(245,158,11,0.65)",
             padding: "1.5rem",
             marginBottom: "1.5rem"
           }}>
@@ -637,7 +638,7 @@ export default function NewsSentimentPage() {
             </div>
             <div style={{ display: "grid", gap: "1.5rem" }}>
               {filteredArticles.map((article, index) => (
-                <div key={index} style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <div key={index} style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border-strong)", padding: "1.5rem", boxShadow: "var(--msp-shadow)" }}>
                   {/* Article Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem", gap: "1rem" }}>
                     <div style={{ flex: 1 }}>
@@ -744,7 +745,7 @@ export default function NewsSentimentPage() {
         {activeTab === "earnings" && (
           <>
             {/* Search Controls */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border-strong)", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "var(--msp-shadow)" }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end" }}>
                 <div style={{ flex: "1", minWidth: "150px" }}>
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#94A3B8", marginBottom: "0.4rem" }}>
@@ -910,7 +911,7 @@ export default function NewsSentimentPage() {
                 </div>
 
                 {/* Earnings Cards - Grouped by Date */}
-                <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border-strong)", padding: "1.5rem", boxShadow: "var(--msp-shadow)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                     <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
                       <span style={{ background: "#f59e0b", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
@@ -1034,7 +1035,8 @@ export default function NewsSentimentPage() {
                               <div style={{ 
                                 background: "var(--msp-panel)", 
                                 borderRadius: "0 0 10px 10px",
-                                border: "2px solid var(--msp-accent)",
+                                border: "1px solid var(--msp-border-strong)",
+                                borderLeft: "3px solid var(--msp-accent)",
                                 borderTop: "1px dashed var(--msp-border)",
                                 padding: "1.25rem",
                                 marginTop: "-0.75rem"
@@ -1176,7 +1178,7 @@ export default function NewsSentimentPage() {
                     borderRadius: "16px", 
                     border: "1px solid var(--msp-border)", 
                     padding: "1.5rem", 
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
+                    boxShadow: "var(--msp-shadow)" 
                   }}>
                     <h2 style={{ color: "var(--msp-muted)", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
                       <span style={{ background: "var(--msp-muted)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>🤖</span>
@@ -1194,9 +1196,9 @@ export default function NewsSentimentPage() {
                     marginTop: "1.5rem",
                     background: "var(--msp-card)", 
                     borderRadius: "16px", 
-                    border: "1px solid rgba(51,65,85,0.8)", 
+                    border: "1px solid var(--msp-border-strong)", 
                     padding: "1.5rem", 
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
+                    boxShadow: "var(--msp-shadow)" 
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                       <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>

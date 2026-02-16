@@ -1859,11 +1859,12 @@ function JournalContent() {
                 key={entry.id}
                 style={{
                   background: 'var(--msp-card)',
-                  border: `2px solid ${entry.outcome === 'win' ? 'rgba(16,185,129,0.6)' : entry.outcome === 'loss' ? 'rgba(239,68,68,0.6)' : 'rgba(100,116,139,0.6)'}`,
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: `3px solid ${entry.outcome === 'win' ? 'rgba(16,185,129,0.65)' : entry.outcome === 'loss' ? 'rgba(239,68,68,0.65)' : 'rgba(100,116,139,0.65)'}`,
                   borderRadius: '16px',
                   padding: '20px',
                   position: 'relative',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                  boxShadow: 'var(--msp-shadow)'
                 }}
               >
                 {/* Header Row */}

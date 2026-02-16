@@ -731,7 +731,8 @@ export default function DeepAnalysisPage() {
             <div style={{ 
               background: `${getSignalColor(result.signals.signal)}20`,
               borderRadius: "20px",
-              border: `2px solid ${getSignalColor(result.signals.signal)}50`,
+              border: "1px solid var(--msp-border-strong)",
+              borderLeft: `3px solid ${getSignalColor(result.signals.signal)}99`,
               padding: "2rem",
               textAlign: "center"
             }}>

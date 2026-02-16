@@ -4,10 +4,10 @@
 
 :root {
   color-scheme: dark;
-  --msp-bg: #0B1220;
-  --msp-card: #0F1A2B;
-  --msp-panel: #111F33;
-  --msp-panel-2: #0D1728;
+  --msp-bg: #0A101C;
+  --msp-card: #101A2A;
+  --msp-panel: #122033;
+  --msp-panel-2: #0D1726;
 
   --msp-border: rgba(255,255,255,0.08);
   --msp-border-strong: rgba(255,255,255,0.12);
@@ -16,21 +16,24 @@
   --msp-text: rgba(255,255,255,0.92);
   --msp-text-muted: rgba(255,255,255,0.62);
   --msp-text-faint: rgba(255,255,255,0.45);
+  --msp-muted: var(--msp-text-muted);
+  --msp-faint: var(--msp-text-faint);
 
-  --msp-accent: #14B8A6;
-  --msp-accent-hover: #10A79A;
-  --msp-accent-glow: rgba(20, 184, 166, 0.22);
+  --msp-accent: #19B7A0;
+  --msp-accent-hover: #16A38F;
+  --msp-accent-glow: rgba(25, 183, 160, 0.18);
 
-  --msp-bull: #22C55E;
-  --msp-bear: #EF4444;
-  --msp-warn: #F59E0B;
+  --msp-bull: #2FB36E;
+  --msp-bear: #E46767;
+  --msp-warn: #D8A243;
   --msp-neutral: #94A3B8;
 
-  --msp-bull-tint: rgba(34, 197, 94, 0.10);
-  --msp-bear-tint: rgba(239, 68, 68, 0.10);
-  --msp-warn-tint: rgba(245, 158, 11, 0.10);
+  --msp-bull-tint: rgba(47, 179, 110, 0.09);
+  --msp-bear-tint: rgba(228, 103, 103, 0.09);
+  --msp-warn-tint: rgba(216, 162, 67, 0.09);
 
   --msp-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --msp-borderStrong: var(--msp-border-strong);
 }
 
 *, *::before, *::after {
@@ -261,6 +264,24 @@ a:hover {
 
 .msp-kicker { color: var(--msp-text-faint); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
 .msp-muted { color: var(--msp-text-muted); }
+
+.msp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--msp-border);
+  background: var(--msp-panel-2);
+  color: var(--msp-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.msp-badge--bull { background: var(--msp-bull-tint); color: var(--msp-bull); border-color: rgba(34,197,94,0.25); }
+.msp-badge--bear { background: var(--msp-bear-tint); color: var(--msp-bear); border-color: rgba(239,68,68,0.25); }
+.msp-badge--warn { background: var(--msp-warn-tint); color: var(--msp-warn); border-color: rgba(245,158,11,0.25); }
 
 .badge-bull { background: var(--msp-bull-tint); color: var(--msp-bull); border: 1px solid rgba(34,197,94,0.25); }
 .badge-bear { background: var(--msp-bear-tint); color: var(--msp-bear); border: 1px solid rgba(239,68,68,0.25); }

@@ -1026,7 +1026,8 @@ function BacktestContent() {
                   background: results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.15)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.1)', 
                   padding: '16px', 
                   borderRadius: '12px', 
-                  border: `2px solid ${results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.5)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.4)'}` 
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: `3px solid ${results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.65)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)'}` 
                 }}>
                   <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⚡ Profit Factor</div>
                   <div style={{ 
@@ -1053,7 +1054,8 @@ function BacktestContent() {
                   background: results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.1)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.15)', 
                   padding: '16px', 
                   borderRadius: '12px', 
-                  border: `2px solid ${results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.4)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.4)' : 'rgba(239,68,68,0.5)'}` 
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: `3px solid ${results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)'}` 
                 }}>
                   <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Max Drawdown</div>
                   <div style={{ 

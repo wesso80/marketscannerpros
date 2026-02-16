@@ -3132,7 +3132,8 @@ function ScannerContent() {
               return (
                 <div style={{
                   background: bgGradient,
-                  border: `2px solid ${borderColor}`,
+                  border: '1px solid var(--msp-border-strong)',
+                  borderLeft: `3px solid ${borderColor}`,
                   borderRadius: "16px",
                   padding: "1.5rem",
                   marginBottom: "1.5rem",
