@@ -15,7 +15,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_workflow_today
     'candidate.created',
     'trade.plan.created',
     'trade.executed',
-    'trade.closed'
+    'trade.closed',
+    'coach.analysis.generated'
   );
 
 -- 2) Alerts: speed up workflow auto-alert dedupe + daily summary
