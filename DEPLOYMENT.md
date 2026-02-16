@@ -1,57 +1,58 @@
-# Vercel Deployment Guide
+# Deployment Guide
 
-## Prerequisites
-1. A Vercel account (https://vercel.com)
-2. Your MarketScanner Pro repository on GitHub/GitLab
-3. Stripe account with live keys for production
+## Stack Notes
+- Runtime: Next.js App Router on Vercel.
+- Auth: custom signed cookie session (`ms_auth`), not NextAuth.
+- Data: Neon/Postgres via `DATABASE_URL`.
+- Workflow loop: `/api/workflow/events`, `/api/workflow/today`, `/api/workflow/tasks`.
 
-## Quick Deploy Steps
+## Required Environment Variables (Production)
+- `APP_SIGNING_SECRET`
+- `DATABASE_URL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `OPENAI_API_KEY`
+- `ALPHA_VANTAGE_API_KEY`
 
-### 1. Connect Repository to Vercel
-1. Go to https://vercel.com/dashboard
-2. Click "Add New..." → "Project"
-3. Import your Git repository
-4. Select the `marketscanner-web` folder as the root directory
+## Optional Environment Variables
+- `FREE_FOR_ALL_MODE` (set `false` in production unless intentionally overriding tiers)
+- `PRO_OVERRIDE_EMAILS`
 
-### 2. Configure Environment Variables
-In Vercel dashboard, go to Project Settings → Environment Variables and add:
+## Deploy Sequence (Recommended)
+1. Push `main` and deploy on Vercel.
+2. Run Neon migration `migrations/020_workflow_operator_loop.sql` (idempotent).
+3. Confirm build/runtime health and workflow loop smoke checks.
 
-**Required:**
-- `NEXT_PUBLIC_APP_URL` = https://your-domain.vercel.app
-- `STRIPE_SECRET_KEY` = your_live_stripe_secret_key
-- `STRIPE_PUBLISHABLE_KEY` = your_live_stripe_publishable_key
-- `NEXTAUTH_URL` = https://your-domain.vercel.app
-- `NEXTAUTH_SECRET` = generate_random_secret_32_chars
-- `GOOGLE_CLIENT_ID` = your_google_oauth_client_id
-- `GOOGLE_CLIENT_SECRET` = your_google_oauth_client_secret
+## Neon Migration (Operator Workflow)
+Run SQL from:
+- `migrations/020_workflow_operator_loop.sql`
 
-**Optional:**
-- `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` = your-domain.com
+What it covers:
+- AI event indexes for workflow funnel events.
+- Coach/task event lookup indexes.
+- Alert dedupe indexes for auto plan alerts.
+- Journal indexes for open-draft and coach-enrichment lookups.
+- Safety `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for journal risk fields.
 
-### 3. Deploy
-1. Click "Deploy" in Vercel
-2. Wait for build completion
-3. Your app will be live at your-project.vercel.app
-
-### 4. Custom Domain (Optional)
-1. Go to Project Settings → Domains
-2. Add your custom domain
-3. Configure DNS as instructed by Vercel
-
-## Build Configuration
-The project is pre-configured with:
-- `vercel.json` for deployment settings
-- `next.config.ts` optimized for production
-- `.vercelignore` to exclude unnecessary files
-
-## Environment-Specific Features
-- Analytics (Plausible) loads only with user consent
-- CORS configuration for external origins
-- Stripe billing portal integration
-- NextAuth for Google OAuth
+## Post-Deploy Smoke Checklist
+1. Open `/operator` and verify:
+	- Today metrics render.
+	- Loop conversion rates render.
+	- Coach Action Queue renders.
+2. Execute a sample workflow:
+	- Trigger a candidate/pass path from scanner/backtest.
+	- Verify auto alert + auto journal draft creation.
+3. Close a trade from portfolio and verify:
+	- `coach.analysis.generated` event created.
+	- `strategy.rule.suggested` task events created.
+	- Task accept/reject posts `strategy.rule.applied`.
+4. Verify today summary endpoint returns expected fields:
+	- `/api/workflow/today`
+5. Verify tasks endpoint behavior:
+	- `GET /api/workflow/tasks?status=pending`
+	- `POST /api/workflow/tasks` with `accepted`/`rejected`
 
 ## Troubleshooting
-- Ensure all environment variables are set
-- Check Vercel build logs for any errors
-- Verify Stripe webhook endpoints if using subscriptions
-- Test authentication flow after deployment
+- Build warning about `baseline-browser-mapping` age is non-blocking.
+- If migration was not run, workflow endpoints still work but query performance may degrade.
+- If auth fails on protected APIs, verify `APP_SIGNING_SECRET` and cookie domain/session config.
