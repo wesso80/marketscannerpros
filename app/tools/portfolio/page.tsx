@@ -6,6 +6,7 @@ import ToolsPageHeader from '@/components/ToolsPageHeader';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import { writeOperatorState } from '@/lib/operatorState';
 import CommandStrip, { type TerminalDensity } from '@/components/terminal/CommandStrip';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
@@ -502,7 +503,9 @@ function PortfolioContent() {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(true);
+  const [showAnalyticsLayer, setShowAnalyticsLayer] = useState(false);
+  const [aiAutoRequested, setAiAutoRequested] = useState(false);
 
   // Price update helpers
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -567,6 +570,14 @@ function PortfolioContent() {
       setAiLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!canAccessPortfolioInsights(tier)) return;
+    if (positions.length === 0 && closedPositions.length === 0) return;
+    if (aiAnalysis || aiLoading || aiAutoRequested) return;
+    setAiAutoRequested(true);
+    void runAiAnalysis();
+  }, [tier, positions.length, closedPositions.length, aiAnalysis, aiLoading, aiAutoRequested]);
 
   // Normalize ticker symbols to clean format
   function normalizeSymbol(raw: string): string {
@@ -1031,6 +1042,56 @@ function PortfolioContent() {
     value: p.currentPrice * p.quantity,
     percentage: totalValue > 0 ? ((p.currentPrice * p.quantity) / totalValue * 100) : 0
   })).sort((a, b) => b.value - a.value);
+
+  const topAllocation = allocationData[0];
+  const concentration = topAllocation?.percentage ?? 0;
+  const riskLoadLabel = totalReturn < -20 || concentration > 50
+    ? 'High'
+    : totalReturn < -8 || concentration > 35
+    ? 'Medium'
+    : 'Low';
+  const portfolioHealthLabel = totalReturn < -20
+    ? '⚠ Needs Work'
+    : totalReturn < -5
+    ? 'Review Needed'
+    : totalReturn > 12
+    ? 'Strong'
+    : 'Stable';
+  const edgeStateLabel = totalReturn < -10 || concentration > 50
+    ? 'Defensive'
+    : totalReturn > 10 && concentration < 35
+    ? 'Offensive'
+    : 'Neutral';
+  const biasLabel = totalReturn > 2 ? 'Bullish' : totalReturn < -2 ? 'Bearish' : 'Neutral';
+
+  useEffect(() => {
+    const edge = Math.max(1, Math.min(99, Math.round(50 + totalReturn)));
+    const bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = totalReturn > 2
+      ? 'BULLISH'
+      : totalReturn < -2
+      ? 'BEARISH'
+      : 'NEUTRAL';
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = riskLoadLabel === 'High'
+      ? 'WAIT'
+      : edge >= 60
+      ? 'EXECUTE'
+      : 'PREP';
+    const risk: 'LOW' | 'MODERATE' | 'HIGH' = riskLoadLabel === 'High'
+      ? 'HIGH'
+      : riskLoadLabel === 'Medium'
+      ? 'MODERATE'
+      : 'LOW';
+
+    writeOperatorState({
+      symbol: topAllocation?.symbol || 'PORT',
+      edge,
+      bias,
+      action,
+      risk,
+      next: action === 'WAIT' ? 'Protect capital and rebalance' : action === 'EXECUTE' ? 'Manage winners/losers actively' : 'Prepare rebalance plan',
+      mode: 'MANAGE',
+    });
+  }, [totalReturn, riskLoadLabel, topAllocation?.symbol]);
 
   // Portfolio metrics table data
   const metricsData = [
@@ -1560,6 +1621,35 @@ function PortfolioContent() {
       <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{
+              background: 'var(--msp-card)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              boxShadow: 'var(--msp-shadow)'
+            }}>
+              <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                Executive Summary
+              </div>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Portfolio Health</div>
+                  <div style={{ color: portfolioHealthLabel.includes('Needs') ? '#f59e0b' : portfolioHealthLabel === 'Strong' ? '#10b981' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{portfolioHealthLabel}</div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
+                  <div style={{ color: edgeStateLabel === 'Offensive' ? '#10b981' : edgeStateLabel === 'Defensive' ? '#f59e0b' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{edgeStateLabel}</div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Risk Load</div>
+                  <div style={{ color: riskLoadLabel === 'High' ? '#ef4444' : riskLoadLabel === 'Medium' ? '#f59e0b' : '#10b981', fontSize: '14px', fontWeight: 700 }}>{riskLoadLabel}</div>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Bias</div>
+                  <div style={{ color: biasLabel === 'Bullish' ? '#10b981' : biasLabel === 'Bearish' ? '#ef4444' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{biasLabel}</div>
+                </div>
+              </div>
+            </div>
             
             {/* Portfolio Intelligence Summary - Only show when there are positions AND user is Pro+ */}
             {positions.length > 0 && canAccessPortfolioInsights(tier) && (() => {
@@ -1603,6 +1693,7 @@ function PortfolioContent() {
               
               return (
                 <div style={{
+                  order: 2,
                   background: 'var(--msp-card)',
                   border: '1px solid var(--msp-border-strong)',
                   borderLeft: `3px solid ${severeDrawdown ? 'rgba(239,68,68,0.65)' : inDrawdown ? 'rgba(245,158,11,0.65)' : 'rgba(16,185,129,0.65)'}`,
@@ -1655,6 +1746,7 @@ function PortfolioContent() {
 
             {/* AI Portfolio Analysis Section */}
             <div style={{
+              order: 1,
               background: 'var(--msp-card)',
               border: '1px solid var(--msp-border)',
               borderRadius: '16px',
@@ -1842,6 +1934,20 @@ function PortfolioContent() {
                   </div>
                 </div>
               )}
+
+              {showAiAnalysis && !aiAnalysis && !aiLoading && !aiError && (
+                <div style={{
+                  background: 'rgba(30,41,59,0.4)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  marginTop: '8px',
+                  border: '1px solid rgba(51,65,85,0.45)',
+                  color: '#94a3b8',
+                  fontSize: '13px'
+                }}>
+                  Operator briefing is ready. Generate the AI narrative to get portfolio health, underperformer focus, and action priorities.
+                </div>
+              )}
               
               {/* Loading skeleton */}
               {aiLoading && (
@@ -1872,6 +1978,42 @@ function PortfolioContent() {
               )}
             </div>
 
+            <div style={{
+              background: 'var(--msp-card)',
+              border: '1px solid rgba(51,65,85,0.8)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              boxShadow: 'var(--msp-shadow)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Analytics Layer
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '12px' }}>Evidence and diagnostics for deeper review</div>
+                </div>
+                <button
+                  onClick={() => setShowAnalyticsLayer((prev) => !prev)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(16,185,129,0.4)',
+                    background: showAnalyticsLayer ? 'rgba(16,185,129,0.18)' : 'rgba(16,185,129,0.08)',
+                    color: '#10b981',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {showAnalyticsLayer ? 'Hide Analytics' : 'Show Analytics'}
+                </button>
+              </div>
+            </div>
+
+            {showAnalyticsLayer && (
+              <>
             {/* Charts Row - responsive grid */}
             <div className="portfolio-charts-grid" style={{ 
               display: 'grid', 
@@ -2247,6 +2389,8 @@ function PortfolioContent() {
                 ))}
               </div>
             </div>
+              </>
+            )}
           </div>
         )}
 
