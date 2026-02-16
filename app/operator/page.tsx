@@ -73,6 +73,7 @@ interface WorkflowToday {
   coachAnalyses: number;
   autoAlerts: number;
   autoJournalDrafts: number;
+  coachJournalEnrichments?: number;
   lastCoachInsight?: {
     analysisId: string | null;
     createdAt: string | null;
@@ -565,7 +566,7 @@ export default function OperatorDashboardPage() {
 
         <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
-          <div className="grid gap-2 md:grid-cols-8">
+          <div className="grid gap-2 md:grid-cols-9">
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Signals</div>
               <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
@@ -597,6 +598,10 @@ export default function OperatorDashboardPage() {
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Coach</div>
               <div className="font-bold text-violet-300">{workflowToday?.coachAnalyses ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Coach→Journal</div>
+              <div className="font-bold text-fuchsia-300">{workflowToday?.coachJournalEnrichments ?? 0}</div>
             </div>
           </div>
           <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs">

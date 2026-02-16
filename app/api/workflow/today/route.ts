@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [eventRows, autoAlertRows, autoDraftRows, latestCoachRows] = await Promise.all([
+    const [eventRows, autoAlertRows, autoDraftRows, latestCoachRows, coachJournalRows] = await Promise.all([
       q(
         `SELECT
            COUNT(*) FILTER (WHERE event_type = 'signal.created')::int AS signals,
@@ -52,6 +52,14 @@ export async function GET() {
          LIMIT 1`,
         [session.workspaceId]
       ),
+      q(
+        `SELECT COUNT(*)::int AS count
+         FROM journal_entries
+         WHERE workspace_id = $1
+           AND updated_at >= CURRENT_DATE
+           AND notes ILIKE '%Coach Analysis ID:%'`,
+        [session.workspaceId]
+      ),
     ]);
 
     const row = eventRows[0] || {};
@@ -73,6 +81,7 @@ export async function GET() {
         coachAnalyses: Number(row.coach_analyses || 0),
         autoAlerts: Number(autoAlertRows[0]?.count || 0),
         autoJournalDrafts: Number(autoDraftRows[0]?.count || 0),
+        coachJournalEnrichments: Number(coachJournalRows[0]?.count || 0),
         lastCoachInsight: coachPayload
           ? {
               analysisId: coachPayload.analysis_id || null,

@@ -19,6 +19,14 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_workflow_today
     'coach.analysis.generated'
   );
 
+CREATE INDEX IF NOT EXISTS idx_ai_events_coach_parent_event
+  ON ai_events (
+    workspace_id,
+    event_type,
+    (event_data->'correlation'->>'parent_event_id')
+  )
+  WHERE event_type = 'coach.analysis.generated';
+
 -- 2) Alerts: speed up workflow auto-alert dedupe + daily summary
 CREATE INDEX IF NOT EXISTS idx_alerts_workflow_plan_dedupe
   ON alerts (
@@ -47,6 +55,9 @@ CREATE INDEX IF NOT EXISTS idx_journal_entries_workspace_symbol_open
 
 CREATE INDEX IF NOT EXISTS idx_journal_entries_created_at
   ON journal_entries (workspace_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_updated_at
+  ON journal_entries (workspace_id, updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_journal_entries_tags_gin
   ON journal_entries USING GIN (tags);
