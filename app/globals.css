@@ -232,6 +232,82 @@ a:hover {
   border-color: var(--msp-border) !important;
 }
 
+/* Extend discipline globally: colored card chrome becomes neutral */
+[class*="border-green-"],
+[class*="border-red-"],
+[class*="border-yellow-"],
+[class*="border-orange-"] {
+  border-color: var(--msp-border) !important;
+}
+
+/* Keep semantic intent visible but calmer in backgrounds */
+[class*="bg-green-"],
+[class*="bg-emerald-"] {
+  background-color: rgba(34, 197, 94, 0.12) !important;
+}
+
+[class*="bg-red-"] {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+}
+
+[class*="bg-yellow-"],
+[class*="bg-orange-"] {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Unify gradient sources so mixed brand colors don't fragment attention */
+[class*="from-blue-"],
+[class*="from-cyan-"],
+[class*="from-indigo-"],
+[class*="from-violet-"],
+[class*="from-purple-"] {
+  --tw-gradient-from: rgba(20, 184, 166, 0.16) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(20, 184, 166, 0.02) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[class*="to-blue-"],
+[class*="to-cyan-"],
+[class*="to-indigo-"],
+[class*="to-violet-"],
+[class*="to-purple-"] {
+  --tw-gradient-to: rgba(20, 184, 166, 0.06) var(--tw-gradient-to-position) !important;
+}
+
+[class*="from-green-"],
+[class*="from-emerald-"] {
+  --tw-gradient-from: rgba(20, 184, 166, 0.15) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(20, 184, 166, 0.03) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[class*="to-green-"],
+[class*="to-emerald-"] {
+  --tw-gradient-to: rgba(15, 118, 110, 0.08) var(--tw-gradient-to-position) !important;
+}
+
+[class*="from-red-"] {
+  --tw-gradient-from: rgba(239, 68, 68, 0.14) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(239, 68, 68, 0.04) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[class*="to-red-"] {
+  --tw-gradient-to: rgba(239, 68, 68, 0.08) var(--tw-gradient-to-position) !important;
+}
+
+[class*="from-yellow-"],
+[class*="from-orange-"] {
+  --tw-gradient-from: rgba(245, 158, 11, 0.14) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(245, 158, 11, 0.04) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+[class*="to-yellow-"],
+[class*="to-orange-"] {
+  --tw-gradient-to: rgba(245, 158, 11, 0.08) var(--tw-gradient-to-position) !important;
+}
+
 /* Spinner animation for loading states */
 @keyframes spin {
   from { transform: rotate(0deg); }
