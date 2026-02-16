@@ -116,6 +116,7 @@ export default function Header() {
   ];
 
   const marketItems: DropdownItem[] = [
+    { href: '/tools/markets', label: 'Markets Dashboard', icon: '🧭' },
     { href: '/tools/crypto', label: 'Crypto Command Center', icon: '₿' },
     { href: '/tools/market-movers', label: 'Market Movers', icon: '📈' },
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
