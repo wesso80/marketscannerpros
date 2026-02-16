@@ -15,6 +15,9 @@ import SignalRail from "@/components/terminal/SignalRail";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { writeOperatorState } from "@/lib/operatorState";
+import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
+import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
+import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -113,6 +116,18 @@ interface OperatorTransitionSummary {
   executionState: 'WAIT' | 'PREP' | 'EXECUTE';
   nextTrigger: string;
   risk: 'LOW' | 'MODERATE' | 'HIGH';
+}
+
+function toWorkflowAssetClass(assetType: AssetType): AssetClass {
+  if (assetType === 'crypto') return 'crypto';
+  if (assetType === 'forex') return 'forex';
+  return 'equity';
+}
+
+function toDecisionPacketMarket(assetType: AssetType): DecisionPacket['market'] {
+  if (assetType === 'crypto') return 'crypto';
+  if (assetType === 'forex') return 'forex';
+  return 'stocks';
 }
 
 // Top 500+ cryptocurrencies from Alpha Vantage
@@ -761,6 +776,23 @@ function ScannerContent() {
           scanned: data.scanned,
           duration: data.duration
         });
+
+        const topPick = data.topPicks?.[0];
+        if (topPick?.symbol) {
+          emitScannerLifecycle(
+            {
+              symbol: topPick.symbol,
+              score: topPick.score,
+              direction: topPick.direction,
+              price: topPick.indicators?.price,
+              atr: topPick.indicators?.atr,
+              adx: topPick.indicators?.adx,
+              rsi: topPick.indicators?.rsi,
+              macd_hist: topPick.indicators?.macd_hist,
+            },
+            'scanner.bulk'
+          );
+        }
       } else {
         setBulkScanError(data.error || 'Scan failed');
       }
@@ -784,6 +816,154 @@ function ScannerContent() {
 
   // AI Page Context - share scan results with copilot
   const { setPageData } = useAIPageContext();
+
+  const emitScannerLifecycle = (scanResult: ScanResult, sourceModule: 'scanner.run' | 'scanner.bulk') => {
+    const assetClass = toWorkflowAssetClass(assetType);
+    const market = toDecisionPacketMarket(assetType);
+    const score = Math.max(1, Math.min(99, Math.round(scanResult.score ?? 50)));
+    const symbolKey = scanResult.symbol.toUpperCase();
+    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    const workflowId = `wf_scanner_${symbolKey}_${dateKey}`;
+    const signalId = `sig_${symbolKey}_${Date.now()}`;
+    const candidateId = `cand_${symbolKey}_${Date.now()}`;
+    const planId = `plan_${symbolKey}_${Date.now()}`;
+    const bias: 'bullish' | 'bearish' | 'neutral' = scanResult.direction === 'bullish'
+      ? 'bullish'
+      : scanResult.direction === 'bearish'
+      ? 'bearish'
+      : 'neutral';
+    const riskScore = scanResult.atr && scanResult.price
+      ? Math.max(1, Math.min(99, Math.round((scanResult.atr / scanResult.price) * 100 * 20)))
+      : 35;
+    const volatilityRegime = riskScore >= 70 ? 'high' : riskScore >= 45 ? 'moderate' : 'low';
+    const timeframeBias = [timeframe];
+
+    const decisionPacket = createDecisionPacketFromScan({
+      symbol: symbolKey,
+      market,
+      signalSource: sourceModule,
+      signalScore: score,
+      bias,
+      timeframeBias,
+      entryZone: scanResult.price,
+      invalidation: scanResult.price && scanResult.atr ? scanResult.price - scanResult.atr : undefined,
+      targets: scanResult.price && scanResult.atr ? [scanResult.price + scanResult.atr, scanResult.price + (scanResult.atr * 2)] : undefined,
+      riskScore,
+      volatilityRegime,
+      status: 'candidate',
+    });
+
+    const signalEvent = createWorkflowEvent<UnifiedSignal>({
+      eventType: 'signal.created',
+      workflowId,
+      route: '/tools/scanner',
+      module: 'scanner',
+      entity: {
+        entity_type: 'signal',
+        entity_id: signalId,
+        symbol: symbolKey,
+        asset_class: assetClass,
+      },
+      payload: {
+        signal_id: signalId,
+        created_at: new Date().toISOString(),
+        symbol: symbolKey,
+        asset_class: assetClass,
+        timeframe,
+        signal_type: 'confluence_scan',
+        direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
+        confidence: score,
+        source: {
+          module: sourceModule,
+          submodule: assetType,
+        },
+        evidence: {
+          score,
+          rsi: scanResult.rsi,
+          adx: scanResult.adx,
+          macd_hist: scanResult.macd_hist,
+        },
+      },
+    });
+
+    const candidateOutcome: CandidateEvaluation['result'] = score >= 70 ? 'pass' : score >= 55 ? 'watch' : 'fail';
+    const candidateEvent = createWorkflowEvent<CandidateEvaluation & { decision_packet: DecisionPacket }>({
+      eventType: 'candidate.created',
+      workflowId,
+      parentEventId: signalEvent.event_id,
+      route: '/tools/scanner',
+      module: 'scanner',
+      entity: {
+        entity_type: 'candidate',
+        entity_id: candidateId,
+        symbol: symbolKey,
+        asset_class: assetClass,
+      },
+      payload: {
+        candidate_id: candidateId,
+        signal_id: signalId,
+        evaluated_at: new Date().toISOString(),
+        result: candidateOutcome,
+        confidence_delta: 0,
+        final_confidence: score,
+        checks: [
+          { name: 'score_threshold', status: score >= 70 ? 'pass' : score >= 55 ? 'warn' : 'fail', detail: `Score ${score}` },
+          { name: 'direction_present', status: bias === 'neutral' ? 'warn' : 'pass', detail: `Bias ${bias}` },
+        ],
+        notes: candidateOutcome === 'pass' ? 'Candidate promoted for plan preparation' : 'Candidate logged for watchlist progression',
+        decision_packet: decisionPacket,
+      },
+    });
+
+    if (candidateOutcome === 'pass') {
+      const tradePlanEvent = createWorkflowEvent<TradePlan>({
+        eventType: 'trade.plan.created',
+        workflowId,
+        parentEventId: candidateEvent.event_id,
+        route: '/tools/scanner',
+        module: 'scanner',
+        entity: {
+          entity_type: 'trade_plan',
+          entity_id: planId,
+          symbol: symbolKey,
+          asset_class: assetClass,
+        },
+        payload: {
+          plan_id: planId,
+          created_at: new Date().toISOString(),
+          symbol: symbolKey,
+          asset_class: assetClass,
+          direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
+          timeframe,
+          setup: {
+            source: sourceModule,
+            signal_type: 'confluence_scan',
+            confidence: score,
+            decision_packet_id: decisionPacket.id,
+          },
+          entry: {
+            zone: decisionPacket.entryZone,
+            current_price: scanResult.price,
+          },
+          risk: {
+            invalidation: decisionPacket.invalidation,
+            targets: decisionPacket.targets,
+            risk_score: decisionPacket.riskScore,
+            volatility_regime: decisionPacket.volatilityRegime,
+          },
+          links: {
+            candidate_id: candidateId,
+            signal_id: signalId,
+          },
+        },
+      });
+
+      void emitWorkflowEvents([signalEvent, candidateEvent, tradePlanEvent]);
+      return;
+    }
+
+    void emitWorkflowEvents([signalEvent, candidateEvent]);
+  };
 
   useEffect(() => {
     if (result) {
@@ -939,6 +1119,7 @@ function ScannerContent() {
         }));
         // Create new object reference to force React re-render
         setResult({ ...scanResult });
+        emitScannerLifecycle(scanResult, 'scanner.run');
         setScannerCollapsed(true);
         setOrientationCollapsed(true);
         setLastUpdated(data.metadata?.timestamp || new Date().toISOString());

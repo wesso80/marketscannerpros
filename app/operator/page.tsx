@@ -64,6 +64,17 @@ interface AdaptivePayload {
   };
 }
 
+interface WorkflowToday {
+  signals: number;
+  candidates: number;
+  plans: number;
+  executions: number;
+  closed: number;
+  autoAlerts: number;
+  autoJournalDrafts: number;
+  lastEventAt: string | null;
+}
+
 function formatNumber(value: number) {
   if (!Number.isFinite(value)) return '—';
   if (Math.abs(value) >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -106,18 +117,20 @@ export default function OperatorDashboardPage() {
   const [alerts, setAlerts] = useState<RecentAlert[]>([]);
   const [adaptive, setAdaptive] = useState<AdaptivePayload | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [workflowToday, setWorkflowToday] = useState<WorkflowToday | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes] = await Promise.all([
+        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes] = await Promise.all([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
           fetch('/api/adaptive/profile?skill=operator&setup=operator_dashboard&baseScore=72', { cache: 'no-store' }),
           fetch('/api/journal', { cache: 'no-store' }),
+          fetch('/api/workflow/today', { cache: 'no-store' }),
         ]);
 
         const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
@@ -125,6 +138,7 @@ export default function OperatorDashboardPage() {
         const alertData = alertsRes.ok ? await alertsRes.json() : null;
         const adaptiveData = adaptiveRes.ok ? await adaptiveRes.json() : null;
         const journal = journalRes.ok ? await journalRes.json() : null;
+        const workflowData = workflowTodayRes.ok ? await workflowTodayRes.json() : null;
 
         if (!mounted) return;
 
@@ -141,6 +155,7 @@ export default function OperatorDashboardPage() {
         setAlerts(alertData?.alerts || []);
         setAdaptive(adaptiveData || null);
         setJournalEntries(journal?.entries || []);
+        setWorkflowToday(workflowData?.today || null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -535,6 +550,40 @@ export default function OperatorDashboardPage() {
                 {mode}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
+          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
+          <div className="grid gap-2 md:grid-cols-7">
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Signals</div>
+              <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Candidates</div>
+              <div className="font-bold text-emerald-300">{workflowToday?.candidates ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Plans</div>
+              <div className="font-bold text-purple-300">{workflowToday?.plans ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Auto Alerts</div>
+              <div className="font-bold text-amber-300">{workflowToday?.autoAlerts ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Auto Drafts</div>
+              <div className="font-bold text-blue-300">{workflowToday?.autoJournalDrafts ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Executed</div>
+              <div className="font-bold text-indigo-300">{workflowToday?.executions ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Closed</div>
+              <div className="font-bold text-emerald-300">{workflowToday?.closed ?? 0}</div>
+            </div>
           </div>
         </section>
 

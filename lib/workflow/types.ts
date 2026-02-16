@@ -160,3 +160,23 @@ export interface AICoachOutput {
   labels_suggested?: Array<Record<string, unknown>>;
   next_actions?: Array<Record<string, unknown>>;
 }
+
+export interface DecisionPacket {
+  id: string;
+  createdAt: string;
+  symbol: string;
+  market: 'stocks' | 'crypto' | 'options' | 'forex';
+  signalSource: string;
+  signalScore: number;
+  bias: 'bullish' | 'bearish' | 'neutral';
+  timeframeBias: string[];
+  entryZone?: number;
+  invalidation?: number;
+  targets?: number[];
+  riskScore: number;
+  volatilityRegime?: string;
+  alertIds?: string[];
+  journalId?: string;
+  operatorFit?: number;
+  status: 'candidate' | 'planned' | 'alerted' | 'executed' | 'closed';
+}
