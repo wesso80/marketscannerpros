@@ -17,7 +17,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_workflow_today
     'trade.executed',
     'trade.closed',
     'coach.analysis.generated',
-    'strategy.rule.suggested'
+    'strategy.rule.suggested',
+    'strategy.rule.applied'
   );
 
 CREATE INDEX IF NOT EXISTS idx_ai_events_coach_parent_event
@@ -35,6 +36,14 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_strategy_parent_event
     (event_data->'correlation'->>'parent_event_id')
   )
   WHERE event_type = 'strategy.rule.suggested';
+
+CREATE INDEX IF NOT EXISTS idx_ai_events_strategy_applied_task
+  ON ai_events (
+    workspace_id,
+    event_type,
+    (event_data->'payload'->>'task_id')
+  )
+  WHERE event_type = 'strategy.rule.applied';
 
 -- 2) Alerts: speed up workflow auto-alert dedupe + daily summary
 CREATE INDEX IF NOT EXISTS idx_alerts_workflow_plan_dedupe

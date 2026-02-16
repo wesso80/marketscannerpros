@@ -72,6 +72,8 @@ interface WorkflowToday {
   closed: number;
   coachAnalyses: number;
   coachTasks?: number;
+  coachTasksAccepted?: number;
+  coachTasksRejected?: number;
   autoAlerts: number;
   autoJournalDrafts: number;
   coachJournalEnrichments?: number;
@@ -85,6 +87,18 @@ interface WorkflowToday {
     recommendation: string | null;
   } | null;
   lastEventAt: string | null;
+}
+
+interface CoachTaskItem {
+  taskId: string;
+  suggestedEventId: string;
+  workflowId: string;
+  symbol: string | null;
+  action: string;
+  detail: string;
+  priority: string;
+  suggestedAt: string;
+  resolved: boolean;
 }
 
 function formatNumber(value: number) {
@@ -130,19 +144,22 @@ export default function OperatorDashboardPage() {
   const [adaptive, setAdaptive] = useState<AdaptivePayload | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [workflowToday, setWorkflowToday] = useState<WorkflowToday | null>(null);
+  const [coachTasksQueue, setCoachTasksQueue] = useState<CoachTaskItem[]>([]);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes] = await Promise.all([
+        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes] = await Promise.all([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
           fetch('/api/adaptive/profile?skill=operator&setup=operator_dashboard&baseScore=72', { cache: 'no-store' }),
           fetch('/api/journal', { cache: 'no-store' }),
           fetch('/api/workflow/today', { cache: 'no-store' }),
+          fetch('/api/workflow/tasks?status=pending&limit=5', { cache: 'no-store' }),
         ]);
 
         const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
@@ -151,6 +168,7 @@ export default function OperatorDashboardPage() {
         const adaptiveData = adaptiveRes.ok ? await adaptiveRes.json() : null;
         const journal = journalRes.ok ? await journalRes.json() : null;
         const workflowData = workflowTodayRes.ok ? await workflowTodayRes.json() : null;
+        const workflowTasksData = workflowTasksRes.ok ? await workflowTasksRes.json() : null;
 
         if (!mounted) return;
 
@@ -168,6 +186,7 @@ export default function OperatorDashboardPage() {
         setAdaptive(adaptiveData || null);
         setJournalEntries(journal?.entries || []);
         setWorkflowToday(workflowData?.today || null);
+        setCoachTasksQueue(workflowTasksData?.tasks || []);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -178,6 +197,40 @@ export default function OperatorDashboardPage() {
       mounted = false;
     };
   }, []);
+
+  const refreshWorkflowToday = async () => {
+    const workflowTodayRes = await fetch('/api/workflow/today', { cache: 'no-store' });
+    if (!workflowTodayRes.ok) return;
+    const workflowData = await workflowTodayRes.json();
+    setWorkflowToday(workflowData?.today || null);
+  };
+
+  const refreshCoachTasks = async () => {
+    const tasksRes = await fetch('/api/workflow/tasks?status=pending&limit=5', { cache: 'no-store' });
+    if (!tasksRes.ok) return;
+    const tasksData = await tasksRes.json();
+    setCoachTasksQueue(tasksData?.tasks || []);
+  };
+
+  const handleTaskDecision = async (taskId: string, decision: 'accepted' | 'rejected') => {
+    if (!taskId) return;
+    setUpdatingTaskId(taskId);
+    try {
+      const res = await fetch('/api/workflow/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ taskId, decision }),
+      });
+
+      if (!res.ok) return;
+
+      await Promise.all([refreshWorkflowToday(), refreshCoachTasks()]);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
 
   const focusSignal = opportunities[0] || null;
 
@@ -567,7 +620,7 @@ export default function OperatorDashboardPage() {
 
         <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
-          <div className="grid gap-2 md:grid-cols-10">
+          <div className="grid gap-2 md:grid-cols-12">
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Signals</div>
               <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
@@ -605,6 +658,14 @@ export default function OperatorDashboardPage() {
               <div className="font-bold text-pink-300">{workflowToday?.coachTasks ?? 0}</div>
             </div>
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Accepted</div>
+              <div className="font-bold text-emerald-300">{workflowToday?.coachTasksAccepted ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Rejected</div>
+              <div className="font-bold text-rose-300">{workflowToday?.coachTasksRejected ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Coach→Journal</div>
               <div className="font-bold text-fuchsia-300">{workflowToday?.coachJournalEnrichments ?? 0}</div>
             </div>
@@ -622,6 +683,47 @@ export default function OperatorDashboardPage() {
               </div>
             ) : (
               <div className="mt-1 text-violet-200/90">No coach analysis generated yet today.</div>
+            )}
+          </div>
+          <div className="mt-3 rounded-md border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs">
+            <div className="text-pink-200 uppercase tracking-wide">Coach Action Queue</div>
+            {coachTasksQueue.length === 0 ? (
+              <div className="mt-1 text-pink-200/90">No pending coach tasks.</div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {coachTasksQueue.map((task) => (
+                  <div key={task.taskId} className="rounded border border-pink-500/20 bg-slate-900/50 px-2 py-2">
+                    <div className="font-semibold text-pink-100">{task.action.replaceAll('_', ' ')}</div>
+                    <div className="mt-1 text-pink-200/90">{task.detail || 'No detail provided.'}</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
+                        {task.priority}
+                      </span>
+                      {task.symbol ? (
+                        <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
+                          {task.symbol}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={updatingTaskId === task.taskId}
+                        onClick={() => handleTaskDecision(task.taskId, 'accepted')}
+                        className="rounded border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-200 disabled:opacity-60"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        disabled={updatingTaskId === task.taskId}
+                        onClick={() => handleTaskDecision(task.taskId, 'rejected')}
+                        className="rounded border border-red-500/40 bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-200 disabled:opacity-60"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </section>
