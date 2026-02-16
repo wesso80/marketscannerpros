@@ -252,10 +252,37 @@ a:hover {
   box-shadow: var(--msp-shadow);
 }
 
+.msp-surface {
+  background: var(--msp-card);
+  border: 1px solid var(--msp-border);
+  box-shadow: var(--msp-shadow);
+}
+
 .msp-panel {
   background: var(--msp-panel);
   border: 1px solid var(--msp-border);
   border-radius: 12px;
+}
+
+.msp-muted {
+  color: var(--msp-text-muted);
+}
+
+.msp-accent {
+  color: var(--msp-accent);
+}
+
+/* 70 / 20 / 10 visual weighting */
+.msp-weight-70 {
+  color: var(--msp-text);
+}
+
+.msp-weight-20 {
+  color: var(--msp-text-muted);
+}
+
+.msp-weight-10 {
+  color: var(--msp-accent);
 }
 
 .msp-divider {

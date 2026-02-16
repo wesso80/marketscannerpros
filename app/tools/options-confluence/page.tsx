@@ -14,6 +14,11 @@ import StateMachineTraderEyeCard from "@/components/StateMachineTraderEyeCard";
 import EvolutionStatusCard from "@/components/EvolutionStatusCard";
 import { deriveCopilotPresence } from "@/lib/copilot/derive-copilot-presence";
 import type { OptionsSetup as AnalyzerOptionsSetup } from "@/lib/options-confluence-analyzer";
+import TerminalShell from "@/components/terminal/TerminalShell";
+import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
+import DecisionCockpit from "@/components/terminal/DecisionCockpit";
+import SignalRail from "@/components/terminal/SignalRail";
+import Pill from "@/components/terminal/Pill";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -463,6 +468,7 @@ export default function OptionsConfluenceScanner() {
   const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [density, setDensity] = useState<TerminalDensity>('normal');
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [trapDoors, setTrapDoors] = useState<{
     evidence: boolean;
@@ -705,13 +711,13 @@ export default function OptionsConfluenceScanner() {
     return price.toFixed(6);
   };
 
-  const gradeColor = (grade: string) => {
+  const gradeClass = (grade: string) => {
     switch (grade) {
-      case 'A+': return '#10B981';
-      case 'A': return '#22C55E';
-      case 'B': return '#F59E0B';
-      case 'C': return '#F97316';
-      default: return '#EF4444';
+      case 'A+': return 'text-emerald-500';
+      case 'A': return 'text-green-500';
+      case 'B': return 'text-amber-500';
+      case 'C': return 'text-orange-500';
+      default: return 'text-red-500';
     }
   };
 
@@ -725,12 +731,12 @@ export default function OptionsConfluenceScanner() {
     }
   };
 
-  const urgencyColor = (urgency: string) => {
+  const urgencyClass = (urgency: string) => {
     switch (urgency) {
-      case 'immediate': return '#10B981';
-      case 'within_hour': return '#F59E0B';
-      case 'wait': return '#6B7280';
-      default: return '#EF4444';
+      case 'immediate': return 'text-emerald-500';
+      case 'within_hour': return 'text-amber-500';
+      case 'wait': return 'text-gray-500';
+      default: return 'text-red-500';
     }
   };
 
@@ -765,46 +771,6 @@ export default function OptionsConfluenceScanner() {
     return 'LOW';
   };
 
-  const lowerTerminalShell = {
-    background: 'var(--msp-card)',
-    border: '1px solid rgba(148,163,184,0.26)',
-    borderRadius: '16px',
-    padding: '1.15rem',
-    boxShadow: '0 10px 28px rgba(0,0,0,0.20)',
-  };
-
-  const lowerTerminalSection = (accentBorder: string) => ({
-    ...lowerTerminalShell,
-    border: `1px solid ${accentBorder}`,
-  });
-
-  const lowerTerminalSummary = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    cursor: 'pointer',
-    listStyle: 'none',
-    margin: '0 0 1rem 0',
-    paddingBottom: '0.75rem',
-    borderBottom: '1px solid rgba(148,163,184,0.22)',
-  };
-
-  const lowerTerminalTitle = {
-    margin: '0 0 1rem 0',
-    fontSize: '0.98rem',
-    fontWeight: 800,
-    letterSpacing: '0.3px',
-  };
-
-  const lowerTerminalPill = {
-    padding: '3px 10px',
-    borderRadius: '999px',
-    fontSize: '0.68rem',
-    fontWeight: 700,
-    letterSpacing: '0.3px',
-    textTransform: 'uppercase' as const,
-  };
-
   const bestPattern = result?.locationContext?.patterns
     ?.slice()
     .sort((a, b) => b.confidence - a.confidence)?.[0] ?? null;
@@ -835,9 +801,9 @@ export default function OptionsConfluenceScanner() {
 
   type LadderState = 'valid' | 'partial' | 'fail';
   const stateVisual = (state: LadderState) => {
-    if (state === 'valid') return { label: 'VALID', color: '#10B981', bg: 'rgba(16,185,129,0.16)', border: 'rgba(16,185,129,0.42)', icon: '✔' };
-    if (state === 'partial') return { label: 'PARTIAL', color: '#F59E0B', bg: 'rgba(245,158,11,0.16)', border: 'rgba(245,158,11,0.42)', icon: '⚠' };
-    return { label: 'FAIL', color: '#EF4444', bg: 'rgba(239,68,68,0.16)', border: 'rgba(239,68,68,0.42)', icon: '✖' };
+    if (state === 'valid') return { label: 'VALID', icon: '✔', containerClass: 'border border-emerald-500/40 bg-emerald-500/15', textClass: 'text-emerald-500' };
+    if (state === 'partial') return { label: 'PARTIAL', icon: '⚠', containerClass: 'border border-amber-500/40 bg-amber-500/15', textClass: 'text-amber-500' };
+    return { label: 'FAIL', icon: '✖', containerClass: 'border border-red-500/40 bg-red-500/15', textClass: 'text-red-500' };
   };
 
   const ladderSteps = result ? (() => {
@@ -981,7 +947,12 @@ export default function OptionsConfluenceScanner() {
       ? 'BLOCKED'
       : (commandStatus === 'ACTIVE' ? 'ALLOWED' : 'WAIT');
 
-  const commandStatusColor = commandStatus === 'ACTIVE' ? '#10B981' : commandStatus === 'WAIT' ? '#F59E0B' : '#EF4444';
+  const commandStatusClass = commandStatus === 'ACTIVE' ? 'text-emerald-500' : commandStatus === 'WAIT' ? 'text-amber-500' : 'text-red-500';
+  const commandStatusToneCardClass = commandStatus === 'ACTIVE'
+    ? 'border border-emerald-500/35 bg-emerald-500/15'
+    : commandStatus === 'WAIT'
+      ? 'border border-amber-500/35 bg-amber-500/15'
+      : 'border border-red-500/35 bg-red-500/15';
   const commandUpdatedAgo = lastUpdated
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
@@ -1329,15 +1300,25 @@ export default function OptionsConfluenceScanner() {
     ? 'EXECUTE_FOCUS'
     : institutionalLensMode;
 
-  const modeAccent = institutionalLensMode === 'ARMED'
-    ? '#10B981'
+  const modeAccentClass = institutionalLensMode === 'ARMED'
+    ? 'text-emerald-500'
     : institutionalLensMode === 'EXECUTE'
-      ? '#F97316'
+      ? 'text-orange-500'
       : institutionalLensMode === 'WATCH'
-        ? '#F59E0B'
+        ? 'text-amber-500'
         : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
-          ? '#EF4444'
-          : 'var(--msp-accent)';
+          ? 'text-red-500'
+          : 'text-[var(--msp-accent)]';
+
+  const modeAccentBorderClass = institutionalLensMode === 'ARMED'
+    ? 'border-l-emerald-500'
+    : institutionalLensMode === 'EXECUTE'
+      ? 'border-l-orange-500'
+      : institutionalLensMode === 'WATCH'
+        ? 'border-l-amber-500'
+        : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
+          ? 'border-l-red-500'
+          : 'border-l-[var(--msp-accent)]';
 
   const confluenceRadar = result ? (() => {
     const clampScore = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
@@ -1500,27 +1481,55 @@ export default function OptionsConfluenceScanner() {
   const adaptiveModeMeta = {
     TREND_MODE: {
       label: 'TREND ACCELERATION',
-      color: '#10B981',
+      accentTextClass: 'text-emerald-500',
+      accentBorderClass: 'border-l-emerald-500',
       reason: 'Directional structure + confluence alignment dominate.',
-      layout: { columns: 'minmax(240px, 0.95fr) minmax(360px, 1.5fr) minmax(240px, 1fr)', signalOrder: 1, marketOrder: 2, execOrder: 3, execOpacity: 1 },
+      layout: {
+        columnsClass: '[grid-template-columns:minmax(240px,0.95fr)_minmax(360px,1.5fr)_minmax(240px,1fr)]',
+        signalOrderClass: 'order-1',
+        marketOrderClass: 'order-2',
+        execOrderClass: 'order-3',
+        execOpacityClass: 'opacity-100',
+      },
     },
     CHOP_RANGE_MODE: {
       label: 'CHOP / RANGE',
-      color: '#F59E0B',
+      accentTextClass: 'text-amber-500',
+      accentBorderClass: 'border-l-amber-500',
       reason: 'Low directional edge; prioritize boundaries and risk control.',
-      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 1, marketOrder: 2, execOrder: 3, execOpacity: 0.78 },
+      layout: {
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        signalOrderClass: 'order-1',
+        marketOrderClass: 'order-2',
+        execOrderClass: 'order-3',
+        execOpacityClass: 'opacity-[0.78]',
+      },
     },
     HIGH_VOL_EVENT_MODE: {
       label: 'VOLATILITY EXPANSION',
-      color: '#EF4444',
+      accentTextClass: 'text-red-500',
+      accentBorderClass: 'border-l-red-500',
       reason: 'IV/expected-move expansion detected; risk and flow prioritized.',
-      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 1, marketOrder: 3, execOrder: 2, execOpacity: 1 },
+      layout: {
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        signalOrderClass: 'order-1',
+        marketOrderClass: 'order-3',
+        execOrderClass: 'order-2',
+        execOpacityClass: 'opacity-100',
+      },
     },
     TRANSITION_MODE: {
       label: 'REGIME TRANSITION',
-      color: '#38BDF8',
+      accentTextClass: 'text-sky-400',
+      accentBorderClass: 'border-l-sky-400',
       reason: 'Momentum/flow shift underway; confirmation sequencing in focus.',
-      layout: { columns: 'repeat(auto-fit, minmax(260px, 1fr))', signalOrder: 2, marketOrder: 1, execOrder: 3, execOpacity: 1 },
+      layout: {
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        signalOrderClass: 'order-2',
+        marketOrderClass: 'order-1',
+        execOrderClass: 'order-3',
+        execOpacityClass: 'opacity-100',
+      },
     },
   }[adaptiveTerminalMode];
 
@@ -1585,12 +1594,12 @@ export default function OptionsConfluenceScanner() {
   // Avoid premature gating while tier is still resolving
   if (isTierLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", color: "#e2e8f0" }}>
-          <h1 style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)", fontWeight: 700, marginBottom: "0.5rem" }}>
+      <div className="min-h-screen bg-[var(--msp-bg)]">
+        <main className="mx-auto max-w-[900px] px-4 py-8 text-slate-200">
+          <h1 className="mb-2 text-[clamp(1.25rem,3vw,1.75rem)] font-bold">
             🎯 Loading Options Confluence Scanner...
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>
+          <p className="text-sm text-slate-400">
             Checking account access and initializing scanner state.
           </p>
         </main>
@@ -1601,23 +1610,15 @@ export default function OptionsConfluenceScanner() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
-        <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
-          <span style={{ 
-            background: "var(--msp-panel)", 
-            border: "1px solid var(--msp-border)",
-            padding: "4px 12px", 
-            borderRadius: "999px", 
-            fontSize: "11px", 
-            fontWeight: "600",
-            color: "var(--msp-accent)"
-          }}>PRO TRADER</span>
-          <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
+      <div className="min-h-screen bg-[var(--msp-bg)]">
+        <header className="mx-auto max-w-[900px] px-4 py-8 text-center">
+          <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO TRADER</span>
+          <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
             🎯 Options Confluence Scanner
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: "14px" }}>Strike & Expiration Recommendations Based on Time Confluence</p>
+          <p className="text-sm text-slate-400">Strike & Expiration Recommendations Based on Time Confluence</p>
         </header>
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "0 1rem 2rem" }}>
+        <main className="mx-auto max-w-[900px] px-4 pb-8">
           <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
         </main>
       </div>
@@ -1625,82 +1626,52 @@ export default function OptionsConfluenceScanner() {
   }
 
   return (
-    <div className="options-page-container" style={{ 
-      minHeight: '100vh', 
-      background: 'var(--msp-bg)',
-      padding: 'clamp(0.5rem, 3vw, 2rem)',
-      color: 'var(--msp-text)',
-    }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', padding: '0 0.25rem' }}>
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <h1 style={{ 
-            fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', 
-            fontWeight: 'bold',
-            color: 'var(--msp-text)',
-            marginBottom: '0.5rem'
-          }}>
-            🎯 Options Confluence Scanner
-          </h1>
-          <p style={{ color: 'var(--msp-text-muted)', maxWidth: '600px', margin: '0 auto', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', padding: '0 1rem' }}>
-            Get intelligent strike & expiration recommendations based on Time Confluence analysis.
-            Uses 50% levels, decompression timing, and Greeks-aware risk assessment.
-          </p>
-        </div>
+    <TerminalShell
+      title="🎯 Options Confluence Scanner"
+      subtitle="Get intelligent strike & expiration recommendations based on Time Confluence analysis. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
+    >
 
         {/* Command Strip */}
         {result && (
-          <div className="sticky top-2 z-40 mb-4 rounded-panel border border-msp-border bg-msp-card px-3 py-2 shadow-msp">
-            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
-              <span className="font-bold text-msp-text">{result.symbol}</span>
-              <span className="text-msp-divider">│</span>
-              <span className="text-msp-muted">BIAS:</span>
-              <span className="font-bold text-msp-text">{thesisDirection.toUpperCase()}</span>
-              <span className="text-msp-divider">│</span>
-              <span className="text-msp-muted">STATUS:</span>
-              <span className="rounded-full border border-msp-borderStrong bg-msp-panel px-2 py-0.5 font-bold uppercase text-msp-accent">
-                {commandStatus}
-              </span>
-              <span className="text-msp-divider">│</span>
-              <span className="text-msp-muted">CONF:</span>
-              <span
-                className={`font-bold ${(result.compositeScore?.confidence ?? 0) >= 70 ? 'text-msp-bull' : (result.compositeScore?.confidence ?? 0) >= 50 ? 'text-msp-warn' : 'text-msp-bear'}`}
-              >
-                {(result.compositeScore?.confidence ?? 0).toFixed(0)}%
-              </span>
-              <span className="text-msp-divider">│</span>
-              <span className="text-msp-muted">DATA:</span>
-              <span
-                className={`${dataHealth === 'REALTIME' || dataHealth === 'LIVE' ? 'text-msp-bull' : dataHealth === 'DELAYED' || dataHealth === 'CACHED' ? 'text-msp-warn' : 'text-msp-bear'} font-bold`}
-              >
-                {dataHealth} {(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? '✔' : ''}
-              </span>
-              <span className="text-msp-divider">│</span>
-              <span className="text-msp-muted">TERMINAL MODE:</span>
-              <span className="font-black tracking-wide text-msp-accent">
-                {adaptiveModeMeta.label}
-              </span>
-              <span className="text-msp-divider">│</span>
-              <span className="font-bold text-msp-accent">LIVE BX + FMV OPTIONS</span>
-              {commandUpdatedAgo !== null && (
-                <>
-                  <span className="text-msp-divider">•</span>
-                  <span className="text-msp-muted">Updated {commandUpdatedAgo}s ago</span>
-                </>
-              )}
-              <span className="text-msp-divider">│</span>
+          <CommandStrip
+            symbol={result.symbol}
+            status={commandStatus}
+            confidence={result.compositeScore?.confidence ?? 0}
+            dataHealth={`${dataHealth}${(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? ' ✔' : ''}`}
+            mode={adaptiveModeMeta.label}
+            density={density}
+            onDensityChange={setDensity}
+            rightSlot={
               <button
+                type="button"
                 onClick={() => setFocusMode((prev) => !prev)}
-                className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide transition ${
-                  focusMode
-                    ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
-                    : 'bg-msp-panel text-msp-muted border-msp-border'
-                }`}
+                className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${focusMode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
               >
                 {focusMode ? 'Focus On' : 'Focus'}
               </button>
-            </div>
-          </div>
+            }
+          />
+        )}
+
+        {result && (
+          <DecisionCockpit
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{commandStatus}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>}
+            right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
+          />
+        )}
+
+        {result && (
+          <SignalRail
+            items={[
+              { label: 'Confluence', value: `${result.confluenceStack} TF`, tone: result.confluenceStack >= 3 ? 'bull' : 'warn' },
+              { label: 'Flow', value: (result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(), tone: result.openInterestAnalysis?.sentiment === 'bullish' ? 'bull' : result.openInterestAnalysis?.sentiment === 'bearish' ? 'bear' : 'neutral' },
+              { label: 'Expected Move', value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A', tone: (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'bear' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'warn' : 'bull' },
+              { label: 'Trade Permission', value: tradePermission, tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
+              { label: 'Mode', value: adaptiveModeMeta.label, tone: 'accent' },
+              { label: 'Updated', value: commandUpdatedAgo !== null ? `${commandUpdatedAgo}s` : 'n/a', tone: 'neutral' },
+            ]}
+          />
         )}
 
         {result && (() => {
@@ -1740,18 +1711,18 @@ export default function OptionsConfluenceScanner() {
         })()}
 
         {result && copilotPresence && (
-          <div className="msp-panel" style={{ marginTop: '-0.25rem', marginBottom: '0.85rem', padding: '0.48rem 0.65rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap', fontSize: '0.72rem' }}>
-              <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>AI Co-Pilot</span>
-              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
-              <span style={{ color: 'var(--msp-accent)', fontWeight: 800 }}>Market State: {adaptiveModeMeta.label}</span>
-              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
-              <span style={{ color: 'var(--msp-text-muted)' }}>Confidence: {copilotPresence.confidence}%</span>
-              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
-              <span style={{ color: 'var(--msp-text-muted)' }}>Watching: {copilotPresence.watching}</span>
+          <div className="msp-panel -mt-1 mb-3 rounded-lg border border-[var(--msp-border)] px-3 py-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-extrabold text-[var(--msp-text)]">AI Co-Pilot</span>
+              <span className="msp-muted">•</span>
+              <span className="font-extrabold text-[var(--msp-accent)]">Market State: {adaptiveModeMeta.label}</span>
+              <span className="msp-muted">•</span>
+              <span className="msp-muted">Confidence: {copilotPresence.confidence}%</span>
+              <span className="msp-muted">•</span>
+              <span className="msp-muted">Watching: {copilotPresence.watching}</span>
             </div>
             {copilotPresence.statusLine && (
-              <div style={{ marginTop: '0.28rem', color: 'var(--msp-text-muted)', fontSize: '0.68rem' }}>
+              <div className="msp-muted mt-1 text-[11px]">
                 {copilotPresence.statusLine}
                 {copilotPresence.notes?.length ? ` • ${copilotPresence.notes[0]}` : ''}
               </div>
@@ -1768,48 +1739,24 @@ export default function OptionsConfluenceScanner() {
           const msg = messages[deskFeedIndex % messages.length];
 
           return (
-            <div className="msp-panel" style={{
-              marginTop: '-0.45rem',
-              marginBottom: '0.8rem',
-              padding: '0.5rem 0.65rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.55rem',
-              flexWrap: 'wrap',
-            }}>
-              <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div className="msp-panel -mt-2 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--msp-border)] px-3 py-2">
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">
                 🧠 AI Desk Feed
               </div>
-              <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', flex: 1 }}>{msg}</div>
+              <div className="msp-muted flex-1 text-xs">{msg}</div>
             </div>
           );
         })()}
 
         {/* Input Section */}
-        <div className="options-form-controls" style={{ 
-          display: 'flex', 
-          gap: '0.75rem', 
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          marginBottom: '1.5rem'
-        }}>
+        <div className="options-form-controls mb-6 flex flex-wrap justify-center gap-3">
           <input
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
             onBlur={() => fetchExpirations(symbol)}
             placeholder="SPY, AAPL, QQQ, TSLA..."
-            style={{
-              padding: '0.75rem 1.25rem',
-              fontSize: '1rem',
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '12px',
-              color: 'var(--msp-text)',
-              flex: '1 1 150px',
-              maxWidth: '250px',
-              outline: 'none',
-            }}
+            className="max-w-[250px] flex-[1_1_150px] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3 text-base text-[var(--msp-text)] outline-none"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 fetchExpirations(symbol);
@@ -1821,16 +1768,7 @@ export default function OptionsConfluenceScanner() {
           <select
             value={selectedTF}
             onChange={(e) => setSelectedTF(e.target.value as ScanModeType)}
-            style={{
-              padding: '0.75rem 1rem',
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '12px',
-              color: 'var(--msp-text)',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '600',
-            }}
+            className="cursor-pointer rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-4 py-3 text-base font-semibold text-[var(--msp-text)]"
           >
             {TIMEFRAME_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -1844,16 +1782,7 @@ export default function OptionsConfluenceScanner() {
             value={selectedExpiry}
             onChange={(e) => setSelectedExpiry(e.target.value)}
             disabled={loadingExpirations || expirations.length === 0}
-            style={{
-              padding: '0.75rem 1rem',
-              background: 'var(--msp-panel)',
-              border: `1px solid ${expirations.length > 0 ? 'var(--msp-border-strong)' : 'var(--msp-border)'}`,
-              borderRadius: '12px',
-              color: expirations.length > 0 ? 'var(--msp-text)' : 'var(--msp-text-faint)',
-              cursor: expirations.length > 0 ? 'pointer' : 'not-allowed',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-            }}
+            className={`rounded-xl border bg-[var(--msp-panel)] px-4 py-3 text-[0.9rem] font-semibold ${expirations.length > 0 ? 'cursor-pointer border-[var(--msp-border-strong)] text-[var(--msp-text)]' : 'cursor-not-allowed border-[var(--msp-border)] text-[var(--msp-text-faint)]'}`}
           >
             <option value="">
               {loadingExpirations ? '⏳ Loading...' : 
@@ -1870,19 +1799,7 @@ export default function OptionsConfluenceScanner() {
           <button
             onClick={() => handleScan()}
             disabled={loading}
-            style={{
-              padding: '0.75rem 2rem',
-              background: loading 
-                ? 'var(--msp-panel)'
-                : 'var(--msp-accent)',
-              border: 'none',
-              borderRadius: '12px',
-              color: '#061018',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}
+            className={`rounded-xl px-8 py-3 text-base font-bold text-[#061018] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
           >
             {loading ? '🔄 Finding Best Options Setup...' : '🎯 Find Best Options Setup'}
           </button>
@@ -1891,15 +1808,7 @@ export default function OptionsConfluenceScanner() {
             <button
               onClick={() => handleScan()}
               disabled={loading}
-              style={{
-                padding: '0.75rem 1rem',
-                background: 'rgba(100,100,100,0.3)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: '12px',
-                color: '#94A3B8',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
+              className="cursor-pointer rounded-xl border border-white/20 bg-[rgba(100,100,100,0.3)] px-4 py-3 text-[0.85rem] text-[#94A3B8]"
             >
               🔄 Refresh
             </button>
@@ -1908,107 +1817,76 @@ export default function OptionsConfluenceScanner() {
 
         {/* Status Bar */}
         {lastUpdated && (
-          <div style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.8rem', color: '#64748B' }}>
+          <div className="mb-4 text-center text-[0.8rem] text-[#64748B]">
             Last updated: {lastUpdated.toLocaleTimeString()}
-            {isCached && <span style={{ marginLeft: '8px', color: '#F59E0B' }}>(cached)</span>}
+            {isCached && <span className="ml-2 text-[#F59E0B]">(cached)</span>}
           </div>
         )}
 
         {/* Error Display */}
         {error && (
-          <div style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: '12px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
-            textAlign: 'center',
-            color: '#EF4444'
-          }}>
+          <div className="mb-6 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] p-4 text-center text-[#EF4444]">
             ❌ {error}
           </div>
         )}
 
         {/* Results */}
         {result && (
-          <div style={{ display: 'grid', gap: '1.5rem' }}>
+          <div className="grid gap-6">
 
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderRadius: '14px',
-              padding: '0.85rem',
-            }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr)',
-                gap: '0.65rem',
-              }}>
-                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Decision Core</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.9rem', fontWeight: 900, marginTop: '0.2rem' }}>
+            <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
+              <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
+                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Decision Core</div>
+                  <div className="mt-[0.2rem] text-[0.9rem] font-black text-slate-200">
                     {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'ready for execution' : 'requires trigger confirmation'}`}
                   </div>
-                  <div style={{ marginTop: '0.35rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    <span style={{ background: 'rgba(148,163,184,0.18)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: '#E2E8F0', fontWeight: 700 }}>
+                  <div className="mt-[0.35rem] flex flex-wrap gap-[0.35rem]">
+                    <span className="rounded-full border border-[var(--msp-border)] bg-slate-400/20 px-2 py-[2px] text-[0.68rem] font-bold text-slate-200">
                       Grade {result.tradeQuality}
                     </span>
-                    <span style={{ background: commandStatus === 'ACTIVE' ? 'rgba(16,185,129,0.2)' : commandStatus === 'WAIT' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: commandStatus === 'ACTIVE' ? '#10B981' : commandStatus === 'WAIT' ? '#F59E0B' : '#EF4444', fontWeight: 800 }}>
+                    <span className={`rounded-full border border-[var(--msp-border)] px-2 py-[2px] text-[0.68rem] font-extrabold ${commandStatus === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-500' : commandStatus === 'WAIT' ? 'bg-amber-500/20 text-amber-500' : 'bg-red-500/20 text-red-500'}`}>
                       {commandStatus}
                     </span>
-                    <span style={{ background: 'rgba(148,163,184,0.18)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '2px 8px', fontSize: '0.68rem', color: '#CBD5E1', fontWeight: 700 }}>
+                    <span className="rounded-full border border-[var(--msp-border)] bg-slate-400/20 px-2 py-[2px] text-[0.68rem] font-bold text-slate-300">
                       Trigger: {decisionTrigger}
                     </span>
                   </div>
-                  <div style={{ marginTop: '0.35rem', color: '#94A3B8', fontSize: '0.72rem' }}>
+                  <div className="mt-[0.35rem] text-[0.72rem] text-slate-400">
                     {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
                   </div>
                 </div>
 
-                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Risk + Execution</div>
-                  <div style={{ marginTop: '0.25rem', display: 'grid', gap: '0.25rem', fontSize: '0.76rem' }}>
-                    <div style={{ color: '#E2E8F0' }}>Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
-                    <div style={{ color: '#FCA5A5' }}>Stop: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
-                    <div style={{ color: '#6EE7B7' }}>Targets: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
-                    <div style={{ color: '#CBD5E1' }}>Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
-                    <div style={{ color: '#94A3B8' }}>Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
+                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Risk + Execution</div>
+                  <div className="mt-1 grid gap-1 text-[0.76rem]">
+                    <div className="text-slate-200">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
+                    <div className="text-red-300">Stop: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
+                    <div className="text-emerald-300">Targets: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
+                    <div className="text-slate-300">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                    <div className="text-slate-400">Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
                   </div>
                 </div>
 
-                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '10px', padding: '0.7rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 800 }}>Options Snapshot</div>
-                  <div style={{ marginTop: '0.25rem', display: 'grid', gap: '0.25rem', fontSize: '0.76rem' }}>
-                    <div style={{ color: '#E2E8F0' }}>P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
-                    <div style={{ color: '#E2E8F0' }}>IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
-                    <div style={{ color: '#E2E8F0' }}>Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
-                    <div style={{ color: '#CBD5E1' }}>Contract: {result.primaryStrike ? `${result.primaryStrike.strike}${result.primaryStrike.type === 'call' ? 'C' : 'P'}` : 'N/A'}</div>
-                    <div style={{ color: '#94A3B8' }}>Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
+                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
+                  <div className="mt-1 grid gap-1 text-[0.76rem]">
+                    <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
+                    <div className="text-slate-200">IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
+                    <div className="text-slate-200">Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
+                    <div className="text-slate-300">Contract: {result.primaryStrike ? `${result.primaryStrike.strike}${result.primaryStrike.type === 'call' ? 'C' : 'P'}` : 'N/A'}</div>
+                    <div className="text-slate-400">Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style={{
-              marginTop: '-1rem',
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '10px',
-              padding: '0.5rem 0.65rem',
-              color: '#CBD5E1',
-              fontSize: '0.74rem',
-            }}>
-              <span style={{ color: '#64748B', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.64rem' }}>Trade Brief:</span>{' '}
+            <div className="-mt-4 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.5rem_0.65rem] text-[0.74rem] text-slate-300">
+              <span className="text-[0.64rem] font-extrabold uppercase text-slate-500">Trade Brief:</span>{' '}
               {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
             </div>
 
-            <div style={{
-              marginTop: '-0.95rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.45rem',
-              alignItems: 'center',
-            }}>
+            <div className="-mt-[0.95rem] flex flex-wrap items-center gap-[0.45rem]">
               {([
                 { key: 'evidence', label: 'Evidence', count: `${result.confluenceStack} TF` },
                 { key: 'contracts', label: 'Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
@@ -2018,29 +1896,15 @@ export default function OptionsConfluenceScanner() {
                 <button
                   key={section.key}
                   onClick={() => setTrapDoors((previousState) => ({ ...previousState, [section.key]: !previousState[section.key] }))}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.3rem 0.6rem',
-                    borderRadius: '999px',
-                    border: '1px solid var(--msp-border)',
-                    background: trapDoors[section.key] ? 'var(--msp-panel)' : 'var(--msp-panel-2)',
-                    color: trapDoors[section.key] ? 'var(--msp-text)' : 'var(--msp-text-muted)',
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
+                  className={`inline-flex cursor-pointer items-center gap-[0.35rem] rounded-full border border-[var(--msp-border)] px-[0.6rem] py-[0.3rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] ${trapDoors[section.key] ? 'bg-[var(--msp-panel)] text-[var(--msp-text)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
                 >
                   <span>{section.label}</span>
-                  <span style={{ color: '#64748B', fontWeight: 700, textTransform: 'none' }}>({section.count})</span>
+                  <span className="font-bold normal-case text-slate-500">({section.count})</span>
                 </button>
               ))}
             </div>
 
-            <div style={{ display: 'grid', gap: '0.45rem', marginTop: '-0.65rem' }}>
+            <div className="-mt-[0.65rem] grid gap-[0.45rem]">
               {([
                 { key: 'evidence', title: 'Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
                 { key: 'contracts', title: 'Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
@@ -2052,104 +1916,65 @@ export default function OptionsConfluenceScanner() {
                   <button
                     key={`collapsed-${door.key}`}
                     onClick={() => setTrapDoors((previousState) => ({ ...previousState, [door.key]: true }))}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      background: 'var(--msp-panel)',
-                      border: '1px dashed var(--msp-border)',
-                      borderRadius: '10px',
-                      padding: '0.58rem 0.7rem',
-                      cursor: 'pointer',
-                      display: 'grid',
-                      gap: '0.18rem',
-                    }}
+                    className="grid w-full cursor-pointer gap-[0.18rem] rounded-[10px] border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.7rem] text-left"
                   >
-                    <div style={{ color: '#E2E8F0', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <div className="text-[0.75rem] font-extrabold uppercase tracking-[0.04em] text-slate-200">
                       {door.title} • Collapsed
                     </div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{door.subtitle}</div>
-                    <div style={{ color: '#64748B', fontSize: '0.68rem', fontWeight: 700 }}>Click to expand</div>
+                    <div className="text-[0.72rem] text-slate-400">{door.subtitle}</div>
+                    <div className="text-[0.68rem] font-bold text-slate-500">Click to expand</div>
                   </button>
                 ))}
             </div>
 
             {trapDoors.evidence && focusMode && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border)',
-                borderRadius: '10px',
-                padding: '0.72rem 0.82rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '0.45rem',
-              }}>
-                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: thesisDirection === 'bullish' ? '#10B981' : thesisDirection === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{thesisDirection.toUpperCase()}</div></div>
-                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
-                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
-                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
-                <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
+              <div className="grid gap-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.72rem_0.82rem] [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Direction</div><div className={`font-black ${thesisDirection === 'bullish' ? 'text-emerald-500' : thesisDirection === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>{thesisDirection.toUpperCase()}</div></div>
+                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Confidence</div><div className="font-black text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
+                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Entry</div><div className="font-extrabold text-[var(--msp-text)]">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
+                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Invalidation</div><div className="font-extrabold text-red-300">{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
+                <div className="col-[1/-1]"><div className="text-[0.64rem] font-bold uppercase text-slate-500">Targets</div><div className="font-extrabold text-emerald-300">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
               </div>
             )}
 
             {trapDoors.evidence && terminalDecisionCard && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border-strong)',
-                borderLeft: `3px solid ${adaptiveModeMeta.color}`,
-                borderRadius: '14px',
-                padding: '0.95rem 1rem',
-                boxShadow: 'var(--msp-shadow)',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>AI Trade Command Card</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.86rem', fontWeight: 800 }}>Conviction {terminalDecisionCard.conviction}%</div>
+              <div className={`rounded-[14px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[0.95rem_1rem] shadow-[var(--msp-shadow)] ${adaptiveModeMeta.accentBorderClass}`}>
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">AI Trade Command Card</div>
+                  <div className="text-[0.86rem] font-extrabold text-slate-200">Conviction {terminalDecisionCard.conviction}%</div>
                 </div>
 
-                <div style={{ marginTop: '0.35rem', color: '#CBD5E1', fontSize: '0.74rem' }}>
-                  <span style={{ color: adaptiveModeMeta.color, fontWeight: 800 }}>TERMINAL MODE: {adaptiveModeMeta.label}</span>
-                  <span style={{ color: '#64748B' }}> • </span>
-                  <span style={{ color: '#94A3B8' }}>{adaptiveModeMeta.reason}</span>
+                <div className="mt-[0.35rem] text-[0.74rem] text-slate-300">
+                  <span className={`font-extrabold ${adaptiveModeMeta.accentTextClass}`}>TERMINAL MODE: {adaptiveModeMeta.label}</span>
+                  <span className="text-slate-500"> • </span>
+                  <span className="text-slate-400">{adaptiveModeMeta.reason}</span>
                 </div>
 
-                <div style={{
-                  marginTop: '0.55rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
-                  gap: '0.4rem',
-                }}>
-                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 900 }}>{terminalDecisionCard.direction}</div>
+                <div className="mt-[0.55rem] grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(175px,1fr))]">
+                  <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Direction</div>
+                    <div className="text-[0.82rem] font-black text-slate-50">{terminalDecisionCard.direction}</div>
                   </div>
-                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Best Setup</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.setup}</div>
+                  <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Best Setup</div>
+                    <div className="text-[0.82rem] font-extrabold text-slate-50">{terminalDecisionCard.setup}</div>
                   </div>
-                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.expectedMove}</div>
+                  <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Expected Move</div>
+                    <div className="text-[0.82rem] font-extrabold text-slate-50">{terminalDecisionCard.expectedMove}</div>
                   </div>
-                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div>
-                    <div style={{ color: '#FCA5A5', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.invalidation}</div>
+                  <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Invalidation</div>
+                    <div className="text-[0.82rem] font-extrabold text-red-300">{terminalDecisionCard.invalidation}</div>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '0.5rem', color: '#CBD5E1', fontSize: '0.78rem' }}>
-                  <span style={{ color: '#A7F3D0', fontWeight: 700 }}>Key Trigger:</span> {terminalDecisionCard.trigger}
+                <div className="mt-2 text-[0.78rem] text-slate-300">
+                  <span className="font-bold text-emerald-200">Key Trigger:</span> {terminalDecisionCard.trigger}
                 </div>
 
                 {adaptiveTerminalMode === 'TRANSITION_MODE' && (
-                  <div style={{
-                    marginTop: '0.5rem',
-                    background: 'var(--msp-panel-2)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '8px',
-                    padding: '0.45rem 0.55rem',
-                    color: 'var(--msp-muted)',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                  }}>
+                  <div className="mt-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem] text-[0.72rem] font-bold text-[var(--msp-muted)]">
                     SIGNAL TIMELINE: Flow shift → Momentum confirmation → Trigger validation
                   </div>
                 )}
@@ -2157,54 +1982,34 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.evidence && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: adaptiveModeMeta.layout.columns,
-              gap: '0.85rem',
-              alignItems: 'stretch',
-            }}>
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border)',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                display: 'grid',
-                gap: '0.45rem',
-                order: adaptiveModeMeta.layout.signalOrder,
-              }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Signal Stack</div>
+            <div className={`grid items-stretch gap-[0.85rem] ${adaptiveModeMeta.layout.columnsClass}`}>
+              <div className={`grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.signalOrderClass}`}>
+                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Signal Stack</div>
                 {terminalSignalStack.map((item) => (
-                  <div key={item.label} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem 0.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.74rem', fontWeight: 800 }}>
+                  <div key={item.label} className="rounded-lg bg-black/20 p-[0.45rem_0.5rem]">
+                    <div className="flex items-center justify-between gap-[0.4rem]">
+                      <div className="text-[0.74rem] font-extrabold text-slate-200">
                         {item.label}
                         {copilotPresence?.watchSet.includes(item.label) && (
-                          <span style={{ marginLeft: '6px', color: 'var(--msp-accent)', fontSize: '0.66rem', fontWeight: 700 }}>★ AI Watching</span>
+                          <span className="ml-1.5 text-[0.66rem] font-bold text-[var(--msp-accent)]">★ AI Watching</span>
                         )}
                       </div>
-                      <div style={{ color: 'var(--msp-muted)', fontSize: '0.74rem', fontWeight: 800 }}>{item.score}%</div>
+                      <div className="text-[0.74rem] font-extrabold text-[var(--msp-muted)]">{item.score}%</div>
                     </div>
-                    <div style={{ height: '5px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.25rem' }}>
-                      <div style={{ height: '100%', width: `${item.score}%`, background: 'var(--msp-accent)' }} />
+                    <div className="mt-1 h-[5px] overflow-hidden rounded-full bg-slate-500/25">
+                      <svg viewBox="0 0 100 1" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
+                        <rect x="0" y="0" width={Math.max(0, Math.min(item.score, 100))} height="1" rx="0.5" ry="0.5" fill="var(--msp-accent)" />
+                      </svg>
                     </div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.68rem', marginTop: '0.18rem' }}>{item.state} • {item.summary}</div>
+                    <div className="mt-[0.18rem] text-[0.68rem] text-slate-400">{item.state} • {item.summary}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border)',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                display: 'grid',
-                gap: '0.6rem',
-                order: adaptiveModeMeta.layout.marketOrder,
-                transform: 'scale(1)',
-              }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Surface</div>
+              <div className={`grid gap-[0.6rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.marketOrderClass}`}>
+                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Market Surface</div>
                 {confluenceRadar && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <div className="flex items-center justify-center">
                     <svg width="190" height="190" viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar Mini">
                       {confluenceRadar.ringPolygons.map((ring, idx) => (
                         <polygon key={`mini-ring-${idx}`} points={ring} fill="none" stroke="rgba(148,163,184,0.24)" strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.15 : 0.85} />
@@ -2216,56 +2021,41 @@ export default function OptionsConfluenceScanner() {
                     </svg>
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.35rem' }}>
-                  <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Current Price</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>${formatPrice(result.currentPrice)}</div>
+                <div className="grid grid-cols-2 gap-[0.35rem]">
+                  <div className="rounded-lg bg-black/20 p-[0.45rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Current Price</div>
+                    <div className="text-[0.8rem] font-extrabold text-slate-50">${formatPrice(result.currentPrice)}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
-                    <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
-                    <div style={{ color: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '#FCA5A5' : '#F8FAFC', fontSize: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '1rem' : '0.8rem', fontWeight: 800 }}>
+                  <div className="rounded-lg bg-black/20 p-[0.45rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Expected Move</div>
+                    <div className={`font-extrabold ${adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? 'text-[1rem] text-red-300' : 'text-[0.8rem] text-slate-50'}`}>
                       {result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border)',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                display: 'grid',
-                gap: '0.45rem',
-                order: adaptiveModeMeta.layout.execOrder,
-                opacity: adaptiveModeMeta.layout.execOpacity,
-              }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Execution Panel</div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry Zone</div>
-                  <div style={{ color: '#F8FAFC', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await setup'}</div>
+              <div className={`grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.execOrderClass} ${adaptiveModeMeta.layout.execOpacityClass}`}>
+                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Execution Panel</div>
+                <div className="rounded-lg bg-black/20 p-[0.45rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Entry Zone</div>
+                  <div className="text-[0.8rem] font-extrabold text-slate-50">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await setup'}</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Stop / Invalidation</div>
-                  <div style={{ color: '#FCA5A5', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : (result.tradeSnapshot?.risk?.invalidationReason || 'N/A')}</div>
+                <div className="rounded-lg bg-black/20 p-[0.45rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Stop / Invalidation</div>
+                  <div className="text-[0.8rem] font-extrabold text-red-300">{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : (result.tradeSnapshot?.risk?.invalidationReason || 'N/A')}</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.45rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Target / R:R</div>
-                  <div style={{ color: '#A7F3D0', fontSize: '0.8rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
+                <div className="rounded-lg bg-black/20 p-[0.45rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Target / R:R</div>
+                  <div className="text-[0.8rem] font-extrabold text-emerald-200">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
-                <div style={{ color: '#94A3B8', fontSize: '0.7rem' }}>Permission: <span style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontWeight: 800 }}>{tradePermission}</span></div>
+                <div className="text-[0.7rem] text-slate-400">Permission: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission}</span></div>
 
                 {copilotPresence && (
-                  <div style={{
-                    marginTop: '0.25rem',
-                    background: 'var(--msp-panel-2)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '8px',
-                    padding: '0.45rem 0.5rem',
-                  }}>
-                    <div style={{ color: 'var(--msp-accent)', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase' }}>Co-Pilot Suggestion</div>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.74rem', marginTop: '0.2rem', fontWeight: 700 }}>{copilotPresence.suggestion.action}</div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '0.15rem' }}>{copilotPresence.suggestion.reason}</div>
+                  <div className="mt-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.5rem]">
+                    <div className="text-[0.66rem] font-extrabold uppercase text-[var(--msp-accent)]">Co-Pilot Suggestion</div>
+                    <div className="mt-[0.2rem] text-[0.74rem] font-bold text-slate-200">{copilotPresence.suggestion.action}</div>
+                    <div className="mt-[0.15rem] text-[0.7rem] text-slate-400">{copilotPresence.suggestion.reason}</div>
                   </div>
                 )}
               </div>
@@ -2273,51 +2063,28 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.evidence && copilotPresence && copilotPresence.notices.length > 0 && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid rgba(148,163,184,0.26)',
-                borderRadius: '12px',
-                padding: '0.65rem 0.75rem',
-                display: 'grid',
-                gap: '0.42rem',
-              }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>Co-Pilot Notices</div>
+              <div className="grid gap-[0.42rem] rounded-xl border border-slate-400/25 bg-[var(--msp-panel)] p-[0.65rem_0.75rem]">
+                <div className="text-[0.68rem] font-bold uppercase text-slate-400">Co-Pilot Notices</div>
                 {copilotPresence.notices.map((notice, index) => (
-                  <div key={`${notice.title}-${index}`} style={{
-                    background: notice.level === 'warn' ? 'rgba(239,68,68,0.08)' : notice.level === 'action' ? 'rgba(16,185,129,0.08)' : 'rgba(148,163,184,0.08)',
-                    border: `1px solid ${notice.level === 'warn' ? 'rgba(239,68,68,0.25)' : notice.level === 'action' ? 'rgba(16,185,129,0.25)' : 'rgba(148,163,184,0.25)'}`,
-                    borderRadius: '8px',
-                    padding: '0.4rem 0.48rem',
-                  }}>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
+                  <div key={`${notice.title}-${index}`} className={`rounded-lg border p-[0.4rem_0.48rem] ${notice.level === 'warn' ? 'border-red-500/25 bg-red-500/10' : notice.level === 'action' ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-slate-400/25 bg-slate-400/10'}`}>
+                    <div className="text-[0.72rem] font-extrabold text-slate-200">
                       {notice.level === 'warn' ? '⚠️' : notice.level === 'action' ? '✅' : '⚡'} Co-Pilot Notice • {notice.title}
                     </div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '0.14rem' }}>{notice.message}</div>
+                    <div className="mt-[0.14rem] text-[0.7rem] text-slate-400">{notice.message}</div>
                   </div>
                 ))}
               </div>
             )}
 
             {trapDoors.evidence && confluenceRadar && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border-strong)',
-                borderRadius: '14px',
-                padding: '0.9rem 1rem',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>MSP Signature • Confluence Radar</div>
-                  <div style={{ color: 'var(--msp-accent)', fontWeight: 900, fontSize: '0.9rem' }}>Composite {confluenceRadar.composite}%</div>
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">MSP Signature • Confluence Radar</div>
+                  <div className="text-[0.9rem] font-black text-[var(--msp-accent)]">Composite {confluenceRadar.composite}%</div>
                 </div>
 
-                <div style={{
-                  marginTop: '0.55rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(220px, 260px) minmax(0, 1fr)',
-                  gap: '0.75rem',
-                  alignItems: 'center',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div className="mt-[0.55rem] grid items-center gap-3 [grid-template-columns:minmax(220px,260px)_minmax(0,1fr)]">
+                  <div className="flex justify-center">
                     <svg width={confluenceRadar.size} height={confluenceRadar.size} viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar">
                       {confluenceRadar.ringPolygons.map((ring, idx) => (
                         <polygon
@@ -2365,11 +2132,11 @@ export default function OptionsConfluenceScanner() {
                     </svg>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '0.35rem' }}>
+                  <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))]">
                     {confluenceRadar.axes.map((axis) => (
-                      <div key={axis.key} style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>{axis.key}</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.8rem', fontWeight: 800 }}>{axis.value}%</div>
+                      <div key={axis.key} className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                        <div className="text-[0.64rem] font-bold uppercase text-slate-500">{axis.key}</div>
+                        <div className="text-[0.8rem] font-extrabold text-slate-200">{axis.value}%</div>
                       </div>
                     ))}
                   </div>
@@ -2378,130 +2145,105 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.evidence && (
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: `3px solid ${modeAccent}`,
-              borderRadius: '14px',
-              padding: '0.8rem 0.95rem',
-              boxShadow: 'var(--msp-shadow)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Lens State</div>
-                <div style={{ color: modeAccent, fontSize: '0.92rem', fontWeight: 900, letterSpacing: '0.4px' }}>{lensDisplayMode}</div>
+            <div className={`rounded-[14px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[0.8rem_0.95rem] shadow-[var(--msp-shadow)] ${modeAccentBorderClass}`}>
+              <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                <div className="text-[0.72rem] font-bold uppercase text-slate-400">Institutional Lens State</div>
+                <div className={`text-[0.92rem] font-black tracking-[0.4px] ${modeAccentClass}`}>{lensDisplayMode}</div>
               </div>
-              <div style={{ color: '#CBD5E1', fontSize: '0.78rem', marginTop: '0.4rem' }}>
+              <div className="mt-[0.4rem] text-[0.78rem] text-slate-300">
                 {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 NO TRADE ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and wait for stability.'}
                 {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Execution intentionally de-emphasized.'}
                 {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
                 {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Execution panel prioritized; non-essential analysis collapsed.'}
                 {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Live management mode active. Focus on risk, flow shifts, and exit discipline.' : 'Extreme confidence focus mode active. Only execution-critical data remains visible.')}
               </div>
-              <div style={{
-                marginTop: '0.5rem',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(165px, 1fr))',
-                gap: '0.35rem',
-              }}>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>MRI Regime</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel?.regime || 'UNKNOWN'}</div>
+              <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(165px,1fr))]">
+                <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">MRI Regime</div>
+                  <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel?.regime || 'UNKNOWN'}</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>MRI Confidence</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel ? `${Math.round(marketRegimeIntel.confidence * 100)}%` : '—'}</div>
+                <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">MRI Confidence</div>
+                  <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel ? `${Math.round(marketRegimeIntel.confidence * 100)}%` : '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Adaptive Confidence</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{Math.round(adaptiveConfidenceScore)}% ({adaptiveConfidenceBand})</div>
+                <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">Adaptive Confidence</div>
+                  <div className="text-[0.77rem] font-extrabold text-slate-200">{Math.round(adaptiveConfidenceScore)}% ({adaptiveConfidenceBand})</div>
                 </div>
-                <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk Modifier</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>{marketRegimeIntel?.risk_modifier?.toFixed(2) ?? '—'}</div>
+                <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">Risk Modifier</div>
+                  <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel?.risk_modifier?.toFixed(2) ?? '—'}</div>
                 </div>
               </div>
             </div>
             )}
 
             {trapDoors.evidence && result.institutionalIntent && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border-strong)',
-                borderRadius: '14px',
-                padding: '0.85rem 0.95rem',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Intent</div>
-                  <div style={{
-                    color: result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#FCA5A5' : 'var(--msp-accent)',
-                    fontSize: '0.84rem',
-                    fontWeight: 900,
-                    letterSpacing: '0.3px',
-                  }}>
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Institutional Intent</div>
+                  <div className={`text-[0.84rem] font-black tracking-[0.3px] ${result.institutionalIntent.primary_intent === 'UNKNOWN' ? 'text-red-300' : 'text-[var(--msp-accent)]'}`}>
                     {result.institutionalIntent.primary_intent}
                   </div>
                 </div>
 
                 {result.institutionalIntent.primary_intent === 'UNKNOWN' ? (
-                  <div style={{ color: '#FCA5A5', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                  <div className="mt-2 text-[0.8rem] text-red-300">
                     🚫 {result.institutionalIntent.reason === 'DATA_INSUFFICIENT' ? 'Intent unavailable — DATA_INSUFFICIENT' : 'Intent unavailable'}
                   </div>
                 ) : (
                   <>
-                    <div style={{ marginTop: '0.45rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#94A3B8', marginBottom: '0.2rem' }}>
+                    <div className="mt-[0.45rem]">
+                      <div className="mb-[0.2rem] flex justify-between text-[0.72rem] text-slate-400">
                         <span>Confidence</span>
                         <span>{Math.round(result.institutionalIntent.intent_confidence * 100)}%</span>
                       </div>
-                      <div style={{ height: '6px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%',
-                          width: `${Math.round(result.institutionalIntent.intent_confidence * 100)}%`,
-                            background: 'var(--msp-accent)',
-                        }} />
+                      <div className="h-[6px] overflow-hidden rounded-full bg-slate-500/25">
+                        <svg viewBox="0 0 100 1" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
+                          <rect
+                            x="0"
+                            y="0"
+                            width={Math.max(0, Math.min(Math.round(result.institutionalIntent.intent_confidence * 100), 100))}
+                            height="1"
+                            rx="0.5"
+                            ry="0.5"
+                            fill="var(--msp-accent)"
+                          />
+                        </svg>
                       </div>
                     </div>
 
-                    <div style={{
-                      marginTop: '0.55rem',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-                      gap: '0.35rem',
-                    }}>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Path</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.77rem', fontWeight: 800 }}>
+                    <div className="mt-[0.55rem] grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+                      <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                        <div className="text-[0.64rem] font-bold uppercase text-slate-500">Expected Path</div>
+                        <div className="text-[0.77rem] font-extrabold text-slate-200">
                           {result.institutionalIntent.expected_path === 'chop' ? '↔ CHOP' :
                            result.institutionalIntent.expected_path === 'mean-revert' ? '↩ MEAN REVERT' :
                            result.institutionalIntent.expected_path === 'expand' ? '↗ EXPAND' :
                            '🚀 EXPANSION CONTINUATION'}
                         </div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.42rem 0.5rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Permission Bias</div>
-                        <div style={{
-                          color: result.institutionalIntent.permission_bias === 'LONG' ? '#10B981' : result.institutionalIntent.permission_bias === 'SHORT' ? '#EF4444' : '#F59E0B',
-                          fontSize: '0.77rem',
-                          fontWeight: 900,
-                        }}>
+                      <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                        <div className="text-[0.64rem] font-bold uppercase text-slate-500">Permission Bias</div>
+                        <div className={`text-[0.77rem] font-black ${result.institutionalIntent.permission_bias === 'LONG' ? 'text-emerald-500' : result.institutionalIntent.permission_bias === 'SHORT' ? 'text-red-500' : 'text-amber-500'}`}>
                           {result.institutionalIntent.permission_bias}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.2rem' }}>
+                    <div className="mt-2 grid gap-[0.2rem]">
                       {(result.institutionalIntent.notes || []).slice(0, 3).map((note, idx) => (
-                        <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>• {note}</div>
+                        <div key={idx} className="text-[0.76rem] text-slate-300">• {note}</div>
                       ))}
                     </div>
 
-                    <details style={{ marginTop: '0.45rem' }}>
-                      <summary style={{ color: '#94A3B8', fontSize: '0.72rem', cursor: 'pointer' }}>Show intent probabilities</summary>
-                      <div style={{ marginTop: '0.4rem', display: 'grid', gap: '0.2rem' }}>
+                    <details className="mt-[0.45rem]">
+                      <summary className="cursor-pointer text-[0.72rem] text-slate-400">Show intent probabilities</summary>
+                      <div className="mt-[0.4rem] grid gap-[0.2rem]">
                         {(Object.entries(result.institutionalIntent.intent_probabilities) as Array<[InstitutionalIntentState, number]>)
                           .sort((a, b) => b[1] - a[1])
                           .map(([intent, probability]) => (
-                            <div key={intent} style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <div key={intent} className="flex justify-between text-[0.74rem] text-slate-300">
                               <span>{intent}</span>
                               <span>{(probability * 100).toFixed(1)}%</span>
                             </div>
@@ -2514,62 +2256,54 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.evidence && (institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
-              <div style={{
-                background: 'var(--msp-panel)',
-                border: '1px solid var(--msp-border-strong)',
-                borderLeft: `3px solid ${modeAccent}`,
-                borderRadius: '18px',
-                padding: '1rem 1.1rem',
-                display: 'grid',
-                gap: '0.9rem',
-              }}>
+              <div className={`grid gap-[0.9rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[1rem_1.1rem] ${modeAccentBorderClass}`}>
                 {institutionalLensMode === 'ARMED' ? (
                   <>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.35px' }}>████ EXECUTION CARD ████</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.55rem' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Entry Zone</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await trigger'}</div>
+                    <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ EXECUTION CARD ████</div>
+                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Entry Zone</div>
+                        <div className="text-[0.88rem] font-extrabold text-slate-200">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await trigger'}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Invalidation</div>
-                        <div style={{ color: '#FCA5A5', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.stopLoss.toFixed(2)}` : 'N/A'}</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Invalidation</div>
+                        <div className="text-[0.88rem] font-extrabold text-red-300">{result.tradeLevels ? `${result.tradeLevels.stopLoss.toFixed(2)}` : 'N/A'}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Targets</div>
-                        <div style={{ color: '#6EE7B7', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} / ${result.tradeLevels.target2?.price?.toFixed(2) || '—'}` : 'N/A'}</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Targets</div>
+                        <div className="text-[0.88rem] font-extrabold text-emerald-300">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} / ${result.tradeLevels.target2?.price?.toFixed(2) || '—'}` : 'N/A'}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>R:R + Size</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : '—'} • {result.maxRiskPercent}%</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">R:R + Size</div>
+                        <div className="text-[0.88rem] font-extrabold text-slate-200">{result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : '—'} • {result.maxRiskPercent}%</div>
                       </div>
                     </div>
-                    <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
-                      <span style={{ color: '#A7F3D0', fontWeight: 700 }}>Why this trade:</span> {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
+                    <div className="text-[0.8rem] text-slate-300">
+                      <span className="font-bold text-emerald-200">Why this trade:</span> {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
                     </div>
-                    <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
-                      <span style={{ color: '#FCA5A5', fontWeight: 700 }}>Risk summary:</span> {riskState} • {decisionTrigger}
+                    <div className="text-[0.8rem] text-slate-300">
+                      <span className="font-bold text-red-300">Risk summary:</span> {riskState} • {decisionTrigger}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.95rem', fontWeight: 900, letterSpacing: '0.35px' }}>████ LIVE MANAGEMENT ████</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.55rem' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Live PnL</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>Track in Journal / Broker</div>
+                    <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ LIVE MANAGEMENT ████</div>
+                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Live PnL</div>
+                        <div className="text-[0.88rem] font-extrabold text-slate-200">Track in Journal / Broker</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Risk Exposure</div>
-                        <div style={{ color: '#FCA5A5', fontSize: '0.88rem', fontWeight: 800 }}>{result.maxRiskPercent}% max risk • {riskState}</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Risk Exposure</div>
+                        <div className="text-[0.88rem] font-extrabold text-red-300">{result.maxRiskPercent}% max risk • {riskState}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Flow Changes</div>
-                        <div style={{ color: '#E2E8F0', fontSize: '0.88rem', fontWeight: 800 }}>{institutionalFlowState}</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow Changes</div>
+                        <div className="text-[0.88rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '10px', padding: '0.55rem 0.65rem' }}>
-                        <div style={{ color: '#64748B', fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase' }}>Exit Conditions</div>
-                        <div style={{ color: '#6EE7B7', fontSize: '0.88rem', fontWeight: 800 }}>{result.tradeSnapshot?.risk?.invalidationReason || 'Stop/invalidation breached'}</div>
+                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
+                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Exit Conditions</div>
+                        <div className="text-[0.88rem] font-extrabold text-emerald-300">{result.tradeSnapshot?.risk?.invalidationReason || 'Stop/invalidation breached'}</div>
                       </div>
                     </div>
                   </>
@@ -2581,189 +2315,107 @@ export default function OptionsConfluenceScanner() {
               <>
 
             {/* Institutional Header Layer (3-second trader test) */}
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: '3px solid var(--msp-border-strong)',
-              borderRadius: '16px',
-              padding: '0.9rem 1rem',
-              boxShadow: 'var(--msp-shadow)',
-            }}>
-              <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.45px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
+            <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem] shadow-[var(--msp-shadow)]">
+              <div className="mb-[0.6rem] text-[0.72rem] font-extrabold uppercase tracking-[0.45px] text-[var(--msp-muted)]">
                 Institutional State
               </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                gap: '0.45rem',
-              }}>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Flow State</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{institutionalFlowState}</div>
+              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow State</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Market Regime</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{institutionalMarketRegime}</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Market Regime</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalMarketRegime}</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Trade Permission</div>
-                  <div style={{
-                    color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B',
-                    fontWeight: 900,
-                    fontSize: '0.9rem',
-                  }}>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Trade Permission</div>
+                  <div className={`font-black ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
                     {tradePermission}
                   </div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
               </div>
             </div>
 
             {/* Primary Intelligence Panel (Cognitive Anchor) */}
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: '3px solid var(--msp-border-strong)',
-              borderRadius: '18px',
-              padding: '1.1rem 1.2rem',
-              minHeight: 'clamp(220px, 32vh, 380px)',
-              boxShadow: 'var(--msp-shadow)',
-              display: 'grid',
-              gap: '0.8rem',
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-              }}>
-                <div style={{ color: '#F8FAFC', fontWeight: 900, fontSize: '0.95rem', letterSpacing: '0.4px' }}>
+            <div className="grid min-h-[clamp(220px,32vh,380px)] gap-[0.8rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1.1rem_1.2rem] shadow-[var(--msp-shadow)]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[0.95rem] font-black tracking-[0.4px] text-slate-50">
                   ⭐ MSP AI SIGNAL
                 </div>
-                <div style={{
-                  fontSize: '0.72rem',
-                  color: 'var(--msp-muted)',
-                  background: 'var(--msp-panel-2)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '999px',
-                  padding: '2px 8px',
-                  fontWeight: 700,
-                }}>
+                <div className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.72rem] font-bold text-[var(--msp-muted)]">
                   Powered by Nasdaq BX + FMV Options (LIVE)
                 </div>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '0.5rem',
-                alignItems: 'start',
-              }}>
-                <div style={{ color: '#CBD5E1', fontSize: '0.83rem', lineHeight: 1.5 }}>
-                  <div><span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Market Mode:</span> <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{marketStateLabel || 'Unknown'} {thesisDirection === 'bullish' ? '↑' : thesisDirection === 'bearish' ? '↓' : '→'}</span></div>
-                  <div><span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Setup Type:</span> <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{setupLabel || 'Awaiting Confirmation'}</span></div>
+              <div className="grid items-start gap-2 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+                <div className="text-[0.83rem] leading-[1.5] text-slate-300">
+                  <div><span className="font-bold uppercase text-slate-500">Market Mode:</span> <span className="font-extrabold text-slate-50">{marketStateLabel || 'Unknown'} {thesisDirection === 'bullish' ? '↑' : thesisDirection === 'bearish' ? '↓' : '→'}</span></div>
+                  <div><span className="font-bold uppercase text-slate-500">Setup Type:</span> <span className="font-extrabold text-slate-50">{setupLabel || 'Awaiting Confirmation'}</span></div>
                 </div>
-                <div style={{
-                  justifySelf: 'end',
-                  textAlign: 'right',
-                  background: `${commandStatusColor}1F`,
-                  border: `1px solid ${commandStatusColor}55`,
-                  borderRadius: '10px',
-                  padding: '0.45rem 0.6rem',
-                  minWidth: '190px',
-                }}>
-                  <div style={{ color: '#64748B', textTransform: 'uppercase', fontSize: '0.66rem', fontWeight: 700 }}>Confidence Score</div>
-                  <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1.15rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                <div className={`min-w-[190px] justify-self-end rounded-[10px] p-[0.45rem_0.6rem] text-right ${commandStatusToneCardClass}`}>
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence Score</div>
+                  <div className={`text-[1.15rem] font-black ${commandStatusClass}`}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
               </div>
 
-              <div style={{
-                background: 'var(--msp-panel-2)',
-                border: '1px solid var(--msp-border)',
-                borderRadius: '12px',
-                padding: '0.72rem',
-                display: 'grid',
-                gap: '0.45rem',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
+              <div className="grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.72rem]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-accent)]">
                     MSP AI Personality Match
                   </div>
                   {adaptiveMatch?.hasProfile && (
-                    <div style={{
-                      color: adaptiveMatch.noTradeBias ? '#EF4444' : '#10B981',
-                      fontWeight: 800,
-                      fontSize: '0.74rem',
-                      textTransform: 'uppercase',
-                    }}>
+                    <div className={adaptiveMatch.noTradeBias ? 'font-extrabold text-red-500' : 'font-extrabold text-emerald-500'}>
                       {adaptiveMatch.noTradeBias ? 'NO-TRADE FILTER ACTIVE' : 'PROFILE ALIGNED'}
                     </div>
                   )}
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-                  gap: '0.4rem',
-                  alignItems: 'center',
-                }}>
+                <div className="grid items-center gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
                   <div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.67rem', textTransform: 'uppercase', fontWeight: 700 }}>Setup Fit Score</div>
-                    <div style={{ color: '#F8FAFC', fontSize: '1.02rem', fontWeight: 900 }}>
+                    <div className="text-[0.67rem] font-bold uppercase text-slate-400">Setup Fit Score</div>
+                    <div className="text-[1.02rem] font-black text-slate-50">
                       {adaptiveMatch?.personalityMatch ?? 50}%
                     </div>
                   </div>
                   <div>
-                    <div style={{ color: '#94A3B8', fontSize: '0.67rem', textTransform: 'uppercase', fontWeight: 700 }}>Adaptive Confidence</div>
-                    <div style={{
-                      color: (adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? '#10B981' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? '#F59E0B' : '#EF4444',
-                      fontSize: '1.02rem',
-                      fontWeight: 900,
-                    }}>
+                    <div className="text-[0.67rem] font-bold uppercase text-slate-400">Adaptive Confidence</div>
+                    <div className={`text-[1.02rem] font-black ${(adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? 'text-emerald-500' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                       {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}%
                     </div>
                   </div>
-                  <div style={{ color: '#94A3B8', fontSize: '0.72rem', textAlign: 'right' }}>
+                  <div className="text-right text-[0.72rem] text-slate-400">
                     {adaptiveMatch?.hasProfile
                       ? `Profile from ${adaptiveMatch.sampleSize} closed trades (${adaptiveMatch.wins} wins)`
                       : (personalityLoaded ? 'Profile warming up from Journal data' : 'Loading Journal profile...')}
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gap: '0.25rem' }}>
+                <div className="grid gap-1">
                   {(adaptiveMatch?.reasons || ['Build profile by logging and closing trades in Trade Journal']).map((reason, idx) => (
-                    <div key={idx} style={{ color: '#E2E8F0', fontSize: '0.78rem' }}>✔ {reason}</div>
+                    <div key={idx} className="text-[0.78rem] text-slate-200">✔ {reason}</div>
                   ))}
                 </div>
               </div>
 
               {result.institutionalFilter && (
-                <div style={{
-                  background: 'rgba(2,6,23,0.28)',
-                  border: `1px solid ${result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.45)' : 'rgba(148,163,184,0.35)'}`,
-                  borderRadius: '12px',
-                  padding: '0.65rem 0.72rem',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-                    <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
+                <div className={`rounded-xl bg-slate-950/30 p-[0.65rem_0.72rem] ${result.institutionalFilter.noTrade ? 'border border-red-500/45' : 'border border-slate-400/35'}`}>
+                  <div className="mb-[0.35rem] flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">
                       Institutional Filters
                     </div>
-                    <div style={{
-                      color: result.institutionalFilter.noTrade ? '#EF4444' : '#10B981',
-                      fontWeight: 800,
-                      fontSize: '0.76rem',
-                    }}>
+                    <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-red-500' : 'text-emerald-500'}`}>
                       FINAL QUALITY: {result.institutionalFilter.finalGrade} ({Number(result.institutionalFilter.finalScore ?? 0).toFixed(0)})
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gap: '0.2rem' }}>
+                  <div className="grid gap-[0.2rem]">
                     {(result.institutionalFilter.filters || []).slice(0, 4).map((filter, idx) => (
-                      <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
+                      <div key={idx} className="text-[0.74rem] text-slate-300">
                         {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
                       </div>
                     ))}
@@ -2780,48 +2432,31 @@ export default function OptionsConfluenceScanner() {
               />
               <EvolutionStatusCard compact />
 
-              <div style={{
-                background: 'rgba(0,0,0,0.2)',
-                border: '1px solid rgba(148,163,184,0.2)',
-                borderRadius: '12px',
-                padding: '0.75rem',
-              }}>
-                <div style={{ color: '#A7F3D0', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.45rem' }}>
+              <div className="rounded-xl border border-slate-400/20 bg-black/20 p-3">
+                <div className="mb-[0.45rem] text-[0.75rem] font-extrabold uppercase text-emerald-200">
                   Why This Exists
                 </div>
-                <div style={{ display: 'grid', gap: '0.32rem' }}>
+                <div className="grid gap-[0.32rem]">
                   {primaryWhyItems.slice(0, 3).map((reason, idx) => (
-                    <div key={idx} style={{ color: '#E2E8F0', fontSize: '0.8rem' }}>✔ {reason}</div>
+                    <div key={idx} className="text-[0.8rem] text-slate-200">✔ {reason}</div>
                   ))}
                 </div>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '0.5rem',
-                alignItems: 'center',
-              }}>
-                <div style={{ color: '#CBD5E1', fontSize: '0.8rem' }}>
-                  <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Risk State:</span>{' '}
-                  <span style={{ color: riskState === 'NORMAL' ? '#10B981' : riskState === 'ELEVATED' ? '#F59E0B' : '#EF4444', fontWeight: 800 }}>{riskState}</span>
+              <div className="grid items-center gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                <div className="text-[0.8rem] text-slate-300">
+                  <span className="font-bold uppercase text-slate-500">Risk State:</span>{' '}
+                  <span className={`font-extrabold ${riskState === 'NORMAL' ? 'text-emerald-500' : riskState === 'ELEVATED' ? 'text-amber-500' : 'text-red-500'}`}>{riskState}</span>
                 </div>
-                <div style={{ color: '#CBD5E1', fontSize: '0.8rem', textAlign: 'right' }}>
-                  <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Primary Action:</span>{' '}
-                  <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{decisionTrigger.toUpperCase()}</span>
+                <div className="text-right text-[0.8rem] text-slate-300">
+                  <span className="font-bold uppercase text-slate-500">Primary Action:</span>{' '}
+                  <span className="font-extrabold text-slate-50">{decisionTrigger.toUpperCase()}</span>
                 </div>
               </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                fontSize: '0.72rem',
-              }}>
-                <div style={{ color: '#A7F3D0' }}>LIVE DATA STATUS: Nasdaq BX ✔ • FMV Options ✔</div>
-                <div style={{ color: '#94A3B8' }}>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[0.72rem]">
+                <div className="text-emerald-200">LIVE DATA STATUS: Nasdaq BX ✔ • FMV Options ✔</div>
+                <div className="text-slate-400">
                   {liveLatencySeconds !== null ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
                 </div>
               </div>
@@ -2829,66 +2464,36 @@ export default function OptionsConfluenceScanner() {
 
             {/* Decision Ladder - Institutional validation pipeline */}
             {institutionalLensMode === 'OBSERVE' && (
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderRadius: '14px',
-              padding: '0.9rem 1rem',
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '0.75rem',
-                flexWrap: 'wrap',
-                marginBottom: '0.8rem',
-              }}>
-                <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.9rem', letterSpacing: '0.4px' }}>
+            <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem]">
+              <div className="mb-[0.8rem] flex flex-wrap items-center justify-between gap-3">
+                <div className="text-[0.9rem] font-extrabold tracking-[0.4px] text-slate-200">
                   🪜 DECISION LADDER
                 </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.74rem',
-                }}>
-                  <span style={{ color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700 }}>Trade Pipeline:</span>
-                  <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{pipelineComplete} / {ladderSteps.length} Complete</span>
-                  <span style={{ color: '#64748B' }}>•</span>
-                  <span style={{
-                    color: pipelineStatus === 'READY' ? '#10B981' : pipelineStatus === 'WAITING' ? '#F59E0B' : '#EF4444',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                  }}>
+                <div className="flex items-center gap-2 text-[0.74rem]">
+                  <span className="font-bold uppercase text-slate-400">Trade Pipeline:</span>
+                  <span className="font-extrabold text-slate-200">{pipelineComplete} / {ladderSteps.length} Complete</span>
+                  <span className="text-slate-500">•</span>
+                  <span className={`uppercase font-extrabold ${pipelineStatus === 'READY' ? 'text-emerald-500' : pipelineStatus === 'WAITING' ? 'text-amber-500' : 'text-red-500'}`}>
                     {pipelineStatus}
                   </span>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <div className="grid gap-2">
                 {ladderSteps.map((step, index) => {
                   const visual = stateVisual(step.state);
                   return (
-                    <div key={step.title} style={{ display: 'grid', gap: '0.45rem' }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
-                        background: visual.bg,
-                        border: `1px solid ${visual.border}`,
-                        borderRadius: '10px',
-                        padding: '0.55rem 0.7rem',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                          <span style={{ color: visual.color, fontSize: '0.85rem', fontWeight: 800 }}>{visual.icon}</span>
-                          <span style={{ color: '#E2E8F0', fontSize: '0.78rem', fontWeight: 700 }}>{step.title}</span>
+                    <div key={step.title} className="grid gap-[0.45rem]">
+                      <div className={`flex items-center justify-between gap-2 rounded-[10px] p-[0.55rem_0.7rem] ${visual.containerClass}`}>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={`text-[0.85rem] font-extrabold ${visual.textClass}`}>{visual.icon}</span>
+                          <span className="text-[0.78rem] font-bold text-slate-200">{step.title}</span>
                         </div>
-                        <span style={{ color: visual.color, fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{visual.label}</span>
+                        <span className={`text-[0.68rem] font-extrabold uppercase ${visual.textClass}`}>{visual.label}</span>
                       </div>
-                      <div style={{ color: '#94A3B8', fontSize: '0.74rem', paddingLeft: '0.35rem' }}>{step.detail}</div>
+                      <div className="pl-[0.35rem] text-[0.74rem] text-slate-400">{step.detail}</div>
                       {index < ladderSteps.length - 1 && (
-                        <div style={{ color: '#64748B', fontSize: '0.74rem', paddingLeft: '0.35rem' }}>↓</div>
+                        <div className="pl-[0.35rem] text-[0.74rem] text-slate-500">↓</div>
                       )}
                     </div>
                   );
@@ -2899,63 +2504,32 @@ export default function OptionsConfluenceScanner() {
 
             {/* Trader Eye Path Layout (Z-Flow) */}
             {institutionalLensMode === 'OBSERVE' && (
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '16px',
-              padding: '1rem',
-              display: 'grid',
-              gap: '0.9rem',
-            }}>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.4px' }}>
+            <div className="grid gap-[0.9rem] rounded-2xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[0.85rem] font-extrabold tracking-[0.4px] text-slate-200">
                   👁️ TRADER EYE PATH
                 </div>
-                <div style={{ color: '#64748B', fontSize: '0.72rem' }}>Left → Center → Right → Down</div>
+                <div className="text-[0.72rem] text-slate-500">Left → Center → Right → Down</div>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                gap: '0.45rem',
-              }}>
+              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(130px,1fr))]">
                 {heatSignalStrip.map((item) => (
-                  <div key={item.label} style={{
-                    background: 'rgba(0,0,0,0.2)',
-                    border: '1px solid rgba(148,163,184,0.25)',
-                    borderRadius: '8px',
-                    padding: '0.42rem 0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.45rem',
-                    fontSize: '0.7rem',
-                  }}>
-                    <span style={{ color: '#94A3B8', fontWeight: 700 }}>{item.label}</span>
-                    <span style={{ color: '#E2E8F0', fontWeight: 700 }}>{item.state} {item.value}</span>
+                  <div key={item.label} className="flex items-center justify-between gap-[0.45rem] rounded-lg border border-slate-400/25 bg-black/20 p-[0.42rem_0.5rem] text-[0.7rem]">
+                    <span className="font-bold text-slate-400">{item.label}</span>
+                    <span className="font-bold text-slate-200">{item.state} {item.value}</span>
                   </div>
                 ))}
               </div>
 
               {/* Z-Flow 2x2: info-left/action-right */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                gap: '0.7rem',
-              }}>
+              <div className="grid gap-[0.7rem] [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
                 {/* Top Left: Bias / Regime / Trend */}
-                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
-                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Left • Market Condition</div>
-                  <div style={{ color: '#F8FAFC', fontWeight: 900, fontSize: '1rem', marginBottom: '0.3rem' }}>
+                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
+                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">Top Left • Market Condition</div>
+                  <div className="mb-[0.3rem] text-[1rem] font-black text-slate-50">
                     {result.symbol} — {thesisDirection.toUpperCase()} BIAS
                   </div>
-                  <div style={{ color: '#CBD5E1', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                  <div className="text-[0.78rem] leading-[1.45] text-slate-300">
                     <div>Regime: {marketStateLabel || 'Unknown'}</div>
                     <div>Trend Alignment: {trendStrength}</div>
                     <div>Session: {result.entryTiming.marketSession || 'n/a'}</div>
@@ -2963,27 +2537,21 @@ export default function OptionsConfluenceScanner() {
                 </div>
 
                 {/* Top Right: Setup Status */}
-                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
-                  <div style={{ color: '#FCD34D', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Right • Setup Status</div>
-                  <div style={{
-                    background: `${commandStatusColor}20`,
-                    border: `1px solid ${commandStatusColor}66`,
-                    borderRadius: '10px',
-                    padding: '0.55rem 0.65rem',
-                    marginBottom: '0.4rem',
-                  }}>
-                    <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1rem' }}>{commandStatus}</div>
-                    <div style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>Pipeline {pipelineComplete}/{ladderSteps.length} complete</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
+                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-amber-300">Top Right • Setup Status</div>
+                  <div className={`mb-[0.4rem] rounded-[10px] p-[0.55rem_0.65rem] ${commandStatusToneCardClass}`}>
+                    <div className={`text-[1rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
+                    <div className="text-[0.76rem] text-slate-300">Pipeline {pipelineComplete}/{ladderSteps.length} complete</div>
                   </div>
-                  <div style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>
+                  <div className="text-[0.76rem] text-slate-300">
                     Confidence {(result.compositeScore?.confidence ?? 0).toFixed(0)}% • Data {dataHealth}
                   </div>
                 </div>
 
                 {/* Bottom Left: Pattern + Confluence */}
-                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
-                  <div style={{ color: '#A7F3D0', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Bottom Left • Pattern + Confluence</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
+                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-emerald-200">Bottom Left • Pattern + Confluence</div>
+                  <div className="text-[0.78rem] leading-[1.45] text-slate-200">
                     <div>Pattern: {hasConfirmedPattern && bestPattern ? bestPattern.name : 'No clean pattern'}</div>
                     <div>HTF: {result.confluenceStack >= 3 ? 'Aligned' : 'Mixed'}</div>
                     <div>Confluence: {(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
@@ -2992,9 +2560,9 @@ export default function OptionsConfluenceScanner() {
                 </div>
 
                 {/* Bottom Right: Execution + Risk */}
-                <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
-                  <div style={{ color: '#C4B5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Bottom Right • Execution + Risk</div>
-                  <div style={{ color: '#E2E8F0', fontSize: '0.77rem', lineHeight: 1.45 }}>
+                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
+                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-violet-300">Bottom Right • Execution + Risk</div>
+                  <div className="text-[0.77rem] leading-[1.45] text-slate-200">
                     <div>ENTRY: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'WAIT'}</div>
                     <div>STOP: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
                     <div>R:R: {result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'N/A'}</div>
@@ -3004,47 +2572,35 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               {/* Dominant Trader Decision Block */}
-              <div style={{
-                background: 'var(--msp-panel-2)',
-                border: '1px solid var(--msp-border-strong)',
-                borderLeft: '3px solid var(--msp-border)',
-                boxShadow: 'var(--msp-shadow)',
-                borderRadius: '12px',
-                padding: '0.8rem 0.9rem',
-              }}>
-                <div style={{ color: '#94A3B8', fontSize: '0.69rem', textTransform: 'uppercase', letterSpacing: '0.45px', marginBottom: '0.3rem' }}>
+              <div className="rounded-xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.8rem_0.9rem] shadow-[var(--msp-shadow)]">
+                <div className="mb-[0.3rem] text-[0.69rem] uppercase tracking-[0.45px] text-slate-400">
                   Trader Decision
                 </div>
-                <div style={{ color: commandStatusColor, fontWeight: 900, fontSize: '1.05rem', marginBottom: '0.45rem' }}>
+                <div className={`mb-[0.45rem] text-[1.05rem] font-black ${commandStatusClass}`}>
                   SETUP STATUS: {commandStatus}
                 </div>
 
-                <div style={{ color: '#CBD5E1', fontSize: '0.77rem', marginBottom: '0.35rem' }}>
-                  <span style={{ color: '#F8FAFC', fontWeight: 700 }}>Reason:</span>
+                <div className="mb-[0.35rem] text-[0.77rem] text-slate-300">
+                  <span className="font-bold text-slate-50">Reason:</span>
                 </div>
-                <div style={{ display: 'grid', gap: '0.25rem', marginBottom: '0.55rem' }}>
+                <div className="mb-[0.55rem] grid gap-1">
                   {(decisionReasons.length ? decisionReasons : ['Momentum divergence', 'Liquidity below ideal threshold', 'Confluence below activation threshold']).map((reason, idx) => (
-                    <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.76rem' }}>• {reason}</div>
+                    <div key={idx} className="text-[0.76rem] text-slate-300">• {reason}</div>
                   ))}
                 </div>
 
-                <div style={{ color: '#CBD5E1', fontSize: '0.77rem' }}>
-                  <span style={{ color: '#F8FAFC', fontWeight: 700 }}>Next Trigger:</span> {decisionTrigger}
+                <div className="text-[0.77rem] text-slate-300">
+                  <span className="font-bold text-slate-50">Next Trigger:</span> {decisionTrigger}
                 </div>
-                <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', marginTop: '0.45rem' }}>
+                <div className="mt-[0.45rem] text-[0.72rem] text-[var(--msp-muted)]">
                   Powered by Nasdaq BX + FMV Options (LIVE)
                 </div>
               </div>
 
               {/* Lower Why Panel */}
-              <div style={{
-                background: 'rgba(0,0,0,0.18)',
-                border: '1px solid rgba(148,163,184,0.24)',
-                borderRadius: '10px',
-                padding: '0.65rem',
-              }}>
-                <div style={{ color: '#C4B5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.4rem', textTransform: 'uppercase' }}>🧠 Why Panel</div>
-                <div style={{ color: '#CBD5E1', fontSize: '0.76rem', lineHeight: 1.5 }}>
+              <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
+                <div className="mb-[0.4rem] text-[0.72rem] font-extrabold uppercase text-violet-300">🧠 Why Panel</div>
+                <div className="text-[0.76rem] leading-[1.5] text-slate-300">
                   {(result.tradeSnapshot?.why && result.tradeSnapshot.why.length > 0)
                     ? result.tradeSnapshot.why.slice(0, 4).join(' • ')
                     : `${result.unusualActivity?.hasUnusualActivity ? 'Unusual activity detected' : 'No unusual options flow'} • OI sentiment ${result.openInterestAnalysis?.sentiment || 'neutral'} • ${hasConfirmedPattern && bestPattern ? `Pattern ${bestPattern.name}` : 'Pattern not confirmed'} • ${result.aiMarketState?.thesis?.summary || 'Awaiting stronger thesis confirmation'}`}
@@ -3057,34 +2613,16 @@ export default function OptionsConfluenceScanner() {
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {trapDoors.logs && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
-              <div style={{
-                background: 'var(--msp-bear-tint)',
-                border: '2px solid #EF4444',
-                borderRadius: '16px',
-                padding: '1rem 1.25rem',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.25rem' }}>🚨</span>
-                  <span style={{ 
-                    color: '#EF4444', 
-                    fontWeight: '700', 
-                    fontSize: '0.9rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}>
+              <div className="rounded-2xl border-2 border-red-500 bg-[var(--msp-bear-tint)] p-[1rem_1.25rem]">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="text-[1.25rem]">🚨</span>
+                  <span className="text-[0.9rem] font-bold uppercase tracking-[0.5px] text-red-500">
                     Critical Risk Events
                   </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="flex flex-col gap-2">
                   {result.disclaimerFlags.map((flag, idx) => (
-                    <div key={idx} style={{ 
-                      color: '#FCA5A5', 
-                      fontSize: '0.875rem',
-                      padding: '8px 12px',
-                      background: 'rgba(0,0,0,0.2)',
-                      borderRadius: '8px',
-                      fontWeight: '500',
-                    }}>
+                    <div key={idx} className="rounded-lg bg-black/20 px-3 py-2 text-[0.875rem] font-medium text-red-300">
                       {flag}
                     </div>
                   ))}
@@ -3095,59 +2633,26 @@ export default function OptionsConfluenceScanner() {
             {/* Data Quality & Execution Notes */}
             {trapDoors.logs && ((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
-              <details style={{
-                background: 'var(--msp-warn-tint)',
-                border: '1px solid rgba(245,158,11,0.4)',
-                borderRadius: '12px',
-                padding: '0.875rem 1rem',
-              }}>
-                <summary style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', listStyle: 'none' }}>
-                  <span style={{ fontSize: '1rem' }}>📋</span>
-                  <span style={{ 
-                    color: '#F59E0B', 
-                    fontWeight: '700', 
-                    fontSize: '0.8rem',
-                    textTransform: 'uppercase',
-                  }}>
+              <details className="rounded-xl border border-amber-500/40 bg-[var(--msp-warn-tint)] p-[0.875rem_1rem]">
+                <summary className="flex cursor-pointer list-none items-center gap-2">
+                  <span className="text-[1rem]">📋</span>
+                  <span className="text-[0.8rem] font-bold uppercase text-amber-500">
                     System Diagnostics (Advanced)
                   </span>
                   {result.dataQuality && (
-                    <span style={{
-                      marginLeft: 'auto',
-                      background: result.dataQuality.freshness === 'REALTIME' ? 'rgba(16,185,129,0.2)' :
-                                  result.dataQuality.freshness === 'DELAYED' ? 'rgba(245,158,11,0.2)' :
-                                  'rgba(239,68,68,0.2)',
-                      color: result.dataQuality.freshness === 'REALTIME' ? '#10B981' :
-                             result.dataQuality.freshness === 'DELAYED' ? '#F59E0B' : '#EF4444',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                    }}>
+                    <span className={`ml-auto rounded-md px-2 py-[2px] text-[0.7rem] font-semibold ${result.dataQuality.freshness === 'REALTIME' ? 'bg-emerald-500/20 text-emerald-500' : result.dataQuality.freshness === 'DELAYED' ? 'bg-amber-500/20 text-amber-500' : 'bg-red-500/20 text-red-500'}`}>
                       {result.dataQuality.freshness} DATA
                     </span>
                   )}
                 </summary>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.6rem' }}>
+                <div className="mt-[0.6rem] flex flex-wrap gap-2">
                   {result.dataConfidenceCaps?.map((cap, idx) => (
-                    <span key={`cap-${idx}`} style={{ 
-                      color: '#FBBF24', 
-                      fontSize: '0.75rem',
-                      padding: '4px 8px',
-                      background: 'rgba(0,0,0,0.2)',
-                      borderRadius: '6px',
-                    }}>
+                    <span key={`cap-${idx}`} className="rounded-md bg-black/20 px-2 py-1 text-[0.75rem] text-amber-300">
                       ⚠️ {cap}
                     </span>
                   ))}
                   {result.executionNotes?.map((note, idx) => (
-                    <span key={`note-${idx}`} style={{ 
-                      color: '#94A3B8', 
-                      fontSize: '0.75rem',
-                      padding: '4px 8px',
-                      background: 'rgba(0,0,0,0.15)',
-                      borderRadius: '6px',
-                    }}>
+                    <span key={`note-${idx}`} className="rounded-md bg-black/15 px-2 py-1 text-[0.75rem] text-slate-400">
                       💡 {note}
                     </span>
                   ))}
@@ -3156,53 +2661,33 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* 3-SECOND VIEW - Trade Snapshot */}
-            <div style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: '3px solid var(--msp-border-strong)',
-              borderRadius: '16px',
-              padding: '1rem 1.1rem',
-              boxShadow: 'var(--msp-shadow)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <div style={{ color: '#E2E8F0', fontWeight: '800', fontSize: '0.95rem', letterSpacing: '0.4px' }}>
+            <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1rem_1.1rem] shadow-[var(--msp-shadow)]">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[0.95rem] font-extrabold tracking-[0.4px] text-slate-200">
                   🚨 TRADE SNAPSHOT (3-SECOND VIEW)
                 </div>
-                <div style={{
-                  color: result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#F59E0B',
-                  fontWeight: '800',
-                  fontSize: '0.9rem',
-                }}>
+                <div className={`text-[0.9rem] font-extrabold ${result.direction === 'bullish' ? 'text-emerald-500' : result.direction === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>
                   {result.symbol} — {result.tradeSnapshot?.verdict ? result.tradeSnapshot.verdict.replace('_', ' ') : (result.direction === 'bullish' ? 'BULLISH EDGE' : result.direction === 'bearish' ? 'BEARISH EDGE' : 'WAIT / NEUTRAL')} ({result.tradeSnapshot?.setupGrade || result.tradeQuality})
                 </div>
               </div>
 
               {((result.tradeSnapshot?.timing?.catalyst && result.tradeSnapshot.timing.catalyst.length > 0) ||
                 (result.candleCloseConfluence && result.candleCloseConfluence.bestEntryWindow.endMins > 0)) && (
-                <div style={{
-                  marginBottom: '0.75rem',
-                  color: '#FBBF24',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  background: 'rgba(251,191,36,0.10)',
-                  border: '1px solid rgba(251,191,36,0.35)',
-                  borderRadius: '10px',
-                  padding: '0.45rem 0.6rem',
-                }}>
+                <div className="mb-3 rounded-[10px] border border-amber-400/35 bg-amber-400/10 p-[0.45rem_0.6rem] text-[0.85rem] font-bold text-amber-300">
                   🔥 {result.tradeSnapshot?.timing?.catalyst || (`TIME EDGE ACTIVE: ${result.candleCloseConfluence?.bestEntryWindow.startMins === 0 ? 'NOW' : `${result.candleCloseConfluence?.bestEntryWindow.startMins} min`} until TF compression release`)}
                 </div>
               )}
 
-              <div style={{ display: 'grid', gap: '0.45rem' }}>
+              <div className="grid gap-[0.45rem]">
                 {result.tradeSnapshot?.oneLine && (
-                  <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
-                    <span style={{ color: '#A7F3D0', fontWeight: '700' }}>WHAT:</span>{' '}
+                  <div className="text-[0.87rem] text-slate-200">
+                    <span className="font-bold text-emerald-200">WHAT:</span>{' '}
                     {result.tradeSnapshot.oneLine}
                   </div>
                 )}
 
-                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
-                  <span style={{ color: 'var(--msp-muted)', fontWeight: '700' }}>WHY:</span>{' '}
+                <div className="text-[0.87rem] text-slate-200">
+                  <span className="font-bold text-[var(--msp-muted)]">WHY:</span>{' '}
                   {result.tradeSnapshot?.why?.length
                     ? result.tradeSnapshot.why.join(' • ')
                     : result.professionalTradeStack
@@ -3210,8 +2695,8 @@ export default function OptionsConfluenceScanner() {
                       : `${result.signalStrength.toUpperCase()} signal with ${result.confluenceStack} TF confluence and ${result.openInterestAnalysis?.sentiment || 'neutral'} options sentiment`}
                 </div>
 
-                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
-                  <span style={{ color: '#FCA5A5', fontWeight: '700' }}>RISK:</span>{' '}
+                <div className="text-[0.87rem] text-slate-200">
+                  <span className="font-bold text-red-300">RISK:</span>{' '}
                   {result.tradeSnapshot?.risk?.invalidationReason
                     ? result.tradeSnapshot.risk.invalidationReason
                     : result.tradeLevels
@@ -3221,8 +2706,8 @@ export default function OptionsConfluenceScanner() {
                       : 'Directional invalidation not clear yet — reduce size / wait'}
                 </div>
 
-                <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
-                  <span style={{ color: '#6EE7B7', fontWeight: '700' }}>ACTION:</span>{' '}
+                <div className="text-[0.87rem] text-slate-200">
+                  <span className="font-bold text-emerald-300">ACTION:</span>{' '}
                   {result.tradeSnapshot?.action?.entryTrigger
                     ? `${result.tradeSnapshot.action.entryTrigger}${result.tradeSnapshot.action.targets?.[0] ? ` • Target ${result.tradeSnapshot.action.targets[0].price.toFixed(2)}` : ''}`
                     : result.tradeLevels
@@ -3238,53 +2723,34 @@ export default function OptionsConfluenceScanner() {
 
             {/* 📈 PATTERN FORMATION - moved before Decision Engine (WHY before ACT) */}
             {(() => {
-              const confirmationColor = hasConfirmedPattern && bestPattern
-                ? patternBiasColor(bestPattern.bias)
-                : '#F59E0B';
               const biasAligned = !!bestPattern && (
                 bestPattern.bias === 'neutral' ||
                 bestPattern.bias === result.direction
               );
 
               return (
-                <div style={{
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border-strong)',
-                  borderLeft: '3px solid var(--msp-border-strong)',
-                  borderRadius: '16px',
-                  padding: '0.85rem 1rem',
-                  boxShadow: 'var(--msp-shadow)',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                    <div style={{ color: '#E2E8F0', fontWeight: '900', fontSize: '0.9rem', letterSpacing: '0.35px' }}>
+                <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_1rem] shadow-[var(--msp-shadow)]">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[0.9rem] font-black tracking-[0.35px] text-slate-200">
                       🧩 PATTERN FORMATION
                     </div>
-                    <span style={{
-                      background: hasConfirmedPattern ? `${confirmationColor}30` : 'rgba(245,158,11,0.22)',
-                      border: `1px solid ${hasConfirmedPattern ? confirmationColor : '#F59E0B'}80`,
-                      color: hasConfirmedPattern ? confirmationColor : '#FCD34D',
-                      padding: '3px 10px',
-                      borderRadius: '999px',
-                      fontSize: '0.68rem',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                    }}>
+                    <span className={`rounded-full border px-[10px] py-[3px] text-[0.68rem] font-bold uppercase ${hasConfirmedPattern && bestPattern?.bias === 'bullish' ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300' : hasConfirmedPattern && bestPattern?.bias === 'bearish' ? 'border-red-500/50 bg-red-500/20 text-red-300' : hasConfirmedPattern ? 'border-amber-500/50 bg-amber-500/20 text-amber-300' : 'border-amber-500/50 bg-amber-500/20 text-amber-300'}`}>
                       {hasConfirmedPattern ? 'Confirmed' : 'Pending'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.45rem' }}>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Pattern</div>
-                      <div style={{ color: confirmationColor, fontWeight: 800, fontSize: '0.86rem' }}>{bestPattern?.name || 'No clear pattern yet'}</div>
+                  <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+                    <div className="rounded-[10px] bg-black/20 p-[0.5rem_0.6rem]">
+                      <div className="text-[0.66rem] font-bold uppercase text-slate-500">Pattern</div>
+                        <div className={`text-[0.86rem] font-extrabold ${!bestPattern ? 'text-amber-500' : bestPattern.bias === 'bullish' ? 'text-emerald-500' : bestPattern.bias === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>{bestPattern?.name || 'No clear pattern yet'}</div>
                     </div>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Strength</div>
-                      <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.86rem' }}>{bestPattern ? `${bestPattern.confidence.toFixed(0)}%` : '—'}</div>
+                    <div className="rounded-[10px] bg-black/20 p-[0.5rem_0.6rem]">
+                      <div className="text-[0.66rem] font-bold uppercase text-slate-500">Strength</div>
+                      <div className="text-[0.86rem] font-extrabold text-slate-200">{bestPattern ? `${bestPattern.confidence.toFixed(0)}%` : '—'}</div>
                     </div>
-                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '10px', padding: '0.5rem 0.6rem' }}>
-                      <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>Bias Align</div>
-                      <div style={{ color: biasAligned ? '#10B981' : '#F59E0B', fontWeight: 800, fontSize: '0.86rem' }}>{biasAligned ? 'YES' : 'MIXED'}</div>
+                    <div className="rounded-[10px] bg-black/20 p-[0.5rem_0.6rem]">
+                      <div className="text-[0.66rem] font-bold uppercase text-slate-500">Bias Align</div>
+                        <div className={`text-[0.86rem] font-extrabold ${biasAligned ? 'text-emerald-500' : 'text-amber-500'}`}>{biasAligned ? 'YES' : 'MIXED'}</div>
                     </div>
                   </div>
                 </div>
@@ -3294,143 +2760,80 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            <div style={{
-              background: 'var(--msp-card)',
-              border: '1px solid var(--msp-border-strong)',
-              borderLeft: '3px solid var(--msp-border-strong)',
-              borderRadius: '20px',
-              padding: 'clamp(1rem, 3vw, 1.75rem)',
-              boxShadow: 'var(--msp-shadow)',
-            }}>
+            <div className="rounded-[20px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-card)] p-[clamp(1rem,3vw,1.75rem)] shadow-[var(--msp-shadow)]">
               {/* Header Row */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-                paddingBottom: '1rem',
-                borderBottom: '1px solid rgba(148,163,184,0.2)',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                  <span style={{
-                    background: 'var(--msp-accent)',
-                    padding: '6px 16px',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    color: '#fff',
-                    letterSpacing: '0.5px',
-                  }}>
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-400/20 pb-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="rounded-[10px] bg-[var(--msp-accent)] px-4 py-[6px] text-[13px] font-bold tracking-[0.5px] text-white">
                     🎯 DECISION ENGINE
                   </span>
-                  <span style={{ color: '#64748B', fontSize: '14px' }}>
+                  <span className="text-[14px] text-slate-500">
                     {symbol.toUpperCase()} • ${result.currentPrice.toFixed(2)}
                   </span>
                 </div>
                 
                 {/* Entry Status Badge */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '8px 16px',
-                  borderRadius: '12px',
-                  background: result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour'
-                    ? 'rgba(16,185,129,0.2)'
-                    : result.entryTiming.urgency === 'wait'
-                    ? 'rgba(245,158,11,0.2)'
-                    : 'rgba(239,68,68,0.2)',
-                  border: `1px solid ${urgencyColor(result.entryTiming.urgency)}50`,
-                }}>
-                  <span style={{ fontSize: '0.9rem' }}>{urgencyEmoji(result.entryTiming.urgency)}</span>
-                  <span style={{ 
-                    color: urgencyColor(result.entryTiming.urgency),
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    textTransform: 'uppercase',
-                  }}>
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour' ? 'border-emerald-500/50 bg-emerald-500/20' : result.entryTiming.urgency === 'wait' ? 'border-amber-500/50 bg-amber-500/20' : 'border-red-500/50 bg-red-500/20'}`}>
+                  <span className="text-[0.9rem]">{urgencyEmoji(result.entryTiming.urgency)}</span>
+                  <span className={`text-[13px] font-bold uppercase ${result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour' ? 'text-emerald-500' : result.entryTiming.urgency === 'wait' ? 'text-amber-500' : 'text-red-500'}`}>
                     {result.entryTiming.urgency === 'no_trade' ? 'NO TRADE' : result.entryTiming.urgency.replace('_', ' ')}
                   </span>
                 </div>
               </div>
 
               {/* Compressed KPI Strip */}
-              <div style={{
-                marginBottom: '1.2rem',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-              }}>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Edge</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</div>
+              <div className="mb-[1.2rem] flex flex-wrap gap-2">
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Edge</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Probability</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Probability</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Risk</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Risk</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Flow</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Flow</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</div>
                 </div>
-                <div style={{ background: 'rgba(15,23,42,0.45)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', padding: '0.45rem 0.65rem' }}>
-                  <div style={{ color: '#64748B', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 700 }}>Strategy</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.85rem' }}>{(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Strategy</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
                 </div>
               </div>
 
               {/* Conflicts Warning (if any) */}
               {(result.compositeScore?.conflicts?.length ?? 0) > 0 && (
-                <div style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                }}>
-                  <div style={{ 
-                    fontWeight: '700', 
-                    color: '#EF4444', 
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}>
+                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                  <div className="mb-2 flex items-center gap-2 font-bold text-red-500">
                     ⚠️ SIGNAL CONFLICTS DETECTED
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>
+                  <div className="text-[0.8rem] text-red-300">
                     {result.compositeScore?.conflicts?.map((conflict, i) => (
-                      <div key={i} style={{ marginBottom: '4px' }}>• {conflict}</div>
+                      <div key={i} className="mb-1">• {conflict}</div>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Entry Window Info */}
-              <div className="entry-timing-row" style={{
-                background: 'var(--msp-panel-2)',
-                borderRadius: '12px',
-                padding: '1rem',
-              }}>
+              <div className="entry-timing-row rounded-xl bg-[var(--msp-panel-2)] p-4">
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
+                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
                     ENTRY WINDOW
                   </div>
-                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                  <div className="font-medium text-slate-200">
                     {result.entryTiming.idealEntryWindow}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
+                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
                     SESSION
                   </div>
-                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                  <div className="font-medium text-slate-200">
                     {result.entryTiming.marketSession === 'regular' ? '🟢 Market Open' :
                      result.entryTiming.marketSession === 'premarket' ? '🌅 Pre-Market' :
                      result.entryTiming.marketSession === 'afterhours' ? '🌙 After Hours' :
@@ -3438,48 +2841,33 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
+                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
                     CONFLUENCE
                   </div>
-                  <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
+                  <div className="font-medium text-slate-200">
                     {result.candleCloseConfluence 
                       ? `${result.candleCloseConfluence.confluenceRating.toUpperCase()} (${result.candleCloseConfluence.confluenceScore}%)`
                       : `${result.confluenceStack} TFs`}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
+                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
                     ALIGNMENT
                   </div>
-                  <div style={{ 
-                    color: result.compositeScore && result.compositeScore.confidence >= 70 ? '#10B981' 
-                      : result.compositeScore && result.compositeScore.confidence >= 50 ? '#F59E0B' 
-                      : '#94A3B8',
-                    fontWeight: '600' 
-                  }}>
+                  <div className={`font-semibold ${result.compositeScore && result.compositeScore.confidence >= 70 ? 'text-emerald-500' : result.compositeScore && result.compositeScore.confidence >= 50 ? 'text-amber-500' : 'text-slate-400'}`}>
                     {result.compositeScore ? `${result.compositeScore.confidence.toFixed(0)}%` : '—'}
                   </div>
                 </div>
               </div>
 
               {/* Quality Reasons (collapsible summary) */}
-              <details style={{ marginTop: '1rem' }}>
-                <summary style={{ 
-                  color: '#64748B', 
-                  fontSize: '0.8rem', 
-                  cursor: 'pointer',
-                  padding: '0.5rem 0',
-                }}>
+              <details className="mt-4">
+                <summary className="cursor-pointer py-2 text-[0.8rem] text-slate-500">
                   📋 Quality Factors ({result.qualityReasons.length})
                 </summary>
-                <div style={{ 
-                  fontSize: '0.75rem', 
-                  color: '#94A3B8', 
-                  paddingLeft: '1rem',
-                  marginTop: '0.5rem',
-                }}>
+                <div className="mt-2 pl-4 text-[0.75rem] text-slate-400">
                   {result.qualityReasons.map((r, i) => (
-                    <div key={i} style={{ marginBottom: '4px' }}>• {r}</div>
+                    <div key={i} className="mb-1">• {r}</div>
                   ))}
                 </div>
               </details>
@@ -3489,102 +2877,49 @@ export default function OptionsConfluenceScanner() {
 
             {/* PRO TRADER SECTION - Collapsible */}
             {trapDoors.narrative && institutionalLensMode === 'OBSERVE' && (
-            <details style={{
-              ...lowerTerminalSection('rgba(168,85,247,0.5)'),
-              marginBottom: '1rem',
-            }}>
-              <summary style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.75rem', 
-                marginBottom: '1.25rem',
-                cursor: 'pointer',
-                borderBottom: '1px solid rgba(168,85,247,0.3)',
-                paddingBottom: '0.75rem',
-                listStyle: 'none',
-              }}>
-                <span style={{ fontSize: '1.5rem' }}>🎯</span>
-                <h2 style={{ margin: 0, color: '#E2E8F0', fontSize: '1.25rem', flex: 1 }}>Institutional Brain Summary</h2>
-                <span style={{ 
-                  fontSize: '0.75rem', 
-                  color: 'var(--msp-muted)',
-                  background: 'rgba(168,85,247,0.2)',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                }}>
+            <details className="mb-4 rounded-[16px] border border-[rgba(168,85,247,0.5)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+              <summary className="mb-5 flex cursor-pointer list-none items-center gap-3 border-b border-violet-500/30 pb-3">
+                <span className="text-[1.5rem]">🎯</span>
+                <h2 className="m-0 flex-1 text-[1.25rem] text-slate-200">Institutional Brain Summary</h2>
+                <span className="rounded-lg bg-violet-500/20 px-[10px] py-1 text-[0.75rem] text-[var(--msp-muted)]">
                   ▼ Show Details
                 </span>
               </summary>
 
-              <div style={{
-                background: 'rgba(15,23,42,0.45)',
-                border: '1px solid rgba(148,163,184,0.25)',
-                borderRadius: '12px',
-                padding: '0.75rem',
-                marginBottom: '1rem',
-                display: 'grid',
-                gap: '0.35rem',
-              }}>
-                <div style={{ color: '#64748B', fontSize: '0.66rem', textTransform: 'uppercase', fontWeight: 700 }}>State</div>
-                <div style={{ color: commandStatusColor, fontSize: '0.95rem', fontWeight: 900 }}>{commandStatus}</div>
-                <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>Institutional Flow: {institutionalFlowState}</div>
-                <div style={{ color: tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B', fontSize: '0.78rem', fontWeight: 800 }}>
+              <div className="mb-4 grid gap-[0.35rem] rounded-xl border border-slate-400/25 bg-slate-900/45 p-3">
+                <div className="text-[0.66rem] font-bold uppercase text-slate-500">State</div>
+                <div className={`text-[0.95rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
+                <div className="text-[0.78rem] text-slate-300">Institutional Flow: {institutionalFlowState}</div>
+                <div className={`text-[0.78rem] font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
                   Trade Permission: {tradePermission}
                 </div>
               </div>
 
               {/* COMPOSITE SCORE & STRATEGY - TOP OF PRO SECTION */}
               {result.compositeScore && (
-                <div style={{ marginBottom: '1.5rem' }}>
+                <div className="mb-6">
                   {/* Strategy Recommendation Banner */}
                   {result.strategyRecommendation && (
-                    <div style={{
-                      background: result.strategyRecommendation.strategyType === 'sell_premium' 
-                        ? 'rgba(239,68,68,0.2)'
-                        : result.strategyRecommendation.strategyType === 'buy_premium'
-                        ? 'rgba(16,185,129,0.2)'
-                        : 'rgba(148,163,184,0.2)',
-                      border: '1px solid var(--msp-border-strong)',
-                      borderLeft: `3px solid ${
-                        result.strategyRecommendation.strategyType === 'sell_premium' ? 'rgba(239,68,68,0.65)' :
-                        result.strategyRecommendation.strategyType === 'buy_premium' ? 'rgba(16,185,129,0.65)' :
-                        'rgba(100,116,139,0.65)'
-                      }`,
-                      borderRadius: '16px',
-                      padding: '1.25rem',
-                      marginBottom: '1rem'
-                    }}>
+                    <div className={`mb-4 rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] p-5 ${result.strategyRecommendation.strategyType === 'sell_premium' ? 'border-l-red-500/65 bg-red-500/20' : result.strategyRecommendation.strategyType === 'buy_premium' ? 'border-l-emerald-500/65 bg-emerald-500/20' : 'border-l-slate-500/65 bg-slate-400/20'}`}>
                       <div className="trade-levels-row">
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '1.25rem' }}>
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <span className="text-[1.25rem]">
                               {result.strategyRecommendation.strategyType === 'sell_premium' ? '💰' :
                                result.strategyRecommendation.strategyType === 'buy_premium' ? '📈' : '⚖️'}
                             </span>
-                            <span style={{ 
-                              fontSize: '1.4rem', 
-                              fontWeight: 'bold',
-                              color: result.strategyRecommendation.strategyType === 'sell_premium' ? '#F87171' :
-                                     result.strategyRecommendation.strategyType === 'buy_premium' ? '#34D399' : '#94A3B8'
-                            }}>
+                            <span className={`text-[1.4rem] font-bold ${result.strategyRecommendation.strategyType === 'sell_premium' ? 'text-red-400' : result.strategyRecommendation.strategyType === 'buy_premium' ? 'text-emerald-400' : 'text-slate-400'}`}>
                               {result.strategyRecommendation.strategy}
                             </span>
-                            <span style={{
-                              background: result.strategyRecommendation.riskProfile === 'defined' ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)',
-                              color: result.strategyRecommendation.riskProfile === 'defined' ? '#6EE7B7' : '#FCD34D',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              fontSize: '0.7rem',
-                              fontWeight: '600'
-                            }}>
+                            <span className={`rounded-full px-2 py-[2px] text-[0.7rem] font-semibold ${result.strategyRecommendation.riskProfile === 'defined' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
                               {result.strategyRecommendation.riskProfile === 'defined' ? '✓ Defined Risk' : '⚠️ Undefined Risk'}
                             </span>
                           </div>
-                          <div style={{ fontSize: '0.85rem', color: '#CBD5E1', marginBottom: '0.5rem' }}>
+                          <div className="mb-2 text-[0.85rem] text-slate-300">
                             {result.strategyRecommendation.reason}
                           </div>
                           {result.strategyRecommendation.strikes && (
-                            <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                            <div className="text-[0.8rem] text-slate-400">
                               {result.strategyRecommendation.strikes.long && (
                                 <span>Long: ${result.strategyRecommendation.strikes.long} </span>
                               )}
@@ -3594,129 +2929,94 @@ export default function OptionsConfluenceScanner() {
                             </div>
                           )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '0.25rem' }}>Risk / Reward</div>
-                          <div style={{ fontSize: '0.8rem', color: '#FCA5A5' }}>Max Risk: {result.strategyRecommendation.maxRisk}</div>
-                          <div style={{ fontSize: '0.8rem', color: '#6EE7B7' }}>Max Reward: {result.strategyRecommendation.maxReward}</div>
+                        <div className="text-right">
+                          <div className="mb-1 text-[0.75rem] text-slate-500">Risk / Reward</div>
+                          <div className="text-[0.8rem] text-red-300">Max Risk: {result.strategyRecommendation.maxRisk}</div>
+                          <div className="text-[0.8rem] text-emerald-300">Max Reward: {result.strategyRecommendation.maxReward}</div>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Composite Score Card */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    border: '1px solid rgba(168,85,247,0.4)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    marginBottom: '1rem'
-                  }}>
-                    <div className="flex-wrap-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="mb-4 rounded-xl border border-violet-500/40 bg-slate-800/80 p-4">
+                    <div className="flex-wrap-mobile mb-4 flex items-center justify-between gap-4">
                       <div>
-                        <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.25rem' }}>Composite Signal</div>
-                        <div style={{ 
-                          fontSize: 'clamp(1.1rem, 4vw, 1.75rem)', 
-                          fontWeight: 'bold',
-                          color: result.compositeScore.finalDirection === 'bullish' ? '#10B981' :
-                                 result.compositeScore.finalDirection === 'bearish' ? '#EF4444' : '#F59E0B'
-                        }}>
+                        <div className="mb-1 text-[0.85rem] text-slate-400">Composite Signal</div>
+                        <div className={`text-[clamp(1.1rem,4vw,1.75rem)] font-bold ${result.compositeScore.finalDirection === 'bullish' ? 'text-emerald-500' : result.compositeScore.finalDirection === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>
                           {result.compositeScore.finalDirection.toUpperCase()}
                         </div>
                       </div>
-                      <div className="flex-wrap-mobile" style={{ display: 'flex', gap: '1rem' }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ 
-                            fontSize: 'clamp(1rem, 3vw, 1.5rem)', 
-                            fontWeight: 'bold',
-                            color: result.compositeScore.directionScore > 0 ? '#10B981' : 
-                                   result.compositeScore.directionScore < 0 ? '#EF4444' : '#F59E0B'
-                          }}>
+                      <div className="flex-wrap-mobile flex gap-4">
+                        <div className="text-center">
+                          <div className={`text-[clamp(1rem,3vw,1.5rem)] font-bold ${result.compositeScore.directionScore > 0 ? 'text-emerald-500' : result.compositeScore.directionScore < 0 ? 'text-red-500' : 'text-amber-500'}`}>
                             {result.compositeScore.directionScore > 0 ? '+' : ''}{result.compositeScore.directionScore.toFixed(0)}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Score</div>
+                          <div className="text-[0.7rem] text-slate-500">Score</div>
                         </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ 
-                            fontSize: 'clamp(1rem, 3vw, 1.5rem)', 
-                            fontWeight: 'bold',
-                            color: result.compositeScore.confidence >= 70 ? '#10B981' :
-                                   result.compositeScore.confidence >= 50 ? '#F59E0B' : '#EF4444'
-                          }}>
+                        <div className="text-center">
+                          <div className={`text-[clamp(1rem,3vw,1.5rem)] font-bold ${result.compositeScore.confidence >= 70 ? 'text-emerald-500' : result.compositeScore.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                             {result.compositeScore.confidence.toFixed(0)}%
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Confidence</div>
+                          <div className="text-[0.7rem] text-slate-500">Confidence</div>
                         </div>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)', fontWeight: 'bold', color: '#A855F7' }}>
+                        <div className="text-center">
+                          <div className="text-[clamp(1rem,3vw,1.5rem)] font-bold text-violet-500">
                             {result.compositeScore.alignedCount}/{result.compositeScore.totalSignals}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: '#64748B' }}>Aligned</div>
+                          <div className="text-[0.7rem] text-slate-500">Aligned</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Signal Components - With weight % and proper color grading */}
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Signal Components (weighted):</div>
-                      <div className="card-grid-mobile" style={{ gap: '0.5rem' }}>
+                    <div className="mb-4">
+                      <div className="mb-2 text-[0.8rem] text-slate-400">Signal Components (weighted):</div>
+                      <div className="card-grid-mobile gap-2">
                         {result.compositeScore.components.map((comp, idx) => {
                           // Color based on strength, not just direction
                           const isStrong = Math.abs(comp.score) >= 50;
                           const isMedium = Math.abs(comp.score) >= 25;
-                          const barColor = comp.direction === 'neutral' ? '#64748B' 
-                            : isStrong 
-                              ? (comp.direction === 'bullish' ? '#10B981' : '#EF4444')
-                              : isMedium 
-                                ? (comp.direction === 'bullish' ? '#6EE7B7' : '#FCA5A5')
-                                : '#94A3B8'; // Weak = grey
-                          const bgColor = comp.direction === 'neutral' ? 'rgba(100,116,139,0.15)'
+                          const barClass = comp.direction === 'neutral'
+                            ? 'text-slate-500 border-l-slate-500'
                             : isStrong
-                              ? (comp.direction === 'bullish' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)')
+                              ? (comp.direction === 'bullish' ? 'text-emerald-500 border-l-emerald-500' : 'text-red-500 border-l-red-500')
                               : isMedium
-                                ? (comp.direction === 'bullish' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)')
-                                : 'rgba(100,116,139,0.08)'; // Weak = faded
+                                ? (comp.direction === 'bullish' ? 'text-emerald-300 border-l-emerald-300' : 'text-red-300 border-l-red-300')
+                                : 'text-slate-400 border-l-slate-400';
+                          const cardToneClass = comp.direction === 'neutral'
+                            ? 'bg-slate-500/15'
+                            : isStrong
+                              ? (comp.direction === 'bullish' ? 'bg-emerald-500/15' : 'bg-red-500/15')
+                              : isMedium
+                                ? (comp.direction === 'bullish' ? 'bg-emerald-500/10' : 'bg-red-500/10')
+                                : 'bg-slate-500/10';
+                          const barFillTextClass = comp.direction === 'neutral'
+                            ? 'text-slate-400'
+                            : isStrong
+                              ? (comp.direction === 'bullish' ? 'text-emerald-500' : 'text-red-500')
+                              : isMedium
+                                ? (comp.direction === 'bullish' ? 'text-emerald-300' : 'text-red-300')
+                                : 'text-slate-400';
+                          const strengthOpacityClass = isStrong ? 'opacity-100' : isMedium ? 'opacity-[0.85]' : 'opacity-[0.65]';
                           
                           return (
-                            <div key={idx} style={{
-                              background: bgColor,
-                              padding: '0.5rem 0.75rem',
-                              borderRadius: '8px',
-                              borderLeft: `3px solid ${barColor}`,
-                              fontSize: '0.75rem',
-                              opacity: isStrong ? 1 : isMedium ? 0.85 : 0.65,
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                                <span style={{ fontWeight: '600', color: '#E2E8F0' }}>
+                            <div key={idx} className={`rounded-lg border-l-[3px] p-[0.5rem_0.75rem] text-[0.75rem] ${cardToneClass} ${barClass} ${strengthOpacityClass}`}>
+                              <div className="mb-1 flex items-center justify-between">
+                                <span className="font-semibold text-slate-200">
                                   {comp.name}
-                                  <span style={{ 
-                                    fontSize: '0.6rem', 
-                                    color: '#64748B',
-                                    marginLeft: '4px',
-                                    fontWeight: '400',
-                                  }}>({(comp.weight * 100).toFixed(0)}%)</span>
+                                  <span className="ml-1 text-[0.6rem] font-normal text-slate-500">({(comp.weight * 100).toFixed(0)}%)</span>
                                 </span>
-                                <span style={{ 
-                                  fontWeight: 'bold',
-                                  color: barColor,
-                                }}>
+                                <span className={`font-bold ${barClass.includes('text-') ? barClass.split(' ')[0] : ''}`}>
                                   {comp.direction === 'neutral' ? '—' : comp.direction === 'bullish' ? '↑' : '↓'}
                                   {' '}{Math.abs(comp.score).toFixed(0)}
                                 </span>
                               </div>
-                              <div style={{ color: '#94A3B8', fontSize: '0.65rem' }}>{comp.reason}</div>
-                              <div style={{ 
-                                marginTop: '0.25rem',
-                                height: '4px',
-                                background: 'rgba(100,116,139,0.3)',
-                                borderRadius: '2px',
-                                overflow: 'hidden'
-                              }}>
-                                <div style={{
-                                  width: `${Math.min(Math.abs(comp.score), 100)}%`,
-                                  height: '100%',
-                                  background: barColor,
-                                  borderRadius: '2px'
-                                }} />
+                              <div className="text-[0.65rem] text-slate-400">{comp.reason}</div>
+                              <div className="mt-1 h-1 overflow-hidden rounded-[2px] bg-slate-500/30">
+                                <svg viewBox="0 0 100 1" preserveAspectRatio="none" className={`h-full w-full ${barFillTextClass}`} aria-hidden="true">
+                                  <rect x="0" y="0" width={Math.max(0, Math.min(Math.abs(comp.score), 100))} height="1" rx="0.5" ry="0.5" fill="currentColor" />
+                                </svg>
                               </div>
                             </div>
                           );
@@ -3726,17 +3026,12 @@ export default function OptionsConfluenceScanner() {
 
                     {/* Conflicts Warning */}
                     {result.compositeScore.conflicts.length > 0 && (
-                      <div style={{
-                        background: 'rgba(239,68,68,0.15)',
-                        border: '1px solid rgba(239,68,68,0.4)',
-                        borderRadius: '8px',
-                        padding: '0.75rem',
-                      }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#FCA5A5', marginBottom: '0.5rem' }}>
+                      <div className="rounded-lg border border-red-500/40 bg-red-500/15 p-3">
+                        <div className="mb-2 text-[0.8rem] font-semibold text-red-300">
                           ⚠️ Signal Conflicts Detected
                         </div>
                         {result.compositeScore.conflicts.map((conflict, idx) => (
-                          <div key={idx} style={{ fontSize: '0.75rem', color: '#FDA4AF', marginBottom: '0.25rem' }}>
+                          <div key={idx} className="mb-1 text-[0.75rem] text-rose-300">
                             {conflict}
                           </div>
                         ))}
@@ -3746,48 +3041,30 @@ export default function OptionsConfluenceScanner() {
                 </div>
               )}
 
-              <div className="card-grid-mobile" style={{ gap: '1rem' }}>
+              <div className="card-grid-mobile gap-4">
                 
                 {/* IV Analysis Card */}
                 {result.ivAnalysis && (
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    border: '1px solid rgba(168,85,247,0.3)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                  }}>
-                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#A855F7', fontSize: '0.9rem' }}>📊 IV Rank / Percentile</h4>
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ 
-                          fontSize: '1.75rem', 
-                          fontWeight: 'bold',
-                          color: result.ivAnalysis.ivRank >= 70 ? '#EF4444' : result.ivAnalysis.ivRank <= 30 ? '#10B981' : '#F59E0B'
-                        }}>
+                  <div className="rounded-xl border border-violet-500/30 bg-slate-800/80 p-4">
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-violet-500">📊 IV Rank / Percentile</h4>
+                    <div className="mb-3 flex flex-wrap gap-4">
+                      <div className="text-center">
+                        <div className={`text-[1.75rem] font-bold ${result.ivAnalysis.ivRank >= 70 ? 'text-red-500' : result.ivAnalysis.ivRank <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
                           {result.ivAnalysis.ivRank}%
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>IV Rank</div>
+                        <div className="text-[0.7rem] text-slate-400">IV Rank</div>
                       </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#CBD5E1' }}>
+                      <div className="text-center">
+                        <div className="text-[1.25rem] font-bold text-slate-300">
                           {(result.ivAnalysis.currentIV * 100).toFixed(0)}%
                         </div>
-                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Current IV</div>
+                        <div className="text-[0.7rem] text-slate-400">Current IV</div>
                       </div>
                     </div>
-                    <div style={{
-                      background: result.ivAnalysis.ivSignal === 'sell_premium' ? 'rgba(239,68,68,0.2)' :
-                                 result.ivAnalysis.ivSignal === 'buy_premium' ? 'rgba(16,185,129,0.2)' :
-                                 'rgba(245,158,11,0.2)',
-                      padding: '0.5rem',
-                      borderRadius: '8px',
-                      fontSize: '0.75rem',
-                      color: result.ivAnalysis.ivSignal === 'sell_premium' ? '#FCA5A5' :
-                             result.ivAnalysis.ivSignal === 'buy_premium' ? '#6EE7B7' : '#FCD34D'
-                    }}>
+                    <div className={`rounded-lg p-2 text-[0.75rem] ${result.ivAnalysis.ivSignal === 'sell_premium' ? 'bg-red-500/20 text-red-300' : result.ivAnalysis.ivSignal === 'buy_premium' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
                       {result.ivAnalysis.ivSignal === 'sell_premium' ? '💰 SELL Premium' :
                        result.ivAnalysis.ivSignal === 'buy_premium' ? '📈 BUY Premium' : '⚖️ Neutral'}
-                      <div style={{ fontSize: '0.65rem', marginTop: '0.25rem', opacity: 0.8 }}>
+                      <div className="mt-1 text-[0.65rem] opacity-80">
                         {result.ivAnalysis.ivReason}
                       </div>
                     </div>
@@ -3796,35 +3073,29 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Expected Move Card */}
                 {result.expectedMove && (
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                  }}>
-                    <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--msp-muted)', fontSize: '0.9rem' }}>📏 Expected Move</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Weekly (7 DTE):</span>
-                        <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>
+                  <div className="rounded-xl border border-[var(--msp-border)] bg-slate-800/80 p-4">
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-[var(--msp-muted)]">📏 Expected Move</h4>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.75rem] text-slate-400">Weekly (7 DTE):</span>
+                        <span className="font-bold text-[var(--msp-muted)]">
                           ±${result.expectedMove.weekly.toFixed(2)} ({result.expectedMove.weeklyPercent.toFixed(1)}%)
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Monthly (30 DTE):</span>
-                        <span style={{ fontWeight: 'bold', color: '#60A5FA' }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.75rem] text-slate-400">Monthly (30 DTE):</span>
+                        <span className="font-bold text-blue-400">
                           ±${result.expectedMove.monthly.toFixed(2)} ({result.expectedMove.monthlyPercent.toFixed(1)}%)
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                        background: 'var(--msp-panel-2)', padding: '0.5rem', borderRadius: '6px', marginTop: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--msp-muted)' }}>Selected Expiry:</span>
-                        <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>
+                      <div className="mt-1 flex items-center justify-between rounded-md bg-[var(--msp-panel-2)] p-2">
+                        <span className="text-[0.75rem] text-[var(--msp-muted)]">Selected Expiry:</span>
+                        <span className="font-bold text-[var(--msp-muted)]">
                           ±${result.expectedMove.selectedExpiry.toFixed(2)} ({result.expectedMove.selectedExpiryPercent.toFixed(1)}%)
                         </span>
                       </div>
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.5rem' }}>
+                    <div className="mt-2 text-[0.65rem] text-slate-500">
                       Based on 1 standard deviation (68% probability)
                     </div>
                   </div>
@@ -3832,27 +3103,11 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Unusual Activity Card */}
                 {result.unusualActivity && (
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    border: `1px solid ${
-                      result.unusualActivity.alertLevel === 'high' ? 'rgba(239,68,68,0.5)' :
-                      result.unusualActivity.alertLevel === 'moderate' ? 'rgba(245,158,11,0.5)' :
-                      'rgba(100,116,139,0.3)'
-                    }`,
-                    borderRadius: '12px',
-                    padding: '1rem',
-                  }}>
-                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#F59E0B', fontSize: '0.9rem' }}>
+                  <div className={`rounded-xl bg-slate-800/80 p-4 ${result.unusualActivity.alertLevel === 'high' ? 'border border-red-500/50' : result.unusualActivity.alertLevel === 'moderate' ? 'border border-amber-500/50' : 'border border-slate-500/30'}`}>
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-amber-500">
                       🔥 Unusual Activity
                       {result.unusualActivity.alertLevel === 'high' && (
-                        <span style={{ 
-                          marginLeft: '0.5rem', 
-                          background: 'rgba(239,68,68,0.3)', 
-                          color: '#FCA5A5',
-                          padding: '2px 8px', 
-                          borderRadius: '999px', 
-                          fontSize: '0.65rem' 
-                        }}>
+                        <span className="ml-2 rounded-full bg-red-500/30 px-2 py-[2px] text-[0.65rem] text-red-300">
                           HIGH ALERT
                         </span>
                       )}
@@ -3860,30 +3115,16 @@ export default function OptionsConfluenceScanner() {
                     
                     {result.unusualActivity.hasUnusualActivity ? (
                       <>
-                        <div style={{ 
-                          fontSize: '0.85rem', 
-                          color: result.unusualActivity.smartMoneyDirection === 'bullish' ? '#10B981' :
-                                 result.unusualActivity.smartMoneyDirection === 'bearish' ? '#EF4444' : '#94A3B8',
-                          marginBottom: '0.5rem'
-                        }}>
+                        <div className={`mb-2 text-[0.85rem] ${result.unusualActivity.smartMoneyDirection === 'bullish' ? 'text-emerald-500' : result.unusualActivity.smartMoneyDirection === 'bearish' ? 'text-red-500' : 'text-slate-400'}`}>
                           Smart Money: {result.unusualActivity.smartMoneyDirection.toUpperCase()}
                         </div>
-                        <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+                        <div className="max-h-[120px] overflow-y-auto">
                           {result.unusualActivity.unusualStrikes.slice(0, 3).map((strike, idx) => (
-                            <div key={idx} style={{
-                              background: strike.type === 'call' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                              padding: '0.4rem 0.6rem',
-                              borderRadius: '6px',
-                              marginBottom: '0.4rem',
-                              fontSize: '0.75rem'
-                            }}>
-                              <div style={{ 
-                                fontWeight: 'bold', 
-                                color: strike.type === 'call' ? '#10B981' : '#EF4444' 
-                              }}>
+                            <div key={idx} className={`mb-2 rounded-md p-[0.4rem_0.6rem] text-[0.75rem] ${strike.type === 'call' ? 'bg-emerald-500/15' : 'bg-red-500/15'}`}>
+                              <div className={`font-bold ${strike.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                                 ${strike.strike} {strike.type.toUpperCase()} - {strike.volumeOIRatio.toFixed(1)}x Vol/OI
                               </div>
-                              <div style={{ fontSize: '0.65rem', color: '#94A3B8' }}>
+                              <div className="text-[0.65rem] text-slate-400">
                                 {strike.volume.toLocaleString()} vol / {strike.openInterest.toLocaleString()} OI
                               </div>
                             </div>
@@ -3891,7 +3132,7 @@ export default function OptionsConfluenceScanner() {
                         </div>
                       </>
                     ) : (
-                      <div style={{ color: '#64748B', fontSize: '0.8rem' }}>
+                      <div className="text-[0.8rem] text-slate-500">
                         No unusual options activity detected
                       </div>
                     )}
@@ -3900,70 +3141,51 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Trade Levels Card */}
                 {result.tradeLevels && (
-                  <div style={{
-                    background: 'rgba(30,41,59,0.8)',
-                    border: '1px solid rgba(16,185,129,0.3)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    gridColumn: 'span 1',
-                  }}>
-                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#10B981', fontSize: '0.9rem' }}>
+                  <div className="col-span-1 rounded-xl border border-emerald-500/30 bg-slate-800/80 p-4">
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-emerald-500">
                       📍 Entry/Exit Levels
-                      <span style={{ 
-                        marginLeft: '0.5rem', 
-                        background: result.tradeLevels.riskRewardRatio >= 1.5 ? 'rgba(16,185,129,0.3)' 
-                          : result.tradeLevels.riskRewardRatio >= 1.0 ? 'rgba(245,158,11,0.3)'
-                          : result.tradeLevels.riskRewardRatio >= 0.75 ? 'rgba(251,146,60,0.3)'
-                          : 'rgba(239,68,68,0.3)',
-                        color: result.tradeLevels.riskRewardRatio >= 1.5 ? '#6EE7B7' 
-                          : result.tradeLevels.riskRewardRatio >= 1.0 ? '#FCD34D'
-                          : result.tradeLevels.riskRewardRatio >= 0.75 ? '#FDBA74'
-                          : '#FCA5A5',
-                        padding: '2px 8px', 
-                        borderRadius: '999px', 
-                        fontSize: '0.65rem' 
-                      }}>
+                      <span className={`ml-2 rounded-full px-2 py-[2px] text-[0.65rem] ${result.tradeLevels.riskRewardRatio >= 1.5 ? 'bg-emerald-500/30 text-emerald-300' : result.tradeLevels.riskRewardRatio >= 1.0 ? 'bg-amber-500/30 text-amber-300' : result.tradeLevels.riskRewardRatio >= 0.75 ? 'bg-orange-400/30 text-orange-300' : 'bg-red-500/30 text-red-300'}`}>
                         {result.tradeLevels.riskRewardRatio.toFixed(1)}:1 R:R
                       </span>
                     </h4>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--msp-muted)' }}>📥 Entry Zone:</span>
-                        <span style={{ color: 'var(--msp-text)', fontWeight: 'bold' }}>
+                    <div className="flex flex-col gap-[0.4rem] text-[0.8rem]">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--msp-muted)]">📥 Entry Zone:</span>
+                        <span className="font-bold text-[var(--msp-text)]">
                           ${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#EF4444' }}>🛑 Stop Loss:</span>
-                        <span style={{ color: '#FCA5A5', fontWeight: 'bold' }}>
+                      <div className="flex justify-between">
+                        <span className="text-red-500">🛑 Stop Loss:</span>
+                        <span className="font-bold text-red-300">
                           ${result.tradeLevels.stopLoss.toFixed(2)} ({result.tradeLevels.stopLossPercent.toFixed(1)}%)
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#10B981' }}>🎯 Target 1 (50%):</span>
-                        <span style={{ color: '#6EE7B7', fontWeight: 'bold' }}>
+                      <div className="flex justify-between">
+                        <span className="text-emerald-500">🎯 Target 1 (50%):</span>
+                        <span className="font-bold text-emerald-300">
                           ${result.tradeLevels.target1.price.toFixed(2)}
                         </span>
                       </div>
                       {result.tradeLevels.target2 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#10B981' }}>🎯 Target 2 (30%):</span>
-                          <span style={{ color: '#6EE7B7' }}>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-500">🎯 Target 2 (30%):</span>
+                          <span className="text-emerald-300">
                             ${result.tradeLevels.target2.price.toFixed(2)}
                           </span>
                         </div>
                       )}
                       {result.tradeLevels.target3 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: '#10B981' }}>🎯 Target 3 (20%):</span>
-                          <span style={{ color: '#6EE7B7' }}>
+                        <div className="flex justify-between">
+                          <span className="text-emerald-500">🎯 Target 3 (20%):</span>
+                          <span className="text-emerald-300">
                             ${result.tradeLevels.target3.price.toFixed(2)}
                           </span>
                         </div>
                       )}
                     </div>
-                    <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                    <div className="mt-2 text-[0.65rem] leading-[1.4] text-slate-500">
                       {result.tradeLevels.reasoning}
                     </div>
                   </div>
@@ -3975,66 +3197,37 @@ export default function OptionsConfluenceScanner() {
 
             {/* Confluence Info - Collapsible */}
             {institutionalLensMode === 'OBSERVE' && (
-            <details style={{
-              ...lowerTerminalSection('rgba(168,85,247,0.32)'),
-            }}>
-              <summary style={{ 
-                ...lowerTerminalSummary,
-                color: '#A78BFA', 
-              }}>
-                <span style={{ color: '#A855F7' }}>🔮</span>
+            <details className="rounded-[16px] border border-[rgba(168,85,247,0.32)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 text-violet-400">
+                <span className="text-violet-500">🔮</span>
                 <span>Confluence Analysis</span>
-                <span style={{ 
-                  fontSize: '0.7rem',
-                  marginLeft: 'auto',
-                  color: '#64748B',
-                }}>
+                <span className="ml-auto text-[0.7rem] text-slate-500">
                   {result.confluenceStack} TFs closing together • click to expand
                 </span>
               </summary>
               <div className="confluence-info-row">
-                <div style={{
-                  background: result.confluenceStack >= 4 
-                    ? 'rgba(16,185,129,0.2)'
-                    : result.confluenceStack >= 2
-                    ? 'rgba(168,85,247,0.2)'
-                    : 'rgba(100,116,139,0.2)',
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                  border: result.confluenceStack >= 4 ? '1px solid rgba(16,185,129,0.4)' : '1px solid transparent',
-                }}>
-                  <div style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 'bold', 
-                    color: result.confluenceStack >= 4 ? '#10B981' : result.confluenceStack >= 2 ? '#A855F7' : '#64748B',
-                  }}>
+                <div className={`rounded-xl p-4 text-center ${result.confluenceStack >= 4 ? 'border border-emerald-500/40 bg-emerald-500/20' : result.confluenceStack >= 2 ? 'border border-transparent bg-violet-500/20' : 'border border-transparent bg-slate-500/20'}`}>
+                  <div className={`text-[2rem] font-bold ${result.confluenceStack >= 4 ? 'text-emerald-500' : result.confluenceStack >= 2 ? 'text-violet-500' : 'text-slate-500'}`}>
                     {result.confluenceStack}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                  <div className="text-[0.8rem] text-slate-400">
                     {result.confluenceStack >= 4 ? 'TFs Closing Together 🔥' : 
                      result.confluenceStack >= 2 ? 'TFs Aligned' : 
                      result.confluenceStack === 1 ? 'TF Active' : 'No Clustering'}
                   </div>
                 </div>
                 
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.5rem' }}>
+                <div className="flex-1">
+                  <div className="mb-2 text-[0.85rem] text-slate-400">
                     {result.confluenceStack >= 2 ? 'Clustered Timeframes:' : 'Active Timeframes:'}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div className="flex flex-wrap gap-2">
                     {result.decompressingTFs.length > 0 ? result.decompressingTFs.map(tf => (
-                      <span key={tf} style={{
-                        background: 'rgba(168,85,247,0.3)',
-                        padding: '4px 12px',
-                        borderRadius: '999px',
-                        fontSize: '0.85rem',
-                        color: '#E9D5FF'
-                      }}>
+                      <span key={tf} className="rounded-full bg-violet-500/30 px-3 py-1 text-[0.85rem] text-violet-200">
                         {tf}
                       </span>
                     )) : (
-                      <span style={{ color: '#64748B', fontSize: '0.85rem' }}>No TFs actively aligned</span>
+                      <span className="text-[0.85rem] text-slate-500">No TFs actively aligned</span>
                     )}
                   </div>
                 </div>
@@ -4044,109 +3237,76 @@ export default function OptionsConfluenceScanner() {
 
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
             {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
-              <div style={{
-                ...lowerTerminalSection(
-                  result.candleCloseConfluence.confluenceRating === 'extreme'
-                    ? 'rgba(239,68,68,0.5)'
-                    : result.candleCloseConfluence.confluenceRating === 'high'
-                    ? 'rgba(245,158,11,0.5)'
-                    : 'rgba(168,85,247,0.32)'
-                ),
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#F59E0B' }}>
+              <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)] ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-[rgba(239,68,68,0.5)]' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-[rgba(245,158,11,0.5)]' : 'border-[rgba(168,85,247,0.32)]'}`}>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                  <h3 className="m-0 mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-amber-500">
                     🕐 Candle Close Confluence
                     {result.candleCloseConfluence.confluenceRating === 'extreme' && (
-                      <span style={{ ...lowerTerminalPill, marginLeft: '0.5rem', background: 'rgba(239,68,68,0.3)', color: '#FCA5A5' }}>
+                      <span className="ml-2 rounded-full bg-red-500/30 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-red-300">
                         🔥 EXTREME
                       </span>
                     )}
                     {result.candleCloseConfluence.confluenceRating === 'high' && (
-                      <span style={{ ...lowerTerminalPill, marginLeft: '0.5rem', background: 'rgba(245,158,11,0.3)', color: '#FCD34D' }}>
+                      <span className="ml-2 rounded-full bg-amber-500/30 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-300">
                         ⚡ HIGH
                       </span>
                     )}
                   </h3>
-                  <div style={{ 
-                    fontSize: '1.5rem', 
-                    fontWeight: 'bold',
-                    color: result.candleCloseConfluence.confluenceScore >= 50 ? '#F59E0B' : '#94A3B8'
-                  }}>
+                  <div className={`text-[1.5rem] font-bold ${result.candleCloseConfluence.confluenceScore >= 50 ? 'text-amber-500' : 'text-slate-400'}`}>
                     Score: {result.candleCloseConfluence.confluenceScore}%
                   </div>
                 </div>
 
                 <div className="card-grid-mobile">
                   {/* Closing Now */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.6)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    borderLeft: `3px solid ${result.candleCloseConfluence.closingNow.count >= 2 ? '#10B981' : '#64748B'}`
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Closing NOW (within 5 mins)</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: result.candleCloseConfluence.closingNow.count >= 2 ? '#10B981' : '#E2E8F0' }}>
+                  <div className={`rounded-xl border-l-[3px] bg-slate-800/60 p-4 ${result.candleCloseConfluence.closingNow.count >= 2 ? 'border-l-emerald-500' : 'border-l-slate-500'}`}>
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Closing NOW (within 5 mins)</div>
+                    <div className={`text-[1.5rem] font-bold ${result.candleCloseConfluence.closingNow.count >= 2 ? 'text-emerald-500' : 'text-slate-200'}`}>
                       {result.candleCloseConfluence.closingNow.count} TFs
                     </div>
                     {result.candleCloseConfluence.closingNow.count > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                      <div className="mt-2 flex flex-wrap gap-1">
                         {result.candleCloseConfluence.closingNow.timeframes.map(tf => (
-                          <span key={tf} style={{
-                            background: 'rgba(16,185,129,0.2)',
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            fontSize: '0.7rem',
-                            color: '#6EE7B7'
-                          }}>{tf}</span>
+                          <span key={tf} className="rounded-full bg-emerald-500/20 px-2 py-[2px] text-[0.7rem] text-emerald-300">{tf}</span>
                         ))}
                       </div>
                     )}
                   </div>
 
                   {/* Closing Soon */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.6)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    borderLeft: '3px solid var(--msp-muted)'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Closing Soon (1-4 hours)</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--msp-muted)' }}>
+                  <div className="rounded-xl border-l-[3px] border-l-[var(--msp-muted)] bg-slate-800/60 p-4">
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Closing Soon (1-4 hours)</div>
+                    <div className="text-[1.5rem] font-bold text-[var(--msp-muted)]">
                       {result.candleCloseConfluence.closingSoon.count} TFs
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--msp-text)', marginTop: '0.25rem' }}>
+                    <div className="mt-1 text-[0.75rem] text-[var(--msp-text)]">
                       Peak: {result.candleCloseConfluence.closingSoon.peakCount} TFs in {result.candleCloseConfluence.closingSoon.peakConfluenceIn}m
                     </div>
                   </div>
 
                   {/* Special Events */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.6)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    borderLeft: `3px solid ${
-                      result.candleCloseConfluence.specialEvents.isYearEnd ? '#EF4444' :
-                      result.candleCloseConfluence.specialEvents.isQuarterEnd ? '#F59E0B' :
-                      result.candleCloseConfluence.specialEvents.isMonthEnd ? '#A855F7' :
-                      '#64748B'
-                    }`
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Special Events</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div className={`rounded-xl border-l-[3px] bg-slate-800/60 p-4 ${
+                    result.candleCloseConfluence.specialEvents.isYearEnd ? 'border-l-red-500' :
+                    result.candleCloseConfluence.specialEvents.isQuarterEnd ? 'border-l-amber-500' :
+                    result.candleCloseConfluence.specialEvents.isMonthEnd ? 'border-l-violet-500' :
+                    'border-l-slate-500'
+                  }`}>
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Special Events</div>
+                    <div className="flex flex-col gap-1">
                       {result.candleCloseConfluence.specialEvents.isYearEnd && (
-                        <span style={{ fontSize: '0.8rem', color: '#FCA5A5', fontWeight: '600' }}>📅 YEAR END</span>
+                        <span className="text-[0.8rem] font-semibold text-red-300">📅 YEAR END</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isQuarterEnd && (
-                        <span style={{ fontSize: '0.8rem', color: '#FCD34D', fontWeight: '600' }}>📅 QUARTER END</span>
+                        <span className="text-[0.8rem] font-semibold text-amber-300">📅 QUARTER END</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isMonthEnd && (
-                        <span style={{ fontSize: '0.8rem', color: '#E9D5FF', fontWeight: '600' }}>📅 Month End</span>
+                        <span className="text-[0.8rem] font-semibold text-violet-200">📅 Month End</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isWeekEnd && (
-                        <span style={{ fontSize: '0.8rem', color: '#CBD5E1' }}>📅 Week End (Friday)</span>
+                        <span className="text-[0.8rem] text-slate-300">📅 Week End (Friday)</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.sessionClose !== 'none' && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--msp-text)' }}>
+                        <span className="text-[0.8rem] text-[var(--msp-text)]">
                           🌍 {result.candleCloseConfluence.specialEvents.sessionClose.toUpperCase()} Session Close
                         </span>
                       )}
@@ -4155,24 +3315,19 @@ export default function OptionsConfluenceScanner() {
                        !result.candleCloseConfluence.specialEvents.isMonthEnd && 
                        !result.candleCloseConfluence.specialEvents.isWeekEnd &&
                        result.candleCloseConfluence.specialEvents.sessionClose === 'none' && (
-                        <span style={{ fontSize: '0.8rem', color: '#64748B' }}>No special events</span>
+                        <span className="text-[0.8rem] text-slate-500">No special events</span>
                       )}
                     </div>
                   </div>
 
                   {/* Best Entry Window */}
-                  <div style={{
-                    background: 'rgba(30,41,59,0.6)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    borderLeft: '3px solid #10B981'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Best Entry Window</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10B981' }}>
+                  <div className="rounded-xl border-l-[3px] border-l-emerald-500 bg-slate-800/60 p-4">
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Best Entry Window</div>
+                    <div className="text-[1.1rem] font-bold text-emerald-500">
                       {result.candleCloseConfluence.bestEntryWindow.startMins === 0 ? 'NOW' : `In ${result.candleCloseConfluence.bestEntryWindow.startMins}m`}
                       {' → '}{result.candleCloseConfluence.bestEntryWindow.endMins}m
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#6EE7B7', marginTop: '0.25rem' }}>
+                    <div className="mt-1 text-[0.75rem] text-emerald-300">
                       {result.candleCloseConfluence.bestEntryWindow.reason}
                     </div>
                   </div>
@@ -4180,19 +3335,13 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Closing Soon Timeline */}
                 {result.candleCloseConfluence.closingSoon.timeframes.length > 0 && (
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(100,116,139,0.3)' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Upcoming Candle Closes:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div className="mt-4 border-t border-slate-500/30 pt-4">
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Upcoming Candle Closes:</div>
+                    <div className="flex flex-wrap gap-2">
                       {result.candleCloseConfluence.closingSoon.timeframes.slice(0, 8).map((item, idx) => (
-                        <div key={idx} style={{
-                          background: item.weight >= 10 ? 'rgba(239,68,68,0.15)' : item.weight >= 5 ? 'rgba(245,158,11,0.15)' : 'rgba(100,116,139,0.15)',
-                          padding: '4px 10px',
-                          borderRadius: '8px',
-                          fontSize: '0.75rem',
-                          border: `1px solid ${item.weight >= 10 ? 'rgba(239,68,68,0.3)' : item.weight >= 5 ? 'rgba(245,158,11,0.3)' : 'rgba(100,116,139,0.3)'}`
-                        }}>
-                          <span style={{ fontWeight: '600', color: item.weight >= 10 ? '#FCA5A5' : item.weight >= 5 ? '#FCD34D' : '#CBD5E1' }}>{item.tf}</span>
-                          <span style={{ color: '#94A3B8' }}> in {item.minsAway}m</span>
+                        <div key={idx} className={`rounded-lg border px-[10px] py-1 text-[0.75rem] ${item.weight >= 10 ? 'border-red-500/30 bg-red-500/15' : item.weight >= 5 ? 'border-amber-500/30 bg-amber-500/15' : 'border-slate-500/30 bg-slate-500/15'}`}>
+                          <span className={`font-semibold ${item.weight >= 10 ? 'text-red-300' : item.weight >= 5 ? 'text-amber-300' : 'text-slate-300'}`}>{item.tf}</span>
+                          <span className="text-slate-400"> in {item.minsAway}m</span>
                         </div>
                       ))}
                     </div>
@@ -4206,66 +3355,47 @@ export default function OptionsConfluenceScanner() {
               <div className="card-grid-mobile">
                 
                 {/* Strike Recommendation */}
-                <div style={{
-                  ...lowerTerminalSection('rgba(16,185,129,0.4)'),
-                }}>
-                  <h3 style={{ ...lowerTerminalTitle, color: '#10B981' }}>🎯 Recommended Strike</h3>
+                <div className="rounded-[16px] border border-[rgba(16,185,129,0.4)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">🎯 Recommended Strike</h3>
                   
                   {result.primaryStrike ? (
                     <>
-                      <div style={{
-                        background: result.primaryStrike.type === 'call' 
-                          ? 'rgba(16,185,129,0.2)'
-                          : 'rgba(239,68,68,0.2)',
-                        padding: '1.25rem',
-                        borderRadius: '12px',
-                        marginBottom: '1rem',
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <span style={{
-                            fontSize: '1.75rem',
-                            fontWeight: 'bold',
-                            color: result.primaryStrike.type === 'call' ? '#10B981' : '#EF4444'
-                          }}>
+                      <div className={`mb-4 rounded-xl p-5 ${result.primaryStrike.type === 'call' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className={`text-[1.75rem] font-bold ${result.primaryStrike.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                             ${result.primaryStrike.strike} {result.primaryStrike.type.toUpperCase()}
                           </span>
-                          <span style={{
-                            background: result.primaryStrike.moneyness === 'ATM' ? 'rgba(245,158,11,0.3)' : 'rgba(100,100,100,0.3)',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold'
-                          }}>
+                          <span className={`rounded-md px-[10px] py-1 text-[0.75rem] font-bold ${result.primaryStrike.moneyness === 'ATM' ? 'bg-amber-500/30' : 'bg-slate-500/30'}`}>
                             {result.primaryStrike.moneyness}
                           </span>
                         </div>
                         
-                        <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.75rem' }}>
+                        <div className="mb-3 text-[0.85rem] text-slate-400">
                           {result.primaryStrike.reason}
                         </div>
                         
-                        <div className="grid-equal-2-col-responsive" style={{ gap: '0.75rem', fontSize: '0.8rem' }}>
+                        <div className="grid-equal-2-col-responsive gap-3 text-[0.8rem]">
                           <div>
-                            <span style={{ color: '#64748B' }}>Est. Delta:</span>
-                            <span style={{ color: '#E2E8F0', marginLeft: '6px', fontWeight: 'bold' }}>
+                            <span className="text-slate-500">Est. Delta:</span>
+                            <span className="ml-1.5 font-bold text-slate-200">
                               {(result.primaryStrike.estimatedDelta * (result.primaryStrike.type === 'call' ? 1 : -1)).toFixed(2)}
                             </span>
                           </div>
                           <div>
-                            <span style={{ color: '#64748B' }}>Distance:</span>
-                            <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                            <span className="text-slate-500">Distance:</span>
+                            <span className="ml-1.5 text-slate-200">
                               {result.primaryStrike.distanceFromPrice > 0 ? '+' : ''}{result.primaryStrike.distanceFromPrice.toFixed(2)}%
                             </span>
                           </div>
                           <div>
-                            <span style={{ color: '#64748B' }}>Target Level:</span>
-                            <span style={{ color: '#10B981', marginLeft: '6px' }}>
+                            <span className="text-slate-500">Target Level:</span>
+                            <span className="ml-1.5 text-emerald-500">
                               ${formatPrice(result.primaryStrike.targetLevel)}
                             </span>
                           </div>
                           <div>
-                            <span style={{ color: '#64748B' }}>Confidence:</span>
-                            <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                            <span className="text-slate-500">Confidence:</span>
+                            <span className="ml-1.5 text-slate-200">
                               {result.primaryStrike.confidenceScore.toFixed(0)}%
                             </span>
                           </div>
@@ -4274,80 +3404,60 @@ export default function OptionsConfluenceScanner() {
                       
                       {result.alternativeStrikes.length > 0 && (
                         <div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '0.5rem' }}>Alternative Strikes:</div>
+                          <div className="mb-2 text-[0.8rem] text-slate-500">Alternative Strikes:</div>
                           {result.alternativeStrikes.map((s, i) => (
-                            <div key={i} style={{
-                              background: 'rgba(100,100,100,0.2)',
-                              padding: '0.75rem',
-                              borderRadius: '8px',
-                              marginBottom: '0.5rem',
-                              fontSize: '0.85rem'
-                            }}>
-                              <span style={{ fontWeight: 'bold', color: s.type === 'call' ? '#10B981' : '#EF4444' }}>
+                            <div key={i} className="mb-2 rounded-lg bg-[rgba(100,100,100,0.2)] p-3 text-[0.85rem]">
+                              <span className={`font-bold ${s.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                                 ${s.strike} {s.type.toUpperCase()}
                               </span>
-                              <span style={{ color: '#64748B', marginLeft: '8px' }}>({s.moneyness})</span>
-                              <div style={{ color: '#94A3B8', fontSize: '0.75rem', marginTop: '4px' }}>{s.reason}</div>
+                              <span className="ml-2 text-slate-500">({s.moneyness})</span>
+                              <div className="mt-1 text-[0.75rem] text-slate-400">{s.reason}</div>
                             </div>
                           ))}
                         </div>
                       )}
                     </>
                   ) : (
-                    <div style={{ color: '#64748B', textAlign: 'center', padding: '2rem' }}>
+                    <div className="p-8 text-center text-slate-500">
                       No clear strike recommendation - wait for directional signal
                     </div>
                   )}
                 </div>
 
                 {/* Expiration Recommendation */}
-                <div style={{
-                  ...lowerTerminalSection('rgba(148,163,184,0.35)'),
-                }}>
-                  <h3 style={{ ...lowerTerminalTitle, color: 'var(--msp-muted)' }}>📅 Recommended Expiration</h3>
+                <div className="rounded-[16px] border border-[rgba(148,163,184,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">📅 Recommended Expiration</h3>
                   
                   {result.primaryExpiration ? (
                     <>
-                      <div style={{
-                        background: 'var(--msp-panel-2)',
-                        padding: '1.25rem',
-                        borderRadius: '12px',
-                        marginBottom: '1rem',
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <span style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--msp-muted)' }}>
+                      <div className="mb-4 rounded-xl bg-[var(--msp-panel-2)] p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-[1.75rem] font-bold text-[var(--msp-muted)]">
                             {result.primaryExpiration.dte} DTE
                           </span>
-                          <span style={{
-                            background: `rgba(${thetaColor(result.primaryExpiration.thetaRisk).slice(1).match(/.{2}/g)?.map(hex => parseInt(hex, 16)).join(',') || '100,100,100'},0.3)`,
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            color: thetaColor(result.primaryExpiration.thetaRisk)
-                          }}>
+                          <span className={`rounded-md px-[10px] py-1 text-[0.75rem] font-bold ${result.primaryExpiration.thetaRisk === 'low' ? 'bg-emerald-500/30 text-emerald-500' : result.primaryExpiration.thetaRisk === 'moderate' ? 'bg-amber-500/30 text-amber-500' : 'bg-red-500/30 text-red-500'}`}>
                             {result.primaryExpiration.thetaRisk.toUpperCase()} THETA
                           </span>
                         </div>
                         
-                        <div style={{ fontSize: '1rem', color: '#E2E8F0', marginBottom: '0.5rem' }}>
+                        <div className="mb-2 text-base text-slate-200">
                           📆 {result.primaryExpiration.expirationDate}
                         </div>
                         
-                        <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '0.75rem' }}>
+                        <div className="mb-3 text-[0.85rem] text-slate-400">
                           {result.primaryExpiration.reason}
                         </div>
                         
-                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap' }}>
+                        <div className="flex flex-wrap gap-4 text-[0.8rem]">
                           <div>
-                            <span style={{ color: '#64748B' }}>Timeframe:</span>
-                            <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                            <span className="text-slate-500">Timeframe:</span>
+                            <span className="ml-1.5 text-slate-200">
                               {result.primaryExpiration.timeframe}
                             </span>
                           </div>
                           <div>
-                            <span style={{ color: '#64748B' }}>Confidence:</span>
-                            <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                            <span className="text-slate-500">Confidence:</span>
+                            <span className="ml-1.5 text-slate-200">
                               {result.primaryExpiration.confidenceScore.toFixed(0)}%
                             </span>
                           </div>
@@ -4356,17 +3466,12 @@ export default function OptionsConfluenceScanner() {
                       
                       {result.alternativeExpirations.length > 0 && (
                         <div>
-                          <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '0.5rem' }}>Alternative Expirations:</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div className="mb-2 text-[0.8rem] text-slate-500">Alternative Expirations:</div>
+                          <div className="flex flex-wrap gap-2">
                             {result.alternativeExpirations.map((e, i) => (
-                              <div key={i} style={{
-                                background: 'rgba(100,100,100,0.2)',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '8px',
-                                fontSize: '0.85rem'
-                              }}>
-                                <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>{e.dte} DTE</span>
-                                <span style={{ color: '#64748B', marginLeft: '6px' }}>({e.expirationDate})</span>
+                              <div key={i} className="rounded-lg bg-[rgba(100,100,100,0.2)] px-4 py-2 text-[0.85rem]">
+                                <span className="font-bold text-[var(--msp-muted)]">{e.dte} DTE</span>
+                                <span className="ml-1.5 text-slate-500">({e.expirationDate})</span>
                               </div>
                             ))}
                           </div>
@@ -4374,7 +3479,7 @@ export default function OptionsConfluenceScanner() {
                       )}
                     </>
                   ) : (
-                    <div style={{ color: '#64748B', textAlign: 'center', padding: '2rem' }}>
+                    <div className="p-8 text-center text-slate-500">
                       No expiration recommendation available
                     </div>
                   )}
@@ -4384,118 +3489,68 @@ export default function OptionsConfluenceScanner() {
 
             {/* Open Interest Analysis */}
             {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
-              <div style={{
-                ...lowerTerminalSection('rgba(20,184,166,0.35)'),
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: 'var(--msp-accent)' }}>📈 Open Interest Analysis</h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ 
-                      background: 'rgba(245,158,11,0.2)', 
-                      ...lowerTerminalPill,
-                      color: '#F59E0B'
-                    }}>
+              <div className="rounded-[16px] border border-[rgba(20,184,166,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-amber-500/20 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-500">
                       📅 EOD Data
                     </span>
-                    <span style={{ 
-                      background: 'var(--msp-panel-2)', 
-                      ...lowerTerminalPill,
-                      color: 'var(--msp-accent)'
-                    }}>
+                    <span className="rounded-full bg-[var(--msp-panel-2)] px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-[var(--msp-accent)]">
                       Expiry: {result.openInterestAnalysis.expirationDate}
                     </span>
                   </div>
                 </div>
                 
-                <div className="card-grid-mobile" style={{ marginBottom: '1rem' }}>
+                <div className="card-grid-mobile mb-4">
                   {/* P/C Ratio */}
-                  <div style={{
-                    background: 'var(--msp-panel-2)',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>Put/Call Ratio</div>
-                    <div style={{ 
-                      fontSize: '1.75rem', 
-                      fontWeight: 'bold',
-                      color: result.openInterestAnalysis.pcRatio > 1 ? '#EF4444' : result.openInterestAnalysis.pcRatio < 0.7 ? '#10B981' : '#F59E0B'
-                    }}>
+                  <div className="rounded-xl bg-[var(--msp-panel-2)] p-4 text-center">
+                    <div className="mb-1 text-[0.8rem] text-slate-400">Put/Call Ratio</div>
+                    <div className={`text-[1.75rem] font-bold ${result.openInterestAnalysis.pcRatio > 1 ? 'text-red-500' : result.openInterestAnalysis.pcRatio < 0.7 ? 'text-emerald-500' : 'text-amber-500'}`}>
                       {result.openInterestAnalysis.pcRatio.toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    <div className="text-[0.75rem] text-slate-500">
                       {result.openInterestAnalysis.pcRatio > 1 ? 'Bearish bias' : result.openInterestAnalysis.pcRatio < 0.7 ? 'Bullish bias' : 'Neutral'}
                     </div>
                   </div>
                   
                   {/* Max Pain */}
                   {result.openInterestAnalysis.maxPainStrike && (
-                    <div style={{
-                      background: 'rgba(245,158,11,0.15)',
-                      padding: '1rem',
-                      borderRadius: '12px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>Max Pain Strike</div>
-                      <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#F59E0B' }}>
+                    <div className="rounded-xl bg-amber-500/15 p-4 text-center">
+                      <div className="mb-1 text-[0.8rem] text-slate-400">Max Pain Strike</div>
+                      <div className="text-[1.75rem] font-bold text-amber-500">
                         ${result.openInterestAnalysis.maxPainStrike}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                      <div className="text-[0.75rem] text-slate-500">
                         {result.openInterestAnalysis.maxPainStrike > result.currentPrice ? 'Above price' : 'Below price'}
                       </div>
                     </div>
                   )}
                   
                   {/* O/I Sentiment */}
-                  <div style={{
-                    background: result.openInterestAnalysis.sentiment === 'bullish' 
-                      ? 'rgba(16,185,129,0.15)' 
-                      : result.openInterestAnalysis.sentiment === 'bearish' 
-                        ? 'rgba(239,68,68,0.15)' 
-                        : 'rgba(100,100,100,0.15)',
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '4px' }}>O/I Sentiment</div>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
-                      fontWeight: 'bold',
-                      color: result.openInterestAnalysis.sentiment === 'bullish' ? '#10B981' : result.openInterestAnalysis.sentiment === 'bearish' ? '#EF4444' : '#6B7280'
-                    }}>
+                  <div className={`rounded-xl p-4 text-center ${result.openInterestAnalysis.sentiment === 'bullish' ? 'bg-emerald-500/15' : result.openInterestAnalysis.sentiment === 'bearish' ? 'bg-red-500/15' : 'bg-slate-500/15'}`}>
+                    <div className="mb-1 text-[0.8rem] text-slate-400">O/I Sentiment</div>
+                    <div className={`text-[1.5rem] font-bold ${result.openInterestAnalysis.sentiment === 'bullish' ? 'text-emerald-500' : result.openInterestAnalysis.sentiment === 'bearish' ? 'text-red-500' : 'text-gray-500'}`}>
                       {result.openInterestAnalysis.sentiment === 'bullish' ? '🟢 BULLISH' : 
                        result.openInterestAnalysis.sentiment === 'bearish' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    <div className="text-[0.75rem] text-slate-500">
                       {result.openInterestAnalysis.sentimentReason}
                     </div>
                   </div>
                 </div>
                 
                 {/* O/I Volume Comparison */}
-                <div className="grid-equal-2-col-responsive" style={{
-                  gap: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{
-                    background: 'rgba(16,185,129,0.1)',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Call O/I</div>
-                    <div style={{ fontWeight: 'bold', color: '#10B981' }}>
+                <div className="grid-equal-2-col-responsive mb-4 gap-4">
+                  <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
+                    <div className="text-[0.75rem] text-slate-500">Total Call O/I</div>
+                    <div className="font-bold text-emerald-500">
                       {(result.openInterestAnalysis.totalCallOI / 1000).toFixed(1)}K
                     </div>
                   </div>
-                  <div style={{
-                    background: 'rgba(239,68,68,0.1)',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Total Put O/I</div>
-                    <div style={{ fontWeight: 'bold', color: '#EF4444' }}>
+                  <div className="rounded-lg bg-red-500/10 p-3 text-center">
+                    <div className="text-[0.75rem] text-slate-500">Total Put O/I</div>
+                    <div className="font-bold text-red-500">
                       {(result.openInterestAnalysis.totalPutOI / 1000).toFixed(1)}K
                     </div>
                   </div>
@@ -4503,73 +3558,51 @@ export default function OptionsConfluenceScanner() {
                 
                 {/* High O/I Strikes with Greeks - Open by default */}
                 {result.openInterestAnalysis.highOIStrikes.length > 0 && (
-                  <details open style={{ marginTop: '0.5rem' }}>
-                    <summary style={{ 
-                      cursor: 'pointer', 
-                      color: '#A78BFA', 
-                      fontSize: '0.85rem',
-                      fontWeight: '500',
-                      padding: '0.5rem 0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}>
+                  <details open className="mt-2">
+                    <summary className="flex cursor-pointer items-center gap-2 py-2 text-[0.85rem] text-violet-400">
                       📊 Strike Analysis with Greeks ({result.openInterestAnalysis.highOIStrikes.length} strikes)
                     </summary>
-                    <div style={{ marginTop: '0.75rem' }}>
+                    <div className="mt-3">
                       <div className="greeks-table-container">
-                        <table className="greeks-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                        <table className="greeks-table w-full border-collapse text-[0.8rem]">
                           <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(100,100,100,0.3)' }}>
-                              <th style={{ textAlign: 'left', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>Strike</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>OI</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#94A3B8', fontWeight: '500' }}>IV</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981', fontWeight: '500' }}>Δ</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7', fontWeight: '500' }}>Γ</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444', fontWeight: '500' }}>Θ</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--msp-muted)', fontWeight: '500' }}>ν</th>
+                            <tr className="border-b border-[rgba(100,100,100,0.3)]">
+                              <th className="p-2 text-left font-medium text-slate-400">Strike</th>
+                              <th className="p-2 text-right font-medium text-slate-400">OI</th>
+                              <th className="p-2 text-right font-medium text-slate-400">IV</th>
+                              <th className="p-2 text-right font-medium text-emerald-500">Δ</th>
+                              <th className="p-2 text-right font-medium text-violet-500">Γ</th>
+                              <th className="p-2 text-right font-medium text-red-500">Θ</th>
+                              <th className="p-2 text-right font-medium text-[var(--msp-muted)]">ν</th>
                             </tr>
                           </thead>
                           <tbody>
                             {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
-                              <tr key={i} style={{ 
-                                borderBottom: '1px solid rgba(100,100,100,0.15)',
-                                background: i % 2 === 0 ? 'rgba(0,0,0,0.1)' : 'transparent'
-                              }}>
-                                <td style={{ padding: '0.5rem' }}>
-                                  <span style={{ 
-                                    fontWeight: 'bold', 
-                                    color: s.type === 'call' ? '#10B981' : '#EF4444',
-                                    marginRight: '0.25rem'
-                                  }}>
+                              <tr key={i} className={`border-b border-[rgba(100,100,100,0.15)] ${i % 2 === 0 ? 'bg-black/10' : 'bg-transparent'}`}>
+                                <td className="p-2">
+                                  <span className={`mr-1 font-bold ${s.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                                     ${s.strike}
                                   </span>
-                                  <span style={{ 
-                                    fontSize: '0.7rem',
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    background: s.type === 'call' ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
-                                    color: s.type === 'call' ? '#10B981' : '#EF4444'
-                                  }}>
+                                  <span className={`rounded px-1.5 py-[2px] text-[0.7rem] ${s.type === 'call' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500'}`}>
                                     {s.type === 'call' ? 'C' : 'P'}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                <td className="p-2 text-right text-slate-300">
                                   {(s.openInterest / 1000).toFixed(1)}K
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#CBD5E1' }}>
+                                <td className="p-2 text-right text-slate-300">
                                   {s.iv ? `${(s.iv * 100).toFixed(0)}%` : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981' }}>
+                                <td className="p-2 text-right text-emerald-500">
                                   {s.delta !== undefined ? s.delta.toFixed(2) : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7' }}>
+                                <td className="p-2 text-right text-violet-500">
                                   {s.gamma !== undefined ? s.gamma.toFixed(3) : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444' }}>
+                                <td className="p-2 text-right text-red-500">
                                   {s.theta !== undefined ? s.theta.toFixed(3) : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--msp-muted)' }}>
+                                <td className="p-2 text-right text-[var(--msp-muted)]">
                                   {s.vega !== undefined ? s.vega.toFixed(3) : '-'}
                                 </td>
                               </tr>
@@ -4577,7 +3610,7 @@ export default function OptionsConfluenceScanner() {
                           </tbody>
                         </table>
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '0.5rem', textAlign: 'right' }}>
+                      <div className="mt-2 text-right text-[0.7rem] text-slate-500">
                         Δ Delta • Γ Gamma • Θ Theta • ν Vega
                       </div>
                     </div>
@@ -4585,35 +3618,18 @@ export default function OptionsConfluenceScanner() {
                 )}
                 
                 {/* Alignment Check */}
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  background: (result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
-                              (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish')
-                    ? 'rgba(16,185,129,0.15)'
-                    : result.openInterestAnalysis.sentiment === 'neutral' 
-                      ? 'rgba(245,158,11,0.15)'
-                      : 'rgba(239,68,68,0.15)',
-                  border: (result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
-                          (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish')
-                    ? '1px solid rgba(16,185,129,0.3)'
-                    : result.openInterestAnalysis.sentiment === 'neutral'
-                      ? '1px solid rgba(245,158,11,0.3)'
-                      : '1px solid rgba(239,68,68,0.3)',
-                  fontSize: '0.85rem'
-                }}>
+                <div className={`mt-4 rounded-lg border p-3 text-[0.85rem] ${(result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') || (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish') ? 'border-emerald-500/30 bg-emerald-500/15' : result.openInterestAnalysis.sentiment === 'neutral' ? 'border-amber-500/30 bg-amber-500/15' : 'border-red-500/30 bg-red-500/15'}`}>
                   {(result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
                    (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish') ? (
-                    <span style={{ color: '#10B981' }}>
+                    <span className="text-emerald-500">
                       ✅ O/I sentiment CONFIRMS confluence direction — higher confidence trade
                     </span>
                   ) : result.openInterestAnalysis.sentiment === 'neutral' ? (
-                    <span style={{ color: '#F59E0B' }}>
+                    <span className="text-amber-500">
                       ⚠️ O/I sentiment neutral — rely on confluence signals
                     </span>
                   ) : (
-                    <span style={{ color: '#EF4444' }}>
+                    <span className="text-red-500">
                       ⚠️ O/I sentiment DIVERGES from confluence — proceed with caution
                     </span>
                   )}
@@ -4621,43 +3637,24 @@ export default function OptionsConfluenceScanner() {
               </div>
             ) : (
               /* No Options Data Available - Show Placeholder */
-              <div style={{
-                ...lowerTerminalSection('rgba(20,184,166,0.35)'),
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: 'var(--msp-accent)' }}>📈 Open Interest Analysis</h3>
-                  <span style={{ 
-                    background: 'rgba(245,158,11,0.2)', 
-                    ...lowerTerminalPill,
-                    color: '#F59E0B'
-                  }}>
+              <div className="rounded-[16px] border border-[rgba(20,184,166,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
+                  <span className="rounded-full bg-amber-500/20 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-500">
                     ⚠️ Data Unavailable
                   </span>
                 </div>
                 
-                <div style={{
-                  background: 'rgba(245,158,11,0.1)',
-                  border: '1px solid rgba(245,158,11,0.3)',
-                  borderRadius: '12px',
-                  padding: '1.25rem',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>�</div>
-                  <div style={{ color: '#F59E0B', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-center">
+                  <div className="mb-3 text-[2rem]">�</div>
+                  <div className="mb-2 text-[1.1rem] font-bold text-amber-500">
                     Options Data Loading Issue
                   </div>
-                  <div style={{ color: '#94A3B8', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  <div className="text-[0.9rem] leading-[1.6] text-slate-400">
                     End-of-day options data is temporarily unavailable. This may be due to 
                     API rate limits, market hours, or the symbol not having options available.
                   </div>
-                  <div style={{ 
-                    marginTop: '1rem', 
-                    padding: '0.75rem', 
-                    background: 'rgba(16,185,129,0.1)', 
-                    borderRadius: '8px',
-                    color: '#10B981',
-                    fontSize: '0.85rem'
-                  }}>
+                  <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-[0.85rem] text-emerald-500">
                     ✅ Strike & Expiration recommendations still work based on price action confluence!
                   </div>
                 </div>
@@ -4666,48 +3663,37 @@ export default function OptionsConfluenceScanner() {
 
             {/* Greeks Advice - Collapsible (advanced) */}
             {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
-            <details style={{
-              ...lowerTerminalSection('rgba(245,158,11,0.34)'),
-            }}>
-              <summary style={{ 
-                ...lowerTerminalSummary,
-                color: '#F59E0B', 
-                fontWeight: '600',
-              }}>
+            <details className="rounded-[16px] border border-[rgba(245,158,11,0.34)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 font-semibold text-amber-500">
                 📊 Greeks & Risk Advice
-                <span style={{ 
-                  fontSize: '0.72rem', 
-                  color: '#64748B',
-                  marginLeft: 'auto',
-                  fontWeight: '400',
-                }}>
+                <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
                   ▼ Show advanced data
                 </span>
               </summary>
               
               <div className="card-grid-mobile">
                 <div>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Target Delta</div>
-                  <div style={{ color: '#E2E8F0', fontWeight: 'bold' }}>{result.greeksAdvice.deltaTarget}</div>
+                  <div className="mb-1 text-[0.8rem] text-slate-500">Target Delta</div>
+                  <div className="font-bold text-slate-200">{result.greeksAdvice.deltaTarget}</div>
                 </div>
                 
                 {result.greeksAdvice.thetaWarning && (
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Theta Warning</div>
-                    <div style={{ color: '#F97316', fontSize: '0.85rem' }}>{result.greeksAdvice.thetaWarning}</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">Theta Warning</div>
+                    <div className="text-[0.85rem] text-orange-500">{result.greeksAdvice.thetaWarning}</div>
                   </div>
                 )}
                 
                 {result.greeksAdvice.gammaAdvice && (
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Gamma Advice</div>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.85rem' }}>{result.greeksAdvice.gammaAdvice}</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">Gamma Advice</div>
+                    <div className="text-[0.85rem] text-slate-200">{result.greeksAdvice.gammaAdvice}</div>
                   </div>
                 )}
                 
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>Overall Strategy</div>
-                  <div style={{ color: '#E2E8F0' }}>{result.greeksAdvice.overallAdvice}</div>
+                <div className="col-span-full">
+                  <div className="mb-1 text-[0.8rem] text-slate-500">Overall Strategy</div>
+                  <div className="text-slate-200">{result.greeksAdvice.overallAdvice}</div>
                 </div>
               </div>
             </details>
@@ -4715,46 +3701,30 @@ export default function OptionsConfluenceScanner() {
 
             {/* Risk Management - Collapsible (advanced) */}
             {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
-            <details style={{
-              ...lowerTerminalSection('rgba(239,68,68,0.34)'),
-            }}>
-              <summary style={{ 
-                ...lowerTerminalSummary,
-                color: '#EF4444', 
-                fontWeight: '600',
-              }}>
+            <details className="rounded-[16px] border border-[rgba(239,68,68,0.34)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 font-semibold text-red-500">
                 ⚠️ Risk Management
-                <span style={{ 
-                  fontSize: '0.72rem', 
-                  color: '#64748B',
-                  marginLeft: 'auto',
-                  fontWeight: '400',
-                }}>
+                <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
                   {result.maxRiskPercent}% max risk • ▼ Show details
                 </span>
               </summary>
               
               <div className="card-grid-mobile">
-                <div style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  padding: '1rem',
-                  borderRadius: '12px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#EF4444' }}>
+                <div className="rounded-xl bg-red-500/10 p-4 text-center">
+                  <div className="text-[1.5rem] font-bold text-red-500">
                     {result.maxRiskPercent}%
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Max Position Risk</div>
+                  <div className="text-[0.8rem] text-slate-400">Max Position Risk</div>
                 </div>
                 
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>🛑 Stop Loss Strategy</div>
-                    <div style={{ color: '#E2E8F0', fontSize: '0.85rem' }}>{result.stopLossStrategy}</div>
+                <div className="flex-1">
+                  <div className="mb-3">
+                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Stop Loss Strategy</div>
+                    <div className="text-[0.85rem] text-slate-200">{result.stopLossStrategy}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '4px' }}>🎯 Profit Target Strategy</div>
-                    <div style={{ color: '#10B981', fontSize: '0.85rem' }}>{result.profitTargetStrategy}</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">🎯 Profit Target Strategy</div>
+                    <div className="text-[0.85rem] text-emerald-500">{result.profitTargetStrategy}</div>
                   </div>
                 </div>
               </div>
@@ -4763,68 +3733,52 @@ export default function OptionsConfluenceScanner() {
 
             {/* Summary Trade Setup */}
             {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
-              <div style={{
-                ...lowerTerminalSection('rgba(16,185,129,0.5)'),
-              }}>
-                <h3 style={{ ...lowerTerminalTitle, color: '#10B981' }}>📋 Trade Summary</h3>
+              <div className="rounded-[16px] border border-[rgba(16,185,129,0.5)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">📋 Trade Summary</h3>
                 
-                <div style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  padding: '1.25rem',
-                  borderRadius: '12px',
-                  fontFamily: 'monospace',
-                  fontSize: '1rem'
-                }}>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#64748B' }}>Symbol:</span>
-                    <span style={{ color: '#E2E8F0', marginLeft: '8px', fontWeight: 'bold' }}>{result.symbol}</span>
-                    <span style={{ color: '#64748B', marginLeft: '16px' }}>@</span>
-                    <span style={{ color: 'var(--msp-muted)', marginLeft: '8px' }}>${formatPrice(result.currentPrice)}</span>
+                <div className="rounded-xl bg-black/30 p-5 font-mono text-base">
+                  <div className="mb-2">
+                    <span className="text-slate-500">Symbol:</span>
+                    <span className="ml-2 font-bold text-slate-200">{result.symbol}</span>
+                    <span className="ml-4 text-slate-500">@</span>
+                    <span className="ml-2 text-[var(--msp-muted)]">${formatPrice(result.currentPrice)}</span>
                   </div>
                   
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#64748B' }}>Action:</span>
-                    <span style={{ 
-                      color: result.primaryStrike.type === 'call' ? '#10B981' : '#EF4444', 
-                      marginLeft: '8px',
-                      fontWeight: 'bold'
-                    }}>
+                  <div className="mb-2">
+                    <span className="text-slate-500">Action:</span>
+                    <span className={`ml-2 font-bold ${result.primaryStrike.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                       BUY {result.primaryStrike.type.toUpperCase()}
                     </span>
                   </div>
                   
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#64748B' }}>Strike:</span>
-                    <span style={{ color: '#F59E0B', marginLeft: '8px', fontWeight: 'bold' }}>${result.primaryStrike.strike}</span>
-                    <span style={{ color: '#64748B', marginLeft: '8px' }}>({result.primaryStrike.moneyness})</span>
+                  <div className="mb-2">
+                    <span className="text-slate-500">Strike:</span>
+                    <span className="ml-2 font-bold text-amber-500">${result.primaryStrike.strike}</span>
+                    <span className="ml-2 text-slate-500">({result.primaryStrike.moneyness})</span>
                   </div>
                   
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#64748B' }}>Expiration:</span>
-                    <span style={{ color: 'var(--msp-muted)', marginLeft: '8px', fontWeight: 'bold' }}>{result.primaryExpiration.expirationDate}</span>
-                    <span style={{ color: '#64748B', marginLeft: '8px' }}>({result.primaryExpiration.dte} DTE)</span>
+                  <div className="mb-2">
+                    <span className="text-slate-500">Expiration:</span>
+                    <span className="ml-2 font-bold text-[var(--msp-muted)]">{result.primaryExpiration.expirationDate}</span>
+                    <span className="ml-2 text-slate-500">({result.primaryExpiration.dte} DTE)</span>
                   </div>
                   
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#64748B' }}>Quality:</span>
-                    <span style={{ color: gradeColor(result.tradeQuality), marginLeft: '8px', fontWeight: 'bold' }}>
+                  <div className="mb-2">
+                    <span className="text-slate-500">Quality:</span>
+                    <span className={`ml-2 font-bold ${gradeClass(result.tradeQuality)}`}>
                       {gradeEmoji(result.tradeQuality)} {result.tradeQuality}
                     </span>
-                    <span style={{ color: '#64748B', marginLeft: '8px' }}>|</span>
-                    <span style={{ color: urgencyColor(result.entryTiming.urgency), marginLeft: '8px' }}>
+                    <span className="ml-2 text-slate-500">|</span>
+                    <span className={`ml-2 ${urgencyClass(result.entryTiming.urgency)}`}>
                       {urgencyEmoji(result.entryTiming.urgency)} {result.entryTiming.urgency.toUpperCase()}
                     </span>
                   </div>
-                    <div style={{ fontWeight: 'bold', color: 'var(--msp-muted)', marginBottom: '0.5rem' }}>Expiration Logic</div>
-                  <div style={{ 
-                    borderTop: '1px solid rgba(255,255,255,0.1)', 
-                    paddingTop: '0.75rem', 
-                    marginTop: '0.75rem',
-                    color: '#94A3B8',
-                    fontSize: '0.85rem'
-                  }}>
+                    <div className="mb-2 font-bold text-[var(--msp-muted)]">Expiration Logic</div>
+                  <div className="border-t border-white/10 pt-3">
+                    <span className="text-[0.85rem] text-slate-400">
                     Target: ${formatPrice(result.primaryStrike.targetLevel)} (50% level) | 
                     Max Risk: {result.maxRiskPercent}% of portfolio
+                    </span>
                   </div>
                 </div>
               </div>
@@ -4838,64 +3792,50 @@ export default function OptionsConfluenceScanner() {
 
         {/* Help Section */}
         {!result && !loading && (
-          <div style={{
-            background: 'rgba(30,41,59,0.4)',
-            border: '1px solid rgba(100,100,100,0.3)',
-            borderRadius: '16px',
-            padding: '2rem',
-            marginTop: '2rem'
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', color: '#E2E8F0' }}>How It Works</h3>
+          <div className="mt-8 rounded-2xl border border-[rgba(100,100,100,0.3)] bg-slate-800/40 p-8">
+            <h3 className="mb-6 text-slate-200">How It Works</h3>
             
-            <div className="card-grid-mobile" style={{ gap: '1.5rem' }}>
+            <div className="card-grid-mobile gap-6">
               <div>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔮</div>
-                <div style={{ fontWeight: 'bold', color: '#A855F7', marginBottom: '0.5rem' }}>Time Confluence</div>
-                <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                <div className="mb-2 text-[1.5rem]">🔮</div>
+                <div className="mb-2 font-bold text-violet-500">Time Confluence</div>
+                <div className="text-[0.85rem] text-slate-400">
                   Scans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.
                 </div>
               </div>
               
               <div>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎯</div>
-                <div style={{ fontWeight: 'bold', color: '#10B981', marginBottom: '0.5rem' }}>Strike Selection</div>
-                <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                <div className="mb-2 text-[1.5rem]">🎯</div>
+                <div className="mb-2 font-bold text-emerald-500">Strike Selection</div>
+                <div className="text-[0.85rem] text-slate-400">
                   Recommends strikes based on 50% level clusters and target zones from decompressing timeframes.
                 </div>
               </div>
               
               <div>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📅</div>
-                <div style={{ fontWeight: 'bold', color: 'var(--msp-muted)', marginBottom: '0.5rem' }}>Expiration Logic</div>
-                <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                <div className="mb-2 text-[1.5rem]">📅</div>
+                <div className="mb-2 font-bold text-[var(--msp-muted)]">Expiration Logic</div>
+                <div className="text-[0.85rem] text-slate-400">
                   Matches expiration to your trading timeframe - scalping gets 0-2 DTE, swing trading gets weekly/monthly options.
                 </div>
               </div>
               
               <div>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📊</div>
-                <div style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: '0.5rem' }}>Greeks-Aware</div>
-                <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
+                <div className="mb-2 text-[1.5rem]">📊</div>
+                <div className="mb-2 font-bold text-amber-500">Greeks-Aware</div>
+                <div className="text-[0.85rem] text-slate-400">
                   Provides delta targets, theta decay warnings, and gamma considerations based on your chosen timeframe.
                 </div>
               </div>
             </div>
             
-            <div style={{ 
-              marginTop: '2rem', 
-              padding: '1rem', 
-              background: 'rgba(245,158,11,0.1)', 
-              borderRadius: '12px',
-              color: '#F59E0B',
-              fontSize: '0.85rem'
-            }}>
+            <div className="mt-8 rounded-xl bg-amber-500/10 p-4 text-[0.85rem] text-amber-500">
               ⚠️ <strong>Risk Warning:</strong> Options trading involves significant risk. This tool provides confluence-based analysis, not financial advice. 
               Always manage position sizes and use stops. Paper trade first!
             </div>
           </div>
         )}
 
-      </div>
-    </div>
+    </TerminalShell>
   );
 }

@@ -5,6 +5,9 @@ import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
+import DecisionCockpit from "@/components/terminal/DecisionCockpit";
+import SignalRail from "@/components/terminal/SignalRail";
 
 interface PriceData {
   price: number;
@@ -543,6 +546,7 @@ export default function DeepAnalysisPage() {
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [density, setDensity] = useState<TerminalDensity>('normal');
   const [error, setError] = useState("");
 
   // AI Page Context - share analysis results with copilot
@@ -575,9 +579,9 @@ export default function DeepAnalysisPage() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
+      <div className="min-h-screen bg-[var(--msp-bg)]">
         <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
-        <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem" }}>
+        <main className="mx-auto max-w-[900px] px-4 py-8">
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
       </div>
@@ -611,63 +615,69 @@ export default function DeepAnalysisPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
       
-      <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem 1rem" }}>
+      <main className="mx-auto max-w-[1200px] px-4 py-8">
+        {result && (
+          <CommandStrip
+            symbol={result.symbol}
+            status={result.signals.signal}
+            confidence={result.signals.score}
+            dataHealth={result.responseTime}
+            mode={result.assetType.toUpperCase()}
+            density={density}
+            onDensityChange={setDensity}
+          />
+        )}
+
+        {result && (
+          <DecisionCockpit
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">24h: {result.price.changePercent.toFixed(2)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">{result.signals.signal}</div><div className="msp-muted">Score: {result.signals.score.toFixed(0)}</div><div className="msp-muted">Response: {result.responseTime}</div></div>}
+            right={<div className="grid gap-1 text-sm"><div className="msp-muted">RSI: {result.indicators.rsi?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">MACD: {result.indicators.macdHist?.toFixed(2) ?? 'n/a'}</div><div className="msp-muted">ADX: {result.indicators.adx?.toFixed(1) ?? 'n/a'}</div></div>}
+          />
+        )}
+
+        {result && (
+          <SignalRail
+            items={[
+              { label: 'Sentiment', value: result.news?.[0]?.sentiment || 'N/A', tone: (result.news?.[0]?.sentiment || '').toLowerCase().includes('bull') ? 'bull' : (result.news?.[0]?.sentiment || '').toLowerCase().includes('bear') ? 'bear' : 'neutral' },
+              { label: 'P/C Ratio', value: result.optionsData ? result.optionsData.putCallRatio.toFixed(2) : 'N/A', tone: result.optionsData ? (result.optionsData.putCallRatio > 1 ? 'bear' : 'bull') : 'neutral' },
+              { label: 'Fear/Greed', value: result.cryptoData ? `${result.cryptoData.fearGreed.value}` : 'N/A', tone: result.cryptoData ? (result.cryptoData.fearGreed.value > 60 ? 'bull' : result.cryptoData.fearGreed.value < 40 ? 'bear' : 'warn') : 'neutral' },
+              { label: 'Options', value: result.optionsData ? result.optionsData.sentiment : 'N/A', tone: result.optionsData?.sentiment === 'Bullish' ? 'bull' : result.optionsData?.sentiment === 'Bearish' ? 'bear' : 'neutral' },
+              { label: 'AI', value: result.aiAnalysis ? 'Ready' : 'N/A', tone: result.aiAnalysis ? 'accent' : 'neutral' },
+              { label: 'Latency', value: result.responseTime, tone: 'neutral' },
+            ]}
+          />
+        )}
+
         {/* Hero Header */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "clamp(2.5rem, 8vw, 4rem)", marginBottom: "0.5rem" }}>🥚</div>
-          <h1 style={{ 
-            fontSize: "clamp(1.5rem, 6vw, 2.5rem)", 
-            fontWeight: "bold", 
-            color: "var(--msp-text)",
-            marginBottom: "0.5rem"
-          }}>
+        <div className="mb-8 text-center">
+          <div className="mb-2 text-[clamp(2.5rem,8vw,4rem)]">🥚</div>
+          <h1 className="mb-2 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-[var(--msp-text)]">
             The Golden Egg
           </h1>
-          <p style={{ color: "var(--msp-text-muted)", fontSize: "clamp(0.9rem, 3vw, 1.1rem)" }}>
+          <p className="text-[clamp(0.9rem,3vw,1.1rem)] text-[var(--msp-text-muted)]">
             Complete market analysis • Any asset • One search
           </p>
         </div>
 
         {/* Search Box */}
-        <div className="msp-card" style={{ borderRadius: "20px", padding: "1.5rem", marginBottom: "2rem" }}>
-          <div className="options-form-controls" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="msp-card mb-8 rounded-[20px] p-6">
+          <div className="options-form-controls flex flex-wrap gap-3">
             <input
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyPress={(e) => e.key === "Enter" && handleAnalyze()}
               placeholder="Enter symbol: AAPL, BTC, EURUSD..."
-              style={{
-                flex: 1,
-                padding: "0.875rem 1.25rem",
-                borderRadius: "12px",
-                border: "1px solid var(--msp-border)",
-                background: "var(--msp-panel)",
-                color: "var(--msp-text)",
-                fontSize: "1rem",
-                outline: "none"
-              }}
+              className="flex-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3.5 text-base text-[var(--msp-text)] outline-none"
             />
             <button
               onClick={handleAnalyze}
               disabled={loading}
-              style={{
-                padding: "0.875rem 1.5rem",
-                borderRadius: "12px",
-                border: "none",
-                background: loading ? "var(--msp-panel)" : "var(--msp-accent)",
-                color: "#061018",
-                fontSize: "1rem",
-                fontWeight: "bold",
-                cursor: loading ? "wait" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                flexShrink: 0
-              }}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold text-[#061018] ${loading ? 'cursor-wait bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
             >
               {loading ? (
                 <>⏳ Finding Market Edge...</>
@@ -676,20 +686,12 @@ export default function DeepAnalysisPage() {
               )}
             </button>
           </div>
-          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", flexWrap: "wrap" }}>
+          <div className="mt-4 flex flex-wrap gap-4">
             {['AAPL', 'BTC', 'TSLA', 'ETH', 'NVDA', 'EURUSD', 'GOLD'].map(s => (
               <button
                 key={s}
                 onClick={() => { setSymbol(s); }}
-                style={{
-                  padding: "0.4rem 0.8rem",
-                  borderRadius: "6px",
-                  border: "1px solid var(--msp-border)",
-                  background: symbol === s ? "var(--msp-panel)" : "transparent",
-                  color: "var(--msp-muted)",
-                  fontSize: "0.85rem",
-                  cursor: "pointer"
-                }}
+                className={`cursor-pointer rounded-md border border-[var(--msp-border)] px-3 py-1.5 text-[0.85rem] text-[var(--msp-muted)] ${symbol === s ? 'bg-[var(--msp-panel)]' : 'bg-transparent'}`}
               >
                 {s}
               </button>
@@ -699,25 +701,17 @@ export default function DeepAnalysisPage() {
 
         {/* Error */}
         {error && (
-          <div style={{ 
-            background: "rgba(239,68,68,0.1)", 
-            border: "1px solid rgba(239,68,68,0.3)", 
-            borderRadius: "12px", 
-            padding: "1rem", 
-            marginBottom: "1.5rem",
-            color: "#EF4444",
-            textAlign: "center"
-          }}>
+          <div className="mb-6 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] p-4 text-center text-[#EF4444]">
             ❌ {error}
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div style={{ textAlign: "center", padding: "4rem" }}>
-            <div style={{ fontSize: "4rem", marginBottom: "1rem", animation: "pulse 1s infinite" }}>🥚</div>
-            <p style={{ color: "#F59E0B", fontSize: "1.2rem" }}>Hatching your golden analysis...</p>
-            <p style={{ color: "#64748B", fontSize: "0.9rem", marginTop: "0.5rem" }}>
+          <div className="p-16 text-center">
+            <div className="mb-4 text-[4rem] [animation:pulse_1s_infinite]">🥚</div>
+            <p className="text-[1.2rem] text-[#F59E0B]">Hatching your golden analysis...</p>
+            <p className="mt-2 text-[0.9rem] text-[#64748B]">
               Fetching price data, technical indicators, news sentiment, and AI insights...
             </p>
           </div>
@@ -725,31 +719,25 @@ export default function DeepAnalysisPage() {
 
         {/* Results */}
         {result && (
-          <div style={{ display: "grid", gap: "1.5rem" }}>
+          <div className="grid gap-6">
             
             {/* Main Signal Banner */}
-            <div style={{ 
-              background: `${getSignalColor(result.signals.signal)}20`,
-              borderRadius: "20px",
-              border: "1px solid var(--msp-border-strong)",
-              borderLeft: `3px solid ${getSignalColor(result.signals.signal)}99`,
-              padding: "2rem",
-              textAlign: "center"
-            }}>
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                <span style={{ fontSize: "clamp(2rem, 6vw, 3rem)" }}>
+            <div
+              className="rounded-[20px] border border-[var(--msp-border-strong)] p-8 text-center"
+              style={{
+                background: `${getSignalColor(result.signals.signal)}20`,
+                borderLeft: `3px solid ${getSignalColor(result.signals.signal)}99`,
+              }}
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+                <span className="text-[clamp(2rem,6vw,3rem)]">
                   {result.assetType === 'crypto' ? '₿' : result.assetType === 'forex' ? '💱' : '📈'}
                 </span>
                 <div>
-                  <h2 style={{ fontSize: "clamp(1.5rem, 6vw, 2.5rem)", fontWeight: "bold", color: "#fff", margin: 0 }}>
+                  <h2 className="m-0 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-white">
                     {result.symbol}
                   </h2>
-                  <span style={{ 
-                    fontSize: "0.9rem", 
-                    color: "#64748B",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em"
-                  }}>
+                  <span className="text-[0.9rem] uppercase tracking-[0.1em] text-[#64748B]">
                     {result.assetType} • {result.company?.name || result.symbol}
                   </span>
                 </div>
@@ -765,22 +753,18 @@ export default function DeepAnalysisPage() {
                 ${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}
               </div>
               
-              <div style={{ 
-                display: "inline-flex", 
-                alignItems: "center", 
-                gap: "0.5rem",
-                padding: "0.5rem 1rem",
-                borderRadius: "8px",
-                background: result.price.changePercent >= 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"
-              }}>
+              <div
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2"
+                style={{ background: result.price.changePercent >= 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)" }}
+              >
                 <span style={{ color: result.price.changePercent >= 0 ? "#10B981" : "#EF4444", fontWeight: "bold" }}>
                   {result.price.changePercent >= 0 ? "▲" : "▼"} {formatNumber(Math.abs(result.price.changePercent))}%
                 </span>
-                <span style={{ color: "#64748B" }}>24h</span>
+                <span className="text-[#64748B]">24h</span>
               </div>
               
               {/* Signal Badge */}
-              <div style={{ marginTop: "1.5rem" }}>
+              <div className="mt-6">
                 <div style={{
                   display: "inline-block",
                   padding: "0.75rem 1.5rem",
@@ -792,7 +776,7 @@ export default function DeepAnalysisPage() {
                 }}>
                   {result.signals.signal}
                 </div>
-                <div style={{ marginTop: "0.75rem", color: "#94A3B8", fontSize: "0.9rem" }}>
+                <div className="mt-3 text-[0.9rem] text-[#94A3B8]">
                   Score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} • {result.signals.bullishCount || 0} bullish / {result.signals.bearishCount || 0} bearish signals
                 </div>
               </div>

@@ -6,6 +6,9 @@ import ToolsPageHeader from '@/components/ToolsPageHeader';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import CommandStrip, { type TerminalDensity } from '@/components/terminal/CommandStrip';
+import DecisionCockpit from '@/components/terminal/DecisionCockpit';
+import SignalRail from '@/components/terminal/SignalRail';
 
 interface Position {
   id: number;
@@ -481,6 +484,7 @@ function PortfolioContent() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [positions, setPositions] = useState<Position[]>([]);
+  const [density, setDensity] = useState<TerminalDensity>('normal');
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -1044,14 +1048,14 @@ function PortfolioContent() {
 
   if (!mounted) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#94a3b8', fontSize: '16px' }}>Loading portfolio...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
+        <div className="text-base text-slate-400">Loading portfolio...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--msp-bg)' }}>
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       <ToolsPageHeader
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
@@ -1069,18 +1073,7 @@ function PortfolioContent() {
                     alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
                   }
                 }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'transparent',
-                  border: '1px solid #10b981',
-                  borderRadius: '6px',
-                  color: canExportCSV(tier) ? '#10b981' : '#6b7280',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  opacity: canExportCSV(tier) ? 1 : 0.6
-                }}
+                className={`rounded-md border px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
               >
                 📥 Export Positions {!canExportCSV(tier) && '🔒'}
               </button>
@@ -1094,17 +1087,7 @@ function PortfolioContent() {
                     alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
                   }
                 }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'transparent',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '6px',
-                  color: canExportCSV(tier) ? 'var(--msp-muted)' : '#6b7280',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
+                className={`rounded-md border border-[var(--msp-border)] px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}
               >
                 📥 Export History
               </button>
@@ -1112,16 +1095,7 @@ function PortfolioContent() {
             {(positions.length > 0 || closedPositions.length > 0) && (
               <button
                 onClick={clearAllData}
-                style={{
-                  padding: '10px 16px',
-                  background: 'transparent',
-                  border: '1px solid rgba(148,163,184,0.25)',
-                  borderRadius: '10px',
-                  color: '#ef4444',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                className="rounded-[10px] border border-slate-500/40 bg-transparent px-4 py-2.5 text-[13px] font-semibold text-red-500"
               >
                 🗑️ Clear All Data
               </button>
@@ -1141,17 +1115,7 @@ function PortfolioContent() {
                 }
                 setShowAddForm(!showAddForm);
               }}
-              style={{
-                padding: '10px 16px',
-                background: '#10B981',
-                border: 'none',
-                borderRadius: '10px',
-                color: '#fff',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                boxShadow: 'var(--msp-shadow)'
-              }}
+              className="rounded-[10px] bg-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[var(--msp-shadow)]"
             >
               {showAddForm ? '✕ Cancel' : '+ Add Position'}
             </button>
@@ -1159,7 +1123,34 @@ function PortfolioContent() {
         }
       />
 
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 16px 0 16px' }}>
+      <div className="mx-auto max-w-[1600px] px-4 pt-3">
+        <CommandStrip
+          symbol={positions[0]?.symbol || 'PORT'}
+          status={totalReturn >= 0 ? 'GAINING' : 'DRAWDOWN'}
+          confidence={Math.max(0, Math.min(100, 50 + totalReturn))}
+          dataHealth={`${positions.length} open / ${closedPositions.length} closed`}
+          mode={tier.toUpperCase()}
+          density={density}
+          onDensityChange={setDensity}
+        />
+
+        <DecisionCockpit
+          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: ${totalValue.toFixed(2)}</div><div className="msp-muted">Cost Basis: ${totalCost.toFixed(2)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
+          center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {totalPL >= 0 ? '+' : '-'}${Math.abs(totalPL).toFixed(2)}</div><div className="msp-muted">Unrealized: {unrealizedPL >= 0 ? '+' : '-'}${Math.abs(unrealizedPL).toFixed(2)}</div><div className="msp-muted">Realized: {realizedPL >= 0 ? '+' : '-'}${Math.abs(realizedPL).toFixed(2)}</div></div>}
+          right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Return: {totalReturn.toFixed(2)}%</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
+        />
+
+        <SignalRail
+          items={[
+            { label: 'Open', value: `${positions.length}`, tone: 'neutral' },
+            { label: 'Closed', value: `${closedPositions.length}`, tone: 'neutral' },
+            { label: 'Unrealized', value: `${unrealizedPL >= 0 ? '+' : '-'}$${Math.abs(unrealizedPL).toFixed(0)}`, tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
+            { label: 'Realized', value: `${realizedPL >= 0 ? '+' : '-'}$${Math.abs(realizedPL).toFixed(0)}`, tone: realizedPL >= 0 ? 'bull' : 'bear' },
+            { label: 'Drawdown', value: `${Math.max(0, -totalReturn).toFixed(1)}%`, tone: totalReturn < -20 ? 'bear' : 'warn' },
+            { label: 'Limit', value: `${positions.length}/${getPortfolioLimit(tier)}`, tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
+          ]}
+        />
+
         <AdaptivePersonalityCard
           skill="portfolio"
           setupText={`Portfolio return ${totalReturn.toFixed(2)}% with ${positions.length} open positions`}
@@ -1170,104 +1161,51 @@ function PortfolioContent() {
       {/* Manual entry modal (fallback when API has no price) */}
       {manualOpen && manualPosition && (
         <div
-          className="fixed inset-0 z-50"
-          style={{ background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={closeManual}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(92vw, 520px)',
-              background: '#0b1220',
-              border: '1px solid #334155',
-              borderRadius: 12,
-              boxShadow: 'var(--msp-shadow)',
-              padding: 20,
-            }}
+            className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ color: '#e2e8f0', fontWeight: 700 }}>Update price for {manualPosition.symbol}</div>
-              <button onClick={closeManual} style={{ color: '#94a3b8', background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
+              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">✕</button>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 10 }}>Enter a price. This showed because the API didn’t return a value for this symbol.</div>
+            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
             <input
               autoFocus
               value={manualValue}
               onChange={(e) => setManualValue(e.target.value)}
               inputMode="decimal"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid #334155',
-                background: '#0f172a',
-                color: '#e2e8f0',
-                outline: 'none'
-              }}
+              className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-200 outline-none"
             />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
-              <button onClick={closeManual} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #334155', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={submitManual} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#10b981', color: 'white', cursor: 'pointer' }}>OK</button>
+            <div className="mt-3.5 flex justify-end gap-2">
+              <button onClick={closeManual} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
+              <button onClick={submitManual} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white">OK</button>
             </div>
           </div>
         </div>
       )}
 
       {/* Top Stats Bar */}
-      <div style={{ 
-        background: 'var(--msp-bg)',
-        padding: '24px 16px',
-        borderBottom: '1px solid rgba(51,65,85,0.6)'
-      }}>
-        <div style={{ 
-          maxWidth: '1600px', 
-          margin: '0 auto', 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '16px'
-        }}>
-          <div style={{
-            background: 'var(--msp-panel)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: '1px solid rgba(51,65,85,0.5)'
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Market Value</div>
-            <div style={{ 
-              fontSize: '22px', 
-              fontWeight: '700',
-              color: '#e2e8f0'
-            }}>
+      <div className="border-b border-slate-700/60 bg-[var(--msp-bg)] px-4 py-6">
+        <div className="mx-auto grid max-w-[1600px] gap-4 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+          <div className="rounded-xl border border-slate-700/50 bg-[var(--msp-panel)] p-4">
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Market Value</div>
+            <div className="text-[22px] font-bold text-slate-200">
               ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>
-          <div style={{
-            background: 'var(--msp-panel)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: `1px solid ${totalReturn >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Return</div>
-            <div style={{ 
-              fontSize: '22px', 
-              fontWeight: '700',
-              color: totalReturn >= 0 ? '#10b981' : '#ef4444'
-            }}>
+          <div className={`rounded-xl bg-[var(--msp-panel)] p-4 ${totalReturn >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Total Return</div>
+            <div className={`text-[22px] font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
               {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
             </div>
           </div>
-          <div style={{
-            background: 'var(--msp-panel)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: `1px solid ${unrealizedPL >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unrealized P&L</div>
-            <div style={{ 
-              fontSize: '22px', 
-              fontWeight: '700',
-              color: unrealizedPL >= 0 ? '#10b981' : '#ef4444'
-            }}>
+          <div className={`rounded-xl bg-[var(--msp-panel)] p-4 ${unrealizedPL >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Unrealized P&L</div>
+            <div className={`text-[22px] font-bold ${unrealizedPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
               ${unrealizedPL >= 0 ? '+' : ''}{unrealizedPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </div>
           </div>

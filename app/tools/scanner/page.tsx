@@ -9,6 +9,9 @@ import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
+import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
+import DecisionCockpit from "@/components/terminal/DecisionCockpit";
+import SignalRail from "@/components/terminal/SignalRail";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 
@@ -544,6 +547,7 @@ function ScannerContent() {
   const [focusMode, setFocusMode] = useState(false);
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
   const [orientationCollapsed, setOrientationCollapsed] = useState(false);
+  const [density, setDensity] = useState<TerminalDensity>('normal');
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [personalityMode, setPersonalityMode] = useState<'adaptive' | TraderPersonality>('adaptive');
   const [personalitySignals, setPersonalitySignals] = useState<PersonalitySignals>(DEFAULT_PERSONALITY_SIGNALS);
@@ -978,7 +982,7 @@ function ScannerContent() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       <ToolsPageHeader
         badge="MARKET SCANNER"
         title="Market Scanner Pro"
@@ -986,8 +990,40 @@ function ScannerContent() {
         icon="🧭"
         backHref="/tools/scanner"
       />
-      <main style={{ padding: "24px 16px" }}>
+      <main className="px-4 py-6">
         <div className="max-w-7xl mx-auto">
+        {result && (
+          <CommandStrip
+            symbol={result.symbol}
+            status={presenceState}
+            confidence={Math.max(0, Math.min(100, result.score))}
+            dataHealth={lastUpdated ? `Updated ${new Date(lastUpdated).toLocaleTimeString()}` : 'No update'}
+            mode={presenceMode}
+            density={density}
+            onDensityChange={setDensity}
+          />
+        )}
+
+        {result && (
+          <DecisionCockpit
+            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {assetType.toUpperCase()}</div><div className="msp-muted">Timeframe: {timeframe.toUpperCase()}</div><div className="msp-muted">Direction: {(result.direction || 'neutral').toUpperCase()}</div></div>}
+            center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">Score {result.score.toFixed(0)}</div><div className="msp-muted">State: {presenceState}</div><div className="msp-muted">Mode: {presenceMode}</div></div>}
+            right={<div className="grid gap-1 text-sm"><div className="msp-muted">RSI: {result.rsi?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">ADX: {result.adx?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">Price: {typeof result.price === 'number' ? `$${result.price.toFixed(2)}` : 'n/a'}</div></div>}
+          />
+        )}
+
+        {result && (
+          <SignalRail
+            items={[
+              { label: 'Bullish', value: `${result.signals?.bullish ?? 0}`, tone: 'bull' },
+              { label: 'Bearish', value: `${result.signals?.bearish ?? 0}`, tone: 'bear' },
+              { label: 'Neutral', value: `${result.signals?.neutral ?? 0}`, tone: 'neutral' },
+              { label: 'Flow', value: result.capitalFlow?.bias?.toUpperCase() || 'NEUTRAL', tone: result.capitalFlow?.bias === 'bullish' ? 'bull' : result.capitalFlow?.bias === 'bearish' ? 'bear' : 'warn' },
+              { label: 'Filter', value: result.institutionalFilter?.recommendation?.replace('_', ' ') || 'N/A', tone: result.institutionalFilter?.noTrade ? 'bear' : 'bull' },
+              { label: 'Focus', value: focusMode ? 'ON' : 'OFF', tone: focusMode ? 'accent' : 'neutral' },
+            ]}
+          />
+        )}
         {showDeskPreludePanels && (
           <>
             <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
@@ -1000,23 +1036,17 @@ function ScannerContent() {
 
         {/* Orientation */}
         {!orientationCollapsed && (
-        <div className="msp-card mb-6 px-5 py-[18px] text-msp-text" style={{ fontSize: 14, lineHeight: 1.5 }}>
-          <div style={{ fontWeight: 600, color: "var(--msp-accent)", marginBottom: 8, display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ 
-              background: "var(--msp-panel)",
-              border: "1px solid var(--msp-border)",
-              borderRadius: "8px",
-              padding: "4px 6px",
-              fontSize: "12px"
-            }}>🎯</span>
+        <div className="msp-card mb-6 px-5 py-[18px] text-sm leading-[1.5] text-msp-text">
+          <div className="mb-2 flex items-center gap-2.5 font-semibold text-[var(--msp-accent)]">
+            <span className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] px-1.5 py-1 text-xs">🎯</span>
             AI TRADE BRIEF
           </div>
-          <div style={{ marginBottom: 10 }}>
+          <div className="mb-2.5">
             Find high-probability phases with multi-timeframe alignment. Start with the phase, confirm alignment, then look for a clean entry trigger.
           </div>
-          <div style={{ fontSize: 13, color: "var(--msp-text-muted)" }}>
-            <strong style={{ color: "var(--msp-text)" }}>How to read results:</strong>
-            <ul style={{ margin: "6px 0 0 18px", padding: 0, listStyle: "disc" }}>
+          <div className="text-[13px] text-[var(--msp-text-muted)]">
+            <strong className="text-[var(--msp-text)]">How to read results:</strong>
+            <ul className="ml-[18px] mt-1.5 list-disc p-0">
               <li>Phase = market regime. Avoid trading against it.</li>
               <li>Multi-TF alignment = confirmation strength; the more agreement, the better.</li>
               <li>Liquidity sweep / catalysts = entry timing. Wait for the catalyst, then execute.</li>
@@ -1027,16 +1057,16 @@ function ScannerContent() {
         )}
 
         {result?.institutionalFilter && (
-          <div className="msp-panel mb-4 px-3.5 py-3" style={{ borderColor: result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.45)' : 'var(--msp-border-strong)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-              <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Filter Engine</div>
-              <div style={{ color: result.institutionalFilter.noTrade ? '#EF4444' : '#10B981', fontSize: '0.76rem', fontWeight: 800 }}>
+          <div className={`msp-panel mb-4 border px-3.5 py-3 ${result.institutionalFilter.noTrade ? 'border-[rgba(239,68,68,0.45)]' : 'border-[var(--msp-border-strong)]'}`}>
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">Institutional Filter Engine</div>
+              <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
                 {result.institutionalFilter.finalGrade} • {result.institutionalFilter.finalScore.toFixed(0)} • {result.institutionalFilter.recommendation.replace('_', ' ')}
               </div>
             </div>
-            <div style={{ display: 'grid', gap: '0.2rem' }}>
+            <div className="grid gap-0.5">
               {result.institutionalFilter.filters.slice(0, 4).map((filter, idx) => (
-                <div key={idx} style={{ color: '#CBD5E1', fontSize: '0.74rem' }}>
+                <div key={idx} className="text-[0.74rem] text-[#CBD5E1]">
                   {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
                 </div>
               ))}
@@ -1045,35 +1075,13 @@ function ScannerContent() {
         )}
 
         {result && scannerCollapsed && (
-          <div style={{
-            background: "var(--msp-panel)",
-            border: "1px solid var(--msp-border)",
-            borderRadius: "12px",
-            padding: "0.7rem 0.85rem",
-            marginBottom: "1rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "0.7rem",
-            flexWrap: "wrap",
-          }}>
-            <div style={{ color: "#E2E8F0", fontSize: "0.8rem", fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3.5 py-2.5">
+            <div className="text-[0.8rem] font-extrabold uppercase tracking-[0.05em] text-[#E2E8F0]">
               Mini Scanner Bar • {assetType.toUpperCase()} • {ticker.toUpperCase()} • {timeframe.toUpperCase()}
             </div>
             <button
               onClick={() => setScannerCollapsed(false)}
-              style={{
-                background: "rgba(16,185,129,0.15)",
-                border: "1px solid rgba(16,185,129,0.42)",
-                borderRadius: "999px",
-                color: "#10B981",
-                fontSize: "0.74rem",
-                fontWeight: 800,
-                padding: "0.34rem 0.78rem",
-                cursor: "pointer",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-              }}
+              className="cursor-pointer rounded-full border border-[rgba(16,185,129,0.42)] bg-[rgba(16,185,129,0.15)] px-3 py-1 text-[0.74rem] font-extrabold uppercase tracking-[0.06em] text-[#10B981]"
             >
               Expand Scanner
             </button>
@@ -1081,57 +1089,30 @@ function ScannerContent() {
         )}
 
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
-        <div style={{
-          display: result && scannerCollapsed ? "none" : "block",
-          background: "var(--msp-card)",
-          border: "1px solid var(--msp-border)",
-          borderRadius: "14px",
-          padding: "20px",
-          marginBottom: "1.5rem",
-          boxShadow: "var(--msp-shadow)",
-          position: "relative",
-          overflow: "hidden"
-        }}>
+        <div className={`${result && scannerCollapsed ? 'hidden' : 'block'} relative mb-6 overflow-hidden rounded-[14px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-5 shadow-[var(--msp-shadow)]`}>
           {/* Gold accent line */}
-          <div style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "3px",
-            background: "var(--msp-accent)"
-          }} />
+          <div className="absolute left-0 right-0 top-0 h-[3px] bg-[var(--msp-accent)]" />
           
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-            <span style={{ fontSize: "28px" }}>🔍</span>
+          <div className="mb-5 flex items-center gap-3">
+            <span className="text-[28px]">🔍</span>
             <div>
-              <h3 style={{ color: "var(--msp-text)", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <h3 className="m-0 text-lg font-bold uppercase tracking-[0.05em] text-[var(--msp-text)]">
                 Live Edge Scanner (Market-Wide)
               </h3>
-              <p style={{ color: "var(--msp-text-muted)", fontSize: "13px", margin: "4px 0 0 0" }}>
+              <p className="m-0 mt-1 text-[13px] text-[var(--msp-text-muted)]">
                 Scan broad market leaders first, then click one symbol to load your active-symbol cockpit below
               </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Equity scan depth:</span>
-              <div style={{ display: "flex", gap: "6px", background: "var(--msp-panel)", padding: "4px", borderRadius: "8px", border: "1px solid var(--msp-border)" }}>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[13px] font-semibold text-[var(--msp-text-muted)]">Equity scan depth:</span>
+              <div className="flex gap-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1">
                 {(['light', 'deep'] as const).map((mode) => (
                   <button
                     key={`equity-${mode}`}
                     onClick={() => setBulkEquityScanMode(mode)}
                     disabled={bulkScanLoading}
-                    style={{
-                      padding: "7px 12px",
-                      background: bulkEquityScanMode === mode ? "var(--msp-accent)" : "transparent",
-                      border: bulkEquityScanMode === mode ? "1px solid var(--msp-border-strong)" : "1px solid transparent",
-                      borderRadius: "6px",
-                      color: bulkEquityScanMode === mode ? "#061018" : "var(--msp-text-muted)",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: bulkScanLoading ? "not-allowed" : "pointer",
-                      opacity: bulkScanLoading ? 0.5 : 1
-                    }}
+                    className={`rounded-md border px-3 py-[7px] text-xs font-bold ${bulkEquityScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[#061018]' : 'border-transparent bg-transparent text-[var(--msp-text-muted)]'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
                   >
                     {mode === 'light' ? 'Fast Hybrid Rank' : 'Deep Indicators'}
                   </button>
@@ -1141,65 +1122,30 @@ function ScannerContent() {
           </div>
           
           {/* How It Works Explainer */}
-          <div style={{ 
-            background: "var(--msp-panel)", 
-            border: "1px solid var(--msp-border)",
-            borderRadius: "8px", 
-            padding: "12px 16px", 
-            marginBottom: "20px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px"
-          }}>
-            <span style={{ fontSize: "20px" }}>💡</span>
-            <p style={{ color: "var(--msp-text)", fontSize: "13px", margin: 0 }}>
+          <div className="mb-5 flex items-center gap-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-4 py-3">
+            <span className="text-[20px]">💡</span>
+            <p className="m-0 text-[13px] text-[var(--msp-text)]">
               <strong>Step 1:</strong> Run a Top 10 scan to shortlist high-confluence charts → 
               <strong>Step 2:</strong> Click a winner to load full breakdown below
             </p>
           </div>
 
           {/* Timeframe Toggle */}
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "12px", 
-            marginBottom: "16px",
-            flexWrap: "wrap"
-          }}>
-            <span style={{ color: "var(--msp-text-muted)", fontSize: "14px", fontWeight: "600" }}>Timeframe:</span>
-            <div style={{ 
-              display: "flex", 
-              gap: "6px",
-              background: "var(--msp-panel)",
-              border: "1px solid var(--msp-border)",
-              padding: "4px",
-              borderRadius: "8px"
-            }}>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-[var(--msp-text-muted)]">Timeframe:</span>
+            <div className="flex gap-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1">
               {(['15m', '30m', '1h', '1d'] as const).map((tf) => (
                 <button
                   key={tf}
                   onClick={() => setBulkScanTimeframe(tf)}
                   disabled={bulkScanLoading}
-                  style={{
-                    padding: "8px 16px",
-                    background: bulkScanTimeframe === tf 
-                      ? "var(--msp-accent)" 
-                      : "transparent",
-                    border: bulkScanTimeframe === tf ? "1px solid var(--msp-border-strong)" : "1px solid transparent",
-                    borderRadius: "6px",
-                    color: bulkScanTimeframe === tf ? "#061018" : "var(--msp-text-muted)",
-                    fontSize: "14px",
-                    fontWeight: bulkScanTimeframe === tf ? "700" : "500",
-                    cursor: bulkScanLoading ? "not-allowed" : "pointer",
-                    transition: "all 0.2s ease",
-                    opacity: bulkScanLoading ? 0.5 : 1
-                  }}
+                  className={`rounded-md border px-4 py-2 text-sm transition ${bulkScanTimeframe === tf ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[#061018] font-bold' : 'border-transparent bg-transparent text-[var(--msp-text-muted)] font-medium'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
                 >
                   {tf === '1d' ? 'Daily' : tf}
                 </button>
               ))}
             </div>
-            <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
+            <span className="text-xs text-[var(--msp-text-faint)]">
               {bulkScanTimeframe === '15m' && '~7 days of data'}
               {bulkScanTimeframe === '30m' && '~14 days of data'}
               {bulkScanTimeframe === '1h' && '~30 days of data'}
