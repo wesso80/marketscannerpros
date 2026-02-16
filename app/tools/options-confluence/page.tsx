@@ -20,6 +20,9 @@ import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import Pill from "@/components/terminal/Pill";
 import { writeOperatorState } from "@/lib/operatorState";
+import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
+import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
+import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -488,6 +491,7 @@ export default function OptionsConfluenceScanner() {
     narrative: null,
     logs: null,
   });
+  const lastWorkflowEventKeyRef = useRef('');
 
   const activateSection = (key: TrapDoorKey) => {
     setTrapDoors((previousState) => ({ ...previousState, [key]: true }));
@@ -627,6 +631,208 @@ export default function OptionsConfluenceScanner() {
       mode: 'EVALUATE',
     });
   }, [result]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    const symbolKey = result.symbol.toUpperCase();
+    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    const workflowId = `wf_options_${symbolKey}_${dateKey}`;
+
+    const confidence = Math.max(
+      1,
+      Math.min(
+        99,
+        Math.round(
+          result.compositeScore?.confidence
+            ?? (result.signalStrength === 'strong'
+              ? 78
+              : result.signalStrength === 'moderate'
+              ? 62
+              : result.signalStrength === 'weak'
+              ? 45
+              : 50)
+        )
+      )
+    );
+
+    const eventKey = `${workflowId}:${symbolKey}:${selectedTF}:${confidence}:${result.direction}`;
+    if (lastWorkflowEventKeyRef.current === eventKey) return;
+    lastWorkflowEventKeyRef.current = eventKey;
+
+    const signalId = `sig_opt_${symbolKey}_${Date.now()}`;
+    const candidateId = `cand_opt_${symbolKey}_${Date.now()}`;
+    const planId = `plan_opt_${symbolKey}_${Date.now()}`;
+
+    const bias: DecisionPacket['bias'] = result.direction === 'bullish'
+      ? 'bullish'
+      : result.direction === 'bearish'
+      ? 'bearish'
+      : 'neutral';
+
+    const direction: UnifiedSignal['direction'] = bias === 'bullish'
+      ? 'long'
+      : bias === 'bearish'
+      ? 'short'
+      : 'neutral';
+
+    const entryMid = result.tradeLevels
+      ? (Number(result.tradeLevels.entryZone.low) + Number(result.tradeLevels.entryZone.high)) / 2
+      : result.currentPrice;
+
+    const riskScore = Math.max(
+      1,
+      Math.min(99, Math.round((result.expectedMove?.selectedExpiryPercent ?? 2) * 20))
+    );
+
+    const candidateOutcome: CandidateEvaluation['result'] = confidence >= 70
+      ? 'pass'
+      : confidence >= 55
+      ? 'watch'
+      : 'fail';
+
+    const decisionPacket = createDecisionPacketFromScan({
+      symbol: symbolKey,
+      market: 'options',
+      signalSource: 'options.confluence',
+      signalScore: confidence,
+      bias,
+      timeframeBias: [selectedTF],
+      entryZone: entryMid,
+      invalidation: result.tradeLevels?.stopLoss,
+      targets: [
+        result.tradeLevels?.target1?.price,
+        result.tradeLevels?.target2?.price,
+        result.tradeLevels?.target3?.price,
+      ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value)),
+      riskScore,
+      volatilityRegime: (result.ivAnalysis?.ivRank ?? 50) >= 70 ? 'high' : (result.ivAnalysis?.ivRank ?? 50) <= 30 ? 'low' : 'moderate',
+      status: 'candidate',
+    });
+
+    const signalEvent = createWorkflowEvent<UnifiedSignal>({
+      eventType: 'signal.created',
+      workflowId,
+      route: '/tools/options-confluence',
+      module: 'options_confluence',
+      entity: {
+        entity_type: 'signal',
+        entity_id: signalId,
+        symbol: symbolKey,
+        asset_class: 'options' as AssetClass,
+      },
+      payload: {
+        signal_id: signalId,
+        created_at: new Date().toISOString(),
+        symbol: symbolKey,
+        asset_class: 'options',
+        timeframe: selectedTF,
+        signal_type: 'options_confluence',
+        direction,
+        confidence,
+        quality_tier: confidence >= 75 ? 'A' : confidence >= 62 ? 'B' : confidence >= 48 ? 'C' : 'D',
+        source: {
+          module: 'options_confluence',
+          submodule: 'scan',
+          strategy: result.strategyRecommendation?.strategy || 'options_flow',
+        },
+        evidence: {
+          trade_quality: result.tradeQuality,
+          confluence_stack: result.confluenceStack,
+          iv_rank: result.ivAnalysis?.ivRank,
+          unusual_activity: result.unusualActivity?.hasUnusualActivity || false,
+        },
+      },
+    });
+
+    const candidateEvent = createWorkflowEvent<CandidateEvaluation & { decision_packet: DecisionPacket }>({
+      eventType: 'candidate.created',
+      workflowId,
+      parentEventId: signalEvent.event_id,
+      route: '/tools/options-confluence',
+      module: 'options_confluence',
+      entity: {
+        entity_type: 'candidate',
+        entity_id: candidateId,
+        symbol: symbolKey,
+        asset_class: 'options' as AssetClass,
+      },
+      payload: {
+        candidate_id: candidateId,
+        signal_id: signalId,
+        evaluated_at: new Date().toISOString(),
+        result: candidateOutcome,
+        confidence_delta: 0,
+        final_confidence: confidence,
+        checks: [
+          {
+            name: 'options_confidence',
+            status: confidence >= 70 ? 'pass' : confidence >= 55 ? 'warn' : 'fail',
+            detail: `Composite confidence ${confidence}`,
+          },
+          {
+            name: 'entry_defined',
+            status: result.tradeLevels ? 'pass' : 'warn',
+            detail: result.tradeLevels ? 'Trade levels present' : 'Trade levels missing',
+          },
+        ],
+        notes: result.tradeSnapshot?.oneLine || result.entryTiming.reason,
+        decision_packet: decisionPacket,
+      },
+    });
+
+    if (candidateOutcome === 'pass') {
+      const tradePlanEvent = createWorkflowEvent<TradePlan>({
+        eventType: 'trade.plan.created',
+        workflowId,
+        parentEventId: candidateEvent.event_id,
+        route: '/tools/options-confluence',
+        module: 'options_confluence',
+        entity: {
+          entity_type: 'trade_plan',
+          entity_id: planId,
+          symbol: symbolKey,
+          asset_class: 'options' as AssetClass,
+        },
+        payload: {
+          plan_id: planId,
+          created_at: new Date().toISOString(),
+          symbol: symbolKey,
+          asset_class: 'options',
+          direction,
+          timeframe: selectedTF,
+          setup: {
+            source: 'options.confluence',
+            signal_type: 'options_confluence',
+            confidence,
+            decision_packet_id: decisionPacket.id,
+            strategy: result.strategyRecommendation?.strategy,
+          },
+          entry: {
+            zone: entryMid,
+            low: result.tradeLevels?.entryZone.low,
+            high: result.tradeLevels?.entryZone.high,
+            current_price: result.currentPrice,
+          },
+          risk: {
+            invalidation: result.tradeLevels?.stopLoss,
+            targets: decisionPacket.targets,
+            risk_score: decisionPacket.riskScore,
+            volatility_regime: decisionPacket.volatilityRegime,
+          },
+          links: {
+            candidate_id: candidateId,
+            signal_id: signalId,
+          },
+        },
+      });
+
+      void emitWorkflowEvents([signalEvent, candidateEvent, tradePlanEvent]);
+      return;
+    }
+
+    void emitWorkflowEvents([signalEvent, candidateEvent]);
+  }, [result, selectedTF]);
 
   useEffect(() => {
     let mounted = true;
