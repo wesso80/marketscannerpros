@@ -317,6 +317,165 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   return true;
 }
 
+function buildCoachRecommendations(args: {
+  winRate: number;
+  avgWin: number;
+  avgLoss: number;
+  expectancy: number;
+  sampleSize: number;
+}): Array<Record<string, unknown>> {
+  const recommendations: Array<Record<string, unknown>> = [];
+
+  if (args.sampleSize < 5) {
+    recommendations.push({
+      priority: 'high',
+      action: 'increase_sample_size',
+      detail: 'Collect at least 5-10 closed trades before adjusting strategy parameters.',
+    });
+  }
+
+  if (args.avgLoss > 0 && args.avgWin > 0 && args.avgWin < args.avgLoss) {
+    recommendations.push({
+      priority: 'high',
+      action: 'improve_reward_to_risk',
+      detail: 'Average loss is larger than average win. Tighten invalidation or extend target structure.',
+    });
+  }
+
+  if (args.winRate < 45) {
+    recommendations.push({
+      priority: 'medium',
+      action: 'tighten_entry_filter',
+      detail: 'Win rate is below 45%. Increase selectivity on setup quality before execution.',
+    });
+  }
+
+  if (args.expectancy > 0) {
+    recommendations.push({
+      priority: 'medium',
+      action: 'keep_size_consistent',
+      detail: 'Expectancy is positive. Keep sizing stable and avoid emotional scaling.',
+    });
+  }
+
+  if (!recommendations.length) {
+    recommendations.push({
+      priority: 'medium',
+      action: 'continue_process_discipline',
+      detail: 'Maintain process consistency and review another batch after additional closures.',
+    });
+  }
+
+  return recommendations;
+}
+
+async function autoGenerateCoachEventForClosedTrade(workspaceId: string, event: MSPEvent): Promise<MSPEvent | null> {
+  if (event.event_type !== 'trade.closed') return null;
+
+  const workflowId = event.correlation?.workflow_id;
+  if (!workflowId) return null;
+
+  const alreadyGenerated = await q(
+    `SELECT id FROM ai_events
+     WHERE workspace_id = $1
+       AND event_type = 'coach.analysis.generated'
+       AND event_data->'correlation'->>'parent_event_id' = $2
+     LIMIT 1`,
+    [workspaceId, event.event_id]
+  );
+
+  if (alreadyGenerated.length > 0) return null;
+
+  const recentClosed = await q(
+    `SELECT pl, outcome
+     FROM journal_entries
+     WHERE workspace_id = $1
+       AND is_open = false
+     ORDER BY COALESCE(exit_date, trade_date) DESC NULLS LAST
+     LIMIT 20`,
+    [workspaceId]
+  );
+
+  const sampleSize = recentClosed.length;
+  const wins = recentClosed.filter((row: any) => Number(row.pl || 0) > 0 || row.outcome === 'win');
+  const losses = recentClosed.filter((row: any) => Number(row.pl || 0) < 0 || row.outcome === 'loss');
+  const winRate = sampleSize > 0 ? (wins.length / sampleSize) * 100 : 0;
+  const avgWin = wins.length > 0
+    ? wins.reduce((sum: number, row: any) => sum + Math.max(0, Number(row.pl || 0)), 0) / wins.length
+    : 0;
+  const avgLoss = losses.length > 0
+    ? Math.abs(losses.reduce((sum: number, row: any) => sum + Math.min(0, Number(row.pl || 0)), 0) / losses.length)
+    : 0;
+  const expectancy = (winRate / 100) * avgWin - (1 - winRate / 100) * avgLoss;
+
+  const payload = event.payload as Record<string, any>;
+  const tradeId = String(payload?.trade_id || event.entity?.entity_id || '').trim();
+  const analysisId = `coach_${tradeId || Date.now()}`;
+
+  return normalizeEvent({
+    event_id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    event_type: 'coach.analysis.generated',
+    event_version: 1,
+    occurred_at: new Date().toISOString(),
+    actor: {
+      actor_type: 'system',
+      user_id: null,
+      anonymous_id: null,
+      session_id: null,
+    },
+    context: {
+      tenant_id: event.context?.tenant_id || 'msp',
+      app: {
+        name: event.context?.app?.name || 'MarketScannerPros',
+        env: event.context?.app?.env || 'prod',
+        build: event.context?.app?.build,
+      },
+      page: {
+        route: '/tools/journal',
+        module: 'coach_engine',
+      },
+      device: {},
+      geo: {},
+    },
+    entity: {
+      entity_type: 'coach',
+      entity_id: analysisId,
+      symbol: event.entity?.symbol,
+      asset_class: event.entity?.asset_class,
+    },
+    correlation: {
+      workflow_id: workflowId,
+      parent_event_id: event.event_id,
+    },
+    payload: {
+      analysis_id: analysisId,
+      created_at: new Date().toISOString(),
+      scope: 'post_trade_close',
+      inputs: {
+        trade_id: tradeId || null,
+        source_event_id: event.event_id,
+      },
+      summary: {
+        sample_size: sampleSize,
+        win_rate: Number(winRate.toFixed(2)),
+        avg_win: Number(avgWin.toFixed(2)),
+        avg_loss: Number(avgLoss.toFixed(2)),
+        expectancy: Number(expectancy.toFixed(2)),
+      },
+      recommendations: buildCoachRecommendations({
+        winRate,
+        avgWin,
+        avgLoss,
+        expectancy,
+        sampleSize,
+      }),
+      links: {
+        trade_id: tradeId || null,
+      },
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
@@ -351,6 +510,7 @@ export async function POST(req: NextRequest) {
 
     let autoAlertsCreated = 0;
     let autoJournalDraftsCreated = 0;
+    const autoCoachEvents: MSPEvent[] = [];
     for (const event of normalized) {
       if (await autoCreatePlanAlertForEvent(session.workspaceId, event)) {
         autoAlertsCreated += 1;
@@ -358,13 +518,20 @@ export async function POST(req: NextRequest) {
       if (await autoCreateJournalDraftForEvent(session.workspaceId, event)) {
         autoJournalDraftsCreated += 1;
       }
+
+      const coachEvent = await autoGenerateCoachEventForClosedTrade(session.workspaceId, event);
+      if (coachEvent) {
+        autoCoachEvents.push(coachEvent);
+      }
     }
+
+    const eventsToPersist = [...normalized, ...autoCoachEvents];
 
     const values: unknown[] = [];
     const placeholders: string[] = [];
     let index = 1;
 
-    for (const event of normalized) {
+    for (const event of eventsToPersist) {
       placeholders.push(`($${index}, $${index + 1}, $${index + 2}::jsonb, $${index + 3}::jsonb, $${index + 4})`);
       values.push(
         session.workspaceId,
@@ -384,9 +551,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      eventsLogged: normalized.length,
+      eventsLogged: eventsToPersist.length,
+      sourceEventsLogged: normalized.length,
       autoAlertsCreated,
       autoJournalDraftsCreated,
+      autoCoachAnalysesGenerated: autoCoachEvents.length,
     });
   } catch (error) {
     console.error('Workflow events API error:', error);

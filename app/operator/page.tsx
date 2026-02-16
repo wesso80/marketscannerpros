@@ -70,6 +70,7 @@ interface WorkflowToday {
   plans: number;
   executions: number;
   closed: number;
+  coachAnalyses: number;
   autoAlerts: number;
   autoJournalDrafts: number;
   lastEventAt: string | null;
@@ -555,7 +556,7 @@ export default function OperatorDashboardPage() {
 
         <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
-          <div className="grid gap-2 md:grid-cols-7">
+          <div className="grid gap-2 md:grid-cols-8">
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Signals</div>
               <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
@@ -583,6 +584,10 @@ export default function OperatorDashboardPage() {
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Closed</div>
               <div className="font-bold text-emerald-300">{workflowToday?.closed ?? 0}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Coach</div>
+              <div className="font-bold text-violet-300">{workflowToday?.coachAnalyses ?? 0}</div>
             </div>
           </div>
         </section>
