@@ -30,7 +30,7 @@ function WatchlistsContent() {
               📋 Watchlists
             </h1>
             <p className="text-slate-400">
-              Create custom lists to organize and track your favorite symbols
+              Watchlists — Your active idea inventory
             </p>
           </div>
 

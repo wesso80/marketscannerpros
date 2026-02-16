@@ -2,6 +2,7 @@
 
 import MSPCopilot from '@/components/MSPCopilot';
 import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
+import OperatorCommandStrip from '@/components/OperatorCommandStrip';
 import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -55,6 +56,11 @@ export default function ToolsLayoutClient({
     <AIPageProvider>
       <ErrorBoundary fallback={null}>
         <AdaptiveTraderPersonalityBar skill={skill} />
+      </ErrorBoundary>
+      <ErrorBoundary fallback={null}>
+        <div className="mx-auto w-full max-w-[1400px] px-3 md:px-4">
+          <OperatorCommandStrip />
+        </div>
       </ErrorBoundary>
       <ErrorBoundary>{wrappedChildren}</ErrorBoundary>
       <ErrorBoundary fallback={null}>

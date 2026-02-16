@@ -14,6 +14,7 @@ import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import { writeOperatorState } from "@/lib/operatorState";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -101,6 +102,17 @@ interface ScanResult {
     most_likely_path: string[];
     risk: string[];
   };
+}
+
+interface OperatorTransitionSummary {
+  symbol: string;
+  timeframe: TimeframeOption;
+  edgeScore: number;
+  bias: 'bullish' | 'bearish' | 'neutral';
+  quality: 'HIGH' | 'MEDIUM' | 'LOW';
+  executionState: 'WAIT' | 'PREP' | 'EXECUTE';
+  nextTrigger: string;
+  risk: 'LOW' | 'MODERATE' | 'HIGH';
 }
 
 // Top 500+ cryptocurrencies from Alpha Vantage
@@ -546,7 +558,8 @@ function ScannerContent() {
   const showLegacyTopAnalysis = false;
   const [focusMode, setFocusMode] = useState(false);
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
-  const [orientationCollapsed, setOrientationCollapsed] = useState(false);
+  const [orientationCollapsed, setOrientationCollapsed] = useState(true);
+  const [operatorTransition, setOperatorTransition] = useState<OperatorTransitionSummary | null>(null);
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [personalityMode, setPersonalityMode] = useState<'adaptive' | TraderPersonality>('adaptive');
@@ -586,6 +599,14 @@ function ScannerContent() {
     } catch {
     }
   }, [personalitySignals, personalityMode]);
+
+  useEffect(() => {
+    const urlSymbol = searchParams.get('symbol');
+    if (!urlSymbol) return;
+    const normalized = urlSymbol.trim().toUpperCase();
+    if (!normalized) return;
+    setTicker(normalized);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!result) return;
@@ -661,6 +682,28 @@ function ScannerContent() {
       regime,
       flowAligned,
     };
+
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = direction === 'neutral'
+      ? 'WAIT'
+      : trendAligned && momentumActive && confidence >= 70
+      ? 'EXECUTE'
+      : 'PREP';
+    const risk: 'LOW' | 'MODERATE' | 'HIGH' = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
+    const next = action === 'EXECUTE'
+      ? 'Cluster active now'
+      : action === 'PREP'
+      ? 'Await confluence trigger'
+      : 'Wait for cleaner setup';
+
+    writeOperatorState({
+      symbol: result.symbol,
+      edge: confidence,
+      bias: direction === 'bullish' ? 'BULLISH' : direction === 'bearish' ? 'BEARISH' : 'NEUTRAL',
+      action,
+      risk,
+      next,
+      mode: 'ORIENT',
+    });
   }, [result]);
 
   // Run bulk scan
@@ -845,6 +888,7 @@ function ScannerContent() {
     setAiError(null);
     setAiLoading(false);
     setLastUpdated(null);
+    setOperatorTransition(null);
     setScanKey(prev => prev + 1); // Force new render
 
     try {
@@ -1408,8 +1452,47 @@ function ScannerContent() {
                   <div
                     key={pick.symbol}
                     onClick={() => {
+                      const edgeScore = Math.max(1, Math.min(99, Math.round(pick.score ?? 50)));
+                      const bias: 'bullish' | 'bearish' | 'neutral' = pick.direction === 'bullish'
+                        ? 'bullish'
+                        : pick.direction === 'bearish'
+                        ? 'bearish'
+                        : 'neutral';
+                      const quality: 'HIGH' | 'MEDIUM' | 'LOW' = edgeScore >= 70 ? 'HIGH' : edgeScore >= 55 ? 'MEDIUM' : 'LOW';
+                      const risk: 'LOW' | 'MODERATE' | 'HIGH' = pick.indicators?.atr_percent >= 3
+                        ? 'HIGH'
+                        : pick.indicators?.atr_percent >= 1.5
+                        ? 'MODERATE'
+                        : 'LOW';
+                      const nextTrigger = edgeScore >= 75
+                        ? 'Time Cluster active now'
+                        : edgeScore >= 55
+                        ? 'Time Cluster in ~12m'
+                        : 'Await stronger confluence cluster';
+                      const executionState: 'WAIT' | 'PREP' | 'EXECUTE' = edgeScore >= 75
+                        ? 'EXECUTE'
+                        : edgeScore >= 55
+                        ? 'PREP'
+                        : 'WAIT';
+
                       setAssetType(bulkScanResults.type as AssetType);
                       setTicker(pick.symbol);
+                      setResult(null);
+                      setCapitalFlow(null);
+                      setAiText(null);
+                      setAiError(null);
+                      setError(null);
+                      setScannerCollapsed(false);
+                      setOperatorTransition({
+                        symbol: pick.symbol,
+                        timeframe,
+                        edgeScore,
+                        bias,
+                        quality,
+                        executionState,
+                        nextTrigger,
+                        risk,
+                      });
                     }}
                     style={{
                       background: "var(--msp-panel)",
@@ -1996,18 +2079,82 @@ function ScannerContent() {
           </div>
         )}
 
+        {operatorTransition && (
+          <div className="msp-card mb-4 px-4 py-4 text-center">
+            <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
+              Stage 2 • Qualify (Operator Transition)
+            </div>
+            <div className="mx-auto mb-3 max-w-[960px] rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-3 py-3">
+              <div className="mb-2 text-base font-extrabold text-[var(--msp-text)]">
+                {operatorTransition.symbol} — {operatorTransition.timeframe.toUpperCase()}
+              </div>
+              <div className="grid gap-2 text-left [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))]">
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Edge Score</div>
+                  <div className="text-[0.84rem] font-extrabold text-[var(--msp-text)]">{operatorTransition.edgeScore} ({operatorTransition.quality})</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Bias</div>
+                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.bias === 'bullish' ? 'text-[var(--msp-bull)]' : operatorTransition.bias === 'bearish' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-warn)]'}`}>{operatorTransition.bias.toUpperCase()}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Execution State</div>
+                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.executionState === 'EXECUTE' ? 'text-[var(--msp-bull)]' : operatorTransition.executionState === 'PREP' ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-neutral)]'}`}>{operatorTransition.executionState}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Next Trigger</div>
+                  <div className="text-[0.8rem] font-bold text-[var(--msp-text)]">{operatorTransition.nextTrigger}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Risk</div>
+                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.risk === 'LOW' ? 'text-[var(--msp-bull)]' : operatorTransition.risk === 'MODERATE' ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-bear)]'}`}>{operatorTransition.risk}</div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={runScan}
+                disabled={loading}
+                className="rounded-md border border-[var(--msp-border-strong)] bg-[var(--msp-bull)] px-4 py-2 text-[0.76rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bg)] disabled:opacity-60"
+              >
+                {loading ? 'Loading Cockpit…' : 'Load Decision Cockpit'}
+              </button>
+              <button
+                onClick={() => setOperatorTransition(null)}
+                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Active Symbol Cockpit Header */}
         {result && (
           <>
-            <div className="msp-panel mb-2 flex flex-wrap items-center gap-2 px-3 py-2">
+            <div className="msp-panel sticky top-[68px] z-20 mb-2 flex flex-wrap items-center gap-2 px-3 py-2">
               {(() => {
                 const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
                 const adx = result.adx ?? 0;
                 const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
                 const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
                 const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
-                const breadth = direction === 'bullish' ? 'RISK ON' : direction === 'bearish' ? 'RISK OFF' : 'MIXED';
-                const sessionLabel = timeframe === '1d' ? 'DAILY' : 'INTRADAY';
+                const edge = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+                const quality = edge >= 70 ? 'HIGH Q' : edge >= 55 ? 'MED Q' : 'LOW Q';
+                const trendAligned = result.price != null && result.ema200 != null
+                  ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+                  : false;
+                const momentumAligned = result.rsi != null && result.macd_hist != null
+                  ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
+                  : false;
+                const action = direction === 'neutral'
+                  ? 'WAIT'
+                  : (trendAligned && momentumAligned ? 'EXECUTE' : 'PREP');
+                const trigger = trendAligned && momentumAligned
+                  ? 'Cluster Active'
+                  : regime === 'TREND'
+                  ? 'Cluster Building'
+                  : 'Await Trigger';
 
                 const stripTag = (label: string, value: string, type: 'bull' | 'bear' | 'warn' | 'accent' | 'neutral' = 'neutral') => {
                   const colorMap: Record<'bull' | 'bear' | 'warn' | 'accent' | 'neutral', string> = {
@@ -2027,11 +2174,13 @@ function ScannerContent() {
 
                 return (
                   <>
-                    {stripTag('Regime', regime, regime === 'TREND' ? 'bull' : regime === 'RANGE' ? 'neutral' : 'warn')}
-                    {stripTag('Global Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
-                    {stripTag('Breadth', breadth, breadth === 'RISK ON' ? 'bull' : breadth === 'RISK OFF' ? 'bear' : 'warn')}
-                    {stripTag('Event Risk', 'NONE', 'accent')}
-                    {stripTag('Session', sessionLabel, 'neutral')}
+                    {stripTag('Symbol', result.symbol, 'accent')}
+                    {stripTag('Bias', direction.toUpperCase(), direction === 'bullish' ? 'bull' : direction === 'bearish' ? 'bear' : 'warn')}
+                    {stripTag('Edge', `${edge}%`, edge >= 70 ? 'bull' : edge >= 55 ? 'warn' : 'bear')}
+                    {stripTag('Quality', quality, quality === 'HIGH Q' ? 'bull' : quality === 'MED Q' ? 'warn' : 'bear')}
+                    {stripTag('Action', action, action === 'EXECUTE' ? 'bull' : action === 'PREP' ? 'warn' : 'neutral')}
+                    {stripTag('Trigger', trigger, trigger === 'Cluster Active' ? 'bull' : trigger === 'Cluster Building' ? 'warn' : 'neutral')}
+                    {stripTag('Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
                   </>
                 );
               })()}
@@ -2170,6 +2319,46 @@ function ScannerContent() {
                     textTransform: 'uppercase',
                   }}>
                     🎯 Trade State: {tradeState}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {(() => {
+              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+              const trendAligned = result.price != null && result.ema200 != null
+                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+                : false;
+              const momentumAligned = result.rsi != null && result.macd_hist != null
+                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
+                : false;
+              const timingState = confidence >= 70 ? 'ACTIVE' : confidence >= 55 ? 'BUILDING' : 'DORMANT';
+              const volatilityState = (result.atr && result.price && (result.atr / result.price) * 100 >= 2.8) ? 'HIGH' : 'CONTROLLED';
+
+              return (
+                <div style={{
+                  marginBottom: '0.95rem',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border-strong)',
+                  borderRadius: '10px',
+                  padding: '0.72rem 0.82rem',
+                }}>
+                  <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
+                    Signal Blocks • Instant Read
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.38rem' }}>
+                    {[
+                      { label: 'Structure', value: trendAligned ? '✔ ALIGNED' : '⚠ MISALIGNED', tone: trendAligned ? 'var(--msp-bull)' : 'var(--msp-bear)' },
+                      { label: 'Momentum', value: momentumAligned ? '✔ CONFIRMED' : '⚠ WEAK', tone: momentumAligned ? 'var(--msp-bull)' : 'var(--msp-warn)' },
+                      { label: 'Timing', value: timingState, tone: timingState === 'ACTIVE' ? 'var(--msp-bull)' : timingState === 'BUILDING' ? 'var(--msp-warn)' : 'var(--msp-neutral)' },
+                      { label: 'Volatility', value: volatilityState, tone: volatilityState === 'HIGH' ? 'var(--msp-bear)' : 'var(--msp-bull)' },
+                    ].map((block) => (
+                      <div key={block.label} style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '8px', padding: '0.45rem 0.52rem' }}>
+                        <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.16rem', letterSpacing: '0.06em' }}>{block.label}</div>
+                        <div style={{ color: block.tone, fontSize: '0.76rem', fontWeight: 900 }}>{block.value}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

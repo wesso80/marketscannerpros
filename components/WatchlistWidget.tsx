@@ -69,6 +69,30 @@ export default function WatchlistWidget() {
   const [newSymbol, setNewSymbol] = useState('');
   const [newAssetType, setNewAssetType] = useState('equity');
 
+  const getHeatState = (quote?: QuoteData) => {
+    if (!quote) {
+      return { icon: '🟡', label: 'WAIT', className: 'text-amber-400 border-amber-500/30 bg-amber-500/10' };
+    }
+    if (quote.changePercent >= 1.25) {
+      return { icon: '🟢', label: 'EDGE BUILDING', className: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' };
+    }
+    if (quote.changePercent <= -1.25) {
+      return { icon: '🔴', label: 'NO TRADE', className: 'text-red-400 border-red-500/30 bg-red-500/10' };
+    }
+    return { icon: '🟡', label: 'WAIT', className: 'text-amber-400 border-amber-500/30 bg-amber-500/10' };
+  };
+
+  const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert', symbol: string) => {
+    const encodedSymbol = encodeURIComponent(symbol);
+    const routes = {
+      scan: `/tools/scanner?symbol=${encodedSymbol}`,
+      deep: `/tools/deep-analysis?symbol=${encodedSymbol}`,
+      flow: `/tools/options-confluence?symbol=${encodedSymbol}`,
+      alert: `/tools/alerts?symbol=${encodedSymbol}`,
+    };
+    window.location.href = routes[tool];
+  };
+
   // Fetch watchlists
   const fetchWatchlists = useCallback(async () => {
     try {
@@ -271,6 +295,19 @@ export default function WatchlistWidget() {
     pro_trader: { watchlists: 100, items: 500 },
   };
   const currentLimits = limits[tier] || limits.free;
+  const activeSymbols = items.length;
+  const scannerReady = items.filter((item) => {
+    const quote = quotes[item.symbol];
+    return getHeatState(quote).label === 'EDGE BUILDING';
+  }).length;
+  const hotSignals = items.filter((item) => {
+    const quote = quotes[item.symbol];
+    return !!quote && Math.abs(quote.changePercent) >= 2;
+  }).length;
+  const avgChangePercent = items.length > 0
+    ? items.reduce((sum, item) => sum + (quotes[item.symbol]?.changePercent ?? 0), 0) / items.length
+    : 0;
+  const biasLabel = avgChangePercent > 0.3 ? 'Bullish' : avgChangePercent < -0.3 ? 'Bearish' : 'Neutral';
 
   if (loading) {
     return (
@@ -288,6 +325,34 @@ export default function WatchlistWidget() {
     <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
       {/* Header */}
       <div className="p-4 border-b border-slate-700/50">
+        <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
+          <div className="text-[0.68rem] uppercase tracking-[0.08em] text-slate-400 font-semibold mb-1">
+            Watchlist Status
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
+              <div className="text-slate-500 uppercase tracking-wide">Active Symbols</div>
+              <div className="text-slate-100 font-semibold">{activeSymbols}</div>
+            </div>
+            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
+              <div className="text-slate-500 uppercase tracking-wide">Scanner Ready</div>
+              <div className="text-emerald-400 font-semibold">{scannerReady}</div>
+            </div>
+            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
+              <div className="text-slate-500 uppercase tracking-wide">Bias</div>
+              <div className={`font-semibold ${biasLabel === 'Bullish' ? 'text-emerald-400' : biasLabel === 'Bearish' ? 'text-red-400' : 'text-amber-400'}`}>{biasLabel}</div>
+            </div>
+            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
+              <div className="text-slate-500 uppercase tracking-wide">Hot Signals</div>
+              <div className="text-amber-400 font-semibold">{hotSignals}</div>
+            </div>
+            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
+              <div className="text-slate-500 uppercase tracking-wide">Mode</div>
+              <div className="text-slate-100 font-semibold">Pre-Staging</div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             📋 Watchlists
@@ -350,7 +415,6 @@ export default function WatchlistWidget() {
           </div>
         ) : selectedWatchlist ? (
           <div>
-            {/* Selected watchlist header */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className={`text-lg font-semibold ${getTextColorClass(selectedWatchlist.color)}`}>
@@ -364,26 +428,23 @@ export default function WatchlistWidget() {
                 <button
                   onClick={() => setShowAddSymbol(true)}
                   disabled={items.length >= currentLimits.items}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 
-                    text-white text-sm rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
                 >
                   + Add Symbol
                 </button>
                 <button
                   onClick={() => deleteWatchlist(selectedWatchlist.id)}
-                  className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 
-                    text-sm rounded-lg transition-colors"
+                  className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm rounded-lg transition-colors"
                 >
                   🗑️
                 </button>
               </div>
             </div>
 
-            {/* Items list */}
             {itemsLoading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-14 bg-slate-700/50 rounded-lg animate-pulse" />
+                {[1, 2, 3].map((row) => (
+                  <div key={row} className="h-14 bg-slate-700/50 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : items.length === 0 ? (
@@ -400,39 +461,69 @@ export default function WatchlistWidget() {
               <div className="space-y-2">
                 {items.map((item) => {
                   const quote = quotes[item.symbol];
+                  const heatState = getHeatState(quote);
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg 
-                        hover:bg-slate-700/50 transition-colors group"
+                      className="p-3 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-semibold text-white">{item.symbol}</p>
-                          <p className="text-xs text-slate-400 capitalize">{item.asset_type}</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div>
+                            <p className="font-semibold text-white">{item.symbol}</p>
+                            <p className="text-xs text-slate-400 capitalize">{item.asset_type}</p>
+                          </div>
+                          <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${heatState.className}`}>
+                            <span>{heatState.icon}</span>
+                            <span>{heatState.label}</span>
+                          </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {quote ? (
-                          <>
+                        <div className="flex items-center gap-4">
+                          {quote ? (
                             <div className="text-right">
                               <p className="font-mono text-white">{formatPrice(quote.price)}</p>
                               <p className={`text-xs ${quote.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent?.toFixed(2)}%
                               </p>
                             </div>
-                          </>
-                        ) : (
-                          <div className="text-right">
-                            <p className="font-mono text-slate-500">-</p>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="text-right">
+                              <p className="font-mono text-slate-500">-</p>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => removeSymbol(item.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-400 transition-all"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <button
-                          onClick={() => removeSymbol(item.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 
-                            hover:text-red-400 transition-all"
+                          onClick={() => launchTool('scan', item.symbol)}
+                          className="px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold uppercase tracking-wide hover:bg-emerald-500/20"
                         >
-                          ✕
+                          Scan
+                        </button>
+                        <button
+                          onClick={() => launchTool('deep', item.symbol)}
+                          className="px-2 py-1 rounded border border-slate-500/40 bg-slate-700/40 text-slate-200 text-[11px] font-semibold uppercase tracking-wide hover:bg-slate-700/70"
+                        >
+                          Deep
+                        </button>
+                        <button
+                          onClick={() => launchTool('flow', item.symbol)}
+                          className="px-2 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 text-[11px] font-semibold uppercase tracking-wide hover:bg-purple-500/20"
+                        >
+                          Option Flow
+                        </button>
+                        <button
+                          onClick={() => launchTool('alert', item.symbol)}
+                          className="px-2 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] font-semibold uppercase tracking-wide hover:bg-amber-500/20"
+                        >
+                          Alert
                         </button>
                       </div>
                     </div>
