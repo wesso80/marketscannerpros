@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { 
@@ -451,6 +451,7 @@ type InstitutionalLensMode = 'OBSERVE' | 'WATCH' | 'ARMED' | 'EXECUTE';
 type MRIRegime = 'TREND_EXPANSION' | 'ROTATIONAL_RANGE' | 'VOLATILITY_EXPANSION' | 'CHAOTIC_NEWS';
 type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 type OperatorViewMode = 'guided' | 'advanced';
+type TrapDoorKey = 'evidence' | 'contracts' | 'narrative' | 'logs';
 
 export default function OptionsConfluenceScanner() {
   const { tier, isLoading: isTierLoading } = useUserTier();
@@ -475,17 +476,30 @@ export default function OptionsConfluenceScanner() {
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
   const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
-  const [trapDoors, setTrapDoors] = useState<{
-    evidence: boolean;
-    contracts: boolean;
-    narrative: boolean;
-    logs: boolean;
-  }>({
+  const [trapDoors, setTrapDoors] = useState<Record<TrapDoorKey, boolean>>({
     evidence: true,
     contracts: false,
     narrative: false,
     logs: false,
   });
+  const sectionAnchorsRef = useRef<Record<TrapDoorKey, HTMLDivElement | null>>({
+    evidence: null,
+    contracts: null,
+    narrative: null,
+    logs: null,
+  });
+
+  const activateSection = (key: TrapDoorKey) => {
+    setTrapDoors((previousState) => ({ ...previousState, [key]: true }));
+
+    const scrollToAnchor = () => {
+      sectionAnchorsRef.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    requestAnimationFrame(() => {
+      setTimeout(scrollToAnchor, 40);
+    });
+  };
 
   const normalizeOptionsSetup = (payload: any): OptionsSetup => {
     const safeTradeLevels = payload?.tradeLevels
@@ -2047,7 +2061,7 @@ export default function OptionsConfluenceScanner() {
                 .map((section) => (
                 <button
                   key={section.key}
-                  onClick={() => setTrapDoors((previousState) => ({ ...previousState, [section.key]: !previousState[section.key] }))}
+                  onClick={() => activateSection(section.key)}
                   className={`inline-flex cursor-pointer items-center gap-[0.35rem] rounded-full border border-[var(--msp-border)] px-[0.6rem] py-[0.3rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] ${trapDoors[section.key] ? 'bg-[var(--msp-panel)] text-[var(--msp-text)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
                 >
                   <span>{section.label}</span>
@@ -2068,7 +2082,7 @@ export default function OptionsConfluenceScanner() {
                 .map((door) => (
                   <button
                     key={`collapsed-${door.key}`}
-                    onClick={() => setTrapDoors((previousState) => ({ ...previousState, [door.key]: true }))}
+                    onClick={() => activateSection(door.key)}
                     className="grid w-full cursor-pointer gap-[0.18rem] rounded-[10px] border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.7rem] text-left"
                   >
                     <div className="text-[0.75rem] font-extrabold uppercase tracking-[0.04em] text-slate-200">
@@ -2081,7 +2095,7 @@ export default function OptionsConfluenceScanner() {
             </div>
 
             {trapDoors.evidence && (
-              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+              <div ref={(element) => { sectionAnchorsRef.current.evidence = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 1 — Evidence</span>
                 <span className="ml-2 text-slate-500">Confluence + structure + setup confirmation</span>
               </div>
@@ -2773,7 +2787,7 @@ export default function OptionsConfluenceScanner() {
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {diagnosticsVisible && (
-              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+              <div ref={(element) => { sectionAnchorsRef.current.logs = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Execution Diagnostics (Advanced)</span>
                 <span className="ml-2 text-slate-500">Risk flags, data quality, confidence caps, execution notes</span>
               </div>
@@ -3044,7 +3058,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* PRO TRADER SECTION - Collapsible */}
             {narrativeVisible && (
-              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+              <div ref={(element) => { sectionAnchorsRef.current.narrative = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 3 — Analyst Narrative (Advanced)</span>
                 <span className="ml-2 text-slate-500">Institutional interpretation and strategy rationale</span>
               </div>
@@ -3525,7 +3539,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.contracts && (
-              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+              <div ref={(element) => { sectionAnchorsRef.current.contracts = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 2 — Contracts & Greeks</span>
                 <span className="ml-2 text-slate-500">Strike + expiry + OI + greeks + risk management</span>
               </div>
