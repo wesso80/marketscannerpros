@@ -29,6 +29,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
 import { getSessionFromCookie } from '@/lib/auth';
+import { buildBacktestEngineResult } from '@/lib/backtest/engine';
+import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
+import { getBacktestStrategy, isBacktestTimeframeSupported } from '@/lib/strategies/registry';
+import type { BacktestTimeframe as RegistryBacktestTimeframe } from '@/lib/strategies/types';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -71,12 +75,6 @@ interface StrategyResult {
   trades: Trade[];
   dates: string[];
   closes: number[];
-}
-
-interface EquityPoint {
-  date: string;
-  equity: number;
-  drawdown: number;
 }
 
 interface PriceData {
@@ -723,351 +721,34 @@ function runStrategy(
   for (let i = startIdx; i < dates.length - 1; i++) {
     const date = dates[i];
     const close = closes[i];
-    
-    // EMA Crossover Strategy (9/21)
-    if (strategy === 'ema_crossover' && ema9[i] && ema21[i] && ema9[i-1] && ema21[i-1]) {
-      if (!position && ema9[i-1] <= ema21[i-1] && ema9[i] > ema21[i]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      } else if (position && ema9[i-1] >= ema21[i-1] && ema9[i] < ema21[i]) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // SMA Crossover (50/200 Golden Cross)
-    if (strategy === 'sma_crossover' && sma50[i] && sma200[i] && sma50[i-1] && sma200[i-1]) {
-      if (!position && sma50[i-1] <= sma200[i-1] && sma50[i] > sma200[i]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      } else if (position && sma50[i-1] >= sma200[i-1] && sma50[i] < sma200[i]) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // RSI Mean Reversion
-    if (strategy === 'rsi_reversal' && rsi[i] && rsi[i-1]) {
-      if (!position && rsi[i] < 30) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      } else if (position && rsi[i] > 70) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // RSI Trend Following
-    if (strategy === 'rsi_trend' && rsi[i] && rsi[i-1]) {
-      if (!position && rsi[i] < 40 && rsi[i] > rsi[i-1]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      } else if (position && rsi[i] > 60) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // MACD Crossover
-    if ((strategy === 'macd_momentum' || strategy === 'macd_crossover') && macdData) {
-      const { macd, signal } = macdData;
-      if (macd[i] !== undefined && signal[i] !== undefined && macd[i-1] !== undefined && signal[i-1] !== undefined) {
-        if (!position && macd[i-1] <= signal[i-1] && macd[i] > signal[i]) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        } else if (position && macd[i-1] >= signal[i-1] && macd[i] < signal[i]) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
-    }
-    
-    // Bollinger Bands Mean Reversion
-    if ((strategy === 'bbands_squeeze' || strategy === 'bbands_breakout') && bbands) {
-      if (bbands.lower[i] && bbands.upper[i]) {
-        if (!position && close <= bbands.lower[i]) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        } else if (position && close >= bbands.upper[i]) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
-    }
-    
-    // Multi-Indicator: EMA + RSI
-    if (strategy === 'multi_ema_rsi' && ema9[i] && ema21[i] && rsi[i] && ema9[i-1] && ema21[i-1]) {
-      if (!position && ema9[i-1] <= ema21[i-1] && ema9[i] > ema21[i] && rsi[i] < 70) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      } else if (position && ((ema9[i-1] >= ema21[i-1] && ema9[i] < ema21[i]) || rsi[i] > 75)) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // Multi-Indicator: MACD + Trend
-    if (strategy === 'multi_macd_adx' && macdData) {
-      const { macd, signal } = macdData;
-      if (macd[i] !== undefined && signal[i] !== undefined && macd[i-1] !== undefined && signal[i-1] !== undefined) {
-        if (!position && macd[i-1] <= signal[i-1] && macd[i] > signal[i] && macd[i] > 0) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        } else if (position && ((macd[i-1] >= signal[i-1] && macd[i] < signal[i]) || macd[i] < 0)) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
-    }
-    
-    // Stochastic Oversold Strategy
-    if (strategy === 'stoch_oversold' && stochData) {
-      const { k, d } = stochData;
-      if (k[i] !== undefined && d[i] !== undefined && k[i-1] !== undefined) {
-        // Entry: %K crosses above %D when both are below 20 (oversold)
-        if (!position && k[i-1] < d[i-1] && k[i] > d[i] && k[i] < 25) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        // Exit: %K crosses below %D when both are above 80 (overbought)
-        } else if (position && k[i] > 80) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
-    }
-    
-    // ADX Trend Strategy
-    if (strategy === 'adx_trend' && adxData) {
-      const { adx, diPlus, diMinus } = adxData;
-      if (adx[i] !== undefined && diPlus[i] !== undefined && diMinus[i] !== undefined) {
-        // Entry: ADX > 25 (strong trend) and +DI crosses above -DI
-        if (!position && adx[i] > 25 && diPlus[i] > diMinus[i] && diPlus[i-1] <= diMinus[i-1]) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        // Exit: ADX < 20 (weak trend) or -DI crosses above +DI
-        } else if (position && (adx[i] < 20 || (diMinus[i] > diPlus[i] && diMinus[i-1] <= diPlus[i-1]))) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
-    }
-    
-    // CCI Reversal Strategy
-    if (strategy === 'cci_reversal' && cci[i] !== undefined && cci[i-1] !== undefined) {
-      // Entry: CCI crosses above -100 (oversold recovery)
-      if (!position && cci[i-1] <= -100 && cci[i] > -100) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      // Exit: CCI crosses above +100 (overbought) or falls back below -100
-      } else if (position && (cci[i] > 100 || cci[i] < -100)) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // OBV Volume Confirmation Strategy
-    if (strategy === 'obv_volume' && obv[i] !== undefined && i >= 21) {
-      // Calculate OBV SMA for trend confirmation
-      const obvSlice = obv.slice(i - 20, i + 1);
-      const obvSMA = obvSlice.reduce((a, b) => a + b, 0) / 21;
-      
-      // Entry: OBV crosses above its 21-period SMA (buying pressure)
-      const obvAboveSMA = obv[i] > obvSMA;
-      const obvBelowSMAPrev = obv[i-1] <= (obv.slice(i - 21, i).reduce((a, b) => a + b, 0) / 21);
-      
-      if (!position && obvAboveSMA && obvBelowSMAPrev && close > closes[i-1]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
-      // Exit: OBV crosses below its SMA
-      } else if (position && obv[i] < obvSMA) {
-        const shares = (initialCapital * 0.95) / position.entry;
-        const returnDollars = (close - position.entry) * shares;
-        const returnPercent = ((close - position.entry) / position.entry) * 100;
-        
-        trades.push({
-          entryDate: position.entryDate,
-          exitDate: date,
-          symbol,
-          side: 'LONG',
-          entry: position.entry,
-          exit: close,
-          return: returnDollars,
-          returnPercent,
-          holdingPeriodDays: i - position.entryIdx + 1
-        });
-        position = null;
-      }
-    }
-    
-    // Multi: BB + Stochastic Strategy
-    if (strategy === 'multi_bb_stoch' && bbands && stochData) {
-      const { k, d } = stochData;
-      if (bbands.lower[i] && bbands.upper[i] && k[i] !== undefined) {
-        // Entry: Price at lower BB AND Stochastic oversold (%K < 25)
-        if (!position && close <= bbands.lower[i] && k[i] < 25) {
-          position = { entry: close, entryDate: date, entryIdx: i };
-        // Exit: Price at upper BB OR Stochastic overbought (%K > 75)
-        } else if (position && (close >= bbands.upper[i] || k[i] > 80)) {
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (close - position.entry) * shares;
-          const returnPercent = ((close - position.entry) / position.entry) * 100;
-          
-          trades.push({
-            entryDate: position.entryDate,
-            exitDate: date,
-            symbol,
-            side: 'LONG',
-            entry: position.entry,
-            exit: close,
-            return: returnDollars,
-            returnPercent,
-            holdingPeriodDays: i - position.entryIdx + 1
-          });
-          position = null;
-        }
-      }
+    const coreStep = runCoreStrategyStep({
+      strategy,
+      i,
+      date,
+      close,
+      initialCapital,
+      symbol,
+      position,
+      trades,
+      indicators: {
+        ema9,
+        ema21,
+        sma50,
+        sma200,
+        rsi,
+        closes,
+        cci,
+        obv,
+        macdData,
+        bbands,
+        adxData,
+        stochData,
+      },
+    });
+
+    if (coreStep.handled) {
+      position = coreStep.position;
+      continue;
     }
     
     // ═══════════════════════════════════════════════════════════════
@@ -1778,15 +1459,30 @@ export async function POST(req: NextRequest) {
     
     const { symbol, strategy, startDate, endDate, initialCapital, timeframe = 'daily' } = body;
 
+    const strategyDefinition = getBacktestStrategy(strategy);
+    if (!strategyDefinition) {
+      return NextResponse.json(
+        { error: `Unknown strategy: ${strategy}` },
+        { status: 400 }
+      );
+    }
+
     const isCrypto = isCryptoSymbol(symbol);
     const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
     
-    // All timeframes now supported for crypto via Binance API
-    const effectiveTimeframe = timeframe;
+    const effectiveTimeframe = timeframe as RegistryBacktestTimeframe;
+    if (!isBacktestTimeframeSupported(strategyDefinition.id, effectiveTimeframe)) {
+      return NextResponse.json(
+        {
+          error: `Timeframe ${effectiveTimeframe} is not supported for strategy ${strategyDefinition.label}`,
+        },
+        { status: 400 }
+      );
+    }
     
     logger.info('Backtest request started', { 
       symbol: normalizedSymbol, 
-      strategy, 
+      strategy: strategyDefinition.id,
       startDate, 
       endDate, 
       initialCapital,
@@ -1800,163 +1496,23 @@ export async function POST(req: NextRequest) {
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
 
     // Run backtest with real indicators
-    const { trades, dates } = runStrategy(strategy, priceData, initialCapital, startDate, endDate, normalizedSymbol, effectiveTimeframe);
+    const { trades, dates } = runStrategy(
+      strategyDefinition.id,
+      priceData,
+      initialCapital,
+      startDate,
+      endDate,
+      normalizedSymbol,
+      effectiveTimeframe
+    );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
-
-    if (trades.length === 0) {
-      return NextResponse.json({
-        totalTrades: 0,
-        winningTrades: 0,
-        losingTrades: 0,
-        winRate: 0,
-        totalReturn: 0,
-        maxDrawdown: 0,
-        sharpeRatio: 0,
-        profitFactor: 0,
-        avgWin: 0,
-        avgLoss: 0,
-        cagr: 0,
-        volatility: 0,
-        sortinoRatio: 0,
-        calmarRatio: 0,
-        timeInMarket: 0,
-        bestTrade: null,
-        worstTrade: null,
-        equityCurve: [],
-        trades: []
-      });
-    }
-
-    // Calculate performance metrics
-    const totalTrades = trades.length;
-    const winningTrades = trades.filter(t => t.return > 0).length;
-    const losingTrades = trades.filter(t => t.return <= 0).length;
-    const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
-
-    const totalReturn = trades.reduce((sum, t) => sum + t.return, 0);
-    const totalReturnPercent = (totalReturn / initialCapital) * 100;
-
-    // Build equity curve using exit dates
-    let equity = initialCapital;
-    let peak = initialCapital;
-    let maxDrawdown = 0;
-    const equityCurve: EquityPoint[] = [];
-
-    const exitReturnsByDate = trades.reduce<Record<string, number>>((acc, trade) => {
-      acc[trade.exitDate] = (acc[trade.exitDate] || 0) + trade.return;
-      return acc;
-    }, {});
-
-    dates.forEach(date => {
-      if (exitReturnsByDate[date] !== undefined) {
-        equity += exitReturnsByDate[date];
-      }
-
-      if (equity > peak) {
-        peak = equity;
-      }
-
-      const drawdown = ((peak - equity) / peak) * 100;
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
-
-      equityCurve.push({ date, equity, drawdown });
-    });
-
-    const endingEquity = equityCurve[equityCurve.length - 1]?.equity || initialCapital;
-    const tradingDays = equityCurve.length;
-
-    // Calculate daily equity returns for risk metrics
-    const equityReturns = equityCurve.slice(1).map((point, idx) => {
-      const prev = equityCurve[idx].equity;
-      return ((point.equity - prev) / prev) * 100;
-    });
-
-    const avgReturn = equityReturns.reduce((a, b) => a + b, 0) / (equityReturns.length || 1);
-    const stdDev = Math.sqrt(
-      equityReturns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (equityReturns.length || 1)
-    );
-    const sharpeRatio = stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0;
-
-    const downsideReturns = equityReturns.filter(r => r < 0);
-    const downsideStd = Math.sqrt(
-      downsideReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / (downsideReturns.length || 1)
-    );
-    const sortinoRatio = downsideStd > 0 ? (avgReturn / downsideStd) * Math.sqrt(252) : 0;
-
-    const cagr = tradingDays > 0 ? Math.pow(endingEquity / initialCapital, 252 / tradingDays) - 1 : 0;
-    const volatility = stdDev * Math.sqrt(252);
-
-    // Calculate profit factor
-    const grossProfit = trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0);
-    const grossLoss = Math.abs(trades.filter(t => t.return <= 0).reduce((sum, t) => sum + t.return, 0));
-    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999 : 0;
-
-    // Average win/loss
-    const avgWin = winningTrades > 0
-      ? trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0) / winningTrades
-      : 0;
-    const avgLoss = losingTrades > 0
-      ? trades.filter(t => t.return <= 0).reduce((sum, t) => sum + t.return, 0) / losingTrades
-      : 0;
-
-    const totalHoldingDays = trades.reduce((sum, t) => sum + t.holdingPeriodDays, 0);
-    const timeInMarket = tradingDays > 0 ? (totalHoldingDays / tradingDays) * 100 : 0;
-    const calmarRatio = maxDrawdown > 0 ? (cagr * 100) / maxDrawdown : 0;
-
-    const bestTrade = trades.reduce((best, t) => t.returnPercent > (best?.returnPercent ?? -Infinity) ? t : best, trades[0]);
-    const worstTrade = trades.reduce((worst, t) => t.returnPercent < (worst?.returnPercent ?? Infinity) ? t : worst, trades[0]);
-
-    const result = {
-      totalTrades,
-      winningTrades,
-      losingTrades,
-      winRate: parseFloat(winRate.toFixed(2)),
-      totalReturn: parseFloat(totalReturnPercent.toFixed(2)),
-      maxDrawdown: parseFloat(maxDrawdown.toFixed(2)),
-      sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
-      profitFactor: parseFloat(profitFactor.toFixed(2)),
-      avgWin: parseFloat(avgWin.toFixed(2)),
-      avgLoss: parseFloat(avgLoss.toFixed(2)),
-      cagr: parseFloat((cagr * 100).toFixed(2)),
-      volatility: parseFloat(volatility.toFixed(2)),
-      sortinoRatio: parseFloat(sortinoRatio.toFixed(2)),
-      calmarRatio: parseFloat(calmarRatio.toFixed(2)),
-      timeInMarket: parseFloat(timeInMarket.toFixed(2)),
-      bestTrade: bestTrade ? {
-        ...bestTrade,
-        entry: parseFloat(bestTrade.entry.toFixed(2)),
-        exit: parseFloat(bestTrade.exit.toFixed(2)),
-        return: parseFloat(bestTrade.return.toFixed(2)),
-        returnPercent: parseFloat(bestTrade.returnPercent.toFixed(2))
-      } : null,
-      worstTrade: worstTrade ? {
-        ...worstTrade,
-        entry: parseFloat(worstTrade.entry.toFixed(2)),
-        exit: parseFloat(worstTrade.exit.toFixed(2)),
-        return: parseFloat(worstTrade.return.toFixed(2)),
-        returnPercent: parseFloat(worstTrade.returnPercent.toFixed(2))
-      } : null,
-      equityCurve: equityCurve.map(point => ({
-        date: point.date,
-        equity: parseFloat(point.equity.toFixed(2)),
-        drawdown: parseFloat(point.drawdown.toFixed(2))
-      })),
-      trades: trades.map(t => ({
-        ...t,
-        entry: parseFloat(t.entry.toFixed(2)),
-        exit: parseFloat(t.exit.toFixed(2)),
-        return: parseFloat(t.return.toFixed(2)),
-        returnPercent: parseFloat(t.returnPercent.toFixed(2))
-      }))
-    };
+    const result = buildBacktestEngineResult(trades, dates, initialCapital);
 
     logger.info('Backtest completed successfully', { 
       symbol, 
-      totalTrades, 
-      winRate, 
-      totalReturn: totalReturnPercent.toFixed(2) 
+      totalTrades: result.totalTrades,
+      winRate: result.winRate,
+      totalReturn: result.totalReturn.toFixed(2)
     });
 
     return NextResponse.json(result);

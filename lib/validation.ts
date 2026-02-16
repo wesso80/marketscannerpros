@@ -4,6 +4,7 @@
 import { z } from "zod";
 
 // ============= Common Schemas =============
+import { isBacktestStrategy } from '@/lib/strategies/registry';
 
 export const emailSchema = z.string().email("Invalid email address").toLowerCase();
 
@@ -85,7 +86,9 @@ export const backtestTimeframeSchema = z.enum(["1min", "5min", "15min", "30min",
 
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,
-  strategy: z.string().min(1),
+  strategy: z.string().min(1).refine((value) => isBacktestStrategy(value), {
+    message: 'Unknown backtest strategy',
+  }),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
   initialCapital: z.number().positive().max(10000000),

@@ -20,6 +20,7 @@ const proTraderTools = [
 ];
 
 const platformTools = [
+  { href: '/operator', icon: '🧭', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow, risk command, and learning loop.' },
   { href: '/tools/scanner', icon: '📊', title: 'Multi-Market Scanner', description: 'Scan equities, crypto, and forex with structured filters.' },
   { href: '/tools/gainers-losers', icon: '🚀', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
   { href: '/tools/company-overview', icon: '🏢', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },

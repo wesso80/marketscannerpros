@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
+import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/registry';
 
 /**
  * Backtest Strategy Alerts Checker
@@ -14,22 +15,6 @@ import { sendPushToUser } from '@/lib/pushServer';
  */
 
 const CRON_SECRET = process.env.CRON_SECRET;
-
-// All available backtest strategies
-const STRATEGIES = [
-  'ema_crossover', 'sma_crossover', 'triple_ema',
-  'rsi_reversal', 'rsi_trend', 'rsi_divergence',
-  'macd_momentum', 'macd_crossover', 'macd_histogram_reversal',
-  'bbands_squeeze', 'bbands_breakout', 'keltner_atr_breakout',
-  'volume_breakout', 'obv_volume', 'volume_climax_reversal',
-  'adx_trend', 'supertrend', 'ichimoku_cloud',
-  'stoch_oversold', 'cci_reversal', 'williams_r',
-  'multi_ema_rsi', 'multi_macd_adx', 'multi_bb_stoch', 'multi_confluence_5',
-  'msp_day_trader', 'msp_day_trader_strict', 'msp_day_trader_v3', 'msp_day_trader_v3_aggressive',
-  'msp_trend_pullback', 'msp_liquidity_reversal',
-  'scalp_vwap_bounce', 'scalp_orb_15', 'scalp_momentum_burst', 'scalp_mean_revert',
-  'swing_pullback_buy', 'swing_breakout', 'swing_earnings_drift'
-];
 
 interface StrategyAlert {
   id: string;
@@ -99,7 +84,10 @@ async function checkStrategyAlerts(req: NextRequest) {
     // Group alerts by symbol+strategy to minimize API calls
     const alertGroups = new Map<string, StrategyAlert[]>();
     for (const alert of alerts) {
-      const strategy = alert.smart_alert_context?.strategy || 'ema_crossover';
+      const rawStrategy = alert.smart_alert_context?.strategy;
+      const strategy = rawStrategy && isBacktestStrategy(rawStrategy)
+        ? rawStrategy
+        : DEFAULT_BACKTEST_STRATEGY;
       const timeframe = alert.smart_alert_context?.timeframe || 'daily';
       const key = `${alert.symbol}|${strategy}|${timeframe}`;
       if (!alertGroups.has(key)) {

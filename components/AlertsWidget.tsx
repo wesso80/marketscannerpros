@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import { readOperatorState } from '@/lib/operatorState';
 import PushNotificationSettings from './PushNotificationSettings';
 import MultiConditionAlertBuilder from './MultiConditionAlertBuilder';
 
@@ -59,6 +60,9 @@ interface AlertHistory {
   condition_met: string;
   symbol: string;
   alert_name: string;
+  condition_type?: string;
+  condition_value?: number;
+  user_action?: string;
   acknowledged_at?: string;
 }
 
@@ -81,9 +85,12 @@ export default function AlertsWidget({
   const [history, setHistory] = useState<AlertHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [activeTab, setActiveTab] = useState<'active' | 'smart' | 'multi' | 'history'>('active');
+  const [activeTab, setActiveTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
   const [showSmartCreate, setShowSmartCreate] = useState(false);
   const [showMultiCreate, setShowMultiCreate] = useState(false);
+  const [loggingHistoryId, setLoggingHistoryId] = useState<string | null>(null);
+  const [loggedHistoryEntries, setLoggedHistoryEntries] = useState<Record<string, number | null>>({});
+  const [historyActionError, setHistoryActionError] = useState('');
   
   // New alert form state
   const [newAlert, setNewAlert] = useState({
@@ -139,7 +146,7 @@ export default function AlertsWidget({
   }, [fetchAlerts]);
 
   useEffect(() => {
-    if (activeTab === 'history') {
+    if (activeTab === 'triggered') {
       fetchHistory();
     }
   }, [activeTab, fetchHistory]);
@@ -378,6 +385,74 @@ export default function AlertsWidget({
     return num.toFixed(6);
   };
 
+  const isStrategySignalType = (conditionType: string) => {
+    return conditionType.startsWith('strategy_') || conditionType.startsWith('scanner_');
+  };
+
+  const basicAlerts = alerts.filter(a => a.is_active && !a.is_smart_alert && !a.is_multi_condition);
+  const strategySignalAlerts = alerts.filter(
+    a => a.is_active && a.is_smart_alert && isStrategySignalType(a.condition_type)
+  );
+  const contextualSmartAlerts = alerts.filter(
+    a => a.is_active && a.is_smart_alert && !isStrategySignalType(a.condition_type)
+  );
+  const multiConditionAlerts = alerts.filter(a => a.is_active && a.is_multi_condition);
+
+  const buildJournalLink = (entry: AlertHistory) => {
+    const params = new URLSearchParams({
+      source: 'alerts',
+      symbol: entry.symbol,
+      setup: entry.condition_met,
+      strategy: entry.condition_type || 'alert_trigger',
+      score: entry.condition_value ? String(entry.condition_value) : '',
+    });
+    return `/tools/journal?${params.toString()}`;
+  };
+
+  const autoLogTriggeredAlert = async (entry: AlertHistory) => {
+    setHistoryActionError('');
+    setLoggingHistoryId(entry.id);
+
+    try {
+      const operatorState = readOperatorState();
+      const res = await fetch('/api/journal/auto-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          historyId: entry.id,
+          symbol: entry.symbol,
+          conditionType: entry.condition_type,
+          conditionMet: entry.condition_met,
+          triggerPrice: entry.trigger_price,
+          triggeredAt: entry.triggered_at,
+          source: 'alerts_triggered_feed',
+          operatorMode: operatorState.mode,
+          operatorBias: operatorState.bias,
+          operatorRisk: operatorState.risk,
+          operatorEdge: operatorState.edge,
+          marketRegime: operatorState.risk === 'HIGH' ? 'Volatility Expansion' : operatorState.bias === 'NEUTRAL' ? 'Range' : 'Trend',
+          marketMood: operatorState.action === 'EXECUTE' ? 'Action Ready' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
+          derivativesBias: operatorState.bias,
+          sectorStrength: operatorState.next,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data?.error) {
+        setHistoryActionError(data?.error || 'Failed to auto-log journal draft');
+        return;
+      }
+
+      setLoggedHistoryEntries(prev => ({ ...prev, [entry.id]: data?.entryId || null }));
+      fetchHistory();
+    } catch (err) {
+      setHistoryActionError('Failed to auto-log journal draft');
+    } finally {
+      setLoggingHistoryId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className={`animate-pulse bg-slate-800/50 rounded-xl p-4 ${className}`}>
@@ -398,7 +473,7 @@ export default function AlertsWidget({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-lg">🔔</span>
-            <span className="text-sm text-slate-400">Price Alerts</span>
+            <span className="text-sm text-slate-400">Alert Intelligence</span>
           </div>
           <span className="text-xs text-slate-500">
             {quota?.used || 0}/{quota?.max || 3}
@@ -434,7 +509,7 @@ export default function AlertsWidget({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">🔔</span>
-            <h3 className="text-lg font-semibold text-white">Price Alerts</h3>
+            <h3 className="text-lg font-semibold text-white">Alert Intelligence</h3>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-400">
@@ -453,24 +528,24 @@ export default function AlertsWidget({
         {/* Tabs */}
         <div className="flex gap-4 mt-4">
           <button
-            onClick={() => setActiveTab('active')}
+            onClick={() => setActiveTab('basic')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
-              activeTab === 'active'
+              activeTab === 'basic'
                 ? 'text-emerald-400 border-emerald-400'
                 : 'text-slate-400 border-transparent hover:text-white'
             }`}
           >
-            Price ({alerts.filter(a => a.is_active && !a.is_smart_alert && !a.is_multi_condition).length})
+            Basic ({basicAlerts.length})
           </button>
           <button
-            onClick={() => setActiveTab('multi')}
+            onClick={() => setActiveTab('strategy')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
-              activeTab === 'multi'
+              activeTab === 'strategy'
                 ? 'text-purple-400 border-purple-400'
                 : 'text-slate-400 border-transparent hover:text-white'
             }`}
           >
-            🔗 Multi ({alerts.filter(a => a.is_active && a.is_multi_condition).length})
+            Strategy ({strategySignalAlerts.length + multiConditionAlerts.length})
           </button>
           <button
             onClick={() => setActiveTab('smart')}
@@ -480,17 +555,17 @@ export default function AlertsWidget({
                 : 'text-slate-400 border-transparent hover:text-white'
             }`}
           >
-            🧠 Smart ({alerts.filter(a => a.is_active && a.is_smart_alert).length})
+            🧠 AI Smart ({contextualSmartAlerts.length})
           </button>
           <button
-            onClick={() => setActiveTab('history')}
+            onClick={() => setActiveTab('triggered')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
-              activeTab === 'history'
+              activeTab === 'triggered'
                 ? 'text-emerald-400 border-emerald-400'
                 : 'text-slate-400 border-transparent hover:text-white'
             }`}
           >
-            History
+            Triggered ({history.length})
           </button>
         </div>
       </div>
@@ -606,21 +681,20 @@ export default function AlertsWidget({
 
       {/* Content */}
       <div className="p-4 max-h-96 overflow-y-auto">
-        {activeTab === 'active' ? (
-          // Price Alerts Tab
+        {activeTab === 'basic' ? (
+          // Basic Alerts Tab
           (() => {
-            const priceAlerts = alerts.filter(a => !a.is_smart_alert && !a.is_multi_condition);
-            return priceAlerts.length === 0 ? (
+            return basicAlerts.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-3">🔕</div>
-              <p className="text-slate-400 mb-2">No price alerts yet</p>
+              <p className="text-slate-400 mb-2">No basic alerts yet</p>
               <p className="text-sm text-slate-500">
-                Create price alerts to get notified when markets move
+                Create baseline price alerts to anchor your event flow
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {priceAlerts.map(alert => (
+              {basicAlerts.map(alert => (
                 <div
                   key={alert.id}
                   className={`p-3 rounded-lg border transition-colors ${
@@ -964,16 +1038,15 @@ export default function AlertsWidget({
 
             {/* Smart Alerts List */}
             {(() => {
-              const smartAlerts = alerts.filter(a => a.is_smart_alert);
-              return smartAlerts.length === 0 ? (
+              return contextualSmartAlerts.length === 0 ? (
                 tier === 'pro_trader' ? (
                   <div className="text-center py-6">
-                    <p className="text-slate-500 text-sm">No smart alerts yet. Create one above!</p>
+                    <p className="text-slate-500 text-sm">No contextual AI alerts yet. Create one above!</p>
                   </div>
                 ) : null
               ) : (
                 <div className="space-y-2">
-                  {smartAlerts.map(alert => (
+                  {contextualSmartAlerts.map(alert => (
                     <div
                       key={alert.id}
                       className={`p-3 rounded-lg border transition-colors ${
@@ -1033,9 +1106,64 @@ export default function AlertsWidget({
               );
             })()}
           </div>
-        ) : activeTab === 'multi' ? (
-          // Multi-Condition Alerts Tab
+        ) : activeTab === 'strategy' ? (
+          // Strategy Alerts Tab
           <div>
+            <div className="mb-4 p-3 rounded-lg border border-slate-700 bg-slate-900/40">
+              <p className="text-xs text-slate-400">
+                Strategy layer combines scanner/strategy signal alerts with multi-condition chains.
+              </p>
+            </div>
+
+            {/* Strategy Signal Alerts */}
+            {strategySignalAlerts.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <p className="text-xs uppercase tracking-wide text-purple-300">Signal Alerts</p>
+                {strategySignalAlerts.map(alert => (
+                  <div
+                    key={alert.id}
+                    className={`p-3 rounded-lg border transition-colors ${
+                      alert.is_active
+                        ? 'bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:border-purple-500/50'
+                        : 'bg-slate-900/30 border-slate-700/50 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">🎯</span>
+                        <span className="font-semibold text-purple-300">
+                          {getConditionLabel(alert.condition_type)}
+                        </span>
+                        {alert.symbol && (
+                          <span className="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">
+                            {alert.symbol}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleAlert(alert.id, alert.is_active)}
+                          className={`p-1.5 rounded transition-colors ${
+                            alert.is_active
+                              ? 'text-purple-400 hover:bg-purple-500/20'
+                              : 'text-slate-500 hover:bg-slate-700'
+                          }`}
+                        >
+                          {alert.is_active ? '⏸' : '▶'}
+                        </button>
+                        <button
+                          onClick={() => deleteAlert(alert.id)}
+                          className="p-1.5 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Multi-Condition Alert Create Form */}
             {tier !== 'free' ? (
               <>
@@ -1122,16 +1250,15 @@ export default function AlertsWidget({
 
             {/* Multi-Condition Alerts List */}
             {(() => {
-              const multiAlerts = alerts.filter(a => a.is_multi_condition);
-              return multiAlerts.length === 0 ? (
+              return multiConditionAlerts.length === 0 ? (
                 tier !== 'free' ? (
                   <div className="text-center py-6">
-                    <p className="text-slate-500 text-sm">No multi-condition alerts yet. Create one above!</p>
+                    <p className="text-slate-500 text-sm">No strategy chain alerts yet. Create one above!</p>
                   </div>
                 ) : null
               ) : (
                 <div className="space-y-2">
-                  {multiAlerts.map(alert => (
+                  {multiConditionAlerts.map(alert => (
                     <div
                       key={alert.id}
                       className={`p-3 rounded-lg border transition-colors ${
@@ -1211,28 +1338,79 @@ export default function AlertsWidget({
               );
             })()}
           </div>
-        ) : activeTab === 'history' ? (
-          // History tab
+        ) : activeTab === 'triggered' ? (
+          // Triggered feed tab
           history.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-4xl mb-3">📜</div>
-              <p className="text-slate-400">No trigger history yet</p>
+              <div className="text-4xl mb-3">⚡</div>
+              <p className="text-slate-400">No triggered events yet</p>
             </div>
           ) : (
             <div className="space-y-2">
+              {historyActionError && (
+                <div className="p-2 rounded border border-red-500/30 bg-red-500/10 text-red-300 text-xs">
+                  {historyActionError}
+                </div>
+              )}
               {history.map(h => (
                 <div
                   key={h.id}
                   className="p-3 bg-slate-800/30 rounded-lg border border-slate-700/50"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-mono text-emerald-400">{h.symbol}</span>
-                      <span className="text-sm text-slate-400 ml-2">{h.condition_met}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-emerald-400">{h.symbol}</span>
+                        <span className="text-sm text-slate-400 truncate">{h.condition_met}</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <a
+                          href={`/tools/scanner?symbol=${encodeURIComponent(h.symbol)}`}
+                          className="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
+                        >
+                          Open Scanner
+                        </a>
+                        <a
+                          href={`/tools/backtest?symbol=${encodeURIComponent(h.symbol)}`}
+                          className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30"
+                        >
+                          Backtest
+                        </a>
+                        <a
+                          href={buildJournalLink(h)}
+                          className="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                        >
+                          Add to Journal
+                        </a>
+                        <button
+                          onClick={() => autoLogTriggeredAlert(h)}
+                          disabled={loggingHistoryId === h.id || Boolean(loggedHistoryEntries[h.id]) || h.user_action === 'journal_logged'}
+                          className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {loggingHistoryId === h.id
+                            ? 'Logging...'
+                            : loggedHistoryEntries[h.id] || h.user_action === 'journal_logged'
+                            ? 'Logged ✓'
+                            : 'Auto Log Draft'}
+                        </button>
+                        {(loggedHistoryEntries[h.id] || h.user_action === 'journal_logged') && (
+                          <a
+                            href={loggedHistoryEntries[h.id] ? `/tools/journal?entryId=${loggedHistoryEntries[h.id]}&source=auto_log` : '/tools/journal?source=auto_log'}
+                            className="px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                          >
+                            Open Logged Draft
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs text-slate-500">
-                      {new Date(h.triggered_at).toLocaleString()}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 block">
+                        {new Date(h.triggered_at).toLocaleString()}
+                      </span>
+                      {h.user_action && (
+                        <span className="text-xs text-slate-400">Action: {h.user_action}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

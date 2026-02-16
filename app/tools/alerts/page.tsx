@@ -23,7 +23,7 @@ function AlertsContent() {
         pageType: 'alerts',
         tier,
       },
-      summary: `Price Alerts page - manage price alerts for crypto, stocks, and forex`,
+      summary: `Alert Intelligence page - detect, validate, execute, and log market events`,
     });
   }, [tier, setPageData]);
 
@@ -50,10 +50,10 @@ function AlertsContent() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
-          🔔 Price Alerts
+          🔔 Alert Intelligence
         </h1>
         <p className="text-slate-400">
-          Find key price moves faster with alerts for crypto, stocks, and forex.
+          Run your event pipeline from one place: detect setups, validate context, execute next actions, and log outcomes.
         </p>
       </div>
 
@@ -68,19 +68,19 @@ function AlertsContent() {
         <div className="space-y-4 text-sm text-slate-300">
           <div className="flex gap-3">
             <span className="text-emerald-400 font-bold">1.</span>
-            <p><strong>Set your target</strong> — Choose a symbol, condition (above/below/% change), and price level</p>
+            <p><strong>Detect</strong> — Create basic, strategy, or AI-smart conditions on symbols you monitor</p>
           </div>
           <div className="flex gap-3">
             <span className="text-emerald-400 font-bold">2.</span>
-            <p><strong>We monitor 24/7</strong> — Our system checks prices every 5 minutes against your alerts</p>
+            <p><strong>Validate</strong> — Triggered events surface context so you can confirm signal quality quickly</p>
           </div>
           <div className="flex gap-3">
             <span className="text-emerald-400 font-bold">3.</span>
-            <p><strong>Get notified instantly</strong> — When conditions are met, you receive push notifications and/or email</p>
+            <p><strong>Execute</strong> — Jump directly into Scanner, Backtest, or Journal from each triggered event</p>
           </div>
           <div className="flex gap-3">
             <span className="text-emerald-400 font-bold">4.</span>
-            <p><strong>Take action</strong> — Click the alert to jump straight to the scanner with that symbol loaded</p>
+            <p><strong>Learn</strong> — Track trigger history and actions to tighten future decision loops</p>
           </div>
         </div>
       </div>
@@ -199,8 +199,8 @@ export default function AlertsPage() {
     <div className="min-h-screen bg-[#0F172A] text-white">
       <ToolsPageHeader 
         badge="TOOLS"
-        title="Price Alerts"
-        subtitle="Find key price moves fast with target alerts"
+        title="Alert Intelligence"
+        subtitle="Detect, validate, execute, and learn from triggered market events"
         icon="🔔"
       />
       <Suspense fallback={

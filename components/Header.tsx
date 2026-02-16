@@ -92,6 +92,7 @@ export default function Header() {
   const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
   const pathname = usePathname();
   const terminalPrefixes = [
+    '/operator',
     '/tools/options-confluence',
     '/tools/scanner',
     '/tools/deep-analysis',
@@ -113,6 +114,7 @@ export default function Header() {
   }, [isOpen]);
 
   const toolsItems: DropdownItem[] = [
+    { href: '/operator', label: 'Operator Dashboard', icon: '🧭' },
     { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
     { href: '/tools/watchlists', label: 'Watchlists', icon: '📋' },
     { href: '/tools/portfolio', label: 'Portfolio Tracker', icon: '💼' },

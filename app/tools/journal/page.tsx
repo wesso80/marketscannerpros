@@ -1,11 +1,15 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
+import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import { useUserTier, canExportCSV, canAccessAdvancedJournal } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
+import type { JournalDraft } from '@/lib/workflow/types';
 
 interface JournalEntry {
   id: number;
@@ -37,6 +41,9 @@ interface JournalEntry {
 }
 
 function JournalContent() {
+  const journalEventMapRef = useRef<Record<number, string>>({});
+
+  const searchParams = useSearchParams();
   const { tier } = useUserTier();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -51,6 +58,7 @@ function JournalContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+  const [draftApplied, setDraftApplied] = useState(false);
   
   const [newEntry, setNewEntry] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -72,8 +80,26 @@ function JournalContent() {
     tags: ''
   });
 
+  const draftSource = searchParams.get('source') || searchParams.get('from');
+  const draftSymbol = searchParams.get('symbol');
+  const draftStrategy = searchParams.get('strategy');
+  const draftSetup = searchParams.get('setup');
+  const draftTimeframe = searchParams.get('timeframe');
+  const draftBias = searchParams.get('bias') || searchParams.get('direction');
+  const draftSide = searchParams.get('side');
+  const draftScore = searchParams.get('score');
+  const draftStop = searchParams.get('stop') || searchParams.get('stopLoss');
+  const draftTarget = searchParams.get('target');
+  const draftWorkflowId = searchParams.get('workflowId');
+  const draftParentEventId = searchParams.get('parentEventId');
+
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  function buildJournalWorkflowId(symbol: string): string {
+    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return `wf_journal_${symbol.toUpperCase()}_${dateKey}`;
+  }
 
   // AI Page Context - share journal data with copilot
   const { setPageData } = useAIPageContext();
@@ -105,6 +131,38 @@ function JournalContent() {
       });
     }
   }, [entries, setPageData]);
+
+  useEffect(() => {
+    if (draftApplied) return;
+    if (!draftSource && !draftSymbol && !draftStrategy && !draftSetup) return;
+
+    const sourceTag = draftSource ? `source:${draftSource}` : '';
+    const setupParts = [
+      draftSetup,
+      draftStrategy ? `Strategy: ${draftStrategy}` : '',
+      draftTimeframe ? `Timeframe: ${draftTimeframe}` : '',
+      draftBias ? `Bias: ${draftBias}` : '',
+      draftScore ? `Confluence: ${draftScore}` : '',
+    ].filter(Boolean);
+
+    const inferredSide = (draftSide || draftBias || '').toLowerCase().includes('bear')
+      ? 'SHORT'
+      : 'LONG';
+
+    setNewEntry((prev) => ({
+      ...prev,
+      symbol: draftSymbol?.toUpperCase() || prev.symbol,
+      side: inferredSide as 'LONG' | 'SHORT',
+      strategy: draftStrategy || prev.strategy,
+      setup: setupParts.join(' | ') || prev.setup,
+      stopLoss: draftStop || prev.stopLoss,
+      target: draftTarget || prev.target,
+      tags: [prev.tags, sourceTag].filter(Boolean).join(prev.tags && sourceTag ? ', ' : ''),
+    }));
+
+    setShowAddForm(true);
+    setDraftApplied(true);
+  }, [draftApplied, draftSource, draftSymbol, draftStrategy, draftSetup, draftTimeframe, draftBias, draftSide, draftScore, draftStop, draftTarget]);
 
   // AI Journal Analysis function
   async function runAiAnalysis() {
@@ -250,6 +308,46 @@ function JournalContent() {
       isOpen: true
     };
 
+    const workflowId = draftWorkflowId || buildJournalWorkflowId(journalEntry.symbol);
+    const journalUpdatedEvent = createWorkflowEvent<JournalDraft>({
+      eventType: 'journal.updated',
+      workflowId,
+      parentEventId: draftParentEventId || null,
+      route: '/tools/journal',
+      module: 'journal',
+      entity: {
+        entity_type: 'journal',
+        entity_id: `journal_${journalEntry.id}`,
+        symbol: journalEntry.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        journal_id: `journal_${journalEntry.id}`,
+        created_at: new Date().toISOString(),
+        symbol: journalEntry.symbol,
+        asset_class: 'mixed',
+        side: journalEntry.side === 'LONG' ? 'long' : 'short',
+        trade_type: journalEntry.tradeType,
+        quantity: journalEntry.quantity,
+        prices: {
+          entry: journalEntry.entryPrice,
+          stop: journalEntry.stopLoss,
+          target: journalEntry.target,
+        },
+        strategy: journalEntry.strategy || 'unspecified',
+        tags: journalEntry.tags,
+        auto_context: {
+          setup: journalEntry.setup,
+          emotions: journalEntry.emotions,
+          source: draftSource || 'journal_manual',
+        },
+        why_this_trade_auto: journalEntry.notes ? [journalEntry.notes] : [],
+      },
+    });
+
+    journalEventMapRef.current[journalEntry.id] = journalUpdatedEvent.event_id;
+    void emitWorkflowEvents([journalUpdatedEvent]);
+
     setEntries([journalEntry, ...entries]);
     setShowAddForm(false);
     setNewEntry({
@@ -301,6 +399,46 @@ function JournalContent() {
     }
     
     const exitPrice = parseFloat(closeTradeData.exitPrice);
+
+    const existingEntry = entries.find((entry) => entry.id === id);
+    if (!existingEntry) return;
+
+    const pl = existingEntry.side === 'LONG'
+      ? (exitPrice - existingEntry.entryPrice) * existingEntry.quantity
+      : (existingEntry.entryPrice - exitPrice) * existingEntry.quantity;
+
+    let outcome: 'win' | 'loss' | 'breakeven' | 'open' = 'breakeven';
+    if (pl > 0) outcome = 'win';
+    else if (pl < 0) outcome = 'loss';
+
+    const parentEventId = journalEventMapRef.current[id] || draftParentEventId || null;
+    const workflowId = draftWorkflowId || buildJournalWorkflowId(existingEntry.symbol);
+    const journalCompletedEvent = createWorkflowEvent({
+      eventType: 'journal.completed',
+      workflowId,
+      parentEventId,
+      route: '/tools/journal',
+      module: 'journal',
+      entity: {
+        entity_type: 'journal',
+        entity_id: `journal_${existingEntry.id}`,
+        symbol: existingEntry.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        journal_id: `journal_${existingEntry.id}`,
+        trade_id: `trade_${existingEntry.id}`,
+        symbol: existingEntry.symbol,
+        side: existingEntry.side,
+        outcome,
+        closed_at: closeTradeData.exitDate,
+        realized_pnl: pl,
+        exit_price: exitPrice,
+      },
+    });
+
+    delete journalEventMapRef.current[id];
+    void emitWorkflowEvents([journalCompletedEvent]);
     
     setEntries(entries.map(entry => {
       if (entry.id === id) {
@@ -581,7 +719,19 @@ function JournalContent() {
         actions={headerActions}
       />
 
-      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+        <CommandCenterStateBar
+          mode="MANAGE"
+          actionableNow={openTrades.length > 0
+            ? `${openTrades.length} live trade${openTrades.length === 1 ? '' : 's'} need management and structured notes`
+            : 'No live trades. Log a setup draft to start execution-to-review loop.'}
+          nextStep={openTrades.length > 0
+            ? 'Update execution notes, then close trades with outcome tags'
+            : 'Create draft or new entry, then tag setup and psychology fields'}
+        />
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
         <AdaptivePersonalityCard
           skill="journal"
           setupText={`Journal entries ${entries.length}, closed ${closedTrades.length}, win rate ${winRate.toFixed(1)}%`}
@@ -595,7 +745,7 @@ function JournalContent() {
         padding: '0 24px',
         borderBottom: '1px solid #334155'
       }}>
-        <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', display: 'flex', gap: '0' }}>
+        <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', display: 'flex', gap: '0' }}>
           <Link href="/tools/portfolio" style={{
             padding: '12px 24px',
             background: 'transparent',
@@ -637,6 +787,73 @@ function JournalContent() {
         </div>
       </div>
 
+      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '16px 24px 0 24px' }}>
+        <div style={{
+          background: 'var(--msp-card)',
+          border: '1px solid var(--msp-border-strong)',
+          borderRadius: '16px',
+          padding: '16px 18px',
+          boxShadow: 'var(--msp-shadow)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Active Operations
+              </div>
+              <div style={{ color: '#e2e8f0', fontSize: '14px', marginTop: '4px' }}>
+                {openTrades.length > 0
+                  ? `${openTrades.length} live trade${openTrades.length === 1 ? '' : 's'} need monitoring`
+                  : 'No live trades — log a setup draft or add a new trade'}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowAddForm((prev) => !prev)}
+              style={{
+                padding: '10px 16px',
+                background: '#10b981',
+                border: 'none',
+                borderRadius: '10px',
+                color: '#0b1625',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              {showAddForm ? '− Hide New Trade Form' : '+ Log New Trade'}
+            </button>
+          </div>
+
+          {openTrades.length > 0 && (
+            <div style={{
+              marginTop: '12px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+              gap: '10px'
+            }}>
+              {openTrades.slice(0, 3).map((trade) => (
+                <div key={`active-${trade.id}`} style={{
+                  background: 'rgba(30,41,59,0.55)',
+                  border: '1px solid rgba(51,65,85,0.5)',
+                  borderRadius: '10px',
+                  padding: '10px 12px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '13px' }}>{trade.symbol}</span>
+                    <span style={{ color: trade.side === 'LONG' ? '#10b981' : '#ef4444', fontSize: '11px', fontWeight: 700 }}>{trade.side}</span>
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                    Entry ${trade.entryPrice.toFixed(2)}
+                    {trade.stopLoss ? ` • Stop $${trade.stopLoss.toFixed(2)}` : ''}
+                    {trade.target ? ` • Target $${trade.target.toFixed(2)}` : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Stats Bar */}
       <div style={{ 
         background: 'var(--msp-card)',
@@ -645,7 +862,7 @@ function JournalContent() {
       }}>
         <div style={{ 
           width: '100%',
-          maxWidth: 'none', 
+          maxWidth: '1280px', 
           margin: '0 auto', 
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -774,7 +991,7 @@ function JournalContent() {
         {smallSampleSize && (
           <div style={{
             width: '100%',
-            maxWidth: 'none',
+            maxWidth: '1280px',
             margin: '16px auto 0',
             padding: '12px 16px',
             background: 'rgba(251,191,36,0.1)',
@@ -795,7 +1012,7 @@ function JournalContent() {
         {totalTrades > 0 && canAccessAdvancedJournal(tier) && (
           <div style={{
             width: '100%',
-            maxWidth: 'none',
+            maxWidth: '1280px',
             margin: '16px auto 0',
             padding: '16px 20px',
             background: 'var(--msp-panel)',
@@ -824,7 +1041,7 @@ function JournalContent() {
         {/* AI Trading Coach Section */}
         <div style={{
           width: '100%',
-          maxWidth: 'none',
+          maxWidth: '1280px',
           margin: '16px auto 0',
           background: 'var(--msp-card)',
           border: '1px solid var(--msp-border)',
@@ -1049,7 +1266,7 @@ function JournalContent() {
             className={equityCurve.length >= 5 ? 'grid-equal-2-col-responsive' : ''}
             style={{ 
               width: '100%',
-              maxWidth: 'none', 
+              maxWidth: '1280px', 
               margin: '16px auto 0',
               display: equityCurve.length >= 5 ? undefined : 'grid',
               gridTemplateColumns: equityCurve.length >= 5 ? undefined : '1fr',
@@ -1217,7 +1434,7 @@ function JournalContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '24px 16px' }}>
         {/* Add Entry Form */}
         {showAddForm && (
           <div style={{

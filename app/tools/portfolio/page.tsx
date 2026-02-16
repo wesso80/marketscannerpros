@@ -1,12 +1,15 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import { useUserTier, canExportCSV, getPortfolioLimit, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { writeOperatorState } from '@/lib/operatorState';
+import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
+import type { TradePayload } from '@/lib/workflow/types';
+import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import CommandStrip, { type TerminalDensity } from '@/components/terminal/CommandStrip';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
@@ -480,6 +483,8 @@ function PositionSizerCalculator() {
 }
 
 function PortfolioContent() {
+  const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
+
   const { tier } = useUserTier();
   const portfolioLimit = getPortfolioLimit(tier);
   const [mounted, setMounted] = useState(false);
@@ -692,6 +697,52 @@ function PortfolioContent() {
   // Track if data has been loaded from server
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  function buildPortfolioWorkflowId(symbol: string): string {
+    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return `wf_portfolio_${symbol.toUpperCase()}_${dateKey}`;
+  }
+
+  function emitTradeUpdatedEvent(position: Position, newPrice: number, source: 'manual' | 'auto' = 'manual') {
+    const pl = position.side === 'LONG'
+      ? (newPrice - position.entryPrice) * position.quantity
+      : (position.entryPrice - newPrice) * position.quantity;
+    const plPercent = ((pl / (position.entryPrice * position.quantity)) * 100);
+    const parentEventId = tradeExecutionEventMapRef.current[position.id] || null;
+
+    const tradeUpdatedEvent = createWorkflowEvent<TradePayload>({
+      eventType: 'trade.updated',
+      workflowId: buildPortfolioWorkflowId(position.symbol),
+      parentEventId,
+      route: '/tools/portfolio',
+      module: 'portfolio',
+      entity: {
+        entity_type: 'trade',
+        entity_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        trade_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+        direction: position.side === 'LONG' ? 'long' : 'short',
+        status: 'open',
+        live: {
+          source,
+          quote_price: newPrice,
+          quote_at: new Date().toISOString(),
+        },
+        risk_runtime: {
+          current_price: newPrice,
+          unrealized_pnl: pl,
+          unrealized_pnl_percent: plPercent,
+        },
+      },
+    });
+
+    void emitWorkflowEvents([tradeUpdatedEvent]);
+  }
+
   // Auto-refresh prices for all positions
   const refreshAllPrices = async (positionsToUpdate: Position[]) => {
     if (positionsToUpdate.length === 0) return;
@@ -706,6 +757,13 @@ function PortfolioContent() {
     }
     
     if (updates.length > 0) {
+      for (const update of updates) {
+        const position = positionsToUpdate.find((p) => p.id === update.id);
+        if (!position) continue;
+        if (position.currentPrice === update.price) continue;
+        emitTradeUpdatedEvent(position, update.price, 'auto');
+      }
+
       setPositions(prev => prev.map(p => {
         const update = updates.find(u => u.id === p.id);
         if (update) {
@@ -877,6 +935,40 @@ function PortfolioContent() {
       entryDate: new Date().toISOString()
     };
 
+    const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
+      eventType: 'trade.executed',
+      workflowId: buildPortfolioWorkflowId(position.symbol),
+      route: '/tools/portfolio',
+      module: 'portfolio',
+      entity: {
+        entity_type: 'trade',
+        entity_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        trade_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+        direction: position.side === 'LONG' ? 'long' : 'short',
+        status: 'open',
+        execution: {
+          side: position.side,
+          quantity: position.quantity,
+          entry_price: position.entryPrice,
+          entry_date: position.entryDate,
+        },
+        risk_runtime: {
+          current_price: position.currentPrice,
+          unrealized_pnl: position.pl,
+          unrealized_pnl_percent: position.plPercent,
+        },
+      },
+    });
+
+    tradeExecutionEventMapRef.current[position.id] = tradeExecutionEvent.event_id;
+    void emitWorkflowEvents([tradeExecutionEvent]);
+
     setPositions([...positions, position]);
     setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '', strategy: '' });
     setShowAddForm(false);
@@ -893,11 +985,52 @@ function PortfolioContent() {
       realizedPL: position.pl
     };
 
+    const parentEventId = tradeExecutionEventMapRef.current[id] || null;
+    const tradeClosedEvent = createWorkflowEvent<TradePayload>({
+      eventType: 'trade.closed',
+      workflowId: buildPortfolioWorkflowId(position.symbol),
+      parentEventId,
+      route: '/tools/portfolio',
+      module: 'portfolio',
+      entity: {
+        entity_type: 'trade',
+        entity_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        trade_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+        direction: position.side === 'LONG' ? 'long' : 'short',
+        status: 'closed',
+        closed_at: closedPos.closeDate,
+        realized_pnl: closedPos.realizedPL,
+        execution: {
+          side: position.side,
+          quantity: position.quantity,
+          entry_price: position.entryPrice,
+          close_price: closedPos.closePrice,
+          entry_date: position.entryDate,
+          close_date: closedPos.closeDate,
+        },
+      },
+    });
+
+    delete tradeExecutionEventMapRef.current[id];
+    void emitWorkflowEvents([tradeClosedEvent]);
+
     setClosedPositions([...closedPositions, closedPos]);
     setPositions(positions.filter(p => p.id !== id));
   };
 
   const updatePrice = (id: number, newPrice: number) => {
+    const position = positions.find((p) => p.id === id);
+    if (!position) return;
+    if (position.currentPrice === newPrice) return;
+
+    emitTradeUpdatedEvent(position, newPrice, 'manual');
+
     setPositions(prev => prev.map(p => {
       if (p.id === id) {
         const pl = p.side === 'LONG' 
@@ -1185,6 +1318,18 @@ function PortfolioContent() {
       />
 
       <div className="w-full max-w-none px-4 pt-3">
+        <CommandCenterStateBar
+          mode="MANAGE"
+          actionableNow={positions.length > 0
+            ? `Live book: ${positions.length} open positions • Top concentration ${topAllocation?.symbol || 'N/A'}`
+            : 'No active exposure. Build watchlist-to-portfolio plan before adding risk.'}
+          nextStep={positions.length > 0
+            ? totalReturn < 0
+              ? 'Reduce concentration and review underperformers'
+              : 'Protect winners and rebalance risk budgets'
+            : 'Add first position with predefined risk and invalidation'}
+        />
+
         <CommandStrip
           symbol={positions[0]?.symbol || 'PORT'}
           status={totalReturn >= 0 ? 'GAINING' : 'DRAWDOWN'}

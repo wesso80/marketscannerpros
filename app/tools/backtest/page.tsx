@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
@@ -8,6 +8,17 @@ import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { writeOperatorState } from '@/lib/operatorState';
+import CommandCenterStateBar from '@/components/CommandCenterStateBar';
+import {
+  BACKTEST_STRATEGY_CATEGORIES,
+  BACKTEST_TIMEFRAME_GROUPS,
+  DEFAULT_BACKTEST_STRATEGY,
+  getBacktestStrategy,
+  isBacktestStrategy,
+} from '@/lib/strategies/registry';
+import type { BacktestTimeframe } from '@/lib/strategies/types';
+import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
+import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
 
 interface BacktestResult {
   totalTrades: number;
@@ -49,7 +60,55 @@ interface EquityPoint {
   drawdown: number;
 }
 
+type EdgeGroupId =
+  | 'msp_aio_systems'
+  | 'scalping_edge'
+  | 'trend_following'
+  | 'mean_reversion'
+  | 'breakout'
+  | 'liquidity_play';
+
+interface StrategyEdgeGroup {
+  id: EdgeGroupId;
+  label: string;
+  categoryIds: (typeof BACKTEST_STRATEGY_CATEGORIES)[number]['id'][];
+}
+
+const STRATEGY_EDGE_GROUPS: readonly StrategyEdgeGroup[] = [
+  {
+    id: 'msp_aio_systems',
+    label: 'MSP AIO Systems',
+    categoryIds: ['msp_elite'],
+  },
+  {
+    id: 'scalping_edge',
+    label: 'Scalping Edge',
+    categoryIds: ['intraday_scalping'],
+  },
+  {
+    id: 'trend_following',
+    label: 'Trend Following',
+    categoryIds: ['moving_averages', 'trend_filters'],
+  },
+  {
+    id: 'mean_reversion',
+    label: 'Mean Reversion',
+    categoryIds: ['mean_reversion', 'momentum'],
+  },
+  {
+    id: 'breakout',
+    label: 'Breakout',
+    categoryIds: ['swing', 'volatility', 'volume_analysis'],
+  },
+  {
+    id: 'liquidity_play',
+    label: 'Liquidity Play',
+    categoryIds: ['multi_indicator'],
+  },
+] as const;
+
 function BacktestContent() {
+  const lastPlanEventKeyRef = useRef('');
   const searchParams = useSearchParams();
   const { tier, isLoading: tierLoading } = useUserTier();
   
@@ -63,8 +122,9 @@ function BacktestContent() {
   const [startDate, setStartDate] = useState('2024-01-01');
   const [endDate, setEndDate] = useState('2024-12-31');
   const [initialCapital, setInitialCapital] = useState('10000');
-  const [strategy, setStrategy] = useState('msp_day_trader');
-  const [timeframe, setTimeframe] = useState<'1min' | '5min' | '15min' | '30min' | '60min' | 'daily'>('daily');
+  const [strategy, setStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
+  const [edgeGroup, setEdgeGroup] = useState<EdgeGroupId>('msp_aio_systems');
+  const [timeframe, setTimeframe] = useState<BacktestTimeframe>('daily');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -73,9 +133,82 @@ function BacktestContent() {
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
   const [showEvidenceLayer, setShowEvidenceLayer] = useState(false);
+  const [planEventId, setPlanEventId] = useState<string | null>(null);
+
+  const workflowId = useMemo(() => {
+    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    return `wf_backtest_${symbol}_${dateKey}`;
+  }, [symbol]);
 
   // AI Page Context - share backtest results with copilot
   const { setPageData } = useAIPageContext();
+
+  const edgeGroupCategories = useMemo(() => {
+    const categoryMap = new Map(BACKTEST_STRATEGY_CATEGORIES.map((category) => [category.id, category]));
+
+    return STRATEGY_EDGE_GROUPS.map((group) => ({
+      ...group,
+      categories: group.categoryIds
+        .map((id) => categoryMap.get(id))
+        .filter((category): category is (typeof BACKTEST_STRATEGY_CATEGORIES)[number] => Boolean(category)),
+    }));
+  }, []);
+
+  const activeEdgeGroup = edgeGroupCategories.find((group) => group.id === edgeGroup) ?? edgeGroupCategories[0];
+  const activeEdgeStrategies = activeEdgeGroup?.categories.flatMap((category) => category.strategies) ?? [];
+
+  const strategyMeta = getBacktestStrategy(strategy);
+
+  const journalDraftHref = useMemo(() => {
+    if (!results) return '/tools/journal';
+
+    const bias = results.totalReturn > 2 ? 'bullish' : results.totalReturn < -2 ? 'bearish' : 'neutral';
+    const score = Math.max(
+      1,
+      Math.min(
+        99,
+        Math.round((results.profitFactor * 25) + (results.winRate * 0.35) - (results.maxDrawdown * 0.45))
+      )
+    );
+
+    const params = new URLSearchParams({
+      source: 'backtest',
+      symbol,
+      strategy,
+      setup: strategyMeta?.label || strategy,
+      timeframe,
+      bias,
+      score: String(score),
+      workflowId,
+      parentEventId: planEventId || '',
+    });
+
+    return `/tools/journal?${params.toString()}`;
+  }, [results, symbol, strategy, strategyMeta, timeframe, workflowId, planEventId]);
+
+  useEffect(() => {
+    if (!urlStrategy) return;
+    if (!isBacktestStrategy(urlStrategy)) return;
+    setStrategy(urlStrategy);
+  }, [urlStrategy]);
+
+  useEffect(() => {
+    const matchingGroup = edgeGroupCategories.find((group) =>
+      group.categories.some((category) => category.strategies.some((item) => item.id === strategy))
+    );
+
+    if (matchingGroup && matchingGroup.id !== edgeGroup) {
+      setEdgeGroup(matchingGroup.id);
+    }
+  }, [strategy, edgeGroupCategories, edgeGroup]);
+
+  useEffect(() => {
+    if (!activeEdgeStrategies.length) return;
+    const strategyAllowed = activeEdgeStrategies.some((item) => item.id === strategy);
+    if (!strategyAllowed) {
+      setStrategy(activeEdgeStrategies[0].id);
+    }
+  }, [edgeGroup, activeEdgeStrategies, strategy]);
 
   useEffect(() => {
     if (results) {
@@ -137,6 +270,133 @@ function BacktestContent() {
       mode: 'EXECUTE',
     });
   }, [results, symbol]);
+
+  useEffect(() => {
+    if (!results) return;
+
+    const eventKey = `${symbol}:${strategy}:${timeframe}:${results.totalTrades}:${results.winRate}:${results.totalReturn}`;
+    if (lastPlanEventKeyRef.current === eventKey) return;
+    lastPlanEventKeyRef.current = eventKey;
+
+    const direction = results.totalReturn >= 0 ? 'long' : 'short';
+    const entry = results.trades[0]?.entry ?? 0;
+    const stop = direction === 'long' ? entry * 0.99 : entry * 1.01;
+    const target = direction === 'long' ? entry * 1.02 : entry * 0.98;
+    const riskAmount = Number(initialCapital) * 0.0025;
+    const unitRisk = Math.max(Math.abs(entry - stop), 0.01);
+    const quantity = Math.max(1, Math.floor(riskAmount / unitRisk));
+
+    const tradePlan: TradePlan = {
+      plan_id: `plan_${symbol}_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      symbol,
+      asset_class: /^[A-Z]{2,6}$/.test(symbol) ? 'equity' : 'mixed',
+      direction,
+      timeframe,
+      setup: {
+        strategy,
+        label: strategyMeta?.label || strategy,
+        tags: [activeEdgeGroup?.label || 'edge_group'],
+      },
+      entry: {
+        type: 'market',
+        price: Number(entry.toFixed(4)),
+      },
+      risk: {
+        stop: { type: 'price', price: Number(stop.toFixed(4)) },
+        take_profit: [{ type: 'rr', rr: 2, price: Number(target.toFixed(4)), size_pct: 100 }],
+        invalidate_if: [{ type: 'max_drawdown', value: Number(results.maxDrawdown.toFixed(2)) }],
+      },
+      position_sizing: {
+        account_value: Number(initialCapital),
+        risk_per_trade_pct: 0.25,
+        risk_amount: Number(riskAmount.toFixed(2)),
+        unit_risk: Number(unitRisk.toFixed(4)),
+        quantity,
+      },
+      links: {
+        symbol,
+        strategy,
+      },
+    };
+
+    const event = createWorkflowEvent({
+      eventType: 'trade.plan.created',
+      workflowId,
+      route: '/tools/backtest',
+      module: 'backtest',
+      entity: {
+        entity_type: 'trade_plan',
+        entity_id: tradePlan.plan_id,
+        symbol,
+        asset_class: tradePlan.asset_class,
+      },
+      payload: {
+        trade_plan: tradePlan,
+      },
+    });
+
+    setPlanEventId(event.event_id);
+    emitWorkflowEvents([event]);
+  }, [results, symbol, strategy, timeframe, strategyMeta, activeEdgeGroup?.label, initialCapital, workflowId]);
+
+  const handleAutoJournalDraftClick = () => {
+    if (!results) return;
+
+    const draft: JournalDraft = {
+      journal_id: `jrnl_draft_${symbol}_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      symbol,
+      asset_class: /^[A-Z]{2,6}$/.test(symbol) ? 'equity' : 'mixed',
+      side: results.totalReturn >= 0 ? 'long' : 'short',
+      trade_type: 'spot',
+      quantity: 1,
+      prices: {
+        entry: results.trades[0]?.entry ?? null,
+        stop: null,
+        target: null,
+        exit: null,
+      },
+      strategy,
+      tags: ['backtest', 'auto_draft'],
+      auto_context: {
+        market_mode: 'evaluate',
+        risk_state: results.maxDrawdown <= 10 ? 'controlled' : results.maxDrawdown <= 20 ? 'moderate' : 'elevated',
+        win_rate: Number(results.winRate.toFixed(2)),
+      },
+      why_this_trade_auto: [
+        `Backtest confidence ${Math.round(results.winRate)}% win rate`,
+        `Profit factor ${results.profitFactor.toFixed(2)}`,
+        `Max drawdown ${results.maxDrawdown.toFixed(2)}%`,
+      ],
+      user_inputs_required: {
+        entry_reason: { status: 'required', prompt: 'Why did you enter?' },
+        emotions: { status: 'required', prompt: 'How did you feel at entry?' },
+      },
+      links: {
+        plan_event_id: planEventId,
+      },
+    };
+
+    const event = createWorkflowEvent({
+      eventType: 'journal.draft.created',
+      workflowId,
+      parentEventId: planEventId,
+      route: '/tools/backtest',
+      module: 'backtest',
+      entity: {
+        entity_type: 'journal',
+        entity_id: draft.journal_id,
+        symbol,
+        asset_class: draft.asset_class,
+      },
+      payload: {
+        journal_draft: draft,
+      },
+    });
+
+    emitWorkflowEvents([event]);
+  };
 
   // Update symbol if URL param changes
   useEffect(() => {
@@ -319,6 +579,17 @@ function BacktestContent() {
         backHref="/dashboard"
       />
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+        <CommandCenterStateBar
+          mode="EXECUTE"
+          actionableNow={results
+            ? `Top setup: ${symbol} • ${strategy} • ${results.winRate.toFixed(1)}% win rate`
+            : `No validated setup yet for ${symbol}. Run backtest to qualify execution.`}
+          nextStep={results
+            ? results.profitFactor >= 1.25 && results.maxDrawdown <= 20
+              ? 'Convert validated setup into execution plan'
+              : 'Adjust rules/timeframe and revalidate'
+            : 'Set strategy + timeframe and run validation'}
+        />
 
         {/* Options Scanner Context Banner */}
         {showOptionsBanner && (
@@ -485,7 +756,32 @@ function BacktestContent() {
 
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                Strategy
+                Edge Type
+              </label>
+              <select
+                value={edgeGroup}
+                onChange={(e) => setEdgeGroup(e.target.value as EdgeGroupId)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+              >
+                {STRATEGY_EDGE_GROUPS.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                Strategy Variant
               </label>
               <select
                 value={strategy}
@@ -500,67 +796,19 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                <optgroup label="🔥 MSP Elite Strategies">
-                  <option value="msp_day_trader">MSP Day Trader AIO (Score 5+)</option>
-                  <option value="msp_day_trader_strict">MSP Day Trader Strict (Score 6+)</option>
-                  <option value="msp_day_trader_v3">📈 Day Trader v3 Optimized (More Trades)</option>
-                  <option value="msp_day_trader_v3_aggressive">🚀 Day Trader v3 Aggressive (Max Trades)</option>
-                  <option value="msp_multi_tf">MSP Multi-TF Dashboard (Bias 6+)</option>
-                  <option value="msp_multi_tf_strict">MSP Multi-TF Strict (Bias 8+)</option>
-                  <option value="msp_trend_pullback">MSP Trend Pullback</option>
-                  <option value="msp_liquidity_reversal">MSP Liquidity Reversal</option>
-                </optgroup>
-                <optgroup label="⚡ Intraday Scalping">
-                  <option value="scalp_vwap_bounce">VWAP Bounce Scalper</option>
-                  <option value="scalp_orb_15">Opening Range Breakout (15m)</option>
-                  <option value="scalp_momentum_burst">Momentum Burst</option>
-                  <option value="scalp_mean_revert">Mean Reversion Scalp</option>
-                </optgroup>
-                <optgroup label="🎯 Swing Trading">
-                  <option value="swing_pullback_buy">Pullback Buy Setup</option>
-                  <option value="swing_breakout">Breakout Swing</option>
-                  <option value="swing_earnings_drift">Post-Earnings Drift</option>
-                </optgroup>
-                <optgroup label="Moving Averages">
-                  <option value="ema_crossover">EMA Crossover (9/21)</option>
-                  <option value="sma_crossover">SMA Crossover (50/200)</option>
-                  <option value="triple_ema">Triple EMA Ribbon</option>
-                </optgroup>
-                <optgroup label="Momentum">
-                  <option value="rsi_reversal">RSI Mean Reversion</option>
-                  <option value="rsi_trend">RSI Trend Following</option>
-                  <option value="rsi_divergence">RSI Divergence</option>
-                  <option value="macd_momentum">MACD Momentum</option>
-                  <option value="macd_crossover">MACD Signal Crossover</option>
-                  <option value="macd_histogram_reversal">MACD Histogram Reversal</option>
-                </optgroup>
-                <optgroup label="Volatility">
-                  <option value="bbands_squeeze">Bollinger Bands Squeeze</option>
-                  <option value="bbands_breakout">Bollinger Bands Breakout</option>
-                  <option value="keltner_atr_breakout">Keltner ATR Breakout</option>
-                </optgroup>
-                <optgroup label="Volume Analysis">
-                  <option value="volume_breakout">Volume Breakout</option>
-                  <option value="obv_volume">OBV Volume Confirmation</option>
-                  <option value="volume_climax_reversal">Volume Climax Reversal</option>
-                </optgroup>
-                <optgroup label="Trend Filters">
-                  <option value="adx_trend">ADX Trend Filter</option>
-                  <option value="supertrend">SuperTrend Strategy</option>
-                  <option value="ichimoku_cloud">Ichimoku Cloud</option>
-                </optgroup>
-                <optgroup label="Mean Reversion">
-                  <option value="stoch_oversold">Stochastic Oversold</option>
-                  <option value="cci_reversal">CCI Reversal</option>
-                  <option value="williams_r">Williams %R Extremes</option>
-                </optgroup>
-                <optgroup label="Multi-Indicator Confluence">
-                  <option value="multi_ema_rsi">Multi: EMA + RSI</option>
-                  <option value="multi_macd_adx">Multi: MACD + ADX</option>
-                  <option value="multi_bb_stoch">Multi: BB + Stochastic</option>
-                  <option value="multi_confluence_5">5-Indicator Confluence</option>
-                </optgroup>
+                {(activeEdgeGroup?.categories || []).map((category) => (
+                  <optgroup key={category.id} label={category.label}>
+                    {category.strategies.map((strategyOption) => (
+                      <option key={strategyOption.id} value={strategyOption.id}>
+                        {strategyOption.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
+              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                Institutional flow: choose edge type first, then deploy the strategy variant.
+              </p>
             </div>
 
             <div>
@@ -569,7 +817,7 @@ function BacktestContent() {
               </label>
               <select
                 value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value as '1min' | '5min' | '15min' | '30min' | '60min' | 'daily')}
+                onChange={(e) => setTimeframe(e.target.value as BacktestTimeframe)}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -580,18 +828,26 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               >
-                <optgroup label="⚡ Scalping">
-                  <option value="1min">1 Minute</option>
-                  <option value="5min">5 Minutes</option>
-                </optgroup>
-                <optgroup label="📈 Intraday">
-                  <option value="15min">15 Minutes</option>
-                  <option value="30min">30 Minutes</option>
-                  <option value="60min">1 Hour</option>
-                </optgroup>
-                <optgroup label="📊 Swing">
-                  <option value="daily">Daily</option>
-                </optgroup>
+                {BACKTEST_TIMEFRAME_GROUPS.map((group) => (
+                  <optgroup key={group.id} label={group.label}>
+                    {group.timeframes.map((value) => {
+                      const strategyMeta = getBacktestStrategy(strategy);
+                      const supported = strategyMeta?.timeframes.includes(value) ?? true;
+
+                      return (
+                        <option key={value} value={value} disabled={!supported}>
+                          {value === '1min' && '1 Minute'}
+                          {value === '5min' && '5 Minutes'}
+                          {value === '15min' && '15 Minutes'}
+                          {value === '30min' && '30 Minutes'}
+                          {value === '60min' && '1 Hour'}
+                          {value === 'daily' && 'Daily'}
+                          {!supported ? ' (Unavailable)' : ''}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                ))}
               </select>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
@@ -772,22 +1028,40 @@ function BacktestContent() {
                 <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Narrative Layer
                 </div>
-                <button
-                  onClick={summarizeBacktest}
-                  disabled={aiLoading}
-                  style={{
-                    padding: '9px 12px',
-                    background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: aiLoading ? 'not-allowed' : 'pointer',
-                    fontSize: '13px'
-                  }}
-                >
-                  {aiLoading ? 'Building Brief...' : 'Generate AI Brief'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <Link
+                    href={journalDraftHref}
+                    onClick={handleAutoJournalDraftClick}
+                    style={{
+                      padding: '9px 12px',
+                      background: 'rgba(59,130,246,0.16)',
+                      border: '1px solid rgba(59,130,246,0.35)',
+                      borderRadius: '8px',
+                      color: '#bfdbfe',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      fontSize: '13px'
+                    }}
+                  >
+                    Auto Journal Draft
+                  </Link>
+                  <button
+                    onClick={summarizeBacktest}
+                    disabled={aiLoading}
+                    style={{
+                      padding: '9px 12px',
+                      background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 600,
+                      cursor: aiLoading ? 'not-allowed' : 'pointer',
+                      fontSize: '13px'
+                    }}
+                  >
+                    {aiLoading ? 'Building Brief...' : 'Generate AI Brief'}
+                  </button>
+                </div>
               </div>
               {aiError && <div style={{ color: '#fca5a5', fontSize: '13px', marginBottom: '8px' }}>{aiError}</div>}
 
