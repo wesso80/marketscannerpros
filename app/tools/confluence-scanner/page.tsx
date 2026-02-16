@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
@@ -55,6 +55,7 @@ interface HierarchicalResult {
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
+type OperatorViewMode = 'guided' | 'advanced';
 
 // Simple timeframe options - user picks what candle they're trading
 const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; tf: string }[] = [
@@ -113,6 +114,8 @@ export default function AIConfluenceScanner() {
   const [holdingPeriod, setHoldingPeriod] = useState<string>('2d');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('guided');
+  const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
 
   // Get holding period info for display
   const selectedHolding = HOLDING_PERIOD_OPTIONS.find(h => h.value === holdingPeriod);
@@ -142,6 +145,28 @@ export default function AIConfluenceScanner() {
       </div>
     );
   }
+
+  useEffect(() => {
+    try {
+      const storedMode = window.localStorage.getItem('msp_confluence_operator_mode_v1');
+      if (storedMode === 'guided' || storedMode === 'advanced') {
+        setOperatorViewMode(storedMode);
+      }
+    } catch {
+      setOperatorViewMode('guided');
+    } finally {
+      setOperatorModeHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!operatorModeHydrated) return;
+    try {
+      window.localStorage.setItem('msp_confluence_operator_mode_v1', operatorViewMode);
+    } catch {
+      // no-op
+    }
+  }, [operatorViewMode, operatorModeHydrated]);
 
   const handleScan = async (forceRefresh = false) => {
     if (!symbol.trim()) {
@@ -272,6 +297,8 @@ export default function AIConfluenceScanner() {
   };
 
   const extremeConditions = hierarchicalResult ? getExtremeConditions() : null;
+  const isGuidedMode = operatorViewMode === 'guided';
+  const showAdvancedInvestigation = !isGuidedMode;
 
   return (
     <div style={{ 
@@ -296,7 +323,67 @@ export default function AIConfluenceScanner() {
           </p>
         </div>
 
+        <div style={{
+          marginBottom: '1rem',
+          padding: '0.75rem 1rem',
+          borderRadius: '12px',
+          border: '1px solid var(--msp-border)',
+          background: 'rgba(15,23,42,0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ color: '#94A3B8', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+            Operator Panel
+          </div>
+          <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+            <button
+              onClick={() => setOperatorViewMode('guided')}
+              disabled={!operatorModeHydrated}
+              style={{
+                borderRadius: '999px',
+                border: operatorViewMode === 'guided' ? '1px solid var(--msp-border-strong)' : '1px solid var(--msp-border)',
+                background: operatorViewMode === 'guided' ? 'var(--msp-accent-glow)' : 'var(--msp-panel)',
+                color: operatorViewMode === 'guided' ? 'var(--msp-accent)' : '#94A3B8',
+                padding: '0.3rem 0.7rem',
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                cursor: operatorModeHydrated ? 'pointer' : 'wait',
+                opacity: operatorModeHydrated ? 1 : 0.7,
+              }}
+            >
+              Guided
+            </button>
+            <button
+              onClick={() => setOperatorViewMode('advanced')}
+              disabled={!operatorModeHydrated}
+              style={{
+                borderRadius: '999px',
+                border: operatorViewMode === 'advanced' ? '1px solid var(--msp-border-strong)' : '1px solid var(--msp-border)',
+                background: operatorViewMode === 'advanced' ? 'var(--msp-accent-glow)' : 'var(--msp-panel)',
+                color: operatorViewMode === 'advanced' ? 'var(--msp-accent)' : '#94A3B8',
+                padding: '0.3rem 0.7rem',
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                cursor: operatorModeHydrated ? 'pointer' : 'wait',
+                opacity: operatorModeHydrated ? 1 : 0.7,
+              }}
+            >
+              Advanced
+            </button>
+          </div>
+        </div>
+
         {/* Simple UI: Symbol + Timeframe + Scan */}
+        <div style={{ color: '#64748B', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.6rem' }}>
+          Control Zone
+        </div>
         <div style={{ 
           display: 'flex', 
           gap: '0.75rem', 
@@ -700,16 +787,56 @@ export default function AIConfluenceScanner() {
           </div>
         )}
 
-        {/* 🔮 Time Confluence Engine - Elite Feature */}
-        <div style={{ marginBottom: '2rem' }}>
-          <TimeConfluenceWidget 
-            showMacro={true}
-            showMicro={true}
-            showTWAP={true}
-            showCalendar={true}
-            compact={false}
-          />
-        </div>
+        {showAdvancedInvestigation ? (
+          <>
+            <div style={{ color: '#64748B', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.6rem' }}>
+              Investigation Stack
+            </div>
+            <div style={{ marginBottom: '2rem' }}>
+              <TimeConfluenceWidget 
+                showMacro={true}
+                showMicro={true}
+                showTWAP={true}
+                showCalendar={true}
+                compact={false}
+              />
+            </div>
+          </>
+        ) : (
+          <div style={{
+            marginBottom: '1.5rem',
+            border: '1px solid var(--msp-border)',
+            borderRadius: '12px',
+            padding: '0.8rem 1rem',
+            background: 'rgba(30,41,59,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}>
+            <span style={{ color: '#94A3B8', fontSize: '0.82rem' }}>
+              Guided mode keeps full time-window and macro diagnostics collapsed for faster decisions.
+            </span>
+            <button
+              onClick={() => setOperatorViewMode('advanced')}
+              style={{
+                border: '1px solid var(--msp-border-strong)',
+                background: 'var(--msp-accent-glow)',
+                color: 'var(--msp-accent)',
+                borderRadius: '999px',
+                padding: '0.3rem 0.75rem',
+                fontSize: '0.72rem',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                cursor: 'pointer',
+              }}
+            >
+              Show Full Analysis
+            </button>
+          </div>
+        )}
 
         {/* Error Display */}
         {error && (
@@ -730,6 +857,9 @@ export default function AIConfluenceScanner() {
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {hierarchicalResult && (
           <div style={{ display: 'grid', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div style={{ color: '#64748B', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+              Decision Engine
+            </div>
             {(() => {
               const clusteredCount = hierarchicalResult.decompression.clusteredCount ?? hierarchicalResult.decompression.activeCount;
               const baseConfidence = hierarchicalResult.prediction.confidence || 50;
@@ -958,7 +1088,7 @@ export default function AIConfluenceScanner() {
               </div>
 
               {/* 📐 SCORE BREAKDOWN PANEL */}
-              {hierarchicalResult.scoreBreakdown && (
+              {showAdvancedInvestigation && hierarchicalResult.scoreBreakdown && (
                 <div style={{
                   marginTop: '1.5rem',
                   padding: '1rem',
@@ -1138,6 +1268,19 @@ export default function AIConfluenceScanner() {
                   )}
                 </div>
               )}
+              {!showAdvancedInvestigation && (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 0.9rem',
+                  borderRadius: '10px',
+                  border: '1px dashed var(--msp-border)',
+                  background: 'rgba(30,41,59,0.5)',
+                  color: '#94A3B8',
+                  fontSize: '0.8rem',
+                }}>
+                  Guided mode hides Score Breakdown internals. Switch to Advanced for factor-level diagnostics.
+                </div>
+              )}
             </div>
 
             {/* 📊 TRADE SETUP CARD */}
@@ -1251,150 +1394,154 @@ export default function AIConfluenceScanner() {
               </div>
             )}
 
-            {/* Decompression Analysis Card */}
-            <div style={{
-              background: 'rgba(30,41,59,0.9)',
-              border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#F59E0B', fontSize: '1.1rem' }}>
-                🔄 Decompression Pull Analysis
-              </h3>
-              
-              {/* Pull Bias Meter */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ color: '#EF4444' }}>🔴 Bearish Pull</span>
-                  <span style={{ color: '#10B981' }}>Bullish Pull 🟢</span>
-                </div>
-                <div style={{ 
-                  height: '12px', 
-                  background: '#64748B',
-                  borderRadius: '6px',
-                  position: 'relative'
+            {showAdvancedInvestigation && (
+              <>
+                {/* Decompression Analysis Card */}
+                <div style={{
+                  background: 'rgba(30,41,59,0.9)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
                 }}>
-                  <div style={{
-                    position: 'absolute',
-                    left: `${50 + hierarchicalResult.decompression.pullBias / 2}%`,
-                    top: '-4px',
-                    width: '20px',
-                    height: '20px',
-                    background: 'white',
-                    borderRadius: '50%',
-                    transform: 'translateX(-50%)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  }} />
-                </div>
-                <div style={{ textAlign: 'center', marginTop: '0.5rem', color: '#94A3B8' }}>
-                  Pull Bias: {hierarchicalResult.decompression.pullBias.toFixed(0)}% ({hierarchicalResult.decompression.netPullDirection})
-                </div>
-              </div>
-
-              {/* Active Decompressions */}
-              <div style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '1rem' }}>
-                {hierarchicalResult.decompression.reasoning}
-              </div>
-
-              {/* TF Grid */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                gap: '0.5rem',
-              }}>
-                {hierarchicalResult.decompression.decompressions.map((d) => (
-                  <div key={d.tf} style={{
-                    padding: '0.5rem',
-                    background: d.isDecompressing 
-                      ? d.pullDirection === 'up' ? 'rgba(16,185,129,0.2)' : 
-                        d.pullDirection === 'down' ? 'rgba(239,68,68,0.2)' : 
-                        'rgba(100,116,139,0.2)'
-                      : 'rgba(0,0,0,0.2)',
-                    borderRadius: '8px',
-                    borderLeft: d.isDecompressing ? '3px solid' : 'none',
-                    borderColor: d.pullDirection === 'up' ? '#10B981' : 
-                                 d.pullDirection === 'down' ? '#EF4444' : '#64748B',
-                  }}>
-                    <div style={{ fontWeight: 600, color: d.isDecompressing ? 'white' : '#64748B' }}>
-                      {d.tf} {d.isDecompressing && '🔄'}
+                  <h3 style={{ margin: '0 0 1rem 0', color: '#F59E0B', fontSize: '1.1rem' }}>
+                    🔄 Decompression Pull Analysis
+                  </h3>
+                  
+                  {/* Pull Bias Meter */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ color: '#EF4444' }}>🔴 Bearish Pull</span>
+                      <span style={{ color: '#10B981' }}>Bullish Pull 🟢</span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                      {d.minsToClose > 0 ? `${d.minsToClose}m to close` : 'Closed'}
-                    </div>
-                    {d.isDecompressing && (
-                      <div style={{ fontSize: '0.75rem', color: d.pullDirection === 'up' ? '#10B981' : '#EF4444', fontFamily: 'monospace' }}>
-                        → ${formatPrice(d.mid50Level)}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 50% Levels & Clusters */}
-            <div style={{
-              background: 'rgba(30,41,59,0.9)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '16px',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--msp-accent)', fontSize: '1.1rem' }}>
-                📏 50% Levels & Clusters
-              </h3>
-              
-              {/* Clusters */}
-              {hierarchicalResult.clusters.length > 0 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                    🎯 {hierarchicalResult.clusters.length} Cluster(s) Detected - Strong Targets!
-                  </div>
-                  {hierarchicalResult.clusters.map((c, i) => (
-                    <div key={i} style={{
-                      padding: '0.5rem 1rem',
-                      background: 'rgba(245,158,11,0.15)',
-                      borderRadius: '8px',
-                      marginBottom: '0.5rem',
+                    <div style={{ 
+                      height: '12px', 
+                      background: '#64748B',
+                      borderRadius: '6px',
+                      position: 'relative'
                     }}>
-                      <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>
-                        Cluster @ ${formatPrice(c.avgLevel)}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                        TFs: {c.tfs.join(', ')}
-                      </div>
+                      <div style={{
+                        position: 'absolute',
+                        left: `${50 + hierarchicalResult.decompression.pullBias / 2}%`,
+                        top: '-4px',
+                        width: '20px',
+                        height: '20px',
+                        background: 'white',
+                        borderRadius: '50%',
+                        transform: 'translateX(-50%)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      }} />
                     </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* 50% Level Grid */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: '0.5rem',
-              }}>
-                {hierarchicalResult.mid50Levels.slice(0, 12).map((level) => (
-                  <div key={level.tf} style={{
-                    padding: '0.5rem',
-                    background: level.isDecompressing ? 'rgba(168,85,247,0.2)' : 'rgba(0,0,0,0.2)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
-                    <span style={{ fontWeight: 500 }}>{level.tf}</span>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>${formatPrice(level.level)}</div>
-                      <div style={{ 
-                        fontSize: '0.7rem', 
-                        color: level.distance > 0 ? '#10B981' : level.distance < 0 ? '#EF4444' : '#64748B'
-                      }}>
-                        {level.distance > 0 ? '+' : ''}{level.distance.toFixed(4)}%
-                      </div>
+                    <div style={{ textAlign: 'center', marginTop: '0.5rem', color: '#94A3B8' }}>
+                      Pull Bias: {hierarchicalResult.decompression.pullBias.toFixed(0)}% ({hierarchicalResult.decompression.netPullDirection})
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Active Decompressions */}
+                  <div style={{ fontSize: '0.9rem', color: '#94A3B8', marginBottom: '1rem' }}>
+                    {hierarchicalResult.decompression.reasoning}
+                  </div>
+
+                  {/* TF Grid */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                    gap: '0.5rem',
+                  }}>
+                    {hierarchicalResult.decompression.decompressions.map((d) => (
+                      <div key={d.tf} style={{
+                        padding: '0.5rem',
+                        background: d.isDecompressing 
+                          ? d.pullDirection === 'up' ? 'rgba(16,185,129,0.2)' : 
+                            d.pullDirection === 'down' ? 'rgba(239,68,68,0.2)' : 
+                            'rgba(100,116,139,0.2)'
+                          : 'rgba(0,0,0,0.2)',
+                        borderRadius: '8px',
+                        borderLeft: d.isDecompressing ? '3px solid' : 'none',
+                        borderColor: d.pullDirection === 'up' ? '#10B981' : 
+                                     d.pullDirection === 'down' ? '#EF4444' : '#64748B',
+                      }}>
+                        <div style={{ fontWeight: 600, color: d.isDecompressing ? 'white' : '#64748B' }}>
+                          {d.tf} {d.isDecompressing && '🔄'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                          {d.minsToClose > 0 ? `${d.minsToClose}m to close` : 'Closed'}
+                        </div>
+                        {d.isDecompressing && (
+                          <div style={{ fontSize: '0.75rem', color: d.pullDirection === 'up' ? '#10B981' : '#EF4444', fontFamily: 'monospace' }}>
+                            → ${formatPrice(d.mid50Level)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 50% Levels & Clusters */}
+                <div style={{
+                  background: 'rgba(30,41,59,0.9)',
+                  border: '1px solid var(--msp-border)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                }}>
+                  <h3 style={{ margin: '0 0 1rem 0', color: 'var(--msp-accent)', fontSize: '1.1rem' }}>
+                    📏 50% Levels & Clusters
+                  </h3>
+                  
+                  {/* Clusters */}
+                  {hierarchicalResult.clusters.length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                        🎯 {hierarchicalResult.clusters.length} Cluster(s) Detected - Strong Targets!
+                      </div>
+                      {hierarchicalResult.clusters.map((c, i) => (
+                        <div key={i} style={{
+                          padding: '0.5rem 1rem',
+                          background: 'rgba(245,158,11,0.15)',
+                          borderRadius: '8px',
+                          marginBottom: '0.5rem',
+                        }}>
+                          <div style={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                            Cluster @ ${formatPrice(c.avgLevel)}
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                            TFs: {c.tfs.join(', ')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* 50% Level Grid */}
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gap: '0.5rem',
+                  }}>
+                    {hierarchicalResult.mid50Levels.slice(0, 12).map((level) => (
+                      <div key={level.tf} style={{
+                        padding: '0.5rem',
+                        background: level.isDecompressing ? 'rgba(168,85,247,0.2)' : 'rgba(0,0,0,0.2)',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}>
+                        <span style={{ fontWeight: 500 }}>{level.tf}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>${formatPrice(level.level)}</div>
+                          <div style={{ 
+                            fontSize: '0.7rem', 
+                            color: level.distance > 0 ? '#10B981' : level.distance < 0 ? '#EF4444' : '#64748B'
+                          }}>
+                            {level.distance > 0 ? '+' : ''}{level.distance.toFixed(4)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
