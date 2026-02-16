@@ -19,6 +19,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import Pill from "@/components/terminal/Pill";
+import { writeOperatorState } from "@/lib/operatorState";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -554,6 +555,64 @@ export default function OptionsConfluenceScanner() {
       });
     }
   }, [result, setPageData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlSymbol = new URLSearchParams(window.location.search).get('symbol');
+    if (!urlSymbol) return;
+    const normalized = urlSymbol.trim().toUpperCase();
+    if (!normalized) return;
+    setSymbol(normalized);
+  }, []);
+
+  useEffect(() => {
+    if (!result) return;
+
+    const signalStrengthScore = typeof result.signalStrength === 'number'
+      ? result.signalStrength
+      : result.signalStrength === 'strong'
+      ? 75
+      : result.signalStrength === 'moderate'
+      ? 60
+      : result.signalStrength === 'weak'
+      ? 40
+      : 50;
+    const edge = Math.max(1, Math.min(99, Math.round(result.compositeScore?.confidence ?? signalStrengthScore)));
+    const bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = result.direction === 'bullish'
+      ? 'BULLISH'
+      : result.direction === 'bearish'
+      ? 'BEARISH'
+      : 'NEUTRAL';
+
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = result.entryTiming.urgency === 'no_trade'
+      ? 'WAIT'
+      : result.tradeLevels && edge >= 60
+      ? 'EXECUTE'
+      : 'PREP';
+
+    const expectedMoveRisk = result.expectedMove?.selectedExpiryPercent ?? 0;
+    const risk: 'LOW' | 'MODERATE' | 'HIGH' = result.institutionalFilter?.noTrade
+      ? 'HIGH'
+      : expectedMoveRisk >= 4
+      ? 'HIGH'
+      : expectedMoveRisk >= 2
+      ? 'MODERATE'
+      : 'LOW';
+
+    const next = result.entryTiming.urgency === 'no_trade'
+      ? (result.entryTiming.reason || 'Wait for cleaner options structure')
+      : (result.tradeSnapshot?.action?.entryTrigger || result.entryTiming.reason || 'Execute with defined levels');
+
+    writeOperatorState({
+      symbol: result.symbol,
+      edge,
+      bias,
+      action,
+      risk,
+      next,
+      mode: 'EVALUATE',
+    });
+  }, [result]);
 
   useEffect(() => {
     let mounted = true;

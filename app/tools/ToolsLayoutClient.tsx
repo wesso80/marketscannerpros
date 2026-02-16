@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import MSPCopilot from '@/components/MSPCopilot';
 import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
 import OperatorCommandStrip from '@/components/OperatorCommandStrip';
@@ -59,7 +60,9 @@ export default function ToolsLayoutClient({
       </ErrorBoundary>
       <ErrorBoundary fallback={null}>
         <div className="mx-auto w-full max-w-[1400px] px-3 md:px-4">
-          <OperatorCommandStrip />
+          <Suspense fallback={null}>
+            <OperatorCommandStrip />
+          </Suspense>
         </div>
       </ErrorBoundary>
       <ErrorBoundary>{wrappedChildren}</ErrorBoundary>

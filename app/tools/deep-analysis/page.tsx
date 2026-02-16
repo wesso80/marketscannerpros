@@ -5,6 +5,7 @@ import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import { writeOperatorState } from "@/lib/operatorState";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
@@ -575,6 +576,60 @@ export default function DeepAnalysisPage() {
       });
     }
   }, [result, setPageData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const urlSymbol = new URLSearchParams(window.location.search).get('symbol');
+    if (!urlSymbol) return;
+    const normalized = urlSymbol.trim().toUpperCase();
+    if (!normalized) return;
+    setSymbol(normalized);
+  }, []);
+
+  useEffect(() => {
+    if (!result) return;
+
+    const signalText = (result.signals?.signal || '').toUpperCase();
+    const rawScore = Number(result.signals?.score ?? 50);
+    const edge = Math.max(1, Math.min(99, Math.round(Math.abs(rawScore))));
+    const atrPercent = result.price?.price && result.indicators?.atr
+      ? (result.indicators.atr / result.price.price) * 100
+      : 0;
+
+    const bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = signalText.includes('BUY') || signalText.includes('BULL')
+      ? 'BULLISH'
+      : signalText.includes('SELL') || signalText.includes('BEAR')
+      ? 'BEARISH'
+      : 'NEUTRAL';
+
+    const action: 'WAIT' | 'PREP' | 'EXECUTE' = bias === 'NEUTRAL'
+      ? 'WAIT'
+      : edge >= 70
+      ? 'EXECUTE'
+      : 'PREP';
+
+    const risk: 'LOW' | 'MODERATE' | 'HIGH' = atrPercent >= 3
+      ? 'HIGH'
+      : atrPercent >= 1.5
+      ? 'MODERATE'
+      : 'LOW';
+
+    const next = action === 'EXECUTE'
+      ? 'Confirm trigger then execute'
+      : action === 'PREP'
+      ? 'Wait for stronger confluence'
+      : 'Monitor for directional edge';
+
+    writeOperatorState({
+      symbol: result.symbol,
+      edge,
+      bias,
+      action,
+      risk,
+      next,
+      mode: 'EVALUATE',
+    });
+  }, [result]);
 
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
