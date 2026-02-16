@@ -12,30 +12,30 @@ export default function Footer() {
   };
 
   return (
-    <footer style={{borderTop:"1px solid #27272a", marginTop:32}}>
+    <footer style={{borderTop:"1px solid #23344D", marginTop:32, background: '#0A1220'}}>
       {/* Legal Disclaimer */}
       <div style={{
-        background: 'rgba(239,68,68,0.05)',
-        borderBottom: '1px solid rgba(239,68,68,0.2)',
+        background: 'rgba(245,158,11,0.06)',
+        borderBottom: '1px solid rgba(35,52,77,0.9)',
         padding: '16px 20px',
         textAlign: 'center'
       }}>
         <p style={{
           fontSize: 13,
-          color: '#9ca3af',
+          color: '#9CA3AF',
           margin: 0,
           lineHeight: 1.6,
           maxWidth: 900,
           marginLeft: 'auto',
           marginRight: 'auto'
         }}>
-          ⚠️ <strong style={{ color: '#f87171' }}>Disclaimer:</strong> MarketScanner Pros is an educational and informational tool. 
+          ⚠️ <strong style={{ color: '#F59E0B' }}>Disclaimer:</strong> MarketScanner Pros is an educational and informational tool. 
           It is not investment advice and should not be construed as such. Past performance does not guarantee future results. 
           Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.
         </p>
       </div>
       
-      <div className="container" style={{display:"flex",gap:"1.5rem",padding:"1rem 0",opacity:.85,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
+      <div className="container" style={{display:"flex",gap:"1.5rem",padding:"1rem 0",opacity:.9,flexWrap:"wrap",justifyContent:"center",alignItems:"center", color: '#E5E7EB'}}>
         <Link href="/blog">Blog</Link>
         <Link href="/guide">Guide</Link>
         <Link href="/disclaimer">Disclaimer</Link>
@@ -96,14 +96,14 @@ export default function Footer() {
       
       {/* Data Attribution */}
       <div style={{ textAlign: 'center', padding: '0.5rem 0', opacity: 0.5, fontSize: 11 }}>
-        <span style={{ color: '#9ca3af' }}>
+        <span style={{ color: '#9CA3AF' }}>
           Market data powered by CoinGecko & Alpha Vantage
         </span>
       </div>
       
       {/* CCPA Do Not Sell Link */}
       <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem', opacity: 0.6, fontSize: 12 }}>
-        <Link href="/privacy#ccpa" style={{ color: '#9ca3af' }}>Do Not Sell My Personal Information</Link>
+        <Link href="/privacy#ccpa" style={{ color: '#9CA3AF' }}>Do Not Sell My Personal Information</Link>
       </div>
     </footer>
   );

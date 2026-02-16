@@ -4,6 +4,19 @@
 
 :root {
   color-scheme: dark;
+  --msp-bg: #0A1220;
+  --msp-card: #111C2D;
+  --msp-panel: #16263A;
+  --msp-border: #23344D;
+  --msp-text: #E5E7EB;
+  --msp-text-muted: #9CA3AF;
+  --msp-accent: #14B8A6;
+  --msp-accent-hover: #0F766E;
+  --msp-accent-glow: rgba(20, 184, 166, 0.25);
+  --msp-bull: #22C55E;
+  --msp-bear: #EF4444;
+  --msp-warn: #F59E0B;
+  --msp-neutral: #64748B;
 }
 
 *, *::before, *::after {
@@ -13,8 +26,8 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
-  color: #e5e5e5;
+  background: var(--msp-bg);
+  color: var(--msp-text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   overflow-x: hidden;
   max-width: 100vw;
@@ -81,10 +94,11 @@ html, body {
 
 /* Links */
 a {
-  color: #34d399;
+  color: var(--msp-accent);
   text-decoration: none;
 }
 a:hover {
+  color: #2DD4BF;
   text-decoration: underline;
 }
 
@@ -119,7 +133,7 @@ a:hover {
 }
 
 .header {
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid var(--msp-border);
   overflow: hidden;
   width: 100%;
 }
@@ -129,8 +143,8 @@ a:hover {
   display: inline-block;
   padding: .7rem .95rem;
   border-radius: .8rem;
-  background: #22c55e;        /* emerald */
-  color: #0a0a0a;             /* near black */
+  background: var(--msp-accent);
+  color: #0a1220;
   font-weight: 700;
   text-decoration: none;
 }
@@ -139,13 +153,13 @@ a:hover {
 }
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, .35); /* focus ring */
+  box-shadow: 0 0 0 3px var(--msp-accent-glow);
 }
 
 .btn-outline {
   background: transparent;
-  border: 1px solid #3f3f46;
-  color: #e5e5e5;
+  border: 1px solid var(--msp-border);
+  color: var(--msp-text);
   padding: .5rem .8rem;
   border-radius: .5rem;
 }
@@ -154,7 +168,7 @@ a:hover {
 }
 .btn-outline:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(63, 63, 70, .35);
+  box-shadow: 0 0 0 3px var(--msp-accent-glow);
 }
 
 /* Cookie banner */
@@ -163,9 +177,9 @@ a:hover {
   inset-inline: 0;
   bottom: 0;
   z-index: 50;
-  background: rgba(24,24,27,.98);
-  color: #e5e5e5;
-  border-top: 1px solid #27272a;
+  background: rgba(17, 28, 45, 0.98);
+  color: var(--msp-text);
+  border-top: 1px solid var(--msp-border);
 }
 .cookie-row {
   display: flex;
@@ -183,12 +197,39 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Fine-tune link colors sitewide to match emerald theme */
+/* Fine-tune link colors sitewide to match MSP teal theme */
 a {
-  color: #a7f3d0;             /* emerald-200ish */
+  color: var(--msp-accent);
 }
 a:hover {
-  color: #6ee7b7;             /* emerald-300ish */
+  color: #2DD4BF;
+}
+
+/* Institutional color discipline: one accent, neutral structure */
+[class*="text-blue-"],
+[class*="text-cyan-"],
+[class*="text-indigo-"],
+[class*="text-violet-"],
+[class*="text-purple-"] {
+  color: var(--msp-accent) !important;
+}
+
+[class*="bg-blue-"],
+[class*="bg-cyan-"],
+[class*="bg-indigo-"],
+[class*="bg-violet-"],
+[class*="bg-purple-"] {
+  background-color: rgba(20, 184, 166, 0.14) !important;
+}
+
+[class*="border-blue-"],
+[class*="border-cyan-"],
+[class*="border-indigo-"],
+[class*="border-violet-"],
+[class*="border-purple-"],
+[class*="border-teal-"],
+[class*="border-emerald-"] {
+  border-color: var(--msp-border) !important;
 }
 
 /* Spinner animation for loading states */

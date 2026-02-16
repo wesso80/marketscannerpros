@@ -63,7 +63,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="overflow-x-hidden">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased overflow-x-hidden">
+      <body className="min-h-screen antialiased overflow-x-hidden">
         <ErrorBoundary>
           <AppUrlFixer />
           <Header />

@@ -473,7 +473,7 @@ function CryptoDetailPageContent() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold mb-4 text-teal-300">
             🔍 Crypto Asset Explorer
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
@@ -735,7 +735,7 @@ function CryptoDetailPageContent() {
             {(() => {
               const trend = getTrendContext(coinData.price_changes);
               return (
-                <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-blue-500/30 rounded-xl p-6">
+                <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-6">
                   <h3 className="text-lg font-semibold mb-4">🧭 Trend Context</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center">
@@ -777,9 +777,9 @@ function CryptoDetailPageContent() {
                   </div>
                   
                   {/* Quick interpretation */}
-                  <div className="mt-4 pt-4 border-t border-blue-500/20">
+                  <div className="mt-4 pt-4 border-t border-slate-700/70">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-blue-300">💡</span>
+                      <span className="text-teal-300">💡</span>
                       <span className="text-slate-300">
                         {trend.weeklyTrend === 'Bullish' && trend.monthlyTrend === 'Bullish' && 'Strong uptrend — momentum aligned across timeframes'}
                         {trend.weeklyTrend === 'Bearish' && trend.monthlyTrend === 'Bearish' && 'Strong downtrend — caution advised'}
@@ -849,7 +849,7 @@ function CryptoDetailPageContent() {
             
             {/* Derivatives Data (if available) */}
             {coinData.derivatives && (
-              <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-6">
+              <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-6">
                 <h3 className="text-lg font-semibold mb-4">📊 Derivatives Data</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   {coinData.derivatives.funding_rate !== undefined && (
@@ -892,8 +892,8 @@ function CryptoDetailPageContent() {
                   if (insights.length === 0) return null;
                   
                   return (
-                    <div className="border-t border-purple-500/20 pt-4 mt-2">
-                      <div className="text-xs text-purple-300 uppercase font-semibold mb-2">🎯 Directional Intelligence</div>
+                    <div className="border-t border-slate-700/70 pt-4 mt-2">
+                      <div className="text-xs text-teal-300 uppercase font-semibold mb-2">🎯 Directional Intelligence</div>
                       <div className="flex flex-wrap gap-2">
                         {insights.map((insight, idx) => (
                           <InsightBadge key={idx} insight={insight!} />

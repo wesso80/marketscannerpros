@@ -14,6 +14,29 @@ import { useAIPageContext } from "@/lib/ai/pageContext";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
+type TraderPersonality = 'momentum' | 'structure' | 'risk' | 'flow';
+
+interface PersonalitySignals {
+  totalScans: number;
+  aiRequests: number;
+  aiExpands: number;
+  focusToggles: number;
+  highConfidenceScans: number;
+  lowConfidenceScans: number;
+  riskHeavyScans: number;
+  flowHeavyScans: number;
+}
+
+const DEFAULT_PERSONALITY_SIGNALS: PersonalitySignals = {
+  totalScans: 0,
+  aiRequests: 0,
+  aiExpands: 0,
+  focusToggles: 0,
+  highConfidenceScans: 0,
+  lowConfidenceScans: 0,
+  riskHeavyScans: 0,
+  flowHeavyScans: 0,
+};
 
 interface ScanResult {
   symbol: string;
@@ -522,16 +545,119 @@ function ScannerContent() {
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
   const [orientationCollapsed, setOrientationCollapsed] = useState(false);
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
+  const [personalityMode, setPersonalityMode] = useState<'adaptive' | TraderPersonality>('adaptive');
+  const [personalitySignals, setPersonalitySignals] = useState<PersonalitySignals>(DEFAULT_PERSONALITY_SIGNALS);
+  const [presenceState, setPresenceState] = useState<'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED'>('WATCHING');
+  const [presenceMode, setPresenceMode] = useState<'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE'>('RANGE MODE');
+  const [presenceUpdates, setPresenceUpdates] = useState<string[]>([]);
   const flowFetchAbortRef = React.useRef<AbortController | null>(null);
   const lastFlowSymbolRef = React.useRef<string | null>(null);
+  const previousPresenceRef = React.useRef<{
+    state: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED';
+    mode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE';
+    regime: 'TREND' | 'RANGE' | 'TRANSITION';
+    flowAligned: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const rawSignals = window.localStorage.getItem('msp_scanner_personality_signals_v1');
+      if (rawSignals) {
+        const parsed = JSON.parse(rawSignals) as Partial<PersonalitySignals>;
+        setPersonalitySignals({ ...DEFAULT_PERSONALITY_SIGNALS, ...parsed });
+      }
+      const rawMode = window.localStorage.getItem('msp_scanner_personality_mode_v1');
+      if (rawMode === 'adaptive' || rawMode === 'momentum' || rawMode === 'structure' || rawMode === 'risk' || rawMode === 'flow') {
+        setPersonalityMode(rawMode);
+      }
+    } catch {
+      setPersonalitySignals(DEFAULT_PERSONALITY_SIGNALS);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('msp_scanner_personality_signals_v1', JSON.stringify(personalitySignals));
+      window.localStorage.setItem('msp_scanner_personality_mode_v1', personalityMode);
+    } catch {
+    }
+  }, [personalitySignals, personalityMode]);
 
   useEffect(() => {
     if (!result) return;
     const timer = setInterval(() => {
       setDeskFeedIndex((prev) => prev + 1);
-    }, 180000);
+    }, 30000);
     return () => clearInterval(timer);
   }, [result?.symbol]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
+    const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
+    const adx = result.adx ?? 0;
+    const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
+    const trendAligned = result.price != null && result.ema200 != null
+      ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+      : false;
+    const momentumActive = result.rsi != null && result.macd_hist != null
+      ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
+      : false;
+    const flowAligned = direction === 'bullish'
+      ? (result.signals?.bullish ?? 0) > (result.signals?.bearish ?? 0)
+      : direction === 'bearish'
+      ? (result.signals?.bearish ?? 0) > (result.signals?.bullish ?? 0)
+      : false;
+    const regime: 'TREND' | 'RANGE' | 'TRANSITION' = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
+
+    const nextState: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED' =
+      confidence < 52 || direction === 'neutral'
+        ? 'INVALIDATED'
+        : trendAligned && momentumActive && confidence >= 70 && flowAligned
+        ? 'READY'
+        : confidence >= 55
+        ? 'PREPARING'
+        : 'WATCHING';
+
+    const nextMode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE' =
+      atrPercent >= 3
+        ? 'CHAOS MODE'
+        : regime === 'TREND'
+        ? 'TREND MODE'
+        : 'RANGE MODE';
+
+    const previous = previousPresenceRef.current;
+    const updates: string[] = [];
+
+    if (previous) {
+      if (previous.state !== nextState) {
+        updates.push(`↳ ${previous.state} → ${nextState}`);
+      }
+      if (!previous.flowAligned && flowAligned) {
+        updates.push('↳ Flow alignment increased confidence');
+      }
+      if (previous.regime !== regime) {
+        updates.push(`↳ Structure upgraded: ${previous.regime} → ${regime}`);
+      }
+      if (previous.mode !== nextMode) {
+        updates.push(`↳ Adaptive profile switched: ${nextMode}`);
+      }
+    }
+
+    setPresenceState(nextState);
+    setPresenceMode(nextMode);
+    if (updates.length > 0) {
+      setPresenceUpdates((prev) => [...updates, ...prev].slice(0, 8));
+    }
+
+    previousPresenceRef.current = {
+      state: nextState,
+      mode: nextMode,
+      regime,
+      flowAligned,
+    };
+  }, [result]);
 
   // Run bulk scan
   const runBulkScan = async (type: 'equity' | 'crypto') => {
@@ -745,8 +871,21 @@ function ScannerContent() {
         console.log('Scanner API Response:', data.results[0]);
         console.log('ATR value:', data.results[0].atr, 'isFinite:', Number.isFinite(data.results[0].atr));
         console.log('Candle time:', data.results[0].lastCandleTime);
+        const scanResult = data.results[0] as ScanResult;
+        const scanScore = Math.max(1, Math.min(99, Math.round(scanResult.score ?? 50)));
+        const scanAtrPercent = scanResult.atr && scanResult.price ? (scanResult.atr / scanResult.price) * 100 : 0;
+        const signalIntensity = scanResult.signals ? (scanResult.signals.bullish + scanResult.signals.bearish) : 0;
+
+        setPersonalitySignals((prev) => ({
+          ...prev,
+          totalScans: prev.totalScans + 1,
+          highConfidenceScans: prev.highConfidenceScans + (scanScore >= 70 ? 1 : 0),
+          lowConfidenceScans: prev.lowConfidenceScans + (scanScore <= 54 ? 1 : 0),
+          riskHeavyScans: prev.riskHeavyScans + (scanAtrPercent >= 2 ? 1 : 0),
+          flowHeavyScans: prev.flowHeavyScans + (signalIntensity >= 8 ? 1 : 0),
+        }));
         // Create new object reference to force React re-render
-        setResult({ ...data.results[0] });
+        setResult({ ...scanResult });
         setScannerCollapsed(true);
         setOrientationCollapsed(true);
         setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
@@ -1996,7 +2135,10 @@ function ScannerContent() {
                 All panels below are for {result.symbol} only
               </div>
               <button
-                onClick={() => setFocusMode((prev) => !prev)}
+                onClick={() => {
+                  setFocusMode((prev) => !prev);
+                  setPersonalitySignals((prev) => ({ ...prev, focusToggles: prev.focusToggles + 1 }));
+                }}
                 style={{
                   marginLeft: 'auto',
                   background: focusMode ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.7)',
@@ -2013,6 +2155,32 @@ function ScannerContent() {
               >
                 {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
               </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {[{ label: 'Adaptive', value: 'adaptive' as const }, { label: 'Momentum', value: 'momentum' as const }, { label: 'Structure', value: 'structure' as const }, { label: 'Risk', value: 'risk' as const }, { label: 'Flow', value: 'flow' as const }].map((option) => {
+                  const active = personalityMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setPersonalityMode(option.value)}
+                      style={{
+                        background: active ? 'rgba(34,211,238,0.18)' : 'rgba(30,41,59,0.7)',
+                        border: `1px solid ${active ? 'rgba(34,211,238,0.45)' : 'rgba(148,163,184,0.3)'}`,
+                        borderRadius: '999px',
+                        color: active ? '#67E8F9' : '#94A3B8',
+                        fontSize: '0.66rem',
+                        fontWeight: 800,
+                        padding: '0.24rem 0.55rem',
+                        cursor: 'pointer',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </>
         )}
@@ -2189,8 +2357,8 @@ function ScannerContent() {
               return (
                 <div style={{
                   marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
-                  border: '1px solid rgba(16,185,129,0.32)',
+                  background: 'linear-gradient(145deg, rgba(10,18,32,0.96), rgba(17,28,45,0.92))',
+                  border: '1px solid rgba(35,52,77,0.9)',
                   borderRadius: '10px',
                   padding: '0.75rem 0.8rem',
                   display: 'grid',
@@ -2199,9 +2367,9 @@ function ScannerContent() {
                 }}>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</div></div>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#E2E8F0', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</div></div>
-                  <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
+                  <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#E2E8F0', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
                 </div>
               );
             })()}
@@ -2220,7 +2388,7 @@ function ScannerContent() {
                 : false;
 
               const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-              const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
+              const regimeColor = regime === 'TREND' ? '#14B8A6' : regime === 'RANGE' ? '#64748B' : '#F59E0B';
               const institutionalIntent = result.institutionalFilter?.recommendation === 'TRADE_READY'
                 ? 'REPRICE_TREND'
                 : result.institutionalFilter?.recommendation === 'CAUTION'
@@ -2262,152 +2430,736 @@ function ScannerContent() {
               const baseProb = Math.max(5, Math.min(85, confidence));
               const bullProb = direction === 'bullish' ? Math.max(15, Math.round(baseProb * 0.4)) : Math.max(10, Math.round((100 - baseProb) * 0.2));
               const bearProb = Math.max(5, 100 - baseProb - bullProb);
+              const flowSignal = capitalFlow?.conviction ?? Math.round(flowEdge);
+
+              const personalityScores: Record<TraderPersonality, number> = {
+                momentum:
+                  (personalitySignals.highConfidenceScans * 1.3) +
+                  (personalitySignals.focusToggles * 0.8) +
+                  (score >= 70 ? 1.5 : 0) +
+                  (momentumActive ? 1.2 : 0),
+                structure:
+                  (personalitySignals.aiExpands * 1.1) +
+                  (personalitySignals.aiRequests * 0.6) +
+                  (trendAligned ? 1.4 : 0) +
+                  (result.ema200 != null ? 0.8 : 0),
+                risk:
+                  (personalitySignals.lowConfidenceScans * 1.1) +
+                  (personalitySignals.riskHeavyScans * 1.4) +
+                  (atrPercent >= 2 ? 1.4 : 0) +
+                  (qualityGate === 'LOW' ? 1 : 0),
+                flow:
+                  (personalitySignals.flowHeavyScans * 1.5) +
+                  (flowSignal >= 60 ? 1.4 : 0) +
+                  ((result.signals?.bullish ?? 0) + (result.signals?.bearish ?? 0) >= 8 ? 1 : 0),
+              };
+
+              const adaptivePersonality = (Object.entries(personalityScores)
+                .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'risk') as TraderPersonality;
+              const activePersonality: TraderPersonality = personalityMode === 'adaptive' ? adaptivePersonality : personalityMode;
+              const personalityLabel = activePersonality === 'momentum'
+                ? 'Momentum Hunter'
+                : activePersonality === 'structure'
+                ? 'Structure Trader'
+                : activePersonality === 'risk'
+                ? 'Risk Manager'
+                : 'Opportunistic Flow Trader';
+              const personalityAccent = activePersonality === 'risk' ? '#F59E0B' : '#14B8A6';
+              const personalityHint = activePersonality === 'momentum'
+                ? 'Execution and timing are prioritized first.'
+                : activePersonality === 'structure'
+                ? 'Structure and levels are emphasized first.'
+                : activePersonality === 'risk'
+                ? 'Risk and quality gates stay dominant first.'
+                : 'Flow and confluence panels are prioritized first.';
+
+              const riskPriority = activePersonality === 'risk' ? 3 : activePersonality === 'momentum' ? 1 : 2;
+              const executionPriority = activePersonality === 'momentum' ? 3 : activePersonality === 'risk' ? 1 : 2;
+              const riskPanelOrder = riskPriority >= executionPriority ? 1 : 2;
+              const executionPanelOrder = riskPanelOrder === 1 ? 2 : 1;
+              const riskPanelScale = riskPriority >= executionPriority ? 1.08 : 0.94;
+              const executionPanelScale = executionPriority > riskPriority ? 1.08 : 0.95;
+              const decisionCoreScale = activePersonality === 'structure' ? 1.08 : activePersonality === 'risk' ? 0.95 : 1.02;
+              const flowPanelScale = activePersonality === 'flow' ? 1.08 : 0.98;
+              const edgeState: 'WAIT' | 'BUILDING EDGE' | 'ACTIVE EDGE' | 'DANGER' =
+                atrPercent >= 3 || score < 45
+                  ? 'DANGER'
+                  : direction === 'neutral'
+                  ? 'WAIT'
+                  : trendAligned && momentumActive && score >= 70
+                  ? 'ACTIVE EDGE'
+                  : 'BUILDING EDGE';
+              const lifecyclePhase =
+                edgeState === 'DANGER'
+                  ? 'EXIT RISK'
+                  : edgeState === 'WAIT'
+                  ? 'SCAN'
+                  : edgeState === 'ACTIVE EDGE'
+                  ? 'EXECUTION WINDOW'
+                  : 'BUILDING EDGE';
+              const edgeStateColor = edgeState === 'ACTIVE EDGE' ? '#14B8A6' : edgeState === 'BUILDING EDGE' ? '#14B8A6' : edgeState === 'DANGER' ? '#EF4444' : '#94A3B8';
+              const edgeStateBorder = edgeState === 'DANGER' ? 'rgba(239,68,68,0.35)' : 'rgba(35,52,77,0.9)';
+              const edgeStateBg = edgeState === 'ACTIVE EDGE'
+                ? 'linear-gradient(145deg, rgba(20,184,166,0.12), rgba(10,18,32,0.9))'
+                : edgeState === 'BUILDING EDGE'
+                ? 'linear-gradient(145deg, rgba(20,184,166,0.08), rgba(10,18,32,0.9))'
+                : edgeState === 'DANGER'
+                ? 'linear-gradient(145deg, rgba(239,68,68,0.12), rgba(10,18,32,0.9))'
+                : 'linear-gradient(145deg, rgba(148,163,184,0.08), rgba(10,18,32,0.9))';
+              const priorityMode = edgeState === 'ACTIVE EDGE' ? 'strong' : edgeState === 'WAIT' || edgeState === 'DANGER' ? 'weak' : 'building';
+              const executionEdgeScore = Math.round(
+                (structureEdge * 0.35) +
+                (timingEdge * 0.30) +
+                (flowEdge * 0.25) +
+                (executionEdge * 0.10)
+              );
+              const executionEdgeState = executionEdgeScore > 75 ? 'READY' : executionEdgeScore >= 50 ? 'WATCH' : 'WAIT';
+              const executionEdgeColor = executionEdgeState === 'READY' ? '#10B981' : executionEdgeState === 'WATCH' ? '#F59E0B' : '#EF4444';
+
+              const timeTriggerState = timingEdge >= 70 && edgeState === 'ACTIVE EDGE'
+                ? 'ACTIVE NOW'
+                : timingEdge >= 45
+                ? 'BUILDING'
+                : 'DORMANT';
+              const timeTriggerColor = timeTriggerState === 'ACTIVE NOW' ? '#10B981' : timeTriggerState === 'BUILDING' ? '#F59E0B' : '#94A3B8';
+
+              const permissionStatus = result.institutionalFilter?.recommendation === 'NO_TRADE'
+                ? 'NO PERMISSION (TRAP RISK)'
+                : result.institutionalFilter?.recommendation === 'TRADE_READY' && direction === 'bullish'
+                ? 'LONG ALLOWED'
+                : result.institutionalFilter?.recommendation === 'TRADE_READY' && direction === 'bearish'
+                ? 'SHORT ALLOWED'
+                : 'LIMITED PERMISSION';
+              const permissionColor = permissionStatus.includes('NO PERMISSION')
+                ? '#EF4444'
+                : permissionStatus.includes('ALLOWED')
+                ? '#10B981'
+                : '#F59E0B';
+              const permissionAllowed = permissionStatus.includes('ALLOWED');
+
+              const flowAligned = direction === 'bullish'
+                ? (result.signals?.bullish ?? 0) > (result.signals?.bearish ?? 0)
+                : direction === 'bearish'
+                ? (result.signals?.bearish ?? 0) > (result.signals?.bullish ?? 0)
+                : false;
+              const rrPass = (rr ?? 0) > 1.8;
+              const triggerChecklist = [
+                { label: 'Structure aligned', pass: trendAligned },
+                { label: 'Flow aligned', pass: flowAligned },
+                { label: 'Time edge active', pass: timeTriggerState === 'ACTIVE NOW' },
+                { label: 'R:R > 1.8', pass: rrPass },
+              ];
+              const executionEnabled = triggerChecklist.every((item) => item.pass) && permissionAllowed && executionEdgeState === 'READY';
+              const commanderLine = `AI COMMANDER: ${institutionalIntent.replace('_', ' ')} — ${direction === 'bullish' ? 'LONG BIAS' : direction === 'bearish' ? 'SHORT BIAS' : 'NEUTRAL BIAS'} — TIME EDGE ${timeTriggerState} — ${executionEnabled ? 'EXECUTION APPROVED' : 'WAIT SIGNAL'}`;
+
+              const aiThinkingStream = [
+                trendAligned
+                  ? `Structure ${direction === 'bullish' ? 'holding above' : direction === 'bearish' ? 'holding below' : 'tracking around'} EMA200`
+                  : 'Structure still misaligned with directional thesis',
+                momentumActive
+                  ? `Momentum confirming on ${timeframe.toUpperCase()} execution layer`
+                  : 'Momentum still weak — waiting for cleaner trigger',
+                entry != null
+                  ? `Next trigger: ${direction === 'bearish' ? 'rejection below' : 'reclaim above'} ${entry.toFixed(2)}`
+                  : 'Next trigger: awaiting reliable entry level',
+              ];
 
               return (
                 <>
                 <div style={{
-                  marginBottom: '0.95rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-                  border: '1px solid rgba(148,163,184,0.34)',
+                  marginBottom: '0.7rem',
+                  background: edgeStateBg,
+                  border: `1px solid ${edgeStateBorder}`,
                   borderRadius: '10px',
-                  padding: '0.95rem',
+                  padding: '0.72rem 0.85rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  flexWrap: 'wrap',
                 }}>
-                  <div style={{ color: '#F8FAFC', fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
-                    Risk + Execution
+                  <div style={{ color: edgeStateColor, fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {edgeState === 'WAIT' ? 'WAIT' : edgeState} {edgeState === 'ACTIVE EDGE' ? '↑' : edgeState === 'DANGER' ? '⚠' : '•'}
                   </div>
-                  <div className="grid-equal-2-col-responsive" style={{ gap: '0.7rem' }}>
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '0.8rem', minHeight: '185px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div style={{ color: '#FCA5A5', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Risk Panel</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.82rem', lineHeight: 1.48 }}>
-                        <div>Invalidation: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                        <div>Volatility: <span style={{ color: atrPercent >= 3 ? '#EF4444' : atrPercent >= 1.5 ? '#F59E0B' : '#10B981', fontWeight: 900 }}>{riskStatus}{result.atr != null && result.price != null ? ` • ATR ${(result.atr / result.price * 100).toFixed(2)}%` : ''}</span></div>
-                        <div>Quality Gate: <span style={{ color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontWeight: 900 }}>{qualityGate}</span></div>
-                        <div>Scenario: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>Base {baseProb}% • Bull {bullProb}% • Bear {bearProb}%</span></div>
-                      </div>
-                    </div>
-
-                    <div style={{ background: 'rgba(15,23,42,0.62)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '0.8rem', minHeight: '185px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.45rem' }}>Execution Plan</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.84rem', lineHeight: 1.52 }}>
-                        <div>Entry: <span style={{ color: '#93C5FD', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-                        <div>Stop: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                        <div>Targets: <span style={{ color: '#6EE7B7', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</span></div>
-                        <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
-                        <div>R:R: <span style={{ color: rr != null && rr >= 1.5 ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
-                      </div>
-                    </div>
+                  <div style={{ color: '#E2E8F0', fontSize: '0.78rem', fontWeight: 700 }}>
+                    {trendAligned ? 'Structure improving' : 'Structure still forming'} • {momentumActive ? 'Momentum confirming' : 'Momentum weak'} • Risk {riskStatus === 'CONTROLLED VOL' ? 'stable' : 'elevated'}
                   </div>
                 </div>
 
                 <div style={{
-                  marginBottom: '0.8rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.86))',
-                  border: '1px solid rgba(56,189,248,0.24)',
-                  borderRadius: '10px',
-                  padding: '0.9rem',
+                  marginBottom: '0.7rem',
+                  background: 'rgba(2,6,23,0.7)',
+                  border: `1px solid ${edgeStateBorder}`,
+                  borderRadius: '999px',
+                  padding: '0.35rem 0.7rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
                 }}>
-                  <div style={{
-                    marginBottom: '0.7rem',
-                    color: '#67E8F9',
-                    fontWeight: 800,
-                    fontSize: '0.76rem',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}>
-                    🧠 AI Verdict + Structure: {edgeSentence}
+                  <span style={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>Phase</span>
+                  <span style={{ color: edgeStateColor, fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lifecyclePhase}</span>
+                </div>
+
+                <div style={{
+                  marginBottom: '0.7rem',
+                  background: 'rgba(2,6,23,0.7)',
+                  border: `1px solid ${personalityMode === 'adaptive' ? 'rgba(34,211,238,0.35)' : 'rgba(148,163,184,0.3)'}`,
+                  borderRadius: '10px',
+                  padding: '0.52rem 0.7rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.6rem',
+                  flexWrap: 'wrap',
+                }}>
+                  <div style={{ color: personalityAccent, fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Trader Personality: {personalityLabel}
                   </div>
+                  <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>
+                    {personalityHint}
+                  </div>
+                </div>
 
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                    gap: '0.7rem',
-                  }}>
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: '8px', padding: '0.72rem' }}>
-                      <div style={{ color: '#6EE7B7', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🟢 Market Context</div>
-                      <div style={{ color: '#E2E8F0', fontSize: '0.78rem', lineHeight: 1.45 }}>
-                        <div>Regime: <span style={{ color: regimeColor, fontWeight: 800 }}>{regime}</span> ({direction.toUpperCase()})</div>
-                        <div>Institutional Intent: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{institutionalIntent}</span></div>
-                        <div>Volatility State: <span style={{ color: '#F8FAFC', fontWeight: 700 }}>{ivEnvironment}</span></div>
-                      </div>
-                      <div style={{ display: 'grid', gap: '0.22rem', marginTop: '0.5rem', color: '#CBD5E1', fontSize: '0.75rem' }}>
-                        <div>{trendAligned ? '✔' : '⚠'} Trend {trendAligned ? 'aligned' : 'misaligned'}</div>
-                        <div>{momentumActive ? '✔' : '⚠'} Momentum {momentumActive ? 'active' : 'not confirmed'}</div>
-                        <div>{atrPercent >= 3 ? '⚠' : '✔'} {atrPercent >= 3 ? 'Elevated volatility risk' : 'Volatility manageable'}</div>
-                        <div>{result.signals && (result.signals.bullish > result.signals.bearish) ? '✔' : '⚠'} Flow: {result.signals ? `${result.signals.bullish}/${result.signals.bearish} (B/B)` : 'limited data'}</div>
-                      </div>
-                    </div>
+                {(() => {
+                  const noEdge = edgeState === 'WAIT' || edgeState === 'DANGER';
+                  const strongEdge = edgeState === 'ACTIVE EDGE';
+                  const contextCollapsed = strongEdge;
+                  const edgeCollapsed = noEdge;
+                  const executionHidden = noEdge;
+                  const conflictLevel = Math.abs((result.signals?.bullish ?? 0) - (result.signals?.bearish ?? 0)) <= 1 ? 'MEDIUM' : 'LOW';
+                  const dominantEdge = [
+                    { label: 'STRUCTURE', value: structureEdge },
+                    { label: 'TIME', value: timingEdge },
+                    { label: 'FLOW', value: flowEdge },
+                    { label: 'EXECUTION', value: executionEdge },
+                  ].sort((a, b) => b.value - a.value)[0];
+                  const pressureMeter = Math.min(100, Math.round((atrPercent * 16) + (qualityGate === 'LOW' ? 24 : qualityGate === 'MODERATE' ? 14 : 7) + (conflictLevel === 'MEDIUM' ? 12 : 5)));
+                  const aiRankedSymbols = [result.symbol, ...quickRecoverySymbols.filter((sym) => sym !== result.symbol)].slice(0, 5);
+                  const maxPain = capitalFlow?.pin_strike;
+                  const marketChaos = riskStatus === 'HIGH VOL' || permissionStatus.includes('NO PERMISSION');
+                  const entryNear = timeTriggerState === 'ACTIVE NOW' && executionEdgeState === 'READY';
+                  const timeClusterMinutes = Math.max(3, Math.round((100 - timingEdge) * 0.6));
+                  const commanderVerdict = `${direction.toUpperCase()} ${institutionalIntent.replace('_', ' ')}`;
+                  const confidenceDropRisk = confidence < 55;
+                  const flowConflict = result.signals ? Math.abs((result.signals.bullish ?? 0) - (result.signals.bearish ?? 0)) <= 1 : false;
+                  const ivInvalidationRisk = riskStatus === 'HIGH VOL' && direction !== 'neutral';
 
-                    <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '8px', padding: '0.72rem' }}>
-                      <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.45rem' }}>🔵 AI Decision Core</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem' }}>
-                        <div style={{ color: directionColor, fontWeight: 900, fontSize: '1rem' }}>{direction.toUpperCase()}</div>
-                        <div style={{ color: '#E2E8F0', fontWeight: 800, fontSize: '0.82rem' }}>Confidence {confidence}% • Grade {grade}</div>
-                      </div>
-                      {[
-                        { label: 'Structure', value: structureEdge },
-                        { label: 'Timing', value: timingEdge },
-                        { label: 'Options Flow', value: flowEdge },
-                        { label: 'Execution', value: executionEdge },
-                      ].map((row) => (
-                        <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 34px', gap: '0.4rem', alignItems: 'center', marginBottom: '0.28rem' }}>
-                          <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{row.label}</div>
-                          <div style={{ height: '6px', background: 'rgba(100,116,139,0.35)', borderRadius: '999px', overflow: 'hidden' }}>
-                            <div style={{ width: `${row.value}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #34D399)' }} />
-                          </div>
-                          <div style={{ color: '#CBD5E1', fontSize: '0.7rem', textAlign: 'right' }}>{row.value}</div>
+                  const autopilotState: 'WATCHING' | 'PREPARING' | 'READY' | 'COOL-DOWN' =
+                    confidenceDropRisk
+                      ? 'COOL-DOWN'
+                      : executionEnabled
+                      ? 'READY'
+                      : strongEdge || executionEdgeState === 'WATCH'
+                      ? 'PREPARING'
+                      : 'WATCHING';
+                  const autopilotColor =
+                    autopilotState === 'READY'
+                      ? '#22C55E'
+                      : autopilotState === 'PREPARING'
+                      ? '#14B8A6'
+                      : '#94A3B8';
+
+                  const opportunityList = [
+                    { symbol: result.symbol, label: `${qualityGate === 'HIGH' ? 'A+' : qualityGate === 'MODERATE' ? 'A' : 'B'} EDGE`, thesis: `${institutionalIntent.replace('_', ' ')} setup`, score: executionEdgeScore },
+                    { symbol: quickRecoverySymbols[0] ?? 'SPY', label: 'A EDGE', thesis: 'Time activation candidate', score: Math.max(40, executionEdgeScore - 8) },
+                    { symbol: quickRecoverySymbols[1] ?? 'QQQ', label: 'B+ EDGE', thesis: 'Compression break watch', score: Math.max(35, executionEdgeScore - 15) },
+                  ].sort((a, b) => b.score - a.score);
+
+                  const riskGuardAlerts = [
+                    confidenceDropRisk ? `⚠ Direction confidence soft (${confidence}%)` : null,
+                    flowConflict ? '⚠ Conflicting flow detected' : null,
+                    ivInvalidationRisk ? '⚠ IV spike invalidates long-premium bias' : null,
+                  ].filter(Boolean) as string[];
+
+                  const actionFeedEvents = [
+                    `${result.symbol} compression ${timingEdge >= 55 ? 'detected' : 'monitoring'}`,
+                    `${result.symbol} flow ${flowAligned ? 'aligned with bias' : 'mixed / conflicting'}`,
+                    `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)`,
+                    `Quality ${qualityGate === 'HIGH' ? 'B → A' : qualityGate === 'MODERATE' ? 'C → B' : 'D → C'} transition watch`,
+                    executionEnabled ? 'EXECUTION READY' : 'Execution gate pending',
+                  ];
+                  const decisionWhy = [
+                    { label: 'Structure Expansion', pass: trendAligned },
+                    { label: 'Flow Alignment', pass: flowAligned },
+                    { label: 'Time Cluster Active', pass: timeTriggerState === 'ACTIVE NOW' },
+                  ];
+                  const executionMode: 'WAIT' | 'PREP' | 'EXECUTE' = executionEnabled ? 'EXECUTE' : strongEdge ? 'PREP' : 'WAIT';
+                  const executionModeColor = executionMode === 'EXECUTE' ? '#10B981' : executionMode === 'PREP' ? '#F59E0B' : '#94A3B8';
+                  const executionModeGlow = executionMode === 'EXECUTE' && (deskFeedIndex % 2 === 0);
+                  const liveEdgeEvents = [
+                    `⚡ ${result.symbol} time cluster ${timeTriggerState === 'ACTIVE NOW' ? 'activated' : 'building'}`,
+                    `${riskStatus === 'HIGH VOL' ? '⚠' : '🧠'} ${result.symbol} volatility ${riskStatus === 'HIGH VOL' ? 'spike' : 'stable'} (${riskStatus})`,
+                    `🧠 ${result.symbol} structure ${qualityGate === 'HIGH' ? 'upgraded to A+' : qualityGate === 'MODERATE' ? 'holding B quality' : 'still below quality gate'}`,
+                    `🔥 Flow update: ${(result.signals?.bullish ?? 0)}/${(result.signals?.bearish ?? 0)} bullish/bearish factors`,
+                  ];
+                  const heartbeatIndex = deskFeedIndex % liveEdgeEvents.length;
+                  const activeHeartbeat = liveEdgeEvents[heartbeatIndex];
+                  const heartbeatAction = executionEnabled ? 'Action now: execution enabled.' : strongEdge ? 'Action now: prepare execution plan.' : 'Action now: stay in watch mode.';
+                  const watchZoneEvents = [
+                    { t: '13:41', text: `${result.symbol} IV environment: ${ivEnvironment}` },
+                    { t: '13:44', text: `OI / flow bias shifted ${capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}` },
+                    { t: '13:46', text: `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)` },
+                    { t: '13:47', text: `Setup quality ${qualityGate} • ${executionEdgeScore}% execution edge` },
+                  ];
+
+                  return (
+                    <>
+                      <div style={{
+                        marginBottom: '0.68rem',
+                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        border: '1px solid rgba(35,52,77,0.9)',
+                        borderRadius: '10px',
+                        padding: '0.62rem 0.75rem',
+                      }}>
+                        <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
+                          AI Trader Presence
                         </div>
-                      ))}
-                      <div style={{ marginTop: '0.45rem', color: '#A7F3D0', fontSize: '0.75rem' }}><strong>Primary Edge:</strong> {edgeSentence.replace('High probability ', '').replace('Moderate edge — ', '').replace('Low-quality edge — ', '')}</div>
-                      <div style={{ color: '#FCA5A5', fontSize: '0.74rem' }}><strong>Not Edge:</strong> {notEdgeSentence}</div>
-                    </div>
+                        <div style={{ color: '#E2E8F0', fontSize: '0.76rem', lineHeight: 1.45 }}>
+                          <div><span style={{ color: '#94A3B8' }}>Bias:</span> {commanderVerdict}</div>
+                          <div><span style={{ color: '#94A3B8' }}>State:</span> <span style={{ color: autopilotColor, fontWeight: 900 }}>{presenceState === 'INVALIDATED' ? 'INVALIDATED' : autopilotState}</span></div>
+                          <div><span style={{ color: '#94A3B8' }}>Focus:</span> Watch {timeframe.toUpperCase()} close ({timeClusterMinutes}m)</div>
+                          <div><span style={{ color: '#94A3B8' }}>Risk:</span> {riskStatus === 'HIGH VOL' ? 'IV rising — avoid naked calls' : riskStatus === 'ELEVATED VOL' ? 'Elevated IV — stay defined risk' : 'Volatility controlled — follow plan'}</div>
+                          <div><span style={{ color: '#94A3B8' }}>Mode:</span> {presenceMode}</div>
+                        </div>
+                      </div>
 
-                  </div>
-                </div>
-                <div style={{
-                  marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
-                  border: '1px solid rgba(245,158,11,0.28)',
-                  borderRadius: '8px',
-                  padding: '0.8rem 0.85rem',
-                }}>
-                  {(() => {
-                    const conflictLevel = Math.abs((result.signals?.bullish ?? 0) - (result.signals?.bearish ?? 0)) <= 1 ? 'MEDIUM' : 'LOW';
-
-                    return (
-                      <>
+                      {presenceUpdates.length > 0 && (
                         <div style={{
-                          color: '#FCD34D',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.08em',
-                          marginBottom: '0.5rem',
+                          marginBottom: '0.62rem',
+                          background: 'rgba(2,6,23,0.64)',
+                          border: '1px solid rgba(35,52,77,0.9)',
+                          borderRadius: '8px',
+                          padding: '0.5rem 0.62rem',
                         }}>
-                          🔥 Risk & Scenario Intelligence
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.55rem', marginBottom: '0.55rem' }}>
-                          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
-                            <div style={{ color: '#10B981', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>Base Case ({baseProb}%)</div>
-                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Trend continuation lower → Target 1 likely' : 'Trend continuation higher → Target 1 likely'}</div>
+                          <div style={{ color: '#94A3B8', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.18rem' }}>
+                            Thinking Layer
                           </div>
-                          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
-                            <div style={{ color: '#60A5FA', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{direction === 'bearish' ? 'Bull' : 'Bull'} Case ({bullProb}%)</div>
-                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Momentum reversal up → trim shorts quickly' : 'Momentum acceleration → add on clean pullback'}</div>
-                          </div>
-                          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.24)', borderRadius: '6px', padding: '0.55rem 0.6rem' }}>
-                            <div style={{ color: '#F87171', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>{direction === 'bearish' ? 'Bear' : 'Bear'} Case ({bearProb}%)</div>
-                            <div style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>{direction === 'bearish' ? 'Structure failure above invalidation → exit immediately' : 'Structure failure below invalidation → exit immediately'}</div>
+                          <div style={{ display: 'grid', gap: '0.12rem', color: '#CBD5E1', fontSize: '0.73rem' }}>
+                            {presenceUpdates.slice(0, 3).map((update, index) => (
+                              <div key={`${update}-${index}`}>{update}</div>
+                            ))}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: riskStatus === 'HIGH VOL' ? '#EF4444' : riskStatus === 'ELEVATED VOL' ? '#F59E0B' : '#10B981', fontSize: '0.68rem', fontWeight: 800 }}>Risk Status: {riskStatus}</span>
-                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontSize: '0.68rem', fontWeight: 800 }}>Trade Quality Gate: {qualityGate}</span>
-                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.2rem 0.55rem', color: conflictLevel === 'LOW' ? '#10B981' : '#F59E0B', fontSize: '0.68rem', fontWeight: 800 }}>Conflict Level: {conflictLevel}</span>
+                      )}
+
+                      {executionEnabled && (
+                        <div style={{
+                          marginBottom: '0.62rem',
+                          background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                          border: '1px solid rgba(35,52,77,0.9)',
+                          borderRadius: '8px',
+                          padding: '0.55rem 0.66rem',
+                        }}>
+                          <div style={{ color: '#10B981', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
+                            AI Trader: Execution Window Open
+                          </div>
+                          <div style={{ color: '#CBD5E1', fontSize: '0.73rem', display: 'grid', gap: '0.1rem' }}>
+                            <div>• Structure confirmed</div>
+                            <div>• Flow aligned</div>
+                            <div>• Time edge active</div>
+                            <div>• R:R now {rr != null ? `${rr.toFixed(1)}:1` : 'N/A'}</div>
+                          </div>
                         </div>
-                      </>
-                    );
-                  })()}
-                </div>
+                      )}
+
+                      <div style={{
+                        marginBottom: '0.72rem',
+                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        border: '1px solid rgba(35,52,77,0.9)',
+                        borderRadius: '10px',
+                        padding: '0.72rem 0.82rem',
+                        boxShadow: 'none',
+                      }}>
+                        <div style={{ color: '#14B8A6', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
+                          Autopilot Layer
+                        </div>
+                        <div style={{ color: autopilotColor, fontSize: '0.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>
+                          MSP Autopilot: {autopilotState}
+                          {autopilotState === 'READY' ? ' • EXECUTION WINDOW OPEN' : ''}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem', marginBottom: '0.55rem' }}>
+                          <div style={{ background: 'rgba(15,23,42,0.56)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem' }}>
+                            <div style={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Market Watch</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
+                              <div>⚡ Structure {trendAligned ? 'holding trend regime' : 'seeking confirmation'}</div>
+                              <div>⚡ IV regime: {ivEnvironment}</div>
+                              <div>⚡ Time confluence: {timeTriggerState}</div>
+                            </div>
+                          </div>
+
+                          <div style={{ background: 'rgba(15,23,42,0.56)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem' }}>
+                            <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Opportunity Engine</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
+                              {opportunityList.map((item, idx) => (
+                                <div key={item.symbol + idx}>{idx + 1}) {item.symbol} — {item.label} ({item.thesis})</div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div style={{ background: 'rgba(15,23,42,0.56)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem' }}>
+                            <div style={{ color: '#FCA5A5', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Risk Guard</div>
+                            <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
+                              {riskGuardAlerts.length ? riskGuardAlerts.map((alert) => <div key={alert}>{alert}</div>) : <div>✔ No critical guardrail breaches</div>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(2,6,23,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem', marginBottom: '0.5rem' }}>
+                          <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.22rem' }}>Action Feed</div>
+                          <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.12rem' }}>
+                            {actionFeedEvents.map((event, idx) => (
+                              <div key={event}><span style={{ color: '#94A3B8' }}>{`13:${(41 + idx).toString().padStart(2, '0')}`}</span> — {event}</div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div style={{ background: 'rgba(2,6,23,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.55rem 0.6rem' }}>
+                          <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>AI Trade Narrative</div>
+                          <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.1rem' }}>
+                            <div>• Structure {trendAligned ? 'supports expansion' : 'still re-aligning'}</div>
+                            <div>• Institutional flow {flowAligned ? 'aligning with bias' : 'still mixed'}</div>
+                            <div>• IV state {ivEnvironment.toLowerCase()} for current setup class</div>
+                            <div>• Time cluster focus in ~{timeClusterMinutes} min</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        marginBottom: '0.75rem',
+                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        border: '1px solid rgba(35,52,77,0.9)',
+                        borderRadius: '10px',
+                        padding: '0.68rem 0.78rem',
+                      }}>
+                        <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+                          Top Strip • AI Command Bar
+                        </div>
+                        <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 900, marginBottom: '0.46rem' }}>
+                          MSP AI EDGE: {commanderVerdict} | Confidence {confidence}% | {grade} Setup
+                        </div>
+                        <div style={{ color: '#A7F3D0', fontSize: '0.76rem', fontWeight: 800, marginBottom: '0.35rem' }}>
+                          LIVE EDGE BAR: {activeHeartbeat}
+                        </div>
+                        <div style={{ color: '#CBD5E1', fontSize: '0.72rem', marginBottom: '0.4rem' }}>
+                          WHAT changed? {activeHeartbeat} • WHY it matters? {strongEdge ? 'Edge quality is elevated.' : 'Setup quality is still developing.'} • WHAT now? {heartbeatAction}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.38rem', flexWrap: 'wrap' }}>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: regimeColor, fontSize: '0.68rem', fontWeight: 800 }}>Regime: {regime}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: riskStatus === 'HIGH VOL' ? '#EF4444' : riskStatus === 'ELEVATED VOL' ? '#F59E0B' : '#10B981', fontSize: '0.68rem', fontWeight: 800 }}>Volatility: {riskStatus}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: timeTriggerColor, fontSize: '0.68rem', fontWeight: 800 }}>Time Edge: {timeTriggerState === 'ACTIVE NOW' ? 'cluster now' : `~${timeClusterMinutes}m`}</span>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        marginBottom: '0.95rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
+                        gap: '0.75rem',
+                        alignItems: 'start',
+                      }}>
+                        <div style={{
+                          background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
+                          border: '1px solid rgba(148,163,184,0.24)',
+                          borderRadius: '10px',
+                          padding: contextCollapsed ? '0.62rem 0.75rem' : '0.8rem 0.9rem',
+                          opacity: contextCollapsed ? 0.9 : 1,
+                          boxShadow: marketChaos ? '0 0 0 1px rgba(239,68,68,0.22), 0 0 18px rgba(239,68,68,0.12)' : 'none',
+                        }}>
+                          <div style={{ color: '#94A3B8', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>
+                            Left Panel • Market Context (Why)
+                          </div>
+
+                          {contextCollapsed ? (
+                            <div style={{ color: '#CBD5E1', fontSize: '0.77rem' }}>
+                              {regime} • Risk {riskStatus} • {timeframe.toUpperCase()} • Intent {institutionalIntent}
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{ marginBottom: '0.48rem', color: '#CBD5E1', fontSize: '0.76rem' }}>AI Ranked Symbols</div>
+                              <div style={{ display: 'flex', gap: '0.32rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
+                                {aiRankedSymbols.map((sym, idx) => (
+                                  <span key={sym} style={{ background: idx === 0 ? 'rgba(16,185,129,0.2)' : 'rgba(15,23,42,0.55)', border: `1px solid ${idx === 0 ? 'rgba(16,185,129,0.38)' : 'rgba(148,163,184,0.24)'}`, borderRadius: '999px', padding: '0.16rem 0.5rem', color: idx === 0 ? '#6EE7B7' : '#CBD5E1', fontSize: '0.68rem', fontWeight: 800 }}>{sym}</span>
+                                ))}
+                              </div>
+
+                              <div style={{ display: 'grid', gap: '0.25rem', color: '#CBD5E1', fontSize: '0.75rem' }}>
+                                <div>Regime: <span style={{ color: regimeColor, fontWeight: 800 }}>{regime}</span></div>
+                                <div>Market Risk: <span style={{ color: riskStatus === 'HIGH VOL' ? '#EF4444' : riskStatus === 'ELEVATED VOL' ? '#F59E0B' : '#10B981', fontWeight: 800 }}>{riskStatus}</span></div>
+                                <div>Breadth / Volume: <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{(result.signals?.bullish ?? 0) + (result.signals?.bearish ?? 0)} active factors</span></div>
+                                <div>AI Market State: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{institutionalIntent}</span></div>
+                              </div>
+
+                              <div style={{ marginTop: '0.56rem' }}>
+                                <div style={{ color: '#94A3B8', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.24rem' }}>AI Pressure Meter</div>
+                                <div style={{ height: '7px', background: 'rgba(51,65,85,0.65)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.22rem' }}>
+                                  <div style={{ width: `${pressureMeter}%`, height: '100%', background: `linear-gradient(90deg, ${pressureMeter >= 70 ? '#EF4444' : pressureMeter >= 45 ? '#F59E0B' : '#10B981'}, #34D399)` }} />
+                                </div>
+                                <div style={{ color: pressureMeter >= 70 ? '#FCA5A5' : '#CBD5E1', fontSize: '0.72rem' }}>{pressureMeter >= 70 ? 'Macro risk elevated' : 'Macro pressure manageable'}</div>
+                              </div>
+
+                              {!!result.institutionalFilter?.filters?.length && (
+                                <div style={{ marginTop: '0.48rem', display: 'grid', gap: '0.14rem', color: '#94A3B8', fontSize: '0.71rem' }}>
+                                  {result.institutionalFilter.filters.slice(0, 3).map((filter, idx) => (
+                                    <div key={idx}>{filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        <div style={{
+                          background: 'linear-gradient(145deg, rgba(2,6,23,0.94), rgba(15,23,42,0.9))',
+                          border: '1px solid rgba(35,52,77,0.9)',
+                          borderRadius: '12px',
+                          padding: edgeCollapsed ? '0.72rem 0.82rem' : '1rem',
+                          boxShadow: 'none',
+                          transform: strongEdge ? 'scale(1.03)' : 'scale(1)',
+                          transformOrigin: 'center top',
+                        }}>
+                          <div style={{ color: '#67E8F9', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
+                            Primary Edge Banner
+                          </div>
+                          <div style={{ color: '#E2E8F0', fontSize: '0.78rem', fontWeight: 800, marginBottom: '0.52rem' }}>
+                            {dominantEdge.label} + {dominantEdge.label === 'TIME' ? 'FLOW' : 'TIME'} ALIGNMENT
+                          </div>
+
+                          <div style={{ color: '#14B8A6', fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
+                            Center Panel • Decision Engine (The Brain)
+                          </div>
+
+                          {edgeCollapsed ? (
+                            <div style={{ color: '#CBD5E1', fontSize: '0.79rem' }}>
+                              Edge compressed: {edgeSentence} • Confidence {confidence}% • Waiting for cleaner alignment.
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{
+                                marginBottom: '0.54rem',
+                                background: 'rgba(15,23,42,0.6)',
+                                border: '1px solid rgba(35,52,77,0.9)',
+                                borderRadius: '8px',
+                                padding: '0.62rem 0.68rem',
+                              }}>
+                                <div style={{ color: directionColor, fontSize: '0.84rem', fontWeight: 900, marginBottom: '0.16rem' }}>
+                                  {direction.toUpperCase()} EDGE
+                                </div>
+                                <div style={{ color: '#E2E8F0', fontSize: '0.75rem', fontWeight: 800, marginBottom: '0.22rem' }}>
+                                  Quality: {grade} • Confidence: {confidence}%
+                                </div>
+                                <div style={{ display: 'grid', gap: '0.14rem' }}>
+                                  {decisionWhy.map((item) => (
+                                    <div key={item.label} style={{ color: item.pass ? '#A7F3D0' : '#FCA5A5', fontSize: '0.72rem' }}>
+                                      {item.pass ? '✔' : '⚠'} {item.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div style={{ marginBottom: '0.54rem' }}>
+                                <div style={{ color: '#CBD5E1', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.26rem' }}>Edge Temperature</div>
+                                <div style={{ height: '8px', background: 'rgba(51,65,85,0.7)', borderRadius: '999px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${confidence}%`, height: '100%', background: `linear-gradient(90deg, ${edgeStateColor}, ${strongEdge ? '#34D399' : '#FCD34D'})` }} />
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gap: '0.54rem' }}>
+                                <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem' }}>
+                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer A • Structural Read</div>
+                                  <div style={{ color: '#CBD5E1', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
+                                    <div>Trend Structure: <span style={{ color: trendAligned ? '#10B981' : '#F59E0B', fontWeight: 800 }}>{trendAligned ? 'Aligned' : 'Needs confirmation'}</span></div>
+                                    <div>Pattern State: <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{edgeSentence.replace('High probability ', '').replace('Moderate edge — ', '').replace('Low-quality edge — ', '')}</span></div>
+                                    <div>Time Confluence: <span style={{ color: timeTriggerColor, fontWeight: 800 }}>{timeTriggerState}</span></div>
+                                    <div>Liquidity Zone: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                                  </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem', opacity: dominantEdge.label === 'FLOW' ? 1 : 0.9 }}>
+                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer B • Options Intelligence</div>
+                                  <div style={{ color: '#CBD5E1', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
+                                    <div>IV Environment: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{ivEnvironment}</span></div>
+                                    <div>Flow / Unusual: <span style={{ color: flowEdge >= 65 ? '#10B981' : '#F59E0B', fontWeight: 800 }}>{flowEdge}%</span></div>
+                                    <div>OI Sentiment: <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}</span></div>
+                                    <div>Max Pain: <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{maxPain != null ? maxPain.toFixed(2) : 'N/A'}</span></div>
+                                  </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem' }}>
+                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer C • Execution Trigger</div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.34rem', color: '#CBD5E1', fontSize: '0.74rem' }}>
+                                    <div>Direction: <span style={{ color: directionColor, fontWeight: 900 }}>{direction.toUpperCase()}</span></div>
+                                    <div>Confidence: <span style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</span></div>
+                                    <div>Quality: <span style={{ color: qualityGate === 'HIGH' ? '#10B981' : qualityGate === 'MODERATE' ? '#F59E0B' : '#EF4444', fontWeight: 900 }}>{qualityGate}</span></div>
+                                    <div>Entry/Invalidation: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ marginTop: '0.55rem', background: 'rgba(2,6,23,0.55)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem 0.66rem' }}>
+                                <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>AI Monitoring</div>
+                                <div style={{ display: 'grid', gap: '0.22rem', color: '#CBD5E1', fontSize: '0.75rem' }}>
+                                  {aiThinkingStream.map((item) => (
+                                    <div key={item}>• {item}</div>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div style={{
+                          background: executionHidden ? 'rgba(2,6,23,0.7)' : 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                          border: executionHidden ? '1px dashed rgba(35,52,77,0.9)' : '1px solid rgba(35,52,77,0.9)',
+                          borderRadius: '10px',
+                          padding: '0.8rem 0.9rem',
+                          transform: strongEdge && !executionHidden ? 'scale(1.04)' : 'scale(1)',
+                          transformOrigin: 'center top',
+                          boxShadow: 'none',
+                        }}>
+                          <div style={{ color: '#F8FAFC', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>
+                            Right Panel • Execution & Risk (The Money)
+                          </div>
+
+                          {executionHidden ? (
+                            <div style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>
+                              Execution hidden until edge improves. Current state: {edgeState}. Wait for confirmation.
+                            </div>
+                          ) : (
+                            <>
+                              <div style={{
+                                marginBottom: '0.5rem',
+                                background: 'rgba(15,23,42,0.6)',
+                                border: '1px solid rgba(35,52,77,0.9)',
+                                borderRadius: '8px',
+                                padding: '0.45rem 0.55rem',
+                                boxShadow: 'none',
+                              }}>
+                                <div style={{ color: executionModeColor, fontSize: '0.73rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                                  Execution State: {executionMode}
+                                </div>
+                              </div>
+
+                              <div style={{ color: '#E2E8F0', fontSize: '0.75rem', marginBottom: '0.46rem' }}>
+                                A{grade} Setup • Permission Bias: <span style={{ color: permissionColor, fontWeight: 900 }}>{permissionStatus}</span> • Intent: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{institutionalIntent.replace('_', ' ')}</span>
+                              </div>
+
+                              <div style={{ display: 'grid', gap: '0.42rem', marginBottom: '0.55rem' }}>
+                                <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.62rem' }}>
+                                  <div style={{ color: '#14B8A6', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Execution Block</div>
+                                  <div style={{ color: '#CBD5E1', fontSize: '0.74rem', lineHeight: 1.45 }}>
+                                    <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
+                                    <div>Entry / Stop: <span style={{ color: '#E2E8F0', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
+                                    <div>Target Zone: <span style={{ color: '#6EE7B7', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` → ${target2.toFixed(2)}` : ''}</span></div>
+                                  </div>
+                                </div>
+
+                                <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.62rem' }}>
+                                  <div style={{ color: '#14B8A6', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Risk Block</div>
+                                  <div style={{ color: '#CBD5E1', fontSize: '0.74rem', lineHeight: 1.45 }}>
+                                    <div>R:R: <span style={{ color: rrPass ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
+                                    <div>Max Loss: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null && entry != null ? Math.abs(entry - invalidation).toFixed(2) : 'N/A'}</span></div>
+                                    <div>Quality / Conflict: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{qualityGate} / {conflictLevel}</span></div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '10px', padding: '0.74rem 0.8rem' }}>
+                                <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
+                                  AI Trade Commander
+                                </div>
+                                <div style={{ color: '#E2E8F0', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                                  {commanderLine}
+                                </div>
+
+                                <div style={{ background: 'rgba(2,6,23,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.64rem' }}>
+                                  <div style={{ color: '#F8FAFC', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>Execution Trigger Layer</div>
+
+                                  <div style={{ display: 'grid', gap: '0.18rem', marginBottom: '0.45rem' }}>
+                                    {triggerChecklist.map((item) => (
+                                      <div key={item.label} style={{ color: item.pass ? '#A7F3D0' : '#FCA5A5', fontSize: '0.73rem' }}>{item.pass ? '✔' : '⚠'} {item.label}</div>
+                                    ))}
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.35rem', marginBottom: '0.48rem' }}>
+                                    <div style={{ color: '#CBD5E1', fontSize: '0.73rem' }}>Edge: <span style={{ color: executionEdgeColor, fontWeight: 900 }}>{executionEdgeScore}%</span></div>
+                                    <div style={{ color: '#CBD5E1', fontSize: '0.73rem' }}>Time: <span style={{ color: timeTriggerColor, fontWeight: 900 }}>{timeTriggerState}</span></div>
+                                    <div style={{ color: '#CBD5E1', fontSize: '0.73rem' }}>Permission: <span style={{ color: permissionColor, fontWeight: 900 }}>{permissionAllowed ? 'YES' : 'NO'}</span></div>
+                                  </div>
+
+                                  <div style={{ color: executionEnabled ? '#10B981' : '#F59E0B', fontSize: '0.73rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
+                                    {executionEnabled ? 'Execution Enabled' : 'Wait For Confirmation'}
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                    <button
+                                      disabled={!executionEnabled}
+                                      style={{
+                                        padding: '0.4rem 0.72rem',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${executionEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(148,163,184,0.26)'}`,
+                                        background: executionEnabled ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.6)',
+                                        color: executionEnabled ? '#10B981' : '#64748B',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 900,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        cursor: executionEnabled ? 'pointer' : 'not-allowed',
+                                      }}
+                                    >
+                                      Enter Trade
+                                    </button>
+                                    <button
+                                      style={{
+                                        padding: '0.4rem 0.72rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(148,163,184,0.3)',
+                                        background: 'rgba(30,41,59,0.6)',
+                                        color: '#CBD5E1',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      Wait Signal
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        marginTop: '0.15rem',
+                        background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                        border: '1px solid rgba(35,52,77,0.9)',
+                        borderRadius: '10px',
+                        padding: '0.72rem 0.82rem',
+                      }}>
+                        <div style={{ color: '#14B8A6', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                          Flow / Alert / AI Watch Zone
+                        </div>
+                        <div style={{ display: 'grid', gap: '0.2rem', marginBottom: '0.45rem' }}>
+                          {watchZoneEvents.map((event) => (
+                            <div key={`${event.t}-${event.text}`} style={{ color: '#CBD5E1', fontSize: '0.75rem' }}>
+                              <span style={{ color: '#94A3B8', marginRight: '0.35rem' }}>{event.t}</span>
+                              {event.text}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.36rem' }}>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: '#FCD34D', fontSize: '0.67rem', fontWeight: 800 }}>Evolution: {qualityGate} setup</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: timeTriggerColor, fontSize: '0.67rem', fontWeight: 800 }}>Time Cluster: {timeTriggerState}</span>
+                          <span style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: permissionColor, fontSize: '0.67rem', fontWeight: 800 }}>Permission: {permissionAllowed ? 'ALLOWED' : 'BLOCKED'}</span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
                 </>
               );
             })()}
@@ -3000,7 +3752,10 @@ function ScannerContent() {
             </div>
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
               <button
-                onClick={explainScan}
+                onClick={() => {
+                  setPersonalitySignals((prev) => ({ ...prev, aiRequests: prev.aiRequests + 1 }));
+                  explainScan();
+                }}
                 disabled={aiLoading}
                 style={{
                   padding: "0.65rem 0.9rem",
@@ -3042,7 +3797,12 @@ function ScannerContent() {
                 }}>
                   <div style={{ fontWeight: 700, color: "#34d399" }}>AI Thesis</div>
                   <button
-                    onClick={() => setAiExpanded(!aiExpanded)}
+                    onClick={() => {
+                      if (!aiExpanded) {
+                        setPersonalitySignals((prev) => ({ ...prev, aiExpands: prev.aiExpands + 1 }));
+                      }
+                      setAiExpanded(!aiExpanded);
+                    }}
                     style={{
                       background: "rgba(52, 211, 153, 0.2)",
                       border: "1px solid rgba(52, 211, 153, 0.3)",

@@ -168,7 +168,7 @@ export default function MarketMoversPage() {
           <>
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30 rounded-xl p-5">
+              <div className="bg-slate-900/50 border border-slate-700/70 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-green-400 text-sm font-medium">Top Gainer</span>
                   <span className="text-2xl">🚀</span>
@@ -179,7 +179,7 @@ export default function MarketMoversPage() {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/30 rounded-xl p-5">
+              <div className="bg-slate-900/50 border border-slate-700/70 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-red-400 text-sm font-medium">Top Loser</span>
                   <span className="text-2xl">📉</span>
@@ -190,13 +190,13 @@ export default function MarketMoversPage() {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/30 rounded-xl p-5">
+              <div className="bg-slate-900/50 border border-slate-700/70 rounded-xl p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-blue-400 text-sm font-medium">Most Active</span>
+                  <span className="text-teal-300 text-sm font-medium">Most Active</span>
                   <span className="text-2xl">🔥</span>
                 </div>
                 <p className="text-2xl font-bold text-white">{data.mostActive?.[0]?.ticker || 'N/A'}</p>
-                <p className="text-blue-400 text-lg font-semibold">
+                <p className="text-teal-300 text-lg font-semibold">
                   {formatVolume(data.mostActive?.[0]?.volume || 0)} vol
                 </p>
               </div>

@@ -251,7 +251,7 @@ function getQuickSignals(data: EquityData): {
   const volatility = beta > 1.5
     ? { label: 'High' as const, icon: '⚡', color: 'text-yellow-400' }
     : beta < 0.8
-      ? { label: 'Low' as const, icon: '🛡️', color: 'text-blue-400' }
+      ? { label: 'Low' as const, icon: '🛡️', color: 'text-teal-300' }
       : { label: 'Normal' as const, icon: '📊', color: 'text-slate-400' };
   
   return { trend, momentum, volatility };
@@ -608,10 +608,10 @@ export default function EquityExplorerPage() {
                 
                 {/* Growth Metrics Highlight */}
                 {(data.fundamentals.quarterlyRevenueGrowth || data.fundamentals.quarterlyEarningsGrowth) && (
-                  <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-lg border border-blue-500/30">
+                  <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/70">
                     {data.fundamentals.quarterlyRevenueGrowth !== undefined && (
                       <div className="text-center">
-                        <p className="text-xs text-blue-300 uppercase mb-1">Revenue YoY</p>
+                        <p className="text-xs text-teal-300 uppercase mb-1">Revenue YoY</p>
                         <p className={`text-lg font-bold ${data.fundamentals.quarterlyRevenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {data.fundamentals.quarterlyRevenueGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyRevenueGrowth * 100).toFixed(1)}%
                         </p>
@@ -619,7 +619,7 @@ export default function EquityExplorerPage() {
                     )}
                     {data.fundamentals.quarterlyEarningsGrowth !== undefined && (
                       <div className="text-center">
-                        <p className="text-xs text-blue-300 uppercase mb-1">EPS YoY</p>
+                        <p className="text-xs text-teal-300 uppercase mb-1">EPS YoY</p>
                         <p className={`text-lg font-bold ${data.fundamentals.quarterlyEarningsGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {data.fundamentals.quarterlyEarningsGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyEarningsGrowth * 100).toFixed(1)}%
                         </p>
