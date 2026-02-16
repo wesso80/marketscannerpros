@@ -20,7 +20,7 @@ export default function WorkflowHero() {
   return (
     <section style={{
       width: '100%',
-      background: 'linear-gradient(135deg, #0a0e17 0%, #111827 50%, #0f172a 100%)',
+      background: 'var(--msp-bg)',
       position: 'relative',
       overflow: 'hidden',
       borderBottom: '1px solid rgba(34,197,94,0.2)'
@@ -54,7 +54,7 @@ export default function WorkflowHero() {
         width: 400,
         height: 400,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(148,163,184,0.06) 0%, transparent 70%)',
         bottom: -100,
         left: -100,
         animation: 'float 15s ease-in-out infinite reverse',
@@ -86,11 +86,7 @@ export default function WorkflowHero() {
             From Market Scan to Trade Log —
             <br />
             <span style={{
-              background: 'linear-gradient(135deg, #22c55e 0%, #14b8a6 50%, #3b82f6 100%)',
-              backgroundSize: '200% 200%',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              animation: 'gradientShift 6s ease infinite'
+              color: 'var(--msp-accent)'
             }}>
               Everything Serious Traders Need in One Platform
             </span>
@@ -158,7 +154,7 @@ export default function WorkflowHero() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 10,
-              background: 'linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)',
+              background: 'var(--msp-accent)',
               color: '#0b1120',
               padding: '18px 36px',
               borderRadius: 999,

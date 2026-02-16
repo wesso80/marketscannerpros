@@ -153,7 +153,7 @@ export default function CustomFearGreedGauge({
                 className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{ 
                   width: `${value}%`, 
-                  background: `linear-gradient(90deg, #dc2626, #f97316, #eab308, #84cc16, #22c55e)`,
+                  background: `var(--msp-accent)`,
                   backgroundSize: '500% 100%',
                   backgroundPosition: `${value}% 0`
                 }}

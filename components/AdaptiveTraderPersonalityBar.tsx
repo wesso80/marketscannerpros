@@ -66,18 +66,15 @@ export default function AdaptiveTraderPersonalityBar({ skill }: { skill: PageSki
   if (!data) return null;
 
   return (
-    <div style={{
+    <div className="msp-panel" style={{
       maxWidth: '1400px',
       margin: '0 auto 0.8rem auto',
-      background: 'linear-gradient(135deg, rgba(2,132,199,0.14), rgba(16,185,129,0.1))',
-      border: '1px solid rgba(56,189,248,0.35)',
-      borderRadius: '12px',
       padding: '0.55rem 0.75rem',
       display: 'grid',
       gap: '0.4rem',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <div style={{ color: '#67E8F9', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
+        <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
           MSP Adaptive Trader Personality Layer
         </div>
         <div style={{ color: data.match.noTradeBias ? '#EF4444' : toneColor, fontSize: '0.74rem', fontWeight: 800 }}>

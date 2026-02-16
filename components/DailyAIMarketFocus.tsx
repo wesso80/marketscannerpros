@@ -83,7 +83,7 @@ export default function DailyAIMarketFocus() {
   if (loading) {
     return (
       <div style={{
-        background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+        background: 'var(--msp-card)',
         borderRadius: 16,
         padding: 40,
         textAlign: 'center',
@@ -98,7 +98,7 @@ export default function DailyAIMarketFocus() {
   if (error && (!data || data.status === 'empty')) {
     return (
       <div style={{
-        background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+        background: 'var(--msp-card)',
         borderRadius: 16,
         padding: 40,
         textAlign: 'center',
@@ -119,7 +119,7 @@ export default function DailyAIMarketFocus() {
 
   return (
     <section style={{
-      background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+      background: 'var(--msp-card)',
       borderRadius: 20,
       padding: 32,
       color: '#fff',

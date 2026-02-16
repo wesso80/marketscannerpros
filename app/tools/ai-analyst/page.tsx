@@ -298,7 +298,7 @@ function AiAnalystContent() {
             <div style={{
               marginBottom: 20,
               padding: '12px 16px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1))',
+              background: 'var(--msp-accent-glow)',
               border: '1px solid rgba(16, 185, 129, 0.3)',
               borderRadius: 12,
               display: 'flex',
@@ -338,7 +338,7 @@ function AiAnalystContent() {
         >
           {/* LEFT SIDE: inputs */}
           <section style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            background: 'var(--msp-card)',
             borderRadius: 16,
             border: '1px solid rgba(51,65,85,0.8)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -568,7 +568,7 @@ function AiAnalystContent() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderRadius: 10,
-                    background: loading || !query.trim() ? '#334155' : 'linear-gradient(135deg, #22c55e, #14b8a6)',
+                    background: loading || !query.trim() ? '#334155' : 'var(--msp-accent)',
                     padding: '10px 20px',
                     fontSize: 14,
                     fontWeight: 600,
@@ -609,7 +609,7 @@ function AiAnalystContent() {
             display: 'flex',
             minHeight: 400,
             flexDirection: 'column',
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            background: 'var(--msp-card)',
             borderRadius: 16,
             border: '1px solid rgba(51,65,85,0.8)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -624,7 +624,7 @@ function AiAnalystContent() {
               overflow: 'auto',
               borderRadius: 12,
               border: '1px solid rgba(34,197,94,0.3)',
-              background: 'linear-gradient(to bottom, rgba(5,7,11,0.9), rgba(12,16,24,0.9))',
+              background: 'var(--msp-panel-2)',
               padding: 20,
               fontSize: 13,
               lineHeight: 1.7,

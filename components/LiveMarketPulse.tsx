@@ -105,7 +105,7 @@ export default function LiveMarketPulse() {
   return (
     <section style={{
       width: '100%',
-      background: 'linear-gradient(180deg, #020617 0%, #0a0e1a 50%, #111827 100%)',
+      background: 'var(--msp-bg)',
       borderBottom: '1px solid rgba(34,197,94,0.2)',
       padding: '0',
       position: 'relative',
@@ -115,10 +115,7 @@ export default function LiveMarketPulse() {
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage: `
-          linear-gradient(rgba(34,197,94,0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(34,197,94,0.03) 1px, transparent 1px)
-        `,
+        backgroundImage: 'none',
         backgroundSize: '50px 50px',
         animation: 'gridMove 20s linear infinite'
       }} />
@@ -188,7 +185,7 @@ export default function LiveMarketPulse() {
         <div style={{
           maxWidth: 700,
           margin: '0 auto 32px',
-          background: 'linear-gradient(145deg, rgba(15,23,42,0.9), rgba(2,6,23,0.95))',
+          background: 'var(--msp-card)',
           borderRadius: 20,
           border: '1px solid rgba(34,197,94,0.3)',
           padding: '28px',
@@ -203,7 +200,7 @@ export default function LiveMarketPulse() {
             left: 0,
             right: 0,
             height: 3,
-            background: 'linear-gradient(90deg, #22c55e, #14b8a6, #3b82f6)',
+            background: 'var(--msp-accent)',
             borderRadius: '20px 20px 0 0'
           }} />
 
@@ -260,7 +257,7 @@ export default function LiveMarketPulse() {
               animation: isAnimating ? 'slideIn 0.4s ease-out 0.1s both' : 'none'
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(20,184,166,0.1))',
+                background: 'rgba(16,185,129,0.14)',
                 border: '1px solid rgba(34,197,94,0.3)',
                 borderRadius: 12,
                 padding: '12px 16px',
@@ -272,9 +269,7 @@ export default function LiveMarketPulse() {
                 <div style={{
                   fontSize: 28,
                   fontWeight: 800,
-                  background: 'linear-gradient(135deg, #22c55e, #14b8a6)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
+                  color: '#22c55e'
                 }}>
                   {signal.confidence}%
                 </div>
@@ -288,7 +283,7 @@ export default function LiveMarketPulse() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
-            background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(20,184,166,0.1))',
+            background: 'rgba(16,185,129,0.12)',
             border: '1px solid rgba(34,197,94,0.4)',
             borderRadius: 999,
             padding: '10px 18px',
@@ -309,7 +304,7 @@ export default function LiveMarketPulse() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <span style={{ fontSize: 16 }}>🤖</span>
-              <span style={{ color: '#14b8a6', fontWeight: 600, fontSize: 13, textTransform: 'uppercase' }}>
+              <span style={{ color: 'var(--msp-accent)', fontWeight: 600, fontSize: 13, textTransform: 'uppercase' }}>
                 MSP AI Analysis
               </span>
             </div>
@@ -345,7 +340,7 @@ export default function LiveMarketPulse() {
                   width: i === currentSignal ? 24 : 8,
                   height: 8,
                   borderRadius: 999,
-                  background: i === currentSignal ? 'linear-gradient(90deg, #22c55e, #14b8a6)' : 'rgba(148,163,184,0.3)',
+                  background: i === currentSignal ? 'var(--msp-accent)' : 'rgba(148,163,184,0.3)',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease'
@@ -395,7 +390,7 @@ export default function LiveMarketPulse() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 10,
-              background: 'linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)',
+              background: 'var(--msp-accent)',
               color: '#0b1120',
               padding: '16px 32px',
               borderRadius: 999,

@@ -52,7 +52,7 @@ export default function AdminSubscriptionsPage() {
   const tierBadge = (tier: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       pro_trader: { bg: "rgba(245, 158, 11, 0.2)", text: "#F59E0B" },
-      pro: { bg: "rgba(59, 130, 246, 0.2)", text: "#3B82F6" },
+      pro: { bg: "var(--msp-accent-glow)", text: "var(--msp-accent)" },
       free: { bg: "rgba(107, 114, 128, 0.2)", text: "#9CA3AF" },
     };
     const color = colors[tier] || colors.free;

@@ -54,7 +54,7 @@ export default function NewListingsWidget() {
   if (loading) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -74,7 +74,7 @@ export default function NewListingsWidget() {
   if (error) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -86,7 +86,7 @@ export default function NewListingsWidget() {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--msp-card)',
       borderRadius: '12px',
       padding: '20px',
       border: '1px solid #334155'
@@ -137,7 +137,7 @@ export default function NewListingsWidget() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
               <div style={{
-                background: coin.hoursAgo < 12 ? 'linear-gradient(135deg, #eab308, #f59e0b)' : 
+                background: coin.hoursAgo < 12 ? '#eab308' : 
                             coin.hoursAgo < 24 ? 'rgba(234, 179, 8, 0.3)' : 'rgba(100, 116, 139, 0.3)',
                 color: coin.hoursAgo < 24 ? '#000' : '#94a3b8',
                 fontSize: '9px',

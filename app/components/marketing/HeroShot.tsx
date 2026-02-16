@@ -30,7 +30,7 @@ export default function HeroShot() {
           <svg className="w-full h-full p-6" viewBox="0 0 600 360" role="img" aria-label="Preview placeholder">
             <defs>
               <linearGradient id="g" x1="0" x2="1">
-                <stop offset="0%" stopColor="#0ea5e9" />
+                <stop offset="0%" stopColor="var(--msp-accent)" />
                 <stop offset="100%" stopColor="#22c55e" />
               </linearGradient>
             </defs>

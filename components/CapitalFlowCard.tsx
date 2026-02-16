@@ -147,15 +147,13 @@ export default function CapitalFlowCard({
   const biasColor = flow.bias === 'bullish' ? '#10B981' : flow.bias === 'bearish' ? '#EF4444' : '#94A3B8';
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(2,6,23,0.88), rgba(15,23,42,0.8))',
-      border: `1px solid ${modeColor}55`,
-      borderRadius: '12px',
+    <div className="msp-card" style={{
+      borderColor: 'var(--msp-border-strong)',
       padding: compact ? '0.7rem 0.85rem' : '0.9rem 1rem',
       marginBottom: '1rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <div style={{ color: '#93C5FD', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Capital Flow Engine</div>
+        <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Capital Flow Engine</div>
         <div style={{ color: modeColor, fontSize: '0.76rem', fontWeight: 800 }}>
           {flow.market_mode.toUpperCase()} • {flow.gamma_state} Gamma • {flow.dominant_expiry}
         </div>
@@ -187,7 +185,7 @@ export default function CapitalFlowCard({
           gap: '0.35rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>MSP One Brain Card</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>MSP One Brain Card</div>
             <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
               Brain Score {Math.round(flow.brain_decision.score)}/100 • {flow.brain_decision.permission}
             </div>
@@ -248,7 +246,7 @@ export default function CapitalFlowCard({
           gap: '0.35rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Probability Matrix</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Probability Matrix</div>
             <div style={{ color: '#E2E8F0', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime}</div>
           </div>
 
@@ -288,7 +286,7 @@ export default function CapitalFlowCard({
           gap: '0.3rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Flow State</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Flow State</div>
             <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
               {flow.flow_state.state} ({Math.round(flow.flow_state.confidence)}%)
             </div>
@@ -318,7 +316,7 @@ export default function CapitalFlowCard({
           gap: '0.35rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-            <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Trade Permission Matrix</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Flow Trade Permission Matrix</div>
             <div style={{ color: flow.flow_trade_permission.blocked ? '#EF4444' : '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
               TPS {toNum(flow.flow_trade_permission.tps).toFixed(0)} • {flow.flow_trade_permission.blocked ? 'BLOCKED' : 'PERMITTED'}
             </div>
@@ -364,7 +362,7 @@ export default function CapitalFlowCard({
           gap: '0.38rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-            <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Risk Governor</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Risk Governor</div>
             <div style={{ color: flow.institutional_risk_governor.executionAllowed ? '#10B981' : '#EF4444', fontSize: '0.72rem', fontWeight: 800 }}>
               {flow.institutional_risk_governor.executionAllowed ? 'EXECUTION ALLOWED' : 'EXECUTION BLOCKED'}
             </div>

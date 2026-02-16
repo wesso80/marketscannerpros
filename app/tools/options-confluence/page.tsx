@@ -755,7 +755,7 @@ export default function OptionsConfluenceScanner() {
   };
 
   const lowerTerminalShell = {
-    background: 'linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.86) 100%)',
+    background: 'var(--msp-card)',
     border: '1px solid rgba(148,163,184,0.26)',
     borderRadius: '16px',
     padding: '1.15rem',
@@ -1326,7 +1326,7 @@ export default function OptionsConfluenceScanner() {
         ? '#F59E0B'
         : marketRegimeIntel?.regime === 'CHAOTIC_NEWS'
           ? '#EF4444'
-          : '#3B82F6';
+          : 'var(--msp-accent)';
 
   const confluenceRadar = result ? (() => {
     const clampScore = (value: number) => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
@@ -1574,7 +1574,7 @@ export default function OptionsConfluenceScanner() {
   // Avoid premature gating while tier is still resolving
   if (isTierLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", color: "#e2e8f0" }}>
           <h1 style={{ fontSize: "clamp(1.25rem, 3vw, 1.75rem)", fontWeight: 700, marginBottom: "0.5rem" }}>
             🎯 Loading Options Confluence Scanner...
@@ -1590,15 +1590,16 @@ export default function OptionsConfluenceScanner() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
         <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
           <span style={{ 
-            background: "linear-gradient(135deg, #10B981, #3B82F6)", 
+            background: "var(--msp-panel)", 
+            border: "1px solid var(--msp-border)",
             padding: "4px 12px", 
             borderRadius: "999px", 
             fontSize: "11px", 
             fontWeight: "600",
-            color: "#fff"
+            color: "var(--msp-accent)"
           }}>PRO TRADER</span>
           <h1 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)", fontWeight: 700, color: "#f1f5f9", margin: "12px 0 8px" }}>
             🎯 Options Confluence Scanner
@@ -1615,9 +1616,9 @@ export default function OptionsConfluenceScanner() {
   return (
     <div className="options-page-container" style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
+      background: 'var(--msp-bg)',
       padding: 'clamp(0.5rem, 3vw, 2rem)',
-      color: 'white',
+      color: 'var(--msp-text)',
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%', padding: '0 0.25rem' }}>
         {/* Header */}
@@ -1625,14 +1626,12 @@ export default function OptionsConfluenceScanner() {
           <h1 style={{ 
             fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', 
             fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #10B981, #3B82F6)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'var(--msp-text)',
             marginBottom: '0.5rem'
           }}>
             🎯 Options Confluence Scanner
           </h1>
-          <p style={{ color: '#94A3B8', maxWidth: '600px', margin: '0 auto', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', padding: '0 1rem' }}>
+          <p style={{ color: 'var(--msp-text-muted)', maxWidth: '600px', margin: '0 auto', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', padding: '0 1rem' }}>
             Get intelligent strike & expiration recommendations based on Time Confluence analysis.
             Uses 50% levels, decompression timing, and Greeks-aware risk assessment.
           </p>
@@ -1640,91 +1639,52 @@ export default function OptionsConfluenceScanner() {
 
         {/* Command Strip */}
         {result && (
-          <div style={{
-            position: 'sticky',
-            top: '0.4rem',
-            zIndex: 40,
-            marginBottom: '1rem',
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.96))',
-            border: `2px solid ${result.direction === 'bullish' ? 'rgba(16,185,129,0.6)' : result.direction === 'bearish' ? 'rgba(239,68,68,0.6)' : 'rgba(245,158,11,0.6)'}`,
-            borderRadius: '12px',
-            boxShadow: '0 12px 28px rgba(0,0,0,0.35)',
-            backdropFilter: 'blur(6px)',
-            padding: '0.58rem 0.75rem',
-          }}>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.65rem',
-              alignItems: 'center',
-              fontSize: '0.76rem',
-              lineHeight: 1.25,
-            }}>
-              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{result.symbol}</span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#CBD5E1' }}>BIAS:</span>
-              <span style={{ color: '#F8FAFC', fontWeight: 700 }}>{thesisDirection.toUpperCase()}</span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#CBD5E1' }}>STATUS:</span>
-              <span style={{
-                background: `${commandStatusColor}25`,
-                border: `1px solid ${commandStatusColor}70`,
-                color: commandStatusColor,
-                padding: '2px 8px',
-                borderRadius: '999px',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-              }}>
+          <div className="sticky top-2 z-40 mb-4 rounded-panel border border-msp-border bg-msp-card px-3 py-2 shadow-msp">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+              <span className="font-bold text-msp-text">{result.symbol}</span>
+              <span className="text-msp-divider">│</span>
+              <span className="text-msp-muted">BIAS:</span>
+              <span className="font-bold text-msp-text">{thesisDirection.toUpperCase()}</span>
+              <span className="text-msp-divider">│</span>
+              <span className="text-msp-muted">STATUS:</span>
+              <span className="rounded-full border border-msp-borderStrong bg-msp-panel px-2 py-0.5 font-bold uppercase text-msp-accent">
                 {commandStatus}
               </span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#CBD5E1' }}>CONF:</span>
-              <span style={{
-                color: (result.compositeScore?.confidence ?? 0) >= 70 ? '#10B981' : (result.compositeScore?.confidence ?? 0) >= 50 ? '#F59E0B' : '#EF4444',
-                fontWeight: 800,
-              }}>
+              <span className="text-msp-divider">│</span>
+              <span className="text-msp-muted">CONF:</span>
+              <span
+                className={`font-bold ${(result.compositeScore?.confidence ?? 0) >= 70 ? 'text-msp-bull' : (result.compositeScore?.confidence ?? 0) >= 50 ? 'text-msp-warn' : 'text-msp-bear'}`}
+              >
                 {(result.compositeScore?.confidence ?? 0).toFixed(0)}%
               </span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#CBD5E1' }}>DATA:</span>
-              <span style={{
-                color: dataHealth === 'REALTIME' || dataHealth === 'LIVE' ? '#10B981' : dataHealth === 'DELAYED' || dataHealth === 'CACHED' ? '#F59E0B' : '#EF4444',
-                fontWeight: 700,
-              }}>
+              <span className="text-msp-divider">│</span>
+              <span className="text-msp-muted">DATA:</span>
+              <span
+                className={`${dataHealth === 'REALTIME' || dataHealth === 'LIVE' ? 'text-msp-bull' : dataHealth === 'DELAYED' || dataHealth === 'CACHED' ? 'text-msp-warn' : 'text-msp-bear'} font-bold`}
+              >
                 {dataHealth} {(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? '✔' : ''}
               </span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#CBD5E1' }}>TERMINAL MODE:</span>
-              <span style={{
-                color: adaptiveModeMeta.color,
-                fontWeight: 900,
-                letterSpacing: '0.2px',
-              }}>
+              <span className="text-msp-divider">│</span>
+              <span className="text-msp-muted">TERMINAL MODE:</span>
+              <span className="font-black tracking-wide text-msp-accent">
                 {adaptiveModeMeta.label}
               </span>
-              <span style={{ color: '#64748B' }}>│</span>
-              <span style={{ color: '#93C5FD', fontWeight: 700 }}>LIVE BX + FMV OPTIONS</span>
+              <span className="text-msp-divider">│</span>
+              <span className="font-bold text-msp-accent">LIVE BX + FMV OPTIONS</span>
               {commandUpdatedAgo !== null && (
                 <>
-                  <span style={{ color: '#64748B' }}>•</span>
-                  <span style={{ color: '#94A3B8' }}>Updated {commandUpdatedAgo}s ago</span>
+                  <span className="text-msp-divider">•</span>
+                  <span className="text-msp-muted">Updated {commandUpdatedAgo}s ago</span>
                 </>
               )}
-              <span style={{ color: '#64748B' }}>│</span>
+              <span className="text-msp-divider">│</span>
               <button
                 onClick={() => setFocusMode((prev) => !prev)}
-                style={{
-                  background: focusMode ? 'rgba(16,185,129,0.2)' : 'rgba(30,41,59,0.75)',
-                  border: `1px solid ${focusMode ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.35)'}`,
-                  color: focusMode ? '#10B981' : '#94A3B8',
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  cursor: 'pointer',
-                }}
+                className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide transition ${
+                  focusMode
+                    ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
+                    : 'bg-msp-panel text-msp-muted border-msp-border'
+                }`}
               >
                 {focusMode ? 'Focus On' : 'Focus'}
               </button>
@@ -1741,63 +1701,46 @@ export default function OptionsConfluenceScanner() {
           const breadth = result.direction === 'bullish' ? 'RISK ON' : result.direction === 'bearish' ? 'RISK OFF' : 'MIXED';
           const regimeLabel = institutionalMarketRegime || 'UNKNOWN';
 
-          const stripTag = (label: string, value: string, color: string) => (
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              background: 'rgba(15,23,42,0.55)',
-              border: '1px solid rgba(148,163,184,0.24)',
-              borderRadius: '999px',
-              padding: '0.2rem 0.55rem',
-              fontSize: '0.67rem',
-            }}>
-              <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
-              <span style={{ color, fontWeight: 800 }}>{value}</span>
+          const stripTag = (label: string, value: string, type: 'bull' | 'bear' | 'warn' | 'accent' | 'neutral' = 'neutral') => {
+            const colorMap: Record<'bull' | 'bear' | 'warn' | 'accent' | 'neutral', string> = {
+              bull: 'text-msp-bull bg-msp-panel border-msp-borderStrong',
+              bear: 'text-msp-bear bg-msp-panel border-msp-borderStrong',
+              warn: 'text-msp-warn bg-msp-panel border-msp-borderStrong',
+              accent: 'text-msp-accent bg-msp-panel border-msp-borderStrong',
+              neutral: 'text-msp-neutral bg-msp-panel border-msp-border',
+            };
+            return (
+            <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${colorMap[type]}`}>
+              <span className="text-msp-faint uppercase">{label}</span>
+              <span>{value}</span>
             </div>
-          );
+            );
+          };
 
           return (
-            <div style={{
-              marginBottom: '0.65rem',
-              background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
-              border: '1px solid rgba(56,189,248,0.3)',
-              borderRadius: '10px',
-              padding: '0.48rem 0.6rem',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-              alignItems: 'center',
-            }}>
-              {stripTag('Regime', regimeLabel, '#10B981')}
-              {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
-              {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
-              {stripTag('Event Risk', 'NONE', '#10B981')}
-              {stripTag('Session', (result.entryTiming.marketSession || 'n/a').toUpperCase(), '#93C5FD')}
+            <div className="msp-panel mb-3 flex flex-wrap items-center gap-2 px-2.5 py-2">
+              {stripTag('Regime', regimeLabel, regimeLabel.includes('TREND') ? 'bull' : 'warn')}
+              {stripTag('Global Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
+              {stripTag('Breadth', breadth, breadth === 'RISK ON' ? 'bull' : breadth === 'RISK OFF' ? 'bear' : 'warn')}
+              {stripTag('Event Risk', 'NONE', 'accent')}
+              {stripTag('Session', (result.entryTiming.marketSession || 'n/a').toUpperCase(), 'neutral')}
             </div>
           );
         })()}
 
         {result && copilotPresence && (
-          <div style={{
-            marginTop: '-0.25rem',
-            marginBottom: '0.85rem',
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85))',
-            border: `1px solid ${adaptiveModeMeta.color}66`,
-            borderRadius: '10px',
-            padding: '0.48rem 0.65rem',
-          }}>
+          <div className="msp-panel" style={{ marginTop: '-0.25rem', marginBottom: '0.85rem', padding: '0.48rem 0.65rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap', fontSize: '0.72rem' }}>
-              <span style={{ color: '#E2E8F0', fontWeight: 800 }}>AI Co-Pilot</span>
-              <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: adaptiveModeMeta.color, fontWeight: 800 }}>Market State: {adaptiveModeMeta.label}</span>
-              <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: '#CBD5E1' }}>Confidence: {copilotPresence.confidence}%</span>
-              <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: '#94A3B8' }}>Watching: {copilotPresence.watching}</span>
+              <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>AI Co-Pilot</span>
+              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
+              <span style={{ color: 'var(--msp-accent)', fontWeight: 800 }}>Market State: {adaptiveModeMeta.label}</span>
+              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
+              <span style={{ color: 'var(--msp-text-muted)' }}>Confidence: {copilotPresence.confidence}%</span>
+              <span style={{ color: 'var(--msp-text-faint)' }}>•</span>
+              <span style={{ color: 'var(--msp-text-muted)' }}>Watching: {copilotPresence.watching}</span>
             </div>
             {copilotPresence.statusLine && (
-              <div style={{ marginTop: '0.28rem', color: '#94A3B8', fontSize: '0.68rem' }}>
+              <div style={{ marginTop: '0.28rem', color: 'var(--msp-text-muted)', fontSize: '0.68rem' }}>
                 {copilotPresence.statusLine}
                 {copilotPresence.notes?.length ? ` • ${copilotPresence.notes[0]}` : ''}
               </div>
@@ -1814,22 +1757,19 @@ export default function OptionsConfluenceScanner() {
           const msg = messages[deskFeedIndex % messages.length];
 
           return (
-            <div style={{
+            <div className="msp-panel" style={{
               marginTop: '-0.45rem',
               marginBottom: '0.8rem',
-              background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-              border: '1px solid rgba(59,130,246,0.28)',
-              borderRadius: '10px',
               padding: '0.5rem 0.65rem',
               display: 'flex',
               alignItems: 'center',
               gap: '0.55rem',
               flexWrap: 'wrap',
             }}>
-              <div style={{ color: '#93C5FD', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 🧠 AI Desk Feed
               </div>
-              <div style={{ color: '#CBD5E1', fontSize: '0.74rem', flex: 1 }}>{msg}</div>
+              <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', flex: 1 }}>{msg}</div>
             </div>
           );
         })()}
@@ -1851,10 +1791,10 @@ export default function OptionsConfluenceScanner() {
             style={{
               padding: '0.75rem 1.25rem',
               fontSize: '1rem',
-              background: 'rgba(30,41,59,0.8)',
-              border: '2px solid rgba(16,185,129,0.3)',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
               borderRadius: '12px',
-              color: 'white',
+              color: 'var(--msp-text)',
               flex: '1 1 150px',
               maxWidth: '250px',
               outline: 'none',
@@ -1872,10 +1812,10 @@ export default function OptionsConfluenceScanner() {
             onChange={(e) => setSelectedTF(e.target.value as ScanModeType)}
             style={{
               padding: '0.75rem 1rem',
-              background: 'rgba(30,41,59,0.8)',
-              border: '2px solid rgba(59,130,246,0.5)',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
               borderRadius: '12px',
-              color: 'white',
+              color: 'var(--msp-text)',
               cursor: 'pointer',
               fontSize: '1rem',
               fontWeight: '600',
@@ -1895,10 +1835,10 @@ export default function OptionsConfluenceScanner() {
             disabled={loadingExpirations || expirations.length === 0}
             style={{
               padding: '0.75rem 1rem',
-              background: 'rgba(30,41,59,0.8)',
-              border: `2px solid ${expirations.length > 0 ? 'rgba(168,85,247,0.5)' : 'rgba(100,100,100,0.3)'}`,
+              background: 'var(--msp-panel)',
+              border: `1px solid ${expirations.length > 0 ? 'var(--msp-border-strong)' : 'var(--msp-border)'}`,
               borderRadius: '12px',
-              color: expirations.length > 0 ? 'white' : '#64748B',
+              color: expirations.length > 0 ? 'var(--msp-text)' : 'var(--msp-text-faint)',
               cursor: expirations.length > 0 ? 'pointer' : 'not-allowed',
               fontSize: '0.9rem',
               fontWeight: '600',
@@ -1922,11 +1862,11 @@ export default function OptionsConfluenceScanner() {
             style={{
               padding: '0.75rem 2rem',
               background: loading 
-                ? 'rgba(100,100,100,0.5)'
-                : 'linear-gradient(135deg, #10B981, #3B82F6)',
+                ? 'var(--msp-panel)'
+                : 'var(--msp-accent)',
               border: 'none',
               borderRadius: '12px',
-              color: 'white',
+              color: '#061018',
               fontWeight: 'bold',
               fontSize: '1rem',
               cursor: loading ? 'not-allowed' : 'pointer',
@@ -1984,8 +1924,8 @@ export default function OptionsConfluenceScanner() {
 
             {focusMode && (
               <div style={{
-                background: 'linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))',
-                border: '1px solid rgba(16,185,129,0.32)',
+                background: 'var(--msp-panel)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '10px',
                 padding: '0.72rem 0.82rem',
                 display: 'grid',
@@ -1994,7 +1934,7 @@ export default function OptionsConfluenceScanner() {
               }}>
                 <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: thesisDirection === 'bullish' ? '#10B981' : thesisDirection === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{thesisDirection.toUpperCase()}</div></div>
                 <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
-                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#93C5FD', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
+                <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
                 <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
                 <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#6EE7B7', fontWeight: 800 }}>{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
               </div>
@@ -2002,7 +1942,7 @@ export default function OptionsConfluenceScanner() {
 
             {terminalDecisionCard && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95))',
+                background: 'var(--msp-panel)',
                 border: `2px solid ${adaptiveModeMeta.color}`,
                 borderRadius: '14px',
                 padding: '0.95rem 1rem',
@@ -2025,19 +1965,19 @@ export default function OptionsConfluenceScanner() {
                   gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))',
                   gap: '0.4rem',
                 }}>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
                     <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div>
                     <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 900 }}>{terminalDecisionCard.direction}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
                     <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Best Setup</div>
                     <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.setup}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
                     <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Expected Move</div>
                     <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.expectedMove}</div>
                   </div>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }}>
+                  <div style={{ background: 'var(--msp-panel-2)', borderRadius: '8px', padding: '0.5rem' }}>
                     <div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div>
                     <div style={{ color: '#FCA5A5', fontSize: '0.82rem', fontWeight: 800 }}>{terminalDecisionCard.invalidation}</div>
                   </div>
@@ -2050,11 +1990,11 @@ export default function OptionsConfluenceScanner() {
                 {adaptiveTerminalMode === 'TRANSITION_MODE' && (
                   <div style={{
                     marginTop: '0.5rem',
-                    background: 'rgba(56,189,248,0.08)',
-                    border: '1px solid rgba(56,189,248,0.3)',
+                    background: 'var(--msp-panel-2)',
+                    border: '1px solid var(--msp-border)',
                     borderRadius: '8px',
                     padding: '0.45rem 0.55rem',
-                    color: '#93C5FD',
+                    color: 'var(--msp-muted)',
                     fontSize: '0.72rem',
                     fontWeight: 700,
                   }}>
@@ -2071,7 +2011,7 @@ export default function OptionsConfluenceScanner() {
               alignItems: 'stretch',
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.8))',
+                background: 'var(--msp-panel)',
                 border: adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? '2px solid rgba(239,68,68,0.45)' : '1px solid rgba(148,163,184,0.25)',
                 borderRadius: '12px',
                 padding: '0.75rem',
@@ -2086,13 +2026,13 @@ export default function OptionsConfluenceScanner() {
                       <div style={{ color: '#E2E8F0', fontSize: '0.74rem', fontWeight: 800 }}>
                         {item.label}
                         {copilotPresence?.watchSet.includes(item.label) && (
-                          <span style={{ marginLeft: '6px', color: '#67E8F9', fontSize: '0.66rem', fontWeight: 700 }}>★ AI Watching</span>
+                          <span style={{ marginLeft: '6px', color: 'var(--msp-accent)', fontSize: '0.66rem', fontWeight: 700 }}>★ AI Watching</span>
                         )}
                       </div>
-                      <div style={{ color: '#93C5FD', fontSize: '0.74rem', fontWeight: 800 }}>{item.score}%</div>
+                      <div style={{ color: 'var(--msp-muted)', fontSize: '0.74rem', fontWeight: 800 }}>{item.score}%</div>
                     </div>
                     <div style={{ height: '5px', background: 'rgba(100,116,139,0.25)', borderRadius: '999px', overflow: 'hidden', marginTop: '0.25rem' }}>
-                      <div style={{ height: '100%', width: `${item.score}%`, background: 'linear-gradient(90deg, #38BDF8, #10B981)' }} />
+                      <div style={{ height: '100%', width: `${item.score}%`, background: 'var(--msp-accent)' }} />
                     </div>
                     <div style={{ color: '#94A3B8', fontSize: '0.68rem', marginTop: '0.18rem' }}>{item.state} • {item.summary}</div>
                   </div>
@@ -2100,8 +2040,8 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.88))',
-                border: adaptiveTerminalMode === 'TREND_MODE' ? '2px solid rgba(16,185,129,0.5)' : adaptiveTerminalMode === 'TRANSITION_MODE' ? '2px solid rgba(56,189,248,0.5)' : '1px solid rgba(59,130,246,0.35)',
+                background: 'var(--msp-panel)',
+                border: adaptiveTerminalMode === 'TREND_MODE' ? '2px solid rgba(16,185,129,0.5)' : adaptiveTerminalMode === 'TRANSITION_MODE' ? '2px solid rgba(20,184,166,0.45)' : '1px solid var(--msp-border)',
                 borderRadius: '12px',
                 padding: '0.75rem',
                 display: 'grid',
@@ -2119,7 +2059,7 @@ export default function OptionsConfluenceScanner() {
                       {confluenceRadar.axisLines.map((line, idx) => (
                         <line key={`mini-axis-${idx}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="rgba(100,116,139,0.36)" strokeWidth={1} />
                       ))}
-                      <polygon points={confluenceRadar.dataPolygon} fill="rgba(56,189,248,0.22)" stroke="rgba(56,189,248,0.88)" strokeWidth={2} />
+                      <polygon points={confluenceRadar.dataPolygon} fill="rgba(20,184,166,0.16)" stroke="rgba(20,184,166,0.78)" strokeWidth={2} />
                     </svg>
                   </div>
                 )}
@@ -2138,7 +2078,7 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.82))',
+                background: 'var(--msp-panel)',
                 border: '1px solid rgba(16,185,129,0.3)',
                 borderRadius: '12px',
                 padding: '0.75rem',
@@ -2165,12 +2105,12 @@ export default function OptionsConfluenceScanner() {
                 {copilotPresence && (
                   <div style={{
                     marginTop: '0.25rem',
-                    background: 'rgba(56,189,248,0.08)',
-                    border: '1px solid rgba(56,189,248,0.3)',
+                    background: 'var(--msp-panel-2)',
+                    border: '1px solid var(--msp-border)',
                     borderRadius: '8px',
                     padding: '0.45rem 0.5rem',
                   }}>
-                    <div style={{ color: '#67E8F9', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase' }}>Co-Pilot Suggestion</div>
+                    <div style={{ color: 'var(--msp-accent)', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase' }}>Co-Pilot Suggestion</div>
                     <div style={{ color: '#E2E8F0', fontSize: '0.74rem', marginTop: '0.2rem', fontWeight: 700 }}>{copilotPresence.suggestion.action}</div>
                     <div style={{ color: '#94A3B8', fontSize: '0.7rem', marginTop: '0.15rem' }}>{copilotPresence.suggestion.reason}</div>
                   </div>
@@ -2180,7 +2120,7 @@ export default function OptionsConfluenceScanner() {
 
             {copilotPresence && copilotPresence.notices.length > 0 && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9))',
+                background: 'var(--msp-panel)',
                 border: '1px solid rgba(148,163,184,0.26)',
                 borderRadius: '12px',
                 padding: '0.65rem 0.75rem',
@@ -2190,8 +2130,8 @@ export default function OptionsConfluenceScanner() {
                 <div style={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>Co-Pilot Notices</div>
                 {copilotPresence.notices.map((notice, index) => (
                   <div key={`${notice.title}-${index}`} style={{
-                    background: notice.level === 'warn' ? 'rgba(239,68,68,0.08)' : notice.level === 'action' ? 'rgba(16,185,129,0.08)' : 'rgba(56,189,248,0.08)',
-                    border: `1px solid ${notice.level === 'warn' ? 'rgba(239,68,68,0.25)' : notice.level === 'action' ? 'rgba(16,185,129,0.25)' : 'rgba(56,189,248,0.25)'}`,
+                    background: notice.level === 'warn' ? 'rgba(239,68,68,0.08)' : notice.level === 'action' ? 'rgba(16,185,129,0.08)' : 'rgba(148,163,184,0.08)',
+                    border: `1px solid ${notice.level === 'warn' ? 'rgba(239,68,68,0.25)' : notice.level === 'action' ? 'rgba(16,185,129,0.25)' : 'rgba(148,163,184,0.25)'}`,
                     borderRadius: '8px',
                     padding: '0.4rem 0.48rem',
                   }}>
@@ -2206,14 +2146,14 @@ export default function OptionsConfluenceScanner() {
 
             {confluenceRadar && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
-                border: '2px solid rgba(56,189,248,0.45)',
+                background: 'var(--msp-panel)',
+                border: '2px solid var(--msp-borderStrong)',
                 borderRadius: '14px',
                 padding: '0.9rem 1rem',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>MSP Signature • Confluence Radar</div>
-                  <div style={{ color: '#67E8F9', fontWeight: 900, fontSize: '0.9rem' }}>Composite {confluenceRadar.composite}%</div>
+                  <div style={{ color: 'var(--msp-accent)', fontWeight: 900, fontSize: '0.9rem' }}>Composite {confluenceRadar.composite}%</div>
                 </div>
 
                 <div style={{
@@ -2249,8 +2189,8 @@ export default function OptionsConfluenceScanner() {
 
                       <polygon
                         points={confluenceRadar.dataPolygon}
-                        fill="rgba(56,189,248,0.24)"
-                        stroke="rgba(56,189,248,0.9)"
+                        fill="rgba(20,184,166,0.16)"
+                        stroke="rgba(20,184,166,0.85)"
                         strokeWidth={2}
                       />
 
@@ -2284,7 +2224,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             <div style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92))',
+              background: 'var(--msp-panel)',
               border: `2px solid ${modeAccent}`,
               borderRadius: '14px',
               padding: '0.8rem 0.95rem',
@@ -2328,7 +2268,7 @@ export default function OptionsConfluenceScanner() {
 
             {result.institutionalIntent && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.90))',
+                background: 'var(--msp-panel)',
                 border: `2px solid ${result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#EF4444' : '#38BDF8'}`,
                 borderRadius: '14px',
                 padding: '0.85rem 0.95rem',
@@ -2336,7 +2276,7 @@ export default function OptionsConfluenceScanner() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <div style={{ color: '#94A3B8', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 700 }}>Institutional Intent</div>
                   <div style={{
-                    color: result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#FCA5A5' : '#67E8F9',
+                    color: result.institutionalIntent.primary_intent === 'UNKNOWN' ? '#FCA5A5' : 'var(--msp-accent)',
                     fontSize: '0.84rem',
                     fontWeight: 900,
                     letterSpacing: '0.3px',
@@ -2360,7 +2300,7 @@ export default function OptionsConfluenceScanner() {
                         <div style={{
                           height: '100%',
                           width: `${Math.round(result.institutionalIntent.intent_confidence * 100)}%`,
-                          background: 'linear-gradient(90deg, #38BDF8, #10B981)',
+                            background: 'var(--msp-accent)',
                         }} />
                       </div>
                     </div>
@@ -2418,7 +2358,7 @@ export default function OptionsConfluenceScanner() {
 
             {(institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.9))',
+                background: 'var(--msp-panel)',
                 border: `3px solid ${modeAccent}`,
                 borderRadius: '18px',
                 padding: '1rem 1.1rem',
@@ -2484,13 +2424,13 @@ export default function OptionsConfluenceScanner() {
 
             {/* Institutional Header Layer (3-second trader test) */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,41,59,0.94))',
+              background: 'var(--msp-panel)',
               border: `2px solid ${tradePermission === 'ALLOWED' ? '#10B981' : tradePermission === 'BLOCKED' ? '#EF4444' : '#F59E0B'}`,
               borderRadius: '16px',
               padding: '0.9rem 1rem',
               boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
             }}>
-              <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.45px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
+              <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.45px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>
                 Institutional State
               </div>
               <div style={{
@@ -2525,7 +2465,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* Primary Intelligence Panel (Cognitive Anchor) */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.92))',
+              background: 'var(--msp-panel)',
               border: `2px solid ${commandStatusColor}`,
               borderRadius: '18px',
               padding: '1.1rem 1.2rem',
@@ -2546,9 +2486,9 @@ export default function OptionsConfluenceScanner() {
                 </div>
                 <div style={{
                   fontSize: '0.72rem',
-                  color: '#93C5FD',
-                  background: 'rgba(59,130,246,0.15)',
-                  border: '1px solid rgba(59,130,246,0.35)',
+                  color: 'var(--msp-muted)',
+                  background: 'var(--msp-panel-2)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '999px',
                   padding: '2px 8px',
                   fontWeight: 700,
@@ -2582,15 +2522,15 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               <div style={{
-                background: 'linear-gradient(135deg, rgba(2,132,199,0.12), rgba(16,185,129,0.1))',
-                border: '1px solid rgba(56,189,248,0.35)',
+                background: 'var(--msp-panel-2)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '12px',
                 padding: '0.72rem',
                 display: 'grid',
                 gap: '0.45rem',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase' }}>
                     MSP AI Personality Match
                   </div>
                   {adaptiveMatch?.hasProfile && (
@@ -2649,7 +2589,7 @@ export default function OptionsConfluenceScanner() {
                   padding: '0.65rem 0.72rem',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-                    <div style={{ color: '#93C5FD', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
+                    <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
                       Institutional Filters
                     </div>
                     <div style={{
@@ -2730,7 +2670,7 @@ export default function OptionsConfluenceScanner() {
             {/* Decision Ladder - Institutional validation pipeline */}
             {institutionalLensMode === 'OBSERVE' && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.90))',
+              background: 'var(--msp-panel)',
               border: '1px solid rgba(99,102,241,0.35)',
               borderRadius: '14px',
               padding: '0.9rem 1rem',
@@ -2800,8 +2740,8 @@ export default function OptionsConfluenceScanner() {
             {/* Trader Eye Path Layout (Z-Flow) */}
             {institutionalLensMode === 'OBSERVE' && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.86))',
-              border: '1px solid rgba(59,130,246,0.35)',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
               borderRadius: '16px',
               padding: '1rem',
               display: 'grid',
@@ -2851,7 +2791,7 @@ export default function OptionsConfluenceScanner() {
               }}>
                 {/* Top Left: Bias / Regime / Trend */}
                 <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(148,163,184,0.24)', borderRadius: '10px', padding: '0.65rem' }}>
-                  <div style={{ color: '#93C5FD', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Left • Market Condition</div>
+                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, marginBottom: '0.45rem', textTransform: 'uppercase' }}>Top Left • Market Condition</div>
                   <div style={{ color: '#F8FAFC', fontWeight: 900, fontSize: '1rem', marginBottom: '0.3rem' }}>
                     {result.symbol} — {thesisDirection.toUpperCase()} BIAS
                   </div>
@@ -2905,7 +2845,7 @@ export default function OptionsConfluenceScanner() {
 
               {/* Dominant Trader Decision Block */}
               <div style={{
-                background: 'linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.88))',
+                background: 'var(--msp-panel-2)',
                 border: `2px solid ${commandStatusColor}`,
                 boxShadow: `0 0 28px ${commandStatusColor}33`,
                 borderRadius: '12px',
@@ -2930,7 +2870,7 @@ export default function OptionsConfluenceScanner() {
                 <div style={{ color: '#CBD5E1', fontSize: '0.77rem' }}>
                   <span style={{ color: '#F8FAFC', fontWeight: 700 }}>Next Trigger:</span> {decisionTrigger}
                 </div>
-                <div style={{ color: '#93C5FD', fontSize: '0.72rem', marginTop: '0.45rem' }}>
+                <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', marginTop: '0.45rem' }}>
                   Powered by Nasdaq BX + FMV Options (LIVE)
                 </div>
               </div>
@@ -2957,7 +2897,7 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {(result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1))',
+                background: 'var(--msp-bear-tint)',
                 border: '2px solid #EF4444',
                 borderRadius: '16px',
                 padding: '1rem 1.25rem',
@@ -2995,7 +2935,7 @@ export default function OptionsConfluenceScanner() {
             {((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
               <details style={{
-                background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.08))',
+                background: 'var(--msp-warn-tint)',
                 border: '1px solid rgba(245,158,11,0.4)',
                 borderRadius: '12px',
                 padding: '0.875rem 1rem',
@@ -3056,7 +2996,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* 3-SECOND VIEW - Trade Snapshot */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(59,130,246,0.10))',
+              background: 'var(--msp-panel)',
               border: `2px solid ${result.direction === 'bullish' ? '#10B981' : result.direction === 'bearish' ? '#EF4444' : '#F59E0B'}`,
               borderRadius: '16px',
               padding: '1rem 1.1rem',
@@ -3100,7 +3040,7 @@ export default function OptionsConfluenceScanner() {
                 )}
 
                 <div style={{ color: '#E2E8F0', fontSize: '0.87rem' }}>
-                  <span style={{ color: '#93C5FD', fontWeight: '700' }}>WHY:</span>{' '}
+                  <span style={{ color: 'var(--msp-muted)', fontWeight: '700' }}>WHY:</span>{' '}
                   {result.tradeSnapshot?.why?.length
                     ? result.tradeSnapshot.why.join(' • ')
                     : result.professionalTradeStack
@@ -3147,8 +3087,8 @@ export default function OptionsConfluenceScanner() {
               return (
                 <div style={{
                   background: hasConfirmedPattern
-                    ? `linear-gradient(135deg, ${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.18)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.18)' : 'rgba(245,158,11,0.16)'}, rgba(15,23,42,0.95))`
-                    : 'linear-gradient(135deg, rgba(148,163,184,0.14), rgba(15,23,42,0.95))',
+                    ? `${bestPattern?.bias === 'bullish' ? 'rgba(16,185,129,0.18)' : bestPattern?.bias === 'bearish' ? 'rgba(239,68,68,0.18)' : 'rgba(245,158,11,0.16)'}`
+                    : 'rgba(148,163,184,0.14)',
                   border: `2px solid ${confirmationColor}`,
                   borderRadius: '16px',
                   padding: '0.85rem 1rem',
@@ -3194,7 +3134,7 @@ export default function OptionsConfluenceScanner() {
             {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             <div style={{
-              background: 'linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95))',
+              background: 'var(--msp-card)',
               border: `3px solid ${gradeColor(result.tradeQuality)}`,
               borderRadius: '20px',
               padding: 'clamp(1rem, 3vw, 1.75rem)',
@@ -3213,7 +3153,7 @@ export default function OptionsConfluenceScanner() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                   <span style={{
-                    background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)',
+                    background: 'var(--msp-accent)',
                     padding: '6px 16px',
                     borderRadius: '10px',
                     fontSize: '13px',
@@ -3312,12 +3252,12 @@ export default function OptionsConfluenceScanner() {
 
               {/* Entry Window Info */}
               <div className="entry-timing-row" style={{
-                background: 'rgba(59,130,246,0.1)',
+                background: 'var(--msp-panel-2)',
                 borderRadius: '12px',
                 padding: '1rem',
               }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
                     ENTRY WINDOW
                   </div>
                   <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
@@ -3325,7 +3265,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
                     SESSION
                   </div>
                   <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
@@ -3336,7 +3276,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
                     CONFLUENCE
                   </div>
                   <div style={{ color: '#E2E8F0', fontWeight: '500' }}>
@@ -3346,7 +3286,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#3B82F6', marginBottom: '4px', fontWeight: '600' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--msp-muted)', marginBottom: '4px', fontWeight: '600' }}>
                     ALIGNMENT
                   </div>
                   <div style={{ 
@@ -3405,7 +3345,7 @@ export default function OptionsConfluenceScanner() {
                 <h2 style={{ margin: 0, color: '#E2E8F0', fontSize: '1.25rem', flex: 1 }}>Institutional Brain Summary</h2>
                 <span style={{ 
                   fontSize: '0.75rem', 
-                  color: '#93C5FD',
+                  color: 'var(--msp-muted)',
                   background: 'rgba(168,85,247,0.2)',
                   padding: '4px 10px',
                   borderRadius: '8px',
@@ -3438,10 +3378,10 @@ export default function OptionsConfluenceScanner() {
                   {result.strategyRecommendation && (
                     <div style={{
                       background: result.strategyRecommendation.strategyType === 'sell_premium' 
-                        ? 'linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(249,115,22,0.2) 100%)'
+                        ? 'rgba(239,68,68,0.2)'
                         : result.strategyRecommendation.strategyType === 'buy_premium'
-                        ? 'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(59,130,246,0.2) 100%)'
-                        : 'linear-gradient(135deg, rgba(100,116,139,0.2) 0%, rgba(148,163,184,0.2) 100%)',
+                        ? 'rgba(16,185,129,0.2)'
+                        : 'rgba(148,163,184,0.2)',
                       border: `2px solid ${
                         result.strategyRecommendation.strategyType === 'sell_premium' ? 'rgba(239,68,68,0.5)' :
                         result.strategyRecommendation.strategyType === 'buy_premium' ? 'rgba(16,185,129,0.5)' :
@@ -3695,15 +3635,15 @@ export default function OptionsConfluenceScanner() {
                 {result.expectedMove && (
                   <div style={{
                     background: 'rgba(30,41,59,0.8)',
-                    border: '1px solid rgba(59,130,246,0.3)',
+                    border: '1px solid var(--msp-border)',
                     borderRadius: '12px',
                     padding: '1rem',
                   }}>
-                    <h4 style={{ margin: '0 0 0.75rem 0', color: '#3B82F6', fontSize: '0.9rem' }}>📏 Expected Move</h4>
+                    <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--msp-muted)', fontSize: '0.9rem' }}>📏 Expected Move</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Weekly (7 DTE):</span>
-                        <span style={{ fontWeight: 'bold', color: '#3B82F6' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>
                           ±${result.expectedMove.weekly.toFixed(2)} ({result.expectedMove.weeklyPercent.toFixed(1)}%)
                         </span>
                       </div>
@@ -3714,9 +3654,9 @@ export default function OptionsConfluenceScanner() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                        background: 'rgba(59,130,246,0.2)', padding: '0.5rem', borderRadius: '6px', marginTop: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#93C5FD' }}>Selected Expiry:</span>
-                        <span style={{ fontWeight: 'bold', color: '#93C5FD' }}>
+                        background: 'var(--msp-panel-2)', padding: '0.5rem', borderRadius: '6px', marginTop: '0.25rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--msp-muted)' }}>Selected Expiry:</span>
+                        <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>
                           ±${result.expectedMove.selectedExpiry.toFixed(2)} ({result.expectedMove.selectedExpiryPercent.toFixed(1)}%)
                         </span>
                       </div>
@@ -3826,8 +3766,8 @@ export default function OptionsConfluenceScanner() {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.8rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#3B82F6' }}>📥 Entry Zone:</span>
-                        <span style={{ color: '#93C5FD', fontWeight: 'bold' }}>
+                        <span style={{ color: 'var(--msp-muted)' }}>📥 Entry Zone:</span>
+                        <span style={{ color: 'var(--msp-text)', fontWeight: 'bold' }}>
                           ${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}
                         </span>
                       </div>
@@ -3892,7 +3832,7 @@ export default function OptionsConfluenceScanner() {
               <div className="confluence-info-row">
                 <div style={{
                   background: result.confluenceStack >= 4 
-                    ? 'linear-gradient(135deg, rgba(16,185,129,0.3) 0%, rgba(168,85,247,0.2) 100%)'
+                    ? 'rgba(16,185,129,0.2)'
                     : result.confluenceStack >= 2
                     ? 'rgba(168,85,247,0.2)'
                     : 'rgba(100,116,139,0.2)',
@@ -4005,13 +3945,13 @@ export default function OptionsConfluenceScanner() {
                     background: 'rgba(30,41,59,0.6)',
                     borderRadius: '12px',
                     padding: '1rem',
-                    borderLeft: '3px solid #3B82F6'
+                    borderLeft: '3px solid var(--msp-muted)'
                   }}>
                     <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.5rem' }}>Closing Soon (1-4 hours)</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3B82F6' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--msp-muted)' }}>
                       {result.candleCloseConfluence.closingSoon.count} TFs
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#93C5FD', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--msp-text)', marginTop: '0.25rem' }}>
                       Peak: {result.candleCloseConfluence.closingSoon.peakCount} TFs in {result.candleCloseConfluence.closingSoon.peakConfluenceIn}m
                     </div>
                   </div>
@@ -4043,7 +3983,7 @@ export default function OptionsConfluenceScanner() {
                         <span style={{ fontSize: '0.8rem', color: '#CBD5E1' }}>📅 Week End (Friday)</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.sessionClose !== 'none' && (
-                        <span style={{ fontSize: '0.8rem', color: '#93C5FD' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--msp-text)' }}>
                           🌍 {result.candleCloseConfluence.specialEvents.sessionClose.toUpperCase()} Session Close
                         </span>
                       )}
@@ -4112,8 +4052,8 @@ export default function OptionsConfluenceScanner() {
                     <>
                       <div style={{
                         background: result.primaryStrike.type === 'call' 
-                          ? 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05))'
-                          : 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05))',
+                          ? 'rgba(16,185,129,0.2)'
+                          : 'rgba(239,68,68,0.2)',
                         padding: '1.25rem',
                         borderRadius: '12px',
                         marginBottom: '1rem',
@@ -4199,20 +4139,20 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Expiration Recommendation */}
                 <div style={{
-                  ...lowerTerminalSection('rgba(59,130,246,0.4)'),
+                  ...lowerTerminalSection('rgba(148,163,184,0.35)'),
                 }}>
-                  <h3 style={{ ...lowerTerminalTitle, color: '#3B82F6' }}>📅 Recommended Expiration</h3>
+                  <h3 style={{ ...lowerTerminalTitle, color: 'var(--msp-muted)' }}>📅 Recommended Expiration</h3>
                   
                   {result.primaryExpiration ? (
                     <>
                       <div style={{
-                        background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.05))',
+                        background: 'var(--msp-panel-2)',
                         padding: '1.25rem',
                         borderRadius: '12px',
                         marginBottom: '1rem',
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                          <span style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#3B82F6' }}>
+                          <span style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--msp-muted)' }}>
                             {result.primaryExpiration.dte} DTE
                           </span>
                           <span style={{
@@ -4262,7 +4202,7 @@ export default function OptionsConfluenceScanner() {
                                 borderRadius: '8px',
                                 fontSize: '0.85rem'
                               }}>
-                                <span style={{ fontWeight: 'bold', color: '#3B82F6' }}>{e.dte} DTE</span>
+                                <span style={{ fontWeight: 'bold', color: 'var(--msp-muted)' }}>{e.dte} DTE</span>
                                 <span style={{ color: '#64748B', marginLeft: '6px' }}>({e.expirationDate})</span>
                               </div>
                             ))}
@@ -4282,10 +4222,10 @@ export default function OptionsConfluenceScanner() {
             {/* Open Interest Analysis */}
             {institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
               <div style={{
-                ...lowerTerminalSection('rgba(139,92,246,0.4)'),
+                ...lowerTerminalSection('rgba(20,184,166,0.35)'),
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: 'var(--msp-accent)' }}>📈 Open Interest Analysis</h3>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ 
                       background: 'rgba(245,158,11,0.2)', 
@@ -4295,9 +4235,9 @@ export default function OptionsConfluenceScanner() {
                       📅 EOD Data
                     </span>
                     <span style={{ 
-                      background: 'rgba(139,92,246,0.2)', 
+                      background: 'var(--msp-panel-2)', 
                       ...lowerTerminalPill,
-                      color: '#A78BFA'
+                      color: 'var(--msp-accent)'
                     }}>
                       Expiry: {result.openInterestAnalysis.expirationDate}
                     </span>
@@ -4307,7 +4247,7 @@ export default function OptionsConfluenceScanner() {
                 <div className="card-grid-mobile" style={{ marginBottom: '1rem' }}>
                   {/* P/C Ratio */}
                   <div style={{
-                    background: 'rgba(139,92,246,0.15)',
+                    background: 'var(--msp-panel-2)',
                     padding: '1rem',
                     borderRadius: '12px',
                     textAlign: 'center'
@@ -4424,7 +4364,7 @@ export default function OptionsConfluenceScanner() {
                               <th style={{ textAlign: 'right', padding: '0.5rem', color: '#10B981', fontWeight: '500' }}>Δ</th>
                               <th style={{ textAlign: 'right', padding: '0.5rem', color: '#A855F7', fontWeight: '500' }}>Γ</th>
                               <th style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444', fontWeight: '500' }}>Θ</th>
-                              <th style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6', fontWeight: '500' }}>ν</th>
+                              <th style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--msp-muted)', fontWeight: '500' }}>ν</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -4466,7 +4406,7 @@ export default function OptionsConfluenceScanner() {
                                 <td style={{ textAlign: 'right', padding: '0.5rem', color: '#EF4444' }}>
                                   {s.theta !== undefined ? s.theta.toFixed(3) : '-'}
                                 </td>
-                                <td style={{ textAlign: 'right', padding: '0.5rem', color: '#3B82F6' }}>
+                                <td style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--msp-muted)' }}>
                                   {s.vega !== undefined ? s.vega.toFixed(3) : '-'}
                                 </td>
                               </tr>
@@ -4519,10 +4459,10 @@ export default function OptionsConfluenceScanner() {
             ) : (
               /* No Options Data Available - Show Placeholder */
               <div style={{
-                ...lowerTerminalSection('rgba(139,92,246,0.4)'),
+                ...lowerTerminalSection('rgba(20,184,166,0.35)'),
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: '#8B5CF6' }}>📈 Open Interest Analysis</h3>
+                  <h3 style={{ ...lowerTerminalTitle, margin: 0, color: 'var(--msp-accent)' }}>📈 Open Interest Analysis</h3>
                   <span style={{ 
                     background: 'rgba(245,158,11,0.2)', 
                     ...lowerTerminalPill,
@@ -4676,7 +4616,7 @@ export default function OptionsConfluenceScanner() {
                     <span style={{ color: '#64748B' }}>Symbol:</span>
                     <span style={{ color: '#E2E8F0', marginLeft: '8px', fontWeight: 'bold' }}>{result.symbol}</span>
                     <span style={{ color: '#64748B', marginLeft: '16px' }}>@</span>
-                    <span style={{ color: '#3B82F6', marginLeft: '8px' }}>${formatPrice(result.currentPrice)}</span>
+                    <span style={{ color: 'var(--msp-muted)', marginLeft: '8px' }}>${formatPrice(result.currentPrice)}</span>
                   </div>
                   
                   <div style={{ marginBottom: '0.5rem' }}>
@@ -4698,7 +4638,7 @@ export default function OptionsConfluenceScanner() {
                   
                   <div style={{ marginBottom: '0.5rem' }}>
                     <span style={{ color: '#64748B' }}>Expiration:</span>
-                    <span style={{ color: '#3B82F6', marginLeft: '8px', fontWeight: 'bold' }}>{result.primaryExpiration.expirationDate}</span>
+                    <span style={{ color: 'var(--msp-muted)', marginLeft: '8px', fontWeight: 'bold' }}>{result.primaryExpiration.expirationDate}</span>
                     <span style={{ color: '#64748B', marginLeft: '8px' }}>({result.primaryExpiration.dte} DTE)</span>
                   </div>
                   
@@ -4712,7 +4652,7 @@ export default function OptionsConfluenceScanner() {
                       {urgencyEmoji(result.entryTiming.urgency)} {result.entryTiming.urgency.toUpperCase()}
                     </span>
                   </div>
-                  
+                    <div style={{ fontWeight: 'bold', color: 'var(--msp-muted)', marginBottom: '0.5rem' }}>Expiration Logic</div>
                   <div style={{ 
                     borderTop: '1px solid rgba(255,255,255,0.1)', 
                     paddingTop: '0.75rem', 
@@ -4763,7 +4703,7 @@ export default function OptionsConfluenceScanner() {
               
               <div>
                 <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📅</div>
-                <div style={{ fontWeight: 'bold', color: '#3B82F6', marginBottom: '0.5rem' }}>Expiration Logic</div>
+                <div style={{ fontWeight: 'bold', color: 'var(--msp-muted)', marginBottom: '0.5rem' }}>Expiration Logic</div>
                 <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>
                   Matches expiration to your trading timeframe - scalping gets 0-2 DTE, swing trading gets weekly/monthly options.
                 </div>

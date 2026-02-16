@@ -112,7 +112,7 @@ export default function CryptoSearchWidget() {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--msp-card)',
       borderRadius: '12px',
       padding: '20px',
       border: '1px solid #334155',

@@ -279,7 +279,7 @@ export default function CryptoHeatmap() {
               <span className="text-xs text-slate-400">-8%</span>
             </div>
             <div className="w-24 h-3 rounded" style={{
-              background: 'linear-gradient(to right, rgb(200, 50, 75), rgb(50, 50, 60), rgb(50, 200, 75))'
+              background: 'var(--msp-panel)'
             }}></div>
             <div className="flex items-center gap-1">
               <div className="w-4 h-4 rounded" style={{ backgroundColor: getHeatColor(8) }}></div>

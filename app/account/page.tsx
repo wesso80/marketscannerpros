@@ -52,10 +52,10 @@ export default function AccountPage() {
   };
 
   const tierDisplay = {
-    free: { name: "Free", color: "#9ca3af", badge: "bg-gray-600" },
-    pro: { name: "Pro", color: "#22c55e", badge: "bg-emerald-600" },
-    pro_trader: { name: "Pro Trader", color: "#3b82f6", badge: "bg-blue-600" },
-    anonymous: { name: "Not Signed In", color: "#6b7280", badge: "bg-gray-700" },
+    free: { name: "Free", color: "#9ca3af", badge: "#475569" },
+    pro: { name: "Pro", color: "#22c55e", badge: "#059669" },
+    pro_trader: { name: "Pro Trader", color: "var(--msp-accent)", badge: "var(--msp-accent)" },
+    anonymous: { name: "Not Signed In", color: "#6b7280", badge: "#374151" },
   };
 
   const currentTier = tierDisplay[tier] || tierDisplay.anonymous;
@@ -92,7 +92,7 @@ export default function AccountPage() {
           <div style={{ 
             textAlign: "center", 
             padding: 60,
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+            background: "var(--msp-card)",
             borderRadius: 16,
             border: "1px solid rgba(51,65,85,0.8)"
           }}>
@@ -105,7 +105,7 @@ export default function AccountPage() {
               style={{
                 display: "inline-block",
                 padding: "12px 32px",
-                background: "linear-gradient(135deg, #14b8a6, #22c55e)",
+                background: "var(--msp-accent)",
                 color: "#0b1120",
                 borderRadius: 999,
                 fontWeight: 600,
@@ -119,7 +119,7 @@ export default function AccountPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {/* Subscription Status Card */}
             <div style={{ 
-              background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+              background: "var(--msp-card)",
               borderRadius: 16,
               border: "1px solid rgba(51,65,85,0.8)",
               padding: 32,
@@ -163,7 +163,7 @@ export default function AccountPage() {
                     href="/pricing"
                     style={{
                       padding: "10px 20px",
-                      background: "linear-gradient(135deg, #14b8a6, #22c55e)",
+                      background: "var(--msp-accent)",
                       border: "none",
                       borderRadius: 10,
                       color: "#0b1120",
@@ -181,7 +181,7 @@ export default function AccountPage() {
 
             {/* Plan Features Card */}
             <div style={{ 
-              background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+              background: "var(--msp-card)",
               borderRadius: 16,
               border: "1px solid rgba(51,65,85,0.8)",
               padding: 32
@@ -232,19 +232,19 @@ export default function AccountPage() {
                 {tier === "pro_trader" && (
                   <>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> Everything in Pro
+                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Everything in Pro
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> MSP Analyst AI (200/day)
+                      <span style={{ color: "var(--msp-accent)" }}>✓</span> MSP Analyst AI (200/day)
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> Full backtesting engine
+                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Full backtesting engine
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> Golden Egg Deep Analysis
+                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Golden Egg Deep Analysis
                     </li>
                     <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#3b82f6" }}>✓</span> Premium support
+                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Premium support
                     </li>
                   </>
                 )}
@@ -253,16 +253,16 @@ export default function AccountPage() {
             {/* Referral Program Card */}
             {referralInfo && (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(59,130,246,0.1), rgba(147,51,234,0.05))",
+                background: "var(--msp-panel)",
                 borderRadius: 16,
-                border: "1px solid rgba(59,130,246,0.3)",
+                border: "1px solid var(--msp-border)",
                 padding: 32
               }}>
                 <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
                   <span>🎁</span> Refer a Friend
                 </h2>
                 <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
-                  When your friend subscribes, you <strong style={{ color: "#60a5fa" }}>both get 1 month Pro Trader free!</strong>
+                  When your friend subscribes, you <strong style={{ color: "var(--msp-accent)" }}>both get 1 month Pro Trader free!</strong>
                 </p>
 
                 {/* Referral Link */}
@@ -289,7 +289,7 @@ export default function AccountPage() {
                       onClick={copyReferralLink}
                       style={{
                         padding: "12px 20px",
-                        background: copied ? "#22c55e" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                        background: copied ? "#22c55e" : "var(--msp-accent)",
                         border: "none",
                         borderRadius: 8,
                         color: "#fff",

@@ -67,13 +67,13 @@ function AuthContent() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      background: 'var(--msp-bg)',
       padding: '20px'
     }}>
       <div style={{
         maxWidth: '420px',
         width: '100%',
-        background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.8))',
+        background: 'var(--msp-card)',
         border: '1px solid rgba(51,65,85,0.8)',
         borderRadius: '20px',
         padding: '40px',
@@ -179,7 +179,7 @@ function AuthContent() {
                 padding: '16px',
                 background: loading 
                   ? '#374151' 
-                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  : 'var(--msp-accent)',
                 border: 'none',
                 borderRadius: '10px',
                 color: '#fff',
@@ -238,7 +238,7 @@ export default function AuthPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+        background: 'var(--msp-bg)'
       }}>
         <div style={{ color: '#94a3b8' }}>Loading...</div>
       </main>

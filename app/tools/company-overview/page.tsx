@@ -354,12 +354,12 @@ function CompanyOverviewContent() {
             onChange={(e) => setSymbol(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter ticker symbol (e.g., AAPL)"
-            style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: "#fff", fontSize: "15px" }}
+            style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "var(--msp-card)", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: "#fff", fontSize: "15px" }}
           />
           <button
             onClick={handleSearch}
             disabled={loading}
-            style={{ padding: "14px 28px", background: "linear-gradient(135deg, #10B981, #059669)", border: "none", borderRadius: "12px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "0 4px 15px rgba(16,185,129,0.3)" }}
+            style={{ padding: "14px 28px", background: "var(--msp-accent)", border: "none", borderRadius: "12px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "0 4px 15px rgba(16,185,129,0.3)" }}
           >
             {loading ? "Loading..." : "Search"}
           </button>
@@ -374,7 +374,7 @@ function CompanyOverviewContent() {
         {data && (
           <div style={{ display: "grid", gap: "20px" }}>
             {/* Company Header */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                 <div>
                   <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#fff", marginBottom: "12px" }}>
@@ -384,7 +384,7 @@ function CompanyOverviewContent() {
                     <span style={{ padding: "8px 14px", background: "rgba(16, 185, 129, 0.15)", borderRadius: "8px", color: "#10B981", fontSize: "13px", border: "1px solid rgba(16,185,129,0.3)" }}>
                       {data.sector}
                     </span>
-                    <span style={{ padding: "8px 14px", background: "rgba(59, 130, 246, 0.15)", borderRadius: "8px", color: "#3B82F6", fontSize: "13px", border: "1px solid rgba(59,130,246,0.3)" }}>
+                    <span style={{ padding: "8px 14px", background: "var(--msp-panel)", borderRadius: "8px", color: "var(--msp-accent)", fontSize: "13px", border: "1px solid var(--msp-border)" }}>
                       {data.industry}
                     </span>
                   </div>
@@ -411,8 +411,8 @@ function CompanyOverviewContent() {
 
             {/* AI Decision Lens - Pro feature */}
             {decisionLens && canAccessPortfolioInsights(tier) && (
-              <div style={{ background: "linear-gradient(145deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))", borderRadius: "16px", border: "1px solid rgba(59,130,246,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#3B82F6", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                   <span style={{ fontSize: "1.5rem" }}>🧠</span> AI Decision Lens
                 </h3>
                 <p style={{ color: "#E2E8F0", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
@@ -430,7 +430,7 @@ function CompanyOverviewContent() {
             {(bullCase.length > 0 || bearCase.length > 0) && canAccessPortfolioInsights(tier) && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
                 {/* Bull Case */}
-                <div style={{ background: "linear-gradient(145deg, rgba(16, 185, 129, 0.08), rgba(15,23,42,0.95))", borderRadius: "16px", border: "1px solid rgba(16,185,129,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+                <div style={{ background: "rgba(16,185,129,0.08)", borderRadius: "16px", border: "1px solid rgba(16,185,129,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#10B981", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>📈</span> Bull Case
                   </h3>
@@ -446,7 +446,7 @@ function CompanyOverviewContent() {
                 </div>
 
                 {/* Bear Case */}
-                <div style={{ background: "linear-gradient(145deg, rgba(239, 68, 68, 0.08), rgba(15,23,42,0.95))", borderRadius: "16px", border: "1px solid rgba(239,68,68,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+                <div style={{ background: "rgba(239,68,68,0.08)", borderRadius: "16px", border: "1px solid rgba(239,68,68,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#EF4444", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>⚠️</span> Risk Case
                   </h3>
@@ -466,7 +466,7 @@ function CompanyOverviewContent() {
             {/* Technical Bias Banner */}
             {technicalBias && (
               <div style={{ 
-                background: `linear-gradient(145deg, ${technicalBias.color}15, rgba(15,23,42,0.95))`, 
+                background: `${technicalBias.color}15`, 
                 borderRadius: "12px", 
                 border: `1px solid ${technicalBias.color}40`, 
                 padding: "16px 20px",
@@ -488,7 +488,7 @@ function CompanyOverviewContent() {
             )}
 
             {/* Valuation Metrics */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", margin: 0 }}>📊 Valuation</h3>
                 {valuation && (
@@ -524,7 +524,7 @@ function CompanyOverviewContent() {
             </div>
 
             {/* Profitability */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💰 Profitability</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Profit Margin" value={formatPercentRaw(data.profitMargin)} />
@@ -536,7 +536,7 @@ function CompanyOverviewContent() {
             </div>
 
             {/* Growth & Revenue */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
@@ -555,7 +555,7 @@ function CompanyOverviewContent() {
             </div>
 
             {/* Technical Indicators */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📉 Technical</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
@@ -567,7 +567,7 @@ function CompanyOverviewContent() {
 
             {/* Dividends */}
             {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
-              <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💵 Dividends</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                   <MetricCard label="Dividend Yield" value={formatPercentRaw(data.dividendYield)} />

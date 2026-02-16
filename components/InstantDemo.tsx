@@ -120,7 +120,7 @@ export default function InstantDemo() {
   return (
     <section style={{
       width: '100%',
-      background: 'linear-gradient(180deg, #0a0e1a 0%, #020617 100%)',
+      background: 'var(--msp-bg)',
       borderBottom: '1px solid rgba(34,197,94,0.15)',
       padding: '48px 0 56px'
     }}>
@@ -146,14 +146,14 @@ export default function InstantDemo() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
-            background: 'rgba(59,130,246,0.1)',
-            border: '1px solid rgba(59,130,246,0.3)',
+            background: 'rgba(20,184,166,0.1)',
+            border: '1px solid rgba(20,184,166,0.3)',
             borderRadius: 999,
             padding: '6px 14px',
             marginBottom: 14
           }}>
             <span style={{ fontSize: 14 }}>🎯</span>
-            <span style={{ color: '#60a5fa', fontSize: 12, fontWeight: 600 }}>TRY IT NOW — NO SIGNUP</span>
+            <span style={{ color: 'var(--msp-accent)', fontSize: 12, fontWeight: 600 }}>TRY IT NOW — NO SIGNUP</span>
           </div>
           
           <h2 style={{
@@ -206,9 +206,7 @@ export default function InstantDemo() {
               padding: '14px 28px',
               borderRadius: 999,
               border: 'none',
-              background: isLoading 
-                ? 'linear-gradient(90deg, #22c55e, #14b8a6, #22c55e)'
-                : 'linear-gradient(135deg, #22c55e, #14b8a6)',
+              background: 'var(--msp-accent)',
               backgroundSize: isLoading ? '200% 100%' : '100% 100%',
               animation: isLoading ? 'shimmer 1.5s linear infinite' : 'none',
               color: '#0b1120',
@@ -258,7 +256,7 @@ export default function InstantDemo() {
         {/* Result card */}
         {showResult && result && (
           <div style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(2,6,23,0.98))',
+            background: 'var(--msp-card)',
             borderRadius: 16,
             border: `1px solid ${
               result.direction === 'bullish' ? 'rgba(34,197,94,0.3)' : 
@@ -278,10 +276,10 @@ export default function InstantDemo() {
               right: 0,
               height: 3,
               background: result.direction === 'bullish' 
-                ? 'linear-gradient(90deg, #22c55e, #14b8a6)'
+                ? '#22c55e'
                 : result.direction === 'bearish'
-                ? 'linear-gradient(90deg, #ef4444, #f97316)'
-                : 'linear-gradient(90deg, #6b7280, #9ca3af)'
+                ? '#ef4444'
+                : '#94a3b8'
             }} />
 
             {/* Header */}
@@ -345,14 +343,14 @@ export default function InstantDemo() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              background: 'rgba(59,130,246,0.1)',
-              border: '1px solid rgba(59,130,246,0.3)',
+              background: 'rgba(20,184,166,0.1)',
+              border: '1px solid rgba(20,184,166,0.3)',
               borderRadius: 999,
               padding: '8px 14px',
               marginBottom: 14
             }}>
               <span>🎯</span>
-              <span style={{ color: '#60a5fa', fontWeight: 600, fontSize: 14 }}>{result.type}</span>
+              <span style={{ color: 'var(--msp-accent)', fontWeight: 600, fontSize: 14 }}>{result.type}</span>
             </div>
 
             {/* AI Insight */}
@@ -360,12 +358,12 @@ export default function InstantDemo() {
               background: 'rgba(0,0,0,0.3)',
               borderRadius: 10,
               padding: '14px 16px',
-              borderLeft: '3px solid #14b8a6',
+              borderLeft: '3px solid var(--msp-accent)',
               marginBottom: 14
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span>🤖</span>
-                <span style={{ color: '#14b8a6', fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>
+                <span style={{ color: 'var(--msp-accent)', fontWeight: 600, fontSize: 12, textTransform: 'uppercase' }}>
                   MSP AI Analysis
                 </span>
               </div>
@@ -413,7 +411,7 @@ export default function InstantDemo() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 8,
-                  background: 'linear-gradient(135deg, #22c55e, #14b8a6)',
+                  background: 'var(--msp-accent)',
                   color: '#0b1120',
                   padding: '12px 24px',
                   borderRadius: 999,

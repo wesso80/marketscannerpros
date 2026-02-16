@@ -190,7 +190,7 @@ export default function CommoditiesPage() {
           <button
             onClick={fetchCommodities}
             style={{
-              background: '#3b82f6',
+              background: 'var(--msp-accent)',
               color: '#fff',
               border: 'none',
               padding: '0.75rem 1.5rem',
@@ -315,8 +315,8 @@ export default function CommoditiesPage() {
         <button
           onClick={() => setSelectedCategory('all')}
           style={{
-            background: selectedCategory === 'all' ? '#3b82f6' : 'rgba(59, 130, 246, 0.1)',
-            border: `1px solid ${selectedCategory === 'all' ? '#3b82f6' : 'rgba(59, 130, 246, 0.3)'}`,
+            background: selectedCategory === 'all' ? 'var(--msp-accent)' : 'var(--msp-panel)',
+            border: `1px solid ${selectedCategory === 'all' ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
             color: '#fff',
             padding: '0.5rem 1rem',
             borderRadius: '8px',
@@ -357,9 +357,9 @@ export default function CommoditiesPage() {
           <button
             onClick={fetchCommodities}
             style={{
-              background: 'rgba(59, 130, 246, 0.1)',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              color: '#3b82f6',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
+              color: 'var(--msp-accent)',
               padding: '0.5rem 1rem',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -460,9 +460,7 @@ export default function CommoditiesPage() {
                           style={{
                             flex: 1,
                             height: `${Math.max(10, height)}%`,
-                            background: isPositive 
-                              ? 'linear-gradient(180deg, #22c55e 0%, rgba(34, 197, 94, 0.3) 100%)'
-                              : 'linear-gradient(180deg, #ef4444 0%, rgba(239, 68, 68, 0.3) 100%)',
+                            background: isPositive ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)',
                             borderRadius: '2px',
                           }}
                         />

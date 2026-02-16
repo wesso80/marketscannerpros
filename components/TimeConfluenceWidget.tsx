@@ -88,7 +88,7 @@ export default function TimeConfluenceWidget({
       case 'very_high':
         return '#F59E0B'; // Orange
       case 'medium':
-        return '#3B82F6'; // Blue
+        return 'var(--msp-accent)';
       default:
         return '#64748B'; // Gray
     }
@@ -115,7 +115,7 @@ export default function TimeConfluenceWidget({
     const colors: Record<string, { bg: string; text: string }> = {
       pre: { bg: 'rgba(251,191,36,0.2)', text: '#FBBF24' },
       regular: { bg: 'rgba(16,185,129,0.2)', text: '#10B981' },
-      after: { bg: 'rgba(139,92,246,0.2)', text: '#8B5CF6' },
+      after: { bg: 'rgba(148,163,184,0.2)', text: 'var(--msp-muted)' },
       closed: { bg: 'rgba(100,116,139,0.2)', text: '#64748B' },
     };
     const { bg, text } = colors[state.sessionType];
@@ -413,7 +413,7 @@ export default function TimeConfluenceWidget({
                       }
                     }}
                     style={{
-                      background: 'linear-gradient(135deg, #A855F7, #8B5CF6)',
+                      background: 'var(--msp-accent)',
                       border: 'none',
                       borderRadius: '6px',
                       color: 'white',
@@ -474,8 +474,8 @@ export default function TimeConfluenceWidget({
                     <span
                       key={candle}
                       style={{
-                        background: candle.includes('Fib') ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.2)',
-                        color: candle.includes('Fib') ? '#F59E0B' : '#3B82F6',
+                        background: candle.includes('Fib') ? 'rgba(245,158,11,0.2)' : 'var(--msp-panel)',
+                        color: candle.includes('Fib') ? '#F59E0B' : 'var(--msp-accent)',
                         padding: '4px 10px',
                         borderRadius: '6px',
                         fontSize: '0.85rem',
@@ -492,7 +492,7 @@ export default function TimeConfluenceWidget({
             {/* Next Major Confluence */}
             {state.nextMajor && (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(59,130,246,0.2))',
+                background: 'var(--msp-panel)',
                 borderRadius: '10px',
                 padding: '1rem',
                 marginBottom: '1rem',
@@ -543,7 +543,7 @@ export default function TimeConfluenceWidget({
                         borderRadius: '6px',
                       }}
                     >
-                      <span style={{ color: '#3B82F6', fontWeight: 500, fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--msp-accent)', fontWeight: 500, fontSize: '0.85rem' }}>
                         {window.start} - {window.end}
                       </span>
                       <span style={{ color: '#64748B', fontSize: '0.75rem' }}>
@@ -609,11 +609,11 @@ export default function TimeConfluenceWidget({
             {/* Next Macro Event */}
             {state.nextMacroConfluence && (
               <div style={{
-                background: `linear-gradient(135deg, ${
+                background: `${
                   state.nextMacroConfluence.isYearly ? 'rgba(239,68,68,0.2)' :
                   state.nextMacroConfluence.isQuarterly ? 'rgba(245,158,11,0.2)' :
-                  'rgba(59,130,246,0.2)'
-                }, rgba(30,41,59,0.8))`,
+                  'var(--msp-panel)'
+                }`,
                 borderRadius: '12px',
                 padding: '1.25rem',
                 marginBottom: '1rem',
@@ -659,10 +659,10 @@ export default function TimeConfluenceWidget({
                         style={{
                           background: candle === 'Yearly' ? 'rgba(239,68,68,0.2)' :
                                      candle === 'Quarterly' ? 'rgba(245,158,11,0.2)' :
-                                     'rgba(59,130,246,0.2)',
+                                     'var(--msp-panel)',
                           color: candle === 'Yearly' ? '#EF4444' :
                                  candle === 'Quarterly' ? '#F59E0B' :
-                                 '#3B82F6',
+                                 'var(--msp-accent)',
                           padding: '4px 10px',
                           borderRadius: '6px',
                           fontSize: '0.85rem',
@@ -689,9 +689,9 @@ export default function TimeConfluenceWidget({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem' }}>
                 {[
                   { label: 'Daily', days: '1', color: '#64748B' },
-                  { label: 'Weekly', days: '5', color: '#3B82F6' },
-                  { label: 'Bi-weekly', days: '10', color: '#3B82F6' },
-                  { label: '3-Week', days: '15', color: '#8B5CF6' },
+                  { label: 'Weekly', days: '5', color: 'var(--msp-accent)' },
+                  { label: 'Bi-weekly', days: '10', color: 'var(--msp-accent)' },
+                  { label: '3-Week', days: '15', color: 'var(--msp-muted)' },
                   { label: 'Monthly', days: '21', color: '#F59E0B' },
                   { label: 'Quarterly', days: '63', color: '#EF4444' },
                 ].map((tf) => (
@@ -747,7 +747,7 @@ export default function TimeConfluenceWidget({
                         borderLeft: `3px solid ${
                           isYearly ? '#EF4444' :
                           isQuarterly ? '#F59E0B' :
-                          '#3B82F6'
+                          'var(--msp-accent)'
                         }`,
                       }}
                     >

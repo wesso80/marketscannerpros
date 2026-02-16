@@ -28,13 +28,13 @@ const features = [
     icon: <FaSearch size={32} color="#f59e0b" />, title: "Market Structure Logic", desc: "Explains why a signal appeared, what conditions align, and what risks exist — using professional market structure logic."
   },
   {
-    icon: <FaBrain size={32} color="#8b5cf6" />, title: "AI-Powered Insights", desc: "Think of it as a market analyst, not a signal bot."
+    icon: <FaBrain size={32} color="var(--msp-accent)" />, title: "AI-Powered Insights", desc: "Think of it as a market analyst, not a signal bot."
   },
   {
     icon: <FaBolt size={32} color="#ef4444" />, title: "Risk Awareness", desc: "Highlights potential fakeouts, late-stage moves, and volatility changes."
   },
   {
-    icon: <FaCogs size={32} color="#3b82f6" />, title: "Structure & Liquidity Context", desc: "Shows key support/resistance, liquidity, and invalidation zones."
+    icon: <FaCogs size={32} color="var(--msp-accent)" />, title: "Structure & Liquidity Context", desc: "Shows key support/resistance, liquidity, and invalidation zones."
   },
   {
     icon: <FaComments size={32} color="#22c55e" />, title: "Decision Support", desc: "Clear, structured, actionable explanations for decision-making." 
@@ -47,7 +47,7 @@ export default function Home() {
     <>
       {/* Top Announcement Banner */}
       <div style={{
-        background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderBottom: '1px solid rgba(34,197,94,0.3)',
         padding: '12px 20px',
         textAlign: 'center',
@@ -86,7 +86,7 @@ export default function Home() {
       {/* Modern SaaS Hero Section (TrendSpider-style layout, user text) */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #0a0e1a 0%, #111827 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         borderBottom: '1px solid #1f2933',
@@ -136,7 +136,7 @@ export default function Home() {
                     display: 'inline-block',
                     borderRadius: 999,
                     border: 'none',
-                    background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                    background: 'var(--msp-accent)',
                     color: '#0b1120',
                     padding: '16px 32px',
                     fontSize: 16,
@@ -187,7 +187,7 @@ export default function Home() {
                     key={f.title}
                     onClick={() => setActiveFeature(i)}
                     style={{
-                      background: activeFeature === i ? 'linear-gradient(135deg, #14b8a6 0%, #22c55e 100%)' : 'rgba(30,41,59,0.7)',
+                      background: activeFeature === i ? 'var(--msp-accent)' : 'rgba(30,41,59,0.7)',
                       color: activeFeature === i ? '#0b1120' : '#e5e7eb',
                       border: activeFeature === i ? '2px solid #22c55e' : '1px solid #334155',
                       borderRadius: 999,
@@ -208,7 +208,7 @@ export default function Home() {
               <div style={{
                 maxWidth: 420,
                 margin: '0 auto',
-                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                background: 'var(--msp-card)',
                 border: '1.5px solid #334155',
                 borderRadius: 18,
                 boxShadow: '0 8px 32px rgba(16,185,129,0.08)',
@@ -231,7 +231,7 @@ export default function Home() {
       {/* How It Works Stepper */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #0b1220 0%, #0f172a 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         borderBottom: '1px solid #1f2933',
         padding: '40px 0'
@@ -267,7 +267,7 @@ export default function Home() {
       {/* Scan the Market Section (TrendSpider-style, user text) */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #111827 0%, #0f172a 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         borderBottom: '1px solid #1f2933',
@@ -307,7 +307,7 @@ export default function Home() {
                 display: 'inline-block',
                 borderRadius: 999,
                 border: 'none',
-                background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                background: 'var(--msp-accent)',
                 color: '#0b1120',
                 padding: '16px 36px',
                 fontSize: 17,
@@ -359,7 +359,7 @@ export default function Home() {
       {/* Crypto Market Pulse - Trending, Movers, Sectors */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #0f172a 0%, #0a0e1a 100%)',
+        background: 'var(--msp-bg)',
         padding: '48px 0',
         borderBottom: '1px solid #1f2933'
       }}>
@@ -458,7 +458,7 @@ export default function Home() {
           }}>
             {/* Free Tier */}
             <div style={{
-              background: 'linear-gradient(145deg, #020617, #0f172a)',
+              background: 'var(--msp-card)',
               borderRadius: 18,
               border: '1px solid #1f2933',
               boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
@@ -581,7 +581,7 @@ export default function Home() {
                   width: '100%',
                   borderRadius: 999,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                  background: 'var(--msp-accent)',
                   color: '#0b1120',
                   padding: '14px 20px',
                   fontSize: 15,
@@ -598,9 +598,9 @@ export default function Home() {
 
             {/* Pro Trader Tier */}
             <div style={{
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               borderRadius: 18,
-              border: '1px solid rgba(59,130,246,0.3)',
+              border: '1px solid var(--msp-border)',
               boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
               padding: '28px 26px',
               position: 'relative',
@@ -639,7 +639,7 @@ export default function Home() {
                     borderBottom: i < 5 ? '1px solid rgba(15,23,42,0.85)' : 'none'
                   }}>
                     <span style={{ color: '#60a5fa', fontSize: 16 }}>✓</span>
-                    <span style={{ color: item.highlight ? '#93c5fd' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
+                    <span style={{ color: item.highlight ? 'var(--msp-muted)' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                   </li>
                 ))}
               </ul>
@@ -651,7 +651,7 @@ export default function Home() {
                   width: '100%',
                   borderRadius: 999,
                   border: 'none',
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  background: 'var(--msp-accent)',
                   color: '#fff',
                   padding: '14px 20px',
                   fontSize: 15,
@@ -659,7 +659,7 @@ export default function Home() {
                   cursor: 'pointer',
                   textAlign: 'center',
                   textDecoration: 'none',
-                  boxShadow: '0 4px 15px rgba(59,130,246,0.3)'
+                  boxShadow: 'var(--msp-shadow)'
                 }}
               >
                 Upgrade to Pro Trader

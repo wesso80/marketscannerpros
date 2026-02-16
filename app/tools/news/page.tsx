@@ -155,10 +155,10 @@ function getMarketCapRank(symbol: string): { rank: 'top10' | 'top25' | 'top100' 
     return { rank: 'top10', label: '🔥 TOP 10', color: '#F59E0B', bgColor: 'rgba(245,158,11,0.2)' };
   }
   if (TOP_25_COMPANIES.includes(sym)) {
-    return { rank: 'top25', label: '⚡ TOP 25', color: '#8B5CF6', bgColor: 'rgba(139,92,246,0.2)' };
+    return { rank: 'top25', label: '⚡ TOP 25', color: 'var(--msp-accent)', bgColor: 'rgba(16,185,129,0.2)' };
   }
   if (TOP_100_COMPANIES.includes(sym)) {
-    return { rank: 'top100', label: '📊 TOP 100', color: '#3B82F6', bgColor: 'rgba(59,130,246,0.2)' };
+    return { rank: 'top100', label: '📊 TOP 100', color: '#94A3B8', bgColor: 'rgba(148,163,184,0.2)' };
   }
   return { rank: null, label: '', color: '', bgColor: '' };
 }
@@ -457,7 +457,7 @@ export default function NewsSentimentPage() {
             onClick={() => setActiveTab("news")}
             style={{
               padding: "1rem 1.5rem",
-              background: activeTab === "news" ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))" : "transparent",
+              background: activeTab === "news" ? "rgba(16,185,129,0.15)" : "transparent",
               border: activeTab === "news" ? "1px solid rgba(16,185,129,0.5)" : "1px solid transparent",
               borderRadius: "10px",
               color: activeTab === "news" ? "#10B981" : "#94A3B8",
@@ -473,7 +473,7 @@ export default function NewsSentimentPage() {
             onClick={() => setActiveTab("earnings")}
             style={{
               padding: "1rem 1.5rem",
-              background: activeTab === "earnings" ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))" : "transparent",
+              background: activeTab === "earnings" ? "rgba(16,185,129,0.15)" : "transparent",
               border: activeTab === "earnings" ? "1px solid rgba(16,185,129,0.5)" : "1px solid transparent",
               borderRadius: "10px",
               color: activeTab === "earnings" ? "#10B981" : "#94A3B8",
@@ -491,7 +491,7 @@ export default function NewsSentimentPage() {
         {activeTab === "news" && (
           <>
             {/* Search Controls */}
-        <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+        <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "2rem", marginBottom: "2rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
           <div
             style={{
               display: 'grid',
@@ -532,7 +532,7 @@ export default function NewsSentimentPage() {
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                style={{ padding: "0.75rem 2rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, height: "fit-content" }}
+                style={{ padding: "0.75rem 2rem", background: "var(--msp-accent)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, height: "fit-content" }}
               >
                 {loading ? "Finding News Setup..." : "Find News Setup"}
               </button>
@@ -563,7 +563,7 @@ export default function NewsSentimentPage() {
         {/* AI News Analysis Panel */}
         {(newsAIAnalysis || aiAnalysisLoading) && (
           <div style={{ 
-            background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(30,41,59,0.8))",
+            background: "rgba(245,158,11,0.1)",
             borderRadius: "16px",
             border: "2px solid rgba(245,158,11,0.3)",
             padding: "1.5rem",
@@ -579,7 +579,7 @@ export default function NewsSentimentPage() {
               gap: "0.5rem" 
             }}>
               <span style={{ 
-                background: "linear-gradient(135deg, #F59E0B, #D97706)", 
+                background: "#F59E0B", 
                 borderRadius: "8px", 
                 padding: "6px 8px",
                 fontSize: "1rem"
@@ -615,7 +615,7 @@ export default function NewsSentimentPage() {
         {/* Show prompt to search if no analysis yet */}
         {!newsAIAnalysis && !aiAnalysisLoading && articles.length === 0 && !loading && (
           <div style={{ 
-            background: "linear-gradient(145deg, rgba(30,41,59,0.5), rgba(15,23,42,0.8))",
+            background: "var(--msp-card)",
             borderRadius: "16px",
             border: "1px dashed rgba(245,158,11,0.3)",
             padding: "2rem",
@@ -637,7 +637,7 @@ export default function NewsSentimentPage() {
             </div>
             <div style={{ display: "grid", gap: "1.5rem" }}>
               {filteredArticles.map((article, index) => (
-                <div key={index} style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <div key={index} style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
                   {/* Article Header */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "0.75rem", gap: "1rem" }}>
                     <div style={{ flex: 1 }}>
@@ -744,7 +744,7 @@ export default function NewsSentimentPage() {
         {activeTab === "earnings" && (
           <>
             {/* Search Controls */}
-            <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", marginBottom: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", alignItems: "flex-end" }}>
                 <div style={{ flex: "1", minWidth: "150px" }}>
                   <label style={{ display: "block", fontSize: "0.8rem", color: "#94A3B8", marginBottom: "0.4rem" }}>
@@ -776,7 +776,7 @@ export default function NewsSentimentPage() {
                 <button
                   onClick={handleEarningsSearch}
                   disabled={earningsLoading}
-                  style={{ padding: "0.6rem 1.5rem", background: "linear-gradient(to right, #10B981, #3B82F6)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: earningsLoading ? "not-allowed" : "pointer", opacity: earningsLoading ? 0.6 : 1, fontSize: "0.9rem" }}
+                  style={{ padding: "0.6rem 1.5rem", background: "var(--msp-accent)", border: "none", borderRadius: "8px", color: "#fff", fontWeight: "600", cursor: earningsLoading ? "not-allowed" : "pointer", opacity: earningsLoading ? 0.6 : 1, fontSize: "0.9rem" }}
                 >
                   {earningsLoading ? "⏳ Loading..." : "🔍 Search"}
                 </button>
@@ -793,20 +793,20 @@ export default function NewsSentimentPage() {
               <>
                 {/* Quick Stats Bar */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
-                  <div style={{ background: categorizedEarnings.today.length > 0 ? "linear-gradient(145deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.today.length > 0 ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                  <div style={{ background: categorizedEarnings.today.length > 0 ? "rgba(16,185,129,0.15)" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.today.length > 0 ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
                     <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: categorizedEarnings.today.length > 0 ? "#10B981" : "#64748B" }}>{categorizedEarnings.today.length}</div>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Today</div>
                   </div>
-                  <div style={{ background: categorizedEarnings.tomorrow.length > 0 ? "linear-gradient(145deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05))" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.tomorrow.length > 0 ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
+                  <div style={{ background: categorizedEarnings.tomorrow.length > 0 ? "rgba(245,158,11,0.15)" : "rgba(30,41,59,0.5)", borderRadius: "12px", border: categorizedEarnings.tomorrow.length > 0 ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
                     <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: categorizedEarnings.tomorrow.length > 0 ? "#F59E0B" : "#64748B" }}>{categorizedEarnings.tomorrow.length}</div>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tomorrow</div>
                   </div>
                   <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
-                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#3B82F6" }}>{categorizedEarnings.thisWeek.length + categorizedEarnings.today.length + categorizedEarnings.tomorrow.length}</div>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--msp-accent)" }}>{categorizedEarnings.thisWeek.length + categorizedEarnings.today.length + categorizedEarnings.tomorrow.length}</div>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>This Week</div>
                   </div>
                   <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)", padding: "1rem", textAlign: "center" }}>
-                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#8B5CF6" }}>{categorizedEarnings.nextWeek.length}</div>
+                    <div style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--msp-muted)" }}>{categorizedEarnings.nextWeek.length}</div>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Next Week</div>
                   </div>
                 </div>
@@ -827,7 +827,7 @@ export default function NewsSentimentPage() {
                       gap: "0.75rem", 
                       padding: "1rem", 
                       marginBottom: "1rem",
-                      background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(139,92,246,0.05))", 
+                      background: "rgba(245,158,11,0.1)", 
                       borderRadius: "12px", 
                       border: "1px solid rgba(245,158,11,0.3)",
                       alignItems: "center"
@@ -849,26 +849,26 @@ export default function NewsSentimentPage() {
                       )}
                       {top25Count > 0 && (
                         <span style={{ 
-                          background: "rgba(139,92,246,0.2)", 
+                          background: "rgba(20,184,166,0.2)", 
                           padding: "0.25rem 0.6rem", 
                           borderRadius: "6px",
                           fontSize: "0.8rem",
                           fontWeight: "600",
-                          color: "#8B5CF6",
-                          border: "1px solid rgba(139,92,246,0.4)"
+                          color: "var(--msp-muted)",
+                          border: "1px solid rgba(20,184,166,0.4)"
                         }}>
                           ⚡ {top25Count} Top 25
                         </span>
                       )}
                       {top100Count > 0 && (
                         <span style={{ 
-                          background: "rgba(59,130,246,0.2)", 
+                          background: "rgba(148,163,184,0.2)", 
                           padding: "0.25rem 0.6rem", 
                           borderRadius: "6px",
                           fontSize: "0.8rem",
                           fontWeight: "600",
-                          color: "#3B82F6",
-                          border: "1px solid rgba(59,130,246,0.4)"
+                          color: "#94A3B8",
+                          border: "1px solid rgba(148,163,184,0.4)"
                         }}>
                           📊 {top100Count} Top 100
                         </span>
@@ -910,10 +910,10 @@ export default function NewsSentimentPage() {
                 </div>
 
                 {/* Earnings Cards - Grouped by Date */}
-                <div style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+                <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", padding: "1.5rem", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                     <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
-                      <span style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
+                      <span style={{ background: "#f59e0b", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📅</span>
                       {filteredEarnings.length} Earnings Reports
                     </h2>
                     <span style={{ fontSize: "0.8rem", color: "#64748B" }}>
@@ -944,9 +944,9 @@ export default function NewsSentimentPage() {
                                 gap: "1rem",
                                 alignItems: "center",
                                 padding: "1rem",
-                                background: isSelected ? "rgba(59,130,246,0.15)" : isToday ? "rgba(16,185,129,0.1)" : isTomorrow ? "rgba(245,158,11,0.05)" : "rgba(30,41,59,0.3)",
+                                background: isSelected ? "var(--msp-panel)" : isToday ? "rgba(16,185,129,0.1)" : isTomorrow ? "rgba(245,158,11,0.05)" : "rgba(30,41,59,0.3)",
                                 borderRadius: isSelected ? "10px 10px 0 0" : "10px",
-                                border: isSelected ? "2px solid #3B82F6" : isToday ? "1px solid rgba(16,185,129,0.3)" : isTomorrow ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(51,65,85,0.3)",
+                                border: isSelected ? "2px solid var(--msp-accent)" : isToday ? "1px solid rgba(16,185,129,0.3)" : isTomorrow ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(51,65,85,0.3)",
                                 borderBottom: isSelected ? "none" : undefined,
                                 cursor: "pointer",
                                 transition: "all 0.2s ease",
@@ -1009,7 +1009,7 @@ export default function NewsSentimentPage() {
                                 </div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.75rem", color: "#64748B", marginTop: "0.25rem" }}>
                                   <span>Fiscal Period: {event.fiscalDateEnding}</span>
-                                  <span style={{ color: "#3B82F6", fontSize: "0.7rem" }}>• Click for analyst ratings</span>
+                                  <span style={{ color: "var(--msp-accent)", fontSize: "0.7rem" }}>• Click for analyst ratings</span>
                                 </div>
                               </div>
                               
@@ -1023,7 +1023,7 @@ export default function NewsSentimentPage() {
                                 }}>
                                   {event.estimate !== null ? `$${event.estimate.toFixed(2)}` : "N/A"}
                                 </div>
-                                <div style={{ fontSize: "1rem", marginTop: "0.25rem", color: isSelected ? "#3B82F6" : "#64748B" }}>
+                                <div style={{ fontSize: "1rem", marginTop: "0.25rem", color: isSelected ? "var(--msp-accent)" : "#64748B" }}>
                                   {isSelected ? "▼" : "→"}
                                 </div>
                               </div>
@@ -1032,10 +1032,10 @@ export default function NewsSentimentPage() {
                             {/* Inline Analyst Panel - Shows directly under the clicked card */}
                             {isSelected && (
                               <div style={{ 
-                                background: "linear-gradient(145deg, rgba(59,130,246,0.1), rgba(30,41,59,0.5))", 
+                                background: "var(--msp-panel)", 
                                 borderRadius: "0 0 10px 10px",
-                                border: "2px solid #3B82F6",
-                                borderTop: "1px dashed rgba(59,130,246,0.3)",
+                                border: "2px solid var(--msp-accent)",
+                                borderTop: "1px dashed var(--msp-border)",
                                 padding: "1.25rem",
                                 marginTop: "-0.75rem"
                               }}>
@@ -1099,7 +1099,7 @@ export default function NewsSentimentPage() {
                                       </div>
                                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
                                         <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>Target</div>
-                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#3B82F6" }}>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--msp-accent)" }}>
                                           {analystData.targetPrice ? `$${analystData.targetPrice.toFixed(0)}` : 'N/A'}
                                         </div>
                                       </div>
@@ -1111,7 +1111,7 @@ export default function NewsSentimentPage() {
                                       </div>
                                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "8px", padding: "0.5rem", textAlign: "center" }}>
                                         <div style={{ fontSize: "0.6rem", color: "#64748B", textTransform: "uppercase" }}>Div %</div>
-                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#8B5CF6" }}>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "bold", color: "var(--msp-muted)" }}>
                                           {analystData.dividendYield ? `${analystData.dividendYield.toFixed(2)}%` : 'N/A'}
                                         </div>
                                       </div>
@@ -1172,14 +1172,14 @@ export default function NewsSentimentPage() {
                 {earningsAIAnalysis && (
                   <div style={{ 
                     marginTop: "1.5rem",
-                    background: "linear-gradient(145deg, rgba(139,92,246,0.1), rgba(30,41,59,0.5))", 
+                    background: "var(--msp-panel)", 
                     borderRadius: "16px", 
-                    border: "1px solid rgba(139,92,246,0.3)", 
+                    border: "1px solid var(--msp-border)", 
                     padding: "1.5rem", 
                     boxShadow: "0 8px 32px rgba(0,0,0,0.3)" 
                   }}>
-                    <h2 style={{ color: "#8B5CF6", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
-                      <span style={{ background: "linear-gradient(135deg, #8B5CF6, #7C3AED)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>🤖</span>
+                    <h2 style={{ color: "var(--msp-muted)", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "1rem" }}>
+                      <span style={{ background: "var(--msp-muted)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>🤖</span>
                       AI Earnings Insights
                     </h2>
                     <div style={{ color: "#E2E8F0", fontSize: "0.95rem", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>
@@ -1192,7 +1192,7 @@ export default function NewsSentimentPage() {
                 {earningsResults.length > 0 && (
                   <div style={{ 
                     marginTop: "1.5rem",
-                    background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", 
+                    background: "var(--msp-card)", 
                     borderRadius: "16px", 
                     border: "1px solid rgba(51,65,85,0.8)", 
                     padding: "1.5rem", 
@@ -1200,7 +1200,7 @@ export default function NewsSentimentPage() {
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                       <h2 style={{ color: "#10B981", display: "flex", alignItems: "center", gap: "10px", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0 }}>
-                        <span style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📊</span>
+                        <span style={{ background: "var(--msp-accent)", borderRadius: "8px", padding: "6px 8px", fontSize: "14px" }}>📊</span>
                         Recent Earnings Results
                       </h2>
                       <button
@@ -1330,7 +1330,7 @@ export default function NewsSentimentPage() {
 
             {/* Empty State */}
             {!earningsLoading && earnings.length === 0 && !earningsError && (
-              <div style={{ textAlign: "center", padding: "4rem 2rem", background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.5)" }}>
+              <div style={{ textAlign: "center", padding: "4rem 2rem", background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.5)" }}>
                 <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>📅</div>
                 <h3 style={{ color: "#fff", marginBottom: "0.5rem" }}>Search for Upcoming Earnings</h3>
                 <p style={{ color: "#64748B", maxWidth: "400px", margin: "0 auto" }}>

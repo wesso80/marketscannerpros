@@ -45,7 +45,7 @@ export function ProModeDashboard({
   if (compact) {
     return (
       <div style={{
-        background: 'linear-gradient(145deg, rgba(16,185,129,0.08), rgba(30,41,59,0.5))',
+        background: 'rgba(16,185,129,0.08)',
         borderRadius: '16px',
         border: '1px solid rgba(16,185,129,0.2)',
         padding: '1rem',
@@ -125,7 +125,7 @@ export function ProModeDashboard({
   
   return (
     <div style={{
-      background: 'linear-gradient(145deg, rgba(16,185,129,0.05), rgba(30,41,59,0.6))',
+      background: 'rgba(16,185,129,0.05)',
       borderRadius: '20px',
       border: '1px solid rgba(16,185,129,0.2)',
       padding: '1.5rem',
@@ -141,7 +141,7 @@ export function ProModeDashboard({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span style={{
-            background: 'linear-gradient(135deg, #10B981, #3B82F6)',
+            background: 'var(--msp-accent)',
             padding: '4px 10px',
             borderRadius: '8px',
             fontSize: '10px',
@@ -355,12 +355,12 @@ export function ProModeDashboard({
             
             <div style={{
               padding: '0.5rem',
-              background: 'rgba(59,130,246,0.1)',
+              background: 'var(--msp-panel)',
               borderRadius: '8px',
-              border: '1px solid rgba(59,130,246,0.3)',
+              border: '1px solid var(--msp-border)',
             }}>
-              <div style={{ fontSize: '9px', color: '#3B82F6', marginBottom: '2px' }}>ENTRY</div>
-              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#3B82F6' }}>
+              <div style={{ fontSize: '9px', color: 'var(--msp-accent)', marginBottom: '2px' }}>ENTRY</div>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-accent)' }}>
                 ${currentPrice.toFixed(2)}
               </div>
               <div style={{ fontSize: '9px', color: '#60A5FA' }}>

@@ -9,7 +9,7 @@ export default function PartnersPage() {
           --bg: #05070b;
           --bg-alt: #0c1018;
           --card: #111624;
-          --accent: #14b8a6;
+          --accent: var(--msp-accent);
           --accent-soft: rgba(20, 184, 166, 0.12);
           --text-main: #f9fafb;
           --text-muted: #9ca3af;
@@ -32,7 +32,7 @@ export default function PartnersPage() {
             alignItems: 'center',
             gap: 8,
             fontSize: 12,
-            color: '#14b8a6',
+            color: 'var(--msp-accent)',
             padding: '6px 14px',
             borderRadius: 999,
             background: 'rgba(20,184,166,0.1)',
@@ -45,7 +45,7 @@ export default function PartnersPage() {
 
           <h1 style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.2, marginBottom: 20 }}>
             MarketScanner Pros — <br/>
-            <span style={{ color: '#14b8a6' }}>Partner & Educator Program</span>
+            <span style={{ color: 'var(--msp-accent)' }}>Partner & Educator Program</span>
           </h1>
 
           <p style={{ fontSize: 20, color: '#e5e7eb', fontWeight: 600, marginBottom: 16, maxWidth: 800, margin: '0 auto 16px' }}>
@@ -65,7 +65,7 @@ export default function PartnersPage() {
             borderRadius: 12
           }}>
             <p style={{ fontSize: 16, color: '#e5e7eb', lineHeight: 1.8, margin: 0 }}>
-              You teach the <strong style={{ color: '#14b8a6' }}>why</strong>.<br/>
+              You teach the <strong style={{ color: 'var(--msp-accent)' }}>why</strong>.<br/>
               We provide the <strong style={{ color: '#22c55e' }}>infrastructure</strong>.
             </p>
             <p style={{ fontSize: 15, color: '#9ca3af', marginTop: 12, fontStyle: 'italic' }}>
@@ -78,10 +78,10 @@ export default function PartnersPage() {
             maxWidth: 700,
             margin: '0 auto 40px',
             padding: '20px 24px',
-            background: 'linear-gradient(145deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))',
-            border: '1px solid rgba(59,130,246,0.3)',
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border)',
             borderRadius: 10,
-            borderLeft: '4px solid #3b82f6'
+            borderLeft: '4px solid var(--msp-accent)'
           }}>
             <p style={{ fontSize: 15, color: '#e5e7eb', margin: 0, lineHeight: 1.8 }}>
               <strong style={{ color: '#60a5fa' }}>Example:</strong> A price-action educator maps their consolidation → expansion framework into MSP phases. Members receive consistent AI explanations aligned with the educator's logic — no more repeating the same context in Discord.
@@ -93,7 +93,7 @@ export default function PartnersPage() {
               display: 'inline-block',
               borderRadius: 999,
               border: 'none',
-              background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+              background: 'var(--msp-accent)',
               color: '#0b1120',
               padding: '14px 32px',
               fontSize: 16,
@@ -125,7 +125,7 @@ export default function PartnersPage() {
       {/* Who This Is For */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         padding: '60px 20px',
         borderBottom: '1px solid #1f2933'
@@ -134,7 +134,7 @@ export default function PartnersPage() {
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
             Who This Is For
           </h2>
-          <p style={{ fontSize: 18, color: '#14b8a6', marginBottom: 40, textAlign: 'center' }}>
+          <p style={{ fontSize: 18, color: 'var(--msp-accent)', marginBottom: 40, textAlign: 'center' }}>
             Designed for Trading Educators & Communities
           </p>
 
@@ -145,7 +145,7 @@ export default function PartnersPage() {
             marginBottom: 40
           }}>
             <div style={{
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               borderRadius: 12,
               border: '1px solid rgba(34,197,94,0.2)',
               padding: '28px'
@@ -170,7 +170,7 @@ export default function PartnersPage() {
             </div>
 
             <div style={{
-              background: 'linear-gradient(145deg, #1e1b1b, #0a0808)',
+              background: 'var(--msp-card)',
               borderRadius: 12,
               border: '1px solid rgba(239,68,68,0.2)',
               padding: '28px'
@@ -245,7 +245,7 @@ export default function PartnersPage() {
       {/* The Solution */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         padding: '60px 20px',
         borderBottom: '1px solid #1f2933'
@@ -254,7 +254,7 @@ export default function PartnersPage() {
           <h2 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, textAlign: 'center' }}>
             The MSP Partner Solution
           </h2>
-          <p style={{ fontSize: 20, color: '#14b8a6', marginBottom: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 20, color: 'var(--msp-accent)', marginBottom: 24, textAlign: 'center' }}>
             Your System. Our Intelligence Engine.
           </p>
           
@@ -267,7 +267,7 @@ export default function PartnersPage() {
             borderRadius: 8
           }}>
             <p style={{ fontSize: 15, color: '#9ca3af', margin: 0, lineHeight: 1.7 }}>
-              <strong style={{ color: '#14b8a6' }}>Example:</strong> An educator teaching market structure can use MSP scanners to surface live consolidation → expansion phases, while the AI Analyst explains context to members in real time.
+              <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong> An educator teaching market structure can use MSP scanners to surface live consolidation → expansion phases, while the AI Analyst explains context to members in real time.
             </p>
           </div>
 
@@ -280,11 +280,11 @@ export default function PartnersPage() {
             {/* We Provide */}
             <div style={{
               padding: '32px',
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(20,184,166,0.3)',
               borderRadius: 12
             }}>
-              <h3 style={{ fontSize: 22, fontWeight: 600, color: '#14b8a6', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 22, fontWeight: 600, color: 'var(--msp-accent)', marginBottom: 20 }}>
                 We Provide:
               </h3>
               <ul style={{ 
@@ -306,7 +306,7 @@ export default function PartnersPage() {
             {/* You Provide */}
             <div style={{
               padding: '32px',
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(34,197,94,0.3)',
               borderRadius: 12
             }}>
@@ -369,7 +369,7 @@ export default function PartnersPage() {
                 width: 40,
                 height: 40,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'var(--msp-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -389,8 +389,8 @@ export default function PartnersPage() {
 
             <div style={{
               padding: '24px',
-              background: 'rgba(59,130,246,0.05)',
-              border: '1px solid rgba(59,130,246,0.2)',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
               borderRadius: 8,
               marginBottom: 20
             }}>
@@ -411,11 +411,11 @@ export default function PartnersPage() {
             <div style={{
               padding: '20px',
               background: 'rgba(15,23,42,0.9)',
-              borderLeft: '3px solid #60a5fa',
+              borderLeft: '3px solid var(--msp-accent)',
               borderRadius: 4
             }}>
               <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, fontStyle: 'italic' }}>
-                <strong style={{ color: '#60a5fa' }}>Example:</strong><br/>
+                <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong><br/>
                 "This page shows how [Partner Name] uses MarketScanner Pros to identify structure, phases, and high-probability conditions."
               </p>
             </div>
@@ -433,7 +433,7 @@ export default function PartnersPage() {
                 width: 40,
                 height: 40,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'var(--msp-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -477,7 +477,7 @@ export default function PartnersPage() {
                 border: '1px solid rgba(20,184,166,0.2)',
                 borderRadius: 8
               }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#14b8a6', marginBottom: 12 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--msp-accent)', marginBottom: 12 }}>
                   MSP Structure:
                 </p>
                 <ul style={{ fontSize: 14, color: '#e5e7eb', lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
@@ -506,7 +506,7 @@ export default function PartnersPage() {
                 width: 40,
                 height: 40,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'var(--msp-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -548,7 +548,7 @@ export default function PartnersPage() {
               ))}
             </div>
 
-            <p style={{ fontSize: 16, color: '#14b8a6', fontWeight: 600, textAlign: 'center', fontStyle: 'italic' }}>
+            <p style={{ fontSize: 16, color: 'var(--msp-accent)', fontWeight: 600, textAlign: 'center', fontStyle: 'italic' }}>
               It doesn't replace you — it amplifies you.
             </p>
           </div>
@@ -558,7 +558,7 @@ export default function PartnersPage() {
       {/* What Partners Gain */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         padding: '60px 20px',
         borderBottom: '1px solid #1f2933'
@@ -576,7 +576,7 @@ export default function PartnersPage() {
           }}>
             <div style={{
               padding: '28px',
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(34,197,94,0.2)',
               borderRadius: 12
             }}>
@@ -602,11 +602,11 @@ export default function PartnersPage() {
 
             <div style={{
               padding: '28px',
-              background: 'linear-gradient(145deg, #0f172a, #020617)',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(20,184,166,0.2)',
               borderRadius: 12
             }}>
-              <h3 style={{ fontSize: 20, fontWeight: 600, color: '#14b8a6', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--msp-accent)', marginBottom: 20 }}>
                 Optional Add-Ons
               </h3>
               <ul style={{ 
@@ -626,8 +626,8 @@ export default function PartnersPage() {
 
           <div style={{
             padding: '32px',
-            background: 'rgba(59,130,246,0.05)',
-            border: '1px solid rgba(59,130,246,0.2)',
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border)',
             borderRadius: 12,
             textAlign: 'center'
           }}>
@@ -681,11 +681,11 @@ export default function PartnersPage() {
             ].map((example, i) => (
               <div key={i} style={{
                 padding: '24px',
-                background: 'linear-gradient(145deg, #0f172a, #020617)',
+                background: 'var(--msp-card)',
                 border: '1px solid rgba(20,184,166,0.2)',
                 borderRadius: 8
               }}>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#14b8a6', marginBottom: 8 }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--msp-accent)', marginBottom: 8 }}>
                   {example.role}
                 </p>
                 <p style={{ fontSize: 14, color: '#e5e7eb', margin: 0 }}>
@@ -700,7 +700,7 @@ export default function PartnersPage() {
       {/* Partner Standards */}
       <section style={{
         width: '100%',
-        background: 'linear-gradient(180deg, #000 0%, #0a0e1a 50%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: '#f9fafb',
         padding: '60px 20px',
         borderBottom: '1px solid #1f2933'
@@ -762,7 +762,7 @@ export default function PartnersPage() {
           
           <h2 style={{ fontSize: 36, fontWeight: 700, marginBottom: 20, lineHeight: 1.2 }}>
             Build Better Traders —<br/>
-            <span style={{ color: '#14b8a6' }}>Not Louder Signals</span>
+            <span style={{ color: 'var(--msp-accent)' }}>Not Louder Signals</span>
           </h2>
           <p style={{ fontSize: 17, color: '#9ca3af', marginBottom: 40, lineHeight: 1.7 }}>
             If you're serious about education, structure, and clarity, let's talk.
@@ -773,7 +773,7 @@ export default function PartnersPage() {
               display: 'inline-block',
               borderRadius: 999,
               border: 'none',
-              background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+              background: 'var(--msp-accent)',
               color: '#0b1120',
               padding: '16px 36px',
               fontSize: 17,
@@ -807,12 +807,12 @@ export default function PartnersPage() {
               alignItems: 'center',
               gap: 8,
               fontSize: 15,
-              color: '#60a5fa',
+              color: 'var(--msp-accent)',
               textDecoration: 'none',
               padding: '10px 20px',
               borderRadius: 8,
-              background: 'rgba(59,130,246,0.08)',
-              border: '1px solid rgba(59,130,246,0.2)',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border)',
               transition: 'all 0.2s'
             }}>
               <span>🔍</span>
@@ -821,7 +821,7 @@ export default function PartnersPage() {
             </Link>
           </div>
 
-          <p style={{ fontSize: 14, color: '#14b8a6', marginBottom: 12 }}>
+          <p style={{ fontSize: 14, color: 'var(--msp-accent)', marginBottom: 12 }}>
             No upfront cost. No obligation. Partnerships reviewed individually.
           </p>
           <p style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>

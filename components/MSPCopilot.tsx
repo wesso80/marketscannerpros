@@ -322,7 +322,7 @@ export default function MSPCopilot({
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105"
         style={{
-          background: 'linear-gradient(135deg, #10B981, #3B82F6)',
+          background: 'var(--msp-accent)',
           color: 'white',
           fontWeight: '600',
           boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
@@ -340,10 +340,10 @@ export default function MSPCopilot({
       style={{
         width: 'min(420px, 100vw)',
         height: 'min(600px, 80vh)',
-        background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
+        background: 'var(--msp-card)',
         borderTopLeftRadius: '20px',
-        borderLeft: '1px solid rgba(59, 130, 246, 0.3)',
-        borderTop: '1px solid rgba(59, 130, 246, 0.3)',
+        borderLeft: '1px solid var(--msp-border)',
+        borderTop: '1px solid var(--msp-border)',
         boxShadow: '-4px -4px 20px rgba(0, 0, 0, 0.5)',
       }}
     >
@@ -393,10 +393,10 @@ export default function MSPCopilot({
             style={{
               flex: 1,
               padding: '0.75rem',
-              background: activeTab === tab ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+              background: activeTab === tab ? 'rgba(20,184,166,0.16)' : 'transparent',
               border: 'none',
-              borderBottom: activeTab === tab ? '2px solid #3B82F6' : '2px solid transparent',
-              color: activeTab === tab ? '#3B82F6' : '#64748B',
+              borderBottom: activeTab === tab ? '2px solid var(--msp-accent)' : '2px solid transparent',
+              color: activeTab === tab ? 'var(--msp-accent)' : '#64748B',
               fontSize: '0.8rem',
               fontWeight: '600',
               cursor: 'pointer',
@@ -631,7 +631,7 @@ export default function MSPCopilot({
                 padding: '0.75rem 1rem',
                 borderRadius: msg.role === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0',
                 background: msg.role === 'user' 
-                  ? 'linear-gradient(135deg, #3B82F6, #2563EB)'
+                  ? 'var(--msp-accent)'
                   : 'rgba(30, 41, 59, 0.8)',
                 color: '#E2E8F0',
                 fontSize: '0.9rem',
@@ -693,21 +693,21 @@ export default function MSPCopilot({
               width: '8px', 
               height: '8px', 
               borderRadius: '50%', 
-              background: '#3B82F6',
+              background: 'var(--msp-accent)',
               animation: 'pulse 1s ease-in-out infinite',
             }} />
             <div style={{ 
               width: '8px', 
               height: '8px', 
               borderRadius: '50%', 
-              background: '#3B82F6',
+              background: 'var(--msp-accent)',
               animation: 'pulse 1s ease-in-out infinite 0.2s',
             }} />
             <div style={{ 
               width: '8px', 
               height: '8px', 
               borderRadius: '50%', 
-              background: '#3B82F6',
+              background: 'var(--msp-accent)',
               animation: 'pulse 1s ease-in-out infinite 0.4s',
             }} />
           </div>
@@ -737,7 +737,7 @@ export default function MSPCopilot({
               style={{
                 flex: 1,
                 padding: '0.5rem',
-                background: 'linear-gradient(135deg, #10B981, #059669)',
+                background: 'var(--msp-accent)',
                 border: 'none',
                 borderRadius: '8px',
                 color: 'white',
@@ -796,7 +796,7 @@ export default function MSPCopilot({
             style={{
               padding: '0.75rem 1rem',
               background: input.trim() && !isLoading 
-                ? 'linear-gradient(135deg, #3B82F6, #2563EB)'
+                ? 'var(--msp-accent)'
                 : 'rgba(51, 65, 85, 0.5)',
               border: 'none',
               borderRadius: '12px',

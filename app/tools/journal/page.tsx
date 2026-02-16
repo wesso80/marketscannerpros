@@ -639,7 +639,7 @@ function JournalContent() {
 
       {/* Stats Bar */}
       <div style={{ 
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 100%)',
+        background: 'var(--msp-card)',
         padding: '24px 16px',
         borderBottom: '1px solid rgba(51,65,85,0.6)'
       }}>
@@ -651,7 +651,7 @@ function JournalContent() {
           gap: '16px'
         }}>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: `1px solid ${totalPL >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
@@ -666,7 +666,7 @@ function JournalContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: `1px solid ${winRate >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
@@ -681,7 +681,7 @@ function JournalContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: '1px solid rgba(51,65,85,0.5)'
@@ -692,7 +692,7 @@ function JournalContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: `1px solid ${profitFactor >= 1 || hasNoLosses ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
@@ -710,7 +710,7 @@ function JournalContent() {
             )}
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: '1px solid rgba(16,185,129,0.3)'
@@ -721,7 +721,7 @@ function JournalContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: '1px solid rgba(239,68,68,0.3)'
@@ -735,32 +735,32 @@ function JournalContent() {
           {tradesWithR.length > 0 && (
             <>
               <div style={{
-                background: 'linear-gradient(145deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))',
+                background: 'var(--msp-panel)',
                 borderRadius: '12px',
                 padding: '16px',
-                border: `1px solid ${totalR >= 0 ? 'rgba(139,92,246,0.4)' : 'rgba(239,68,68,0.3)'}`
+                border: `1px solid ${totalR >= 0 ? 'var(--msp-border)' : 'rgba(239,68,68,0.3)'}`
               }}>
-                <div style={{ color: '#a78bfa', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total R</div>
+                <div style={{ color: 'var(--msp-muted)', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total R</div>
                 <div style={{ 
                   fontSize: '22px', 
                   fontWeight: '700',
-                  color: totalR >= 0 ? '#a78bfa' : '#ef4444'
+                  color: totalR >= 0 ? 'var(--msp-muted)' : '#ef4444'
                 }}>
                   {totalR >= 0 ? '+' : ''}{totalR.toFixed(1)}R
                 </div>
                 <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>{tradesWithR.length} trades with R</div>
               </div>
               <div style={{
-                background: 'linear-gradient(145deg, rgba(139,92,246,0.15), rgba(139,92,246,0.05))',
+                background: 'var(--msp-panel)',
                 borderRadius: '12px',
                 padding: '16px',
-                border: `1px solid ${avgR >= 0 ? 'rgba(139,92,246,0.4)' : 'rgba(239,68,68,0.3)'}`
+                border: `1px solid ${avgR >= 0 ? 'var(--msp-border)' : 'rgba(239,68,68,0.3)'}`
               }}>
-                <div style={{ color: '#a78bfa', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg R/Trade</div>
+                <div style={{ color: 'var(--msp-muted)', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg R/Trade</div>
                 <div style={{ 
                   fontSize: '22px', 
                   fontWeight: '700',
-                  color: avgR >= 0 ? '#a78bfa' : '#ef4444'
+                  color: avgR >= 0 ? 'var(--msp-muted)' : '#ef4444'
                 }}>
                   {avgR >= 0 ? '+' : ''}{avgR.toFixed(2)}R
                 </div>
@@ -795,13 +795,13 @@ function JournalContent() {
             maxWidth: '1600px',
             margin: '16px auto 0',
             padding: '16px 20px',
-            background: 'linear-gradient(145deg, rgba(139,92,246,0.08), rgba(139,92,246,0.03))',
-            border: '1px solid rgba(139,92,246,0.25)',
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border)',
             borderRadius: '12px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
               <span style={{ fontSize: '16px' }}>📊</span>
-              <span style={{ color: '#a78bfa', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Journal Insight</span>
+              <span style={{ color: 'var(--msp-muted)', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Journal Insight</span>
             </div>
             <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
               {(() => {
@@ -822,8 +822,8 @@ function JournalContent() {
         <div style={{
           maxWidth: '1600px',
           margin: '16px auto 0',
-          background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
-          border: '1px solid rgba(139,92,246,0.3)',
+          background: 'var(--msp-card)',
+          border: '1px solid var(--msp-border)',
           borderRadius: '16px',
           padding: '20px 24px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -837,14 +837,14 @@ function JournalContent() {
             left: 0,
             right: 0,
             height: '3px',
-            background: 'linear-gradient(90deg, #8b5cf6, #ec4899, #8b5cf6)'
+            background: 'var(--msp-accent)'
           }} />
           
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: showAiAnalysis ? '16px' : 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ 
                 fontSize: '24px',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+                background: 'var(--msp-accent)',
                 borderRadius: '10px',
                 padding: '8px',
                 display: 'flex',
@@ -867,8 +867,8 @@ function JournalContent() {
               style={{
                 padding: '10px 20px',
                 background: aiLoading 
-                  ? 'rgba(139,92,246,0.3)' 
-                  : 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                  ? 'rgba(100,116,139,0.3)' 
+                  : 'var(--msp-accent)',
                 border: 'none',
                 borderRadius: '10px',
                 color: '#fff',
@@ -879,7 +879,7 @@ function JournalContent() {
                 alignItems: 'center',
                 gap: '8px',
                 transition: 'all 0.2s ease',
-                boxShadow: aiLoading ? 'none' : '0 4px 15px rgba(139,92,246,0.4)'
+                boxShadow: aiLoading ? 'none' : 'var(--msp-shadow)'
               }}
             >
               {aiLoading ? (
@@ -920,7 +920,7 @@ function JournalContent() {
               borderRadius: '12px',
               padding: '20px',
               marginTop: '4px',
-              border: '1px solid rgba(139,92,246,0.2)'
+              border: '1px solid var(--msp-border)'
             }}>
               <div style={{
                 color: '#e2e8f0',
@@ -1024,7 +1024,7 @@ function JournalContent() {
                     key={i}
                     style={{
                       height: '16px',
-                      background: 'linear-gradient(90deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.2) 50%, rgba(139,92,246,0.1) 100%)',
+                      background: 'rgba(100,116,139,0.22)',
                       borderRadius: '4px',
                       width: `${100 - (i * 10)}%`,
                       animation: 'pulse 1.5s ease-in-out infinite'
@@ -1053,8 +1053,8 @@ function JournalContent() {
             {/* Strategy Leaderboard */}
             {strategyStats.length > 0 && (
               <div style={{
-                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
-                border: '1px solid rgba(59,130,246,0.3)',
+                background: 'var(--msp-card)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '16px',
                 padding: '20px',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
@@ -1106,7 +1106,7 @@ function JournalContent() {
             {/* Equity Curve */}
             {equityCurve.length >= 5 && (
               <div style={{
-                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                background: 'var(--msp-card)',
                 border: '1px solid rgba(16,185,129,0.3)',
                 borderRadius: '16px',
                 padding: '20px',
@@ -1216,7 +1216,7 @@ function JournalContent() {
         {/* Add Entry Form */}
         {showAddForm && (
           <div style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            background: 'var(--msp-card)',
             border: '1px solid rgba(51,65,85,0.8)',
             borderRadius: '16px',
             padding: '24px',
@@ -1235,7 +1235,7 @@ function JournalContent() {
               letterSpacing: '0.05em'
             }}>
               <span style={{ 
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'var(--msp-accent)',
                 borderRadius: '8px',
                 padding: '6px 8px',
                 fontSize: '14px'
@@ -1452,8 +1452,8 @@ function JournalContent() {
             {/* R:R Preview */}
             {newEntry.entryPrice && newEntry.stopLoss && (
               <div style={{
-                background: 'linear-gradient(145deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05))',
-                border: '1px solid rgba(139,92,246,0.3)',
+                background: 'var(--msp-panel)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '10px',
                 padding: '12px 16px',
                 marginBottom: '16px',
@@ -1754,7 +1754,7 @@ function JournalContent() {
         {/* Filters */}
         {entries.length > 0 && (
           <div style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            background: 'var(--msp-card)',
             border: '1px solid rgba(51,65,85,0.8)',
             borderRadius: '16px',
             padding: '16px 24px',
@@ -1819,7 +1819,7 @@ function JournalContent() {
         {/* Journal Entries */}
         {filteredEntries.length === 0 ? (
           <div style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+            background: 'var(--msp-card)',
             border: '1px solid rgba(51,65,85,0.8)',
             borderRadius: '16px',
             padding: '60px 24px',
@@ -1858,7 +1858,7 @@ function JournalContent() {
               <div
                 key={entry.id}
                 style={{
-                  background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                  background: 'var(--msp-card)',
                   border: `2px solid ${entry.outcome === 'win' ? 'rgba(16,185,129,0.6)' : entry.outcome === 'loss' ? 'rgba(239,68,68,0.6)' : 'rgba(100,116,139,0.6)'}`,
                   borderRadius: '16px',
                   padding: '20px',
@@ -2085,7 +2085,7 @@ function JournalContent() {
                     )}
                     {entry.notes && (
                       <div>
-                        <div style={{ color: '#3b82f6', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
+                        <div style={{ color: 'var(--msp-accent)', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>
                           📝 TRADE NOTES
                         </div>
                         <div style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6' }}>

@@ -279,7 +279,7 @@ export default function AdminTrialsPage() {
               disabled={loading}
               style={{
                 padding: "12px 24px",
-                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                background: "var(--msp-accent)",
                 border: "none",
                 borderRadius: "8px",
                 color: "#fff",
@@ -334,9 +334,9 @@ export default function AdminTrialsPage() {
                           borderRadius: "4px",
                           fontSize: "11px",
                           fontWeight: "600",
-                          background: trial.tier === "pro_trader" ? "rgba(139,92,246,0.2)" : "rgba(59,130,246,0.2)",
+                          background: trial.tier === "pro_trader" ? "var(--msp-accent-glow)" : "var(--msp-accent-glow)",
                           color: trial.tier === "pro_trader" ? "#a78bfa" : "#60a5fa",
-                          border: `1px solid ${trial.tier === "pro_trader" ? "rgba(139,92,246,0.3)" : "rgba(59,130,246,0.3)"}`,
+                          border: `1px solid ${trial.tier === "pro_trader" ? "var(--msp-border-strong)" : "var(--msp-border-strong)"}`,
                         }}>
                           {trial.tier === "pro_trader" ? "PRO TRADER" : "PRO"}
                         </span>

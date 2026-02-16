@@ -67,7 +67,7 @@ export default function AIToolsPage() {
             disabled={generating}
             style={{
               padding: "10px 20px",
-              background: generating ? "#475569" : "linear-gradient(135deg, #8B5CF6, #6366F1)",
+              background: generating ? "#475569" : "var(--msp-accent)",
               border: "none",
               borderRadius: "10px",
               color: "#fff",
@@ -105,7 +105,7 @@ export default function AIToolsPage() {
 
           {/* How It Works */}
           <div style={{
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+            background: "var(--msp-card)",
             borderRadius: "16px",
             border: "1px solid rgba(139, 92, 246, 0.3)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
@@ -139,13 +139,13 @@ export default function AIToolsPage() {
 
           {/* Planned Features */}
           <div style={{
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+            background: "var(--msp-card)",
             borderRadius: "16px",
             border: "1px solid rgba(51,65,85,0.8)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
             padding: "24px",
           }}>
-            <h2 style={{ color: "#8B5CF6", marginBottom: 12, fontSize: "1.25rem", fontWeight: 600 }}>🚀 Coming Soon</h2>
+            <h2 style={{ color: "var(--msp-accent)", marginBottom: 12, fontSize: "1.25rem", fontWeight: 600 }}>🚀 Coming Soon</h2>
             <ul style={{ color: "#e5e7eb", fontSize: "15px", lineHeight: 1.8, paddingLeft: "20px", margin: 0 }}>
               <li>Chart pattern recognition (AI/ML)</li>
               <li>Portfolio optimization (risk/reward, AI-driven)</li>

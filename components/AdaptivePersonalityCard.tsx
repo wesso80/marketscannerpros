@@ -91,16 +91,12 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
   if (!data) return null;
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(15,23,42,0.94), rgba(30,41,59,0.88))',
-      border: `1px solid ${tone}55`,
-      borderRadius: '12px',
+    <div className="msp-card" style={{
       padding: props.compact ? '0.55rem 0.7rem' : '0.8rem 0.95rem',
       marginBottom: props.compact ? '0.65rem' : '1rem',
-      boxShadow: `0 0 20px ${tone}1f`,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <div style={{ color: '#67E8F9', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
+        <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>
           MSP AI Personality Match
         </div>
         <div style={{ color: data.match.noTradeBias ? '#EF4444' : tone, fontWeight: 800, fontSize: '0.75rem' }}>
@@ -123,13 +119,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
       </div>
 
       {data.institutionalFilter && (
-        <div style={{
-          marginTop: '0.45rem',
-          background: 'rgba(2,6,23,0.35)',
-          border: '1px solid rgba(148,163,184,0.25)',
-          borderRadius: '10px',
-          padding: '0.5rem 0.55rem',
-        }}>
+        <div className="msp-panel" style={{ marginTop: '0.45rem', padding: '0.5rem 0.55rem' }}>
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -138,7 +128,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
             flexWrap: 'wrap',
             marginBottom: '0.3rem',
           }}>
-            <span style={{ color: '#93C5FD', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>
+            <span style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>
               Institutional Filter Engine
             </span>
             <span style={{

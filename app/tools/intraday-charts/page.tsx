@@ -417,7 +417,7 @@ function CandlestickChart({
               return `${scaleX(i)},${scaleY(val)}`;
             }).filter(Boolean).join(' ')}
             fill="none"
-            stroke="#3b82f6"
+            stroke="var(--msp-accent)"
             strokeWidth="1.5"
           />
         )}
@@ -431,7 +431,7 @@ function CandlestickChart({
               return `${scaleX(i)},${scaleY(val)}`;
             }).filter(Boolean).join(' ')}
             fill="none"
-            stroke="#06b6d4"
+            stroke="var(--msp-accent)"
             strokeWidth="1.5"
           />
         )}

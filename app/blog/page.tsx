@@ -66,7 +66,7 @@ export default function BlogPage() {
               </div>
               <h2 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#f9fafb' }}>{post.title}</h2>
               <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6, margin: 0 }}>{post.excerpt}</p>
-              <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#14b8a6' }}>
+              <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--msp-accent)' }}>
                 <span>Read article</span>
                 <span>→</span>
               </div>

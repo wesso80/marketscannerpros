@@ -32,7 +32,7 @@ export default function PortalButton() {
       disabled={loading}
       style={{
         padding: "10px 20px",
-        background: loading ? "#475569" : "linear-gradient(135deg, #3b82f6, #6366f1)",
+        background: loading ? "#475569" : "var(--msp-accent)",
         border: "none",
         borderRadius: "10px",
         color: "#fff",

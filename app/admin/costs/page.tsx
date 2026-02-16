@@ -152,7 +152,7 @@ export default function AdminCostsPage() {
         padding: "0.75rem 1rem",
         marginBottom: "1.5rem",
         fontSize: "0.875rem",
-        color: "#93C5FD"
+        color: "var(--msp-accent)"
       }}>
         <strong>GPT-4o-mini Pricing:</strong> Input: $0.15/1M tokens • Output: $0.60/1M tokens
       </div>
@@ -169,7 +169,7 @@ export default function AdminCostsPage() {
           </div>
         </div>
         <div style={statBoxStyle}>
-          <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#3B82F6" }}>
+          <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-accent)" }}>
             {formatCost(stats?.last30Days.cost || 0)}
           </div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Last 30 Days</div>
@@ -187,7 +187,7 @@ export default function AdminCostsPage() {
           </div>
         </div>
         <div style={statBoxStyle}>
-          <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#8B5CF6" }}>
+          <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--msp-accent)" }}>
             ~{formatCost(projectedMonthly)}
           </div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Projected Monthly</div>
@@ -266,7 +266,7 @@ export default function AdminCostsPage() {
                       borderRadius: "0.25rem",
                       fontSize: "0.875rem",
                       color: tier.tier === "pro_trader" ? "#F59E0B" : 
-                             tier.tier === "pro" ? "#3B82F6" : "#9CA3AF",
+                             tier.tier === "pro" ? "var(--msp-accent)" : "#9CA3AF",
                       textTransform: "capitalize",
                     }}>
                       {tier.tier.replace("_", " ")}
@@ -326,7 +326,7 @@ export default function AdminCostsPage() {
                       borderRadius: "0.25rem",
                       fontSize: "0.625rem",
                       color: user.tier === "pro_trader" ? "#F59E0B" : 
-                             user.tier === "pro" ? "#3B82F6" : "#9CA3AF",
+                             user.tier === "pro" ? "var(--msp-accent)" : "#9CA3AF",
                     }}>
                       {user.tier}
                     </span>

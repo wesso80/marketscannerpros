@@ -110,8 +110,8 @@ export default function ExplainButton({
         onClick={fetchExplanation}
         title={`Explain ${metricName}`}
         style={{
-          background: 'rgba(59, 130, 246, 0.15)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
+          background: 'var(--msp-panel)',
+          border: '1px solid var(--msp-border)',
           borderRadius: size === 'sm' ? '4px' : '6px',
           padding: size === 'sm' ? '2px 4px' : '4px 8px',
           cursor: 'pointer',
@@ -119,15 +119,15 @@ export default function ExplainButton({
           alignItems: 'center',
           gap: '2px',
           fontSize: size === 'sm' ? '0.65rem' : '0.75rem',
-          color: '#3B82F6',
+          color: 'var(--msp-accent)',
           transition: 'all 0.2s',
           marginLeft: '4px',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.25)';
+          e.currentTarget.style.background = 'rgba(16,185,129,0.2)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+          e.currentTarget.style.background = 'var(--msp-panel)';
         }}
       >
         <span>?</span>
@@ -142,8 +142,8 @@ export default function ExplainButton({
             zIndex: 1000,
             width: '280px',
             maxWidth: '90vw',
-            background: 'linear-gradient(145deg, #1E293B, #0F172A)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
+            background: 'var(--msp-card)',
+            border: '1px solid var(--msp-border)',
             borderRadius: '12px',
             padding: '1rem',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
@@ -156,7 +156,7 @@ export default function ExplainButton({
             alignItems: 'flex-start',
             marginBottom: '0.75rem',
           }}>
-            <div style={{ fontWeight: '600', color: '#3B82F6', fontSize: '0.9rem' }}>
+            <div style={{ fontWeight: '600', color: 'var(--msp-accent)', fontSize: '0.9rem' }}>
               💡 {metricName}
             </div>
             <button

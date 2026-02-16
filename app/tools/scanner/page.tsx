@@ -303,7 +303,7 @@ function TradingViewChart({
                 {
                   label: 'RSI (14)',
                   data: rsiData,
-                  borderColor: '#8B5CF6',
+                  borderColor: 'var(--msp-accent)',
                   backgroundColor: 'rgba(139, 92, 246, 0.1)',
                   borderWidth: 1.5,
                   tension: 0.1,
@@ -398,7 +398,7 @@ function TradingViewChart({
                   type: 'line' as const,
                   label: 'MACD',
                   data: macdLine,
-                  borderColor: '#3B82F6',
+                  borderColor: 'var(--msp-accent)',
                   borderWidth: 1.5,
                   tension: 0.1,
                   pointRadius: 0,
@@ -978,13 +978,13 @@ function ScannerContent() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
       <ToolsPageHeader
         badge="MARKET SCANNER"
         title="Market Scanner Pro"
         subtitle="Find high-probability setups in seconds with multi-factor confluence."
         icon="🧭"
-        backHref="/dashboard"
+        backHref="/tools/scanner"
       />
       <main style={{ padding: "24px 16px" }}>
         <div className="max-w-7xl mx-auto">
@@ -994,37 +994,17 @@ function ScannerContent() {
           </>
         )}
 
-        <div style={{
-          background: "linear-gradient(145deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92))",
-          border: "1px solid rgba(56,189,248,0.34)",
-          borderRadius: "12px",
-          padding: "0.65rem 0.9rem",
-          marginBottom: "0.8rem",
-          color: "#67E8F9",
-          fontSize: "0.78rem",
-          fontWeight: 800,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-        }}>
+        <div className="msp-panel mb-3 px-3.5 py-2.5 text-[0.78rem] font-extrabold uppercase tracking-[0.05em] text-msp-faint">
           Decision Cockpit Mode • You’ve crossed from feature dashboard → decision cockpit
         </div>
 
         {/* Orientation */}
         {!orientationCollapsed && (
-        <div style={{
-          background: "linear-gradient(145deg, rgba(2,6,23,0.94), rgba(15,23,42,0.9))",
-          border: "1px solid rgba(56,189,248,0.24)",
-          borderRadius: "14px",
-          padding: "18px 20px",
-          marginBottom: "1.5rem",
-          color: "#e2e8f0",
-          fontSize: 14,
-          lineHeight: 1.5,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
-        }}>
-          <div style={{ fontWeight: 600, color: "#10b981", marginBottom: 8, display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="msp-card mb-6 px-5 py-[18px] text-msp-text" style={{ fontSize: 14, lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600, color: "var(--msp-accent)", marginBottom: 8, display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ 
-              background: "linear-gradient(135deg, #10b981, #059669)",
+              background: "var(--msp-panel)",
+              border: "1px solid var(--msp-border)",
               borderRadius: "8px",
               padding: "4px 6px",
               fontSize: "12px"
@@ -1034,8 +1014,8 @@ function ScannerContent() {
           <div style={{ marginBottom: 10 }}>
             Find high-probability phases with multi-timeframe alignment. Start with the phase, confirm alignment, then look for a clean entry trigger.
           </div>
-          <div style={{ fontSize: 13, color: "#cbd5e1" }}>
-            <strong style={{ color: "#e5e7eb" }}>How to read results:</strong>
+          <div style={{ fontSize: 13, color: "var(--msp-text-muted)" }}>
+            <strong style={{ color: "var(--msp-text)" }}>How to read results:</strong>
             <ul style={{ margin: "6px 0 0 18px", padding: 0, listStyle: "disc" }}>
               <li>Phase = market regime. Avoid trading against it.</li>
               <li>Multi-TF alignment = confirmation strength; the more agreement, the better.</li>
@@ -1047,15 +1027,9 @@ function ScannerContent() {
         )}
 
         {result?.institutionalFilter && (
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(2,6,23,0.85), rgba(15,23,42,0.8))',
-            border: `1px solid ${result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.35)'}`,
-            borderRadius: '12px',
-            padding: '0.7rem 0.85rem',
-            marginBottom: '1rem',
-          }}>
+          <div className="msp-panel mb-4 px-3.5 py-3" style={{ borderColor: result.institutionalFilter.noTrade ? 'rgba(239,68,68,0.45)' : 'var(--msp-border-strong)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
-              <div style={{ color: '#93C5FD', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Filter Engine</div>
+              <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Filter Engine</div>
               <div style={{ color: result.institutionalFilter.noTrade ? '#EF4444' : '#10B981', fontSize: '0.76rem', fontWeight: 800 }}>
                 {result.institutionalFilter.finalGrade} • {result.institutionalFilter.finalScore.toFixed(0)} • {result.institutionalFilter.recommendation.replace('_', ' ')}
               </div>
@@ -1072,8 +1046,8 @@ function ScannerContent() {
 
         {result && scannerCollapsed && (
           <div style={{
-            background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
-            border: "1px solid rgba(56,189,248,0.38)",
+            background: "var(--msp-panel)",
+            border: "1px solid var(--msp-border)",
             borderRadius: "12px",
             padding: "0.7rem 0.85rem",
             marginBottom: "1rem",
@@ -1109,12 +1083,12 @@ function ScannerContent() {
         {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
         <div style={{
           display: result && scannerCollapsed ? "none" : "block",
-          background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
-          border: "1px solid rgba(56,189,248,0.28)",
+          background: "var(--msp-card)",
+          border: "1px solid var(--msp-border)",
           borderRadius: "14px",
           padding: "20px",
           marginBottom: "1.5rem",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
+          boxShadow: "var(--msp-shadow)",
           position: "relative",
           overflow: "hidden"
         }}>
@@ -1125,23 +1099,23 @@ function ScannerContent() {
             left: 0,
             right: 0,
             height: "3px",
-            background: "linear-gradient(90deg, #38BDF8, #10B981, #38BDF8)"
+            background: "var(--msp-accent)"
           }} />
           
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <span style={{ fontSize: "28px" }}>🔍</span>
             <div>
-              <h3 style={{ color: "#67E8F9", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <h3 style={{ color: "var(--msp-text)", fontSize: "18px", fontWeight: "700", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Live Edge Scanner (Market-Wide)
               </h3>
-              <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 0 0" }}>
+              <p style={{ color: "var(--msp-text-muted)", fontSize: "13px", margin: "4px 0 0 0" }}>
                 Scan broad market leaders first, then click one symbol to load your active-symbol cockpit below
               </p>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ color: "#94a3b8", fontSize: "13px", fontWeight: 600 }}>Equity scan depth:</span>
-              <div style={{ display: "flex", gap: "6px", background: "rgba(30,41,59,0.6)", padding: "4px", borderRadius: "8px" }}>
+              <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Equity scan depth:</span>
+              <div style={{ display: "flex", gap: "6px", background: "var(--msp-panel)", padding: "4px", borderRadius: "8px", border: "1px solid var(--msp-border)" }}>
                 {(['light', 'deep'] as const).map((mode) => (
                   <button
                     key={`equity-${mode}`}
@@ -1149,10 +1123,10 @@ function ScannerContent() {
                     disabled={bulkScanLoading}
                     style={{
                       padding: "7px 12px",
-                      background: bulkEquityScanMode === mode ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
-                      border: "none",
+                      background: bulkEquityScanMode === mode ? "var(--msp-accent)" : "transparent",
+                      border: bulkEquityScanMode === mode ? "1px solid var(--msp-border-strong)" : "1px solid transparent",
                       borderRadius: "6px",
-                      color: bulkEquityScanMode === mode ? "#fff" : "#94a3b8",
+                      color: bulkEquityScanMode === mode ? "#061018" : "var(--msp-text-muted)",
                       fontSize: "12px",
                       fontWeight: 700,
                       cursor: bulkScanLoading ? "not-allowed" : "pointer",
@@ -1168,8 +1142,8 @@ function ScannerContent() {
           
           {/* How It Works Explainer */}
           <div style={{ 
-            background: "rgba(16,185,129,0.1)", 
-            border: "1px solid rgba(16,185,129,0.3)",
+            background: "var(--msp-panel)", 
+            border: "1px solid var(--msp-border)",
             borderRadius: "8px", 
             padding: "12px 16px", 
             marginBottom: "20px",
@@ -1178,7 +1152,7 @@ function ScannerContent() {
             gap: "12px"
           }}>
             <span style={{ fontSize: "20px" }}>💡</span>
-            <p style={{ color: "#10b981", fontSize: "13px", margin: 0 }}>
+            <p style={{ color: "var(--msp-text)", fontSize: "13px", margin: 0 }}>
               <strong>Step 1:</strong> Run a Top 10 scan to shortlist high-confluence charts → 
               <strong>Step 2:</strong> Click a winner to load full breakdown below
             </p>
@@ -1192,11 +1166,12 @@ function ScannerContent() {
             marginBottom: "16px",
             flexWrap: "wrap"
           }}>
-            <span style={{ color: "#94a3b8", fontSize: "14px", fontWeight: "600" }}>Timeframe:</span>
+            <span style={{ color: "var(--msp-text-muted)", fontSize: "14px", fontWeight: "600" }}>Timeframe:</span>
             <div style={{ 
               display: "flex", 
               gap: "6px",
-              background: "rgba(30,41,59,0.6)",
+              background: "var(--msp-panel)",
+              border: "1px solid var(--msp-border)",
               padding: "4px",
               borderRadius: "8px"
             }}>
@@ -1208,11 +1183,11 @@ function ScannerContent() {
                   style={{
                     padding: "8px 16px",
                     background: bulkScanTimeframe === tf 
-                      ? "linear-gradient(135deg, #10b981, #059669)" 
+                      ? "var(--msp-accent)" 
                       : "transparent",
-                    border: "none",
+                    border: bulkScanTimeframe === tf ? "1px solid var(--msp-border-strong)" : "1px solid transparent",
                     borderRadius: "6px",
-                    color: bulkScanTimeframe === tf ? "#fff" : "#94a3b8",
+                    color: bulkScanTimeframe === tf ? "#061018" : "var(--msp-text-muted)",
                     fontSize: "14px",
                     fontWeight: bulkScanTimeframe === tf ? "700" : "500",
                     cursor: bulkScanLoading ? "not-allowed" : "pointer",
@@ -1224,7 +1199,7 @@ function ScannerContent() {
                 </button>
               ))}
             </div>
-            <span style={{ color: "#64748b", fontSize: "12px" }}>
+            <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
               {bulkScanTimeframe === '15m' && '~7 days of data'}
               {bulkScanTimeframe === '30m' && '~14 days of data'}
               {bulkScanTimeframe === '1h' && '~30 days of data'}
@@ -1253,7 +1228,7 @@ function ScannerContent() {
                     disabled={bulkScanLoading}
                     style={{
                       padding: "7px 12px",
-                      background: bulkCryptoScanMode === mode ? "linear-gradient(135deg, #10b981, #059669)" : "transparent",
+                      background: bulkCryptoScanMode === mode ? "#10B981" : "transparent",
                       border: "none",
                       borderRadius: "6px",
                       color: bulkCryptoScanMode === mode ? "#fff" : "#94a3b8",
@@ -1310,7 +1285,7 @@ function ScannerContent() {
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'crypto' 
                   ? "rgba(251,191,36,0.3)" 
-                  : "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.1))",
+                  : "rgba(251,191,36,0.16)",
                 border: "2px solid #fbbf24",
                 borderRadius: "12px",
                 color: "#fbbf24",
@@ -1347,7 +1322,7 @@ function ScannerContent() {
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'equity' 
                     ? "rgba(16,185,129,0.3)" 
-                    : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.1))",
+                    : "rgba(16,185,129,0.16)",
                 border: "2px solid #10b981",
                 borderRadius: "12px",
                 color: "#10b981",
@@ -1380,14 +1355,14 @@ function ScannerContent() {
           {bulkScanError && (
             <div style={{
               background: bulkScanError.toLowerCase().includes("log in") 
-                ? "rgba(59, 130, 246, 0.1)" 
+                ? "var(--msp-panel-2)" 
                 : "rgba(239,68,68,0.1)",
               border: bulkScanError.toLowerCase().includes("log in")
-                ? "1px solid rgba(59, 130, 246, 0.3)"
+                ? "1px solid var(--msp-border)"
                 : "1px solid rgba(239,68,68,0.3)",
               borderRadius: "12px",
               padding: "1.5rem",
-              color: bulkScanError.toLowerCase().includes("log in") ? "#60A5FA" : "#ef4444",
+              color: bulkScanError.toLowerCase().includes("log in") ? "var(--msp-muted)" : "#ef4444",
               fontSize: "14px",
               marginBottom: "16px",
               textAlign: "center",
@@ -1400,7 +1375,7 @@ function ScannerContent() {
                     style={{
                       display: "inline-block",
                       padding: "0.75rem 2rem",
-                      background: "linear-gradient(135deg, #10B981, #059669)",
+                      background: "#10B981",
                       color: "white",
                       borderRadius: "8px",
                       fontWeight: 600,
@@ -1456,11 +1431,11 @@ function ScannerContent() {
 
               <div style={{
                 marginBottom: "12px",
-                background: "rgba(59,130,246,0.10)",
-                border: "1px solid rgba(59,130,246,0.28)",
+                background: "var(--msp-panel-2)",
+                border: "1px solid var(--msp-border)",
                 borderRadius: "10px",
                 padding: "8px 12px",
-                color: "#93C5FD",
+                color: "var(--msp-muted)",
                 fontSize: "12px",
                 fontWeight: 600,
               }}>
@@ -1494,7 +1469,7 @@ function ScannerContent() {
                       position: "absolute",
                       top: "-8px",
                       left: "12px",
-                      background: idx < 3 ? "linear-gradient(135deg, #fbbf24, #f59e0b)" : "rgba(100,116,139,0.8)",
+                      background: idx < 3 ? "#f59e0b" : "rgba(100,116,139,0.8)",
                       color: idx < 3 ? "#0f172a" : "#f1f5f9",
                       padding: "2px 8px",
                       borderRadius: "10px",
@@ -1595,7 +1570,7 @@ function ScannerContent() {
                       }}>
                         {pick.derivatives.openInterest > 0 && (
                           <span title="Open Interest">
-                            📊 OI: <span style={{ color: "#3b82f6" }}>
+                            📊 OI: <span style={{ color: "var(--msp-muted)" }}>
                               ${pick.derivatives.openInterest >= 1e9 
                                 ? (pick.derivatives.openInterest / 1e9).toFixed(2) + 'B'
                                 : pick.derivatives.openInterest >= 1e6 
@@ -1750,9 +1725,9 @@ function ScannerContent() {
         {/* Scanner Panel */}
         <div style={{
           display: result && scannerCollapsed ? "none" : "block",
-          background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.9))",
+          background: "var(--msp-panel)",
           borderRadius: "14px",
-          border: "1px solid rgba(56,189,248,0.28)",
+          border: "1px solid var(--msp-border)",
           padding: "2rem",
           marginBottom: "2rem",
           boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
@@ -1933,7 +1908,7 @@ function ScannerContent() {
                 padding: "0.75rem 2rem",
                 background: loading
                   ? "rgba(16, 185, 129, 0.5)"
-                  : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                  : "#10B981",
                 border: "none",
                 borderRadius: "8px",
                 color: "#fff",
@@ -1975,13 +1950,13 @@ function ScannerContent() {
           <div style={{
             padding: "1.5rem",
             background: error.toLowerCase().includes("log in") 
-              ? "rgba(59, 130, 246, 0.1)" 
+              ? "var(--msp-panel-2)" 
               : "rgba(239, 68, 68, 0.1)",
             border: error.toLowerCase().includes("log in")
-              ? "1px solid rgba(59, 130, 246, 0.3)"
+              ? "1px solid var(--msp-border)"
               : "1px solid rgba(239, 68, 68, 0.3)",
             borderRadius: "12px",
-            color: error.toLowerCase().includes("log in") ? "#60A5FA" : "#EF4444",
+            color: error.toLowerCase().includes("log in") ? "var(--msp-muted)" : "#EF4444",
             marginBottom: "1rem",
             textAlign: "center",
           }}>
@@ -1993,7 +1968,7 @@ function ScannerContent() {
                   style={{
                     display: "inline-block",
                     padding: "0.75rem 2rem",
-                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    background: "#10B981",
                     color: "white",
                     borderRadius: "8px",
                     fontWeight: 600,
@@ -2067,71 +2042,49 @@ function ScannerContent() {
         {/* Active Symbol Cockpit Header */}
         {result && (
           <>
-            <div style={{
-              background: "linear-gradient(145deg, rgba(2,6,23,0.95), rgba(15,23,42,0.90))",
-              border: "1px solid rgba(56,189,248,0.3)",
-              borderRadius: "12px",
-              padding: "0.55rem 0.75rem",
-              marginBottom: "0.55rem",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.55rem",
-              alignItems: "center",
-            }}>
+            <div className="msp-panel mb-2 flex flex-wrap items-center gap-2 px-3 py-2">
               {(() => {
                 const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
                 const adx = result.adx ?? 0;
                 const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
                 const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-                const regimeColor = regime === 'TREND' ? '#10B981' : regime === 'RANGE' ? '#3B82F6' : '#F59E0B';
                 const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
                 const breadth = direction === 'bullish' ? 'RISK ON' : direction === 'bearish' ? 'RISK OFF' : 'MIXED';
                 const sessionLabel = timeframe === '1d' ? 'DAILY' : 'INTRADAY';
 
-                const stripTag = (label: string, value: string, color: string) => (
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    background: 'rgba(15,23,42,0.55)',
-                    border: '1px solid rgba(148,163,184,0.24)',
-                    borderRadius: '999px',
-                    padding: '0.22rem 0.55rem',
-                    fontSize: '0.68rem',
-                  }}>
-                    <span style={{ color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
-                    <span style={{ color, fontWeight: 800 }}>{value}</span>
+                const stripTag = (label: string, value: string, type: 'bull' | 'bear' | 'warn' | 'accent' | 'neutral' = 'neutral') => {
+                  const colorMap: Record<'bull' | 'bear' | 'warn' | 'accent' | 'neutral', string> = {
+                    bull: 'text-msp-bull bg-msp-panel border-msp-borderStrong',
+                    bear: 'text-msp-bear bg-msp-panel border-msp-borderStrong',
+                    warn: 'text-msp-warn bg-msp-panel border-msp-borderStrong',
+                    accent: 'text-msp-accent bg-msp-panel border-msp-borderStrong',
+                    neutral: 'text-msp-neutral bg-msp-panel border-msp-border',
+                  };
+                  return (
+                  <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${colorMap[type]}`}>
+                    <span className="text-msp-faint uppercase">{label}</span>
+                    <span>{value}</span>
                   </div>
-                );
+                  );
+                };
 
                 return (
                   <>
-                    {stripTag('Regime', regime, regimeColor)}
-                    {stripTag('Global Risk', riskState, riskState === 'HIGH' ? '#EF4444' : riskState === 'MODERATE' ? '#F59E0B' : '#10B981')}
-                    {stripTag('Breadth', breadth, breadth === 'RISK ON' ? '#10B981' : breadth === 'RISK OFF' ? '#EF4444' : '#F59E0B')}
-                    {stripTag('Event Risk', 'NONE', '#10B981')}
-                    {stripTag('Session', sessionLabel, '#93C5FD')}
+                    {stripTag('Regime', regime, regime === 'TREND' ? 'bull' : regime === 'RANGE' ? 'neutral' : 'warn')}
+                    {stripTag('Global Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
+                    {stripTag('Breadth', breadth, breadth === 'RISK ON' ? 'bull' : breadth === 'RISK OFF' ? 'bear' : 'warn')}
+                    {stripTag('Event Risk', 'NONE', 'accent')}
+                    {stripTag('Session', sessionLabel, 'neutral')}
                   </>
                 );
               })()}
             </div>
 
-            <div style={{
-              background: "linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))",
-              border: "1px solid rgba(16,185,129,0.35)",
-              borderRadius: "14px",
-              padding: "0.8rem 1rem",
-              marginBottom: "0.85rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "0.75rem",
-              flexWrap: "wrap",
-            }}>
-              <div style={{ color: "#E2E8F0", fontSize: "0.88rem", fontWeight: 800, letterSpacing: "0.35px" }}>
+            <div className="msp-card mb-3 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="text-msp-text text-sm font-bold tracking-wide">
                 🎯 ACTIVE SYMBOL COCKPIT — {result.symbol} ({timeframe.toUpperCase()})
               </div>
-              <div style={{ color: "#10B981", fontSize: "0.76rem", fontWeight: 700 }}>
+              <div className="text-msp-muted text-xs font-semibold">
                 All panels below are for {result.symbol} only
               </div>
               <button
@@ -2139,42 +2092,27 @@ function ScannerContent() {
                   setFocusMode((prev) => !prev);
                   setPersonalitySignals((prev) => ({ ...prev, focusToggles: prev.focusToggles + 1 }));
                 }}
-                style={{
-                  marginLeft: 'auto',
-                  background: focusMode ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.7)',
-                  border: `1px solid ${focusMode ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.3)'}`,
-                  borderRadius: '999px',
-                  color: focusMode ? '#10B981' : '#94A3B8',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  padding: '0.28rem 0.65rem',
-                  cursor: 'pointer',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
+                className={`ml-auto rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide transition ${
+                  focusMode
+                    ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
+                    : 'bg-msp-panel text-msp-muted border-msp-border'
+                }`}
               >
                 {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {[{ label: 'Adaptive', value: 'adaptive' as const }, { label: 'Momentum', value: 'momentum' as const }, { label: 'Structure', value: 'structure' as const }, { label: 'Risk', value: 'risk' as const }, { label: 'Flow', value: 'flow' as const }].map((option) => {
                   const active = personalityMode === option.value;
                   return (
                     <button
                       key={option.value}
                       onClick={() => setPersonalityMode(option.value)}
-                      style={{
-                        background: active ? 'rgba(34,211,238,0.18)' : 'rgba(30,41,59,0.7)',
-                        border: `1px solid ${active ? 'rgba(34,211,238,0.45)' : 'rgba(148,163,184,0.3)'}`,
-                        borderRadius: '999px',
-                        color: active ? '#67E8F9' : '#94A3B8',
-                        fontSize: '0.66rem',
-                        fontWeight: 800,
-                        padding: '0.24rem 0.55rem',
-                        cursor: 'pointer',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}
+                      className={`rounded-full border px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
+                        active
+                          ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
+                          : 'bg-msp-panel text-msp-muted border-msp-border'
+                      }`}
                     >
                       {option.label}
                     </button>
@@ -2188,11 +2126,11 @@ function ScannerContent() {
         {/* Results Card */}
         {result && (
           <div key={scanKey} style={{
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+            background: "var(--msp-card)",
             borderRadius: "16px",
-            border: "1px solid rgba(71,85,105,0.95)",
+            border: "1px solid var(--msp-borderStrong)",
             padding: "2rem",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
+            boxShadow: "var(--msp-shadow)"
           }}>
             {(() => {
               const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
@@ -2206,11 +2144,11 @@ function ScannerContent() {
               return (
                 <div style={{
                   marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.96), rgba(15,23,42,0.92))',
-                  border: '1px solid rgba(56,189,248,0.42)',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '12px',
                   padding: '0.8rem 0.95rem',
-                  color: '#E2E8F0',
+                  color: 'var(--msp-text)',
                   fontSize: '0.86rem',
                   fontWeight: 800,
                   letterSpacing: '0.05em',
@@ -2241,13 +2179,13 @@ function ScannerContent() {
 
               return (
                 <div style={{
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-                  border: '1px solid rgba(56,189,248,0.42)',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '14px',
                   padding: '1rem 1.1rem',
                   marginBottom: '1.2rem',
                 }}>
-                  <div style={{ color: '#67E8F9', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
+                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
                     Command Bar
                   </div>
                   <div style={{
@@ -2288,8 +2226,8 @@ function ScannerContent() {
               return (
                 <div style={{
                   marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
-                  border: '1px solid rgba(148,163,184,0.3)',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '10px',
                   padding: '0.85rem 0.9rem',
                 }}>
@@ -2297,7 +2235,7 @@ function ScannerContent() {
                     Edge Temperature
                   </div>
                   <div style={{ height: '10px', background: 'rgba(51,65,85,0.7)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.4rem' }}>
-                    <div style={{ width: `${confidence}%`, height: '100%', background: `linear-gradient(90deg, ${heatColor}, ${confidence >= 70 ? '#34D399' : confidence >= 50 ? '#FCD34D' : '#F87171'})` }} />
+                    <div style={{ width: `${confidence}%`, height: '100%', background: heatColor }} />
                   </div>
                   <div style={{ color: heatColor, fontSize: '0.8rem', fontWeight: 800 }}>
                     Edge State: {heatLabel} • {confidence}% confidence
@@ -2320,8 +2258,8 @@ function ScannerContent() {
               return (
                 <div style={{
                   marginBottom: '0.7rem',
-                  background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
-                  border: '1px solid rgba(59,130,246,0.28)',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '10px',
                   padding: '0.55rem 0.7rem',
                   display: 'flex',
@@ -2330,7 +2268,7 @@ function ScannerContent() {
                   gap: '0.6rem',
                   flexWrap: 'wrap',
                 }}>
-                  <div style={{ color: '#93C5FD', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     🧠 AI Desk Feed
                   </div>
                   <div style={{ color: '#CBD5E1', fontSize: '0.76rem', flex: 1 }}>{msg}</div>
@@ -2357,8 +2295,8 @@ function ScannerContent() {
               return (
                 <div style={{
                   marginBottom: '1rem',
-                  background: 'linear-gradient(145deg, rgba(10,18,32,0.96), rgba(17,28,45,0.92))',
-                  border: '1px solid rgba(35,52,77,0.9)',
+                  background: 'var(--msp-panel-2)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '10px',
                   padding: '0.75rem 0.8rem',
                   display: 'grid',
@@ -2367,7 +2305,7 @@ function ScannerContent() {
                 }}>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</div></div>
-                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: '#E2E8F0', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
+                  <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
                   <div><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: '#FCA5A5', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</div></div>
                   <div style={{ gridColumn: '1 / -1' }}><div style={{ color: '#64748B', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: '#E2E8F0', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
                 </div>
@@ -2388,7 +2326,7 @@ function ScannerContent() {
                 : false;
 
               const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-              const regimeColor = regime === 'TREND' ? '#14B8A6' : regime === 'RANGE' ? '#64748B' : '#F59E0B';
+              const regimeColor = regime === 'TREND' ? 'var(--msp-accent)' : regime === 'RANGE' ? '#64748B' : '#F59E0B';
               const institutionalIntent = result.institutionalFilter?.recommendation === 'TRADE_READY'
                 ? 'REPRICE_TREND'
                 : result.institutionalFilter?.recommendation === 'CAUTION'
@@ -2464,7 +2402,7 @@ function ScannerContent() {
                 : activePersonality === 'risk'
                 ? 'Risk Manager'
                 : 'Opportunistic Flow Trader';
-              const personalityAccent = activePersonality === 'risk' ? '#F59E0B' : '#14B8A6';
+              const personalityAccent = activePersonality === 'risk' ? '#F59E0B' : 'var(--msp-accent)';
               const personalityHint = activePersonality === 'momentum'
                 ? 'Execution and timing are prioritized first.'
                 : activePersonality === 'structure'
@@ -2497,15 +2435,15 @@ function ScannerContent() {
                   : edgeState === 'ACTIVE EDGE'
                   ? 'EXECUTION WINDOW'
                   : 'BUILDING EDGE';
-              const edgeStateColor = edgeState === 'ACTIVE EDGE' ? '#14B8A6' : edgeState === 'BUILDING EDGE' ? '#14B8A6' : edgeState === 'DANGER' ? '#EF4444' : '#94A3B8';
+              const edgeStateColor = edgeState === 'ACTIVE EDGE' ? 'var(--msp-accent)' : edgeState === 'BUILDING EDGE' ? 'var(--msp-accent)' : edgeState === 'DANGER' ? '#EF4444' : '#94A3B8';
               const edgeStateBorder = edgeState === 'DANGER' ? 'rgba(239,68,68,0.35)' : 'rgba(35,52,77,0.9)';
               const edgeStateBg = edgeState === 'ACTIVE EDGE'
-                ? 'linear-gradient(145deg, rgba(20,184,166,0.12), rgba(10,18,32,0.9))'
+                ? 'rgba(20,184,166,0.12)'
                 : edgeState === 'BUILDING EDGE'
-                ? 'linear-gradient(145deg, rgba(20,184,166,0.08), rgba(10,18,32,0.9))'
+                ? 'rgba(20,184,166,0.08)'
                 : edgeState === 'DANGER'
-                ? 'linear-gradient(145deg, rgba(239,68,68,0.12), rgba(10,18,32,0.9))'
-                : 'linear-gradient(145deg, rgba(148,163,184,0.08), rgba(10,18,32,0.9))';
+                ? 'rgba(239,68,68,0.12)'
+                : 'rgba(148,163,184,0.08)';
               const priorityMode = edgeState === 'ACTIVE EDGE' ? 'strong' : edgeState === 'WAIT' || edgeState === 'DANGER' ? 'weak' : 'building';
               const executionEdgeScore = Math.round(
                 (structureEdge * 0.35) +
@@ -2603,7 +2541,7 @@ function ScannerContent() {
                 <div style={{
                   marginBottom: '0.7rem',
                   background: 'rgba(2,6,23,0.7)',
-                  border: `1px solid ${personalityMode === 'adaptive' ? 'rgba(34,211,238,0.35)' : 'rgba(148,163,184,0.3)'}`,
+                  border: `1px solid ${personalityMode === 'adaptive' ? 'rgba(20,184,166,0.35)' : 'rgba(148,163,184,0.3)'}`,
                   borderRadius: '10px',
                   padding: '0.52rem 0.7rem',
                   display: 'flex',
@@ -2656,7 +2594,7 @@ function ScannerContent() {
                     autopilotState === 'READY'
                       ? '#22C55E'
                       : autopilotState === 'PREPARING'
-                      ? '#14B8A6'
+                      ? 'var(--msp-accent)'
                       : '#94A3B8';
 
                   const opportunityList = [
@@ -2706,12 +2644,12 @@ function ScannerContent() {
                     <>
                       <div style={{
                         marginBottom: '0.68rem',
-                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        background: 'var(--msp-panel)',
                         border: '1px solid rgba(35,52,77,0.9)',
                         borderRadius: '10px',
                         padding: '0.62rem 0.75rem',
                       }}>
-                        <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
+                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
                           AI Trader Presence
                         </div>
                         <div style={{ color: '#E2E8F0', fontSize: '0.76rem', lineHeight: 1.45 }}>
@@ -2745,7 +2683,7 @@ function ScannerContent() {
                       {executionEnabled && (
                         <div style={{
                           marginBottom: '0.62rem',
-                          background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                          background: 'var(--msp-panel)',
                           border: '1px solid rgba(35,52,77,0.9)',
                           borderRadius: '8px',
                           padding: '0.55rem 0.66rem',
@@ -2764,13 +2702,13 @@ function ScannerContent() {
 
                       <div style={{
                         marginBottom: '0.72rem',
-                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        background: 'var(--msp-panel)',
                         border: '1px solid rgba(35,52,77,0.9)',
                         borderRadius: '10px',
                         padding: '0.72rem 0.82rem',
                         boxShadow: 'none',
                       }}>
-                        <div style={{ color: '#14B8A6', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
+                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
                           Autopilot Layer
                         </div>
                         <div style={{ color: autopilotColor, fontSize: '0.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>
@@ -2789,7 +2727,7 @@ function ScannerContent() {
                           </div>
 
                           <div style={{ background: 'rgba(15,23,42,0.56)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem' }}>
-                            <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Opportunity Engine</div>
+                            <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Opportunity Engine</div>
                             <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
                               {opportunityList.map((item, idx) => (
                                 <div key={item.symbol + idx}>{idx + 1}) {item.symbol} — {item.label} ({item.thesis})</div>
@@ -2806,7 +2744,7 @@ function ScannerContent() {
                         </div>
 
                         <div style={{ background: 'rgba(2,6,23,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem', marginBottom: '0.5rem' }}>
-                          <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.22rem' }}>Action Feed</div>
+                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.22rem' }}>Action Feed</div>
                           <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.12rem' }}>
                             {actionFeedEvents.map((event, idx) => (
                               <div key={event}><span style={{ color: '#94A3B8' }}>{`13:${(41 + idx).toString().padStart(2, '0')}`}</span> — {event}</div>
@@ -2815,7 +2753,7 @@ function ScannerContent() {
                         </div>
 
                         <div style={{ background: 'rgba(2,6,23,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.55rem 0.6rem' }}>
-                          <div style={{ color: '#14B8A6', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>AI Trade Narrative</div>
+                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>AI Trade Narrative</div>
                           <div style={{ color: '#CBD5E1', fontSize: '0.74rem', display: 'grid', gap: '0.1rem' }}>
                             <div>• Structure {trendAligned ? 'supports expansion' : 'still re-aligning'}</div>
                             <div>• Institutional flow {flowAligned ? 'aligning with bias' : 'still mixed'}</div>
@@ -2827,12 +2765,12 @@ function ScannerContent() {
 
                       <div style={{
                         marginBottom: '0.75rem',
-                        background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))',
+                        background: 'var(--msp-panel)',
                         border: '1px solid rgba(35,52,77,0.9)',
                         borderRadius: '10px',
                         padding: '0.68rem 0.78rem',
                       }}>
-                        <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
                           Top Strip • AI Command Bar
                         </div>
                         <div style={{ color: '#F8FAFC', fontSize: '0.82rem', fontWeight: 900, marginBottom: '0.46rem' }}>
@@ -2859,7 +2797,7 @@ function ScannerContent() {
                         alignItems: 'start',
                       }}>
                         <div style={{
-                          background: 'linear-gradient(145deg, rgba(2,6,23,0.9), rgba(15,23,42,0.84))',
+                          background: 'var(--msp-panel-2)',
                           border: '1px solid rgba(148,163,184,0.24)',
                           borderRadius: '10px',
                           padding: contextCollapsed ? '0.62rem 0.75rem' : '0.8rem 0.9rem',
@@ -2893,7 +2831,7 @@ function ScannerContent() {
                               <div style={{ marginTop: '0.56rem' }}>
                                 <div style={{ color: '#94A3B8', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.24rem' }}>AI Pressure Meter</div>
                                 <div style={{ height: '7px', background: 'rgba(51,65,85,0.65)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.22rem' }}>
-                                  <div style={{ width: `${pressureMeter}%`, height: '100%', background: `linear-gradient(90deg, ${pressureMeter >= 70 ? '#EF4444' : pressureMeter >= 45 ? '#F59E0B' : '#10B981'}, #34D399)` }} />
+                                  <div style={{ width: `${pressureMeter}%`, height: '100%', background: pressureMeter >= 70 ? '#EF4444' : pressureMeter >= 45 ? '#F59E0B' : '#10B981' }} />
                                 </div>
                                 <div style={{ color: pressureMeter >= 70 ? '#FCA5A5' : '#CBD5E1', fontSize: '0.72rem' }}>{pressureMeter >= 70 ? 'Macro risk elevated' : 'Macro pressure manageable'}</div>
                               </div>
@@ -2910,7 +2848,7 @@ function ScannerContent() {
                         </div>
 
                         <div style={{
-                          background: 'linear-gradient(145deg, rgba(2,6,23,0.94), rgba(15,23,42,0.9))',
+                          background: 'var(--msp-panel-2)',
                           border: '1px solid rgba(35,52,77,0.9)',
                           borderRadius: '12px',
                           padding: edgeCollapsed ? '0.72rem 0.82rem' : '1rem',
@@ -2918,14 +2856,14 @@ function ScannerContent() {
                           transform: strongEdge ? 'scale(1.03)' : 'scale(1)',
                           transformOrigin: 'center top',
                         }}>
-                          <div style={{ color: '#67E8F9', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
+                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
                             Primary Edge Banner
                           </div>
                           <div style={{ color: '#E2E8F0', fontSize: '0.78rem', fontWeight: 800, marginBottom: '0.52rem' }}>
                             {dominantEdge.label} + {dominantEdge.label === 'TIME' ? 'FLOW' : 'TIME'} ALIGNMENT
                           </div>
 
-                          <div style={{ color: '#14B8A6', fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
+                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
                             Center Panel • Decision Engine (The Brain)
                           </div>
 
@@ -2960,13 +2898,13 @@ function ScannerContent() {
                               <div style={{ marginBottom: '0.54rem' }}>
                                 <div style={{ color: '#CBD5E1', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.26rem' }}>Edge Temperature</div>
                                 <div style={{ height: '8px', background: 'rgba(51,65,85,0.7)', borderRadius: '999px', overflow: 'hidden' }}>
-                                  <div style={{ width: `${confidence}%`, height: '100%', background: `linear-gradient(90deg, ${edgeStateColor}, ${strongEdge ? '#34D399' : '#FCD34D'})` }} />
+                                  <div style={{ width: `${confidence}%`, height: '100%', background: edgeStateColor }} />
                                 </div>
                               </div>
 
                               <div style={{ display: 'grid', gap: '0.54rem' }}>
                                 <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem' }}>
-                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer A • Structural Read</div>
+                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer A • Structural Read</div>
                                   <div style={{ color: '#CBD5E1', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
                                     <div>Trend Structure: <span style={{ color: trendAligned ? '#10B981' : '#F59E0B', fontWeight: 800 }}>{trendAligned ? 'Aligned' : 'Needs confirmation'}</span></div>
                                     <div>Pattern State: <span style={{ color: '#E2E8F0', fontWeight: 800 }}>{edgeSentence.replace('High probability ', '').replace('Moderate edge — ', '').replace('Low-quality edge — ', '')}</span></div>
@@ -2976,7 +2914,7 @@ function ScannerContent() {
                                 </div>
 
                                 <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem', opacity: dominantEdge.label === 'FLOW' ? 1 : 0.9 }}>
-                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer B • Options Intelligence</div>
+                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer B • Options Intelligence</div>
                                   <div style={{ color: '#CBD5E1', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
                                     <div>IV Environment: <span style={{ color: '#F8FAFC', fontWeight: 800 }}>{ivEnvironment}</span></div>
                                     <div>Flow / Unusual: <span style={{ color: flowEdge >= 65 ? '#10B981' : '#F59E0B', fontWeight: 800 }}>{flowEdge}%</span></div>
@@ -2986,7 +2924,7 @@ function ScannerContent() {
                                 </div>
 
                                 <div style={{ background: 'rgba(15,23,42,0.58)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.7rem' }}>
-                                  <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer C • Execution Trigger</div>
+                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer C • Execution Trigger</div>
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.34rem', color: '#CBD5E1', fontSize: '0.74rem' }}>
                                     <div>Direction: <span style={{ color: directionColor, fontWeight: 900 }}>{direction.toUpperCase()}</span></div>
                                     <div>Confidence: <span style={{ color: '#E2E8F0', fontWeight: 900 }}>{confidence}%</span></div>
@@ -2997,7 +2935,7 @@ function ScannerContent() {
                               </div>
 
                               <div style={{ marginTop: '0.55rem', background: 'rgba(2,6,23,0.55)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.58rem 0.66rem' }}>
-                                <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>AI Monitoring</div>
+                                <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>AI Monitoring</div>
                                 <div style={{ display: 'grid', gap: '0.22rem', color: '#CBD5E1', fontSize: '0.75rem' }}>
                                   {aiThinkingStream.map((item) => (
                                     <div key={item}>• {item}</div>
@@ -3009,7 +2947,7 @@ function ScannerContent() {
                         </div>
 
                         <div style={{
-                          background: executionHidden ? 'rgba(2,6,23,0.7)' : 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                          background: executionHidden ? 'rgba(2,6,23,0.7)' : 'var(--msp-panel)',
                           border: executionHidden ? '1px dashed rgba(35,52,77,0.9)' : '1px solid rgba(35,52,77,0.9)',
                           borderRadius: '10px',
                           padding: '0.8rem 0.9rem',
@@ -3046,7 +2984,7 @@ function ScannerContent() {
 
                               <div style={{ display: 'grid', gap: '0.42rem', marginBottom: '0.55rem' }}>
                                 <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.62rem' }}>
-                                  <div style={{ color: '#14B8A6', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Execution Block</div>
+                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Execution Block</div>
                                   <div style={{ color: '#CBD5E1', fontSize: '0.74rem', lineHeight: 1.45 }}>
                                     <div>Strategy: <span style={{ color: '#F8FAFC', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
                                     <div>Entry / Stop: <span style={{ color: '#E2E8F0', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
@@ -3055,7 +2993,7 @@ function ScannerContent() {
                                 </div>
 
                                 <div style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '8px', padding: '0.62rem' }}>
-                                  <div style={{ color: '#14B8A6', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Risk Block</div>
+                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Risk Block</div>
                                   <div style={{ color: '#CBD5E1', fontSize: '0.74rem', lineHeight: 1.45 }}>
                                     <div>R:R: <span style={{ color: rrPass ? '#10B981' : '#F59E0B', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
                                     <div>Max Loss: <span style={{ color: '#FCA5A5', fontWeight: 900 }}>{invalidation != null && entry != null ? Math.abs(entry - invalidation).toFixed(2) : 'N/A'}</span></div>
@@ -3064,8 +3002,8 @@ function ScannerContent() {
                                 </div>
                               </div>
 
-                              <div style={{ background: 'linear-gradient(145deg, rgba(10,18,32,0.94), rgba(17,28,45,0.9))', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '10px', padding: '0.74rem 0.8rem' }}>
-                                <div style={{ color: '#14B8A6', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
+                              <div style={{ background: 'var(--msp-panel-2)', border: '1px solid rgba(35,52,77,0.9)', borderRadius: '10px', padding: '0.74rem 0.8rem' }}>
+                                <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
                                   AI Trade Commander
                                 </div>
                                 <div style={{ color: '#E2E8F0', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.5rem' }}>
@@ -3135,12 +3073,12 @@ function ScannerContent() {
 
                       <div style={{
                         marginTop: '0.15rem',
-                        background: 'linear-gradient(145deg, rgba(2,6,23,0.92), rgba(15,23,42,0.88))',
+                        background: 'var(--msp-panel)',
                         border: '1px solid rgba(35,52,77,0.9)',
                         borderRadius: '10px',
                         padding: '0.72rem 0.82rem',
                       }}>
-                        <div style={{ color: '#14B8A6', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
                           Flow / Alert / AI Watch Zone
                         </div>
                         <div style={{ display: 'grid', gap: '0.2rem', marginBottom: '0.45rem' }}>
@@ -3181,10 +3119,10 @@ function ScannerContent() {
                                  "Caution – Wait for Clarity";
               const emoji = isBullish ? "🟢" : isBearish ? "🔴" : "🟡";
               const bgGradient = isBullish 
-                ? "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.05) 100%)" 
+                ? "var(--msp-bull-tint)" 
                 : isBearish 
-                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.05) 100%)"
-                : "linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.05) 100%)";
+                ? "var(--msp-bear-tint)"
+                : "var(--msp-warn-tint)";
               const borderColor = isBullish ? "rgba(16, 185, 129, 0.5)" : 
                                   isBearish ? "rgba(239, 68, 68, 0.5)" : 
                                   "rgba(251, 191, 36, 0.5)";
@@ -3209,10 +3147,10 @@ function ScannerContent() {
                     right: 0,
                     height: "4px",
                     background: isBullish 
-                      ? "linear-gradient(90deg, #10B981, #34D399, #10B981)"
+                      ? "#10B981"
                       : isBearish 
-                      ? "linear-gradient(90deg, #EF4444, #F87171, #EF4444)"
-                      : "linear-gradient(90deg, #F59E0B, #FBBF24, #F59E0B)",
+                      ? "#EF4444"
+                      : "#F59E0B",
                     borderRadius: "16px 16px 0 0"
                   }} />
                   
@@ -3521,7 +3459,7 @@ function ScannerContent() {
                     } else if (adx < 20 && atrPercent < 2) {
                       regime = "Compression";
                       regimeIcon = "🔄";
-                      regimeColor = "#8B5CF6";
+                      regimeColor = "var(--msp-accent)";
                       regimeAdvice = "Breakout setups imminent";
                     } else if (atrPercent >= 3) {
                       regime = "High Volatility";
@@ -3531,7 +3469,7 @@ function ScannerContent() {
                     } else {
                       regime = "Ranging";
                       regimeIcon = "↔️";
-                      regimeColor = "#3B82F6";
+                      regimeColor = "#38BDF8";
                       regimeAdvice = "Mean-reversion plays";
                     }
                     
@@ -3759,7 +3697,7 @@ function ScannerContent() {
                 disabled={aiLoading}
                 style={{
                   padding: "0.65rem 0.9rem",
-                  background: aiLoading ? "#1f2937" : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                  background: aiLoading ? "#1f2937" : "#10B981",
                   border: "none",
                   borderRadius: "8px",
                   color: "#fff",
@@ -4269,7 +4207,7 @@ function ScannerContent() {
                   background: "rgba(30, 41, 59, 0.5)",
                   borderRadius: "12px",
                   padding: "1rem",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  border: "1px solid var(--msp-border)",
                 }}>
                   <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
                     📊 OPEN INTEREST
@@ -4277,7 +4215,7 @@ function ScannerContent() {
                   <div style={{
                     fontSize: "1.3rem",
                     fontWeight: "600",
-                    color: "#3b82f6",
+                    color: "var(--msp-muted)",
                   }}>
                     ${result.derivatives.openInterest >= 1e9 
                       ? (result.derivatives.openInterest / 1e9).toFixed(2) + 'B'

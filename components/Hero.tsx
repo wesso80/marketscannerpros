@@ -12,7 +12,7 @@ export default function Hero() {
           --bg: #05070b;
           --bg-alt: #0c1018;
           --card: #111624;
-          --accent: #14b8a6;
+          --accent: var(--msp-accent);
           --accent-soft: rgba(20, 184, 166, 0.12);
           --text-main: #f9fafb;
           --text-muted: #9ca3af;
@@ -109,7 +109,7 @@ export default function Hero() {
                   </div>
                   <div style={{ 
                     fontSize: 13, 
-                    color: '#14b8a6',
+                    color: 'var(--msp-accent)',
                     fontWeight: 500
                   }}>
                     Phase-Based Market Intelligence
@@ -163,7 +163,7 @@ export default function Hero() {
                   alignItems: 'center',
                   gap: 8,
                   whiteSpace: 'nowrap',
-                  background: 'linear-gradient(135deg, var(--accent), #22c55e)',
+                  background: 'var(--accent)',
                   color: '#0b1120',
                   boxShadow: 'var(--shadow-small)',
                   textDecoration: 'none'
@@ -196,7 +196,7 @@ export default function Hero() {
 
             {/* Side card */}
             <aside style={{
-              background: 'linear-gradient(145deg, #020617, #020617 40%, #020617 60%, #0f172a 100%)',
+              background: 'var(--msp-card)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-soft)',

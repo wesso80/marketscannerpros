@@ -53,7 +53,7 @@ function WidgetSkeleton({ height = '280px' }: { height?: string }) {
   return (
     <div 
       style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155',
@@ -297,7 +297,7 @@ function CryptoCommandCenterContent() {
       {/* Header */}
       <div 
         style={{
-          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          background: 'var(--msp-card)',
           borderBottom: '1px solid #334155',
           position: 'sticky',
           top: 0,
@@ -415,7 +415,7 @@ function CryptoCommandCenterContent() {
                   borderRadius: '8px',
                   marginBottom: '4px',
                   background: activeSection === item.id 
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))'
+                    ? 'var(--msp-accent-glow)'
                     : 'transparent',
                   border: activeSection === item.id 
                     ? '1px solid rgba(16, 185, 129, 0.3)'

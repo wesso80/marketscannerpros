@@ -52,7 +52,7 @@ export default function DefiStatsWidget() {
   if (loading) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -72,7 +72,7 @@ export default function DefiStatsWidget() {
   if (error || !data) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -88,7 +88,7 @@ export default function DefiStatsWidget() {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--msp-card)',
       borderRadius: '12px',
       padding: '20px',
       border: '1px solid #334155'
@@ -186,7 +186,7 @@ export default function DefiStatsWidget() {
           <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase' }}>
             DeFi/ETH Ratio
           </div>
-          <div style={{ color: '#8b5cf6', fontSize: '18px', fontWeight: 700 }}>
+          <div style={{ color: 'var(--msp-accent)', fontSize: '18px', fontWeight: 700 }}>
             {(data.defiToEthRatio ?? 0).toFixed(1)}%
           </div>
         </div>
@@ -212,7 +212,7 @@ export default function DefiStatsWidget() {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#64748b', fontSize: '10px' }}>DeFi Dominance</div>
-          <div style={{ color: '#8b5cf6', fontSize: '16px', fontWeight: 700 }}>
+          <div style={{ color: 'var(--msp-accent)', fontSize: '16px', fontWeight: 700 }}>
             {(data.topCoinDominance ?? 0).toFixed(1)}%
           </div>
         </div>

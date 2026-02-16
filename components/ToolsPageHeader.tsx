@@ -14,14 +14,7 @@ interface ToolsPageHeaderProps {
 
 export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHref }: ToolsPageHeaderProps) {
   return (
-    <div
-      style={{
-        background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(11,21,38,0.92))",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.12)",
-        padding: "18px 24px",
-        boxShadow: "0 14px 40px rgba(0,0,0,0.28)",
-      }}
-    >
+    <div className="border-b border-msp-border bg-msp-card px-6 py-5 shadow-msp">
       <div
         style={{
           maxWidth: "1600px",
@@ -35,65 +28,26 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: "1 1 100%", minWidth: 260 }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "14px",
-              background: "linear-gradient(145deg, #10b981 0%, #3b82f6 100%)",
-              display: "grid",
-              placeItems: "center",
-              boxShadow: "0 10px 30px rgba(16,185,129,0.35)",
-            }}
-          >
-            <span style={{ fontSize: "20px", color: "#0b1625", fontWeight: 800 }}>{icon}</span>
+          <div className="grid h-[42px] w-[42px] place-items-center rounded-msp border border-msp-borderStrong bg-msp-panel">
+            <span style={{ fontSize: "20px", color: "var(--msp-accent)", fontWeight: 800 }}>{icon}</span>
           </div>
           <div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 10px",
-                borderRadius: "999px",
-                background: "rgba(16,185,129,0.12)",
-                color: "#34d399",
-                fontSize: "11px",
-                letterSpacing: "0.06em",
-                border: "1px solid rgba(16,185,129,0.35)",
-              }}
-            >
+            <div className="inline-flex items-center gap-2 rounded-full border border-msp-borderStrong bg-msp-panel px-2.5 py-1 text-[11px] tracking-[0.06em] text-msp-accent">
               {badge}
             </div>
             <h1
               style={{
                 fontSize: "24px",
                 fontWeight: 800,
-                color: "#e2e8f0",
+                color: "var(--msp-text)",
                 margin: "6px 0 0 0",
                 letterSpacing: "-0.02em",
               }}
             >
               {title}
             </h1>
-            <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "12px" }}>{subtitle}</p>
-            <div
-              style={{
-                marginTop: "8px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "4px 10px",
-                borderRadius: "999px",
-                background: "rgba(245,158,11,0.12)",
-                border: "1px solid rgba(245,158,11,0.35)",
-                color: "#FBBF24",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
+            <p style={{ margin: "4px 0 0 0", color: "var(--msp-text-muted)", fontSize: "12px" }}>{subtitle}</p>
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-msp-warn/30 bg-msp-warnTint px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.04em] text-msp-warn">
               Educational Only • Not Financial Advice
             </div>
           </div>
@@ -112,16 +66,7 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
           {backHref && (
             <Link
               href={backHref}
-              style={{
-                padding: "10px 16px",
-                background: "transparent",
-                border: "1px solid rgba(148,163,184,0.25)",
-                borderRadius: "10px",
-                color: "#cbd5e1",
-                textDecoration: "none",
-                fontSize: "13px",
-                fontWeight: 600,
-              }}
+              className="rounded-panel border border-msp-border bg-msp-panel px-4 py-2.5 text-[13px] font-semibold text-msp-text no-underline"
             >
               ← Back
             </Link>

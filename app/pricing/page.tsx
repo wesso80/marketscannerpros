@@ -156,8 +156,8 @@ function PricingContent() {
         {/* Referral Banner - show when arriving via referral link */}
         {referralCode && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.1))',
-            border: '1px solid rgba(59,130,246,0.4)',
+            background: 'rgba(20,184,166,0.1)',
+            border: '1px solid rgba(20,184,166,0.35)',
             borderRadius: 12,
             padding: '16px 24px',
             marginBottom: 32,
@@ -236,7 +236,7 @@ function PricingContent() {
             }}>
               Yearly
               <span style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                background: 'var(--msp-accent)',
                 color: '#fff',
                 fontSize: 11,
                 padding: '2px 8px',
@@ -272,7 +272,7 @@ function PricingContent() {
         }}>
           {/* Free Tier */}
           <div style={{
-            background: 'linear-gradient(145deg, #020617, #0f172a)',
+            background: 'var(--msp-card)',
             borderRadius: 18,
             border: '1px solid #1f2933',
             boxShadow: '0 18px 45px rgba(0,0,0,0.75)',
@@ -392,7 +392,7 @@ function PricingContent() {
                 width: '100%',
                 borderRadius: 999,
                 border: 'none',
-                background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                background: 'var(--msp-accent)',
                 color: '#0b1120',
                 padding: '16px 24px',
                 fontSize: 16,
@@ -411,10 +411,10 @@ function PricingContent() {
 
           {/* Pro Trader Tier */}
           <div style={{
-            background: 'linear-gradient(145deg, #0f172a, #020617)',
+            background: 'var(--msp-card)',
             borderRadius: 18,
-            border: '1px solid rgba(59,130,246,0.3)',
-            boxShadow: '0 18px 45px rgba(0,0,0,0.75), 0 0 30px rgba(59,130,246,0.08)',
+            border: '1px solid var(--msp-border)',
+            boxShadow: '0 18px 45px rgba(0,0,0,0.75), var(--msp-shadow)',
             padding: '32px 28px',
             position: 'relative',
             overflow: 'hidden'
@@ -452,7 +452,7 @@ function PricingContent() {
                   paddingRight: item.highlight ? 10 : 0
                 }}>
                   <span style={{ color: '#60a5fa', fontSize: 18 }}>✓</span>
-                  <span style={{ color: item.highlight ? '#93c5fd' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
+                  <span style={{ color: item.highlight ? 'var(--msp-muted)' : '#e5e7eb', fontWeight: item.highlight ? 600 : 400 }}>{item.text}</span>
                 </li>
               ))}
             </ul>
@@ -464,13 +464,13 @@ function PricingContent() {
                 width: '100%',
                 borderRadius: 999,
                 border: 'none',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'var(--msp-accent)',
                 color: '#fff',
                 padding: '16px 24px',
                 fontSize: 16,
                 fontWeight: 600,
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(59,130,246,0.3)',
+                boxShadow: 'var(--msp-shadow)',
                 opacity: loading === 'pro_trader' ? 0.6 : 1
               }}
             >
@@ -489,7 +489,7 @@ function PricingContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {faqs.map((faq, i) => (
               <div key={i} style={{
-                background: 'linear-gradient(145deg, #020617, #0f172a)',
+                background: 'var(--msp-card)',
                 borderRadius: 12,
                 border: '1px solid #1f2933',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.5)',

@@ -29,7 +29,7 @@ export default function UrgencyHero() {
   return (
     <section style={{
       width: '100%',
-      background: 'linear-gradient(135deg, #0a0e17 0%, #111827 50%, #0f172a 100%)',
+      background: 'var(--msp-bg)',
       position: 'relative',
       overflow: 'hidden',
       borderBottom: '1px solid rgba(34,197,94,0.2)'
@@ -75,7 +75,7 @@ export default function UrgencyHero() {
         width: 300,
         height: 300,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(148,163,184,0.1) 0%, transparent 70%)',
         bottom: -50,
         left: -50,
         animation: 'float 10s ease-in-out infinite reverse',
@@ -140,11 +140,7 @@ export default function UrgencyHero() {
             The Market Speaks.
             <br />
             <span style={{
-              background: 'linear-gradient(135deg, #22c55e 0%, #14b8a6 50%, #3b82f6 100%)',
-              backgroundSize: '200% 200%',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              animation: 'gradientShift 5s ease infinite'
+              color: 'var(--msp-accent)'
             }}>
               Are You Listening?
             </span>
@@ -175,7 +171,7 @@ export default function UrgencyHero() {
           transition: 'all 0.8s ease 0.4s'
         }}>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05))',
+            background: 'rgba(239,68,68,0.1)',
             border: '1px solid rgba(239,68,68,0.2)',
             borderRadius: 16,
             padding: '20px 28px',
@@ -196,7 +192,7 @@ export default function UrgencyHero() {
           </div>
 
           <div style={{
-            background: 'linear-gradient(145deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))',
+            background: 'rgba(34,197,94,0.1)',
             border: '1px solid rgba(34,197,94,0.2)',
             borderRadius: 16,
             padding: '20px 28px',
@@ -216,8 +212,8 @@ export default function UrgencyHero() {
           </div>
 
           <div style={{
-            background: 'linear-gradient(145deg, rgba(59,130,246,0.1), rgba(59,130,246,0.05))',
-            border: '1px solid rgba(59,130,246,0.2)',
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border)',
             borderRadius: 16,
             padding: '20px 28px',
             textAlign: 'center',
@@ -229,7 +225,7 @@ export default function UrgencyHero() {
             <div style={{
               fontSize: 36,
               fontWeight: 800,
-              color: '#60a5fa'
+              color: 'var(--msp-accent)'
             }}>
               1,247
             </div>
@@ -253,7 +249,7 @@ export default function UrgencyHero() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 10,
-              background: 'linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)',
+              background: 'var(--msp-accent)',
               color: '#0b1120',
               padding: '18px 36px',
               borderRadius: 999,

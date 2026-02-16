@@ -185,7 +185,7 @@ export default function SentimentWidget({
 
             {/* Scale bar */}
             <div className="relative h-3 rounded-full overflow-hidden mb-2" style={{
-              background: 'linear-gradient(to right, #ef4444, #f97316, #eab308, #84cc16, #22c55e)'
+              background: 'var(--msp-panel)'
             }}>
               <div 
                 className="absolute top-0 w-3 h-3 bg-white rounded-full border-2 border-slate-900 transition-all duration-500"

@@ -575,7 +575,7 @@ export default function DeepAnalysisPage() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
         <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
         <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem" }}>
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
@@ -611,7 +611,7 @@ export default function DeepAnalysisPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
       <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
       
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem 1rem" }}>
@@ -621,27 +621,18 @@ export default function DeepAnalysisPage() {
           <h1 style={{ 
             fontSize: "clamp(1.5rem, 6vw, 2.5rem)", 
             fontWeight: "bold", 
-            background: "linear-gradient(135deg, #F59E0B, #FBBF24, #F59E0B)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: "var(--msp-text)",
             marginBottom: "0.5rem"
           }}>
             The Golden Egg
           </h1>
-          <p style={{ color: "#94A3B8", fontSize: "clamp(0.9rem, 3vw, 1.1rem)" }}>
+          <p style={{ color: "var(--msp-text-muted)", fontSize: "clamp(0.9rem, 3vw, 1.1rem)" }}>
             Complete market analysis • Any asset • One search
           </p>
         </div>
 
         {/* Search Box */}
-        <div style={{ 
-          background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(30,41,59,0.8))", 
-          borderRadius: "20px", 
-          border: "2px solid rgba(245,158,11,0.3)", 
-          padding: "1.5rem",
-          marginBottom: "2rem",
-          boxShadow: "0 8px 32px rgba(245,158,11,0.1)"
-        }}>
+        <div className="msp-card" style={{ borderRadius: "20px", padding: "1.5rem", marginBottom: "2rem" }}>
           <div className="options-form-controls" style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <input
               type="text"
@@ -653,9 +644,9 @@ export default function DeepAnalysisPage() {
                 flex: 1,
                 padding: "0.875rem 1.25rem",
                 borderRadius: "12px",
-                border: "2px solid rgba(245,158,11,0.3)",
-                background: "rgba(15,23,42,0.8)",
-                color: "#fff",
+                border: "1px solid var(--msp-border)",
+                background: "var(--msp-panel)",
+                color: "var(--msp-text)",
                 fontSize: "1rem",
                 outline: "none"
               }}
@@ -667,8 +658,8 @@ export default function DeepAnalysisPage() {
                 padding: "0.875rem 1.5rem",
                 borderRadius: "12px",
                 border: "none",
-                background: loading ? "rgba(245,158,11,0.5)" : "linear-gradient(135deg, #F59E0B, #D97706)",
-                color: "#000",
+                background: loading ? "var(--msp-panel)" : "var(--msp-accent)",
+                color: "#061018",
                 fontSize: "1rem",
                 fontWeight: "bold",
                 cursor: loading ? "wait" : "pointer",
@@ -693,9 +684,9 @@ export default function DeepAnalysisPage() {
                 style={{
                   padding: "0.4rem 0.8rem",
                   borderRadius: "6px",
-                  border: "1px solid rgba(245,158,11,0.3)",
-                  background: symbol === s ? "rgba(245,158,11,0.2)" : "transparent",
-                  color: "#F59E0B",
+                  border: "1px solid var(--msp-border)",
+                  background: symbol === s ? "var(--msp-panel)" : "transparent",
+                  color: "var(--msp-muted)",
                   fontSize: "0.85rem",
                   cursor: "pointer"
                 }}
@@ -738,7 +729,7 @@ export default function DeepAnalysisPage() {
             
             {/* Main Signal Banner */}
             <div style={{ 
-              background: `linear-gradient(145deg, ${getSignalColor(result.signals.signal)}20, rgba(30,41,59,0.8))`,
+              background: `${getSignalColor(result.signals.signal)}20`,
               borderRadius: "20px",
               border: `2px solid ${getSignalColor(result.signals.signal)}50`,
               padding: "2rem",
@@ -808,13 +799,13 @@ export default function DeepAnalysisPage() {
             
             {/* Key Takeaways Section */}
             <div style={{ 
-              background: "linear-gradient(145deg, rgba(245,158,11,0.15), rgba(30,41,59,0.9))",
+              background: "var(--msp-warn-tint)",
               borderRadius: "16px",
               border: "1px solid rgba(245,158,11,0.4)",
               padding: "1.5rem"
             }}>
               <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>⚡</span>
+                <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>⚡</span>
                 Quick Summary
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "0.75rem" }}>
@@ -919,13 +910,13 @@ export default function DeepAnalysisPage() {
               {/* Technical Indicators */}
               {result.indicators && (
                 <div style={{ 
-                  background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                  background: "var(--msp-card)",
                   borderRadius: "16px",
                   border: "1px solid rgba(51,65,85,0.8)",
                   padding: "1.5rem"
                 }}>
                   <h3 style={{ color: "#10B981", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ background: "linear-gradient(135deg, #10B981, #059669)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
+                    <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                     Technical Indicators
                   </h3>
                   
@@ -1020,7 +1011,7 @@ export default function DeepAnalysisPage() {
                     {result.indicators.atr !== undefined && (
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "1rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>ATR (14)</div>
-                        <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#8B5CF6" }}>
+                        <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "var(--msp-muted)" }}>
                           ${result.indicators.atr.toFixed(2)}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "#64748B" }}>Volatility</div>
@@ -1051,7 +1042,7 @@ export default function DeepAnalysisPage() {
                         </div>
                         <div style={{ 
                           height: "8px", 
-                          background: "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", 
+                          background: "var(--msp-divider)", 
                           borderRadius: "4px", 
                           marginTop: "0.5rem",
                           position: "relative"
@@ -1081,13 +1072,13 @@ export default function DeepAnalysisPage() {
               
               {/* Signal Reasons - Weighted Probability Engine */}
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
                 border: "1px solid rgba(51,65,85,0.8)",
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>🎯</span>
+                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>🎯</span>
                   Signal Breakdown
                 </h3>
                 
@@ -1122,10 +1113,10 @@ export default function DeepAnalysisPage() {
                             height: "100%",
                             width: `${weighted.confidence}%`,
                             background: weighted.confidence > 70 
-                              ? "linear-gradient(90deg, #10B981, #34D399)" 
+                              ? "#10B981" 
                               : weighted.confidence > 50 
-                                ? "linear-gradient(90deg, #F59E0B, #FBBF24)" 
-                                : "linear-gradient(90deg, #EF4444, #F87171)",
+                                ? "#F59E0B" 
+                                : "#EF4444",
                             borderRadius: "6px",
                             transition: "width 0.5s ease"
                           }} />
@@ -1237,13 +1228,13 @@ export default function DeepAnalysisPage() {
             {/* Company / Crypto Data */}
             {(result.company || result.cryptoData) && (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
-                border: "1px solid rgba(51,65,85,0.8)",
+                border: "1px solid var(--msp-borderStrong)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "#8B5CF6", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #8B5CF6, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>🏢</span>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>🏢</span>
                   {result.company ? 'Company Overview' : 'Market Data'}
                 </h3>
                 
@@ -1289,7 +1280,7 @@ export default function DeepAnalysisPage() {
                       </div>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Target Price</div>
-                        <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#3B82F6" }}>${result.company.targetPrice?.toFixed(2) || 'N/A'}</div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--msp-muted)" }}>${result.company.targetPrice?.toFixed(2) || 'N/A'}</div>
                         {result.company.targetPrice && result.price?.price && (
                           <div style={{ fontSize: "0.7rem", color: result.company.targetPrice > result.price.price ? "#10B981" : "#EF4444" }}>
                             {((result.company.targetPrice - result.price.price) / result.price.price * 100) > 0 ? '+' : ''}
@@ -1312,7 +1303,7 @@ export default function DeepAnalysisPage() {
                             </div>
                             <div style={{ 
                               height: "10px", 
-                              background: "linear-gradient(90deg, #EF4444, #F59E0B, #10B981)", 
+                              background: "var(--msp-divider)", 
                               borderRadius: "5px",
                               position: "relative"
                             }}>
@@ -1338,7 +1329,7 @@ export default function DeepAnalysisPage() {
                       
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Div Yield</div>
-                        <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "#8B5CF6" }}>
+                        <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--msp-muted)" }}>
                           {result.company.dividendYield?.toFixed(2) || '0'}%
                         </div>
                       </div>
@@ -1412,13 +1403,13 @@ export default function DeepAnalysisPage() {
             {/* Options Flow - Show data for admins, Coming Soon for others */}
             {result.assetType === 'stock' && (result.optionsData ? (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
-                border: "1px solid rgba(168,85,247,0.3)",
+                border: "1px solid var(--msp-border)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "#A855F7", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                   Options Flow (Weekly Expiry)
                   <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>ADMIN PREVIEW</span>
                 </h3>
@@ -1437,7 +1428,7 @@ export default function DeepAnalysisPage() {
                   </div>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Avg IV</div>
-                    <div style={{ color: "#3B82F6", fontSize: "1.25rem", fontWeight: "bold" }}>
+                    <div style={{ color: "var(--msp-muted)", fontSize: "1.25rem", fontWeight: "bold" }}>
                       {result.optionsData.avgIV ? `${capPercentage(result.optionsData.avgIV * 100, 300)}` : "—"}
                     </div>
                   </div>
@@ -1489,7 +1480,7 @@ export default function DeepAnalysisPage() {
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>ν Vega:</span>
-                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOICall.vega?.toFixed(4) || '—'}</span>
+                            <span style={{ color: "var(--msp-muted)" }}>{result.optionsData.highestOICall.vega?.toFixed(4) || '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1527,7 +1518,7 @@ export default function DeepAnalysisPage() {
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <span style={{ color: "#64748B" }}>ν Vega:</span>
-                            <span style={{ color: "#3B82F6" }}>{result.optionsData.highestOIPut.vega?.toFixed(4) || '—'}</span>
+                            <span style={{ color: "var(--msp-muted)" }}>{result.optionsData.highestOIPut.vega?.toFixed(4) || '—'}</span>
                           </div>
                         </div>
                       </div>
@@ -1537,15 +1528,15 @@ export default function DeepAnalysisPage() {
               </div>
             ) : (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(168,85,247,0.08), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
-                border: "1px solid rgba(168,85,247,0.3)",
+                border: "1px solid var(--msp-border)",
                 padding: "1.5rem",
                 position: "relative",
                 overflow: "hidden"
               }}>
-                <h3 style={{ color: "#A855F7", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #A855F7, #7C3AED)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                   Options Flow (Weekly Expiry)
                 </h3>
                 
@@ -1568,9 +1559,8 @@ export default function DeepAnalysisPage() {
                   <div style={{ 
                     fontSize: "1.5rem", 
                     fontWeight: "bold",
-                    background: "linear-gradient(135deg, #A855F7, #7C3AED, #A855F7)",
+                    color: "var(--msp-accent)",
                     WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
                     marginBottom: "0.5rem"
                   }}>
                     Coming Soon
@@ -1613,13 +1603,13 @@ export default function DeepAnalysisPage() {
             {/* Earnings Data (for stocks) */}
             {result.earnings && (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(245,158,11,0.08), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
                 border: "1px solid rgba(245,158,11,0.3)",
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>📅</span>
+                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>📅</span>
                   Earnings Report
                 </h3>
                 
@@ -1724,13 +1714,13 @@ export default function DeepAnalysisPage() {
             {/* News Sentiment */}
             {result.news && result.news.length > 0 && (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                background: "var(--msp-card)",
                 borderRadius: "16px",
-                border: "1px solid rgba(51,65,85,0.8)",
+                border: "1px solid var(--msp-borderStrong)",
                 padding: "1.5rem"
               }}>
-                <h3 style={{ color: "#3B82F6", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)", borderRadius: "6px", padding: "4px 6px" }}>📰</span>
+                <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📰</span>
                   Latest News & Sentiment
                 </h3>
                 
@@ -1825,13 +1815,13 @@ export default function DeepAnalysisPage() {
             {/* AI Analysis */}
             {result.aiAnalysis && (
               <div style={{ 
-                background: "linear-gradient(145deg, rgba(245,158,11,0.1), rgba(30,41,59,0.8))",
+                background: "var(--msp-warn-tint)",
                 borderRadius: "16px",
                 border: "2px solid rgba(245,158,11,0.3)",
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", borderRadius: "6px", padding: "4px 6px" }}>🤖</span>
+                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>🤖</span>
                   AI Deep Analysis
                 </h3>
                 
@@ -1893,7 +1883,7 @@ export default function DeepAnalysisPage() {
           <div style={{ 
             textAlign: "center", 
             padding: "4rem 2rem",
-            background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+            background: "var(--msp-card)",
             borderRadius: "16px",
             border: "1px solid rgba(51,65,85,0.5)"
           }}>

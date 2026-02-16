@@ -314,7 +314,7 @@ export default function GainersLosersPage() {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 20px',
-              background: refreshing ? '#334155' : 'linear-gradient(135deg, #10b981, #059669)',
+              background: refreshing ? '#334155' : 'var(--msp-accent)',
               border: 'none',
               borderRadius: '8px',
               color: '#fff',
@@ -335,13 +335,13 @@ export default function GainersLosersPage() {
 
         {/* Tabs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-          <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
+          <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             🚀 Top Gainers
           </button>
-          <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
+          <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             📉 Top Losers
           </button>
-          <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1))" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid rgba(59, 130, 246, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "active" ? "#3B82F6" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
+          <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
             🔥 Most Active
           </button>
         </div>
@@ -350,8 +350,8 @@ export default function GainersLosersPage() {
         {insight && canAccessPortfolioInsights(tier) && (
           <div style={{
             padding: "12px 16px",
-            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))",
-            border: "1px solid rgba(59, 130, 246, 0.3)",
+            background: "var(--msp-panel)",
+            border: "1px solid var(--msp-border)",
             borderRadius: "10px",
             marginBottom: "16px",
             color: "#E2E8F0",
@@ -441,7 +441,7 @@ export default function GainersLosersPage() {
                 </div>
               ) : currentData.map((item, index) => (
                 <div key={index} style={{
-                  background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))",
+                  background: "var(--msp-card)",
                   borderRadius: "12px",
                   border: "1px solid rgba(51,65,85,0.8)",
                   padding: "16px"
@@ -508,7 +508,7 @@ export default function GainersLosersPage() {
             </div>
 
             {/* Desktop Table */}
-            <div className="hidden md:block" style={{ background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
+            <div className="hidden md:block" style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
               <div style={{ minWidth: 700, width: '100%' }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>

@@ -118,7 +118,7 @@ export default function StateMachineTraderEyeCard({
 
   return (
     <div style={{
-      background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+      background: 'var(--msp-card)',
       border: `1px solid ${stateColor}55`,
       borderRadius: '12px',
       padding: compact ? '0.65rem 0.8rem' : '0.9rem 1rem',
@@ -127,7 +127,7 @@ export default function StateMachineTraderEyeCard({
       gap: '0.32rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <div style={{ color: '#93C5FD', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>
+        <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>
           Trader Eye State
         </div>
         <div style={{ color: stateColor, fontSize: '0.72rem', fontWeight: 800 }}>

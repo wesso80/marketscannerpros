@@ -79,7 +79,7 @@ export default function AdminAIUsagePage() {
   const tierBadge = (tier: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       pro_trader: { bg: "rgba(245, 158, 11, 0.2)", text: "#F59E0B" },
-      pro: { bg: "rgba(59, 130, 246, 0.2)", text: "#3B82F6" },
+      pro: { bg: "var(--msp-accent-glow)", text: "var(--msp-accent)" },
       free: { bg: "rgba(107, 114, 128, 0.2)", text: "#9CA3AF" },
     };
     const color = colors[tier] || colors.free;
@@ -128,7 +128,7 @@ export default function AdminAIUsagePage() {
       {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         <div style={{ ...cardStyle, textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", fontWeight: 700, color: "#3B82F6" }}>{totalQuestionsToday}</div>
+          <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>{totalQuestionsToday}</div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Questions Today</div>
         </div>
         <div style={{ ...cardStyle, textAlign: "center" }}>
@@ -140,7 +140,7 @@ export default function AdminAIUsagePage() {
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Questions (30 days)</div>
         </div>
         <div style={{ ...cardStyle, textAlign: "center" }}>
-          <div style={{ fontSize: "2rem", fontWeight: 700, color: "#8B5CF6" }}>{topUsers.length}</div>
+          <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>{topUsers.length}</div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Total AI Users</div>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function AdminAIUsagePage() {
                     <td style={{ padding: "0.75rem", color: "#E5E7EB" }}>
                       {new Date(day.date).toLocaleDateString()}
                     </td>
-                    <td style={{ padding: "0.75rem", textAlign: "right", color: "#3B82F6", fontWeight: 600 }}>
+                    <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--msp-accent)", fontWeight: 600 }}>
                       {day.questions}
                     </td>
                     <td style={{ padding: "0.75rem", textAlign: "right", color: "#10B981" }}>
@@ -232,7 +232,7 @@ export default function AdminAIUsagePage() {
                       {user.workspace_id.slice(0, 16)}...
                     </td>
                     <td style={{ padding: "0.75rem" }}>{tierBadge(user.tier)}</td>
-                    <td style={{ padding: "0.75rem", textAlign: "right", color: "#3B82F6", fontWeight: 600 }}>
+                    <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--msp-accent)", fontWeight: 600 }}>
                       {user.total_questions}
                     </td>
                     <td style={{ padding: "0.75rem", textAlign: "right", color: "#9CA3AF", fontSize: "0.875rem" }}>

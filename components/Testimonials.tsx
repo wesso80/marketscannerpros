@@ -57,7 +57,7 @@ export default function Testimonials() {
         }}>
           {testimonials.map((t, i) => (
             <blockquote key={i} style={{
-              background: 'linear-gradient(145deg, #020617, #0f172a)',
+              background: 'var(--msp-card)',
               borderRadius: 12,
               border: '1px solid #1f2933',
               boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
@@ -97,7 +97,7 @@ export default function Testimonials() {
                   width: 36,
                   height: 36,
                   borderRadius: 999,
-                  background: 'linear-gradient(135deg, #14b8a6, #22c55e)',
+                  background: 'var(--msp-accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

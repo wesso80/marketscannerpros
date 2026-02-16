@@ -121,10 +121,10 @@ export default function AIConfluenceScanner() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)" }}>
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
         <header style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem", textAlign: "center" }}>
           <span style={{ 
-            background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", 
+            background: "var(--msp-accent)", 
             padding: "4px 12px", 
             borderRadius: "999px", 
             fontSize: "11px", 
@@ -276,7 +276,7 @@ export default function AIConfluenceScanner() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(180deg, #0F172A 0%, #1E293B 100%)',
+      background: 'var(--msp-bg)',
       padding: '2rem',
       color: 'white'
     }}>
@@ -286,9 +286,7 @@ export default function AIConfluenceScanner() {
           <h1 style={{ 
             fontSize: '2.5rem', 
             fontWeight: 'bold',
-            background: 'linear-gradient(135deg, #A855F7, #3B82F6)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'var(--msp-accent)',
             marginBottom: '0.5rem'
           }}>
             🔮 Time Confluence Scanner
@@ -415,7 +413,7 @@ export default function AIConfluenceScanner() {
             style={{
               padding: '0.75rem 2rem',
               fontSize: '1.1rem',
-              background: loading ? 'rgba(168,85,247,0.5)' : 'linear-gradient(135deg, #A855F7, #7C3AED)',
+              background: loading ? 'rgba(100,116,139,0.5)' : 'var(--msp-accent)',
               border: 'none',
               borderRadius: '12px',
               color: 'white',
@@ -443,10 +441,10 @@ export default function AIConfluenceScanner() {
               style={{
                 padding: '0.75rem 1rem',
                 fontSize: '0.9rem',
-                background: 'rgba(59,130,246,0.2)',
-                border: '1px solid rgba(59,130,246,0.5)',
+                background: 'var(--msp-panel)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '12px',
-                color: '#3B82F6',
+                color: 'var(--msp-accent)',
                 fontWeight: '500',
                 cursor: 'pointer',
               }}
@@ -467,10 +465,10 @@ export default function AIConfluenceScanner() {
               style={{
                 margin: '0.25rem',
                 padding: '0.4rem 0.8rem',
-                background: 'rgba(59,130,246,0.2)',
-                border: '1px solid rgba(59,130,246,0.5)',
+                background: 'var(--msp-panel)',
+                border: '1px solid var(--msp-border)',
                 borderRadius: '8px',
-                color: '#3B82F6',
+                color: 'var(--msp-accent)',
                 cursor: 'pointer',
                 fontSize: '0.85rem',
               }}
@@ -483,17 +481,17 @@ export default function AIConfluenceScanner() {
         {/* ⏰ Institutional Time Windows */}
         <div style={{
           background: activeWindow 
-            ? (isPowerHour ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' 
-               : isOpeningRange ? 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))'
+            ? (isPowerHour ? 'rgba(239,68,68,0.2)' 
+              : isOpeningRange ? 'rgba(16,185,129,0.2)'
                : isLunchLull ? 'rgba(100,116,139,0.15)'
-               : 'rgba(59,130,246,0.15)')
+              : 'var(--msp-panel)')
             : 'rgba(30,41,59,0.6)',
           border: activeWindow
             ? (isPowerHour ? '2px solid #EF4444' 
                : isOpeningRange ? '2px solid #10B981'
                : isLunchLull ? '1px solid #64748B'
-               : '1px solid #3B82F6')
-            : '1px solid rgba(59,130,246,0.3)',
+              : '1px solid var(--msp-accent)')
+            : '1px solid var(--msp-border)',
           borderRadius: '12px',
           padding: '1rem 1.5rem',
           marginBottom: '1.5rem',
@@ -558,7 +556,7 @@ export default function AIConfluenceScanner() {
 
         {/* � Trade Window / Holding Period Display */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+          background: 'rgba(16,185,129,0.1)',
           border: '1px solid rgba(16,185,129,0.3)',
           borderRadius: '12px',
           padding: '1rem 1.5rem',
@@ -643,12 +641,12 @@ export default function AIConfluenceScanner() {
                 ⏰ Exit by: {new Date(Date.now() + holdingHours * 3600000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric' })}
               </span>
               {holdingHours >= 168 && (
-                <span style={{ color: '#8B5CF6' }}>
+                <span style={{ color: 'var(--msp-muted)' }}>
                   📅 Swing trade: Position sizing for volatility
                 </span>
               )}
               {holdingHours < 24 && holdingHours >= 9 && (
-                <span style={{ color: '#3B82F6' }}>
+                <span style={{ color: 'var(--msp-accent)' }}>
                   ⚡ Day trade: Close before market close
                 </span>
               )}
@@ -660,8 +658,8 @@ export default function AIConfluenceScanner() {
         {extremeConditions && extremeConditions.length > 0 && (
           <div style={{
             background: extremeConditions.some(c => c.type === 'extreme') 
-              ? 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(168,85,247,0.25), rgba(245,158,11,0.25))'
-              : 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))',
+              ? 'rgba(239,68,68,0.25)'
+              : 'rgba(16,185,129,0.2)',
             border: extremeConditions.some(c => c.type === 'extreme') ? '2px solid #EF4444' : '2px solid #10B981',
             borderRadius: '16px',
             padding: '1.25rem',
@@ -824,12 +822,12 @@ export default function AIConfluenceScanner() {
 
             {/* Signal Card */}
             <div style={{
-              background: `linear-gradient(145deg, ${
+              background: `${
                 hierarchicalResult.signalStrength === 'strong' ? 'rgba(16,185,129,0.2)' :
                 hierarchicalResult.signalStrength === 'moderate' ? 'rgba(245,158,11,0.2)' :
                 hierarchicalResult.signalStrength === 'weak' ? 'rgba(239,68,68,0.1)' :
                 'rgba(100,116,139,0.1)'
-              }, rgba(30,41,59,0.9))`,
+              }`,
               border: `2px solid ${
                 hierarchicalResult.signalStrength === 'strong' ? '#10B981' :
                 hierarchicalResult.signalStrength === 'moderate' ? '#F59E0B' :
@@ -913,11 +911,11 @@ export default function AIConfluenceScanner() {
               <div style={{
                 marginTop: '1.5rem',
                 padding: '1rem',
-                background: `linear-gradient(135deg, ${
+                background: `${
                   hierarchicalResult.prediction.direction === 'bullish' ? 'rgba(16,185,129,0.15)' :
                   hierarchicalResult.prediction.direction === 'bearish' ? 'rgba(239,68,68,0.15)' :
                   'rgba(100,116,139,0.1)'
-                }, transparent)`,
+                }`,
                 borderRadius: '12px',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
@@ -941,13 +939,13 @@ export default function AIConfluenceScanner() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Target</div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3B82F6', fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--msp-accent)', fontFamily: 'monospace' }}>
                     ${formatPrice(hierarchicalResult.prediction.targetLevel)}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase' }}>Move Expected</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#A855F7' }}>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--msp-muted)' }}>
                     {hierarchicalResult.prediction.expectedMoveTime}
                   </div>
                 </div>
@@ -1045,7 +1043,7 @@ export default function AIConfluenceScanner() {
                     <div style={{ 
                       textAlign: 'center', 
                       padding: '0.75rem',
-                      background: 'rgba(59,130,246,0.1)',
+                      background: 'var(--msp-panel)',
                       borderRadius: '8px',
                     }}>
                       <div style={{ fontSize: '0.65rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
@@ -1054,7 +1052,7 @@ export default function AIConfluenceScanner() {
                       <div style={{ 
                         fontSize: '1.25rem', 
                         fontWeight: 'bold',
-                        color: hierarchicalResult.scoreBreakdown.clusterScore >= 70 ? '#3B82F6' : '#94A3B8',
+                        color: hierarchicalResult.scoreBreakdown.clusterScore >= 70 ? 'var(--msp-accent)' : '#94A3B8',
                       }}>
                         {hierarchicalResult.scoreBreakdown.clusterScore}
                       </div>
@@ -1117,11 +1115,11 @@ export default function AIConfluenceScanner() {
                     }}>
                       {hierarchicalResult.scoreBreakdown.banners.map((banner, i) => (
                         <span key={i} style={{
-                          background: banner.includes('MEGA') ? 'linear-gradient(135deg, #F59E0B, #EF4444)' :
-                                     banner.includes('EXTREME BULLISH') ? 'linear-gradient(135deg, #10B981, #059669)' :
-                                     banner.includes('EXTREME BEARISH') ? 'linear-gradient(135deg, #EF4444, #DC2626)' :
-                                     banner.includes('MAGNET') ? 'linear-gradient(135deg, #8B5CF6, #6366F1)' :
-                                     'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+                          background: banner.includes('MEGA') ? '#F59E0B' :
+                                     banner.includes('EXTREME BULLISH') ? '#10B981' :
+                                     banner.includes('EXTREME BEARISH') ? '#EF4444' :
+                                     banner.includes('MAGNET') ? 'var(--msp-muted)' :
+                                     'var(--msp-accent)',
                           color: '#fff',
                           padding: '4px 12px',
                           borderRadius: '999px',
@@ -1145,8 +1143,8 @@ export default function AIConfluenceScanner() {
             {hierarchicalResult.tradeSetup && hierarchicalResult.prediction.direction !== 'neutral' && (
               <div style={{
                 background: hierarchicalResult.prediction.direction === 'bullish' 
-                  ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(30,41,59,0.95))'
-                  : 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(30,41,59,0.95))',
+                  ? 'rgba(16,185,129,0.15)'
+                  : 'rgba(239,68,68,0.15)',
                 border: `2px solid ${hierarchicalResult.prediction.direction === 'bullish' ? '#10B981' : '#EF4444'}`,
                 borderRadius: '16px',
                 padding: '1.5rem',
@@ -1160,7 +1158,7 @@ export default function AIConfluenceScanner() {
                     padding: '0.25rem 0.75rem',
                     borderRadius: '8px',
                     fontSize: '0.8rem',
-                    color: '#A855F7',
+                    color: 'var(--msp-muted)',
                     fontWeight: 600,
                   }}>
                     Swing Stop
@@ -1174,8 +1172,8 @@ export default function AIConfluenceScanner() {
                 }}>
                   {/* Entry */}
                   <div style={{
-                    background: 'rgba(59,130,246,0.15)',
-                    border: '1px solid rgba(59,130,246,0.4)',
+                    background: 'var(--msp-panel)',
+                    border: '1px solid var(--msp-border)',
                     borderRadius: '12px',
                     padding: '1rem',
                     textAlign: 'center',
@@ -1183,7 +1181,7 @@ export default function AIConfluenceScanner() {
                     <div style={{ fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                       Entry Price
                     </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#3B82F6', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--msp-accent)', fontFamily: 'monospace' }}>
                       ${formatPrice(hierarchicalResult.tradeSetup.entryPrice)}
                     </div>
                   </div>
@@ -1270,7 +1268,7 @@ export default function AIConfluenceScanner() {
                 </div>
                 <div style={{ 
                   height: '12px', 
-                  background: 'linear-gradient(90deg, #EF4444, #64748B, #10B981)',
+                  background: '#64748B',
                   borderRadius: '6px',
                   position: 'relative'
                 }}>
@@ -1334,11 +1332,11 @@ export default function AIConfluenceScanner() {
             {/* 50% Levels & Clusters */}
             <div style={{
               background: 'rgba(30,41,59,0.9)',
-              border: '1px solid rgba(59,130,246,0.3)',
+              border: '1px solid var(--msp-border)',
               borderRadius: '16px',
               padding: '1.5rem',
             }}>
-              <h3 style={{ margin: '0 0 1rem 0', color: '#3B82F6', fontSize: '1.1rem' }}>
+              <h3 style={{ margin: '0 0 1rem 0', color: 'var(--msp-accent)', fontSize: '1.1rem' }}>
                 📏 50% Levels & Clusters
               </h3>
               

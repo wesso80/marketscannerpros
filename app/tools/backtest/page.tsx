@@ -284,8 +284,8 @@ function BacktestContent() {
         {/* Options Scanner Context Banner */}
         {showOptionsBanner && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(168,85,247,0.15))',
-            border: '1px solid rgba(59,130,246,0.4)',
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border)',
             borderRadius: '12px',
             padding: '16px 20px',
             marginBottom: '20px',
@@ -299,7 +299,7 @@ function BacktestContent() {
               <span style={{ fontSize: '1.5rem' }}>🔬</span>
               <div>
                 <div style={{ 
-                  color: '#60A5FA', 
+                  color: 'var(--msp-accent)', 
                   fontWeight: '600', 
                   fontSize: '14px',
                   marginBottom: '2px'
@@ -331,10 +331,10 @@ function BacktestContent() {
                 href={`/tools/options-confluence?symbol=${symbol}`}
                 style={{
                   padding: '8px 14px',
-                  background: 'rgba(59,130,246,0.2)',
-                  border: '1px solid rgba(59,130,246,0.4)',
+                  background: 'var(--msp-panel)',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '8px',
-                  color: '#60A5FA',
+                  color: 'var(--msp-accent)',
                   textDecoration: 'none',
                   fontSize: '12px',
                   fontWeight: '500',
@@ -395,7 +395,7 @@ function BacktestContent() {
 
         {/* Backtest Configuration */}
         <div style={{
-          background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+          background: 'var(--msp-card)',
           border: '1px solid rgba(51,65,85,0.8)',
           borderRadius: '16px',
           padding: '24px',
@@ -414,7 +414,7 @@ function BacktestContent() {
             letterSpacing: '0.05em'
           }}>
             <span style={{ 
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'var(--msp-accent)',
               borderRadius: '8px',
               padding: '6px 8px',
               fontSize: '14px'
@@ -629,7 +629,7 @@ function BacktestContent() {
             style={{
               width: '100%',
               padding: '14px',
-              background: isLoading ? '#374151' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              background: isLoading ? '#374151' : 'var(--msp-accent)',
               border: 'none',
               borderRadius: '8px',
               color: '#fff',
@@ -688,7 +688,7 @@ function BacktestContent() {
                 disabled={aiLoading}
                 style={{
                   padding: '10px 14px',
-                  background: aiLoading ? '#1f2937' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
                   border: 'none',
                   borderRadius: '8px',
                   color: '#fff',
@@ -747,7 +747,7 @@ function BacktestContent() {
 
             {/* Equity Curve Chart */}
             <div style={{
-              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(51,65,85,0.8)',
               borderRadius: '16px',
               padding: '24px',
@@ -766,7 +766,7 @@ function BacktestContent() {
                 letterSpacing: '0.05em'
               }}>
                 <span style={{ 
-                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  background: 'var(--msp-accent)',
                   borderRadius: '8px',
                   padding: '6px 8px',
                   fontSize: '14px'
@@ -965,7 +965,7 @@ function BacktestContent() {
 
             {/* Performance Metrics */}
             <div style={{
-              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(51,65,85,0.8)',
               borderRadius: '16px',
               padding: '24px',
@@ -984,7 +984,7 @@ function BacktestContent() {
                 letterSpacing: '0.05em'
               }}>
                 <span style={{ 
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  background: 'var(--msp-muted)',
                   borderRadius: '8px',
                   padding: '6px 8px',
                   fontSize: '14px'
@@ -1147,7 +1147,7 @@ function BacktestContent() {
 
             {/* Trade History */}
             <div style={{
-              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(51,65,85,0.8)',
               borderRadius: '16px',
               overflow: 'hidden',
@@ -1166,7 +1166,7 @@ function BacktestContent() {
                   letterSpacing: '0.05em'
                 }}>
                   <span style={{ 
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    background: '#f59e0b',
                     borderRadius: '8px',
                     padding: '6px 8px',
                     fontSize: '14px'
@@ -1253,7 +1253,7 @@ function BacktestContent() {
 
         {!results && !isLoading && (
           <div style={{
-            background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+            background: 'var(--msp-card)',
             border: '1px solid #374151',
             borderRadius: '12px',
             padding: '60px 24px',

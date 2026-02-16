@@ -205,7 +205,7 @@ export default function MarketPulseHero() {
                     className="h-full transition-all duration-500"
                     style={{ 
                       width: `${fearGreed.value}%`,
-                      background: `linear-gradient(90deg, #ef4444, #f97316, #eab308, #84cc16, #22c55e)`,
+                      background: `var(--msp-accent)`,
                       backgroundSize: '500% 100%',
                       backgroundPosition: `${fearGreed.value}% 0`
                     }} 

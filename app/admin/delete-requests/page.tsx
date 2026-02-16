@@ -76,7 +76,7 @@ export default function AdminDeleteRequestsPage() {
   const statusBadge = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       pending: { bg: "rgba(245, 158, 11, 0.2)", text: "#F59E0B" },
-      processing: { bg: "rgba(59, 130, 246, 0.2)", text: "#3B82F6" },
+      processing: { bg: "var(--msp-accent-glow)", text: "var(--msp-accent)" },
       completed: { bg: "rgba(16, 185, 129, 0.2)", text: "#10B981" },
       rejected: { bg: "rgba(239, 68, 68, 0.2)", text: "#EF4444" },
     };
@@ -205,7 +205,7 @@ export default function AdminDeleteRequestsPage() {
                   padding: "0.75rem",
                   marginBottom: "1rem",
                 }}>
-                  <div style={{ color: "#3B82F6", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Admin Notes:</div>
+                  <div style={{ color: "var(--msp-accent)", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Admin Notes:</div>
                   <div style={{ color: "#E5E7EB", fontSize: "0.875rem" }}>{req.admin_notes}</div>
                 </div>
               )}
@@ -219,7 +219,7 @@ export default function AdminDeleteRequestsPage() {
                       background: "rgba(59, 130, 246, 0.2)",
                       border: "1px solid rgba(59, 130, 246, 0.4)",
                       borderRadius: "0.5rem",
-                      color: "#3B82F6",
+                      color: "var(--msp-accent)",
                       cursor: "pointer",
                     }}
                   >
@@ -294,7 +294,7 @@ export default function AdminDeleteRequestsPage() {
         border: "1px solid rgba(59, 130, 246, 0.2)",
         borderRadius: "0.75rem",
       }}>
-        <h3 style={{ color: "#3B82F6", fontWeight: 600, marginBottom: "0.75rem" }}>📋 GDPR Deletion Checklist</h3>
+        <h3 style={{ color: "var(--msp-accent)", fontWeight: 600, marginBottom: "0.75rem" }}>📋 GDPR Deletion Checklist</h3>
         <ul style={{ color: "#9CA3AF", fontSize: "0.875rem", margin: 0, paddingLeft: "1.25rem" }}>
           <li>Delete from <code>workspaces</code> table</li>
           <li>Delete from <code>user_subscriptions</code> table</li>

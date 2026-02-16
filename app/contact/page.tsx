@@ -9,7 +9,7 @@ export default function ContactPage() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)',
+      background: 'var(--msp-bg)',
       color: '#E5E7EB',
       padding: '4rem 1rem',
     }}>
@@ -18,7 +18,7 @@ export default function ContactPage() {
         margin: '0 auto',
       }}>
         <div style={{
-          background: 'linear-gradient(145deg, rgba(17, 24, 39, 0.8) 0%, rgba(31, 41, 55, 0.6) 100%)',
+          background: 'var(--msp-card)',
           border: '1px solid rgba(16, 185, 129, 0.2)',
           borderRadius: '1.5rem',
           padding: '3rem',
@@ -28,7 +28,7 @@ export default function ContactPage() {
             fontSize: '2.5rem',
             fontWeight: 700,
             marginBottom: '0.5rem',
-            background: 'linear-gradient(135deg, #10B981, #34D399)',
+            background: 'var(--msp-accent)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -67,7 +67,7 @@ export default function ContactPage() {
             style={{
               display: 'inline-block',
               padding: '0.875rem 1.5rem',
-              background: 'linear-gradient(135deg, #10B981, #059669)',
+              background: 'var(--msp-accent)',
               color: '#fff',
               fontWeight: 600,
               borderRadius: '0.75rem',

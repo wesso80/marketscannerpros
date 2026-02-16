@@ -69,8 +69,8 @@ export function SetupConfidenceCard({
   return (
     <div
       style={{
-        background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.6))",
-        border: "1px solid rgba(59,130,246,0.35)",
+        background: "var(--msp-card)",
+        border: "1px solid var(--msp-border)",
         borderRadius: "14px",
         padding: "1rem",
         marginBottom: "1rem",
@@ -86,18 +86,18 @@ export function SetupConfidenceCard({
           flexWrap: "wrap",
         }}
       >
-        <div style={{ fontSize: "0.8rem", color: "#93C5FD", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
+        <div style={{ fontSize: "0.8rem", color: "var(--msp-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>
           {title}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ color: "#E2E8F0", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Grade</span>
           <span
             style={{
-              background: "rgba(59,130,246,0.2)",
-              border: "1px solid rgba(59,130,246,0.35)",
+              background: "rgba(20,184,166,0.14)",
+              border: "1px solid rgba(20,184,166,0.3)",
               borderRadius: "999px",
               padding: "0.2rem 0.55rem",
-              color: "#93C5FD",
+              color: "var(--msp-accent)",
               fontWeight: 700,
               fontSize: "0.8rem",
             }}

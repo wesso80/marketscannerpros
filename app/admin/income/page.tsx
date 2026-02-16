@@ -185,7 +185,7 @@ export default function AdminIncomePage() {
                 borderRadius: "0.5rem",
                 border: "1px solid rgba(59, 130, 246, 0.2)"
               }}>
-                <span style={{ color: "#3B82F6" }}>Pro ({stats.subscriptions.pro})</span>
+                <span style={{ color: "var(--msp-accent)" }}>Pro ({stats.subscriptions.pro})</span>
                 <span style={{ color: "#E5E7EB", fontWeight: 600 }}>
                   {formatCurrency(stats.subscriptions.pro * stats.pricing.pro)}/mo
                 </span>
@@ -319,7 +319,7 @@ export default function AdminIncomePage() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                   <th style={{ textAlign: "left", padding: "0.75rem", color: "#9CA3AF" }}>Month</th>
-                  <th style={{ textAlign: "right", padding: "0.75rem", color: "#3B82F6" }}>Pro</th>
+                  <th style={{ textAlign: "right", padding: "0.75rem", color: "var(--msp-accent)" }}>Pro</th>
                   <th style={{ textAlign: "right", padding: "0.75rem", color: "#F59E0B" }}>Pro Trader</th>
                   <th style={{ textAlign: "right", padding: "0.75rem", color: "#10B981" }}>Revenue</th>
                 </tr>
@@ -330,7 +330,7 @@ export default function AdminIncomePage() {
                     <td style={{ padding: "0.75rem", color: "#E5E7EB" }}>
                       {new Date(row.month + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </td>
-                    <td style={{ textAlign: "right", padding: "0.75rem", color: "#3B82F6" }}>{row.pro}</td>
+                    <td style={{ textAlign: "right", padding: "0.75rem", color: "var(--msp-accent)" }}>{row.pro}</td>
                     <td style={{ textAlign: "right", padding: "0.75rem", color: "#F59E0B" }}>{row.pro_trader}</td>
                     <td style={{ textAlign: "right", padding: "0.75rem", color: "#10B981", fontWeight: 600 }}>
                       {formatCurrency(row.revenue)}

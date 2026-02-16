@@ -10,14 +10,14 @@ export default function ToolsPage() {
     <>
       <style jsx global>{`
         :root {
-          --bg: #05070b;
-          --bg-alt: #0c1018;
-          --card: #111624;
-          --accent: #14b8a6;
+          --bg: var(--msp-bg);
+          --bg-alt: var(--msp-panel-2);
+          --card: var(--msp-card);
+          --accent: var(--msp-accent);
           --accent-soft: rgba(20, 184, 166, 0.12);
-          --text-main: #f9fafb;
-          --text-muted: #9ca3af;
-          --border-subtle: #1f2933;
+          --text-main: var(--msp-text);
+          --text-muted: var(--msp-text-muted);
+          --border-subtle: var(--msp-border);
           --danger: #f97373;
           --radius-lg: 18px;
           --radius-md: 12px;
@@ -28,7 +28,7 @@ export default function ToolsPage() {
 
       <div style={{
         minHeight: '100vh',
-        background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
+        background: 'var(--msp-bg)',
         color: 'var(--text-main)',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
         lineHeight: 1.5
@@ -48,7 +48,8 @@ export default function ToolsPage() {
                 width: 40,
                 height: 40,
                 borderRadius: 999,
-                background: 'radial-gradient(circle at 30% 20%, #22c55e, #0f766e 40%, #020617 100%)',
+                background: 'var(--msp-panel)',
+                border: '1px solid var(--msp-border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -93,8 +94,8 @@ export default function ToolsPage() {
                 alignItems: 'center',
                 gap: 6,
                 whiteSpace: 'nowrap',
-                background: 'linear-gradient(135deg, var(--accent), #22c55e)',
-                color: '#0b1120',
+                background: 'var(--accent)',
+                color: '#061018',
                 boxShadow: 'var(--shadow-small)',
                 textDecoration: 'none'
               }}>
@@ -112,7 +113,7 @@ export default function ToolsPage() {
             }}>
             {/* Hero section */}
             <section style={{
-              background: 'radial-gradient(circle at top, #111827, #020617 60%)',
+              background: 'var(--card)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-soft)',
@@ -126,7 +127,7 @@ export default function ToolsPage() {
                 top: -40,
                 width: 260,
                 height: 260,
-                background: 'radial-gradient(circle, rgba(45,212,191,0.22), transparent 60%)',
+                background: 'radial-gradient(circle, rgba(20,184,166,0.16), transparent 60%)',
                 filter: 'blur(1px)',
                 opacity: 0.8
               }} aria-hidden="true"></div>
@@ -146,8 +147,8 @@ export default function ToolsPage() {
                 <span style={{
                   padding: '3px 8px',
                   borderRadius: 999,
-                  background: 'rgba(34,197,94,0.12)',
-                  color: '#bbf7d0',
+                  background: 'rgba(20,184,166,0.12)',
+                  color: 'var(--accent)',
                   fontSize: 11
                 }}>Invite-only scripts</span>
                 <span>Hosted on TradingView · Manual access</span>
@@ -187,8 +188,8 @@ export default function ToolsPage() {
                   alignItems: 'center',
                   gap: 6,
                   whiteSpace: 'nowrap',
-                  background: 'linear-gradient(135deg, var(--accent), #22c55e)',
-                  color: '#0b1120',
+                  background: 'var(--accent)',
+                  color: '#061018',
                   boxShadow: 'var(--shadow-small)',
                   textDecoration: 'none'
                 }}>
@@ -227,14 +228,14 @@ export default function ToolsPage() {
                 padding: '5px 10px',
                 borderRadius: 999,
                 background: 'var(--accent-soft)',
-                color: '#a5f3fc',
-                border: '1px solid rgba(34,197,235,0.35)'
+                color: 'var(--accent)',
+                border: '1px solid rgba(20,184,166,0.35)'
               }}>Beta phase · All access is Free Trial only</div>
             </section>
 
             {/* Side card */}
             <aside style={{
-              background: 'linear-gradient(145deg, #020617, #020617 40%, #020617 60%, #0f172a 100%)',
+              background: 'var(--card)',
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--border-subtle)',
               boxShadow: 'var(--shadow-soft)',
@@ -495,7 +496,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #7C3AED, #A855F7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
                     <span>🔮</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(168, 85, 247, 0.7)', color: '#A855F7' }}>Pro Trader</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -533,7 +534,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
                     <span>🎯</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Pro Trader</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -586,7 +587,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>📊</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -617,7 +618,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🚀</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -648,7 +649,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🏢</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -679,7 +680,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>📰</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -710,7 +711,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🗺️</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -741,7 +742,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F7931A, #627EEA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🪙</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -772,7 +773,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F7931A, #10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>₿</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                   </div>
@@ -803,7 +804,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #f59e0b, #22c55e)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🛢️</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -835,7 +836,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🚀</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -867,7 +868,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>🏛️</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -899,7 +900,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>📅</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
@@ -931,7 +932,7 @@ export default function ToolsPage() {
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   height: '100%'
                 }}>
-                  <div style={{ position: 'relative', height: 150, background: 'linear-gradient(135deg, #10B981, #6366F1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
                     <span>📈</span>
                     <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
                     <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>

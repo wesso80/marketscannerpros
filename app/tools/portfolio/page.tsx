@@ -105,9 +105,7 @@ function PositionSizerCalculator() {
   };
 
   return (
-    <div style={{
-      background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.8))',
-      border: '1px solid #334155',
+    <div className="msp-card" style={{
       borderRadius: '16px',
       padding: '32px',
       maxWidth: '800px',
@@ -117,7 +115,7 @@ function PositionSizerCalculator() {
         <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           🎯 Position Sizing Calculator
         </h2>
-        <p style={{ color: '#94a3b8', fontSize: '14px' }}>
+        <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
           Calculate optimal position sizes based on your risk tolerance and trading setup.
         </p>
       </div>
@@ -129,10 +127,10 @@ function PositionSizerCalculator() {
           style={{
             flex: 1,
             padding: '12px',
-            background: method === 'fixed' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.1)',
-            border: method === 'fixed' ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(148,163,184,0.2)',
+            background: method === 'fixed' ? 'var(--msp-panel)' : 'var(--msp-panel-2)',
+            border: method === 'fixed' ? '1px solid var(--msp-border-strong)' : '1px solid var(--msp-border)',
             borderRadius: '8px',
-            color: method === 'fixed' ? '#10b981' : '#94a3b8',
+            color: method === 'fixed' ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -146,10 +144,10 @@ function PositionSizerCalculator() {
           style={{
             flex: 1,
             padding: '12px',
-            background: method === 'kelly' ? 'rgba(139,92,246,0.15)' : 'rgba(148,163,184,0.1)',
-            border: method === 'kelly' ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(148,163,184,0.2)',
+            background: method === 'kelly' ? 'var(--msp-panel)' : 'var(--msp-panel-2)',
+            border: method === 'kelly' ? '1px solid var(--msp-border-strong)' : '1px solid var(--msp-border)',
             borderRadius: '8px',
-            color: method === 'kelly' ? '#a78bfa' : '#94a3b8',
+            color: method === 'kelly' ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -316,8 +314,8 @@ function PositionSizerCalculator() {
       {/* Kelly Criterion Inputs */}
       {method === 'kelly' && (
         <div style={{
-          background: 'rgba(139,92,246,0.1)',
-          border: '1px solid rgba(139,92,246,0.3)',
+          background: 'var(--msp-panel-2)',
+          border: '1px solid var(--msp-border)',
           borderRadius: '12px',
           padding: '20px',
           marginBottom: '24px'
@@ -395,7 +393,7 @@ function PositionSizerCalculator() {
 
       {/* Results */}
       <div style={{
-        background: 'linear-gradient(145deg, rgba(16,185,129,0.1), rgba(34,211,238,0.05))',
+        background: 'var(--msp-panel)',
         border: '1px solid rgba(16,185,129,0.3)',
         borderRadius: '16px',
         padding: '24px'
@@ -417,7 +415,7 @@ function PositionSizerCalculator() {
             <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
               Shares/Units
             </div>
-            <div style={{ color: '#3b82f6', fontSize: '24px', fontWeight: '700' }}>
+            <div style={{ color: 'var(--msp-muted)', fontSize: '24px', fontWeight: '700' }}>
               {formatNumber(method === 'kelly' ? kellyShares : result.shares, 4)}
             </div>
           </div>
@@ -449,8 +447,8 @@ function PositionSizerCalculator() {
         )}
 
         {method === 'kelly' && result.kellyPercent > 0 && (
-          <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(139,92,246,0.1)', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ color: '#a78bfa', fontSize: '13px' }}>
+          <div style={{ marginTop: '16px', padding: '12px', background: 'var(--msp-panel-2)', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ color: 'var(--msp-muted)', fontSize: '13px' }}>
               Kelly Optimal Bet Size: <strong>{formatNumber(result.kellyPercent, 1)}%</strong> of account
             </div>
             <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
@@ -1042,18 +1040,18 @@ function PortfolioContent() {
   ];
 
   // Color palette for pie chart
-  const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+  const colors = ['#10b981', '#f59e0b', '#ef4444', 'var(--msp-accent)', '#f97316', '#22c55e', '#eab308', '#84cc16', '#fb7185'];
 
   if (!mounted) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--msp-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: '#94a3b8', fontSize: '16px' }}>Loading portfolio...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--msp-bg)' }}>
       <ToolsPageHeader
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
@@ -1099,9 +1097,9 @@ function PortfolioContent() {
                 style={{
                   padding: '8px 16px',
                   background: 'transparent',
-                  border: '1px solid #3b82f6',
+                  border: '1px solid var(--msp-border)',
                   borderRadius: '6px',
-                  color: canExportCSV(tier) ? '#3b82f6' : '#6b7280',
+                  color: canExportCSV(tier) ? 'var(--msp-muted)' : '#6b7280',
                   fontSize: '13px',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -1145,7 +1143,7 @@ function PortfolioContent() {
               }}
               style={{
                 padding: '10px 16px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: '#10B981',
                 border: 'none',
                 borderRadius: '10px',
                 color: '#fff',
@@ -1217,7 +1215,7 @@ function PortfolioContent() {
 
       {/* Top Stats Bar */}
       <div style={{ 
-        background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 100%)',
+        background: 'var(--msp-bg)',
         padding: '24px 16px',
         borderBottom: '1px solid rgba(51,65,85,0.6)'
       }}>
@@ -1229,7 +1227,7 @@ function PortfolioContent() {
           gap: '16px'
         }}>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: '1px solid rgba(51,65,85,0.5)'
@@ -1244,7 +1242,7 @@ function PortfolioContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: `1px solid ${totalReturn >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
@@ -1259,7 +1257,7 @@ function PortfolioContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: `1px solid ${unrealizedPL >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
@@ -1274,7 +1272,7 @@ function PortfolioContent() {
             </div>
           </div>
           <div style={{
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.6), rgba(30,41,59,0.3))',
+            background: 'var(--msp-panel)',
             borderRadius: '12px',
             padding: '16px',
             border: '1px solid rgba(51,65,85,0.5)'
@@ -1324,12 +1322,12 @@ function PortfolioContent() {
               let riskColor = '#10b981';
               if (healthScore < 40) { riskLevel = 'High'; riskColor = '#ef4444'; }
               else if (healthScore < 60) { riskLevel = 'Medium-High'; riskColor = '#f59e0b'; }
-              else if (healthScore < 75) { riskLevel = 'Medium'; riskColor = '#3b82f6'; }
+              else if (healthScore < 75) { riskLevel = 'Medium'; riskColor = 'var(--msp-accent)'; }
               else { riskLevel = 'Low'; riskColor = '#10b981'; }
               
               return (
                 <div style={{
-                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  background: 'var(--msp-panel)',
                   borderRadius: '12px',
                   padding: '20px',
                   border: '1px solid rgba(100,116,139,0.3)',
@@ -1412,7 +1410,7 @@ function PortfolioContent() {
               
               return (
                 <div style={{
-                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  background: 'var(--msp-panel)',
                   borderRadius: '12px',
                   padding: '20px',
                   border: '1px solid rgba(100,116,139,0.3)',
@@ -1502,7 +1500,7 @@ function PortfolioContent() {
               
               return (
                 <div style={{
-                  background: 'linear-gradient(145deg, rgba(30,41,59,0.8), rgba(30,41,59,0.4))',
+                  background: 'var(--msp-panel)',
                   borderRadius: '12px',
                   padding: '20px',
                   border: '1px solid rgba(100,116,139,0.3)',
@@ -1583,8 +1581,8 @@ function PortfolioContent() {
                   justifyContent: 'center',
                   gap: '8px',
                   background: isActive
-                    ? 'linear-gradient(145deg, rgba(34,211,238,0.08), rgba(16,185,129,0.14))'
-                    : 'linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.04))',
+                    ? 'var(--msp-panel-2)'
+                    : 'rgba(255,255,255,0.03)',
                   border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.2)',
                   boxShadow: isActive ? '0 10px 30px rgba(16,185,129,0.25)' : 'none',
                   color: isActive ? '#e2e8f0' : '#94a3b8',
@@ -1608,7 +1606,7 @@ function PortfolioContent() {
                       right: '12px',
                       height: '3px',
                       borderRadius: '999px',
-                      background: 'linear-gradient(90deg, #22d3ee, #10b981)'
+                      background: 'var(--msp-accent)'
                     }}
                   />
                 )}
@@ -1665,7 +1663,7 @@ function PortfolioContent() {
               
               return (
                 <div style={{
-                  background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                  background: 'var(--msp-card)',
                   border: `1px solid ${severeDrawdown ? 'rgba(239,68,68,0.4)' : inDrawdown ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.3)'}`,
                   borderRadius: '16px',
                   padding: '20px 24px',
@@ -1716,8 +1714,8 @@ function PortfolioContent() {
 
             {/* AI Portfolio Analysis Section */}
             <div style={{
-              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
-              border: '1px solid rgba(139,92,246,0.3)',
+              background: 'var(--msp-card)',
+              border: '1px solid var(--msp-border)',
               borderRadius: '16px',
               padding: '20px 24px',
               boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -1731,14 +1729,14 @@ function PortfolioContent() {
                 left: 0,
                 right: 0,
                 height: '3px',
-                background: 'linear-gradient(90deg, #8b5cf6, #a855f7, #8b5cf6)'
+                background: 'var(--msp-accent)'
               }} />
               
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: showAiAnalysis ? '16px' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{ 
                     fontSize: '24px',
-                    background: 'linear-gradient(135deg, #8b5cf6, #a855f7)',
+                    background: 'var(--msp-panel-2)',
                     borderRadius: '10px',
                     padding: '8px',
                     display: 'flex',
@@ -1761,8 +1759,8 @@ function PortfolioContent() {
                   style={{
                     padding: '10px 20px',
                     background: aiLoading 
-                      ? 'rgba(139,92,246,0.3)' 
-                      : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      ? 'rgba(100,116,139,0.35)' 
+                      : 'var(--msp-accent)',
                     border: 'none',
                     borderRadius: '10px',
                     color: '#fff',
@@ -1773,7 +1771,7 @@ function PortfolioContent() {
                     alignItems: 'center',
                     gap: '8px',
                     transition: 'all 0.2s ease',
-                    boxShadow: aiLoading ? 'none' : '0 4px 15px rgba(139,92,246,0.4)'
+                    boxShadow: aiLoading ? 'none' : 'var(--msp-shadow)'
                   }}
                 >
                   {aiLoading ? (
@@ -1814,7 +1812,7 @@ function PortfolioContent() {
                   borderRadius: '12px',
                   padding: '20px',
                   marginTop: '4px',
-                  border: '1px solid rgba(139,92,246,0.2)'
+                  border: '1px solid var(--msp-border)'
                 }}>
                   <div style={{
                     color: '#e2e8f0',
@@ -1918,7 +1916,7 @@ function PortfolioContent() {
                         key={i}
                         style={{
                           height: '16px',
-                          background: 'linear-gradient(90deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.2) 50%, rgba(139,92,246,0.1) 100%)',
+                          background: 'rgba(100,116,139,0.22)',
                           borderRadius: '4px',
                           width: `${100 - (i * 10)}%`,
                           animation: 'pulse 1.5s ease-in-out infinite'
@@ -1941,7 +1939,7 @@ function PortfolioContent() {
             }}>
               {/* Portfolio Allocation Chart */}
               <div style={{ 
-                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                background: 'var(--msp-card)',
                 border: '1px solid rgba(51,65,85,0.8)',
                 borderRadius: '16px',
                 padding: '24px',
@@ -1959,7 +1957,7 @@ function PortfolioContent() {
                   letterSpacing: '0.05em'
                 }}>
                   <span style={{ 
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    background: 'var(--msp-panel-2)',
                     borderRadius: '8px',
                     padding: '6px 8px',
                     fontSize: '14px'
@@ -2080,7 +2078,7 @@ function PortfolioContent() {
 
               {/* Performance Chart */}
               <div style={{ 
-                background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+                background: 'var(--msp-card)',
                 border: '1px solid rgba(51,65,85,0.8)',
                 borderRadius: '16px',
                 padding: '24px',
@@ -2098,7 +2096,7 @@ function PortfolioContent() {
                   letterSpacing: '0.05em'
                 }}>
                   <span style={{ 
-                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    background: 'var(--msp-panel-2)',
                     borderRadius: '8px',
                     padding: '6px 8px',
                     fontSize: '14px'
@@ -2255,7 +2253,7 @@ function PortfolioContent() {
 
             {/* Portfolio Metrics Table */}
             <div style={{ 
-              background: 'linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.5))',
+              background: 'var(--msp-card)',
               border: '1px solid rgba(51,65,85,0.8)',
               borderRadius: '16px',
               padding: '24px',
@@ -2273,7 +2271,7 @@ function PortfolioContent() {
                 letterSpacing: '0.05em'
               }}>
                 <span style={{ 
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                  background: 'var(--msp-panel-2)',
                   borderRadius: '8px',
                   padding: '6px 8px',
                   fontSize: '14px'
@@ -2477,7 +2475,7 @@ function PortfolioContent() {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: '#10B981',
                   border: 'none',
                   borderRadius: '6px',
                   color: '#fff',
@@ -2520,7 +2518,7 @@ function PortfolioContent() {
                   onClick={() => setActiveTab('add position')}
                   style={{
                     padding: '8px 16px',
-                    background: '#3b82f6',
+                    background: 'var(--msp-accent)',
                     border: 'none',
                     borderRadius: '6px',
                     color: '#fff',

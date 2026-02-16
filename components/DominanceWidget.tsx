@@ -71,7 +71,7 @@ export default function DominanceWidget() {
   if (data.loading) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -84,7 +84,7 @@ export default function DominanceWidget() {
   if (data.error) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -96,7 +96,7 @@ export default function DominanceWidget() {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--msp-card)',
       borderRadius: '12px',
       padding: '20px',
       border: '1px solid #334155'
@@ -160,7 +160,7 @@ export default function DominanceWidget() {
           <div style={{
             width: `${Math.min(data.btc, 100)}%`,
             height: '100%',
-            background: 'linear-gradient(90deg, #f7931a, #fbbf24)',
+            background: '#f7931a',
             borderRadius: '4px',
             transition: 'width 0.5s ease'
           }} />
@@ -200,7 +200,7 @@ export default function DominanceWidget() {
           <div style={{
             width: `${Math.min(data.eth * 2, 100)}%`, // Scale up for visibility
             height: '100%',
-            background: 'linear-gradient(90deg, #627eea, #8b5cf6)',
+            background: 'var(--msp-accent)',
             borderRadius: '4px',
             transition: 'width 0.5s ease'
           }} />
@@ -231,7 +231,7 @@ export default function DominanceWidget() {
           <div style={{
             width: `${Math.min(stableDominance * 5, 100)}%`, // Scale up for visibility
             height: '100%',
-            background: `linear-gradient(90deg, #26a17b, ${stableColor})`,
+            background: stableColor,
             borderRadius: '4px',
             transition: 'width 0.5s ease'
           }} />

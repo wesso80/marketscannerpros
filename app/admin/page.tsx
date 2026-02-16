@@ -179,7 +179,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         <p style={{ color: "#9CA3AF", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
           Run the SQL below in your Neon PostgreSQL console to enable prediction logging + learning outcomes.
         </p>
-        <p style={{ color: "#93C5FD", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
+        <p style={{ color: "var(--msp-accent)", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
           Migration file: [migrations/015_learning_machine.sql](migrations/015_learning_machine.sql)
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
@@ -187,9 +187,9 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           <button
             onClick={() => navigator.clipboard.writeText(learningMigrationSql)}
             style={{
-              background: "rgba(59,130,246,0.2)",
-              border: "1px solid rgba(59,130,246,0.4)",
-              color: "#BFDBFE",
+              background: "var(--msp-panel)",
+              border: "1px solid var(--msp-border)",
+              color: "var(--msp-accent)",
               padding: "6px 10px",
               borderRadius: 8,
               fontSize: "0.8rem",
@@ -225,7 +225,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Total Users</div>
         </div>
         <div style={statBoxStyle}>
-          <div style={{ fontSize: "2rem", fontWeight: 700, color: "#3B82F6" }}>
+          <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>
             {stats?.aiUsage.today.totalQuestions || 0}
           </div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>AI Questions Today</div>
@@ -288,7 +288,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                   <span style={{ color: "#9CA3AF" }}>
                     {new Date(day.date).toLocaleDateString()}
                   </span>
-                  <span style={{ color: "#3B82F6", fontWeight: 600 }}>{day.count} questions</span>
+                  <span style={{ color: "var(--msp-accent)", fontWeight: 600 }}>{day.count} questions</span>
                 </div>
               ))}
             </div>
@@ -348,12 +348,12 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                       borderRadius: "0.25rem",
                       fontSize: "0.75rem",
                       color: user.tier === "pro_trader" ? "#F59E0B" : 
-                             user.tier === "pro" ? "#3B82F6" : "#9CA3AF",
+                             user.tier === "pro" ? "var(--msp-accent)" : "#9CA3AF",
                     }}>
                       {user.tier}
                     </span>
                   </span>
-                  <span style={{ color: "#3B82F6", fontWeight: 600 }}>{user.questions}</span>
+                  <span style={{ color: "var(--msp-accent)", fontWeight: 600 }}>{user.questions}</span>
                 </div>
               ))}
             </div>
@@ -463,7 +463,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                         }}>
                           {Number(s.win_rate).toFixed(1)}%
                         </td>
-                        <td style={{ padding: "0.5rem", textAlign: "right", color: "#3B82F6" }}>
+                        <td style={{ padding: "0.5rem", textAlign: "right", color: "var(--msp-accent)" }}>
                           {Number(s.avg_move_pct).toFixed(2)}%
                         </td>
                       </tr>

@@ -13,81 +13,49 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
   const price = requiredTier === "pro_trader" ? "$89.99" : "$39.99";
   
   return (
-    <div style={{
-      minHeight: "60vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "40px 20px",
-    }}>
-      <div style={{
-        maxWidth: "480px",
-        textAlign: "center",
-        background: "linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.8))",
-        border: "1px solid rgba(51,65,85,0.8)",
-        borderRadius: "20px",
-        padding: "48px 40px",
-        boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
-      }}>
+    <div className="flex min-h-[60vh] items-center justify-center px-5 py-10">
+      <div className="msp-card w-full max-w-[480px] rounded-[20px] px-10 py-12 text-center">
         <div style={{ fontSize: "56px", marginBottom: "20px" }}>🔒</div>
         
         <h2 style={{
           fontSize: "26px",
           fontWeight: "700",
-          color: "#f1f5f9",
+          color: "var(--msp-text)",
           marginBottom: "12px",
         }}>
           {tierName} Feature
         </h2>
         
         <p style={{
-          color: "#94a3b8",
+          color: "var(--msp-text-muted)",
           fontSize: "16px",
           lineHeight: "1.6",
           marginBottom: "24px",
         }}>
-          <strong style={{ color: "#e2e8f0" }}>{feature}</strong> is available 
+          <strong style={{ color: "var(--msp-text)" }}>{feature}</strong> is available 
           on the {tierName} plan.
         </p>
 
         {children}
 
-        <div style={{
-          background: "rgba(34,197,94,0.1)",
-          border: "1px solid rgba(34,197,94,0.3)",
-          borderRadius: "12px",
-          padding: "16px",
-          marginBottom: "24px",
-        }}>
-          <div style={{ color: "#22c55e", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
+        <div className="mb-6 rounded-panel border border-msp-borderStrong bg-msp-panel p-4">
+          <div style={{ color: "var(--msp-accent)", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
             Unlock {requiredTier === "pro_trader" ? "Pro Trader" : "Pro"}
           </div>
-          <div style={{ color: "#86efac", fontSize: "24px", fontWeight: "700" }}>
+          <div style={{ color: "var(--msp-text)", fontSize: "24px", fontWeight: "700" }}>
             {price}<span style={{ fontSize: "14px", fontWeight: "400" }}>/month</span>
           </div>
         </div>
 
         <Link
           href="/pricing"
-          style={{
-            display: "inline-block",
-            background: requiredTier === "pro_trader" 
-              ? "linear-gradient(135deg, #3b82f6, #8b5cf6)"
-              : "linear-gradient(135deg, #14b8a6, #22c55e)",
-            color: requiredTier === "pro_trader" ? "#fff" : "#0b1120",
-            padding: "14px 32px",
-            borderRadius: "999px",
-            fontSize: "16px",
-            fontWeight: "600",
-            textDecoration: "none",
-            boxShadow: "0 4px 15px rgba(34,197,94,0.3)",
-          }}
+          className="inline-block rounded-full border border-msp-borderStrong bg-msp-accent px-8 py-3.5 text-base font-semibold text-[#061018] no-underline"
         >
           Upgrade to {tierName}
         </Link>
 
         <p style={{
-          color: "#6b7280",
+          color: "var(--msp-text-faint)",
           fontSize: "13px",
           marginTop: "16px",
         }}>

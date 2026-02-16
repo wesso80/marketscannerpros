@@ -320,7 +320,7 @@ export default function SectorHeatmap() {
               <span className="text-xs text-slate-400">-3%</span>
             </div>
             <div className="w-24 h-3 rounded" style={{
-              background: 'linear-gradient(to right, rgb(200, 60, 72), rgb(60, 60, 70), rgb(60, 220, 72))'
+              background: 'var(--msp-panel)'
             }}></div>
             <div className="flex items-center gap-1">
               <div className="w-4 h-4 rounded" style={{ backgroundColor: getHeatColor(3) }}></div>

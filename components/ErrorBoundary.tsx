@@ -59,7 +59,7 @@ class ErrorBoundary extends Component<Props, State> {
             maxWidth: '500px',
             textAlign: 'center',
             padding: '40px',
-            background: 'linear-gradient(145deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95))',
+            background: 'var(--msp-card)',
             border: '1px solid rgba(239,68,68,0.3)',
             borderRadius: '16px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
@@ -113,7 +113,7 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 style={{
                   padding: '12px 24px',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'var(--msp-accent)',
                   border: 'none',
                   borderRadius: '8px',
                   color: '#fff',

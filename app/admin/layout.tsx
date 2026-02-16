@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
       <main style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)",
+        background: "var(--msp-bg)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -116,7 +116,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button type="submit" style={{
             width: "100%",
             padding: "0.75rem",
-            background: "linear-gradient(135deg, #10B981, #059669)",
+            background: "var(--msp-accent)",
             border: "none",
             borderRadius: "0.5rem",
             color: "white",
@@ -134,7 +134,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <AdminContext.Provider value={{ secret, setSecret, isAuthed, setIsAuthed }}>
       <div style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)",
+        background: "var(--msp-bg)",
         display: "flex",
       }}>
         {/* Sidebar */}

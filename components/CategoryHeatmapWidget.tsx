@@ -95,7 +95,7 @@ export default function CategoryHeatmapWidget() {
   if (loading) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -115,7 +115,7 @@ export default function CategoryHeatmapWidget() {
   if (error) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        background: 'var(--msp-card)',
         borderRadius: '12px',
         padding: '20px',
         border: '1px solid #334155'
@@ -135,7 +135,7 @@ export default function CategoryHeatmapWidget() {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+      background: 'var(--msp-card)',
       borderRadius: '12px',
       padding: '20px',
       border: '1px solid #334155'

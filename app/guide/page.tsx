@@ -267,7 +267,7 @@ export default function UserGuide() {
                 width: 48,
                 height: 48,
                 borderRadius: 10,
-                background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(59,130,246,0.2))',
+                background: 'var(--msp-accent-glow)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
