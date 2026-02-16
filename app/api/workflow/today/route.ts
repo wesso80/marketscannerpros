@@ -18,11 +18,12 @@ export async function GET() {
            COUNT(*) FILTER (WHERE event_type = 'trade.executed')::int AS executions,
            COUNT(*) FILTER (WHERE event_type = 'trade.closed')::int AS closed,
            COUNT(*) FILTER (WHERE event_type = 'coach.analysis.generated')::int AS coach_analyses,
+           COUNT(*) FILTER (WHERE event_type = 'strategy.rule.suggested')::int AS coach_tasks,
            MAX(created_at) AS last_event_at
          FROM ai_events
          WHERE workspace_id = $1
            AND created_at >= CURRENT_DATE
-           AND event_type IN ('signal.created', 'candidate.created', 'trade.plan.created', 'trade.executed', 'trade.closed', 'coach.analysis.generated')`,
+           AND event_type IN ('signal.created', 'candidate.created', 'trade.plan.created', 'trade.executed', 'trade.closed', 'coach.analysis.generated', 'strategy.rule.suggested')`,
         [session.workspaceId]
       ),
       q(
@@ -79,6 +80,7 @@ export async function GET() {
         executions: Number(row.executions || 0),
         closed: Number(row.closed || 0),
         coachAnalyses: Number(row.coach_analyses || 0),
+        coachTasks: Number(row.coach_tasks || 0),
         autoAlerts: Number(autoAlertRows[0]?.count || 0),
         autoJournalDrafts: Number(autoDraftRows[0]?.count || 0),
         coachJournalEnrichments: Number(coachJournalRows[0]?.count || 0),

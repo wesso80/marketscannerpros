@@ -541,6 +541,101 @@ async function attachCoachSummaryToJournalDraft(workspaceId: string, coachEvent:
   return true;
 }
 
+async function autoCreateCoachActionTaskEvents(
+  workspaceId: string,
+  coachEvent: MSPEvent
+): Promise<MSPEvent[]> {
+  if (coachEvent.event_type !== 'coach.analysis.generated') return [];
+
+  const workflowId = coachEvent.correlation?.workflow_id;
+  if (!workflowId) return [];
+
+  const payload = coachEvent.payload as Record<string, any>;
+  const analysisId = String(payload?.analysis_id || '').trim();
+  if (!analysisId) return [];
+
+  const recommendations = Array.isArray(payload?.recommendations)
+    ? (payload.recommendations as Array<Record<string, any>>)
+    : [];
+
+  if (!recommendations.length) return [];
+
+  const existingRows = await q(
+    `SELECT event_data->'payload'->>'action' AS action
+     FROM ai_events
+     WHERE workspace_id = $1
+       AND event_type = 'strategy.rule.suggested'
+       AND event_data->'correlation'->>'parent_event_id' = $2`,
+    [workspaceId, coachEvent.event_id]
+  );
+
+  const existingActions = new Set(
+    existingRows
+      .map((row: any) => String(row?.action || '').trim())
+      .filter((action: string) => action.length > 0)
+  );
+
+  const taskEvents: MSPEvent[] = [];
+  for (const [index, recommendation] of recommendations.slice(0, 3).entries()) {
+    const action = String(recommendation?.action || '').trim();
+    if (!action || existingActions.has(action)) continue;
+
+    const taskId = `task_${analysisId}_${index + 1}`;
+    const detail = String(recommendation?.detail || '').trim();
+    const priority = String(recommendation?.priority || 'medium').toLowerCase();
+
+    taskEvents.push(
+      normalizeEvent({
+        event_id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        event_type: 'strategy.rule.suggested',
+        event_version: 1,
+        occurred_at: new Date().toISOString(),
+        actor: {
+          actor_type: 'system',
+          user_id: null,
+          anonymous_id: null,
+          session_id: null,
+        },
+        context: {
+          tenant_id: coachEvent.context?.tenant_id || 'msp',
+          app: {
+            name: coachEvent.context?.app?.name || 'MarketScannerPros',
+            env: coachEvent.context?.app?.env || 'prod',
+            build: coachEvent.context?.app?.build,
+          },
+          page: {
+            route: '/operator',
+            module: 'coach_task_engine',
+          },
+          device: {},
+          geo: {},
+        },
+        entity: {
+          entity_type: 'coach',
+          entity_id: taskId,
+          symbol: coachEvent.entity?.symbol,
+          asset_class: coachEvent.entity?.asset_class,
+        },
+        correlation: {
+          workflow_id: workflowId,
+          parent_event_id: coachEvent.event_id,
+        },
+        payload: {
+          task_id: taskId,
+          source_analysis_id: analysisId,
+          action,
+          detail,
+          priority,
+          status: 'pending',
+          suggested_at: new Date().toISOString(),
+        },
+      })
+    );
+  }
+
+  return taskEvents;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
@@ -576,7 +671,9 @@ export async function POST(req: NextRequest) {
     let autoAlertsCreated = 0;
     let autoJournalDraftsCreated = 0;
     let autoCoachJournalUpdates = 0;
+    let autoCoachActionTasksCreated = 0;
     const autoCoachEvents: MSPEvent[] = [];
+    const autoCoachTaskEvents: MSPEvent[] = [];
     for (const event of normalized) {
       if (await autoCreatePlanAlertForEvent(session.workspaceId, event)) {
         autoAlertsCreated += 1;
@@ -588,13 +685,20 @@ export async function POST(req: NextRequest) {
       const coachEvent = await autoGenerateCoachEventForClosedTrade(session.workspaceId, event);
       if (coachEvent) {
         autoCoachEvents.push(coachEvent);
+
+        const taskEvents = await autoCreateCoachActionTaskEvents(session.workspaceId, coachEvent);
+        if (taskEvents.length > 0) {
+          autoCoachTaskEvents.push(...taskEvents);
+          autoCoachActionTasksCreated += taskEvents.length;
+        }
+
         if (await attachCoachSummaryToJournalDraft(session.workspaceId, coachEvent)) {
           autoCoachJournalUpdates += 1;
         }
       }
     }
 
-    const eventsToPersist = [...normalized, ...autoCoachEvents];
+    const eventsToPersist = [...normalized, ...autoCoachEvents, ...autoCoachTaskEvents];
 
     const values: unknown[] = [];
     const placeholders: string[] = [];
@@ -625,6 +729,7 @@ export async function POST(req: NextRequest) {
       autoAlertsCreated,
       autoJournalDraftsCreated,
       autoCoachAnalysesGenerated: autoCoachEvents.length,
+      autoCoachActionTasksCreated,
       autoCoachJournalUpdates,
     });
   } catch (error) {
