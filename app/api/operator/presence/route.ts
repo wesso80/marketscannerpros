@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [stateRows, directionRows, attentionRows, pendingTaskRows, edgeRows] = await Promise.all([
+    const [stateRows, directionRows, attentionRows, pendingTaskRows, edgeRows, behaviorRows] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
          FROM operator_state
@@ -98,14 +98,117 @@ export async function GET() {
          GROUP BY UPPER(symbol)`,
         [session.workspaceId]
       ),
+      q(
+        `WITH base AS (
+           SELECT
+             event_type,
+             created_at,
+             event_data->'correlation'->>'workflow_id' AS workflow_id,
+             event_data->'payload'->>'result' AS candidate_result
+           FROM ai_events
+           WHERE workspace_id = $1
+             AND created_at >= NOW() - INTERVAL '30 days'
+             AND event_type IN ('candidate.created', 'trade.plan.created', 'trade.executed', 'trade.closed')
+         ),
+         candidate_pass AS (
+           SELECT workflow_id, MIN(created_at) AS candidate_at
+           FROM base
+           WHERE event_type = 'candidate.created'
+             AND candidate_result = 'pass'
+             AND workflow_id IS NOT NULL
+             AND workflow_id <> ''
+           GROUP BY workflow_id
+         ),
+         planned AS (
+           SELECT workflow_id, MIN(created_at) AS planned_at
+           FROM base
+           WHERE event_type = 'trade.plan.created'
+             AND workflow_id IS NOT NULL
+             AND workflow_id <> ''
+           GROUP BY workflow_id
+         ),
+         executed AS (
+           SELECT workflow_id, MIN(created_at) AS executed_at
+           FROM base
+           WHERE event_type = 'trade.executed'
+             AND workflow_id IS NOT NULL
+             AND workflow_id <> ''
+           GROUP BY workflow_id
+         ),
+         closed AS (
+           SELECT workflow_id, MIN(created_at) AS closed_at
+           FROM base
+           WHERE event_type = 'trade.closed'
+             AND workflow_id IS NOT NULL
+             AND workflow_id <> ''
+           GROUP BY workflow_id
+         ),
+         late_entries AS (
+           SELECT
+             COUNT(*) FILTER (WHERE e.executed_at - p.planned_at > INTERVAL '45 minutes')::int AS late_count,
+             COUNT(*)::int AS total_exec_with_plan
+           FROM executed e
+           JOIN planned p ON p.workflow_id = e.workflow_id
+         ),
+         early_exits AS (
+           SELECT
+             COUNT(*) FILTER (WHERE c.closed_at - e.executed_at < INTERVAL '45 minutes')::int AS early_count,
+             COUNT(*)::int AS total_closed_with_exec
+           FROM closed c
+           JOIN executed e ON e.workflow_id = c.workflow_id
+         ),
+         ignored AS (
+           SELECT
+             COUNT(*) FILTER (WHERE e.workflow_id IS NULL)::int AS ignored_count,
+             COUNT(*)::int AS total_pass_candidates
+           FROM candidate_pass cp
+           LEFT JOIN executed e
+             ON e.workflow_id = cp.workflow_id
+             AND e.executed_at >= cp.candidate_at
+             AND e.executed_at <= cp.candidate_at + INTERVAL '24 hours'
+         )
+         SELECT
+           le.late_count,
+           le.total_exec_with_plan,
+           ee.early_count,
+           ee.total_closed_with_exec,
+           ig.ignored_count,
+           ig.total_pass_candidates
+         FROM late_entries le
+         CROSS JOIN early_exits ee
+         CROSS JOIN ignored ig`,
+        [session.workspaceId]
+      ),
     ]);
-
     const state = stateRows[0] as Record<string, any> | undefined;
     const direction = (directionRows[0] || {}) as Record<string, any>;
 
     const bullishCount = Number(direction.bullish_count || 0);
     const bearishCount = Number(direction.bearish_count || 0);
     const totalSignals = Number(direction.total_count || 0);
+
+    const behavior = (behaviorRows[0] || {}) as Record<string, any>;
+    const lateCount = Number(behavior.late_count || 0);
+    const lateTotal = Number(behavior.total_exec_with_plan || 0);
+    const earlyCount = Number(behavior.early_count || 0);
+    const earlyTotal = Number(behavior.total_closed_with_exec || 0);
+    const ignoredCount = Number(behavior.ignored_count || 0);
+    const ignoredTotal = Number(behavior.total_pass_candidates || 0);
+
+    const rate = (numerator: number, denominator: number) => {
+      if (!denominator) return 0;
+      return Number(((numerator / denominator) * 100).toFixed(1));
+    };
+
+    const lateEntryPct = rate(lateCount, lateTotal);
+    const earlyExitPct = rate(earlyCount, earlyTotal);
+    const ignoredSetupPct = rate(ignoredCount, ignoredTotal);
+
+    const behaviorQuality = clamp(
+      100 - (lateEntryPct * 0.4 + earlyExitPct * 0.35 + ignoredSetupPct * 0.25),
+      20,
+      100
+    );
 
     const marketBias = totalSignals === 0
       ? 'neutral'
@@ -144,7 +247,7 @@ export async function GET() {
             : 50
           : 50;
 
-        const operatorFit = Number(((marketScore / 100) * (personalEdgePct / 100) * 100).toFixed(1));
+        const operatorFit = Number(((marketScore / 100) * (personalEdgePct / 100) * (behaviorQuality / 100) * 100).toFixed(1));
 
         return {
           symbol,
@@ -154,6 +257,7 @@ export async function GET() {
           operatorFit,
           sampleSize: edge?.sampleSize || 0,
           avgPl: Number((edge?.avgPl || 0).toFixed(2)),
+          behaviorQuality: Number(behaviorQuality.toFixed(1)),
         };
       })
       .filter((item: any) => item.symbol)
@@ -212,6 +316,17 @@ export async function GET() {
         riskLoad: {
           userRiskLoad: cognitiveLoad,
           environment: state?.risk_environment || 'MODERATE',
+        },
+        behavior: {
+          lateEntryPct,
+          earlyExitPct,
+          ignoredSetupPct,
+          behaviorQuality: Number(behaviorQuality.toFixed(1)),
+          sample: {
+            executionsWithPlan: lateTotal,
+            closedWithExecution: earlyTotal,
+            passCandidates: ignoredTotal,
+          },
         },
         topAttention,
         suggestedActions,

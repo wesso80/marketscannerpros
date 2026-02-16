@@ -120,6 +120,17 @@ interface OperatorPresenceSummary {
     userRiskLoad: number;
     environment: string;
   };
+  behavior?: {
+    lateEntryPct: number;
+    earlyExitPct: number;
+    ignoredSetupPct: number;
+    behaviorQuality: number;
+    sample?: {
+      executionsWithPlan: number;
+      closedWithExecution: number;
+      passCandidates: number;
+    };
+  };
   topAttention: Array<{
     symbol: string;
     confidence: number;
@@ -128,6 +139,7 @@ interface OperatorPresenceSummary {
     operatorFit: number;
     sampleSize: number;
     avgPl: number;
+    behaviorQuality?: number;
   }>;
   suggestedActions: Array<{
     key: string;
@@ -689,6 +701,12 @@ export default function OperatorDashboardPage() {
             </div>
           </div>
 
+          {presence?.behavior ? (
+            <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs text-slate-300">
+              Behavior Quality {formatNumber(presence.behavior.behaviorQuality)}% · Late Entry {formatNumber(presence.behavior.lateEntryPct)}% · Early Exit {formatNumber(presence.behavior.earlyExitPct)}% · Ignored Setups {formatNumber(presence.behavior.ignoredSetupPct)}%
+            </div>
+          ) : null}
+
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="mb-1 text-slate-300 uppercase tracking-wide">Top Attention</div>
@@ -696,7 +714,7 @@ export default function OperatorDashboardPage() {
                 <div className="space-y-1 text-slate-200">
                   {presence.topAttention.map((item, index) => (
                     <div key={`${item.symbol}-${index}`}>
-                      {index + 1}. {item.symbol} — Fit {formatNumber(item.operatorFit)} | Mkt {formatNumber(item.confidence)} | Edge {formatNumber(item.personalEdge)}
+                      {index + 1}. {item.symbol} — Fit {formatNumber(item.operatorFit)} | Mkt {formatNumber(item.confidence)} | Edge {formatNumber(item.personalEdge)} | Behavior {formatNumber(item.behaviorQuality ?? presence?.behavior?.behaviorQuality ?? 100)}
                     </div>
                   ))}
                 </div>

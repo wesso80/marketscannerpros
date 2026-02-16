@@ -45,6 +45,15 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_strategy_applied_task
   )
   WHERE event_type = 'strategy.rule.applied';
 
+CREATE INDEX IF NOT EXISTS idx_ai_events_workflow_corr
+  ON ai_events (
+    workspace_id,
+    event_type,
+    (event_data->'correlation'->>'workflow_id'),
+    created_at DESC
+  )
+  WHERE event_type IN ('candidate.created', 'trade.plan.created', 'trade.executed', 'trade.closed');
+
 -- 2) Alerts: speed up workflow auto-alert dedupe + daily summary
 CREATE INDEX IF NOT EXISTS idx_alerts_workflow_plan_dedupe
   ON alerts (
