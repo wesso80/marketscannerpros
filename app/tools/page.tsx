@@ -83,6 +83,24 @@ export default function ToolsPage() {
                 }}></span>
                 <span>Early-access beta · Free trials</span>
               </div>
+              <Link href="/tools/markets" style={{
+                borderRadius: 999,
+                cursor: 'pointer',
+                fontSize: 14,
+                padding: '9px 16px',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap',
+                background: 'var(--msp-panel)',
+                color: 'var(--msp-text)',
+                border: '1px solid var(--msp-border-strong)',
+                textDecoration: 'none'
+              }}>
+                <span>🧭</span>
+                <span>Open Markets</span>
+              </Link>
               <a href={emailLink} style={{
                 borderRadius: 999,
                 border: 'none',
