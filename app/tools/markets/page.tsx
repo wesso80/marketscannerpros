@@ -85,10 +85,11 @@ function Card({ title, right, children }: { title: string; right?: React.ReactNo
 export default function MarketsPage() {
   const [regionTab, setRegionTab] = useState<RegionTab>('americas');
   const rows = useMemo(() => globalRows[regionTab], [regionTab]);
+  const edgeState: 'BUILDING' | 'ACTIVE' | 'DEFENSIVE' = 'BUILDING';
 
   return (
     <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', padding: '1rem' }}>
-      <div style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: '0.9rem' }}>
+      <div style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: '0.7rem' }}>
         <nav
           style={{
             background: 'var(--msp-card)',
@@ -123,9 +124,9 @@ export default function MarketsPage() {
             background: 'var(--msp-panel)',
             border: '1px solid var(--msp-border-strong)',
             borderRadius: 12,
-            padding: '0.5rem 0.7rem',
+            padding: '0.42rem 0.62rem',
             display: 'flex',
-            gap: '0.55rem',
+            gap: '0.42rem',
             flexWrap: 'wrap',
             alignItems: 'center',
           }}
@@ -139,7 +140,7 @@ export default function MarketsPage() {
             ['DXY', '103.2'],
             ['Data', 'Live'],
           ].map(([k, v]) => (
-            <div key={k} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.55rem', color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>
+            <div key={k} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.16rem 0.48rem', color: 'var(--msp-text-muted)', fontSize: '0.72rem' }}>
               <strong style={{ color: 'var(--msp-text)' }}>{k}</strong> • {v}
             </div>
           ))}
@@ -148,121 +149,155 @@ export default function MarketsPage() {
           </div>
         </div>
 
-        <div className="grid xl:grid-cols-2 gap-4">
-          <Card title="Today In Markets">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {todayTiles.map((tile) => (
-                <div key={tile.symbol} style={{ background: 'var(--msp-panel)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.55rem 0.65rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{tile.symbol}</div>
-                    <div style={{ color: toneColor(tile.tone), fontWeight: 800 }}>{tile.value}</div>
-                  </div>
-                  <div style={{ marginTop: '0.35rem', color: toneColor(tile.tone), letterSpacing: '0.08em' }}>{tile.spark}</div>
-                </div>
-              ))}
+        <section
+          style={{
+            background: 'var(--msp-panel)',
+            border: '1px solid var(--msp-border-strong)',
+            borderRadius: 14,
+            padding: '0.72rem',
+            display: 'grid',
+            gap: '0.7rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'grid', gap: '0.06rem' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 800 }}>Decision Plane</div>
+              <div style={{ fontSize: '0.95rem', color: 'var(--msp-text)', fontWeight: 800 }}>Market Brain</div>
             </div>
-          </Card>
-
-          <Card
-            title="Sector Heatmap"
-            right={<span style={{ fontSize: '0.72rem', color: 'var(--msp-accent)', fontWeight: 700 }}>Risk Regime • Balanced</span>}
-          >
-            <div style={{ minHeight: 360 }}>
-              <SectorHeatmap />
+            <div style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.6rem', color: edgeState === 'ACTIVE' ? 'var(--msp-bull)' : edgeState === 'DEFENSIVE' ? 'var(--msp-bear)' : 'var(--msp-warn)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Edge State: {edgeState}
             </div>
-          </Card>
-        </div>
+          </div>
 
-        <div className="grid xl:grid-cols-2 gap-4">
-          <Card title="Compare To Benchmarks" right={<Link href="/tools/market-movers" style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', textDecoration: 'none' }}>Open Full</Link>}>
-            <div style={{ background: 'var(--msp-panel)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.8rem' }}>
-              <div style={{ display: 'grid', gap: '0.45rem' }}>
-                {[
-                  ['SPY', '▃▄▅▆▇', '+0.6%'],
-                  ['QQQ', '▃▄▆▇▇', '+0.8%'],
-                  ['IWM', '▅▄▃▂▁', '-0.2%'],
-                ].map(([s, spark, chg]) => (
-                  <div key={s} style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--msp-text)', fontWeight: 700 }}>{s}</span>
-                    <span style={{ color: 'var(--msp-accent)', letterSpacing: '0.08em' }}>{spark}</span>
-                    <span style={{ color: (chg as string).startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)', fontWeight: 700 }}>{chg}</span>
+          <div className="grid xl:grid-cols-2 gap-3">
+            <Card title="Today In Markets">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {todayTiles.map((tile) => (
+                  <div key={tile.symbol} style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{tile.symbol}</div>
+                      <div style={{ color: toneColor(tile.tone), fontWeight: 800 }}>{tile.value}</div>
+                    </div>
+                    <div style={{ marginTop: '0.25rem', color: toneColor(tile.tone), letterSpacing: '0.08em' }}>{tile.spark}</div>
                   </div>
                 ))}
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card title="Global Index Tables">
-            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '0.55rem', flexWrap: 'wrap' }}>
-              {(['americas', 'emea', 'apac'] as RegionTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setRegionTab(tab)}
+            <Card
+              title="Sector Heatmap"
+              right={<span style={{ fontSize: '0.7rem', color: 'var(--msp-accent)', fontWeight: 700 }}>Risk Regime • Balanced</span>}
+            >
+              <div style={{ minHeight: 336 }}>
+                <SectorHeatmap />
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid xl:grid-cols-2 gap-3">
+            <Card title="Compare To Benchmarks" right={<Link href="/tools/market-movers" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Full</Link>}>
+              <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.65rem' }}>
+                <div style={{ display: 'grid', gap: '0.35rem' }}>
+                  {[
+                    ['SPY', '▃▄▅▆▇', '+0.6%'],
+                    ['QQQ', '▃▄▆▇▇', '+0.8%'],
+                    ['IWM', '▅▄▃▂▁', '-0.2%'],
+                  ].map(([s, spark, chg]) => (
+                    <div key={s} style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', alignItems: 'center', gap: '0.45rem' }}>
+                      <span style={{ color: 'var(--msp-text)', fontWeight: 700 }}>{s}</span>
+                      <span style={{ color: 'var(--msp-accent)', letterSpacing: '0.08em' }}>{spark}</span>
+                      <span style={{ color: (chg as string).startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)', fontWeight: 700 }}>{chg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <Card title="Global Index Tables">
+              <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
+                {(['americas', 'emea', 'apac'] as RegionTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setRegionTab(tab)}
+                    style={{
+                      borderRadius: 999,
+                      border: `1px solid ${regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
+                      background: regionTab === tab ? 'var(--msp-accent-glow)' : 'var(--msp-panel-2)',
+                      color: regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
+                      padding: '0.18rem 0.6rem',
+                      fontSize: '0.72rem',
+                      textTransform: 'uppercase',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+                  <thead>
+                    <tr style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                      {['Name', 'Last', 'Chg', '1D', '1W', '1M', 'Spark'].map((h) => (
+                        <th key={h} style={{ textAlign: 'left', padding: '0.34rem 0.25rem', borderBottom: '1px solid var(--msp-border)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.name} style={{ borderBottom: '1px solid var(--msp-divider)' }}>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text)', fontWeight: 700 }}>{row.name}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.last}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: row.chg.startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)' }}>{row.chg}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.d1}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.w1}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.m1}</td>
+                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-accent)' }}>{row.spark}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        <Card title="Options Pulse" right={<Link href="/tools/options-confluence" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Cockpit</Link>}>
+          <Link
+            href="/tools/options-confluence"
+            style={{
+              textDecoration: 'none',
+              display: 'grid',
+              background: 'var(--msp-panel)',
+              border: '1px solid var(--msp-border-strong)',
+              borderRadius: 10,
+              overflow: 'hidden',
+            }}
+          >
+            <div className="grid md:grid-cols-3" style={{ borderBottom: '1px solid var(--msp-border)' }}>
+              {optionsPulse.map((item, index) => (
+                <div
+                  key={item.title}
                   style={{
-                    borderRadius: 999,
-                    border: `1px solid ${regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
-                    background: regionTab === tab ? 'var(--msp-accent-glow)' : 'var(--msp-panel)',
-                    color: regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
-                    padding: '0.2rem 0.65rem',
-                    fontSize: '0.74rem',
-                    textTransform: 'uppercase',
-                    fontWeight: 700,
-                    cursor: 'pointer',
+                    padding: '0.7rem 0.75rem',
+                    borderRight: index < optionsPulse.length - 1 ? '1px solid var(--msp-divider)' : 'none',
+                    display: 'grid',
+                    gap: '0.18rem',
                   }}
                 >
-                  {tab}
-                </button>
+                  <div style={{ color: 'var(--msp-text)', fontWeight: 800, fontSize: '0.82rem' }}>{item.title}</div>
+                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>{item.subtitle}</div>
+                </div>
               ))}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
-                <thead>
-                  <tr style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                    {['Name', 'Last', 'Chg', '1D', '1W', '1M', 'Spark'].map((h) => (
-                      <th key={h} style={{ textAlign: 'left', padding: '0.4rem 0.3rem', borderBottom: '1px solid var(--msp-border)' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.name} style={{ borderBottom: '1px solid var(--msp-divider)' }}>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-text)', fontWeight: 700 }}>{row.name}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-text-muted)' }}>{row.last}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: row.chg.startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)' }}>{row.chg}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-text-muted)' }}>{row.d1}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-text-muted)' }}>{row.w1}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-text-muted)' }}>{row.m1}</td>
-                      <td style={{ padding: '0.5rem 0.3rem', color: 'var(--msp-accent)' }}>{row.spark}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ padding: '0.45rem 0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--msp-text-faint)', fontWeight: 700 }}>Mini Cockpit</span>
+              <span style={{ color: 'var(--msp-bull)', fontSize: '0.74rem', fontWeight: 700 }}>Edge Summary: Flow constructive</span>
+              <span style={{ color: 'var(--msp-warn)', fontSize: '0.74rem', fontWeight: 700 }}>Volatility: Elevated watch</span>
+              <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>Skew: Mild defensive put demand</span>
             </div>
-          </Card>
-        </div>
-
-        <Card title="Options Pulse" right={<Link href="/tools/options-confluence" style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', textDecoration: 'none' }}>Open Cockpit</Link>}>
-          <div className="grid md:grid-cols-3 gap-3">
-            {optionsPulse.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                style={{
-                  textDecoration: 'none',
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: 10,
-                  padding: '0.75rem',
-                  minHeight: 110,
-                  display: 'grid',
-                  alignContent: 'space-between',
-                }}
-              >
-                <div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{item.title}</div>
-                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.82rem' }}>{item.subtitle}</div>
-              </Link>
-            ))}
-          </div>
+          </Link>
         </Card>
 
         <div className="grid xl:grid-cols-2 gap-4">
