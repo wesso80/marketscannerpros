@@ -664,7 +664,10 @@ function ScannerContent() {
   }, [result]);
 
   // Run bulk scan
-  const runBulkScan = async (type: 'equity' | 'crypto') => {
+  const runBulkScan = async (
+    type: 'equity' | 'crypto',
+    overrides?: { mode?: 'deep' | 'light' }
+  ) => {
     setBulkScanType(type);
     setBulkScanLoading(true);
     setBulkScanError(null);
@@ -673,13 +676,15 @@ function ScannerContent() {
     try {
       const payload: any = { type, timeframe: bulkScanTimeframe };
       if (type === 'crypto') {
-        payload.mode = bulkCryptoScanMode;
-        if (bulkCryptoScanMode === 'light') {
+        const resolvedMode = overrides?.mode ?? bulkCryptoScanMode;
+        payload.mode = resolvedMode;
+        if (resolvedMode === 'light') {
           payload.universeSize = bulkCryptoUniverseSize;
         }
       } else {
-        payload.mode = bulkEquityScanMode;
-        if (bulkEquityScanMode === 'light') {
+        const resolvedMode = overrides?.mode ?? bulkEquityScanMode;
+        payload.mode = resolvedMode;
+        if (resolvedMode === 'light') {
           payload.universeSize = 500;
         }
       }
@@ -988,7 +993,7 @@ function ScannerContent() {
         title="Market Scanner Pro"
         subtitle="Find high-probability setups in seconds with multi-factor confluence."
         icon="🧭"
-        backHref="/tools/scanner"
+        backHref="/tools"
       />
       <main className="px-4 py-6">
         <div className="w-full max-w-none">
@@ -1110,7 +1115,10 @@ function ScannerContent() {
                 {(['light', 'deep'] as const).map((mode) => (
                   <button
                     key={`equity-${mode}`}
-                    onClick={() => setBulkEquityScanMode(mode)}
+                    onClick={() => {
+                      setBulkEquityScanMode(mode);
+                      void runBulkScan('equity', { mode });
+                    }}
                     disabled={bulkScanLoading}
                     className={`rounded-md border px-3 py-[7px] text-xs font-bold ${bulkEquityScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[var(--msp-bg)]' : 'border-transparent bg-transparent text-[var(--msp-text-muted)]'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
                   >
@@ -1170,7 +1178,10 @@ function ScannerContent() {
                 {(['light', 'deep'] as const).map((mode) => (
                   <button
                     key={mode}
-                    onClick={() => setBulkCryptoScanMode(mode)}
+                    onClick={() => {
+                      setBulkCryptoScanMode(mode);
+                      void runBulkScan('crypto', { mode });
+                    }}
                     disabled={bulkScanLoading}
                     style={{
                       padding: "7px 12px",
@@ -3633,107 +3644,10 @@ function ScannerContent() {
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", marginBottom: "1rem" }}>
-              <button
-                onClick={() => {
-                  setPersonalitySignals((prev) => ({ ...prev, aiRequests: prev.aiRequests + 1 }));
-                  explainScan();
-                }}
-                disabled={aiLoading}
-                style={{
-                  padding: "0.65rem 0.9rem",
-                  background: aiLoading ? "#1f2937" : "#10B981",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontWeight: 600,
-                  cursor: aiLoading ? "not-allowed" : "pointer",
-                  fontSize: "0.95rem",
-                }}
-              >
-                {aiLoading ? "Finding Trade Rationale..." : result.direction === 'bullish' ? "Why is this Bullish?" : result.direction === 'bearish' ? "Why is this Bearish?" : "Explain this Verdict"}
-              </button>
-              {aiError && <span style={{ color: "#fca5a5", fontSize: "0.9rem" }}>{aiError}</span>}
-            </div>
             {result.price && (
               <p style={{ fontSize: "1.25rem", color: "#10B981", marginBottom: "1.5rem", fontWeight: "600" }}>
                 💰 ${typeof result.price === 'number' ? result.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 8}) : 'N/A'}
               </p>
-            )}
-
-            {aiText && (
-              <div style={{
-                marginBottom: "1.5rem",
-                background: "rgba(34, 197, 94, 0.07)",
-                border: "1px solid rgba(34, 197, 94, 0.35)",
-                borderRadius: "12px",
-                padding: "1rem",
-                color: "#d1fae5",
-                lineHeight: 1.55,
-                fontSize: "0.95rem",
-              }}>
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  marginBottom: "0.75rem"
-                }}>
-                  <div style={{ fontWeight: 700, color: "#34d399" }}>AI Thesis</div>
-                  <button
-                    onClick={() => {
-                      if (!aiExpanded) {
-                        setPersonalitySignals((prev) => ({ ...prev, aiExpands: prev.aiExpands + 1 }));
-                      }
-                      setAiExpanded(!aiExpanded);
-                    }}
-                    style={{
-                      background: "rgba(52, 211, 153, 0.2)",
-                      border: "1px solid rgba(52, 211, 153, 0.3)",
-                      borderRadius: "6px",
-                      padding: "0.35rem 0.75rem",
-                      color: "#34d399",
-                      fontSize: "0.8rem",
-                      cursor: "pointer",
-                      fontWeight: 500
-                    }}
-                  >
-                    {aiExpanded ? "Show Less ▲" : "Expand Analysis ▼"}
-                  </button>
-                </div>
-                {/* Condensed Summary (always visible) */}
-                {(() => {
-                  const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-                  const trendLine = `Trend = ${direction === 'bullish' ? 'Bullish structure' : direction === 'bearish' ? 'Bearish structure' : 'Mixed structure'}`;
-                  const momentumLine = `Momentum = ${result.rsi != null && result.macd_hist != null
-                    ? (direction === 'bullish'
-                      ? (result.rsi >= 50 && result.macd_hist >= 0 ? 'Confirmed' : 'Weak confirmation')
-                      : direction === 'bearish'
-                      ? (result.rsi <= 50 && result.macd_hist <= 0 ? 'Confirmed' : 'Weak confirmation')
-                      : 'Mixed')
-                    : 'Limited data'}`;
-                  const edgeLine = `Edge = ${result.score >= 70 ? 'High quality' : result.score >= 55 ? 'Moderate quality' : 'Low quality'} (${Math.round(result.score ?? 50)}%)`;
-                  
-                  return (
-                    <div style={{ 
-                      padding: "0.75rem",
-                      background: "rgba(0,0,0,0.2)",
-                      borderRadius: "8px",
-                      marginBottom: aiExpanded ? "0.75rem" : 0
-                    }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#34d399", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>AI Thesis</div>
-                      <div style={{ fontSize: "0.88rem" }}>• {trendLine}</div>
-                      <div style={{ fontSize: "0.88rem" }}>• {momentumLine}</div>
-                      <div style={{ fontSize: "0.88rem" }}>• {edgeLine}</div>
-                    </div>
-                  );
-                })()}
-                {/* Full Analysis (collapsible) */}
-                {aiExpanded && (
-                  <div style={{ whiteSpace: "pre-wrap", paddingTop: "0.5rem", borderTop: "1px solid rgba(52, 211, 153, 0.2)" }}>
-                    {aiText}
-                  </div>
-                )}
-              </div>
             )}
 
             {showAdvancedEngineeringPanels && (

@@ -280,7 +280,7 @@ export default function AIConfluenceScanner() {
       padding: '2rem',
       color: 'white'
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ 

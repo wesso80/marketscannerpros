@@ -35,7 +35,6 @@ const platformTools = [
   { href: '/tools/portfolio', icon: '💼', title: 'Portfolio', description: 'Track risk posture, return streams, and exposure.' },
   { href: '/tools/journal', icon: '📓', title: 'Trade Journal', description: 'Record execution quality and review discipline.' },
   { href: '/tools/ai-analyst', icon: '🧠', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
-  { href: '/tools/ai-tools', icon: '✨', title: 'AI Tools', description: 'Auxiliary AI workflow utilities and prompts.' },
   { href: '/tools/backtest', icon: '📈', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
 ];
 
@@ -155,7 +154,7 @@ export default function ToolsPage() {
         </section>
 
         <section>
-          <h3 style={{ margin: '0 0 0.6rem', fontSize: 16, fontWeight: 650 }}>Pro Trader AI Tools</h3>
+          <h3 style={{ margin: '0 0 0.6rem', fontSize: 16, fontWeight: 650 }}>Pro Trader Scanners</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
             {proTraderTools.map((tool) => (
               <Card key={tool.href} {...tool} />

@@ -24,7 +24,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools',
     '/tools/scanner',
     '/tools/ai-analyst',
-    '/tools/ai-tools',
     '/tools/deep-analysis',
     '/tools/confluence-scanner',
     '/tools/options-confluence',

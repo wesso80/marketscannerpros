@@ -581,7 +581,7 @@ function JournalContent() {
         actions={headerActions}
       />
 
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '12px 24px 0 24px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '12px 24px 0 24px' }}>
         <AdaptivePersonalityCard
           skill="journal"
           setupText={`Journal entries ${entries.length}, closed ${closedTrades.length}, win rate ${winRate.toFixed(1)}%`}
@@ -595,7 +595,7 @@ function JournalContent() {
         padding: '0 24px',
         borderBottom: '1px solid #334155'
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', gap: '0' }}>
+        <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', display: 'flex', gap: '0' }}>
           <Link href="/tools/portfolio" style={{
             padding: '12px 24px',
             background: 'transparent',
@@ -644,7 +644,8 @@ function JournalContent() {
         borderBottom: '1px solid rgba(51,65,85,0.6)'
       }}>
         <div style={{ 
-          maxWidth: '1600px', 
+          width: '100%',
+          maxWidth: 'none', 
           margin: '0 auto', 
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -772,7 +773,8 @@ function JournalContent() {
         {/* Small Sample Size Warning */}
         {smallSampleSize && (
           <div style={{
-            maxWidth: '1600px',
+            width: '100%',
+            maxWidth: 'none',
             margin: '16px auto 0',
             padding: '12px 16px',
             background: 'rgba(251,191,36,0.1)',
@@ -792,7 +794,8 @@ function JournalContent() {
         {/* Journal Insight - Pro feature */}
         {totalTrades > 0 && canAccessAdvancedJournal(tier) && (
           <div style={{
-            maxWidth: '1600px',
+            width: '100%',
+            maxWidth: 'none',
             margin: '16px auto 0',
             padding: '16px 20px',
             background: 'var(--msp-panel)',
@@ -820,7 +823,8 @@ function JournalContent() {
         
         {/* AI Trading Coach Section */}
         <div style={{
-          maxWidth: '1600px',
+          width: '100%',
+          maxWidth: 'none',
           margin: '16px auto 0',
           background: 'var(--msp-card)',
           border: '1px solid var(--msp-border)',
@@ -1044,7 +1048,8 @@ function JournalContent() {
           <div 
             className={equityCurve.length >= 5 ? 'grid-equal-2-col-responsive' : ''}
             style={{ 
-              maxWidth: '1600px', 
+              width: '100%',
+              maxWidth: 'none', 
               margin: '16px auto 0',
               display: equityCurve.length >= 5 ? undefined : 'grid',
               gridTemplateColumns: equityCurve.length >= 5 ? undefined : '1fr',
@@ -1212,7 +1217,7 @@ function JournalContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
         {/* Add Entry Form */}
         {showAddForm && (
           <div style={{

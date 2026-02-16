@@ -1231,7 +1231,8 @@ function PortfolioContent() {
           borderBottom: '1px solid rgba(51,65,85,0.4)'
         }}>
           <div style={{ 
-            maxWidth: '1600px', 
+            width: '100%',
+            maxWidth: 'none', 
             margin: '0 auto', 
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -1491,7 +1492,8 @@ function PortfolioContent() {
       {/* View Tabs */}
       <div style={{ padding: '0 16px' }}>
         <div style={{
-          maxWidth: '1600px',
+          width: '100%',
+          maxWidth: 'none',
           margin: '0 auto',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
@@ -1555,7 +1557,7 @@ function PortfolioContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             

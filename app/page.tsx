@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
+import LiveDeskFeedPanel from '@/components/LiveDeskFeedPanel';
 
 const actionLayer = [
   { title: 'Scanner', href: '/tools/scanner', desc: 'Signal discovery and qualification' },
@@ -191,9 +192,7 @@ export default function HomePage() {
           <div style={{ marginBottom: '0.68rem', fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
             Live Intelligence Snapshot
           </div>
-          <div style={{ border: '1px solid var(--msp-border)', borderRadius: 12, overflow: 'hidden', background: 'var(--msp-panel)' }}>
-            <img src="/marketing/hero-dashboard.png" alt="MSP cockpit preview" style={{ width: '100%', display: 'block' }} />
-          </div>
+          <LiveDeskFeedPanel />
         </section>
 
         <section
