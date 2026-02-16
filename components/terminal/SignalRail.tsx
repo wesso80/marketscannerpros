@@ -11,9 +11,9 @@ interface SignalRailProps {
 
 const toneMap: Record<NonNullable<SignalRailItem['tone']>, string> = {
   neutral: 'text-[var(--msp-text)] border-[var(--msp-border)] bg-[var(--msp-panel-2)]',
-  bull: 'text-[var(--msp-bull)] border-[color:rgba(47,179,110,0.35)] bg-[var(--msp-bull-tint)]',
-  bear: 'text-[var(--msp-bear)] border-[color:rgba(228,103,103,0.35)] bg-[var(--msp-bear-tint)]',
-  warn: 'text-[var(--msp-warn)] border-[color:rgba(216,162,67,0.35)] bg-[var(--msp-warn-tint)]',
+  bull: 'text-[var(--msp-bull)] border-[color:var(--msp-bull)] bg-[var(--msp-bull-tint)]',
+  bear: 'text-[var(--msp-bear)] border-[color:var(--msp-bear)] bg-[var(--msp-bear-tint)]',
+  warn: 'text-[var(--msp-warn)] border-[color:var(--msp-warn)] bg-[var(--msp-warn-tint)]',
   accent: 'text-[var(--msp-accent)] border-[var(--msp-border-strong)] bg-[var(--msp-panel)]',
 };
 

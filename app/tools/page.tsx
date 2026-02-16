@@ -276,6 +276,58 @@ export default function ToolsPage() {
             </aside>
           </main>
 
+          <section style={{ marginBottom: 26 }}>
+            <Link href="/tools/markets" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <article style={{
+                background: 'var(--card)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-soft)',
+                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr)',
+                gap: 0,
+                cursor: 'pointer'
+              }}>
+                <div style={{ position: 'relative', minHeight: 200, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 58 }}>
+                  <span>🧭</span>
+                  <div style={{ position: 'absolute', left: 12, top: 12, fontSize: 11, padding: '4px 8px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                  <div style={{ position: 'absolute', right: 12, top: 12, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                </div>
+
+                <div style={{ padding: '18px 18px 16px', display: 'grid', gap: 10, alignContent: 'center' }}>
+                  <div style={{ fontSize: 11, color: 'var(--msp-accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Primary Workspace
+                  </div>
+                  <h2 style={{ margin: 0, fontSize: 22, lineHeight: 1.2, fontWeight: 650 }}>
+                    Markets Dashboard
+                  </h2>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
+                    Institutional flow view with sticky regime strip, sector heatmap, benchmark compare, options pulse,
+                    watchlist, news, calendar, and alerts in one page.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
+                    {['Regime Strip', 'Heatmap', 'Global Tabs', 'Options Pulse', 'Watchlist + News', 'Calendar + Alerts'].map((chip) => (
+                      <span
+                        key={chip}
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--text-muted)',
+                          background: 'var(--msp-panel-2)',
+                          border: '1px solid var(--msp-border)',
+                          padding: '4px 8px',
+                          borderRadius: 999,
+                        }}
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            </Link>
+          </section>
+
           {/* Tools section */}
           <section>
             <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 560 }}>Included TradingView tools (beta)</h2>
@@ -575,6 +627,38 @@ export default function ToolsPage() {
               gap: 18,
               marginBottom: 26
             }}>
+              {/* Markets Flow */}
+              <Link href="/tools/markets" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <article style={{
+                  background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  boxShadow: 'var(--shadow-small)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  height: '100%'
+                }}>
+                  <div style={{ position: 'relative', height: 150, background: 'var(--msp-panel-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
+                    <span>🧭</span>
+                    <div style={{ position: 'absolute', left: 10, top: 10, fontSize: 11, padding: '4px 7px', borderRadius: 999, background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(16, 185, 129, 0.7)', color: '#10B981' }}>Live</div>
+                    <div style={{ position: 'absolute', right: 10, top: 10, fontSize: 10, padding: '3px 8px', borderRadius: 999, background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.5)', color: '#fde047' }}>NEW</div>
+                  </div>
+                  <div style={{ padding: '11px 12px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 560 }}>Markets Dashboard</div>
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                      Unified market flow with sticky regime strip, heatmap, global index compare, options pulse, watchlist, news, calendar, and alerts.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4, color: 'var(--text-muted)' }}>
+                      <span>Focus: <span style={{ color: 'var(--accent)' }}>Top-down flow</span></span>
+                      <span>Type: Workspace</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+
               {/* Scanner Tool */}
               <Link href="/tools/scanner" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <article style={{

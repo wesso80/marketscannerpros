@@ -83,7 +83,7 @@ function CompanyOverviewContent() {
   // Gate for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
     return (
-      <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--msp-bg)] text-[var(--msp-text)]">
         <UpgradeGate feature="Company Overview" requiredTier="pro" />
       </div>
     );
@@ -128,11 +128,11 @@ function CompanyOverviewContent() {
     if (!data) return null;
     const pe = parseFloat(data.pe);
     
-    if (isNaN(pe)) return { level: "Unknown", color: "#94A3B8" };
-    if (pe > 50) return { level: "Premium", color: "#F59E0B" };
-    if (pe > 25) return { level: "Elevated", color: "#EAB308" };
-    if (pe > 15) return { level: "Fair", color: "#10B981" };
-    return { level: "Value", color: "#22C55E" };
+    if (isNaN(pe)) return { level: "Unknown", color: "var(--msp-text-muted)", bg: "var(--msp-panel-2)", border: "var(--msp-border)" };
+    if (pe > 50) return { level: "Premium", color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)" };
+    if (pe > 25) return { level: "Elevated", color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)" };
+    if (pe > 15) return { level: "Fair", color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)" };
+    return { level: "Value", color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)" };
   };
 
   const getTechnicalBias = () => {
@@ -151,15 +151,15 @@ function CompanyOverviewContent() {
     const nearLow = low52 > 0 && (price / low52) < 1.05;
     
     if (aboveBothMAs && nearHigh) {
-      return { bias: "Bullish", detail: `Strong uptrend, near 52-week high`, color: "#10B981", icon: "📈" };
+      return { bias: "Bullish", detail: `Strong uptrend, near 52-week high`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "📈" };
     } else if (aboveBothMAs) {
-      return { bias: "Bullish", detail: `Trading above key moving averages ($${ma50.toFixed(0)} / $${ma200.toFixed(0)})`, color: "#10B981", icon: "📈" };
+      return { bias: "Bullish", detail: `Trading above key moving averages ($${ma50.toFixed(0)} / $${ma200.toFixed(0)})`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "📈" };
     } else if (belowBothMAs && nearLow) {
-      return { bias: "Bearish", detail: `Downtrend, near 52-week low`, color: "#EF4444", icon: "📉" };
+      return { bias: "Bearish", detail: `Downtrend, near 52-week low`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "📉" };
     } else if (belowBothMAs) {
-      return { bias: "Bearish", detail: `Trading below key moving averages`, color: "#EF4444", icon: "📉" };
+      return { bias: "Bearish", detail: `Trading below key moving averages`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "📉" };
     } else {
-      return { bias: "Neutral", detail: `Mixed signals between 50 & 200 MA`, color: "#F59E0B", icon: "↔️" };
+      return { bias: "Neutral", detail: `Mixed signals between 50 & 200 MA`, color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)", icon: "↔️" };
     }
   };
 
@@ -319,7 +319,7 @@ function CompanyOverviewContent() {
   // Gate entire page for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
         <ToolsPageHeader
           badge="FUNDAMENTALS"
           title="Company Overview"
@@ -335,7 +335,7 @@ function CompanyOverviewContent() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
       <ToolsPageHeader
         badge="FUNDAMENTALS"
         title="Company Overview"
@@ -354,19 +354,19 @@ function CompanyOverviewContent() {
             onChange={(e) => setSymbol(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter ticker symbol (e.g., AAPL)"
-            style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "var(--msp-card)", border: "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: "#fff", fontSize: "15px" }}
+            style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "var(--msp-card)", border: "1px solid var(--msp-border)", borderRadius: "12px", color: "var(--msp-text)", fontSize: "15px" }}
           />
           <button
             onClick={handleSearch}
             disabled={loading}
-            style={{ padding: "14px 28px", background: "var(--msp-accent)", border: "none", borderRadius: "12px", color: "#fff", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "0 4px 15px rgba(16,185,129,0.3)" }}
+            style={{ padding: "14px 28px", background: "var(--msp-accent)", border: "none", borderRadius: "12px", color: "var(--msp-bg)", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "var(--msp-shadow)" }}
           >
             {loading ? "Loading..." : "Search"}
           </button>
         </div>
 
         {error && (
-          <div style={{ padding: "14px 16px", background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", borderRadius: "12px", color: "#FCA5A5", marginBottom: "24px" }}>
+          <div style={{ padding: "14px 16px", background: "var(--msp-bear-tint)", border: "1px solid var(--msp-bear)", borderRadius: "12px", color: "var(--msp-bear)", marginBottom: "24px" }}>
             {error}
           </div>
         )}
@@ -374,14 +374,14 @@ function CompanyOverviewContent() {
         {data && (
           <div style={{ display: "grid", gap: "20px" }}>
             {/* Company Header */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                 <div>
-                  <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "#fff", marginBottom: "12px" }}>
+                  <h2 style={{ fontSize: "1.75rem", fontWeight: "bold", color: "var(--msp-text)", marginBottom: "12px" }}>
                     {data.name} ({data.symbol})
                   </h2>
                   <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
-                    <span style={{ padding: "8px 14px", background: "rgba(16, 185, 129, 0.15)", borderRadius: "8px", color: "#10B981", fontSize: "13px", border: "1px solid rgba(16,185,129,0.3)" }}>
+                    <span style={{ padding: "8px 14px", background: "var(--msp-bull-tint)", borderRadius: "8px", color: "var(--msp-bull)", fontSize: "13px", border: "1px solid var(--msp-bull)" }}>
                       {data.sector}
                     </span>
                     <span style={{ padding: "8px 14px", background: "var(--msp-panel)", borderRadius: "8px", color: "var(--msp-accent)", fontSize: "13px", border: "1px solid var(--msp-border)" }}>
@@ -391,13 +391,13 @@ function CompanyOverviewContent() {
                 </div>
                 {data.currentPrice && (
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "#fff" }}>
+                    <div style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--msp-text)" }}>
                       ${parseFloat(data.currentPrice).toFixed(2)}
                     </div>
                     {data.changePercent && (
                       <div style={{ 
                         fontSize: "14px", 
-                        color: data.changePercent.includes("-") ? "#EF4444" : "#10B981",
+                        color: data.changePercent.includes("-") ? "var(--msp-bear)" : "var(--msp-bull)",
                         fontWeight: "600"
                       }}>
                         {data.changePercent}
@@ -406,20 +406,20 @@ function CompanyOverviewContent() {
                   </div>
                 )}
               </div>
-              <p style={{ color: "#94A3B8", lineHeight: "1.7", fontSize: "14px" }}>{data.description}</p>
+              <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px" }}>{data.description}</p>
             </div>
 
             {/* AI Decision Lens - Pro feature */}
             {decisionLens && canAccessPortfolioInsights(tier) && (
-              <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+              <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
                   <span style={{ fontSize: "1.5rem" }}>🧠</span> AI Decision Lens
                 </h3>
-                <p style={{ color: "#E2E8F0", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
+                <p style={{ color: "var(--msp-text)", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
                   <strong>Overall View:</strong> {decisionLens.summary}
                 </p>
                 {decisionLens.fit && (
-                  <p style={{ color: "#94A3B8", lineHeight: "1.7", fontSize: "14px", fontStyle: "italic" }}>
+                  <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px", fontStyle: "italic" }}>
                     {decisionLens.fit}
                   </p>
                 )}
@@ -430,34 +430,34 @@ function CompanyOverviewContent() {
             {(bullCase.length > 0 || bearCase.length > 0) && canAccessPortfolioInsights(tier) && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
                 {/* Bull Case */}
-                <div style={{ background: "rgba(16,185,129,0.08)", borderRadius: "16px", border: "1px solid rgba(16,185,129,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#10B981", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ background: "var(--msp-bull-tint)", borderRadius: "16px", border: "1px solid var(--msp-bull)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>📈</span> Bull Case
                   </h3>
                   {bullCase.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "20px", color: "#94A3B8", lineHeight: "2" }}>
+                    <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
                       {bullCase.map((point, i) => (
                         <li key={i} style={{ fontSize: "14px" }}>{point}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p style={{ color: "#64748B", fontSize: "14px" }}>Limited bullish signals detected</p>
+                    <p style={{ color: "var(--msp-text-faint)", fontSize: "14px" }}>Limited bullish signals detected</p>
                   )}
                 </div>
 
                 {/* Bear Case */}
-                <div style={{ background: "rgba(239,68,68,0.08)", borderRadius: "16px", border: "1px solid rgba(239,68,68,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#EF4444", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div style={{ background: "var(--msp-bear-tint)", borderRadius: "16px", border: "1px solid var(--msp-bear)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bear)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>⚠️</span> Risk Case
                   </h3>
                   {bearCase.length > 0 ? (
-                    <ul style={{ margin: 0, paddingLeft: "20px", color: "#94A3B8", lineHeight: "2" }}>
+                    <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
                       {bearCase.map((point, i) => (
                         <li key={i} style={{ fontSize: "14px" }}>{point}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p style={{ color: "#64748B", fontSize: "14px" }}>No major risk signals detected</p>
+                    <p style={{ color: "var(--msp-text-faint)", fontSize: "14px" }}>No major risk signals detected</p>
                   )}
                 </div>
               </div>
@@ -466,9 +466,9 @@ function CompanyOverviewContent() {
             {/* Technical Bias Banner */}
             {technicalBias && (
               <div style={{ 
-                background: `${technicalBias.color}15`, 
+                background: technicalBias.bg,
                 borderRadius: "12px", 
-                border: `1px solid ${technicalBias.color}40`, 
+                border: `1px solid ${technicalBias.border}`,
                 padding: "16px 20px",
                 display: "flex",
                 alignItems: "center",
@@ -480,7 +480,7 @@ function CompanyOverviewContent() {
                   <span style={{ color: technicalBias.color, fontWeight: "bold", fontSize: "15px" }}>
                     Technical Bias: {technicalBias.bias}
                   </span>
-                  <span style={{ color: "#94A3B8", fontSize: "14px", marginLeft: "12px" }}>
+                  <span style={{ color: "var(--msp-text-muted)", fontSize: "14px", marginLeft: "12px" }}>
                     {technicalBias.detail}
                   </span>
                 </div>
@@ -488,18 +488,18 @@ function CompanyOverviewContent() {
             )}
 
             {/* Valuation Metrics */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", margin: 0 }}>📊 Valuation</h3>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", margin: 0 }}>📊 Valuation</h3>
                 {valuation && (
                   <span style={{ 
                     padding: "6px 14px", 
-                    background: `${valuation.color}20`, 
+                    background: valuation.bg,
                     borderRadius: "20px", 
                     color: valuation.color, 
                     fontSize: "13px", 
                     fontWeight: "600",
-                    border: `1px solid ${valuation.color}40`
+                    border: `1px solid ${valuation.border}`
                   }}>
                     {valuation.level} Valuation
                   </span>
@@ -514,7 +514,7 @@ function CompanyOverviewContent() {
                   label="Analyst Target" 
                   value={`$${formatValue(data.analystTargetPrice)}`}
                   subValue={analystContext ? (
-                    <span style={{ color: analystContext.isUpside ? "#10B981" : "#EF4444", fontSize: "12px" }}>
+                    <span style={{ color: analystContext.isUpside ? "var(--msp-bull)" : "var(--msp-bear)", fontSize: "12px" }}>
                       {analystContext.isUpside ? "+" : ""}{analystContext.diff}% {analystContext.label}
                     </span>
                   ) : undefined}
@@ -524,8 +524,8 @@ function CompanyOverviewContent() {
             </div>
 
             {/* Profitability */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💰 Profitability</h3>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💰 Profitability</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Profit Margin" value={formatPercentRaw(data.profitMargin)} />
                 <MetricCard label="Operating Margin" value={formatPercentRaw(data.operatingMargin)} />
@@ -536,27 +536,27 @@ function CompanyOverviewContent() {
             </div>
 
             {/* Growth & Revenue */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
                 <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
                 <MetricCard 
                   label="Earnings Growth" 
                   value={formatPercent(data.quarterlyEarningsGrowth)}
-                  valueColor={parseFloat(data.quarterlyEarningsGrowth) >= 0 ? "#10B981" : "#EF4444"}
+                  valueColor={parseFloat(data.quarterlyEarningsGrowth) >= 0 ? "var(--msp-bull)" : "var(--msp-bear)"}
                 />
                 <MetricCard 
                   label="Revenue Growth" 
                   value={formatPercent(data.quarterlyRevenueGrowth)}
-                  valueColor={parseFloat(data.quarterlyRevenueGrowth) >= 0 ? "#10B981" : "#EF4444"}
+                  valueColor={parseFloat(data.quarterlyRevenueGrowth) >= 0 ? "var(--msp-bull)" : "var(--msp-bear)"}
                 />
               </div>
             </div>
 
             {/* Technical Indicators */}
-            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>📉 Technical</h3>
+            <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📉 Technical</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                 <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
                 <MetricCard label="200-Day MA" value={`$${formatValue(data.day200MA)}`} />
@@ -567,8 +567,8 @@ function CompanyOverviewContent() {
 
             {/* Dividends */}
             {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
-              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", padding: "24px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#10B981", marginBottom: "20px" }}>💵 Dividends</h3>
+              <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💵 Dividends</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
                   <MetricCard label="Dividend Yield" value={formatPercentRaw(data.dividendYield)} />
                 </div>
@@ -577,13 +577,13 @@ function CompanyOverviewContent() {
 
             {/* Disclaimer */}
             <div style={{ 
-              background: "rgba(245, 158, 11, 0.1)", 
+              background: "var(--msp-warn-tint)", 
               borderRadius: "12px", 
-              border: "1px solid rgba(245, 158, 11, 0.3)", 
+              border: "1px solid var(--msp-warn)", 
               padding: "16px 20px",
               marginTop: "8px"
             }}>
-              <p style={{ color: "#F59E0B", fontSize: "13px", margin: 0, lineHeight: "1.6" }}>
+              <p style={{ color: "var(--msp-warn)", fontSize: "13px", margin: 0, lineHeight: "1.6" }}>
                 <strong>⚠️ Disclaimer:</strong> This analysis is algorithmic and for informational purposes only. It does not constitute investment advice. Always conduct your own research and consult a financial advisor before making investment decisions.
               </p>
             </div>
@@ -599,7 +599,7 @@ function CompanyOverviewContent() {
 export default function CompanyOverviewPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0B1120] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--msp-bg)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
       </div>
     }>
@@ -620,9 +620,9 @@ function MetricCard({
   valueColor?: string;
 }) {
   return (
-    <div style={{ padding: "16px", background: "rgba(15,23,42,0.6)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.5)" }}>
-      <div style={{ fontSize: "13px", color: "#94A3B8", marginBottom: "8px" }}>{label}</div>
-      <div style={{ fontSize: "1.15rem", fontWeight: "bold", color: valueColor || "#fff" }}>{value}</div>
+    <div style={{ padding: "16px", background: "var(--msp-panel)", borderRadius: "12px", border: "1px solid var(--msp-border)" }}>
+      <div style={{ fontSize: "13px", color: "var(--msp-text-muted)", marginBottom: "8px" }}>{label}</div>
+      <div style={{ fontSize: "1.15rem", fontWeight: "bold", color: valueColor || "var(--msp-text)" }}>{value}</div>
       {subValue && <div style={{ marginTop: "4px" }}>{subValue}</div>}
     </div>
   );

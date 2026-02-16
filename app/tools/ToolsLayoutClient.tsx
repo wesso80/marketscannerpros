@@ -19,6 +19,7 @@ function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/backtest')) return 'backtest';
   if (pathname.includes('/ai-analyst')) return 'ai_analyst';
   if (pathname.includes('/market-movers') || pathname.includes('/gainers-losers')) return 'market_movers';
+  if (pathname.includes('/markets')) return 'market_movers';
   if (pathname.includes('/macro')) return 'macro';
   if (pathname.includes('/earnings')) return 'earnings';
   if (pathname.includes('/commodities')) return 'commodities';

@@ -37,10 +37,11 @@ interface StrikeRecommendation {
 
 interface ExpirationRecommendation {
   dte: number;
+  calendarDte: number;
   expirationDate: string;
   reason: string;
   thetaRisk: 'low' | 'moderate' | 'high';
-  timeframe: string;
+  timeframe: 'scalping' | 'intraday' | 'swing' | 'position';
   confidenceScore: number;
 }
 
@@ -746,22 +747,6 @@ export default function OptionsConfluenceScanner() {
       case 'within_hour': return '⏰';
       case 'wait': return '⏳';
       default: return '🚫';
-    }
-  };
-
-  const thetaColor = (risk: string) => {
-    switch (risk) {
-      case 'low': return '#10B981';
-      case 'moderate': return '#F59E0B';
-      default: return '#EF4444';
-    }
-  };
-
-  const patternBiasColor = (bias: 'bullish' | 'bearish' | 'neutral') => {
-    switch (bias) {
-      case 'bullish': return '#10B981';
-      case 'bearish': return '#EF4444';
-      default: return '#F59E0B';
     }
   };
 
@@ -1799,7 +1784,7 @@ export default function OptionsConfluenceScanner() {
           <button
             onClick={() => handleScan()}
             disabled={loading}
-            className={`rounded-xl px-8 py-3 text-base font-bold text-[#061018] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
+            className={`rounded-xl px-8 py-3 text-base font-bold text-[var(--msp-bg)] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
           >
             {loading ? '🔄 Finding Best Options Setup...' : '🎯 Find Best Options Setup'}
           </button>
@@ -1808,7 +1793,7 @@ export default function OptionsConfluenceScanner() {
             <button
               onClick={() => handleScan()}
               disabled={loading}
-              className="cursor-pointer rounded-xl border border-white/20 bg-[rgba(100,100,100,0.3)] px-4 py-3 text-[0.85rem] text-[#94A3B8]"
+              className="cursor-pointer rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3 text-[0.85rem] text-[var(--msp-text-muted)]"
             >
               🔄 Refresh
             </button>
@@ -1817,15 +1802,15 @@ export default function OptionsConfluenceScanner() {
 
         {/* Status Bar */}
         {lastUpdated && (
-          <div className="mb-4 text-center text-[0.8rem] text-[#64748B]">
+          <div className="mb-4 text-center text-[0.8rem] text-[var(--msp-text-muted)]">
             Last updated: {lastUpdated.toLocaleTimeString()}
-            {isCached && <span className="ml-2 text-[#F59E0B]">(cached)</span>}
+            {isCached && <span className="ml-2 text-[var(--msp-warn)]">(cached)</span>}
           </div>
         )}
 
         {/* Error Display */}
         {error && (
-          <div className="mb-6 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] p-4 text-center text-[#EF4444]">
+          <div className="mb-6 rounded-xl border border-[color:var(--msp-bear)] bg-[var(--msp-bear-tint)] p-4 text-center text-[var(--msp-bear)]">
             ❌ {error}
           </div>
         )}
@@ -1886,12 +1871,22 @@ export default function OptionsConfluenceScanner() {
               {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
             </div>
 
+            <div className="-mt-[0.85rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.72rem]">
+              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Display Map</div>
+              <div className="mt-[0.35rem] grid gap-[0.25rem] text-[0.72rem] text-slate-300 md:grid-cols-2">
+                <div><span className="font-extrabold text-slate-200">1. Evidence:</span> confluence proof, decision context, structure</div>
+                <div><span className="font-extrabold text-slate-200">2. Contracts & Greeks:</span> strike/expiry, OI, greeks, risk plan</div>
+                <div><span className="font-extrabold text-slate-200">3. AI Narrative:</span> institutional interpretation and rationale</div>
+                <div><span className="font-extrabold text-slate-200">4. Logs/Diagnostics:</span> risk flags, quality caps, execution notes</div>
+              </div>
+            </div>
+
             <div className="-mt-[0.95rem] flex flex-wrap items-center gap-[0.45rem]">
               {([
-                { key: 'evidence', label: 'Evidence', count: `${result.confluenceStack} TF` },
-                { key: 'contracts', label: 'Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
-                { key: 'narrative', label: 'AI Narrative', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
-                { key: 'logs', label: 'Logs/Diagnostics', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
+                { key: 'evidence', label: '1) Evidence', count: `${result.confluenceStack} TF` },
+                { key: 'contracts', label: '2) Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
+                { key: 'narrative', label: '3) AI Narrative', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
+                { key: 'logs', label: '4) Logs/Diagnostics', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
               ] as const).map((section) => (
                 <button
                   key={section.key}
@@ -1906,10 +1901,10 @@ export default function OptionsConfluenceScanner() {
 
             <div className="-mt-[0.65rem] grid gap-[0.45rem]">
               {([
-                { key: 'evidence', title: 'Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
-                { key: 'contracts', title: 'Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
-                { key: 'narrative', title: 'AI Narrative', subtitle: 'Institutional brain summary and long-form interpretation' },
-                { key: 'logs', title: 'Logs/Diagnostics', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
+                { key: 'evidence', title: '1) Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
+                { key: 'contracts', title: '2) Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
+                { key: 'narrative', title: '3) AI Narrative', subtitle: 'Institutional brain summary and long-form interpretation' },
+                { key: 'logs', title: '4) Logs/Diagnostics', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
               ] as const)
                 .filter((door) => !trapDoors[door.key])
                 .map((door) => (
@@ -1926,6 +1921,13 @@ export default function OptionsConfluenceScanner() {
                   </button>
                 ))}
             </div>
+
+            {trapDoors.evidence && (
+              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 1 — Evidence</span>
+                <span className="ml-2 text-slate-500">Confluence + structure + setup confirmation</span>
+              </div>
+            )}
 
             {trapDoors.evidence && focusMode && (
               <div className="grid gap-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.72rem_0.82rem] [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
@@ -2012,12 +2014,12 @@ export default function OptionsConfluenceScanner() {
                   <div className="flex items-center justify-center">
                     <svg width="190" height="190" viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar Mini">
                       {confluenceRadar.ringPolygons.map((ring, idx) => (
-                        <polygon key={`mini-ring-${idx}`} points={ring} fill="none" stroke="rgba(148,163,184,0.24)" strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.15 : 0.85} />
+                        <polygon key={`mini-ring-${idx}`} points={ring} fill="none" stroke="var(--msp-border)" strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.15 : 0.85} />
                       ))}
                       {confluenceRadar.axisLines.map((line, idx) => (
-                        <line key={`mini-axis-${idx}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="rgba(100,116,139,0.36)" strokeWidth={1} />
+                        <line key={`mini-axis-${idx}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="var(--msp-text-faint)" strokeWidth={1} />
                       ))}
-                      <polygon points={confluenceRadar.dataPolygon} fill="rgba(20,184,166,0.16)" stroke="rgba(20,184,166,0.78)" strokeWidth={2} />
+                      <polygon points={confluenceRadar.dataPolygon} fill="var(--msp-accent-glow)" stroke="var(--msp-accent)" strokeWidth={2} />
                     </svg>
                   </div>
                 )}
@@ -2091,7 +2093,7 @@ export default function OptionsConfluenceScanner() {
                           key={`ring-${idx}`}
                           points={ring}
                           fill="none"
-                          stroke="rgba(148,163,184,0.28)"
+                          stroke="var(--msp-border)"
                           strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.3 : 0.9}
                         />
                       ))}
@@ -2103,15 +2105,15 @@ export default function OptionsConfluenceScanner() {
                           y1={line.y1}
                           x2={line.x2}
                           y2={line.y2}
-                          stroke="rgba(100,116,139,0.4)"
+                          stroke="var(--msp-text-faint)"
                           strokeWidth={1}
                         />
                       ))}
 
                       <polygon
                         points={confluenceRadar.dataPolygon}
-                        fill="rgba(20,184,166,0.16)"
-                        stroke="rgba(20,184,166,0.85)"
+                        fill="var(--msp-accent-glow)"
+                        stroke="var(--msp-accent)"
                         strokeWidth={2}
                       />
 
@@ -2120,7 +2122,7 @@ export default function OptionsConfluenceScanner() {
                           key={label.key}
                           x={label.x}
                           y={label.y}
-                          fill="#CBD5E1"
+                          fill="var(--msp-text-muted)"
                           fontSize="10"
                           fontWeight="700"
                           textAnchor="middle"
@@ -2311,7 +2313,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {institutionalLensMode !== 'ARMED' && institutionalLensMode !== 'EXECUTE' && (
+            {(
               <>
 
             {/* Institutional Header Layer (3-second trader test) */}
@@ -2612,6 +2614,13 @@ export default function OptionsConfluenceScanner() {
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
+            {trapDoors.logs && (
+              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Logs / Diagnostics</span>
+                <span className="ml-2 text-slate-500">Risk flags, data quality, confidence caps, execution notes</span>
+              </div>
+            )}
+
             {trapDoors.logs && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div className="rounded-2xl border-2 border-red-500 bg-[var(--msp-bear-tint)] p-[1rem_1.25rem]">
                 <div className="mb-3 flex items-center gap-3">
@@ -2876,8 +2885,15 @@ export default function OptionsConfluenceScanner() {
             {/* Pattern panel intentionally rendered above Decision Engine */}
 
             {/* PRO TRADER SECTION - Collapsible */}
-            {trapDoors.narrative && institutionalLensMode === 'OBSERVE' && (
-            <details className="mb-4 rounded-[16px] border border-[rgba(168,85,247,0.5)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+            {trapDoors.narrative && (
+              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 3 — AI Narrative</span>
+                <span className="ml-2 text-slate-500">Institutional interpretation and strategy rationale</span>
+              </div>
+            )}
+
+            {trapDoors.narrative && (
+            <details className="mb-4 rounded-[16px] border border-[var(--msp-border-strong)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-5 flex cursor-pointer list-none items-center gap-3 border-b border-violet-500/30 pb-3">
                 <span className="text-[1.5rem]">🎯</span>
                 <h2 className="m-0 flex-1 text-[1.25rem] text-slate-200">Institutional Brain Summary</h2>
@@ -3197,8 +3213,8 @@ export default function OptionsConfluenceScanner() {
 
             {/* Confluence Info - Collapsible */}
             {institutionalLensMode === 'OBSERVE' && (
-            <details className="rounded-[16px] border border-[rgba(168,85,247,0.32)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
-              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 text-violet-400">
+            <details className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 text-violet-400">
                 <span className="text-violet-500">🔮</span>
                 <span>Confluence Analysis</span>
                 <span className="ml-auto text-[0.7rem] text-slate-500">
@@ -3237,7 +3253,7 @@ export default function OptionsConfluenceScanner() {
 
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
             {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
-              <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)] ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-[rgba(239,68,68,0.5)]' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-[rgba(245,158,11,0.5)]' : 'border-[rgba(168,85,247,0.32)]'}`}>
+              <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-red-500/50' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-amber-500/50' : 'border-[var(--msp-border)]'}`}>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                   <h3 className="m-0 mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-amber-500">
                     🕐 Candle Close Confluence
@@ -3350,12 +3366,19 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
+            {trapDoors.contracts && (
+              <div className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 2 — Contracts & Greeks</span>
+                <span className="ml-2 text-slate-500">Strike + expiry + OI + greeks + risk management</span>
+              </div>
+            )}
+
             {/* Strike & Expiration Recommendations */}
-            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && result.direction !== 'neutral' && (
+            {trapDoors.contracts && result.direction !== 'neutral' && (
               <div className="card-grid-mobile">
                 
                 {/* Strike Recommendation */}
-                <div className="rounded-[16px] border border-[rgba(16,185,129,0.4)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                <div className="rounded-[16px] border border-emerald-500/40 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                   <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">🎯 Recommended Strike</h3>
                   
                   {result.primaryStrike ? (
@@ -3406,7 +3429,7 @@ export default function OptionsConfluenceScanner() {
                         <div>
                           <div className="mb-2 text-[0.8rem] text-slate-500">Alternative Strikes:</div>
                           {result.alternativeStrikes.map((s, i) => (
-                            <div key={i} className="mb-2 rounded-lg bg-[rgba(100,100,100,0.2)] p-3 text-[0.85rem]">
+                            <div key={i} className="mb-2 rounded-lg bg-[var(--msp-panel-2)] p-3 text-[0.85rem]">
                               <span className={`font-bold ${s.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                                 ${s.strike} {s.type.toUpperCase()}
                               </span>
@@ -3425,7 +3448,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
 
                 {/* Expiration Recommendation */}
-                <div className="rounded-[16px] border border-[rgba(148,163,184,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+                <div className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                   <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">📅 Recommended Expiration</h3>
                   
                   {result.primaryExpiration ? (
@@ -3469,7 +3492,7 @@ export default function OptionsConfluenceScanner() {
                           <div className="mb-2 text-[0.8rem] text-slate-500">Alternative Expirations:</div>
                           <div className="flex flex-wrap gap-2">
                             {result.alternativeExpirations.map((e, i) => (
-                              <div key={i} className="rounded-lg bg-[rgba(100,100,100,0.2)] px-4 py-2 text-[0.85rem]">
+                              <div key={i} className="rounded-lg bg-[var(--msp-panel-2)] px-4 py-2 text-[0.85rem]">
                                 <span className="font-bold text-[var(--msp-muted)]">{e.dte} DTE</span>
                                 <span className="ml-1.5 text-slate-500">({e.expirationDate})</span>
                               </div>
@@ -3488,8 +3511,8 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Open Interest Analysis */}
-            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (result.openInterestAnalysis ? (
-              <div className="rounded-[16px] border border-[rgba(20,184,166,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+            {trapDoors.contracts && (result.openInterestAnalysis ? (
+              <div className="rounded-[16px] border border-[color:var(--msp-accent)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
                   <div className="flex flex-wrap items-center gap-2">
@@ -3566,7 +3589,7 @@ export default function OptionsConfluenceScanner() {
                       <div className="greeks-table-container">
                         <table className="greeks-table w-full border-collapse text-[0.8rem]">
                           <thead>
-                            <tr className="border-b border-[rgba(100,100,100,0.3)]">
+                            <tr className="border-b border-[var(--msp-border-strong)]">
                               <th className="p-2 text-left font-medium text-slate-400">Strike</th>
                               <th className="p-2 text-right font-medium text-slate-400">OI</th>
                               <th className="p-2 text-right font-medium text-slate-400">IV</th>
@@ -3578,7 +3601,7 @@ export default function OptionsConfluenceScanner() {
                           </thead>
                           <tbody>
                             {result.openInterestAnalysis.highOIStrikes.slice(0, 6).map((s, i) => (
-                              <tr key={i} className={`border-b border-[rgba(100,100,100,0.15)] ${i % 2 === 0 ? 'bg-black/10' : 'bg-transparent'}`}>
+                              <tr key={i} className={`border-b border-[var(--msp-border)] ${i % 2 === 0 ? 'bg-black/10' : 'bg-transparent'}`}>
                                 <td className="p-2">
                                   <span className={`mr-1 font-bold ${s.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
                                     ${s.strike}
@@ -3637,7 +3660,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             ) : (
               /* No Options Data Available - Show Placeholder */
-              <div className="rounded-[16px] border border-[rgba(20,184,166,0.35)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+              <div className="rounded-[16px] border border-[color:var(--msp-accent)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
                   <span className="rounded-full bg-amber-500/20 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-500">
@@ -3662,9 +3685,9 @@ export default function OptionsConfluenceScanner() {
             ))}
 
             {/* Greeks Advice - Collapsible (advanced) */}
-            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
-            <details className="rounded-[16px] border border-[rgba(245,158,11,0.34)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
-              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 font-semibold text-amber-500">
+            {trapDoors.contracts && (
+            <details className="rounded-[16px] border border-amber-500/35 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 font-semibold text-amber-500">
                 📊 Greeks & Risk Advice
                 <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
                   ▼ Show advanced data
@@ -3700,9 +3723,9 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Risk Management - Collapsible (advanced) */}
-            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && (
-            <details className="rounded-[16px] border border-[rgba(239,68,68,0.34)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
-              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[rgba(148,163,184,0.22)] pb-3 font-semibold text-red-500">
+            {trapDoors.contracts && (
+            <details className="rounded-[16px] border border-red-500/35 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
+              <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 font-semibold text-red-500">
                 ⚠️ Risk Management
                 <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
                   {result.maxRiskPercent}% max risk • ▼ Show details
@@ -3732,8 +3755,8 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Summary Trade Setup */}
-            {trapDoors.contracts && institutionalLensMode === 'OBSERVE' && result.primaryStrike && result.primaryExpiration && (
-              <div className="rounded-[16px] border border-[rgba(16,185,129,0.5)] bg-[var(--msp-card)] p-[1.15rem] shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+            {trapDoors.contracts && result.primaryStrike && result.primaryExpiration && (
+              <div className="rounded-[16px] border border-emerald-500/50 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                 <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">📋 Trade Summary</h3>
                 
                 <div className="rounded-xl bg-black/30 p-5 font-mono text-base">
@@ -3792,7 +3815,7 @@ export default function OptionsConfluenceScanner() {
 
         {/* Help Section */}
         {!result && !loading && (
-          <div className="mt-8 rounded-2xl border border-[rgba(100,100,100,0.3)] bg-slate-800/40 p-8">
+          <div className="mt-8 rounded-2xl border border-[var(--msp-border)] bg-slate-800/40 p-8">
             <h3 className="mb-6 text-slate-200">How It Works</h3>
             
             <div className="card-grid-mobile gap-6">
