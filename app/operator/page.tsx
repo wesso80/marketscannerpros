@@ -120,6 +120,43 @@ interface OperatorPresenceSummary {
     userRiskLoad: number;
     environment: string;
   };
+  adaptiveInputs?: {
+    marketReality: {
+      mode: string;
+      volatilityState: string;
+      signalDensity: number;
+      confluenceDensity: number;
+    };
+    operatorReality: {
+      mode: string;
+      actions8h: number;
+      executions8h: number;
+      closed8h: number;
+      behaviorQuality: number;
+    };
+    cognitiveLoad: {
+      level: string;
+      value: number;
+      openAlerts: number;
+      unresolvedPlans: number;
+      simultaneousSetups: number;
+    };
+    intentDirection: string;
+  };
+  experienceMode?: {
+    key: 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
+    label: string;
+    rationale: string;
+    directives: {
+      showScanner: boolean;
+      emphasizeRisk: boolean;
+      reduceAlerts: boolean;
+      highlightLearning: boolean;
+      minimalSurface: boolean;
+      quickActions: boolean;
+      frictionLevel: 'low' | 'medium' | 'high';
+    };
+  };
   behavior?: {
     lateEntryPct: number;
     earlyExitPct: number;
@@ -463,6 +500,15 @@ export default function OperatorDashboardPage() {
     } as Record<string, string>;
   }, [connectedRoutes]);
 
+  const experienceMode = presence?.experienceMode;
+  const modeDirectives = experienceMode?.directives;
+  const reduceAlerts = modeDirectives?.reduceAlerts ?? false;
+  const showScanner = modeDirectives?.showScanner ?? true;
+  const highlightLearning = modeDirectives?.highlightLearning ?? false;
+  const emphasizeRisk = modeDirectives?.emphasizeRisk ?? false;
+  const minimalSurface = modeDirectives?.minimalSurface ?? false;
+  const alertsView = reduceAlerts ? alerts.slice(0, 1) : alerts;
+
   const unifiedSignal: UnifiedSignal | null = useMemo(() => {
     if (!focusSignal) return null;
 
@@ -682,6 +728,17 @@ export default function OperatorDashboardPage() {
 
         <section className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-200">Operator Presence</div>
+          {presence?.experienceMode ? (
+            <div className="mb-2 rounded-md border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs">
+              <div className="font-semibold text-cyan-200">{presence.experienceMode.label}</div>
+              <div className="mt-1 text-cyan-100/90">{presence.experienceMode.rationale}</div>
+              {presence?.adaptiveInputs ? (
+                <div className="mt-2 text-cyan-100/80">
+                  Market: {presence.adaptiveInputs.marketReality.mode.replaceAll('_', ' ')} · Operator: {presence.adaptiveInputs.operatorReality.mode.replaceAll('_', ' ')} · Cognitive: {presence.adaptiveInputs.cognitiveLoad.level} · Intent: {presence.adaptiveInputs.intentDirection.replaceAll('_', ' ')}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid gap-2 md:grid-cols-4">
             <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
               <div className="text-slate-400 uppercase tracking-wide">Market State</div>
@@ -885,6 +942,10 @@ export default function OperatorDashboardPage() {
             <div className="text-emerald-300 uppercase tracking-wide">Operator Mode</div>
             <div className="font-bold">{operatorMode}</div>
           </div>
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
+            <div className="text-cyan-300 uppercase tracking-wide">Experience Mode</div>
+            <div className="font-bold text-cyan-100">{experienceMode?.label || 'Focus Mode'}</div>
+          </div>
           <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
             <div className="text-slate-400 uppercase tracking-wide">Regime</div>
             <div className="font-bold">{regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</div>
@@ -909,6 +970,7 @@ export default function OperatorDashboardPage() {
 
         <div className="grid gap-4 lg:grid-cols-12">
           <aside className="space-y-4 lg:col-span-3">
+            {showScanner ? (
             <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
               <div className="space-y-2">
@@ -936,6 +998,14 @@ export default function OperatorDashboardPage() {
                 )}
               </div>
             </section>
+            ) : (
+            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
+              <div className="text-xs text-slate-400">
+                Discovery is de-emphasized in {experienceMode?.label || 'current mode'} to prioritize execution quality.
+              </div>
+            </section>
+            )}
 
             <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Pipeline</h3>
@@ -1049,7 +1119,7 @@ export default function OperatorDashboardPage() {
           </main>
 
           <aside className="space-y-4 lg:col-span-3">
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+            <section className={`rounded-xl p-4 ${emphasizeRisk ? 'border border-red-500/40 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Risk Command</h2>
               <div className="space-y-2 text-xs">
                 <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
@@ -1070,22 +1140,26 @@ export default function OperatorDashboardPage() {
             <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Live Trade Alerts</h3>
               <div className="space-y-2 text-xs">
-                {alerts.length === 0 ? (
+                {alertsView.length === 0 ? (
                   <p className="text-slate-500">No fresh alerts in the last 5 minutes.</p>
                 ) : (
-                  alerts.map((alert) => (
+                  alertsView.map((alert) => (
                     <div key={alert.id} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-200">
                       ⚠ {alert.symbol} {alert.condition.replaceAll('_', ' ')} at {formatNumber(alert.triggered_price)}
                     </div>
                   ))
                 )}
+                {reduceAlerts && alerts.length > alertsView.length ? (
+                  <p className="text-slate-500">Alert stream reduced by ARL in {experienceMode?.label || 'current mode'}.</p>
+                ) : null}
               </div>
               <Link href={connectedRoutes.alerts} className="mt-3 inline-block text-xs text-emerald-300 hover:text-emerald-200">Open Alert Intelligence →</Link>
             </section>
           </aside>
         </div>
 
-        <section className="mt-4 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+        {!minimalSurface ? (
+        <section className={`mt-4 rounded-xl p-4 ${highlightLearning ? 'border border-blue-500/40 bg-blue-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Learning Loop · AI Operator Coach</h2>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-300">
@@ -1111,6 +1185,7 @@ export default function OperatorDashboardPage() {
             />
           </div>
         </section>
+        ) : null}
       </div>
     </div>
   );

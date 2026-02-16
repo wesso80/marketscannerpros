@@ -10,6 +10,16 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+type ExperienceModeKey = 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
+
+function mapIntentDirection(userMode: string): 'scanning' | 'planning' | 'managing_trades' | 'reviewing_performance' {
+  const mode = String(userMode || '').toUpperCase();
+  if (mode === 'OBSERVE') return 'scanning';
+  if (mode === 'EVALUATE') return 'planning';
+  if (mode === 'EXECUTE') return 'managing_trades';
+  return 'reviewing_performance';
+}
+
 export async function GET() {
   try {
     const session = await getSessionFromCookie();
@@ -17,7 +27,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [stateRows, directionRows, attentionRows, pendingTaskRows, edgeRows, behaviorRows] = await Promise.all([
+    const [
+      stateRows,
+      directionRows,
+      attentionRows,
+      pendingTaskRows,
+      edgeRows,
+      behaviorRows,
+      operatorStatsRows,
+      openAlertsRows,
+    ] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
          FROM operator_state
@@ -179,6 +198,26 @@ export async function GET() {
          CROSS JOIN ignored ig`,
         [session.workspaceId]
       ),
+      q(
+        `SELECT
+           COUNT(*) FILTER (
+             WHERE event_type IN ('candidate.created', 'trade.plan.created', 'trade.executed')
+           )::int AS actions_8h,
+           COUNT(*) FILTER (WHERE event_type = 'trade.executed')::int AS executions_8h,
+           COUNT(*) FILTER (WHERE event_type = 'trade.closed')::int AS closed_8h
+         FROM ai_events
+         WHERE workspace_id = $1
+           AND created_at >= NOW() - INTERVAL '8 hours'`,
+        [session.workspaceId]
+      ),
+      q(
+        `SELECT
+           COUNT(*)::int AS open_alerts
+         FROM alerts
+         WHERE workspace_id = $1
+           AND is_active = true`,
+        [session.workspaceId]
+      ),
     ]);
     const state = stateRows[0] as Record<string, any> | undefined;
     const direction = (directionRows[0] || {}) as Record<string, any>;
@@ -188,6 +227,8 @@ export async function GET() {
     const totalSignals = Number(direction.total_count || 0);
 
     const behavior = (behaviorRows[0] || {}) as Record<string, any>;
+    const operatorStats = (operatorStatsRows[0] || {}) as Record<string, any>;
+    const openAlertsData = (openAlertsRows[0] || {}) as Record<string, any>;
     const lateCount = Number(behavior.late_count || 0);
     const lateTotal = Number(behavior.total_exec_with_plan || 0);
     const earlyCount = Number(behavior.early_count || 0);
@@ -203,6 +244,11 @@ export async function GET() {
     const lateEntryPct = rate(lateCount, lateTotal);
     const earlyExitPct = rate(earlyCount, earlyTotal);
     const ignoredSetupPct = rate(ignoredCount, ignoredTotal);
+
+    const actions8h = Number(operatorStats.actions_8h || 0);
+    const executions8h = Number(operatorStats.executions_8h || 0);
+    const closed8h = Number(operatorStats.closed_8h || 0);
+    const openAlerts = Number(openAlertsData.open_alerts || 0);
 
     const behaviorQuality = clamp(
       100 - (lateEntryPct * 0.4 + earlyExitPct * 0.35 + ignoredSetupPct * 0.25),
@@ -235,7 +281,7 @@ export async function GET() {
       edgeBySymbol.set(symbol, { sampleSize, winRate, avgPl });
     }
 
-    const topAttention = attentionRows
+    const topAttentionRaw = attentionRows
       .map((row: any) => {
         const symbol = String(row.symbol || '').toUpperCase();
         const marketScore = clamp(toFinite(Number(row.confidence), 0), 0, 100);
@@ -274,9 +320,145 @@ export async function GET() {
     }));
 
     const firstTask = pendingTasks[0] || null;
+
+    const stateLoad = clamp(toFinite(state?.cognitive_load, toFinite(state?.ai_attention_score, 50)), 0, 100);
+    const unresolvedPlans = pendingTasks.length;
+    const simultaneousSetups = Number(state?.active_candidates || topAttentionRaw.length || 0);
+    const cognitiveLoad = clamp(
+      stateLoad * 0.4 +
+        unresolvedPlans * 8 +
+        simultaneousSetups * 6 +
+        openAlerts * 4,
+      0,
+      100
+    );
+
+    const recentLossPressure = closed8h > 0 ? clamp(((closed8h - executions8h) / closed8h) * 100, 0, 100) : 0;
+    const operatorReality = cognitiveLoad >= 78 || behaviorQuality < 55 || recentLossPressure >= 60
+      ? 'overextended'
+      : cognitiveLoad <= 58 && behaviorQuality >= 70
+      ? 'in_rhythm'
+      : 'balanced';
+
+    const marketMode = volatilityState === 'expansion' && totalSignals >= 8
+      ? 'volatile_expansion'
+      : volatilityState === 'compression' || totalSignals <= 2
+      ? 'low_volatility_compression'
+      : 'balanced_transition';
+
+    const intentDirection = mapIntentDirection(state?.user_mode || 'OBSERVE');
+
+    let experienceModeKey: ExperienceModeKey = 'focus';
+    if (operatorReality === 'overextended') {
+      experienceModeKey = 'risk_control';
+    } else if (intentDirection === 'managing_trades' || executions8h > 0) {
+      experienceModeKey = 'focus';
+    } else if (marketMode === 'volatile_expansion' && operatorReality === 'in_rhythm' && cognitiveLoad < 70) {
+      experienceModeKey = 'hunt';
+    } else if (intentDirection === 'reviewing_performance' || closed8h > 0) {
+      experienceModeKey = 'learning';
+    } else if (marketMode === 'low_volatility_compression') {
+      experienceModeKey = 'passive_scan';
+    }
+
+    const experienceModes: Record<ExperienceModeKey, {
+      label: string;
+      rationale: string;
+      directives: {
+        showScanner: boolean;
+        emphasizeRisk: boolean;
+        reduceAlerts: boolean;
+        highlightLearning: boolean;
+        minimalSurface: boolean;
+        quickActions: boolean;
+        frictionLevel: 'low' | 'medium' | 'high';
+      };
+    }> = {
+      hunt: {
+        label: 'Hunt Mode',
+        rationale: 'Market is active and operator state is stable — prioritize setup discovery and fast validation.',
+        directives: {
+          showScanner: true,
+          emphasizeRisk: false,
+          reduceAlerts: false,
+          highlightLearning: false,
+          minimalSurface: false,
+          quickActions: true,
+          frictionLevel: 'low',
+        },
+      },
+      focus: {
+        label: 'Focus Mode',
+        rationale: 'Execution context is active — shift surface from discovery to risk-managed trade handling.',
+        directives: {
+          showScanner: false,
+          emphasizeRisk: true,
+          reduceAlerts: false,
+          highlightLearning: false,
+          minimalSurface: false,
+          quickActions: true,
+          frictionLevel: 'medium',
+        },
+      },
+      risk_control: {
+        label: 'Risk-Control Mode',
+        rationale: 'Cognitive pressure or behavior drift detected — reduce noise and force tighter decision quality.',
+        directives: {
+          showScanner: false,
+          emphasizeRisk: true,
+          reduceAlerts: true,
+          highlightLearning: false,
+          minimalSurface: false,
+          quickActions: false,
+          frictionLevel: 'high',
+        },
+      },
+      learning: {
+        label: 'Learning Mode',
+        rationale: 'Recent outcome data is available — prioritize coaching and post-trade pattern reinforcement.',
+        directives: {
+          showScanner: false,
+          emphasizeRisk: false,
+          reduceAlerts: true,
+          highlightLearning: true,
+          minimalSurface: false,
+          quickActions: false,
+          frictionLevel: 'low',
+        },
+      },
+      passive_scan: {
+        label: 'Passive Scan Mode',
+        rationale: 'Low-volatility regime — keep a minimal surface and only surface high-conviction opportunities.',
+        directives: {
+          showScanner: true,
+          emphasizeRisk: false,
+          reduceAlerts: true,
+          highlightLearning: false,
+          minimalSurface: true,
+          quickActions: false,
+          frictionLevel: 'low',
+        },
+      },
+    };
+
+    const experienceMode = experienceModes[experienceModeKey];
+
+    const topAttention = topAttentionRaw.filter((item: any) => {
+      if (experienceModeKey !== 'passive_scan') return true;
+      return item.operatorFit >= 55;
+    });
+
     const suggestedActions: Array<{ key: string; label: string; reason: string }> = [];
 
-    if (firstTask) {
+    if (experienceModeKey === 'risk_control') {
+      suggestedActions.push({ key: 'prepare_trade_plan', label: 'Run Risk Reset', reason: 'Tighten exposure and confirm stop discipline before any new entry.' });
+    } else if (experienceModeKey === 'learning') {
+      suggestedActions.push({ key: 'run_backtest', label: 'Review Coach Patterns', reason: 'Reinforce learning from recent trade outcomes before next cycle.' });
+    } else if (experienceModeKey === 'hunt') {
+      suggestedActions.push({ key: 'scan_market', label: 'Scan for A+ Setups', reason: 'Environment supports active setup hunting with low friction.' });
+    }
+
+    if (firstTask && suggestedActions.length < 2) {
       const actionKey = String(firstTask.action || '').toLowerCase();
       if (actionKey.includes('alert')) {
         suggestedActions.push({ key: 'create_alert', label: 'Create Alert', reason: firstTask.detail || 'Top coach action pending.' });
@@ -303,8 +485,6 @@ export async function GET() {
       });
     }
 
-    const cognitiveLoad = clamp(toFinite(state?.cognitive_load, toFinite(state?.ai_attention_score, 50)), 0, 100);
-
     return NextResponse.json({
       presence: {
         marketState: {
@@ -316,6 +496,35 @@ export async function GET() {
         riskLoad: {
           userRiskLoad: cognitiveLoad,
           environment: state?.risk_environment || 'MODERATE',
+        },
+        adaptiveInputs: {
+          marketReality: {
+            mode: marketMode,
+            volatilityState,
+            signalDensity: totalSignals,
+            confluenceDensity: topAttentionRaw.length,
+          },
+          operatorReality: {
+            mode: operatorReality,
+            actions8h,
+            executions8h,
+            closed8h,
+            behaviorQuality: Number(behaviorQuality.toFixed(1)),
+          },
+          cognitiveLoad: {
+            level: cognitiveLoad >= 75 ? 'HIGH' : cognitiveLoad >= 55 ? 'MEDIUM' : 'LOW',
+            value: Number(cognitiveLoad.toFixed(1)),
+            openAlerts,
+            unresolvedPlans,
+            simultaneousSetups,
+          },
+          intentDirection,
+        },
+        experienceMode: {
+          key: experienceModeKey,
+          label: experienceMode.label,
+          rationale: experienceMode.rationale,
+          directives: experienceMode.directives,
         },
         behavior: {
           lateEntryPct,
