@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [stateRows, directionRows, attentionRows, pendingTaskRows] = await Promise.all([
+    const [stateRows, directionRows, attentionRows, pendingTaskRows, edgeRows] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
          FROM operator_state
@@ -85,6 +85,19 @@ export async function GET() {
          LIMIT 3`,
         [session.workspaceId]
       ),
+      q(
+        `SELECT
+           UPPER(symbol) AS symbol,
+           COUNT(*)::int AS sample_size,
+           SUM(CASE WHEN outcome = 'win' OR COALESCE(pl, 0) > 0 THEN 1 ELSE 0 END)::int AS wins,
+           AVG(COALESCE(pl, 0)) AS avg_pl
+         FROM journal_entries
+         WHERE workspace_id = $1
+           AND is_open = false
+           AND (outcome IN ('win', 'loss', 'breakeven') OR pl IS NOT NULL)
+         GROUP BY UPPER(symbol)`,
+        [session.workspaceId]
+      ),
     ]);
 
     const state = stateRows[0] as Record<string, any> | undefined;
@@ -108,13 +121,44 @@ export async function GET() {
       ? 'compression'
       : 'normal';
 
+    const edgeBySymbol = new Map<string, { sampleSize: number; winRate: number; avgPl: number }>();
+    for (const row of edgeRows as any[]) {
+      const symbol = String(row?.symbol || '').toUpperCase();
+      if (!symbol) continue;
+      const sampleSize = Number(row?.sample_size || 0);
+      const wins = Number(row?.wins || 0);
+      const winRate = sampleSize > 0 ? (wins / sampleSize) * 100 : 0;
+      const avgPl = Number(row?.avg_pl || 0);
+      edgeBySymbol.set(symbol, { sampleSize, winRate, avgPl });
+    }
+
     const topAttention = attentionRows
-      .map((row: any) => ({
-        symbol: String(row.symbol || '').toUpperCase(),
-        confidence: toFinite(Number(row.confidence), 0),
-        hits: Number(row.hits || 0),
-      }))
-      .filter((item: any) => item.symbol);
+      .map((row: any) => {
+        const symbol = String(row.symbol || '').toUpperCase();
+        const marketScore = clamp(toFinite(Number(row.confidence), 0), 0, 100);
+        const edge = edgeBySymbol.get(symbol);
+
+        const personalEdgePct = edge
+          ? edge.sampleSize >= 3
+            ? clamp(edge.winRate, 0, 100)
+            : 50
+          : 50;
+
+        const operatorFit = Number(((marketScore / 100) * (personalEdgePct / 100) * 100).toFixed(1));
+
+        return {
+          symbol,
+          confidence: marketScore,
+          hits: Number(row.hits || 0),
+          personalEdge: Number(personalEdgePct.toFixed(1)),
+          operatorFit,
+          sampleSize: edge?.sampleSize || 0,
+          avgPl: Number((edge?.avgPl || 0).toFixed(2)),
+        };
+      })
+      .filter((item: any) => item.symbol)
+      .sort((a: any, b: any) => b.operatorFit - a.operatorFit || b.confidence - a.confidence)
+      .slice(0, 3);
 
     const pendingTasks = pendingTaskRows.map((row: any) => ({
       taskId: String(row.task_id || ''),
@@ -143,7 +187,7 @@ export async function GET() {
       suggestedActions.push({
         key: 'review_top_attention',
         label: 'Review Top Attention',
-        reason: `${topAttention[0].symbol} currently leads confidence ranking.`,
+        reason: `${topAttention[0].symbol} leads operator fit (${topAttention[0].operatorFit.toFixed(1)}).`,
       });
     }
 

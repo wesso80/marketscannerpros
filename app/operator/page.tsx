@@ -124,6 +124,10 @@ interface OperatorPresenceSummary {
     symbol: string;
     confidence: number;
     hits: number;
+    personalEdge: number;
+    operatorFit: number;
+    sampleSize: number;
+    avgPl: number;
   }>;
   suggestedActions: Array<{
     key: string;
@@ -692,7 +696,7 @@ export default function OperatorDashboardPage() {
                 <div className="space-y-1 text-slate-200">
                   {presence.topAttention.map((item, index) => (
                     <div key={`${item.symbol}-${index}`}>
-                      {index + 1}. {item.symbol} — {formatNumber(item.confidence)} confidence
+                      {index + 1}. {item.symbol} — Fit {formatNumber(item.operatorFit)} | Mkt {formatNumber(item.confidence)} | Edge {formatNumber(item.personalEdge)}
                     </div>
                   ))}
                 </div>
