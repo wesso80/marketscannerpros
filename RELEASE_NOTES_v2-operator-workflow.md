@@ -91,3 +91,21 @@ This milestone turns MarketScanner Pros into a connected operator workflow by li
 ### Production Validation
 - Build compiles successfully after all changes.
 - Existing warning remains non-blocking: baseline-browser-mapping dataset age warning.
+
+### Operator Presence Phase (Latest)
+- Added options confluence into workflow event loop:
+  - emits `signal.created`, `candidate.created`, and pass-gated `trade.plan.created`.
+- Added invisible-layer persistence foundation:
+  - `migrations/021_operator_state.sql`
+  - `POST/GET /api/operator/state`
+  - client pulse sync from `writeOperatorState(...)`.
+- Added Operator Presence summary endpoint:
+  - `GET /api/operator/presence`
+  - returns market state, top attention symbols, pending task context, and suggested actions.
+- Added Operator Presence panel on `/operator`:
+  - Market State, Volatility, Risk Load, Pending Tasks
+  - Top Attention list
+  - Suggested Actions with direct handoff links
+
+### Additional Rollout Requirement
+- Run `migrations/021_operator_state.sql` in Neon (idempotent) after deploy.

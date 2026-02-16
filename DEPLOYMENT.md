@@ -5,6 +5,7 @@
 - Auth: custom signed cookie session (`ms_auth`), not NextAuth.
 - Data: Neon/Postgres via `DATABASE_URL`.
 - Workflow loop: `/api/workflow/events`, `/api/workflow/today`, `/api/workflow/tasks`.
+- Presence layer: `/api/operator/state`, `/api/operator/presence`.
 
 ## Required Environment Variables (Production)
 - `APP_SIGNING_SECRET`
@@ -21,11 +22,13 @@
 ## Deploy Sequence (Recommended)
 1. Push `main` and deploy on Vercel.
 2. Run Neon migration `migrations/020_workflow_operator_loop.sql` (idempotent).
-3. Confirm build/runtime health and workflow loop smoke checks.
+3. Run Neon migration `migrations/021_operator_state.sql` (idempotent).
+4. Confirm build/runtime health and workflow loop smoke checks.
 
 ## Neon Migration (Operator Workflow)
 Run SQL from:
 - `migrations/020_workflow_operator_loop.sql`
+- `migrations/021_operator_state.sql`
 
 What it covers:
 - AI event indexes for workflow funnel events.
@@ -33,6 +36,7 @@ What it covers:
 - Alert dedupe indexes for auto plan alerts.
 - Journal indexes for open-draft and coach-enrichment lookups.
 - Safety `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for journal risk fields.
+- Operator Presence pulse table + lookup indexes.
 
 ## Post-Deploy Smoke Checklist
 1. Open `/operator` and verify:
@@ -51,6 +55,9 @@ What it covers:
 5. Verify tasks endpoint behavior:
 	- `GET /api/workflow/tasks?status=pending`
 	- `POST /api/workflow/tasks` with `accepted`/`rejected`
+6. Verify presence endpoints:
+	- `GET /api/operator/presence`
+	- `GET /api/operator/state`
 
 ## Troubleshooting
 - Build warning about `baseline-browser-mapping` age is non-blocking.

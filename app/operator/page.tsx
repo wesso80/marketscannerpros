@@ -109,6 +109,30 @@ interface CoachTaskItem {
   resolved: boolean;
 }
 
+interface OperatorPresenceSummary {
+  marketState: {
+    marketBias: string;
+    volatilityState: string;
+    userMode: string;
+    updatedAt: string | null;
+  };
+  riskLoad: {
+    userRiskLoad: number;
+    environment: string;
+  };
+  topAttention: Array<{
+    symbol: string;
+    confidence: number;
+    hits: number;
+  }>;
+  suggestedActions: Array<{
+    key: string;
+    label: string;
+    reason: string;
+  }>;
+  pendingTaskCount: number;
+}
+
 function formatNumber(value: number) {
   if (!Number.isFinite(value)) return '—';
   if (Math.abs(value) >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -152,6 +176,7 @@ export default function OperatorDashboardPage() {
   const [adaptive, setAdaptive] = useState<AdaptivePayload | null>(null);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [workflowToday, setWorkflowToday] = useState<WorkflowToday | null>(null);
+  const [presence, setPresence] = useState<OperatorPresenceSummary | null>(null);
   const [coachTasksQueue, setCoachTasksQueue] = useState<CoachTaskItem[]>([]);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
@@ -160,7 +185,7 @@ export default function OperatorDashboardPage() {
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes] = await Promise.all([
+        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes] = await Promise.all([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
@@ -168,6 +193,7 @@ export default function OperatorDashboardPage() {
           fetch('/api/journal', { cache: 'no-store' }),
           fetch('/api/workflow/today', { cache: 'no-store' }),
           fetch('/api/workflow/tasks?status=pending&limit=5', { cache: 'no-store' }),
+          fetch('/api/operator/presence', { cache: 'no-store' }),
         ]);
 
         const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
@@ -177,6 +203,7 @@ export default function OperatorDashboardPage() {
         const journal = journalRes.ok ? await journalRes.json() : null;
         const workflowData = workflowTodayRes.ok ? await workflowTodayRes.json() : null;
         const workflowTasksData = workflowTasksRes.ok ? await workflowTasksRes.json() : null;
+        const presenceData = presenceRes.ok ? await presenceRes.json() : null;
 
         if (!mounted) return;
 
@@ -194,6 +221,7 @@ export default function OperatorDashboardPage() {
         setAdaptive(adaptiveData || null);
         setJournalEntries(journal?.entries || []);
         setWorkflowToday(workflowData?.today || null);
+        setPresence(presenceData?.presence || null);
         setCoachTasksQueue(workflowTasksData?.tasks || []);
       } finally {
         if (mounted) setLoading(false);
@@ -409,6 +437,16 @@ export default function OperatorDashboardPage() {
     };
   }, [focusSignal, bias, currentStage, edgeScore, operatorMode]);
 
+  const presenceActionRoutes = useMemo(() => {
+    return {
+      create_alert: connectedRoutes.alerts,
+      prepare_trade_plan: connectedRoutes.backtest,
+      run_backtest: connectedRoutes.backtest,
+      review_top_attention: connectedRoutes.scanner,
+      scan_market: connectedRoutes.scanner,
+    } as Record<string, string>;
+  }, [connectedRoutes]);
+
   const unifiedSignal: UnifiedSignal | null = useMemo(() => {
     if (!focusSignal) return null;
 
@@ -623,6 +661,67 @@ export default function OperatorDashboardPage() {
                 {mode}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
+          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-200">Operator Presence</div>
+          <div className="grid gap-2 md:grid-cols-4">
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Market State</div>
+              <div className="font-bold text-cyan-200">{presence?.marketState?.marketBias?.replaceAll('_', ' ') || 'neutral'}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Volatility</div>
+              <div className="font-bold text-cyan-200">{presence?.marketState?.volatilityState || 'normal'}</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Risk Load</div>
+              <div className="font-bold text-cyan-200">{formatNumber(presence?.riskLoad?.userRiskLoad ?? 0)}%</div>
+            </div>
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="text-slate-400 uppercase tracking-wide">Pending Tasks</div>
+              <div className="font-bold text-cyan-200">{presence?.pendingTaskCount ?? 0}</div>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="mb-1 text-slate-300 uppercase tracking-wide">Top Attention</div>
+              {presence?.topAttention?.length ? (
+                <div className="space-y-1 text-slate-200">
+                  {presence.topAttention.map((item, index) => (
+                    <div key={`${item.symbol}-${index}`}>
+                      {index + 1}. {item.symbol} — {formatNumber(item.confidence)} confidence
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-slate-400">No high-priority symbols detected yet.</div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+              <div className="mb-1 text-slate-300 uppercase tracking-wide">Suggested Actions</div>
+              {presence?.suggestedActions?.length ? (
+                <div className="space-y-2">
+                  {presence.suggestedActions.slice(0, 3).map((action, index) => (
+                    <div key={`${action.key}-${index}`} className="rounded border border-cyan-500/20 bg-slate-950/40 px-2 py-2">
+                      <div className="font-semibold text-cyan-200">{action.label}</div>
+                      <div className="text-slate-300">{action.reason}</div>
+                      <Link
+                        href={presenceActionRoutes[action.key] || connectedRoutes.scanner}
+                        className="mt-1 inline-block text-cyan-300 hover:text-cyan-200"
+                      >
+                        Open →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-slate-400">No suggested actions available.</div>
+              )}
+            </div>
           </div>
         </section>
 
