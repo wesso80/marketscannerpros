@@ -66,6 +66,20 @@ export async function GET() {
     ]);
 
     const row = eventRows[0] || {};
+    const signals = Number(row.signals || 0);
+    const candidates = Number(row.candidates || 0);
+    const plans = Number(row.plans || 0);
+    const executions = Number(row.executions || 0);
+    const closed = Number(row.closed || 0);
+    const coachAnalyses = Number(row.coach_analyses || 0);
+    const coachTasks = Number(row.coach_tasks || 0);
+    const coachTasksAccepted = Number(row.coach_tasks_accepted || 0);
+    const coachTasksRejected = Number(row.coach_tasks_rejected || 0);
+
+    const toRate = (numerator: number, denominator: number) => {
+      if (!denominator) return 0;
+      return Number(((numerator / denominator) * 100).toFixed(1));
+    };
     const latestCoach = latestCoachRows[0] as { payload?: Record<string, any>; created_at?: string } | undefined;
     const coachPayload = latestCoach?.payload || null;
     const coachSummary = (coachPayload?.summary || {}) as Record<string, any>;
@@ -76,18 +90,26 @@ export async function GET() {
 
     return NextResponse.json({
       today: {
-        signals: Number(row.signals || 0),
-        candidates: Number(row.candidates || 0),
-        plans: Number(row.plans || 0),
-        executions: Number(row.executions || 0),
-        closed: Number(row.closed || 0),
-        coachAnalyses: Number(row.coach_analyses || 0),
-        coachTasks: Number(row.coach_tasks || 0),
-        coachTasksAccepted: Number(row.coach_tasks_accepted || 0),
-        coachTasksRejected: Number(row.coach_tasks_rejected || 0),
+        signals,
+        candidates,
+        plans,
+        executions,
+        closed,
+        coachAnalyses,
+        coachTasks,
+        coachTasksAccepted,
+        coachTasksRejected,
         autoAlerts: Number(autoAlertRows[0]?.count || 0),
         autoJournalDrafts: Number(autoDraftRows[0]?.count || 0),
         coachJournalEnrichments: Number(coachJournalRows[0]?.count || 0),
+        conversions: {
+          signalToCandidatePct: toRate(candidates, signals),
+          candidateToPlanPct: toRate(plans, candidates),
+          planToExecutionPct: toRate(executions, plans),
+          executionToClosedPct: toRate(closed, executions),
+          closedToCoachPct: toRate(coachAnalyses, closed),
+          taskAcceptPct: toRate(coachTasksAccepted, coachTasks),
+        },
         lastCoachInsight: coachPayload
           ? {
               analysisId: coachPayload.analysis_id || null,

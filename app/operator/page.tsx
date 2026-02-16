@@ -77,6 +77,14 @@ interface WorkflowToday {
   autoAlerts: number;
   autoJournalDrafts: number;
   coachJournalEnrichments?: number;
+  conversions?: {
+    signalToCandidatePct: number;
+    candidateToPlanPct: number;
+    planToExecutionPct: number;
+    executionToClosedPct: number;
+    closedToCoachPct: number;
+    taskAcceptPct: number;
+  };
   lastCoachInsight?: {
     analysisId: string | null;
     createdAt: string | null;
@@ -684,6 +692,29 @@ export default function OperatorDashboardPage() {
             ) : (
               <div className="mt-1 text-violet-200/90">No coach analysis generated yet today.</div>
             )}
+          </div>
+          <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
+            <div className="text-cyan-200 uppercase tracking-wide">Loop Conversion Rates</div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Signal→Candidate: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.signalToCandidatePct ?? 0)}%</span>
+              </div>
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Candidate→Plan: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.candidateToPlanPct ?? 0)}%</span>
+              </div>
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Plan→Execution: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.planToExecutionPct ?? 0)}%</span>
+              </div>
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Execution→Closed: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.executionToClosedPct ?? 0)}%</span>
+              </div>
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Closed→Coach: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.closedToCoachPct ?? 0)}%</span>
+              </div>
+              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+                Task Accept: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.taskAcceptPct ?? 0)}%</span>
+              </div>
+            </div>
           </div>
           <div className="mt-3 rounded-md border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs">
             <div className="text-pink-200 uppercase tracking-wide">Coach Action Queue</div>
