@@ -73,6 +73,15 @@ interface WorkflowToday {
   coachAnalyses: number;
   autoAlerts: number;
   autoJournalDrafts: number;
+  lastCoachInsight?: {
+    analysisId: string | null;
+    createdAt: string | null;
+    winRate: number;
+    avgWin: number;
+    avgLoss: number;
+    expectancy: number;
+    recommendation: string | null;
+  } | null;
   lastEventAt: string | null;
 }
 
@@ -589,6 +598,21 @@ export default function OperatorDashboardPage() {
               <div className="text-slate-400 uppercase tracking-wide">Coach</div>
               <div className="font-bold text-violet-300">{workflowToday?.coachAnalyses ?? 0}</div>
             </div>
+          </div>
+          <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs">
+            <div className="text-violet-200 uppercase tracking-wide">Last Coach Insight</div>
+            {workflowToday?.lastCoachInsight ? (
+              <div className="mt-1 space-y-1 text-violet-100">
+                <div>
+                  Win {formatNumber(workflowToday.lastCoachInsight.winRate)}% · Avg Win {formatNumber(workflowToday.lastCoachInsight.avgWin)} · Avg Loss {formatNumber(workflowToday.lastCoachInsight.avgLoss)} · Expectancy {formatNumber(workflowToday.lastCoachInsight.expectancy)}
+                </div>
+                <div className="text-violet-200/90">
+                  {workflowToday.lastCoachInsight.recommendation || 'No recommendation available yet.'}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-1 text-violet-200/90">No coach analysis generated yet today.</div>
+            )}
           </div>
         </section>
 
