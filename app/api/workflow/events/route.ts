@@ -476,6 +476,71 @@ async function autoGenerateCoachEventForClosedTrade(workspaceId: string, event: 
   });
 }
 
+async function attachCoachSummaryToJournalDraft(workspaceId: string, coachEvent: MSPEvent): Promise<boolean> {
+  if (coachEvent.event_type !== 'coach.analysis.generated') return false;
+
+  const workflowId = coachEvent.correlation?.workflow_id;
+  if (!workflowId) return false;
+
+  const payload = coachEvent.payload as Record<string, any>;
+  const analysisId = String(payload?.analysis_id || '').trim();
+  if (!analysisId) return false;
+
+  const workflowTag = `workflow_${workflowId}`;
+  const draftRows = await q(
+    `SELECT id, notes
+     FROM journal_entries
+     WHERE workspace_id = $1
+       AND is_open = true
+       AND outcome = 'open'
+       AND COALESCE(tags, ARRAY[]::text[]) @> ARRAY[$2]::text[]
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [workspaceId, workflowTag]
+  );
+
+  if (draftRows.length === 0) return false;
+
+  const draft = draftRows[0] as { id: number; notes?: string | null };
+  const existingNotes = String(draft.notes || '');
+  if (existingNotes.includes(`Coach Analysis ID: ${analysisId}`)) {
+    return false;
+  }
+
+  const summary = payload?.summary as Record<string, any> | undefined;
+  const recommendations = Array.isArray(payload?.recommendations)
+    ? (payload.recommendations as Array<Record<string, any>>)
+    : [];
+
+  const lines = [
+    '',
+    '---',
+    'AI Coach Auto-Analysis',
+    `Coach Analysis ID: ${analysisId}`,
+    `Win Rate: ${summary?.win_rate ?? 'n/a'}%`,
+    `Avg Win: ${summary?.avg_win ?? 'n/a'}`,
+    `Avg Loss: ${summary?.avg_loss ?? 'n/a'}`,
+    `Expectancy: ${summary?.expectancy ?? 'n/a'}`,
+    ...recommendations.slice(0, 3).map((item, idx) => {
+      const action = String(item?.action || 'action');
+      const detail = String(item?.detail || '');
+      return `Recommendation ${idx + 1}: ${action}${detail ? ` — ${detail}` : ''}`;
+    }),
+  ];
+
+  const mergedNotes = `${existingNotes}${lines.join('\n')}`.trim();
+
+  await q(
+    `UPDATE journal_entries
+     SET notes = $2,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [draft.id, mergedNotes]
+  );
+
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
@@ -510,6 +575,7 @@ export async function POST(req: NextRequest) {
 
     let autoAlertsCreated = 0;
     let autoJournalDraftsCreated = 0;
+    let autoCoachJournalUpdates = 0;
     const autoCoachEvents: MSPEvent[] = [];
     for (const event of normalized) {
       if (await autoCreatePlanAlertForEvent(session.workspaceId, event)) {
@@ -522,6 +588,9 @@ export async function POST(req: NextRequest) {
       const coachEvent = await autoGenerateCoachEventForClosedTrade(session.workspaceId, event);
       if (coachEvent) {
         autoCoachEvents.push(coachEvent);
+        if (await attachCoachSummaryToJournalDraft(session.workspaceId, coachEvent)) {
+          autoCoachJournalUpdates += 1;
+        }
       }
     }
 
@@ -556,6 +625,7 @@ export async function POST(req: NextRequest) {
       autoAlertsCreated,
       autoJournalDraftsCreated,
       autoCoachAnalysesGenerated: autoCoachEvents.length,
+      autoCoachJournalUpdates,
     });
   } catch (error) {
     console.error('Workflow events API error:', error);
