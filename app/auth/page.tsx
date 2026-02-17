@@ -2,6 +2,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import PageHowItWorks from '@/components/PageHowItWorks';
 
 function AuthContent() {
   const [email, setEmail] = useState("");
@@ -79,6 +80,8 @@ function AuthContent() {
         padding: '40px',
         boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
       }}>
+        <PageHowItWorks route="/auth" />
+
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{

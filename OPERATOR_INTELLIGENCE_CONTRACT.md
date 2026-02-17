@@ -173,6 +173,39 @@ Source endpoint: `POST /api/workflow/feedback`
 - `event_data.payload.source`: `consciousness_loop`
 - `event_data.payload.feedback_tag`: accepted tag
 
+## 3.1) Decision Packet Trace Contract
+
+Source endpoint: `GET /api/workflow/decision-packet?id=<decision_packet_id>`
+
+Purpose: timeline-level trace for the canonical join key across workflow events, smart alerts, and journal artifacts.
+
+### Response shape
+
+```ts
+{
+  decisionPacketId: string;
+  summary: {
+    events: number;
+    alerts: number;
+    journalEntries: number;
+    totalItems: number;
+    latestAt: string | null;
+    earliestAt: string | null;
+    symbols: string[];
+    workflowIds: string[];
+  };
+  timeline: Array<{
+    source: 'ai_event' | 'alert' | 'journal';
+    createdAt: string;
+    type: string;
+    id: string;
+    symbol: string | null;
+    workflowId: string | null;
+    payload: Record<string, unknown>;
+  }>;
+}
+```
+
 ## 4) UI Consumption Rules
 
 1. Never infer mode from local UI state if `controlMatrix.output.mode` exists.

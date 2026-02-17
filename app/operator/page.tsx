@@ -272,6 +272,39 @@ interface OperatorPresenceSummary {
   pendingTaskCount: number;
 }
 
+interface DecisionPacketTraceItem {
+  source: 'ai_event' | 'alert' | 'journal';
+  createdAt: string;
+  type: string;
+  id: string;
+  symbol: string | null;
+  workflowId: string | null;
+  payload: Record<string, unknown>;
+}
+
+interface DecisionPacketTraceSummary {
+  events: number;
+  alerts: number;
+  journalEntries: number;
+  totalItems: number;
+  latestAt: string | null;
+  earliestAt: string | null;
+  symbols: string[];
+  workflowIds: string[];
+}
+
+interface DecisionPacketTraceResponse {
+  decisionPacketId: string;
+  summary: DecisionPacketTraceSummary;
+  timeline: DecisionPacketTraceItem[];
+}
+
+function getPresenceFromApiResponse(payload: any): OperatorPresenceSummary | null {
+  if (payload?.presenceV1?.presence) return payload.presenceV1.presence as OperatorPresenceSummary;
+  if (payload?.presence) return payload.presence as OperatorPresenceSummary;
+  return null;
+}
+
 function formatNumber(value: number) {
   if (!Number.isFinite(value)) return '—';
   if (Math.abs(value) >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -319,6 +352,8 @@ export default function OperatorDashboardPage() {
   const [coachTasksQueue, setCoachTasksQueue] = useState<CoachTaskItem[]>([]);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [loopFeedbackSaving, setLoopFeedbackSaving] = useState<null | 'validated' | 'ignored' | 'wrong_context' | 'timing_issue'>(null);
+  const [decisionPacketTrace, setDecisionPacketTrace] = useState<DecisionPacketTraceResponse | null>(null);
+  const [decisionPacketTraceLoading, setDecisionPacketTraceLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -361,7 +396,7 @@ export default function OperatorDashboardPage() {
         setAdaptive(adaptiveData || null);
         setJournalEntries(journal?.entries || []);
         setWorkflowToday(workflowData?.today || null);
-        setPresence(presenceData?.presence || null);
+        setPresence(getPresenceFromApiResponse(presenceData));
         setCoachTasksQueue(workflowTasksData?.tasks || []);
       } finally {
         if (mounted) setLoading(false);
@@ -429,11 +464,46 @@ export default function OperatorDashboardPage() {
       const presenceRes = await fetch('/api/operator/presence', { cache: 'no-store' });
       if (!presenceRes.ok) return;
       const presenceData = await presenceRes.json();
-      setPresence(presenceData?.presence || null);
+      setPresence(getPresenceFromApiResponse(presenceData));
     } finally {
       setLoopFeedbackSaving(null);
     }
   };
+
+  const loopDecisionPacketId = presence?.consciousnessLoop?.decide?.decisionPacket?.id || null;
+
+  useEffect(() => {
+    if (!loopDecisionPacketId) {
+      setDecisionPacketTrace(null);
+      setDecisionPacketTraceLoading(false);
+      return;
+    }
+
+    let mounted = true;
+    const loadTrace = async () => {
+      setDecisionPacketTraceLoading(true);
+      try {
+        const res = await fetch(`/api/workflow/decision-packet?id=${encodeURIComponent(loopDecisionPacketId)}`, { cache: 'no-store' });
+        if (!res.ok) {
+          if (mounted) setDecisionPacketTrace(null);
+          return;
+        }
+
+        const data = (await res.json()) as DecisionPacketTraceResponse;
+        if (mounted) setDecisionPacketTrace(data);
+      } catch {
+        if (mounted) setDecisionPacketTrace(null);
+      } finally {
+        if (mounted) setDecisionPacketTraceLoading(false);
+      }
+    };
+
+    void loadTrace();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loopDecisionPacketId]);
 
   const focusSignal = opportunities[0] || null;
 
@@ -1144,6 +1214,29 @@ export default function OperatorDashboardPage() {
               <div className="mt-1 text-emerald-100/90">
                 Learn: {presence.consciousnessLoop.learn.feedbackTag.replaceAll('_', ' ')} · {presence.consciousnessLoop.learn.rationale}
               </div>
+              {loopDecisionPacketId ? (
+                <div className="mt-2 rounded border border-emerald-500/20 bg-slate-900/30 px-2 py-2 text-emerald-100/90">
+                  <div className="font-semibold text-emerald-200">Decision Packet Trace · {loopDecisionPacketId}</div>
+                  {decisionPacketTraceLoading ? (
+                    <div className="mt-1 text-emerald-100/70">Loading trace...</div>
+                  ) : decisionPacketTrace?.summary ? (
+                    <>
+                      <div className="mt-1 text-emerald-100/80">
+                        Events {decisionPacketTrace.summary.events} · Alerts {decisionPacketTrace.summary.alerts} · Journal {decisionPacketTrace.summary.journalEntries}
+                      </div>
+                      <div className="mt-1 space-y-1 text-emerald-100/75">
+                        {decisionPacketTrace.timeline.slice(0, 5).map((item) => (
+                          <div key={`${item.source}-${item.id}-${item.createdAt}`}>
+                            {item.source.toUpperCase()} · {item.type} · {item.symbol || '—'} · {new Date(item.createdAt).toLocaleString()}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-1 text-emerald-100/70">No trace timeline found yet.</div>
+                  )}
+                </div>
+              ) : null}
               {presence?.adaptiveInputs?.learningFeedback ? (
                 <div className="mt-1 text-emerald-100/80">
                   Feedback 7d: V {formatNumber(presence.adaptiveInputs.learningFeedback.validatedPct)}% · WC {formatNumber(presence.adaptiveInputs.learningFeedback.wrongContextPct)}% · T {formatNumber(presence.adaptiveInputs.learningFeedback.timingIssuePct)}% · Penalty {formatNumber(presence.adaptiveInputs.learningFeedback.penalty)} · Bonus {formatNumber(presence.adaptiveInputs.learningFeedback.bonus)}

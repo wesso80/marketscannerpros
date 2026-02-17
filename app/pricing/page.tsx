@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import PageHowItWorks from '@/components/PageHowItWorks';
 
 function PricingContent() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -153,6 +154,8 @@ function PricingContent() {
         }
       `}</style>
       <div style={{ maxWidth: 1000, padding: '48px 20px 60px', margin: '0 auto' }}>
+        <PageHowItWorks route="/pricing" />
+
         {/* Referral Banner - show when arriving via referral link */}
         {referralCode && (
           <div style={{

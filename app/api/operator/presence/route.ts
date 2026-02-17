@@ -11,6 +11,7 @@ import {
 } from '@/lib/operator/adaptiveReality';
 import { deriveOperatorBrainState } from '@/lib/operator/brainState';
 import { runConsciousnessLoop } from '@/lib/operator/consciousnessLoop';
+import { buildPresenceV1Envelope } from '@/lib/operator/presence.v1';
 
 function toFinite(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -18,6 +19,13 @@ function toFinite(value: unknown, fallback = 0): number {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function toIsoStringOrNull(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
 export async function GET() {
@@ -623,13 +631,12 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({
-      presence: {
+    const presence = {
         marketState: {
           marketBias,
           volatilityState,
           userMode: state?.user_mode || 'OBSERVE',
-          updatedAt: state?.updated_at || null,
+          updatedAt: toIsoStringOrNull(state?.updated_at),
         },
         riskLoad: {
           userRiskLoad: cognitiveLoad,
@@ -722,7 +729,13 @@ export async function GET() {
         suggestedActions,
         pendingTaskCount: pendingTasks.length,
         pendingTasks,
-      },
+      };
+
+    const presenceV1 = buildPresenceV1Envelope(presence);
+
+    return NextResponse.json({
+      presence,
+      presenceV1,
     });
   } catch (error) {
     console.error('Operator presence GET error:', error);

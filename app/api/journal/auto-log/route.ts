@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       sectorStrength,
       workflowId,
       parentEventId,
+      decisionPacketId,
     } = body || {};
 
     if (!symbol) {
@@ -113,6 +114,9 @@ export async function POST(req: NextRequest) {
     const safeDerivativesBias = String(derivativesBias || 'NEUTRAL').slice(0, 40);
     const safeSectorStrength = String(sectorStrength || 'MIXED').slice(0, 40);
     const edge = Number.isFinite(Number(operatorEdge)) ? Math.max(1, Math.min(99, Number(operatorEdge))) : 50;
+    const safeDecisionPacketId = typeof decisionPacketId === 'string' && decisionPacketId.trim()
+      ? decisionPacketId.trim().slice(0, 120)
+      : null;
 
     const tradeStory = [
       'AUTO TRADE STORY',
@@ -141,9 +145,15 @@ export async function POST(req: NextRequest) {
       `Condition: ${safeCondition}`,
       `Triggered Price: ${entryPrice}`,
       `Triggered At: ${triggeredAt || new Date().toISOString()}`,
+      `Decision Packet: ${safeDecisionPacketId || 'n/a'}`,
       tradeStory,
       psychologyPrompt,
     ].join('\n');
+
+    const tags = ['auto_alert', 'triggered_feed', safeSource, `mode_${safeOperatorMode.toLowerCase()}`];
+    if (safeDecisionPacketId) {
+      tags.push(`dp_${safeDecisionPacketId}`);
+    }
 
     const inserted = await q(
       `INSERT INTO journal_entries (
@@ -167,7 +177,7 @@ export async function POST(req: NextRequest) {
         notes,
         '',
         'open',
-        ['auto_alert', 'triggered_feed', safeSource, `mode_${safeOperatorMode.toLowerCase()}`],
+        tags,
         true,
       ]
     );
@@ -199,6 +209,7 @@ export async function POST(req: NextRequest) {
             source: safeSource,
             mode: safeOperatorMode,
             confidence: edge,
+            decision_packet_id: safeDecisionPacketId,
             correlation: {
               workflow_id,
               parent_event_id,
@@ -210,6 +221,7 @@ export async function POST(req: NextRequest) {
             symbol: safeSymbol,
             story: tradeStory,
             source: safeSource,
+            decision_packet_id: safeDecisionPacketId,
             correlation: {
               workflow_id,
               parent_event_id,

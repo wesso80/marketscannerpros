@@ -6,6 +6,7 @@
     "dev": "next dev -H 0.0.0.0 -p 5000",
     "build": "next build",
     "start": "node server.js",
+    "test:contracts": "vitest run test/contracts.v1.test.ts",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:outcomes": "npx tsx worker/label-outcomes.ts"
@@ -49,7 +50,8 @@
     "stylelint": "^16.26.1",
     "stylelint-config-standard": "^39.0.1",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "vitest": "^3.2.4"
   },
   "main": "index.js",
   "directories": {

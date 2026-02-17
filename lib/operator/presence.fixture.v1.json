@@ -1,0 +1,191 @@
+{
+  "contract": "operator_presence",
+  "version": "v1",
+  "generatedAt": "2026-02-17T09:03:00.000Z",
+  "presence": {
+    "marketState": {
+      "marketBias": "balanced",
+      "volatilityState": "normal",
+      "userMode": "OBSERVE",
+      "updatedAt": "2026-02-17T09:02:00.000Z"
+    },
+    "riskLoad": {
+      "userRiskLoad": 48.2,
+      "environment": "MODERATE"
+    },
+    "adaptiveInputs": {
+      "marketReality": {
+        "mode": "balanced_transition",
+        "volatilityState": "normal",
+        "signalDensity": 6,
+        "confluenceDensity": 2
+      },
+      "operatorReality": {
+        "mode": "balanced",
+        "actions8h": 8,
+        "executions8h": 3,
+        "closed8h": 2,
+        "behaviorQuality": 74.6
+      },
+      "operatorBrain": {
+        "state": "FOCUSED",
+        "executionMode": "flow",
+        "fatigueScore": 38,
+        "riskToleranceScore": 62,
+        "riskCapacity": "MEDIUM",
+        "thresholdShift": 2,
+        "aggressionBias": "balanced",
+        "guidance": "Keep focus on quality setups and controlled risk."
+      },
+      "learningFeedback": {
+        "total7d": 14,
+        "validatedPct": 64.3,
+        "ignoredPct": 14.3,
+        "wrongContextPct": 14.3,
+        "timingIssuePct": 7.1,
+        "penalty": 11.2,
+        "bonus": 7.5
+      },
+      "cognitiveLoad": {
+        "level": "MEDIUM",
+        "value": 52.4,
+        "openAlerts": 3,
+        "unresolvedPlans": 1,
+        "simultaneousSetups": 2
+      },
+      "intentDirection": "scanning"
+    },
+    "controlMatrix": {
+      "axes": {
+        "market": { "mode": "trend", "score": 66.8 },
+        "operator": { "mode": "neutral", "score": 71.2 },
+        "risk": { "mode": "normal", "score": 36.1 },
+        "intent": { "mode": "scanning", "score": 55 }
+      },
+      "matrixScore": 68.4,
+      "output": {
+        "mode": "focus",
+        "label": "Focus Mode",
+        "reason": "Execution context is active and quality is stable.",
+        "priorityWidgets": ["risk_command", "decision_cockpit", "live_alerts"],
+        "hiddenWidgets": ["broad_scanner"],
+        "actionFriction": 0.45,
+        "alertIntensity": 0.65
+      }
+    },
+    "consciousnessLoop": {
+      "observe": {
+        "symbol": "SPY",
+        "market": { "mode": "trend", "score": 66.8, "volatilityState": "normal" },
+        "operator": { "mode": "neutral", "score": 71.2 },
+        "risk": { "mode": "normal", "score": 36.1 },
+        "intent": { "mode": "scanning", "score": 55 },
+        "setup": { "signalScore": 72, "operatorFit": 69.5, "confidence": 72 },
+        "behavior": { "quality": 74.6, "lateEntryPct": 12.4, "earlyExitPct": 15.7, "ignoredSetupPct": 11.3 },
+        "automation": { "hasPendingTask": false, "hasTopAttention": true }
+      },
+      "interpret": {
+        "decisionContext": "trend market, neutral operator, normal risk, scanning intent",
+        "suitability": "high"
+      },
+      "decide": {
+        "confidence": 73.8,
+        "suggestedActions": ["promote_candidate", "prepare_trade_plan"],
+        "decisionPacket": {
+          "id": "dp_8c1f2a",
+          "symbol": "SPY",
+          "signalScore": 72,
+          "riskScore": 36,
+          "operatorFit": 69.5,
+          "status": "candidate"
+        }
+      },
+      "act": {
+        "autoActions": ["alert_auto_ready"]
+      },
+      "learn": {
+        "feedbackTag": "validated",
+        "rationale": "Context and behavior are aligned with execution goals."
+      },
+      "adapt": {
+        "adjustments": ["keep_low_friction"]
+      }
+    },
+    "experienceMode": {
+      "key": "focus",
+      "label": "Focus Mode",
+      "rationale": "Execution context is active and quality is stable.",
+      "directives": {
+        "showScanner": false,
+        "emphasizeRisk": true,
+        "reduceAlerts": false,
+        "highlightLearning": false,
+        "minimalSurface": false,
+        "quickActions": true,
+        "frictionLevel": "medium"
+      },
+      "priorityWidgets": ["risk_command", "decision_cockpit", "live_alerts"],
+      "hiddenWidgets": ["broad_scanner"],
+      "actionFriction": 0.45,
+      "alertIntensity": 0.65
+    },
+    "behavior": {
+      "lateEntryPct": 12.4,
+      "earlyExitPct": 15.7,
+      "ignoredSetupPct": 11.3,
+      "behaviorQuality": 74.6,
+      "sample": {
+        "executionsWithPlan": 27,
+        "closedWithExecution": 21,
+        "passCandidates": 31
+      }
+    },
+    "topAttention": [
+      {
+        "symbol": "SPY",
+        "confidence": 72,
+        "hits": 5,
+        "personalEdge": 61.4,
+        "operatorFit": 69.5,
+        "sampleSize": 14,
+        "avgPl": 142.33,
+        "decisionPacketId": "dp_8c1f2a"
+      },
+      {
+        "symbol": "QQQ",
+        "confidence": 68,
+        "hits": 4,
+        "personalEdge": 58,
+        "operatorFit": 63.1,
+        "sampleSize": 11,
+        "avgPl": 96.1
+      }
+    ],
+    "symbolExperienceModes": [
+      {
+        "symbol": "SPY",
+        "operatorFit": 69.5,
+        "confidence": 72,
+        "personalEdge": 61.4,
+        "mode": {
+          "key": "focus",
+          "label": "Focus Mode",
+          "directives": {
+            "showScanner": false,
+            "emphasizeRisk": true,
+            "reduceAlerts": false,
+            "highlightLearning": false,
+            "minimalSurface": false,
+            "quickActions": true,
+            "frictionLevel": "medium"
+          }
+        },
+        "reason": "Execution context is active and quality is stable."
+      }
+    ],
+    "suggestedActions": [
+      { "key": "review_top_attention", "label": "Review Top Attention", "reason": "SPY leads operator fit." }
+    ],
+    "pendingTaskCount": 1
+  }
+}

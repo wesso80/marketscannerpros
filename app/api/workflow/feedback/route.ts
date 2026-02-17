@@ -1,38 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
-
-type FeedbackTag = 'validated' | 'ignored' | 'wrong_context' | 'timing_issue';
-
-function isFeedbackTag(value: unknown): value is FeedbackTag {
-  return value === 'validated' || value === 'ignored' || value === 'wrong_context' || value === 'timing_issue';
-}
+import {
+  WorkflowFeedbackResponseV1Schema,
+  parseWorkflowFeedbackRequestV1WithLegacy,
+  buildPersistedEventFromFeedback,
+} from '@/lib/operator/feedback.v1';
 
 export async function POST(req: NextRequest) {
+  const fallbackCorrelationId = `corr_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json() as {
-      feedbackTag?: FeedbackTag;
-      decisionPacketId?: string;
-      symbol?: string;
-      confidence?: number;
-      workflowId?: string;
-      notes?: string;
-    };
+    const parsed = parseWorkflowFeedbackRequestV1WithLegacy(await req.json());
 
-    if (!isFeedbackTag(body.feedbackTag)) {
-      return NextResponse.json({ error: 'Invalid feedbackTag' }, { status: 400 });
-    }
-
-    const symbol = String(body.symbol || '').trim().toUpperCase();
-    const decisionPacketId = String(body.decisionPacketId || '').trim();
-    const workflowId = String(body.workflowId || `wf_feedback_${Date.now()}`).trim();
-    const notes = String(body.notes || '').trim();
-    const confidence = Number.isFinite(body.confidence) ? Number(body.confidence) : null;
+    const symbol = String(parsed.symbol || '').trim().toUpperCase();
+    const decisionPacketId = String(parsed.decisionPacketId || '').trim();
+    const workflowId = String(parsed.workflowId || `wf_feedback_${Date.now()}`).trim();
+    const notes = String(parsed.notes || '').trim();
+    const confidence = Number.isFinite(parsed.confidence) ? Number(parsed.confidence) : null;
+    const nowIso = new Date().toISOString();
+    const built = buildPersistedEventFromFeedback(parsed, nowIso);
 
     const eventData = {
       event_id: `evt_feedback_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
@@ -67,8 +59,8 @@ export async function POST(req: NextRequest) {
         parent_event_id: null,
       },
       payload: {
-        source: 'consciousness_loop',
-        feedback_tag: body.feedbackTag,
+        ...built.event_data.payload,
+        symbol: symbol || undefined,
         confidence,
         notes: notes || null,
       },
@@ -85,9 +77,21 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    return NextResponse.json({ success: true });
+    const responseBody = WorkflowFeedbackResponseV1Schema.parse({
+      ok: true,
+      correlationId: parsed.correlationId ?? fallbackCorrelationId,
+      persistedEventId: String(eventData.event_id),
+      message: 'Feedback persisted',
+    });
+
+    return NextResponse.json(responseBody);
   } catch (error) {
     console.error('Workflow feedback POST error:', error);
-    return NextResponse.json({ error: 'Failed to save feedback' }, { status: 500 });
+    const responseBody = WorkflowFeedbackResponseV1Schema.parse({
+      ok: false,
+      correlationId: fallbackCorrelationId,
+      message: error instanceof Error ? error.message : 'Failed to save feedback',
+    });
+    return NextResponse.json(responseBody, { status: 400 });
   }
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import PortalButton from "@/components/PortalButton";
 import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
+import PageHowItWorks from '@/components/PageHowItWorks';
 import { useUserTier } from "@/lib/useUserTier";
 
 interface ReferralInfo {
@@ -78,6 +79,8 @@ export default function AccountPage() {
       </div>
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px" }}>
+        <PageHowItWorks route="/account" />
+
         <AdaptivePersonalityCard
           skill="account"
           setupText={`Account page ${tier} plan and lifecycle context`}

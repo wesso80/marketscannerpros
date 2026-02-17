@@ -823,6 +823,7 @@ export default function OptionsConfluenceScanner() {
           links: {
             candidate_id: candidateId,
             signal_id: signalId,
+            decision_packet_id: decisionPacket.id,
           },
         },
       });
