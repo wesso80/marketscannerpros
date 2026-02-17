@@ -299,6 +299,7 @@ export default function OperatorDashboardPage() {
   const [presence, setPresence] = useState<OperatorPresenceSummary | null>(null);
   const [coachTasksQueue, setCoachTasksQueue] = useState<CoachTaskItem[]>([]);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [loopFeedbackSaving, setLoopFeedbackSaving] = useState<null | 'validated' | 'ignored' | 'wrong_context' | 'timing_issue'>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -385,6 +386,33 @@ export default function OperatorDashboardPage() {
       await Promise.all([refreshWorkflowToday(), refreshCoachTasks()]);
     } finally {
       setUpdatingTaskId(null);
+    }
+  };
+
+  const submitLoopFeedback = async (feedbackTag: 'validated' | 'ignored' | 'wrong_context' | 'timing_issue') => {
+    if (!presence?.consciousnessLoop?.decide?.decisionPacket?.id) return;
+
+    setLoopFeedbackSaving(feedbackTag);
+    try {
+      const response = await fetch('/api/workflow/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedbackTag,
+          decisionPacketId: presence.consciousnessLoop.decide.decisionPacket.id,
+          symbol: presence.consciousnessLoop.decide.decisionPacket.symbol,
+          confidence: presence.consciousnessLoop.decide.confidence,
+        }),
+      });
+
+      if (!response.ok) return;
+
+      const presenceRes = await fetch('/api/operator/presence', { cache: 'no-store' });
+      if (!presenceRes.ok) return;
+      const presenceData = await presenceRes.json();
+      setPresence(presenceData?.presence || null);
+    } finally {
+      setLoopFeedbackSaving(null);
     }
   };
 
@@ -1097,6 +1125,24 @@ export default function OperatorDashboardPage() {
                   Adapt: {presence.consciousnessLoop.adapt.adjustments.slice(0, 3).join(' · ')}
                 </div>
               ) : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {([
+                  { key: 'validated', label: 'Validated' },
+                  { key: 'ignored', label: 'Ignored' },
+                  { key: 'wrong_context', label: 'Wrong Context' },
+                  { key: 'timing_issue', label: 'Timing Issue' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    disabled={loopFeedbackSaving !== null}
+                    onClick={() => submitLoopFeedback(item.key)}
+                    className="rounded border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-100 disabled:opacity-60"
+                  >
+                    {loopFeedbackSaving === item.key ? 'Saving...' : item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
 

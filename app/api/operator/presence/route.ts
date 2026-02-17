@@ -35,6 +35,7 @@ export async function GET() {
       behaviorRows,
       operatorStatsRows,
       openAlertsRows,
+      latestFeedbackRows,
     ] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
@@ -215,6 +216,18 @@ export async function GET() {
          FROM alerts
          WHERE workspace_id = $1
            AND is_active = true`,
+        [session.workspaceId]
+      ),
+      q(
+        `SELECT
+           event_data->'payload'->>'feedback_tag' AS feedback_tag,
+           created_at
+         FROM ai_events
+         WHERE workspace_id = $1
+           AND event_type = 'label.explicit.created'
+           AND event_data->'payload'->>'source' = 'consciousness_loop'
+         ORDER BY created_at DESC
+         LIMIT 1`,
         [session.workspaceId]
       ),
     ]);
@@ -459,8 +472,10 @@ export async function GET() {
       return item.operatorFit >= 55;
     });
 
+    const latestFeedbackTag = String(latestFeedbackRows[0]?.feedback_tag || '').trim();
+
     const topSymbol = topAttention[0] || topAttentionRaw[0] || null;
-    const loop = runConsciousnessLoop({
+    const loopBase = runConsciousnessLoop({
       symbol: topSymbol?.symbol || String(state?.current_focus || 'SPY').toUpperCase(),
       market: {
         mode: marketMode,
@@ -495,6 +510,20 @@ export async function GET() {
         hasTopAttention: topAttention.length > 0,
       },
     });
+
+    const loop =
+      latestFeedbackTag === 'validated' ||
+      latestFeedbackTag === 'ignored' ||
+      latestFeedbackTag === 'wrong_context' ||
+      latestFeedbackTag === 'timing_issue'
+        ? {
+            ...loopBase,
+            learn: {
+              feedbackTag: latestFeedbackTag,
+              rationale: `Latest explicit operator feedback: ${latestFeedbackTag.replaceAll('_', ' ')}.`,
+            },
+          }
+        : loopBase;
 
     const suggestedActions: Array<{ key: string; label: string; reason: string }> = [];
 
