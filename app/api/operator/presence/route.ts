@@ -12,6 +12,20 @@ function clamp(value: number, min: number, max: number) {
 
 type ExperienceModeKey = 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
 
+type ExperienceModeDefinition = {
+  label: string;
+  rationale: string;
+  directives: {
+    showScanner: boolean;
+    emphasizeRisk: boolean;
+    reduceAlerts: boolean;
+    highlightLearning: boolean;
+    minimalSurface: boolean;
+    quickActions: boolean;
+    frictionLevel: 'low' | 'medium' | 'high';
+  };
+};
+
 function mapIntentDirection(userMode: string): 'scanning' | 'planning' | 'managing_trades' | 'reviewing_performance' {
   const mode = String(userMode || '').toUpperCase();
   if (mode === 'OBSERVE') return 'scanning';
@@ -361,19 +375,7 @@ export async function GET() {
       experienceModeKey = 'passive_scan';
     }
 
-    const experienceModes: Record<ExperienceModeKey, {
-      label: string;
-      rationale: string;
-      directives: {
-        showScanner: boolean;
-        emphasizeRisk: boolean;
-        reduceAlerts: boolean;
-        highlightLearning: boolean;
-        minimalSurface: boolean;
-        quickActions: boolean;
-        frictionLevel: 'low' | 'medium' | 'high';
-      };
-    }> = {
+    const experienceModes: Record<ExperienceModeKey, ExperienceModeDefinition> = {
       hunt: {
         label: 'Hunt Mode',
         rationale: 'Market is active and operator state is stable — prioritize setup discovery and fast validation.',
@@ -442,6 +444,52 @@ export async function GET() {
     };
 
     const experienceMode = experienceModes[experienceModeKey];
+
+    const symbolExperienceModes = topAttentionRaw
+      .map((item: any) => {
+        const fit = Number(item.operatorFit || 0);
+        const confidence = Number(item.confidence || 0);
+        const personalEdge = Number(item.personalEdge || 0);
+
+        let symbolModeKey: ExperienceModeKey;
+        if (operatorReality === 'overextended') {
+          symbolModeKey = 'risk_control';
+        } else if (fit >= 70 && confidence >= 65 && marketMode === 'volatile_expansion') {
+          symbolModeKey = 'hunt';
+        } else if (fit >= 55 && (intentDirection === 'managing_trades' || executions8h > 0)) {
+          symbolModeKey = 'focus';
+        } else if (personalEdge < 48 || behaviorQuality < 62) {
+          symbolModeKey = 'learning';
+        } else if (fit < 50) {
+          symbolModeKey = 'passive_scan';
+        } else {
+          symbolModeKey = experienceModeKey;
+        }
+
+        const mode = experienceModes[symbolModeKey];
+        return {
+          symbol: item.symbol,
+          operatorFit: fit,
+          confidence,
+          personalEdge,
+          mode: {
+            key: symbolModeKey,
+            label: mode.label,
+            directives: mode.directives,
+          },
+          reason:
+            symbolModeKey === 'hunt'
+              ? 'High fit in active regime — elevate setup discovery and quick action.'
+              : symbolModeKey === 'focus'
+              ? 'Execution context detected — prioritize management and risk control.'
+              : symbolModeKey === 'risk_control'
+              ? 'Operator pressure elevated — tighten controls and reduce noise.'
+              : symbolModeKey === 'learning'
+              ? 'Edge quality below threshold — route to review and pattern correction.'
+              : 'Conviction is moderate/low — keep symbol in passive monitoring.',
+        };
+      })
+      .filter((item: any) => item.symbol);
 
     const topAttention = topAttentionRaw.filter((item: any) => {
       if (experienceModeKey !== 'passive_scan') return true;
@@ -538,6 +586,7 @@ export async function GET() {
           },
         },
         topAttention,
+        symbolExperienceModes,
         suggestedActions,
         pendingTaskCount: pendingTasks.length,
         pendingTasks,

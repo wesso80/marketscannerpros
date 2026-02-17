@@ -178,6 +178,26 @@ interface OperatorPresenceSummary {
     avgPl: number;
     behaviorQuality?: number;
   }>;
+  symbolExperienceModes?: Array<{
+    symbol: string;
+    operatorFit: number;
+    confidence: number;
+    personalEdge: number;
+    mode: {
+      key: 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
+      label: string;
+      directives: {
+        showScanner: boolean;
+        emphasizeRisk: boolean;
+        reduceAlerts: boolean;
+        highlightLearning: boolean;
+        minimalSurface: boolean;
+        quickActions: boolean;
+        frictionLevel: 'low' | 'medium' | 'high';
+      };
+    };
+    reason: string;
+  }>;
   suggestedActions: Array<{
     key: string;
     label: string;
@@ -508,6 +528,13 @@ export default function OperatorDashboardPage() {
   const emphasizeRisk = modeDirectives?.emphasizeRisk ?? false;
   const minimalSurface = modeDirectives?.minimalSurface ?? false;
   const alertsView = reduceAlerts ? alerts.slice(0, 1) : alerts;
+  const symbolModeBySymbol = useMemo(() => {
+    const map = new Map<string, NonNullable<OperatorPresenceSummary['symbolExperienceModes']>[number]>();
+    for (const item of presence?.symbolExperienceModes || []) {
+      map.set(item.symbol.toUpperCase(), item);
+    }
+    return map;
+  }, [presence?.symbolExperienceModes]);
 
   const unifiedSignal: UnifiedSignal | null = useMemo(() => {
     if (!focusSignal) return null;
@@ -769,11 +796,21 @@ export default function OperatorDashboardPage() {
               <div className="mb-1 text-slate-300 uppercase tracking-wide">Top Attention</div>
               {presence?.topAttention?.length ? (
                 <div className="space-y-1 text-slate-200">
-                  {presence.topAttention.map((item, index) => (
-                    <div key={`${item.symbol}-${index}`}>
-                      {index + 1}. {item.symbol} — Fit {formatNumber(item.operatorFit)} | Mkt {formatNumber(item.confidence)} | Edge {formatNumber(item.personalEdge)} | Behavior {formatNumber(item.behaviorQuality ?? presence?.behavior?.behaviorQuality ?? 100)}
-                    </div>
-                  ))}
+                  {presence.topAttention.map((item, index) => {
+                    const symbolMode = symbolModeBySymbol.get(item.symbol.toUpperCase());
+                    return (
+                      <div key={`${item.symbol}-${index}`} className="rounded border border-slate-700/60 bg-slate-900/40 px-2 py-1">
+                        <div>
+                          {index + 1}. {item.symbol} — Fit {formatNumber(item.operatorFit)} | Mkt {formatNumber(item.confidence)} | Edge {formatNumber(item.personalEdge)} | Behavior {formatNumber(item.behaviorQuality ?? presence?.behavior?.behaviorQuality ?? 100)}
+                        </div>
+                        {symbolMode ? (
+                          <div className="mt-1 text-slate-400">
+                            Mode: <span className="font-semibold text-cyan-200">{symbolMode.mode.label}</span> · Friction {symbolMode.mode.directives.frictionLevel} · {symbolMode.reason}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-slate-400">No high-priority symbols detected yet.</div>
