@@ -258,11 +258,20 @@ async function labelOutcomes() {
   // Refresh accuracy stats if we labeled anything
   if (totalLabeled > 0) {
     console.log('\n🔄 Refreshing accuracy statistics...');
-    await q('SELECT refresh_signal_accuracy(90)');
-    console.log('✅ Accuracy stats updated');
+    let accuracyStatsAvailable = true;
+    try {
+      await q('SELECT refresh_signal_accuracy(90)');
+      console.log('✅ Accuracy stats updated');
+    } catch (err) {
+      accuracyStatsAvailable = false;
+      console.warn(
+        '⚠️ Skipping accuracy stats refresh (schema mismatch or missing function):',
+        err instanceof Error ? err.message : err
+      );
+    }
     
     // Print summary
-    const stats = await q<{
+    const stats = accuracyStatsAvailable ? await q<{
       signal_type: string;
       direction: string;
       horizon_minutes: number;
@@ -274,7 +283,7 @@ async function labelOutcomes() {
       WHERE total_signals >= 5
       ORDER BY total_signals DESC 
       LIMIT 15
-    `);
+    `) : [];
     
     if (stats.length > 0) {
       console.log('\n📈 Signal Accuracy Summary:');
