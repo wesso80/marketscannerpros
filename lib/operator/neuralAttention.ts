@@ -52,7 +52,13 @@ export interface PresenceLike {
   };
   riskLoad: { level?: 'LOW' | 'MEDIUM' | 'HIGH'; score?: number; exposurePct?: number };
   topAttention?: { symbol?: string | null };
-  symbolExperienceModes?: Record<string, { mode: ExperienceMode; confidence?: number }>;
+  symbolExperienceModes?:
+    | Record<string, { mode: ExperienceMode; confidence?: number }>
+    | Array<{
+        symbol: string;
+        mode: ExperienceMode | { key: ExperienceMode };
+        confidence?: number;
+      }>;
   candidates?: Array<{
     symbol: string;
     signalScore: number;
