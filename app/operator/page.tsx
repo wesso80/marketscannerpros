@@ -557,10 +557,26 @@ export default function OperatorDashboardPage() {
     () => presence?.controlMatrix?.output.hiddenWidgets || presence?.experienceMode?.hiddenWidgets || [],
     [presence?.controlMatrix?.output.hiddenWidgets, presence?.experienceMode?.hiddenWidgets]
   );
+  const priorityIndexByWidget = useMemo(() => {
+    const map = new Map<string, number>();
+    matrixPriorityWidgets.forEach((widget, index) => {
+      map.set(widget, index);
+    });
+    return map;
+  }, [matrixPriorityWidgets]);
   const hiddenWidgets = useMemo(() => new Set(matrixHiddenWidgets), [matrixHiddenWidgets]);
   const priorityWidgets = useMemo(() => new Set(matrixPriorityWidgets), [matrixPriorityWidgets]);
   const isHidden = (key: string) => hiddenWidgets.has(key);
   const isPriority = (key: string) => priorityWidgets.has(key);
+  const widgetRank = (key: string) => priorityIndexByWidget.get(key) ?? 999;
+
+  const leftPanelOrder = useMemo(() => {
+    return ['signal_flow', 'signal_pipeline'].sort((a, b) => widgetRank(a) - widgetRank(b));
+  }, [priorityIndexByWidget]);
+
+  const rightPanelOrder = useMemo(() => {
+    return ['risk_command', 'live_alerts'].sort((a, b) => widgetRank(a) - widgetRank(b));
+  }, [priorityIndexByWidget]);
 
   const showScanner = showScannerDirective && !isHidden('signal_flow') && !isHidden('broad_scanner');
   const showRiskCommand = !isHidden('risk_command');
@@ -1053,56 +1069,62 @@ export default function OperatorDashboardPage() {
 
         <div className="grid gap-4 lg:grid-cols-12">
           <aside className="space-y-4 lg:col-span-3">
-            {showScanner ? (
-            <section className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('signal_flow') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
-              <div className="space-y-2">
-                {loading ? (
-                  <p className="text-xs text-slate-500">Loading opportunities...</p>
-                ) : opportunities.length === 0 ? (
-                  <p className="text-xs text-slate-500">No opportunities available.</p>
-                ) : (
-                  opportunities.slice(0, 5).map((item) => {
-                    const stage = classifyPhase(item.score || 0, activeSymbols.has(item.symbol.toUpperCase()));
-                    return (
-                      <div key={`${item.symbol}-${item.score}`} className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-emerald-300">{item.symbol}</span>
-                          <span className="text-xs text-slate-400">{(item.direction || 'neutral').toUpperCase()}</span>
-                        </div>
-                        <div className="mt-1 text-xs text-slate-400">Confidence: {formatNumber(item.score)}</div>
-                        <div className="mt-1 text-xs text-purple-300">Phase: {stage.toUpperCase()}</div>
-                        <Link href={`/tools/backtest?symbol=${encodeURIComponent(item.symbol)}&from=operator`} className="mt-2 inline-block text-xs text-emerald-300 hover:text-emerald-200">
-                          → Continue to Validation
-                        </Link>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-            ) : (
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
-              <div className="text-xs text-slate-400">
-                Discovery is de-emphasized in {experienceMode?.label || 'current mode'} to prioritize execution quality.
-              </div>
-            </section>
-            )}
-
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Pipeline</h3>
-              <div className="space-y-2">
-                {pipeline.map((step, index) => {
-                  const active = index <= stageIndex(currentStage);
-                  return (
-                    <div key={step} className={`rounded-md border px-2 py-1 text-xs ${active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
-                      {step}
+            {leftPanelOrder.map((widgetKey) => {
+              if (widgetKey === 'signal_flow') {
+                return showScanner ? (
+                  <section key={widgetKey} className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('signal_flow') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
+                    <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
+                    <div className="space-y-2">
+                      {loading ? (
+                        <p className="text-xs text-slate-500">Loading opportunities...</p>
+                      ) : opportunities.length === 0 ? (
+                        <p className="text-xs text-slate-500">No opportunities available.</p>
+                      ) : (
+                        opportunities.slice(0, 5).map((item) => {
+                          const stage = classifyPhase(item.score || 0, activeSymbols.has(item.symbol.toUpperCase()));
+                          return (
+                            <div key={`${item.symbol}-${item.score}`} className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-emerald-300">{item.symbol}</span>
+                                <span className="text-xs text-slate-400">{(item.direction || 'neutral').toUpperCase()}</span>
+                              </div>
+                              <div className="mt-1 text-xs text-slate-400">Confidence: {formatNumber(item.score)}</div>
+                              <div className="mt-1 text-xs text-purple-300">Phase: {stage.toUpperCase()}</div>
+                              <Link href={`/tools/backtest?symbol=${encodeURIComponent(item.symbol)}&from=operator`} className="mt-2 inline-block text-xs text-emerald-300 hover:text-emerald-200">
+                                → Continue to Validation
+                              </Link>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </section>
+                  </section>
+                ) : (
+                  <section key={widgetKey} className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+                    <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
+                    <div className="text-xs text-slate-400">
+                      Discovery is de-emphasized in {experienceMode?.label || 'current mode'} to prioritize execution quality.
+                    </div>
+                  </section>
+                );
+              }
+
+              return (
+                <section key={widgetKey} className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('signal_pipeline') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Pipeline</h3>
+                  <div className="space-y-2">
+                    {pipeline.map((step, index) => {
+                      const active = index <= stageIndex(currentStage);
+                      return (
+                        <div key={step} className={`rounded-md border px-2 py-1 text-xs ${active ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/50 text-slate-500'}`}>
+                          {step}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
           </aside>
 
           <main className="space-y-4 lg:col-span-6">
@@ -1210,46 +1232,52 @@ export default function OperatorDashboardPage() {
           </main>
 
           <aside className="space-y-4 lg:col-span-3">
-            {showRiskCommand ? (
-            <section className={`rounded-xl p-4 ${emphasizeRisk || isPriority('risk_command') ? 'border border-red-500/40 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Risk Command</h2>
-              <div className="space-y-2 text-xs">
-                <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
-                  <div className="text-slate-400">Total Exposure</div>
-                  <div className="font-bold text-emerald-300">{formatNumber(exposurePct)}%</div>
-                </div>
-                <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
-                  <div className="text-slate-400">Sector Concentration</div>
-                  <div className={`font-bold ${concentrationLabel === 'HIGH' ? 'text-red-300' : concentrationLabel === 'MEDIUM' ? 'text-amber-300' : 'text-emerald-300'}`}>{concentrationLabel}</div>
-                </div>
-                <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
-                  <div className="text-slate-400">Max Drawdown State</div>
-                  <div className={`font-bold ${drawdownState === 'Stressed' ? 'text-red-300' : drawdownState === 'Warming' ? 'text-amber-300' : 'text-emerald-300'}`}>{drawdownState}</div>
-                </div>
-              </div>
-            </section>
-            ) : null}
-
-            {showLiveAlerts ? (
-            <section className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('live_alerts') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Live Trade Alerts</h3>
-              <div className="space-y-2 text-xs">
-                {alertsView.length === 0 ? (
-                  <p className="text-slate-500">No fresh alerts in the last 5 minutes.</p>
-                ) : (
-                  alertsView.map((alert) => (
-                    <div key={alert.id} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-200">
-                      ⚠ {alert.symbol} {alert.condition.replaceAll('_', ' ')} at {formatNumber(alert.triggered_price)}
+            {rightPanelOrder.map((widgetKey) => {
+              if (widgetKey === 'risk_command') {
+                if (!showRiskCommand) return null;
+                return (
+                  <section key={widgetKey} className={`rounded-xl p-4 ${emphasizeRisk || isPriority('risk_command') ? 'border border-red-500/40 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
+                    <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Risk Command</h2>
+                    <div className="space-y-2 text-xs">
+                      <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
+                        <div className="text-slate-400">Total Exposure</div>
+                        <div className="font-bold text-emerald-300">{formatNumber(exposurePct)}%</div>
+                      </div>
+                      <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
+                        <div className="text-slate-400">Sector Concentration</div>
+                        <div className={`font-bold ${concentrationLabel === 'HIGH' ? 'text-red-300' : concentrationLabel === 'MEDIUM' ? 'text-amber-300' : 'text-emerald-300'}`}>{concentrationLabel}</div>
+                      </div>
+                      <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
+                        <div className="text-slate-400">Max Drawdown State</div>
+                        <div className={`font-bold ${drawdownState === 'Stressed' ? 'text-red-300' : drawdownState === 'Warming' ? 'text-amber-300' : 'text-emerald-300'}`}>{drawdownState}</div>
+                      </div>
                     </div>
-                  ))
-                )}
-                {reduceAlerts && alerts.length > alertsView.length ? (
-                  <p className="text-slate-500">Alert stream reduced by ARL in {experienceMode?.label || 'current mode'}.</p>
-                ) : null}
-              </div>
-              <Link href={connectedRoutes.alerts} className="mt-3 inline-block text-xs text-emerald-300 hover:text-emerald-200">Open Alert Intelligence →</Link>
-            </section>
-            ) : null}
+                  </section>
+                );
+              }
+
+              if (!showLiveAlerts) return null;
+              return (
+                <section key={widgetKey} className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('live_alerts') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Live Trade Alerts</h3>
+                  <div className="space-y-2 text-xs">
+                    {alertsView.length === 0 ? (
+                      <p className="text-slate-500">No fresh alerts in the last 5 minutes.</p>
+                    ) : (
+                      alertsView.map((alert) => (
+                        <div key={alert.id} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-200">
+                          ⚠ {alert.symbol} {alert.condition.replaceAll('_', ' ')} at {formatNumber(alert.triggered_price)}
+                        </div>
+                      ))
+                    )}
+                    {reduceAlerts && alerts.length > alertsView.length ? (
+                      <p className="text-slate-500">Alert stream reduced by ARL in {experienceMode?.label || 'current mode'}.</p>
+                    ) : null}
+                  </div>
+                  <Link href={connectedRoutes.alerts} className="mt-3 inline-block text-xs text-emerald-300 hover:text-emerald-200">Open Alert Intelligence →</Link>
+                </section>
+              );
+            })}
           </aside>
         </div>
 
