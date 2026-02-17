@@ -585,6 +585,7 @@ export default function OperatorDashboardPage() {
   const showLearningLoop = !minimalSurface && !isHidden('learning_loop');
   const showAggressiveActions = !isHidden('aggressive_actions') && (modeDirectives?.quickActions ?? true);
   const showLearningFirst = showLearningLoop && showWorkflowToday && widgetRank('learning_loop') < widgetRank('workflow_today');
+  const showPresenceFirst = widgetRank('operator_presence') <= widgetRank('operator_kpis');
 
   const alertsView = reduceAlerts ? alerts.slice(0, 1) : alerts;
   const symbolModeBySymbol = useMemo(() => {
@@ -940,6 +941,39 @@ export default function OperatorDashboardPage() {
     </section>
   ) : null;
 
+  const operatorKpisSection = (
+    <div className={`mb-4 grid gap-2 md:grid-cols-5 ${isPriority('operator_kpis') ? 'rounded-xl border border-cyan-500/40 p-2' : ''}`}>
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
+        <div className="text-emerald-300 uppercase tracking-wide">Operator Mode</div>
+        <div className="font-bold">{operatorMode}</div>
+      </div>
+      <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
+        <div className="text-cyan-300 uppercase tracking-wide">Experience Mode</div>
+        <div className="font-bold text-cyan-100">{experienceMode?.label || 'Focus Mode'}</div>
+      </div>
+      <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
+        <div className="text-slate-400 uppercase tracking-wide">Regime</div>
+        <div className="font-bold">{regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</div>
+      </div>
+      <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
+        <div className="text-slate-400 uppercase tracking-wide">Risk DNA</div>
+        <div className="font-bold uppercase">{riskDNA}</div>
+      </div>
+      <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
+        <div className="text-slate-400 uppercase tracking-wide">Timing</div>
+        <div className="font-bold uppercase">{timingDNA}</div>
+      </div>
+      <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
+        <div className="text-slate-400 uppercase tracking-wide">Adaptive Confidence</div>
+        <div className="font-bold text-emerald-300">{adaptiveScore}%</div>
+      </div>
+      <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs">
+        <div className="text-indigo-300 uppercase tracking-wide">MSP Operator Score™</div>
+        <div className="font-bold text-indigo-200">{operatorScore}/100</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
       <ToolsPageHeader
@@ -976,7 +1010,9 @@ export default function OperatorDashboardPage() {
           </div>
         </section>
 
-        <section className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3">
+        {!showPresenceFirst ? operatorKpisSection : null}
+
+        <section className={`mb-4 rounded-xl bg-cyan-500/10 p-3 ${isPriority('operator_presence') ? 'border border-cyan-300/50' : 'border border-cyan-500/30'}`}>
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-200">Operator Presence</div>
           {presence?.experienceMode ? (
             <div className="mb-2 rounded-md border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs">
@@ -1069,38 +1105,9 @@ export default function OperatorDashboardPage() {
           </div>
         </section>
 
-        {showLearningFirst ? learningLoopSection : workflowTodaySection}
+        {showPresenceFirst ? operatorKpisSection : null}
 
-        <div className="mb-4 grid gap-2 md:grid-cols-5">
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
-            <div className="text-emerald-300 uppercase tracking-wide">Operator Mode</div>
-            <div className="font-bold">{operatorMode}</div>
-          </div>
-          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
-            <div className="text-cyan-300 uppercase tracking-wide">Experience Mode</div>
-            <div className="font-bold text-cyan-100">{experienceMode?.label || 'Focus Mode'}</div>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
-            <div className="text-slate-400 uppercase tracking-wide">Regime</div>
-            <div className="font-bold">{regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</div>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
-            <div className="text-slate-400 uppercase tracking-wide">Risk DNA</div>
-            <div className="font-bold uppercase">{riskDNA}</div>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
-            <div className="text-slate-400 uppercase tracking-wide">Timing</div>
-            <div className="font-bold uppercase">{timingDNA}</div>
-          </div>
-          <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
-            <div className="text-slate-400 uppercase tracking-wide">Adaptive Confidence</div>
-            <div className="font-bold text-emerald-300">{adaptiveScore}%</div>
-          </div>
-          <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs">
-            <div className="text-indigo-300 uppercase tracking-wide">MSP Operator Score™</div>
-            <div className="font-bold text-indigo-200">{operatorScore}/100</div>
-          </div>
-        </div>
+        {showLearningFirst ? learningLoopSection : workflowTodaySection}
 
         <div className="grid gap-4 lg:grid-cols-12">
           <aside className="space-y-4 lg:col-span-3">
