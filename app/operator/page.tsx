@@ -545,10 +545,29 @@ export default function OperatorDashboardPage() {
   const experienceMode = presence?.experienceMode;
   const modeDirectives = experienceMode?.directives;
   const reduceAlerts = modeDirectives?.reduceAlerts ?? false;
-  const showScanner = modeDirectives?.showScanner ?? true;
+  const showScannerDirective = modeDirectives?.showScanner ?? true;
   const highlightLearning = modeDirectives?.highlightLearning ?? false;
   const emphasizeRisk = modeDirectives?.emphasizeRisk ?? false;
   const minimalSurface = modeDirectives?.minimalSurface ?? false;
+  const matrixPriorityWidgets = useMemo(
+    () => presence?.controlMatrix?.output.priorityWidgets || presence?.experienceMode?.priorityWidgets || [],
+    [presence?.controlMatrix?.output.priorityWidgets, presence?.experienceMode?.priorityWidgets]
+  );
+  const matrixHiddenWidgets = useMemo(
+    () => presence?.controlMatrix?.output.hiddenWidgets || presence?.experienceMode?.hiddenWidgets || [],
+    [presence?.controlMatrix?.output.hiddenWidgets, presence?.experienceMode?.hiddenWidgets]
+  );
+  const hiddenWidgets = useMemo(() => new Set(matrixHiddenWidgets), [matrixHiddenWidgets]);
+  const priorityWidgets = useMemo(() => new Set(matrixPriorityWidgets), [matrixPriorityWidgets]);
+  const isHidden = (key: string) => hiddenWidgets.has(key);
+  const isPriority = (key: string) => priorityWidgets.has(key);
+
+  const showScanner = showScannerDirective && !isHidden('signal_flow') && !isHidden('broad_scanner');
+  const showRiskCommand = !isHidden('risk_command');
+  const showLiveAlerts = !isHidden('live_alerts');
+  const showLearningLoop = !minimalSurface && !isHidden('learning_loop');
+  const showAggressiveActions = !isHidden('aggressive_actions') && (modeDirectives?.quickActions ?? true);
+
   const alertsView = reduceAlerts ? alerts.slice(0, 1) : alerts;
   const symbolModeBySymbol = useMemo(() => {
     const map = new Map<string, NonNullable<OperatorPresenceSummary['symbolExperienceModes']>[number]>();
@@ -1035,7 +1054,7 @@ export default function OperatorDashboardPage() {
         <div className="grid gap-4 lg:grid-cols-12">
           <aside className="space-y-4 lg:col-span-3">
             {showScanner ? (
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+            <section className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('signal_flow') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Signal Flow</h2>
               <div className="space-y-2">
                 {loading ? (
@@ -1136,6 +1155,8 @@ export default function OperatorDashboardPage() {
                   <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Trade Personality Match: {personalityMatch}%</div>
                   <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Execution Trigger: {currentStage === 'Ready' || currentStage === 'Active' ? 'Armed' : 'Pending validation'}</div>
                   <div className="flex gap-2 pt-1">
+                    {showAggressiveActions ? (
+                      <>
                     {operatorMode === 'OBSERVE' && (
                       <>
                         <Link href={connectedRoutes.markets} className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20">
@@ -1176,6 +1197,12 @@ export default function OperatorDashboardPage() {
                         </Link>
                       </>
                     )}
+                      </>
+                    ) : (
+                      <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1 text-slate-400">
+                        Action speed reduced by ARCM in {experienceMode?.label || 'current mode'}
+                      </span>
+                    )}
                   </div>
                 </div>
               }
@@ -1183,7 +1210,8 @@ export default function OperatorDashboardPage() {
           </main>
 
           <aside className="space-y-4 lg:col-span-3">
-            <section className={`rounded-xl p-4 ${emphasizeRisk ? 'border border-red-500/40 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
+            {showRiskCommand ? (
+            <section className={`rounded-xl p-4 ${emphasizeRisk || isPriority('risk_command') ? 'border border-red-500/40 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Risk Command</h2>
               <div className="space-y-2 text-xs">
                 <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">
@@ -1200,8 +1228,10 @@ export default function OperatorDashboardPage() {
                 </div>
               </div>
             </section>
+            ) : null}
 
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+            {showLiveAlerts ? (
+            <section className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('live_alerts') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
               <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Live Trade Alerts</h3>
               <div className="space-y-2 text-xs">
                 {alertsView.length === 0 ? (
@@ -1219,11 +1249,12 @@ export default function OperatorDashboardPage() {
               </div>
               <Link href={connectedRoutes.alerts} className="mt-3 inline-block text-xs text-emerald-300 hover:text-emerald-200">Open Alert Intelligence →</Link>
             </section>
+            ) : null}
           </aside>
         </div>
 
-        {!minimalSurface ? (
-        <section className={`mt-4 rounded-xl p-4 ${highlightLearning ? 'border border-blue-500/40 bg-blue-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
+        {showLearningLoop ? (
+        <section className={`mt-4 rounded-xl p-4 ${highlightLearning || isPriority('learning_loop') ? 'border border-blue-500/40 bg-blue-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Learning Loop · AI Operator Coach</h2>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-300">
