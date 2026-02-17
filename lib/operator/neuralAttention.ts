@@ -260,11 +260,31 @@ export function buildNeuralAttention(presence: PresenceLike): BuildNeuralAttenti
 
   const focusChanged = (currentPrimary ?? null) !== (primary ?? null);
 
-  const focusStrip = [
-    { id: 'mode', label: 'MODE', value: experienceMode.toUpperCase(), tone: experienceMode === 'risk_control' ? 'warn' : 'good' as const },
-    { id: 'brain', label: 'BRAIN', value: brain.state, tone: brain.state === 'OVERLOADED' ? 'bad' : brain.state === 'STRESSED' ? 'warn' : 'good' as const },
-    { id: 'load', label: 'LOAD', value: `${load.level} (${Math.round(load.value)})`, tone: load.level === 'HIGH' ? 'bad' : load.level === 'MEDIUM' ? 'warn' : 'good' as const },
-    { id: 'focus', label: 'FOCUS', value: primary ?? '—', tone: primary ? 'good' : 'warn' as const },
+  const focusStrip: NeuralAttention['uiDirectives']['focusStrip'] = [
+    {
+      id: 'mode',
+      label: 'MODE',
+      value: experienceMode.toUpperCase(),
+      tone: experienceMode === 'risk_control' ? 'warn' : 'good',
+    },
+    {
+      id: 'brain',
+      label: 'BRAIN',
+      value: brain.state,
+      tone: brain.state === 'OVERLOADED' ? 'bad' : brain.state === 'STRESSED' ? 'warn' : 'good',
+    },
+    {
+      id: 'load',
+      label: 'LOAD',
+      value: `${load.level} (${Math.round(load.value)})`,
+      tone: load.level === 'HIGH' ? 'bad' : load.level === 'MEDIUM' ? 'warn' : 'good',
+    },
+    {
+      id: 'focus',
+      label: 'FOCUS',
+      value: primary ?? '—',
+      tone: primary ? 'good' : 'warn',
+    },
   ];
 
   const neuralAttention: NeuralAttention = {
