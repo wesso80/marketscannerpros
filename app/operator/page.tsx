@@ -581,8 +581,10 @@ export default function OperatorDashboardPage() {
   const showScanner = showScannerDirective && !isHidden('signal_flow') && !isHidden('broad_scanner');
   const showRiskCommand = !isHidden('risk_command');
   const showLiveAlerts = !isHidden('live_alerts');
+  const showWorkflowToday = !isHidden('workflow_today');
   const showLearningLoop = !minimalSurface && !isHidden('learning_loop');
   const showAggressiveActions = !isHidden('aggressive_actions') && (modeDirectives?.quickActions ?? true);
+  const showLearningFirst = showLearningLoop && showWorkflowToday && widgetRank('learning_loop') < widgetRank('workflow_today');
 
   const alertsView = reduceAlerts ? alerts.slice(0, 1) : alerts;
   const symbolModeBySymbol = useMemo(() => {
@@ -774,6 +776,170 @@ export default function OperatorDashboardPage() {
     targetOne,
   ]);
 
+  const workflowTodaySection = showWorkflowToday ? (
+    <section className={`mb-4 rounded-xl bg-slate-800/40 p-3 ${isPriority('workflow_today') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
+      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
+      <div className="grid gap-2 md:grid-cols-12">
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Signals</div>
+          <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Candidates</div>
+          <div className="font-bold text-emerald-300">{workflowToday?.candidates ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Plans</div>
+          <div className="font-bold text-purple-300">{workflowToday?.plans ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Auto Alerts</div>
+          <div className="font-bold text-amber-300">{workflowToday?.autoAlerts ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Auto Drafts</div>
+          <div className="font-bold text-blue-300">{workflowToday?.autoJournalDrafts ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Executed</div>
+          <div className="font-bold text-indigo-300">{workflowToday?.executions ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Closed</div>
+          <div className="font-bold text-emerald-300">{workflowToday?.closed ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Coach</div>
+          <div className="font-bold text-violet-300">{workflowToday?.coachAnalyses ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Coach Tasks</div>
+          <div className="font-bold text-pink-300">{workflowToday?.coachTasks ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Accepted</div>
+          <div className="font-bold text-emerald-300">{workflowToday?.coachTasksAccepted ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Rejected</div>
+          <div className="font-bold text-rose-300">{workflowToday?.coachTasksRejected ?? 0}</div>
+        </div>
+        <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
+          <div className="text-slate-400 uppercase tracking-wide">Coach→Journal</div>
+          <div className="font-bold text-fuchsia-300">{workflowToday?.coachJournalEnrichments ?? 0}</div>
+        </div>
+      </div>
+      <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs">
+        <div className="text-violet-200 uppercase tracking-wide">Last Coach Insight</div>
+        {workflowToday?.lastCoachInsight ? (
+          <div className="mt-1 space-y-1 text-violet-100">
+            <div>
+              Win {formatNumber(workflowToday.lastCoachInsight.winRate)}% · Avg Win {formatNumber(workflowToday.lastCoachInsight.avgWin)} · Avg Loss {formatNumber(workflowToday.lastCoachInsight.avgLoss)} · Expectancy {formatNumber(workflowToday.lastCoachInsight.expectancy)}
+            </div>
+            <div className="text-violet-200/90">
+              {workflowToday.lastCoachInsight.recommendation || 'No recommendation available yet.'}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-1 text-violet-200/90">No coach analysis generated yet today.</div>
+        )}
+      </div>
+      <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
+        <div className="text-cyan-200 uppercase tracking-wide">Loop Conversion Rates</div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Signal→Candidate: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.signalToCandidatePct ?? 0)}%</span>
+          </div>
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Candidate→Plan: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.candidateToPlanPct ?? 0)}%</span>
+          </div>
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Plan→Execution: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.planToExecutionPct ?? 0)}%</span>
+          </div>
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Execution→Closed: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.executionToClosedPct ?? 0)}%</span>
+          </div>
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Closed→Coach: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.closedToCoachPct ?? 0)}%</span>
+          </div>
+          <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
+            Task Accept: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.taskAcceptPct ?? 0)}%</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 rounded-md border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs">
+        <div className="text-pink-200 uppercase tracking-wide">Coach Action Queue</div>
+        {coachTasksQueue.length === 0 ? (
+          <div className="mt-1 text-pink-200/90">No pending coach tasks.</div>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {coachTasksQueue.map((task) => (
+              <div key={task.taskId} className="rounded border border-pink-500/20 bg-slate-900/50 px-2 py-2">
+                <div className="font-semibold text-pink-100">{task.action.replaceAll('_', ' ')}</div>
+                <div className="mt-1 text-pink-200/90">{task.detail || 'No detail provided.'}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
+                    {task.priority}
+                  </span>
+                  {task.symbol ? (
+                    <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
+                      {task.symbol}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={updatingTaskId === task.taskId}
+                    onClick={() => handleTaskDecision(task.taskId, 'accepted')}
+                    className="rounded border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-200 disabled:opacity-60"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updatingTaskId === task.taskId}
+                    onClick={() => handleTaskDecision(task.taskId, 'rejected')}
+                    className="rounded border border-red-500/40 bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-200 disabled:opacity-60"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  ) : null;
+
+  const learningLoopSection = showLearningLoop ? (
+    <section className={`mt-4 rounded-xl p-4 ${highlightLearning || isPriority('learning_loop') ? 'border border-blue-500/40 bg-blue-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
+      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Learning Loop · AI Operator Coach</h2>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-300">
+          <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">Coach Insight</div>
+          <p>{coachSuggestion}</p>
+          {adaptive?.match?.reasons?.length ? (
+            <ul className="mt-2 space-y-1 text-xs text-slate-400">
+              {adaptive.match.reasons.slice(0, 2).map((reason, idx) => (
+                <li key={idx}>• {reason}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <AdaptivePersonalityCard
+          skill="operator"
+          setupText={focusSignal ? `${focusSignal.symbol} operator execution context` : 'operator execution context'}
+          direction={bias}
+          timeframe="1d"
+          urgency={currentStage === 'Ready' || currentStage === 'Active' ? 'immediate' : 'within_hour'}
+          regime={regimeADX >= 25 ? 'trend' : 'range'}
+          baseScore={edgeScore}
+          compact
+        />
+      </div>
+    </section>
+  ) : null;
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
       <ToolsPageHeader
@@ -903,138 +1069,7 @@ export default function OperatorDashboardPage() {
           </div>
         </section>
 
-        <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
-          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
-          <div className="grid gap-2 md:grid-cols-12">
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Signals</div>
-              <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Candidates</div>
-              <div className="font-bold text-emerald-300">{workflowToday?.candidates ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Plans</div>
-              <div className="font-bold text-purple-300">{workflowToday?.plans ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Auto Alerts</div>
-              <div className="font-bold text-amber-300">{workflowToday?.autoAlerts ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Auto Drafts</div>
-              <div className="font-bold text-blue-300">{workflowToday?.autoJournalDrafts ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Executed</div>
-              <div className="font-bold text-indigo-300">{workflowToday?.executions ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Closed</div>
-              <div className="font-bold text-emerald-300">{workflowToday?.closed ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Coach</div>
-              <div className="font-bold text-violet-300">{workflowToday?.coachAnalyses ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Coach Tasks</div>
-              <div className="font-bold text-pink-300">{workflowToday?.coachTasks ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Accepted</div>
-              <div className="font-bold text-emerald-300">{workflowToday?.coachTasksAccepted ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Rejected</div>
-              <div className="font-bold text-rose-300">{workflowToday?.coachTasksRejected ?? 0}</div>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
-              <div className="text-slate-400 uppercase tracking-wide">Coach→Journal</div>
-              <div className="font-bold text-fuchsia-300">{workflowToday?.coachJournalEnrichments ?? 0}</div>
-            </div>
-          </div>
-          <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs">
-            <div className="text-violet-200 uppercase tracking-wide">Last Coach Insight</div>
-            {workflowToday?.lastCoachInsight ? (
-              <div className="mt-1 space-y-1 text-violet-100">
-                <div>
-                  Win {formatNumber(workflowToday.lastCoachInsight.winRate)}% · Avg Win {formatNumber(workflowToday.lastCoachInsight.avgWin)} · Avg Loss {formatNumber(workflowToday.lastCoachInsight.avgLoss)} · Expectancy {formatNumber(workflowToday.lastCoachInsight.expectancy)}
-                </div>
-                <div className="text-violet-200/90">
-                  {workflowToday.lastCoachInsight.recommendation || 'No recommendation available yet.'}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-1 text-violet-200/90">No coach analysis generated yet today.</div>
-            )}
-          </div>
-          <div className="mt-3 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs">
-            <div className="text-cyan-200 uppercase tracking-wide">Loop Conversion Rates</div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Signal→Candidate: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.signalToCandidatePct ?? 0)}%</span>
-              </div>
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Candidate→Plan: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.candidateToPlanPct ?? 0)}%</span>
-              </div>
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Plan→Execution: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.planToExecutionPct ?? 0)}%</span>
-              </div>
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Execution→Closed: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.executionToClosedPct ?? 0)}%</span>
-              </div>
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Closed→Coach: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.closedToCoachPct ?? 0)}%</span>
-              </div>
-              <div className="rounded border border-cyan-500/20 bg-slate-900/50 px-2 py-1">
-                Task Accept: <span className="font-bold text-cyan-200">{formatNumber(workflowToday?.conversions?.taskAcceptPct ?? 0)}%</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 rounded-md border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs">
-            <div className="text-pink-200 uppercase tracking-wide">Coach Action Queue</div>
-            {coachTasksQueue.length === 0 ? (
-              <div className="mt-1 text-pink-200/90">No pending coach tasks.</div>
-            ) : (
-              <div className="mt-2 space-y-2">
-                {coachTasksQueue.map((task) => (
-                  <div key={task.taskId} className="rounded border border-pink-500/20 bg-slate-900/50 px-2 py-2">
-                    <div className="font-semibold text-pink-100">{task.action.replaceAll('_', ' ')}</div>
-                    <div className="mt-1 text-pink-200/90">{task.detail || 'No detail provided.'}</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
-                        {task.priority}
-                      </span>
-                      {task.symbol ? (
-                        <span className="rounded border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
-                          {task.symbol}
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={updatingTaskId === task.taskId}
-                        onClick={() => handleTaskDecision(task.taskId, 'accepted')}
-                        className="rounded border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-200 disabled:opacity-60"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        disabled={updatingTaskId === task.taskId}
-                        onClick={() => handleTaskDecision(task.taskId, 'rejected')}
-                        className="rounded border border-red-500/40 bg-red-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-red-200 disabled:opacity-60"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+        {showLearningFirst ? learningLoopSection : workflowTodaySection}
 
         <div className="mb-4 grid gap-2 md:grid-cols-5">
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
@@ -1127,8 +1162,11 @@ export default function OperatorDashboardPage() {
             })}
           </aside>
 
-          <main className="space-y-4 lg:col-span-6">
-            <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+          <main className="flex flex-col gap-4 lg:col-span-6">
+            <section
+              className={`rounded-xl bg-slate-800/40 p-4 ${isPriority('decision_overview') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}
+              style={{ order: widgetRank('decision_overview') }}
+            >
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-300">Decision Cockpit</h2>
               <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/50 p-3">
                 <div className="text-xs uppercase tracking-wide text-slate-400">Current Focus Trade</div>
@@ -1153,82 +1191,84 @@ export default function OperatorDashboardPage() {
               </div>
             </section>
 
-            <DecisionCockpit
-              left={
-                <div className="space-y-2 text-xs">
-                  <div className={`rounded-md border px-2 py-1 ${toneBadge(regimeLayer.tone)}`}>Market Regime: {regimeLayer.label}</div>
-                  <div className={`rounded-md border px-2 py-1 ${toneBadge(liquidityLayer.tone)}`}>Liquidity: {liquidityLayer.label}</div>
-                  <div className={`rounded-md border px-2 py-1 ${toneBadge(volatilityLayer.tone)}`}>Volatility: {volatilityLayer.label}</div>
-                  <div className={`rounded-md border px-2 py-1 ${toneBadge(timingLayer.tone)}`}>Timing: {timingLayer.label}</div>
-                  <div className={`rounded-md border px-2 py-1 ${toneBadge(momentumLayer.tone)}`}>Momentum: {momentumLayer.label}</div>
-                </div>
-              }
-              center={
-                <div className="space-y-2 text-xs">
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Entry Zone: {formatNumber(entryLow)} - {formatNumber(entryHigh)}</div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Stop: {formatNumber(stop)}</div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Target 1: {formatNumber(targetOne)}</div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Target 2: {formatNumber(targetTwo)}</div>
-                </div>
-              }
-              right={
-                <div className="space-y-2 text-xs">
-                  <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">R Multiple Plan: 1.0R risk / 2.2R reward</div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Trade Personality Match: {personalityMatch}%</div>
-                  <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Execution Trigger: {currentStage === 'Ready' || currentStage === 'Active' ? 'Armed' : 'Pending validation'}</div>
-                  <div className="flex gap-2 pt-1">
-                    {showAggressiveActions ? (
-                      <>
-                    {operatorMode === 'OBSERVE' && (
-                      <>
-                        <Link href={connectedRoutes.markets} className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20">
-                          Market Context
-                        </Link>
-                        <Link href={connectedRoutes.movers} className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20">
-                          Market Movers
-                        </Link>
-                      </>
-                    )}
-                    {operatorMode === 'EVALUATE' && (
-                      <>
-                        <Link href={connectedRoutes.scanner} className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20">
-                          Find Setup
-                        </Link>
-                        <Link href={connectedRoutes.backtest} className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20">
-                          Validate Edge
-                        </Link>
-                      </>
-                    )}
-                    {operatorMode === 'EXECUTE' && (
-                      <>
-                        <Link href={connectedRoutes.chart} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20">
-                          Open Chart
-                        </Link>
-                        <Link href={connectedRoutes.alerts} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-300 hover:bg-amber-500/20">
-                          Arm Alerts
-                        </Link>
-                      </>
-                    )}
-                    {operatorMode === 'REVIEW' && (
-                      <>
-                        <Link href={connectedRoutes.journalDraft} className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-blue-300 hover:bg-blue-500/20">
-                          Auto Journal Draft
-                        </Link>
-                        <Link href={connectedRoutes.portfolio} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20">
-                          Review Portfolio
-                        </Link>
-                      </>
-                    )}
-                      </>
-                    ) : (
-                      <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1 text-slate-400">
-                        Action speed reduced by ARCM in {experienceMode?.label || 'current mode'}
-                      </span>
-                    )}
+            <div style={{ order: widgetRank('decision_cockpit') }}>
+              <DecisionCockpit
+                left={
+                  <div className="space-y-2 text-xs">
+                    <div className={`rounded-md border px-2 py-1 ${toneBadge(regimeLayer.tone)}`}>Market Regime: {regimeLayer.label}</div>
+                    <div className={`rounded-md border px-2 py-1 ${toneBadge(liquidityLayer.tone)}`}>Liquidity: {liquidityLayer.label}</div>
+                    <div className={`rounded-md border px-2 py-1 ${toneBadge(volatilityLayer.tone)}`}>Volatility: {volatilityLayer.label}</div>
+                    <div className={`rounded-md border px-2 py-1 ${toneBadge(timingLayer.tone)}`}>Timing: {timingLayer.label}</div>
+                    <div className={`rounded-md border px-2 py-1 ${toneBadge(momentumLayer.tone)}`}>Momentum: {momentumLayer.label}</div>
                   </div>
-                </div>
-              }
-            />
+                }
+                center={
+                  <div className="space-y-2 text-xs">
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Entry Zone: {formatNumber(entryLow)} - {formatNumber(entryHigh)}</div>
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Stop: {formatNumber(stop)}</div>
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Target 1: {formatNumber(targetOne)}</div>
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Target 2: {formatNumber(targetTwo)}</div>
+                  </div>
+                }
+                right={
+                  <div className="space-y-2 text-xs">
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1">R Multiple Plan: 1.0R risk / 2.2R reward</div>
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Trade Personality Match: {personalityMatch}%</div>
+                    <div className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1">Execution Trigger: {currentStage === 'Ready' || currentStage === 'Active' ? 'Armed' : 'Pending validation'}</div>
+                    <div className="flex gap-2 pt-1">
+                      {showAggressiveActions ? (
+                        <>
+                      {operatorMode === 'OBSERVE' && (
+                        <>
+                          <Link href={connectedRoutes.markets} className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20">
+                            Market Context
+                          </Link>
+                          <Link href={connectedRoutes.movers} className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20">
+                            Market Movers
+                          </Link>
+                        </>
+                      )}
+                      {operatorMode === 'EVALUATE' && (
+                        <>
+                          <Link href={connectedRoutes.scanner} className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20">
+                            Find Setup
+                          </Link>
+                          <Link href={connectedRoutes.backtest} className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20">
+                            Validate Edge
+                          </Link>
+                        </>
+                      )}
+                      {operatorMode === 'EXECUTE' && (
+                        <>
+                          <Link href={connectedRoutes.chart} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20">
+                            Open Chart
+                          </Link>
+                          <Link href={connectedRoutes.alerts} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-amber-300 hover:bg-amber-500/20">
+                            Arm Alerts
+                          </Link>
+                        </>
+                      )}
+                      {operatorMode === 'REVIEW' && (
+                        <>
+                          <Link href={connectedRoutes.journalDraft} className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-blue-300 hover:bg-blue-500/20">
+                            Auto Journal Draft
+                          </Link>
+                          <Link href={connectedRoutes.portfolio} className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20">
+                            Review Portfolio
+                          </Link>
+                        </>
+                      )}
+                        </>
+                      ) : (
+                        <span className="rounded-md border border-slate-700 bg-slate-900/50 px-2 py-1 text-slate-400">
+                          Action speed reduced by ARCM in {experienceMode?.label || 'current mode'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                }
+              />
+            </div>
           </main>
 
           <aside className="space-y-4 lg:col-span-3">
@@ -1281,34 +1321,7 @@ export default function OperatorDashboardPage() {
           </aside>
         </div>
 
-        {showLearningLoop ? (
-        <section className={`mt-4 rounded-xl p-4 ${highlightLearning || isPriority('learning_loop') ? 'border border-blue-500/40 bg-blue-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Learning Loop · AI Operator Coach</h2>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-sm text-slate-300">
-              <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">Coach Insight</div>
-              <p>{coachSuggestion}</p>
-              {adaptive?.match?.reasons?.length ? (
-                <ul className="mt-2 space-y-1 text-xs text-slate-400">
-                  {adaptive.match.reasons.slice(0, 2).map((reason, idx) => (
-                    <li key={idx}>• {reason}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-            <AdaptivePersonalityCard
-              skill="operator"
-              setupText={focusSignal ? `${focusSignal.symbol} operator execution context` : 'operator execution context'}
-              direction={bias}
-              timeframe="1d"
-              urgency={currentStage === 'Ready' || currentStage === 'Active' ? 'immediate' : 'within_hour'}
-              regime={regimeADX >= 25 ? 'trend' : 'range'}
-              baseScore={edgeScore}
-              compact
-            />
-          </div>
-        </section>
-        ) : null}
+        {showLearningFirst ? workflowTodaySection : learningLoopSection}
       </div>
     </div>
   );
