@@ -36,6 +36,7 @@ export async function GET() {
       operatorStatsRows,
       openAlertsRows,
       latestFeedbackRows,
+      feedbackTrendRows,
     ] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
@@ -230,6 +231,20 @@ export async function GET() {
          LIMIT 1`,
         [session.workspaceId]
       ),
+      q(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE event_data->'payload'->>'feedback_tag' = 'validated')::int AS validated_count,
+           COUNT(*) FILTER (WHERE event_data->'payload'->>'feedback_tag' = 'ignored')::int AS ignored_count,
+           COUNT(*) FILTER (WHERE event_data->'payload'->>'feedback_tag' = 'wrong_context')::int AS wrong_context_count,
+           COUNT(*) FILTER (WHERE event_data->'payload'->>'feedback_tag' = 'timing_issue')::int AS timing_issue_count
+         FROM ai_events
+         WHERE workspace_id = $1
+           AND event_type = 'label.explicit.created'
+           AND event_data->'payload'->>'source' = 'consciousness_loop'
+           AND created_at >= NOW() - INTERVAL '7 days'`,
+        [session.workspaceId]
+      ),
     ]);
     const state = stateRows[0] as Record<string, any> | undefined;
     const direction = (directionRows[0] || {}) as Record<string, any>;
@@ -397,10 +412,44 @@ export async function GET() {
       0,
       100
     );
-    const operatorScoreAxis = clamp(behaviorQuality * 0.55 + (100 - cognitiveLoad) * 0.45, 0, 100);
+    const latestFeedbackTag = String(latestFeedbackRows[0]?.feedback_tag || '').trim();
+    const feedbackTrend = (feedbackTrendRows[0] || {}) as Record<string, any>;
+    const feedbackTotal = Number(feedbackTrend.total || 0);
+    const feedbackValidatedCount = Number(feedbackTrend.validated_count || 0);
+    const feedbackIgnoredCount = Number(feedbackTrend.ignored_count || 0);
+    const feedbackWrongContextCount = Number(feedbackTrend.wrong_context_count || 0);
+    const feedbackTimingIssueCount = Number(feedbackTrend.timing_issue_count || 0);
+
+    const feedbackPct = (count: number) => {
+      if (!feedbackTotal) return 0;
+      return Number(((count / feedbackTotal) * 100).toFixed(1));
+    };
+
+    const feedbackValidatedPct = feedbackPct(feedbackValidatedCount);
+    const feedbackIgnoredPct = feedbackPct(feedbackIgnoredCount);
+    const feedbackWrongContextPct = feedbackPct(feedbackWrongContextCount);
+    const feedbackTimingIssuePct = feedbackPct(feedbackTimingIssueCount);
+
+    const feedbackPenalty = clamp(
+      feedbackWrongContextPct * 0.5 + feedbackTimingIssuePct * 0.35 + feedbackIgnoredPct * 0.2,
+      0,
+      35
+    );
+    const feedbackBonus = clamp(feedbackValidatedPct * 0.2, 0, 12);
+
+    const operatorScoreAxis = clamp(
+      behaviorQuality * 0.55 +
+        (100 - cognitiveLoad) * 0.45 -
+        feedbackPenalty +
+        feedbackBonus,
+      0,
+      100
+    );
     const riskScoreAxis = clamp(
       (riskMode === 'defensive' ? 92 : riskMode === 'constrained' ? 78 : riskMode === 'elevated' ? 62 : 35) +
-        recentLossPressure * 0.2,
+        recentLossPressure * 0.2 +
+        feedbackWrongContextPct * 0.18 +
+        feedbackTimingIssuePct * 0.12,
       0,
       100
     );
@@ -471,8 +520,6 @@ export async function GET() {
       if (experienceModeKey !== 'passive_scan') return true;
       return item.operatorFit >= 55;
     });
-
-    const latestFeedbackTag = String(latestFeedbackRows[0]?.feedback_tag || '').trim();
 
     const topSymbol = topAttention[0] || topAttentionRaw[0] || null;
     const loopBase = runConsciousnessLoop({
@@ -587,6 +634,15 @@ export async function GET() {
             executions8h,
             closed8h,
             behaviorQuality: Number(behaviorQuality.toFixed(1)),
+          },
+          learningFeedback: {
+            total7d: feedbackTotal,
+            validatedPct: feedbackValidatedPct,
+            ignoredPct: feedbackIgnoredPct,
+            wrongContextPct: feedbackWrongContextPct,
+            timingIssuePct: feedbackTimingIssuePct,
+            penalty: Number(feedbackPenalty.toFixed(1)),
+            bonus: Number(feedbackBonus.toFixed(1)),
           },
           cognitiveLoad: {
             level: cognitiveLoad >= 75 ? 'HIGH' : cognitiveLoad >= 55 ? 'MEDIUM' : 'LOW',

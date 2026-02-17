@@ -54,6 +54,15 @@ CREATE INDEX IF NOT EXISTS idx_ai_events_workflow_corr
   )
   WHERE event_type IN ('candidate.created', 'trade.plan.created', 'trade.executed', 'trade.closed');
 
+CREATE INDEX IF NOT EXISTS idx_ai_events_loop_feedback_recent
+  ON ai_events (
+    workspace_id,
+    created_at DESC,
+    (event_data->'payload'->>'feedback_tag')
+  )
+  WHERE event_type = 'label.explicit.created'
+    AND (event_data->'payload'->>'source') = 'consciousness_loop';
+
 -- 2) Alerts: speed up workflow auto-alert dedupe + daily summary
 CREATE INDEX IF NOT EXISTS idx_alerts_workflow_plan_dedupe
   ON alerts (

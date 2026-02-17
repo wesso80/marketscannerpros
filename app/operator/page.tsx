@@ -134,6 +134,15 @@ interface OperatorPresenceSummary {
       closed8h: number;
       behaviorQuality: number;
     };
+    learningFeedback?: {
+      total7d: number;
+      validatedPct: number;
+      ignoredPct: number;
+      wrongContextPct: number;
+      timingIssuePct: number;
+      penalty: number;
+      bonus: number;
+    };
     cognitiveLoad: {
       level: string;
       value: number;
@@ -1120,6 +1129,11 @@ export default function OperatorDashboardPage() {
               <div className="mt-1 text-emerald-100/90">
                 Learn: {presence.consciousnessLoop.learn.feedbackTag.replaceAll('_', ' ')} · {presence.consciousnessLoop.learn.rationale}
               </div>
+              {presence?.adaptiveInputs?.learningFeedback ? (
+                <div className="mt-1 text-emerald-100/80">
+                  Feedback 7d: V {formatNumber(presence.adaptiveInputs.learningFeedback.validatedPct)}% · WC {formatNumber(presence.adaptiveInputs.learningFeedback.wrongContextPct)}% · T {formatNumber(presence.adaptiveInputs.learningFeedback.timingIssuePct)}% · Penalty {formatNumber(presence.adaptiveInputs.learningFeedback.penalty)} · Bonus {formatNumber(presence.adaptiveInputs.learningFeedback.bonus)}
+                </div>
+              ) : null}
               {presence.consciousnessLoop.adapt.adjustments.length ? (
                 <div className="mt-1 text-emerald-100/80">
                   Adapt: {presence.consciousnessLoop.adapt.adjustments.slice(0, 3).join(' · ')}
