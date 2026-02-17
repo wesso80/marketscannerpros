@@ -6,6 +6,7 @@ import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
+import FocusStrip from '@/components/operator/FocusStrip';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
@@ -110,6 +111,30 @@ interface CoachTaskItem {
 }
 
 interface OperatorPresenceSummary {
+  lastPresenceTs?: string;
+  dataFreshness?: {
+    marketDataAgeSec: number | null;
+    eventsWriteAgeSec: number | null;
+    operatorStateAgeSec: number | null;
+    eventsWrittenLast5m: number;
+    eventsByTypeLast5m: Record<string, number>;
+  };
+  systemHealth?: {
+    status: 'OK' | 'DEGRADED' | 'STALE';
+    reasons: string[];
+  };
+  modeChangeEvidence?: {
+    lastModeChangeTs: string;
+    previousMode: string;
+    currentMode: string;
+    rationale: string;
+    drivers: Array<{
+      key: string;
+      before: number;
+      after: number;
+      eventRef: string | null;
+    }>;
+  };
   marketState: {
     marketBias: string;
     volatilityState: string;
@@ -269,6 +294,45 @@ interface OperatorPresenceSummary {
     label: string;
     reason: string;
   }>;
+  neuralAttention?: {
+    focus: {
+      primary: string | null;
+      secondary: string[];
+      reason: string;
+      horizon: 'NOW' | 'TODAY' | 'SWING';
+      lockedUntilTs?: string;
+      pinned?: boolean;
+    };
+    scoreboard: Array<{
+      symbol: string;
+      score: number;
+      components: {
+        setupQuality: number;
+        operatorFit: number;
+        urgency: number;
+        readiness: number;
+        riskPenalty: number;
+        learningBias: number;
+      };
+      state: 'watch' | 'candidate' | 'plan' | 'alert' | 'execute' | 'cooldown';
+      nextAction: 'create_alert' | 'prepare_plan' | 'wait' | 'reduce_risk' | 'journal';
+      why: string;
+    }>;
+    uiDirectives: {
+      promoteWidgets: string[];
+      demoteWidgets: string[];
+      highlightSymbol: string | null;
+      focusStrip: Array<{ id: string; label: string; value: string; tone: 'good' | 'warn' | 'bad' }>;
+      refreshSeconds: number;
+    };
+    nudges: Array<{
+      id: string;
+      type: 'attention_shift' | 'risk_guard' | 'action_prompt';
+      text: string;
+      severity: 'low' | 'med' | 'high';
+      ttlSeconds: number;
+    }>;
+  };
   pendingTaskCount: number;
 }
 
@@ -299,10 +363,71 @@ interface DecisionPacketTraceResponse {
   timeline: DecisionPacketTraceItem[];
 }
 
+interface RiskGovernorDecision {
+  allowed: boolean;
+  reasonCode: string | null;
+  reason: string | null;
+}
+
+interface RiskGovernorDebugResponse {
+  thresholds: {
+    maxAutoAlertsPerHour: number;
+    maxAutoAlertsPerDay: number;
+    maxPlanRiskScoreForAutoAlert: number;
+    maxCognitiveLoadForAutoActions: number;
+    blockWhenOverloaded: boolean;
+    allowSystemExecutionAutomation: boolean;
+  };
+  snapshot: {
+    riskEnvironment: string | null;
+    cognitiveLoad: number | null;
+    executionAutomationOptIn: boolean;
+    autoAlertsLastHour: number;
+    autoAlertsToday: number;
+    stateUpdatedAt: string | null;
+  };
+  debugInput: {
+    requestedPlanRiskScore: number | null;
+    systemActor: boolean;
+  };
+  decisions: {
+    autoAlert: RiskGovernorDecision;
+    systemExecution: RiskGovernorDecision;
+  };
+}
+
 function getPresenceFromApiResponse(payload: any): OperatorPresenceSummary | null {
   if (payload?.presenceV1?.presence) return payload.presenceV1.presence as OperatorPresenceSummary;
   if (payload?.presence) return payload.presence as OperatorPresenceSummary;
   return null;
+}
+
+function heartbeatIntervalForBrainState(state?: 'FLOW' | 'FOCUSED' | 'STRESSED' | 'OVERLOADED'): number {
+  if (state === 'FLOW') return 40000;
+  if (state === 'FOCUSED') return 30000;
+  if (state === 'STRESSED') return 24000;
+  if (state === 'OVERLOADED') return 34000;
+  return 30000;
+}
+
+function createHeartbeatMonologues(presence: OperatorPresenceSummary | null): string[] {
+  const lines: string[] = [];
+  const marketMode = presence?.adaptiveInputs?.marketReality?.mode?.replaceAll('_', ' ');
+  const operatorMode = presence?.adaptiveInputs?.operatorReality?.mode?.replaceAll('_', ' ');
+  const suitability = presence?.consciousnessLoop?.interpret?.suitability;
+  const symbol = presence?.consciousnessLoop?.decide?.decisionPacket?.symbol;
+  const confidence = presence?.consciousnessLoop?.decide?.confidence;
+
+  lines.push('Scanning…');
+  if (marketMode) lines.push(`Watching ${marketMode} regime…`);
+  if (operatorMode) lines.push(`Operator state: ${operatorMode}…`);
+  if (typeof confidence === 'number') lines.push(`Signal confidence ${formatNumber(confidence)}%…`);
+  if (symbol) lines.push(`Top attention on ${symbol}…`);
+  if (suitability) lines.push(`Suitability reading: ${suitability}…`);
+  lines.push('No high-fit setup yet…');
+  lines.push('Signal density updating…');
+
+  return Array.from(new Set(lines));
 }
 
 function formatNumber(value: number) {
@@ -354,13 +479,19 @@ export default function OperatorDashboardPage() {
   const [loopFeedbackSaving, setLoopFeedbackSaving] = useState<null | 'validated' | 'ignored' | 'wrong_context' | 'timing_issue'>(null);
   const [decisionPacketTrace, setDecisionPacketTrace] = useState<DecisionPacketTraceResponse | null>(null);
   const [decisionPacketTraceLoading, setDecisionPacketTraceLoading] = useState(false);
+  const [riskGovernorDebug, setRiskGovernorDebug] = useState<RiskGovernorDebugResponse | null>(null);
+  const [riskGovernorRefreshing, setRiskGovernorRefreshing] = useState(false);
+  const [heartbeatLastBeatAt, setHeartbeatLastBeatAt] = useState<string | null>(null);
+  const [heartbeatMonologue, setHeartbeatMonologue] = useState('Scanning…');
+  const [heartbeatDrift, setHeartbeatDrift] = useState('Heartbeat initializing…');
+  const [focusActionSaving, setFocusActionSaving] = useState<null | 'create_alert' | 'prepare_plan' | 'snooze' | 'pin'>(null);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes] = await Promise.all([
+        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes, riskGovernorRes] = await Promise.all([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
@@ -369,6 +500,7 @@ export default function OperatorDashboardPage() {
           fetch('/api/workflow/today', { cache: 'no-store' }),
           fetch('/api/workflow/tasks?status=pending&limit=5', { cache: 'no-store' }),
           fetch('/api/operator/presence', { cache: 'no-store' }),
+          fetch('/api/operator/risk-governor', { cache: 'no-store' }),
         ]);
 
         const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
@@ -379,6 +511,7 @@ export default function OperatorDashboardPage() {
         const workflowData = workflowTodayRes.ok ? await workflowTodayRes.json() : null;
         const workflowTasksData = workflowTasksRes.ok ? await workflowTasksRes.json() : null;
         const presenceData = presenceRes.ok ? await presenceRes.json() : null;
+        const riskGovernorData = riskGovernorRes.ok ? await riskGovernorRes.json() : null;
 
         if (!mounted) return;
 
@@ -398,6 +531,7 @@ export default function OperatorDashboardPage() {
         setWorkflowToday(workflowData?.today || null);
         setPresence(getPresenceFromApiResponse(presenceData));
         setCoachTasksQueue(workflowTasksData?.tasks || []);
+        setRiskGovernorDebug((riskGovernorData || null) as RiskGovernorDebugResponse | null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -421,6 +555,63 @@ export default function OperatorDashboardPage() {
     if (!tasksRes.ok) return;
     const tasksData = await tasksRes.json();
     setCoachTasksQueue(tasksData?.tasks || []);
+  };
+
+  const refreshRiskGovernor = async (planRiskScore?: number) => {
+    setRiskGovernorRefreshing(true);
+    const query = typeof planRiskScore === 'number' && Number.isFinite(planRiskScore)
+      ? `?planRiskScore=${encodeURIComponent(String(planRiskScore))}&systemActor=true`
+      : '?systemActor=true';
+    try {
+      const res = await fetch(`/api/operator/risk-governor${query}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as RiskGovernorDebugResponse;
+      setRiskGovernorDebug(data);
+    } finally {
+      setRiskGovernorRefreshing(false);
+    }
+  };
+
+  const refreshPresenceHeartbeat = async () => {
+    const presenceRes = await fetch('/api/operator/presence', { cache: 'no-store' });
+    if (!presenceRes.ok) return;
+
+    const payload = await presenceRes.json();
+    const nextPresence = getPresenceFromApiResponse(payload);
+    if (!nextPresence) return;
+
+    setPresence((prev) => {
+      const prevConfidence = prev?.consciousnessLoop?.decide?.confidence;
+      const nextConfidence = nextPresence?.consciousnessLoop?.decide?.confidence;
+      const prevSymbol = prev?.consciousnessLoop?.decide?.decisionPacket?.symbol;
+      const nextSymbol = nextPresence?.consciousnessLoop?.decide?.decisionPacket?.symbol;
+      const prevRisk = prev?.riskLoad?.environment;
+      const nextRisk = nextPresence?.riskLoad?.environment;
+
+      if (typeof prevConfidence === 'number' && typeof nextConfidence === 'number' && prevConfidence !== nextConfidence) {
+        const delta = Number((nextConfidence - prevConfidence).toFixed(2));
+        const sign = delta > 0 ? '+' : '';
+        setHeartbeatDrift(`Confidence drift ${sign}${formatNumber(delta)} → ${formatNumber(nextConfidence)}%`);
+      } else if (prevSymbol && nextSymbol && prevSymbol !== nextSymbol) {
+        setHeartbeatDrift(`Attention shift ${prevSymbol} → ${nextSymbol}`);
+      } else if (prevRisk && nextRisk && prevRisk !== nextRisk) {
+        setHeartbeatDrift(`Risk tone ${prevRisk.toLowerCase()} → ${nextRisk.toLowerCase()}`);
+      } else {
+        setHeartbeatDrift('State stable — monitoring for change.');
+      }
+
+      return nextPresence;
+    });
+
+    setHeartbeatLastBeatAt(new Date().toISOString());
+    await refreshRiskGovernor(
+      typeof nextPresence.consciousnessLoop?.decide?.decisionPacket?.riskScore === 'number'
+        ? nextPresence.consciousnessLoop.decide.decisionPacket.riskScore
+        : undefined
+    );
+
+    const lines = createHeartbeatMonologues(nextPresence);
+    setHeartbeatMonologue(lines[Math.floor(Math.random() * lines.length)] || 'Scanning…');
   };
 
   const handleTaskDecision = async (taskId: string, decision: 'accepted' | 'rejected') => {
@@ -470,7 +661,114 @@ export default function OperatorDashboardPage() {
     }
   };
 
+  const applyAttentionControl = async (args: {
+    action: 'pin' | 'snooze' | 'take_action' | 'clear_pin';
+    symbol?: string;
+    ttlMinutes?: number;
+    actionKey?: 'create_alert' | 'prepare_plan' | 'wait' | 'reduce_risk' | 'journal';
+    reason?: string;
+  }) => {
+    const res = await fetch('/api/operator/attention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...args,
+        workflowId,
+        decisionPacketId: loopDecisionPacketId,
+      }),
+    });
+    return res.ok;
+  };
+
+  const handleFocusAction = async (action: 'create_alert' | 'prepare_plan' | 'snooze' | 'pin') => {
+    const primary = presence?.neuralAttention?.focus?.primary || focusSignal?.symbol || null;
+    if (!primary) return;
+
+    setFocusActionSaving(action);
+    try {
+      if (action === 'create_alert') {
+        await applyAttentionControl({ action: 'take_action', symbol: primary, actionKey: 'create_alert', reason: 'Focus strip action: create alert' });
+        const createRes = await fetch('/api/alerts/create-from-focus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: primary, decisionPacketId: loopDecisionPacketId }),
+        });
+        const createData = createRes.ok ? await createRes.json() : null;
+        emitWorkflowEvents([
+          createWorkflowEvent({
+            eventType: 'operator.context.updated',
+            workflowId,
+            route: '/operator',
+            module: 'neural_attention',
+            entity: { entity_type: 'operator_context', entity_id: `focus_action_${Date.now()}`, symbol: primary, asset_class: 'mixed' },
+            payload: {
+              source: 'neural_attention',
+              event_name: 'attention.action.taken',
+              action_key: 'create_alert',
+              symbol: primary,
+            },
+          }),
+        ]);
+        setHeartbeatDrift(createData?.alertId ? `Alert created for ${primary} (${createData.alertId})` : `Alert action triggered for ${primary}`);
+        window.location.href = `/tools/alerts?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`;
+        return;
+      }
+
+      if (action === 'prepare_plan') {
+        await applyAttentionControl({ action: 'take_action', symbol: primary, actionKey: 'prepare_plan', reason: 'Focus strip action: draft plan' });
+        const draftRes = await fetch('/api/plans/draft-from-focus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: primary, decisionPacketId: loopDecisionPacketId }),
+        });
+        const draftData = draftRes.ok ? await draftRes.json() : null;
+        emitWorkflowEvents([
+          createWorkflowEvent({
+            eventType: 'operator.context.updated',
+            workflowId,
+            route: '/operator',
+            module: 'neural_attention',
+            entity: { entity_type: 'operator_context', entity_id: `focus_action_${Date.now()}`, symbol: primary, asset_class: 'mixed' },
+            payload: {
+              source: 'neural_attention',
+              event_name: 'attention.action.taken',
+              action_key: 'prepare_plan',
+              symbol: primary,
+            },
+          }),
+        ]);
+        setHeartbeatDrift(draftData?.planId ? `Draft plan created for ${primary} (${draftData.planId})` : `Draft plan action triggered for ${primary}`);
+        window.location.href = `/tools/backtest?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${draftData?.planId ? `&planId=${encodeURIComponent(draftData.planId)}` : ''}`;
+        return;
+      }
+
+      if (action === 'snooze') {
+        await fetch('/api/operator/focus/snooze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: primary, ttlMinutes: 20, reason: 'Focus strip action: snooze 20m' }),
+        });
+      }
+
+      if (action === 'pin') {
+        await fetch('/api/operator/focus/pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: primary,
+            ttlMinutes: 60,
+          }),
+        });
+      }
+
+      await refreshPresenceHeartbeat();
+    } finally {
+      setFocusActionSaving(null);
+    }
+  };
+
   const loopDecisionPacketId = presence?.consciousnessLoop?.decide?.decisionPacket?.id || null;
+  const loopDecisionPacketRiskScore = presence?.consciousnessLoop?.decide?.decisionPacket?.riskScore;
 
   useEffect(() => {
     if (!loopDecisionPacketId) {
@@ -504,6 +802,24 @@ export default function OperatorDashboardPage() {
       mounted = false;
     };
   }, [loopDecisionPacketId]);
+
+  useEffect(() => {
+    void refreshRiskGovernor(
+      typeof loopDecisionPacketRiskScore === 'number' ? loopDecisionPacketRiskScore : undefined
+    );
+  }, [loopDecisionPacketRiskScore]);
+
+  const operatorBrainState = presence?.adaptiveInputs?.operatorBrain?.state;
+
+  useEffect(() => {
+    const cadenceMs = heartbeatIntervalForBrainState(operatorBrainState);
+
+    const id = window.setInterval(() => {
+      void refreshPresenceHeartbeat();
+    }, cadenceMs);
+
+    return () => window.clearInterval(id);
+  }, [operatorBrainState]);
 
   const focusSignal = opportunities[0] || null;
 
@@ -692,12 +1008,32 @@ export default function OperatorDashboardPage() {
   const emphasizeRisk = modeDirectives?.emphasizeRisk ?? false;
   const minimalSurface = modeDirectives?.minimalSurface ?? false;
   const matrixPriorityWidgets = useMemo(
-    () => presence?.controlMatrix?.output.priorityWidgets || presence?.experienceMode?.priorityWidgets || [],
-    [presence?.controlMatrix?.output.priorityWidgets, presence?.experienceMode?.priorityWidgets]
+    () => {
+      const base = presence?.controlMatrix?.output.priorityWidgets || presence?.experienceMode?.priorityWidgets || [];
+      const promote = presence?.neuralAttention?.uiDirectives?.promoteWidgets || [];
+      const seen = new Set<string>();
+      const merged = [...promote, ...base].filter((item) => {
+        if (seen.has(item)) return false;
+        seen.add(item);
+        return true;
+      });
+      return merged;
+    },
+    [presence?.controlMatrix?.output.priorityWidgets, presence?.experienceMode?.priorityWidgets, presence?.neuralAttention?.uiDirectives?.promoteWidgets]
   );
   const matrixHiddenWidgets = useMemo(
-    () => presence?.controlMatrix?.output.hiddenWidgets || presence?.experienceMode?.hiddenWidgets || [],
-    [presence?.controlMatrix?.output.hiddenWidgets, presence?.experienceMode?.hiddenWidgets]
+    () => {
+      const base = presence?.controlMatrix?.output.hiddenWidgets || presence?.experienceMode?.hiddenWidgets || [];
+      const demote = presence?.neuralAttention?.uiDirectives?.demoteWidgets || [];
+      const seen = new Set<string>();
+      const merged = [...base, ...demote].filter((item) => {
+        if (seen.has(item)) return false;
+        seen.add(item);
+        return true;
+      });
+      return merged;
+    },
+    [presence?.controlMatrix?.output.hiddenWidgets, presence?.experienceMode?.hiddenWidgets, presence?.neuralAttention?.uiDirectives?.demoteWidgets]
   );
   const priorityIndexByWidget = useMemo(() => {
     const map = new Map<string, number>();
@@ -1010,6 +1346,44 @@ export default function OperatorDashboardPage() {
           </div>
         </div>
       </div>
+      <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
+        <div className="flex items-center justify-between text-amber-200 uppercase tracking-wide">
+          <span>Risk Governor</span>
+          <button
+            type="button"
+            onClick={() => void refreshRiskGovernor(typeof loopDecisionPacketRiskScore === 'number' ? loopDecisionPacketRiskScore : undefined)}
+            disabled={riskGovernorRefreshing}
+            className="rounded border border-amber-500/40 bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-100 disabled:opacity-60"
+          >
+            {riskGovernorRefreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <div className="rounded border border-amber-500/20 bg-slate-900/50 px-2 py-1">
+            Auto Alert: <span className={`font-bold ${riskGovernorDebug?.decisions.autoAlert.allowed ? 'text-emerald-200' : 'text-rose-200'}`}>{riskGovernorDebug?.decisions.autoAlert.allowed ? 'Allowed' : 'Blocked'}</span>
+          </div>
+          <div className="rounded border border-amber-500/20 bg-slate-900/50 px-2 py-1">
+            System Execution: <span className={`font-bold ${riskGovernorDebug?.decisions.systemExecution.allowed ? 'text-emerald-200' : 'text-rose-200'}`}>{riskGovernorDebug?.decisions.systemExecution.allowed ? 'Allowed' : 'Blocked'}</span>
+          </div>
+        </div>
+        <div className="mt-2 text-amber-100/90">
+          Reason: {riskGovernorDebug?.decisions.autoAlert.reason || riskGovernorDebug?.decisions.systemExecution.reason || 'No active policy block.'}
+        </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 text-[11px]">
+          <div className="rounded border border-slate-700 bg-slate-900/50 px-2 py-1">
+            Risk Env: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.riskEnvironment || 'n/a'}</span>
+          </div>
+          <div className="rounded border border-slate-700 bg-slate-900/50 px-2 py-1">
+            Cognitive Load: <span className="font-semibold text-amber-100">{formatNumber(riskGovernorDebug?.snapshot.cognitiveLoad ?? 0)}</span>
+          </div>
+          <div className="rounded border border-slate-700 bg-slate-900/50 px-2 py-1">
+            Auto Alerts 1h: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.autoAlertsLastHour ?? 0}/{riskGovernorDebug?.thresholds.maxAutoAlertsPerHour ?? 0}</span>
+          </div>
+          <div className="rounded border border-slate-700 bg-slate-900/50 px-2 py-1">
+            Execution Opt-In: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.executionAutomationOptIn ? 'Enabled' : 'Disabled'}</span>
+          </div>
+        </div>
+      </div>
       <div className="mt-3 rounded-md border border-pink-500/30 bg-pink-500/10 px-3 py-2 text-xs">
         <div className="text-pink-200 uppercase tracking-wide">Coach Action Queue</div>
         {coachTasksQueue.length === 0 ? (
@@ -1130,7 +1504,67 @@ export default function OperatorDashboardPage() {
           mode={mappedCommandMode}
           actionableNow={modeActionable.actionableNow}
           nextStep={modeActionable.nextStep}
+          heartbeat={{
+            modeKey: presence?.experienceMode?.key || null,
+            brainState: presence?.adaptiveInputs?.operatorBrain?.state || null,
+            monologue: heartbeatMonologue,
+            drift: heartbeatDrift,
+            lastBeatAt: heartbeatLastBeatAt,
+          }}
         />
+
+        <section className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              Last update {presence?.lastPresenceTs ? new Date(presence.lastPresenceTs).toLocaleTimeString() : '—'} · Events last 5m: {presence?.dataFreshness?.eventsWrittenLast5m ?? 0} · Mode: {(presence?.experienceMode?.key || '—').toUpperCase()} · Friction: {formatNumber(presence?.experienceMode?.actionFriction ?? presence?.controlMatrix?.output?.actionFriction ?? 0)}
+            </div>
+            <div className={`rounded px-2 py-0.5 font-semibold ${presence?.systemHealth?.status === 'OK' ? 'bg-emerald-500/20 text-emerald-200' : presence?.systemHealth?.status === 'DEGRADED' ? 'bg-amber-500/20 text-amber-200' : 'bg-rose-500/20 text-rose-200'}`}>
+              Health: {presence?.systemHealth?.status || 'OK'}
+            </div>
+          </div>
+          {presence?.systemHealth?.reasons?.length ? (
+            <div className="mt-1 text-cyan-100/85">{presence.systemHealth.reasons.join(' · ')}</div>
+          ) : null}
+        </section>
+
+        <div className="mb-4">
+          <FocusStrip
+            focus={{
+              primary: presence?.neuralAttention?.focus?.primary ?? null,
+              reason: presence?.neuralAttention?.focus?.reason ?? 'No focus reason available yet.',
+              horizon: presence?.neuralAttention?.focus?.horizon ?? 'TODAY',
+              lockedUntilTs: presence?.neuralAttention?.focus?.lockedUntilTs,
+              pinned: presence?.neuralAttention?.focus?.pinned,
+            }}
+            chips={presence?.neuralAttention?.uiDirectives?.focusStrip || []}
+            disabled={focusActionSaving !== null}
+            onAction={(kind) => {
+              void handleFocusAction(kind);
+            }}
+          />
+          {presence?.neuralAttention?.nudges?.length ? (
+            <div className="mt-2 text-xs text-emerald-100/80">
+              {presence.neuralAttention.nudges[0].text}
+            </div>
+          ) : null}
+        </div>
+
+        <section className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-100">
+          <div className="font-semibold uppercase tracking-wide text-violet-200">Why This Mode?</div>
+          <div className="mt-1">
+            {(presence?.modeChangeEvidence?.previousMode || presence?.experienceMode?.key || '—').toUpperCase()} → {(presence?.modeChangeEvidence?.currentMode || presence?.experienceMode?.key || '—').toUpperCase()} · Last change {presence?.modeChangeEvidence?.lastModeChangeTs ? new Date(presence.modeChangeEvidence.lastModeChangeTs).toLocaleTimeString() : '—'}
+          </div>
+          <div className="mt-1 text-violet-100/90">{presence?.modeChangeEvidence?.rationale || presence?.experienceMode?.rationale || 'No mode rationale available yet.'}</div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            {(presence?.modeChangeEvidence?.drivers || []).slice(0, 3).map((d) => (
+              <div key={d.key} className="rounded border border-violet-500/20 bg-slate-900/40 px-2 py-1">
+                <div className="uppercase tracking-wide text-violet-200/80">{d.key}</div>
+                <div>{formatNumber(d.before)} → {formatNumber(d.after)}</div>
+                <div className="text-violet-100/70">{d.eventRef || 'no-event-ref'}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Operator Mode</div>

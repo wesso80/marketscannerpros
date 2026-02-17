@@ -90,6 +90,30 @@ export const learningFeedbackTrendSchema = z.object({
 });
 
 export const presenceV1Schema = z.object({
+  lastPresenceTs: z.string().optional(),
+  dataFreshness: z.object({
+    marketDataAgeSec: z.number().nullable(),
+    eventsWriteAgeSec: z.number().nullable(),
+    operatorStateAgeSec: z.number().nullable(),
+    eventsWrittenLast5m: z.number(),
+    eventsByTypeLast5m: z.record(z.string(), z.number()),
+  }).optional(),
+  systemHealth: z.object({
+    status: z.enum(['OK', 'DEGRADED', 'STALE']),
+    reasons: z.array(z.string()),
+  }).optional(),
+  modeChangeEvidence: z.object({
+    lastModeChangeTs: z.string(),
+    previousMode: z.string(),
+    currentMode: z.string(),
+    rationale: z.string(),
+    drivers: z.array(z.object({
+      key: z.string(),
+      before: z.number(),
+      after: z.number(),
+      eventRef: z.string().nullable(),
+    })),
+  }).optional(),
   marketState: z.object({
     marketBias: z.string(),
     volatilityState: z.string(),
@@ -192,6 +216,50 @@ export const presenceV1Schema = z.object({
     label: z.string(),
     reason: z.string(),
   })),
+  neuralAttention: z.object({
+    focus: z.object({
+      primary: z.string().nullable(),
+      secondary: z.array(z.string()),
+      reason: z.string(),
+      horizon: z.enum(['NOW', 'TODAY', 'SWING']),
+      lockedUntilTs: z.string().optional(),
+      pinned: z.boolean().optional(),
+    }),
+    scoreboard: z.array(z.object({
+      symbol: z.string(),
+      score: z.number(),
+      components: z.object({
+        setupQuality: z.number(),
+        operatorFit: z.number(),
+        urgency: z.number(),
+        readiness: z.number(),
+        riskPenalty: z.number(),
+        learningBias: z.number(),
+      }),
+      state: z.enum(['watch', 'candidate', 'plan', 'alert', 'execute', 'cooldown']),
+      nextAction: z.enum(['create_alert', 'prepare_plan', 'wait', 'reduce_risk', 'journal']),
+      why: z.string(),
+    })),
+    uiDirectives: z.object({
+      promoteWidgets: z.array(z.string()),
+      demoteWidgets: z.array(z.string()),
+      highlightSymbol: z.string().nullable(),
+      focusStrip: z.array(z.object({
+        id: z.string(),
+        label: z.string(),
+        value: z.string(),
+        tone: z.enum(['good', 'warn', 'bad']),
+      })),
+      refreshSeconds: z.number(),
+    }),
+    nudges: z.array(z.object({
+      id: z.string(),
+      type: z.enum(['attention_shift', 'risk_guard', 'action_prompt']),
+      text: z.string(),
+      severity: z.enum(['low', 'med', 'high']),
+      ttlSeconds: z.number(),
+    })),
+  }).optional(),
   pendingTaskCount: z.number(),
 }).superRefine((value, ctx) => {
   if (value.experienceMode.key !== value.controlMatrix.output.mode) {

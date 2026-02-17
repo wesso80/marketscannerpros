@@ -12,6 +12,7 @@ import {
 import { deriveOperatorBrainState } from '@/lib/operator/brainState';
 import { runConsciousnessLoop } from '@/lib/operator/consciousnessLoop';
 import { buildPresenceV1Envelope } from '@/lib/operator/presence.v1';
+import { buildNeuralAttention } from '@/lib/operator/neuralAttention';
 
 function toFinite(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -26,6 +27,21 @@ function toIsoStringOrNull(value: unknown): string | null {
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
+}
+
+function toContextObject(value: unknown): Record<string, any> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, any>;
+      }
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 export async function GET() {
@@ -46,6 +62,9 @@ export async function GET() {
       openAlertsRows,
       latestFeedbackRows,
       feedbackTrendRows,
+      latestEventRows,
+      eventsLast5mRows,
+      latestSignalRows,
     ] = await Promise.all([
       q(
         `SELECT current_focus, active_candidates, risk_environment, ai_attention_score, user_mode, cognitive_load, context_state, updated_at
@@ -230,6 +249,7 @@ export async function GET() {
       ),
       q(
         `SELECT
+           event_data->>'event_id' AS event_id,
            event_data->'payload'->>'feedback_tag' AS feedback_tag,
            created_at
          FROM ai_events
@@ -252,6 +272,28 @@ export async function GET() {
            AND event_type = 'label.explicit.created'
            AND event_data->'payload'->>'source' = 'consciousness_loop'
            AND created_at >= NOW() - INTERVAL '7 days'`,
+        [session.workspaceId]
+      ),
+      q(
+        `SELECT MAX(created_at) AS latest_event_at
+         FROM ai_events
+         WHERE workspace_id = $1`,
+        [session.workspaceId]
+      ),
+      q(
+        `SELECT event_type, COUNT(*)::int AS count
+         FROM ai_events
+         WHERE workspace_id = $1
+           AND created_at >= NOW() - INTERVAL '5 minutes'
+         GROUP BY event_type
+         ORDER BY count DESC, event_type ASC`,
+        [session.workspaceId]
+      ),
+      q(
+        `SELECT MAX(created_at) AS latest_signal_at
+         FROM ai_events
+         WHERE workspace_id = $1
+           AND event_type IN ('signal.created', 'candidate.created')`,
         [session.workspaceId]
       ),
     ]);
@@ -404,6 +446,7 @@ export async function GET() {
       100
     );
     const latestFeedbackTag = String(latestFeedbackRows[0]?.feedback_tag || '').trim();
+    const latestFeedbackEventId = String(latestFeedbackRows[0]?.event_id || '').trim() || null;
     const feedbackTrend = (feedbackTrendRows[0] || {}) as Record<string, any>;
     const feedbackTotal = Number(feedbackTrend.total || 0);
     const feedbackValidatedCount = Number(feedbackTrend.validated_count || 0);
@@ -631,7 +674,226 @@ export async function GET() {
       });
     }
 
+    const contextState = toContextObject(state?.context_state);
+    const nowDate = new Date();
+    const nowMs = nowDate.getTime();
+    const rawMemory = toContextObject(contextState.neural_attention_state || {});
+    const previousNeuralState = {
+      currentPrimary: typeof rawMemory.currentPrimary === 'string' ? rawMemory.currentPrimary : (typeof rawMemory.primaryFocus === 'string' ? rawMemory.primaryFocus : null),
+      lockedUntilTs: typeof rawMemory.lockedUntilTs === 'string' ? rawMemory.lockedUntilTs : null,
+      pinnedSymbol: typeof rawMemory.pinnedSymbol === 'string' ? rawMemory.pinnedSymbol : (rawMemory.pinned && typeof rawMemory.pinned.symbol === 'string' ? rawMemory.pinned.symbol : null),
+      pinnedUntilTs: typeof rawMemory.pinnedUntilTs === 'string' ? rawMemory.pinnedUntilTs : (rawMemory.pinned && typeof rawMemory.pinned.expiresAt === 'string' ? rawMemory.pinned.expiresAt : null),
+      cooldownUntil: toContextObject(rawMemory.cooldownUntil || rawMemory.cooldownUntilBySymbol || {}),
+      ignoredCounts7d: toContextObject(rawMemory.ignoredCounts7d || rawMemory.ignoredPromptsBySymbol || {}),
+      snoozeUntilTs: typeof rawMemory.snoozeUntilTs === 'string' ? rawMemory.snoozeUntilTs : null,
+    };
+
+    const neural = buildNeuralAttention({
+      experienceMode: { mode: experienceMode.mode as any, label: experienceMode.label, reason: experienceMode.reason },
+      controlMatrix: {
+        output: {
+          mode: experienceMode.mode as any,
+          actionFriction: experienceMode.actionFriction,
+          alertIntensity: experienceMode.alertIntensity,
+        },
+      },
+      adaptiveInputs: {
+        marketReality: {
+          volatilityState,
+          signalDensity: totalSignals,
+          confluenceDensity: topAttentionRaw.length,
+          mode: marketModeLabel,
+        },
+        operatorBrain: {
+          state: operatorBrain.state,
+          fatigueScore: operatorBrain.fatigueScore,
+          riskCapacity: operatorBrain.riskCapacity,
+        },
+        learningFeedback: {
+          validatedPct: feedbackValidatedPct,
+          ignoredPct: feedbackIgnoredPct,
+          wrongContextPct: feedbackWrongContextPct,
+          timingIssuePct: feedbackTimingIssuePct,
+          penalty: Number(feedbackPenalty.toFixed(1)),
+          bonus: Number(feedbackBonus.toFixed(1)),
+          total7d: feedbackTotal,
+        },
+        cognitiveLoad: {
+          level: cognitiveLoad >= 75 ? 'HIGH' : cognitiveLoad >= 55 ? 'MEDIUM' : 'LOW',
+          value: Number(cognitiveLoad.toFixed(1)),
+          openAlerts,
+          unresolvedPlans,
+          simultaneousSetups,
+        },
+      },
+      riskLoad: {
+        level: cognitiveLoad >= 75 ? 'HIGH' : cognitiveLoad >= 55 ? 'MEDIUM' : 'LOW',
+        score: Number(cognitiveLoad.toFixed(1)),
+      },
+      topAttention: {
+        symbol: topAttentionRaw[0]?.symbol || null,
+      },
+      symbolExperienceModes,
+      attentionMemory: previousNeuralState,
+      candidates: topAttentionRaw.map((item: any) => {
+        const symbol = String(item.symbol || '').toUpperCase();
+        const loopPacketSymbol = loop.decide.decisionPacket.symbol?.toUpperCase();
+        const loopStatus = loop.decide.decisionPacket.status;
+
+        const status = symbol && loopPacketSymbol === symbol
+          ? (loopStatus === 'executed'
+            ? 'executed'
+            : loopStatus === 'alerted'
+            ? 'alerted'
+            : loopStatus === 'planned'
+            ? 'planned'
+            : loopStatus === 'closed'
+            ? 'closed'
+            : 'candidate')
+          : 'candidate';
+
+        return {
+          symbol,
+          signalScore: Number(item.confidence || 0),
+          operatorFit: Number(item.operatorFit || 0),
+          confidence: Number(item.confidence || 0),
+          status,
+          hasAlert: status === 'alerted' || status === 'executed',
+          hasPlan: status === 'planned' || status === 'executed',
+        };
+      }),
+    });
+
+    const cooldownRows = await q<{
+      created_at: string;
+      payload: Record<string, unknown> | null;
+    }>(
+      `SELECT
+         created_at,
+         event_data->'payload' AS payload
+       FROM ai_events
+       WHERE workspace_id = $1
+         AND event_type = 'attention.cooldown.applied'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [session.workspaceId]
+    );
+
+    const latestCooldown = cooldownRows[0];
+    const cooldownPayload = (latestCooldown?.payload || {}) as Record<string, unknown>;
+    const cooldownSymbol = String(cooldownPayload.symbol || '').trim().toUpperCase();
+    const cooldownUntilUnix = Number(cooldownPayload.cooldown_until_unix || 0);
+    const cooldownIgnoredCount = Number(cooldownPayload.ignored_count || 0);
+
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const cooldownActive = cooldownUntilUnix > nowUnix;
+
+    if (cooldownActive && cooldownSymbol) {
+      const cooldownUntilLabel = new Date(cooldownUntilUnix * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const cooldownNudge = {
+        id: `cooldown-${cooldownSymbol}-${cooldownUntilUnix}`,
+        type: 'risk_guard' as const,
+        text: `${cooldownSymbol} cooldown active until ${cooldownUntilLabel} (${cooldownIgnoredCount} ignored prompts).`,
+        severity: 'high' as const,
+        ttlSeconds: Math.max(30, cooldownUntilUnix - nowUnix),
+      };
+
+      neural.neuralAttention.nudges = [
+        cooldownNudge,
+        ...neural.neuralAttention.nudges.filter((item) => item.id !== cooldownNudge.id),
+      ].slice(0, 3);
+    }
+
+    const latestEventAtIso = toIsoStringOrNull((latestEventRows[0] as any)?.latest_event_at);
+    const latestSignalAtIso = toIsoStringOrNull((latestSignalRows[0] as any)?.latest_signal_at);
+    const operatorStateUpdatedIso = toIsoStringOrNull(state?.updated_at);
+
+    const ageSeconds = (iso: string | null) => {
+      if (!iso) return null;
+      const parsed = new Date(iso).getTime();
+      if (!Number.isFinite(parsed)) return null;
+      return Math.max(0, Math.floor((nowMs - parsed) / 1000));
+    };
+
+    const eventsByTypeLast5m = Object.fromEntries(
+      (eventsLast5mRows as any[]).map((row) => [String(row.event_type || ''), Number(row.count || 0)])
+    );
+    const eventsWrittenLast5m = (eventsLast5mRows as any[]).reduce((sum, row) => sum + Number(row.count || 0), 0);
+
+    const dataFreshness = {
+      marketDataAgeSec: ageSeconds(latestSignalAtIso),
+      eventsWriteAgeSec: ageSeconds(latestEventAtIso),
+      operatorStateAgeSec: ageSeconds(operatorStateUpdatedIso),
+      eventsWrittenLast5m,
+      eventsByTypeLast5m,
+    };
+
+    const healthReasons: string[] = [];
+    if (dataFreshness.eventsWriteAgeSec != null && dataFreshness.eventsWriteAgeSec > 300) {
+      healthReasons.push('Event stream has not written in over 5 minutes.');
+    }
+    if (dataFreshness.operatorStateAgeSec != null && dataFreshness.operatorStateAgeSec > 300) {
+      healthReasons.push('Operator state snapshot is older than 5 minutes.');
+    }
+    if (dataFreshness.marketDataAgeSec != null && dataFreshness.marketDataAgeSec > 600) {
+      healthReasons.push('Market signal feed is older than 10 minutes.');
+    }
+
+    const healthStatus =
+      dataFreshness.eventsWriteAgeSec != null && dataFreshness.eventsWriteAgeSec > 900
+        ? 'STALE'
+        : healthReasons.length > 0
+        ? 'DEGRADED'
+        : 'OK';
+
+    const previousModeEvidence = toContextObject(contextState.mode_change_evidence || {});
+    const previousMode = typeof previousModeEvidence.currentMode === 'string'
+      ? previousModeEvidence.currentMode
+      : typeof contextState.last_experience_mode === 'string'
+      ? String(contextState.last_experience_mode)
+      : experienceModeKey;
+
+    const previousDrivers = toContextObject(previousModeEvidence.driverSnapshot || {});
+    const modeChanged = previousMode !== experienceModeKey;
+    const modeChangeEvidence = {
+      lastModeChangeTs: modeChanged
+        ? nowDate.toISOString()
+        : (typeof previousModeEvidence.lastModeChangeTs === 'string' ? previousModeEvidence.lastModeChangeTs : nowDate.toISOString()),
+      previousMode,
+      currentMode: experienceModeKey,
+      drivers: [
+        {
+          key: 'feedbackPenalty',
+          before: Number(previousDrivers.feedbackPenalty ?? feedbackPenalty),
+          after: Number(feedbackPenalty.toFixed(1)),
+          eventRef: latestFeedbackEventId,
+        },
+        {
+          key: 'cognitiveLoad',
+          before: Number(previousDrivers.cognitiveLoad ?? cognitiveLoad),
+          after: Number(cognitiveLoad.toFixed(1)),
+          eventRef: null,
+        },
+        {
+          key: 'marketScore',
+          before: Number(previousDrivers.marketScore ?? marketScore),
+          after: Number(marketScore.toFixed(1)),
+          eventRef: null,
+        },
+      ],
+      rationale: modeChanged
+        ? `Mode changed from ${previousMode} to ${experienceModeKey} based on updated operator/market inputs.`
+        : `Mode remains ${experienceModeKey}; drivers stayed within current thresholds.`,
+    };
+
     const presence = {
+        lastPresenceTs: nowDate.toISOString(),
+        dataFreshness,
+        systemHealth: {
+          status: healthStatus,
+          reasons: healthReasons,
+        },
+        modeChangeEvidence,
         marketState: {
           marketBias,
           volatilityState,
@@ -727,9 +989,141 @@ export async function GET() {
         topAttention,
         symbolExperienceModes,
         suggestedActions,
+        neuralAttention: neural.neuralAttention,
         pendingTaskCount: pendingTasks.length,
         pendingTasks,
       };
+
+    const updatedContextState = {
+      ...contextState,
+      last_experience_mode: experienceModeKey,
+      neural_attention_state: neural.memory,
+      mode_change_evidence: {
+        ...modeChangeEvidence,
+        driverSnapshot: {
+          feedbackPenalty: Number(feedbackPenalty.toFixed(1)),
+          cognitiveLoad: Number(cognitiveLoad.toFixed(1)),
+          marketScore: Number(marketScore.toFixed(1)),
+        },
+      },
+      neural_attention_meta: {
+        updatedAt: new Date().toISOString(),
+        focus: neural.neuralAttention.focus.primary,
+        lastNudgeId: neural.neuralAttention.nudges[0]?.id || contextState?.neural_attention_meta?.lastNudgeId || null,
+      },
+    };
+
+    await q(
+      `UPDATE operator_state
+       SET context_state = $2::jsonb,
+           updated_at = NOW()
+       WHERE workspace_id = $1`,
+      [session.workspaceId, JSON.stringify(updatedContextState)]
+    );
+
+    if (neural.focusShift.changed && neural.focusShift.next) {
+      const shiftEventData = {
+        event_id: `evt_attention_shift_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        event_type: 'attention.shifted',
+        event_version: 1,
+        occurred_at: new Date().toISOString(),
+        actor: {
+          actor_type: 'system',
+          user_id: null,
+          anonymous_id: null,
+          session_id: null,
+        },
+        context: {
+          tenant_id: 'msp',
+          app: { name: 'MarketScannerPros', env: 'prod' },
+          page: { route: '/operator', module: 'neural_attention' },
+          device: {},
+          geo: {},
+        },
+        entity: {
+          entity_type: 'focus',
+          entity_id: `nal_${Date.now()}`,
+          symbol: neural.focusShift.next,
+          asset_class: 'mixed',
+        },
+        correlation: {
+          workflow_id: `wf_attention_${new Date().toISOString().slice(0, 13).replaceAll(':', '')}`,
+          parent_event_id: null,
+        },
+        payload: {
+          source: 'neural_attention',
+          previousFocus: neural.focusShift.previous,
+          newFocus: neural.focusShift.next,
+          reason: neural.focusShift.reason,
+          top: neural.focusShift.top,
+          lockUntilTs: neural.neuralAttention.focus.lockedUntilTs || null,
+        },
+      };
+
+      await q(
+        `INSERT INTO ai_events (workspace_id, event_type, event_data, page_context)
+         VALUES ($1, $2, $3::jsonb, $4::jsonb)`,
+        [
+          session.workspaceId,
+          'attention.shifted',
+          JSON.stringify(shiftEventData),
+          JSON.stringify({ route: '/operator', module: 'neural_attention' }),
+        ]
+      );
+    }
+
+    const firstNudge = neural.neuralAttention.nudges[0];
+    const previousNudgeId = contextState?.neural_attention_meta?.lastNudgeId || null;
+    if (firstNudge && firstNudge.id !== previousNudgeId) {
+      const nudgeEventData = {
+        event_id: `evt_attention_nudge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        event_type: 'attention.nudge.shown',
+        event_version: 1,
+        occurred_at: new Date().toISOString(),
+        actor: {
+          actor_type: 'system',
+          user_id: null,
+          anonymous_id: null,
+          session_id: null,
+        },
+        context: {
+          tenant_id: 'msp',
+          app: { name: 'MarketScannerPros', env: 'prod' },
+          page: { route: '/operator', module: 'neural_attention' },
+          device: {},
+          geo: {},
+        },
+        entity: {
+          entity_type: 'focus',
+          entity_id: `nudge_${Date.now()}`,
+          symbol: neural.neuralAttention.focus.primary || undefined,
+          asset_class: 'mixed',
+        },
+        correlation: {
+          workflow_id: `wf_attention_${new Date().toISOString().slice(0, 13).replaceAll(':', '')}`,
+          parent_event_id: null,
+        },
+        payload: {
+          source: 'neural_attention',
+          id: firstNudge.id,
+          type: firstNudge.type,
+          text: firstNudge.text,
+          severity: firstNudge.severity,
+          ttlSeconds: firstNudge.ttlSeconds,
+        },
+      };
+
+      await q(
+        `INSERT INTO ai_events (workspace_id, event_type, event_data, page_context)
+         VALUES ($1, $2, $3::jsonb, $4::jsonb)`,
+        [
+          session.workspaceId,
+          'attention.nudge.shown',
+          JSON.stringify(nudgeEventData),
+          JSON.stringify({ route: '/operator', module: 'neural_attention' }),
+        ]
+      );
+    }
 
     const presenceV1 = buildPresenceV1Envelope(presence);
 

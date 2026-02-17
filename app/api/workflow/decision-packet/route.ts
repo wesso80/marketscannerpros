@@ -12,6 +12,21 @@ type TimelineItem = {
   payload: Record<string, unknown>;
 };
 
+type PacketState = {
+  packetId: string;
+  fingerprint: string;
+  status: string;
+  symbol: string;
+  market: string | null;
+  workflowId: string | null;
+  sourceEventCount: number;
+  firstEventId: string | null;
+  lastEventId: string | null;
+  lastEventType: string | null;
+  updatedAt: string;
+  aliases: string[];
+};
+
 function toIso(value: unknown): string {
   const date = value instanceof Date ? value : new Date(String(value));
   if (Number.isNaN(date.getTime())) return new Date(0).toISOString();
@@ -30,8 +45,57 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'id query param (decision_packet_id) is required' }, { status: 400 });
     }
 
-    const tagNeedle = `dp_${id}`;
-    const noteNeedle = `%Decision Packet: ${id}%`;
+    const aliasRows = await q(
+      `SELECT
+         COALESCE(a.packet_id, d.packet_id) AS canonical_id,
+         d.packet_id,
+         d.fingerprint,
+         d.status,
+         d.symbol,
+         d.market,
+         d.workflow_id,
+         d.source_event_count,
+         d.first_event_id,
+         d.last_event_id,
+         d.last_event_type,
+         d.updated_at,
+         COALESCE(
+           (
+             SELECT ARRAY_AGG(alias_id ORDER BY alias_id)
+             FROM decision_packet_aliases
+             WHERE workspace_id = $1
+               AND packet_id = d.packet_id
+           ),
+           ARRAY[]::text[]
+         ) AS aliases
+       FROM decision_packets d
+       LEFT JOIN decision_packet_aliases a
+         ON a.workspace_id = d.workspace_id
+        AND a.alias_id = $2
+       WHERE d.workspace_id = $1
+         AND (
+           d.packet_id = $2
+           OR d.packet_id = a.packet_id
+         )
+       LIMIT 1`,
+      [session.workspaceId, id]
+    );
+
+    const packetRow = aliasRows[0] as Record<string, unknown> | undefined;
+    const canonicalId = String(packetRow?.canonical_id || packetRow?.packet_id || id);
+    const allPacketIds = new Set<string>([id, canonicalId]);
+
+    const aliases = Array.isArray(packetRow?.aliases)
+      ? (packetRow?.aliases as unknown[]).map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+    for (const alias of aliases) {
+      allPacketIds.add(alias);
+    }
+
+    const packetIds = Array.from(allPacketIds);
+
+    const tagNeedles = packetIds.map((packetId) => `dp_${packetId}`);
+    const noteNeedles = packetIds.map((packetId) => `%Decision Packet: ${packetId}%`);
 
     const [eventRows, alertRows, journalRows] = await Promise.all([
       q(
@@ -52,17 +116,17 @@ export async function GET(req: NextRequest) {
          FROM ai_events
          WHERE workspace_id = $1
            AND (
-             event_data->'payload'->>'decision_packet_id' = $2
-             OR event_data->'payload'->'setup'->>'decision_packet_id' = $2
-             OR event_data->'payload'->'links'->>'decision_packet_id' = $2
-             OR event_data->'payload'->'trade_plan'->'setup'->>'decision_packet_id' = $2
-             OR event_data->'payload'->'trade_plan'->'links'->>'decision_packet_id' = $2
-             OR event_data->'payload'->'decision_packet'->>'id' = $2
-             OR event_data->'entity'->>'entity_id' = $2
+             event_data->'payload'->>'decision_packet_id' = ANY($2::text[])
+             OR event_data->'payload'->'setup'->>'decision_packet_id' = ANY($2::text[])
+             OR event_data->'payload'->'links'->>'decision_packet_id' = ANY($2::text[])
+             OR event_data->'payload'->'trade_plan'->'setup'->>'decision_packet_id' = ANY($2::text[])
+             OR event_data->'payload'->'trade_plan'->'links'->>'decision_packet_id' = ANY($2::text[])
+             OR event_data->'payload'->'decision_packet'->>'id' = ANY($2::text[])
+             OR event_data->'entity'->>'entity_id' = ANY($2::text[])
            )
          ORDER BY created_at DESC
          LIMIT 200`,
-        [session.workspaceId, id]
+        [session.workspaceId, packetIds]
       ),
       q(
         `SELECT
@@ -74,12 +138,12 @@ export async function GET(req: NextRequest) {
          FROM alerts
          WHERE workspace_id = $1
            AND (
-             smart_alert_context->>'decisionPacketId' = $2
-             OR smart_alert_context->>'decision_packet_id' = $2
+             smart_alert_context->>'decisionPacketId' = ANY($2::text[])
+             OR smart_alert_context->>'decision_packet_id' = ANY($2::text[])
            )
          ORDER BY created_at DESC
          LIMIT 100`,
-        [session.workspaceId, id]
+        [session.workspaceId, packetIds]
       ),
       q(
         `SELECT
@@ -98,14 +162,31 @@ export async function GET(req: NextRequest) {
          FROM journal_entries
          WHERE workspace_id = $1
            AND (
-             COALESCE(tags, ARRAY[]::text[]) @> ARRAY[$2]::text[]
-             OR notes ILIKE $3
+             COALESCE(tags, ARRAY[]::text[]) && $2::text[]
+             OR notes ILIKE ANY($3::text[])
            )
          ORDER BY created_at DESC
          LIMIT 100`,
-        [session.workspaceId, tagNeedle, noteNeedle]
+        [session.workspaceId, tagNeedles, noteNeedles]
       ),
     ]);
+
+    const packetState: PacketState | null = packetRow
+      ? {
+          packetId: String(packetRow.packet_id || canonicalId),
+          fingerprint: String(packetRow.fingerprint || ''),
+          status: String(packetRow.status || 'candidate'),
+          symbol: String(packetRow.symbol || ''),
+          market: packetRow.market ? String(packetRow.market) : null,
+          workflowId: packetRow.workflow_id ? String(packetRow.workflow_id) : null,
+          sourceEventCount: Number(packetRow.source_event_count || 0),
+          firstEventId: packetRow.first_event_id ? String(packetRow.first_event_id) : null,
+          lastEventId: packetRow.last_event_id ? String(packetRow.last_event_id) : null,
+          lastEventType: packetRow.last_event_type ? String(packetRow.last_event_type) : null,
+          updatedAt: toIso(packetRow.updated_at),
+          aliases,
+        }
+      : null;
 
     const timeline: TimelineItem[] = [
       ...eventRows.map((row: any) => ({
@@ -141,7 +222,10 @@ export async function GET(req: NextRequest) {
     const workflowIds = Array.from(new Set(timeline.map((item) => item.workflowId).filter(Boolean)));
 
     return NextResponse.json({
-      decisionPacketId: id,
+      decisionPacketId: canonicalId,
+      requestedId: id,
+      packetIds,
+      packetState,
       summary: {
         events: eventRows.length,
         alerts: alertRows.length,

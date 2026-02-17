@@ -40,9 +40,25 @@ interface CommandCenterStateBarProps {
   mode: OperatorFlowMode;
   actionableNow: string;
   nextStep?: string;
+  heartbeat?: {
+    modeKey?: 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan' | null;
+    brainState?: 'FLOW' | 'FOCUSED' | 'STRESSED' | 'OVERLOADED' | null;
+    monologue?: string;
+    drift?: string;
+    lastBeatAt?: string | null;
+  };
 }
 
-export default function CommandCenterStateBar({ mode, actionableNow, nextStep }: CommandCenterStateBarProps) {
+function toneForHeartbeatMode(modeKey?: NonNullable<CommandCenterStateBarProps['heartbeat']>['modeKey']) {
+  if (modeKey === 'hunt') return '#10b981';
+  if (modeKey === 'focus') return '#38bdf8';
+  if (modeKey === 'risk_control') return '#f59e0b';
+  if (modeKey === 'learning') return '#a78bfa';
+  if (modeKey === 'passive_scan') return '#22d3ee';
+  return '#34d399';
+}
+
+export default function CommandCenterStateBar({ mode, actionableNow, nextStep, heartbeat }: CommandCenterStateBarProps) {
   const [state, setState] = useState<OperatorState>(DEFAULT_OPERATOR_STATE);
 
   useEffect(() => {
@@ -61,6 +77,9 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep }:
   }, [mode]);
 
   const regime = useMemo(() => deriveRegime(state), [state]);
+  const pulseTone = toneForHeartbeatMode(heartbeat?.modeKey || null);
+  const pulseDimmed = heartbeat?.brainState === 'OVERLOADED';
+  const pulseDuration = heartbeat?.brainState === 'STRESSED' ? '3.2s' : heartbeat?.brainState === 'FLOW' ? '4.8s' : '4s';
 
   return (
     <div style={{
@@ -106,6 +125,27 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep }:
         display: 'grid',
         gap: '6px'
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '999px',
+                background: pulseTone,
+                boxShadow: `0 0 0 0 ${pulseTone}55`,
+                opacity: pulseDimmed ? 0.55 : 0.9,
+                animation: `mspHeartbeatPulse ${pulseDuration} ease-in-out infinite`,
+              }}
+            />
+            <span style={{ color: '#a7f3d0', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Live Pulse — scanning market rhythm
+            </span>
+          </div>
+          <span style={{ color: '#94a3b8', fontSize: '11px' }}>
+            {heartbeat?.lastBeatAt ? new Date(heartbeat.lastBeatAt).toLocaleTimeString() : '—'}
+          </span>
+        </div>
         <div style={{ color: '#34d399', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           Actionable Now
         </div>
@@ -113,7 +153,25 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep }:
         <div style={{ color: '#94a3b8', fontSize: '12px' }}>
           Next: {nextStep || state.next}
         </div>
+        {heartbeat?.monologue ? (
+          <div style={{ color: '#a5f3fc', fontSize: '12px' }}>
+            {heartbeat.monologue}
+          </div>
+        ) : null}
+        {heartbeat?.drift ? (
+          <div style={{ color: '#cbd5e1', fontSize: '11px' }}>
+            {heartbeat.drift}
+          </div>
+        ) : null}
       </div>
+
+      <style jsx>{`
+        @keyframes mspHeartbeatPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 ${pulseTone}44; }
+          50% { transform: scale(${pulseDimmed ? '1.01' : '1.05'}); box-shadow: 0 0 0 ${pulseDimmed ? '3px' : '6px'} transparent; }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+        }
+      `}</style>
     </div>
   );
 }
