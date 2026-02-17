@@ -295,13 +295,28 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
 // Database Operations
 // ============================================================================
 
-async function getSymbolsToFetch(tier?: number): Promise<Array<{ symbol: string; tier: number; asset_type: string }>> {
+async function getSymbolsToFetch(
+  tier?: number,
+  options?: { includeForex?: boolean }
+): Promise<Array<{ symbol: string; tier: number; asset_type: string }>> {
   const db = getPool();
-  const query = tier 
-    ? 'SELECT symbol, tier, asset_type FROM symbol_universe WHERE enabled = TRUE AND tier = $1 ORDER BY last_fetched_at ASC NULLS FIRST'
-    : 'SELECT symbol, tier, asset_type FROM symbol_universe WHERE enabled = TRUE ORDER BY tier ASC, last_fetched_at ASC NULLS FIRST';
-  
-  const result = await db.query(query, tier ? [tier] : []);
+  const includeForex = options?.includeForex === true;
+
+  let query = 'SELECT symbol, tier, asset_type FROM symbol_universe WHERE enabled = TRUE';
+  const params: Array<string | number> = [];
+
+  if (tier) {
+    params.push(tier);
+    query += ` AND tier = $${params.length}`;
+  }
+
+  if (!includeForex) {
+    query += ` AND COALESCE(asset_type, 'equity') <> 'forex'`;
+  }
+
+  query += ' ORDER BY tier ASC, last_fetched_at ASC NULLS FIRST';
+
+  const result = await db.query(query, params);
   return result.rows;
 }
 
@@ -929,10 +944,10 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
 // Main Worker Loop
 // ============================================================================
 
-async function runIngestionCycle(): Promise<{ symbolsProcessed: number; apiCalls: number; errors: number }> {
+async function runIngestionCycle(includeForex = false): Promise<{ symbolsProcessed: number; apiCalls: number; errors: number }> {
   const stats = { symbolsProcessed: 0, apiCalls: 0, errors: 0 };
   
-  const symbols = await getSymbolsToFetch();
+  const symbols = await getSymbolsToFetch(undefined, { includeForex });
   console.log(`[worker] Processing ${symbols.length} symbols...`);
 
   for (const { symbol, tier, asset_type } of symbols) {
@@ -970,8 +985,11 @@ async function main(): Promise<void> {
   console.log('[worker] MSP Data Ingestion Worker starting...');
 
   const cliOnce = process.argv.includes('--once');
+  const cliIncludeForex = process.argv.includes('--include-forex');
   const envOnce = ['1', 'true', 'yes'].includes((getEnv('WORKER_RUN_ONCE') || '').toLowerCase());
+  const envIncludeForex = ['1', 'true', 'yes'].includes((getEnv('WORKER_INCLUDE_FOREX') || '').toLowerCase());
   const runOnce = cliOnce || envOnce;
+  const includeForex = cliIncludeForex || envIncludeForex;
   const failOnErrors = ['1', 'true', 'yes'].includes((getEnv('WORKER_FAIL_ON_ERRORS') || '').toLowerCase());
   
   if (!getEnv('ALPHA_VANTAGE_API_KEY')) {
@@ -990,6 +1008,7 @@ async function main(): Promise<void> {
   console.log(`[worker] Burst cap: ${burstPerSecond} requests/second`);
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);
   console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
+  console.log(`[worker] Forex ingest: ${includeForex ? 'enabled (manual override)' : 'disabled (equities + crypto only)'}`);
 
   await ensureIngestionSchema();
   console.log('[worker] Schema compatibility checks complete');
@@ -1003,7 +1022,7 @@ async function main(): Promise<void> {
     const startTime = Date.now();
 
     try {
-      const stats = await runIngestionCycle();
+      const stats = await runIngestionCycle(includeForex);
       const duration = Math.round((Date.now() - startTime) / 1000);
 
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
