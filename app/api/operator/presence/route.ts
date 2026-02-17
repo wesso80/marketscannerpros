@@ -9,6 +9,7 @@ import {
   type OperatorMode,
   type RiskMode,
 } from '@/lib/operator/adaptiveReality';
+import { deriveOperatorBrainState } from '@/lib/operator/brainState';
 import { runConsciousnessLoop } from '@/lib/operator/consciousnessLoop';
 
 function toFinite(value: unknown, fallback = 0): number {
@@ -381,24 +382,6 @@ export async function GET() {
       ? 'trend'
       : 'chop';
 
-    const operatorMode: OperatorMode = operatorReality === 'overextended'
-      ? actions8h >= 10
-        ? 'overtrading'
-        : recentLossPressure >= 60
-        ? 'emotional'
-        : 'fatigued'
-      : operatorReality === 'in_rhythm'
-      ? 'sharp'
-      : 'neutral';
-
-    const riskMode: RiskMode = state?.risk_environment === 'HIGH' || cognitiveLoad >= 85
-      ? 'defensive'
-      : state?.risk_environment === 'MODERATE' || cognitiveLoad >= 70 || behaviorQuality < 60
-      ? 'constrained'
-      : recentLossPressure >= 45
-      ? 'elevated'
-      : 'normal';
-
     const intentMode = mapUserModeToIntentMode(state?.user_mode || 'OBSERVE');
     const intentDirection = intentMode === 'executing'
       ? 'managing_trades'
@@ -436,6 +419,37 @@ export async function GET() {
       35
     );
     const feedbackBonus = clamp(feedbackValidatedPct * 0.2, 0, 12);
+
+    const operatorBrain = deriveOperatorBrainState({
+      cognitiveLoad,
+      behaviorQuality,
+      recentLossPressure,
+      feedbackPenalty,
+      actions8h,
+      ignoredSetupPct,
+      lateEntryPct,
+      earlyExitPct,
+    });
+
+    const operatorMode: OperatorMode = operatorBrain.state === 'FLOW'
+      ? 'sharp'
+      : operatorBrain.state === 'FOCUSED'
+      ? 'neutral'
+      : operatorBrain.state === 'STRESSED'
+      ? 'fatigued'
+      : actions8h >= 10
+      ? 'overtrading'
+      : 'emotional';
+
+    const riskMode: RiskMode = operatorBrain.state === 'OVERLOADED'
+      ? 'defensive'
+      : state?.risk_environment === 'HIGH' || cognitiveLoad >= 85
+      ? 'defensive'
+      : state?.risk_environment === 'MODERATE' || cognitiveLoad >= 70 || behaviorQuality < 60
+      ? 'constrained'
+      : recentLossPressure >= 45
+      ? 'elevated'
+      : 'normal';
 
     const operatorScoreAxis = clamp(
       behaviorQuality * 0.55 +
@@ -634,6 +648,16 @@ export async function GET() {
             executions8h,
             closed8h,
             behaviorQuality: Number(behaviorQuality.toFixed(1)),
+          },
+          operatorBrain: {
+            state: operatorBrain.state,
+            executionMode: operatorBrain.executionMode,
+            fatigueScore: operatorBrain.fatigueScore,
+            riskToleranceScore: operatorBrain.riskToleranceScore,
+            riskCapacity: operatorBrain.riskCapacity,
+            thresholdShift: operatorBrain.thresholdShift,
+            aggressionBias: operatorBrain.aggressionBias,
+            guidance: operatorBrain.guidance,
           },
           learningFeedback: {
             total7d: feedbackTotal,

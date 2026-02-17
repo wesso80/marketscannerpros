@@ -134,6 +134,16 @@ interface OperatorPresenceSummary {
       closed8h: number;
       behaviorQuality: number;
     };
+    operatorBrain?: {
+      state: 'FLOW' | 'FOCUSED' | 'STRESSED' | 'OVERLOADED';
+      executionMode: 'flow' | 'hesitant' | 'aggressive';
+      fatigueScore: number;
+      riskToleranceScore: number;
+      riskCapacity: 'HIGH' | 'MEDIUM' | 'LOW';
+      thresholdShift: number;
+      aggressionBias: 'reduced' | 'balanced' | 'elevated';
+      guidance: string;
+    };
     learningFeedback?: {
       total7d: number;
       validatedPct: number;
@@ -1090,6 +1100,11 @@ export default function OperatorDashboardPage() {
                   Market: {presence.adaptiveInputs.marketReality.mode.replaceAll('_', ' ')} · Operator: {presence.adaptiveInputs.operatorReality.mode.replaceAll('_', ' ')} · Cognitive: {presence.adaptiveInputs.cognitiveLoad.level} · Intent: {presence.adaptiveInputs.intentDirection.replaceAll('_', ' ')}
                 </div>
               ) : null}
+              {presence?.adaptiveInputs?.operatorBrain ? (
+                <div className="mt-1 text-cyan-100/80">
+                  Brain: {presence.adaptiveInputs.operatorBrain.state} · Fatigue {formatNumber(presence.adaptiveInputs.operatorBrain.fatigueScore)} · Risk Capacity {presence.adaptiveInputs.operatorBrain.riskCapacity} · Threshold Shift {formatNumber(presence.adaptiveInputs.operatorBrain.thresholdShift)}
+                </div>
+              ) : null}
             </div>
           ) : null}
           <div className="grid gap-2 md:grid-cols-4">
@@ -1132,6 +1147,11 @@ export default function OperatorDashboardPage() {
               {presence?.adaptiveInputs?.learningFeedback ? (
                 <div className="mt-1 text-emerald-100/80">
                   Feedback 7d: V {formatNumber(presence.adaptiveInputs.learningFeedback.validatedPct)}% · WC {formatNumber(presence.adaptiveInputs.learningFeedback.wrongContextPct)}% · T {formatNumber(presence.adaptiveInputs.learningFeedback.timingIssuePct)}% · Penalty {formatNumber(presence.adaptiveInputs.learningFeedback.penalty)} · Bonus {formatNumber(presence.adaptiveInputs.learningFeedback.bonus)}
+                </div>
+              ) : null}
+              {presence?.adaptiveInputs?.operatorBrain?.guidance ? (
+                <div className="mt-1 text-emerald-100/80">
+                  Brain Guidance: {presence.adaptiveInputs.operatorBrain.guidance}
                 </div>
               ) : null}
               {presence.consciousnessLoop.adapt.adjustments.length ? (
