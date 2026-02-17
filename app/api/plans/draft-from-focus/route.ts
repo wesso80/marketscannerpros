@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 
 type DraftFromFocusBody = {
   focusId?: string;
@@ -213,6 +214,53 @@ export async function POST(req: NextRequest) {
         JSON.stringify({ route: '/operator', module: 'focus_creator' }),
       ]
     );
+
+    try {
+      const dedupeBase = `${session.workspaceId}:${decisionPacketId || symbol}:${planId}`;
+      await Promise.all([
+        enqueueEngineJob({
+          workspaceId: session.workspaceId,
+          jobType: 'journal.prefill',
+          dedupeKey: `journal:${dedupeBase}`,
+          priority: 30,
+          payload: {
+            source: 'focus.creator',
+            action: 'draft_plan',
+            symbol,
+            planId,
+            decisionPacketId,
+          },
+        }),
+        enqueueEngineJob({
+          workspaceId: session.workspaceId,
+          jobType: 'coach.recompute',
+          dedupeKey: `coach:${dedupeBase}`,
+          priority: 40,
+          payload: {
+            source: 'focus.creator',
+            action: 'draft_plan',
+            symbol,
+            planId,
+            decisionPacketId,
+          },
+        }),
+        enqueueEngineJob({
+          workspaceId: session.workspaceId,
+          jobType: 'operator.recompute_presence',
+          dedupeKey: `presence:${dedupeBase}`,
+          priority: 20,
+          payload: {
+            source: 'focus.creator',
+            action: 'draft_plan',
+            symbol,
+            planId,
+            decisionPacketId,
+          },
+        }),
+      ]);
+    } catch (enqueueError) {
+      console.warn('Engine enqueue warning (draft-from-focus plan):', enqueueError);
+    }
 
     return NextResponse.json({
       success: true,

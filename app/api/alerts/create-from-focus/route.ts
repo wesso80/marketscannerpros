@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 
 type CreateFromFocusBody = {
   focusId?: string;
@@ -200,6 +201,40 @@ export async function POST(req: NextRequest) {
         JSON.stringify({ route: '/operator', module: 'focus_creator' }),
       ]
     );
+
+    try {
+      const dedupeBase = `${session.workspaceId}:${decisionPacketId || symbol}:${alertId}`;
+      await Promise.all([
+        enqueueEngineJob({
+          workspaceId: session.workspaceId,
+          jobType: 'coach.recompute',
+          dedupeKey: `coach:${dedupeBase}`,
+          priority: 40,
+          payload: {
+            source: 'focus.creator',
+            action: 'create_alert',
+            symbol,
+            alertId,
+            decisionPacketId,
+          },
+        }),
+        enqueueEngineJob({
+          workspaceId: session.workspaceId,
+          jobType: 'operator.recompute_presence',
+          dedupeKey: `presence:${dedupeBase}`,
+          priority: 20,
+          payload: {
+            source: 'focus.creator',
+            action: 'create_alert',
+            symbol,
+            alertId,
+            decisionPacketId,
+          },
+        }),
+      ]);
+    } catch (enqueueError) {
+      console.warn('Engine enqueue warning (create-from-focus alert):', enqueueError);
+    }
 
     return NextResponse.json({
       success: true,

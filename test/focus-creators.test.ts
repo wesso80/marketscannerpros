@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getSessionFromCookieMock, qMock } = vi.hoisted(() => ({
+const { getSessionFromCookieMock, qMock, enqueueEngineJobMock } = vi.hoisted(() => ({
   getSessionFromCookieMock: vi.fn(),
   qMock: vi.fn(),
+  enqueueEngineJobMock: vi.fn(),
 }));
 
 vi.mock('../lib/auth', () => ({
@@ -21,12 +22,17 @@ vi.mock('@/lib/db', () => ({
   q: qMock,
 }));
 
+vi.mock('@/lib/engine/jobQueue', () => ({
+  enqueueEngineJob: enqueueEngineJobMock,
+}));
+
 import { POST as createAlertFromFocus } from '../app/api/alerts/create-from-focus/route';
 import { POST as createPlanFromFocus } from '../app/api/plans/draft-from-focus/route';
 
 describe('focus creator endpoints', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    enqueueEngineJobMock.mockResolvedValue({ enqueued: true, jobId: 1 });
     getSessionFromCookieMock.mockResolvedValue({
       workspaceId: 'ws_test_123',
       cid: 'cus_test_123',

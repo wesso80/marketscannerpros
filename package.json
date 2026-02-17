@@ -9,7 +9,9 @@
     "test:contracts": "vitest run test/contracts.v1.test.ts",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
-    "worker:outcomes": "npx tsx worker/label-outcomes.ts"
+    "worker:outcomes": "npx tsx worker/label-outcomes.ts",
+    "worker:engine": "npx tsx worker/engine-runner.ts",
+    "worker:engine:once": "npx tsx worker/engine-runner.ts --once"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
