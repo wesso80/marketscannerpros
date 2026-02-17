@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import {
+  evaluateAdaptiveReality,
+  mapUserModeToIntentMode,
+  type ExperienceModeKey,
+  type MarketMode,
+  type OperatorMode,
+  type RiskMode,
+} from '@/lib/operator/adaptiveReality';
 
 function toFinite(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -8,30 +16,6 @@ function toFinite(value: unknown, fallback = 0): number {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
-}
-
-type ExperienceModeKey = 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
-
-type ExperienceModeDefinition = {
-  label: string;
-  rationale: string;
-  directives: {
-    showScanner: boolean;
-    emphasizeRisk: boolean;
-    reduceAlerts: boolean;
-    highlightLearning: boolean;
-    minimalSurface: boolean;
-    quickActions: boolean;
-    frictionLevel: 'low' | 'medium' | 'high';
-  };
-};
-
-function mapIntentDirection(userMode: string): 'scanning' | 'planning' | 'managing_trades' | 'reviewing_performance' {
-  const mode = String(userMode || '').toUpperCase();
-  if (mode === 'OBSERVE') return 'scanning';
-  if (mode === 'EVALUATE') return 'planning';
-  if (mode === 'EXECUTE') return 'managing_trades';
-  return 'reviewing_performance';
 }
 
 export async function GET() {
@@ -354,96 +338,79 @@ export async function GET() {
       ? 'in_rhythm'
       : 'balanced';
 
-    const marketMode = volatilityState === 'expansion' && totalSignals >= 8
+    const marketModeLabel = volatilityState === 'expansion' && totalSignals >= 8
       ? 'volatile_expansion'
       : volatilityState === 'compression' || totalSignals <= 2
       ? 'low_volatility_compression'
       : 'balanced_transition';
 
-    const intentDirection = mapIntentDirection(state?.user_mode || 'OBSERVE');
+    const marketMode: MarketMode = marketModeLabel === 'volatile_expansion'
+      ? 'expansion'
+      : marketModeLabel === 'low_volatility_compression'
+      ? 'compression'
+      : totalSignals >= 6
+      ? 'trend'
+      : 'chop';
 
-    let experienceModeKey: ExperienceModeKey = 'focus';
-    if (operatorReality === 'overextended') {
-      experienceModeKey = 'risk_control';
-    } else if (intentDirection === 'managing_trades' || executions8h > 0) {
-      experienceModeKey = 'focus';
-    } else if (marketMode === 'volatile_expansion' && operatorReality === 'in_rhythm' && cognitiveLoad < 70) {
-      experienceModeKey = 'hunt';
-    } else if (intentDirection === 'reviewing_performance' || closed8h > 0) {
-      experienceModeKey = 'learning';
-    } else if (marketMode === 'low_volatility_compression') {
-      experienceModeKey = 'passive_scan';
-    }
+    const operatorMode: OperatorMode = operatorReality === 'overextended'
+      ? actions8h >= 10
+        ? 'overtrading'
+        : recentLossPressure >= 60
+        ? 'emotional'
+        : 'fatigued'
+      : operatorReality === 'in_rhythm'
+      ? 'sharp'
+      : 'neutral';
 
-    const experienceModes: Record<ExperienceModeKey, ExperienceModeDefinition> = {
-      hunt: {
-        label: 'Hunt Mode',
-        rationale: 'Market is active and operator state is stable — prioritize setup discovery and fast validation.',
-        directives: {
-          showScanner: true,
-          emphasizeRisk: false,
-          reduceAlerts: false,
-          highlightLearning: false,
-          minimalSurface: false,
-          quickActions: true,
-          frictionLevel: 'low',
-        },
-      },
-      focus: {
-        label: 'Focus Mode',
-        rationale: 'Execution context is active — shift surface from discovery to risk-managed trade handling.',
-        directives: {
-          showScanner: false,
-          emphasizeRisk: true,
-          reduceAlerts: false,
-          highlightLearning: false,
-          minimalSurface: false,
-          quickActions: true,
-          frictionLevel: 'medium',
-        },
-      },
-      risk_control: {
-        label: 'Risk-Control Mode',
-        rationale: 'Cognitive pressure or behavior drift detected — reduce noise and force tighter decision quality.',
-        directives: {
-          showScanner: false,
-          emphasizeRisk: true,
-          reduceAlerts: true,
-          highlightLearning: false,
-          minimalSurface: false,
-          quickActions: false,
-          frictionLevel: 'high',
-        },
-      },
-      learning: {
-        label: 'Learning Mode',
-        rationale: 'Recent outcome data is available — prioritize coaching and post-trade pattern reinforcement.',
-        directives: {
-          showScanner: false,
-          emphasizeRisk: false,
-          reduceAlerts: true,
-          highlightLearning: true,
-          minimalSurface: false,
-          quickActions: false,
-          frictionLevel: 'low',
-        },
-      },
-      passive_scan: {
-        label: 'Passive Scan Mode',
-        rationale: 'Low-volatility regime — keep a minimal surface and only surface high-conviction opportunities.',
-        directives: {
-          showScanner: true,
-          emphasizeRisk: false,
-          reduceAlerts: true,
-          highlightLearning: false,
-          minimalSurface: true,
-          quickActions: false,
-          frictionLevel: 'low',
-        },
-      },
-    };
+    const riskMode: RiskMode = state?.risk_environment === 'HIGH' || cognitiveLoad >= 85
+      ? 'defensive'
+      : state?.risk_environment === 'MODERATE' || cognitiveLoad >= 70 || behaviorQuality < 60
+      ? 'constrained'
+      : recentLossPressure >= 45
+      ? 'elevated'
+      : 'normal';
 
-    const experienceMode = experienceModes[experienceModeKey];
+    const intentMode = mapUserModeToIntentMode(state?.user_mode || 'OBSERVE');
+    const intentDirection = intentMode === 'executing'
+      ? 'managing_trades'
+      : intentMode === 'reviewing'
+      ? 'reviewing_performance'
+      : intentMode;
+
+    const marketScore = clamp(
+      (volatilityState === 'expansion' ? 78 : volatilityState === 'compression' ? 38 : 58) +
+        Math.min(totalSignals * 3, 20),
+      0,
+      100
+    );
+    const operatorScoreAxis = clamp(behaviorQuality * 0.55 + (100 - cognitiveLoad) * 0.45, 0, 100);
+    const riskScoreAxis = clamp(
+      (riskMode === 'defensive' ? 92 : riskMode === 'constrained' ? 78 : riskMode === 'elevated' ? 62 : 35) +
+        recentLossPressure * 0.2,
+      0,
+      100
+    );
+    const intentScoreAxis = clamp(
+      intentMode === 'executing' || intentMode === 'managing'
+        ? 75
+        : intentMode === 'planning'
+        ? 62
+        : intentMode === 'scanning'
+        ? 55
+        : 50,
+      0,
+      100
+    );
+
+    const adaptive = evaluateAdaptiveReality({
+      market: { mode: marketMode, score: marketScore },
+      operator: { mode: operatorMode, score: operatorScoreAxis },
+      risk: { mode: riskMode, score: riskScoreAxis },
+      intent: { mode: intentMode, score: intentScoreAxis },
+    });
+
+    const experienceModeKey: ExperienceModeKey = adaptive.output.mode;
+    const experienceMode = adaptive.output;
 
     const symbolExperienceModes = topAttentionRaw
       .map((item: any) => {
@@ -451,22 +418,26 @@ export async function GET() {
         const confidence = Number(item.confidence || 0);
         const personalEdge = Number(item.personalEdge || 0);
 
-        let symbolModeKey: ExperienceModeKey;
-        if (operatorReality === 'overextended') {
-          symbolModeKey = 'risk_control';
-        } else if (fit >= 70 && confidence >= 65 && marketMode === 'volatile_expansion') {
-          symbolModeKey = 'hunt';
-        } else if (fit >= 55 && (intentDirection === 'managing_trades' || executions8h > 0)) {
-          symbolModeKey = 'focus';
-        } else if (personalEdge < 48 || behaviorQuality < 62) {
-          symbolModeKey = 'learning';
-        } else if (fit < 50) {
-          symbolModeKey = 'passive_scan';
-        } else {
-          symbolModeKey = experienceModeKey;
-        }
+        const symbolAdaptive = evaluateAdaptiveReality({
+          market: {
+            mode: marketMode,
+            score: clamp((marketScore * 0.5) + (confidence * 0.5), 0, 100),
+          },
+          operator: {
+            mode: personalEdge < 48 ? 'neutral' : operatorMode,
+            score: clamp((operatorScoreAxis * 0.6) + (fit * 0.4), 0, 100),
+          },
+          risk: {
+            mode: fit < 45 ? 'constrained' : riskMode,
+            score: clamp((riskScoreAxis * 0.7) + ((100 - fit) * 0.3), 0, 100),
+          },
+          intent: {
+            mode: intentMode,
+            score: intentScoreAxis,
+          },
+        });
 
-        const mode = experienceModes[symbolModeKey];
+        const symbolModeKey: ExperienceModeKey = symbolAdaptive.output.mode;
         return {
           symbol: item.symbol,
           operatorFit: fit,
@@ -474,19 +445,10 @@ export async function GET() {
           personalEdge,
           mode: {
             key: symbolModeKey,
-            label: mode.label,
-            directives: mode.directives,
+            label: symbolAdaptive.output.label,
+            directives: symbolAdaptive.output.directives,
           },
-          reason:
-            symbolModeKey === 'hunt'
-              ? 'High fit in active regime — elevate setup discovery and quick action.'
-              : symbolModeKey === 'focus'
-              ? 'Execution context detected — prioritize management and risk control.'
-              : symbolModeKey === 'risk_control'
-              ? 'Operator pressure elevated — tighten controls and reduce noise.'
-              : symbolModeKey === 'learning'
-              ? 'Edge quality below threshold — route to review and pattern correction.'
-              : 'Conviction is moderate/low — keep symbol in passive monitoring.',
+          reason: symbolAdaptive.output.reason,
         };
       })
       .filter((item: any) => item.symbol);
@@ -547,7 +509,7 @@ export async function GET() {
         },
         adaptiveInputs: {
           marketReality: {
-            mode: marketMode,
+            mode: marketModeLabel,
             volatilityState,
             signalDensity: totalSignals,
             confluenceDensity: topAttentionRaw.length,
@@ -568,11 +530,33 @@ export async function GET() {
           },
           intentDirection,
         },
+        controlMatrix: {
+          axes: {
+            market: { mode: marketMode, score: Number(marketScore.toFixed(1)) },
+            operator: { mode: operatorMode, score: Number(operatorScoreAxis.toFixed(1)) },
+            risk: { mode: riskMode, score: Number(riskScoreAxis.toFixed(1)) },
+            intent: { mode: intentMode, score: Number(intentScoreAxis.toFixed(1)) },
+          },
+          matrixScore: adaptive.matrixScore,
+          output: {
+            mode: experienceMode.mode,
+            label: experienceMode.label,
+            reason: experienceMode.reason,
+            priorityWidgets: experienceMode.priorityWidgets,
+            hiddenWidgets: experienceMode.hiddenWidgets,
+            actionFriction: experienceMode.actionFriction,
+            alertIntensity: experienceMode.alertIntensity,
+          },
+        },
         experienceMode: {
           key: experienceModeKey,
           label: experienceMode.label,
-          rationale: experienceMode.rationale,
+          rationale: experienceMode.reason,
           directives: experienceMode.directives,
+          priorityWidgets: experienceMode.priorityWidgets,
+          hiddenWidgets: experienceMode.hiddenWidgets,
+          actionFriction: experienceMode.actionFriction,
+          alertIntensity: experienceMode.alertIntensity,
         },
         behavior: {
           lateEntryPct,

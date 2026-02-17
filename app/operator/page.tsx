@@ -147,6 +147,10 @@ interface OperatorPresenceSummary {
     key: 'hunt' | 'focus' | 'risk_control' | 'learning' | 'passive_scan';
     label: string;
     rationale: string;
+    priorityWidgets?: string[];
+    hiddenWidgets?: string[];
+    actionFriction?: number;
+    alertIntensity?: number;
     directives: {
       showScanner: boolean;
       emphasizeRisk: boolean;
@@ -155,6 +159,24 @@ interface OperatorPresenceSummary {
       minimalSurface: boolean;
       quickActions: boolean;
       frictionLevel: 'low' | 'medium' | 'high';
+    };
+  };
+  controlMatrix?: {
+    matrixScore: number;
+    axes: {
+      market: { mode: string; score: number };
+      operator: { mode: string; score: number };
+      risk: { mode: string; score: number };
+      intent: { mode: string; score: number };
+    };
+    output: {
+      mode: string;
+      label: string;
+      reason: string;
+      priorityWidgets: string[];
+      hiddenWidgets: string[];
+      actionFriction: number;
+      alertIntensity: number;
     };
   };
   behavior?: {
@@ -759,6 +781,11 @@ export default function OperatorDashboardPage() {
             <div className="mb-2 rounded-md border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-xs">
               <div className="font-semibold text-cyan-200">{presence.experienceMode.label}</div>
               <div className="mt-1 text-cyan-100/90">{presence.experienceMode.rationale}</div>
+              {presence.controlMatrix ? (
+                <div className="mt-1 text-cyan-100/80">
+                  Matrix {formatNumber(presence.controlMatrix.matrixScore)} · Friction {formatNumber((presence.experienceMode.actionFriction ?? presence.controlMatrix.output.actionFriction) * 100)}% · Alert Intensity {formatNumber((presence.experienceMode.alertIntensity ?? presence.controlMatrix.output.alertIntensity) * 100)}%
+                </div>
+              ) : null}
               {presence?.adaptiveInputs ? (
                 <div className="mt-2 text-cyan-100/80">
                   Market: {presence.adaptiveInputs.marketReality.mode.replaceAll('_', ' ')} · Operator: {presence.adaptiveInputs.operatorReality.mode.replaceAll('_', ' ')} · Cognitive: {presence.adaptiveInputs.cognitiveLoad.level} · Intent: {presence.adaptiveInputs.intentDirection.replaceAll('_', ' ')}
