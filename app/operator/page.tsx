@@ -179,6 +179,31 @@ interface OperatorPresenceSummary {
       alertIntensity: number;
     };
   };
+  consciousnessLoop?: {
+    interpret: {
+      decisionContext: string;
+      suitability: 'high' | 'moderate' | 'low';
+    };
+    decide: {
+      confidence: number;
+      suggestedActions: string[];
+      decisionPacket: {
+        id: string;
+        symbol: string;
+        signalScore: number;
+        riskScore: number;
+        operatorFit?: number;
+        status: string;
+      };
+    };
+    learn: {
+      feedbackTag: 'validated' | 'ignored' | 'wrong_context' | 'timing_issue';
+      rationale: string;
+    };
+    adapt: {
+      adjustments: string[];
+    };
+  };
   behavior?: {
     lateEntryPct: number;
     earlyExitPct: number;
@@ -1052,6 +1077,26 @@ export default function OperatorDashboardPage() {
           {presence?.behavior ? (
             <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs text-slate-300">
               Behavior Quality {formatNumber(presence.behavior.behaviorQuality)}% · Late Entry {formatNumber(presence.behavior.lateEntryPct)}% · Early Exit {formatNumber(presence.behavior.earlyExitPct)}% · Ignored Setups {formatNumber(presence.behavior.ignoredSetupPct)}%
+            </div>
+          ) : null}
+
+          {presence?.consciousnessLoop ? (
+            <div className="mt-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+              <div className="font-semibold text-emerald-200">Consciousness Loop</div>
+              <div className="mt-1 text-emerald-100/90">
+                Interpret: {presence.consciousnessLoop.interpret.decisionContext} · Suitability {presence.consciousnessLoop.interpret.suitability.toUpperCase()}
+              </div>
+              <div className="mt-1 text-emerald-100/90">
+                Decide: {presence.consciousnessLoop.decide.decisionPacket.symbol} packet ({presence.consciousnessLoop.decide.decisionPacket.status}) · Confidence {formatNumber(presence.consciousnessLoop.decide.confidence)}
+              </div>
+              <div className="mt-1 text-emerald-100/90">
+                Learn: {presence.consciousnessLoop.learn.feedbackTag.replaceAll('_', ' ')} · {presence.consciousnessLoop.learn.rationale}
+              </div>
+              {presence.consciousnessLoop.adapt.adjustments.length ? (
+                <div className="mt-1 text-emerald-100/80">
+                  Adapt: {presence.consciousnessLoop.adapt.adjustments.slice(0, 3).join(' · ')}
+                </div>
+              ) : null}
             </div>
           ) : null}
 

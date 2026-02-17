@@ -9,6 +9,7 @@ import {
   type OperatorMode,
   type RiskMode,
 } from '@/lib/operator/adaptiveReality';
+import { runConsciousnessLoop } from '@/lib/operator/consciousnessLoop';
 
 function toFinite(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
@@ -458,6 +459,43 @@ export async function GET() {
       return item.operatorFit >= 55;
     });
 
+    const topSymbol = topAttention[0] || topAttentionRaw[0] || null;
+    const loop = runConsciousnessLoop({
+      symbol: topSymbol?.symbol || String(state?.current_focus || 'SPY').toUpperCase(),
+      market: {
+        mode: marketMode,
+        score: Number(marketScore.toFixed(1)),
+        volatilityState,
+      },
+      operator: {
+        mode: operatorMode,
+        score: Number(operatorScoreAxis.toFixed(1)),
+      },
+      risk: {
+        mode: riskMode,
+        score: Number(riskScoreAxis.toFixed(1)),
+      },
+      intent: {
+        mode: intentMode,
+        score: Number(intentScoreAxis.toFixed(1)),
+      },
+      setup: {
+        signalScore: Number(topSymbol?.confidence || marketScore),
+        operatorFit: Number(topSymbol?.operatorFit || 50),
+        confidence: Number(topSymbol?.confidence || marketScore),
+      },
+      behavior: {
+        quality: Number(behaviorQuality.toFixed(1)),
+        lateEntryPct,
+        earlyExitPct,
+        ignoredSetupPct,
+      },
+      automation: {
+        hasPendingTask: pendingTasks.length > 0,
+        hasTopAttention: topAttention.length > 0,
+      },
+    });
+
     const suggestedActions: Array<{ key: string; label: string; reason: string }> = [];
 
     if (experienceModeKey === 'risk_control') {
@@ -548,6 +586,7 @@ export async function GET() {
             alertIntensity: experienceMode.alertIntensity,
           },
         },
+        consciousnessLoop: loop,
         experienceMode: {
           key: experienceModeKey,
           label: experienceMode.label,
