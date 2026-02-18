@@ -158,13 +158,48 @@ export async function POST(req: NextRequest) {
 
     await ensureJournalSchema();
 
+    const incomingEntries = Array.isArray(entries) ? entries : [];
+
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
+      const existingIdRows = await client.query<{ id: number }>(
+        `SELECT id FROM journal_entries WHERE workspace_id = $1`,
+        [workspaceId]
+      );
+      const existingWorkspaceIds = new Set(existingIdRows.rows.map((row) => Number(row.id)));
+
+      const dedupedEntries = new Map<string, any>();
+      for (const rawEntry of incomingEntries) {
+        const numericId = Number(rawEntry?.id);
+        const canPreserveStableId =
+          Number.isInteger(numericId) &&
+          numericId > 0 &&
+          existingWorkspaceIds.has(numericId);
+
+        const dedupeKey = canPreserveStableId
+          ? `id:${numericId}`
+          : [
+              'synthetic',
+              String(rawEntry?.symbol || '').toUpperCase(),
+              String(rawEntry?.date || ''),
+              String(rawEntry?.side || ''),
+              String(rawEntry?.entryPrice || ''),
+              String(rawEntry?.quantity || ''),
+              String(rawEntry?.strategy || ''),
+              String(rawEntry?.setup || ''),
+            ].join(':');
+
+        dedupedEntries.set(dedupeKey, {
+          ...rawEntry,
+          __stableId: canPreserveStableId ? numericId : null,
+        });
+      }
+
       await client.query(`DELETE FROM journal_entries WHERE workspace_id = $1`, [workspaceId]);
 
-      for (const e of entries || []) {
-        const numericId = Number(e?.id);
-        const hasStableId = Number.isInteger(numericId) && numericId > 0;
+      for (const e of dedupedEntries.values()) {
+        const stableId = typeof e?.__stableId === 'number' ? e.__stableId : null;
+        const hasStableId = Number.isInteger(stableId) && stableId > 0;
 
         const columns = [
           'workspace_id', 'trade_date', 'symbol', 'side', 'trade_type', 'option_type', 'strike_price',
@@ -210,7 +245,7 @@ export async function POST(req: NextRequest) {
 
         if (hasStableId) {
           columns.unshift('id');
-          values.unshift(numericId);
+          values.unshift(stableId);
         }
 
         const placeholders = values.map((_, idx) => `$${idx + 1}`).join(', ');
