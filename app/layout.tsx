@@ -6,6 +6,7 @@ import CookieBanner from "../components/CookieBanner";
 import Header from "../components/Header";
 import AlertToast from "../components/AlertToast";
 import ErrorBoundary from "../components/ErrorBoundary";
+import OperatorHeartbeat from "../components/OperatorHeartbeat";
 import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased overflow-x-hidden">
         <ErrorBoundary>
           <AppUrlFixer />
+          <OperatorHeartbeat />
           <Header />
           <main className="msp-main-shell">{children}</main>
           <Footer />

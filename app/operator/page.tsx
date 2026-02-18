@@ -7,6 +7,7 @@ import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import FocusStrip from '@/components/operator/FocusStrip';
+import OperatorProposalRail from '@/components/operator/OperatorProposalRail';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
@@ -396,6 +397,43 @@ interface RiskGovernorDebugResponse {
   };
 }
 
+type OperatorProposalActionType = 'create_alert' | 'create_journal_draft' | 'create_plan_draft';
+
+interface OperatorProposal {
+  id: string;
+  rank: number;
+  packetId: string;
+  symbol: string | null;
+  assetClass: string | null;
+  status: string | null;
+  score: number;
+  confidence: number;
+  signalScore: number;
+  action: {
+    type: OperatorProposalActionType;
+    payload: Record<string, any>;
+    mode: 'draft' | 'commit';
+    requiresConfirm: boolean;
+  };
+  reasoning: {
+    focus: string | null;
+    riskEnvironment: string;
+    freshness: number;
+    packetFit: number;
+  };
+  cooldown: {
+    key: string;
+    expiresAt: string;
+  };
+  updatedAt: string;
+}
+
+interface OperatorProposalResponse {
+  success: boolean;
+  proposals: OperatorProposal[];
+  generatedAt: string;
+}
+
 function getPresenceFromApiResponse(payload: any): OperatorPresenceSummary | null {
   if (payload?.presenceV1?.presence) return payload.presenceV1.presence as OperatorPresenceSummary;
   if (payload?.presence) return payload.presence as OperatorPresenceSummary;
@@ -485,6 +523,11 @@ export default function OperatorDashboardPage() {
   const [heartbeatMonologue, setHeartbeatMonologue] = useState('Scanning…');
   const [heartbeatDrift, setHeartbeatDrift] = useState('Heartbeat initializing…');
   const [focusActionSaving, setFocusActionSaving] = useState<null | 'create_alert' | 'prepare_plan' | 'snooze' | 'pin'>(null);
+  const [proposals, setProposals] = useState<OperatorProposal[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
+  const [proposalFeedback, setProposalFeedback] = useState<string | null>(null);
+  const [dismissedProposalIds, setDismissedProposalIds] = useState<Record<string, true>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -569,6 +612,19 @@ export default function OperatorDashboardPage() {
       setRiskGovernorDebug(data);
     } finally {
       setRiskGovernorRefreshing(false);
+    }
+  };
+
+  const refreshProposals = async () => {
+    setProposalsLoading(true);
+    try {
+      const res = await fetch('/api/operator/proposals?limit=8', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as OperatorProposalResponse;
+      const next = Array.isArray(data?.proposals) ? data.proposals : [];
+      setProposals(next);
+    } finally {
+      setProposalsLoading(false);
     }
   };
 
@@ -680,6 +736,76 @@ export default function OperatorDashboardPage() {
     return res.ok;
   };
 
+  const executeProposal = async (proposal: OperatorProposal) => {
+    if (!proposal?.id) return;
+
+    if (proposal.action.type === 'create_alert' && riskGovernorDebug && !riskGovernorDebug.decisions.autoAlert.allowed) {
+      setProposalFeedback(riskGovernorDebug.decisions.autoAlert.reason || 'Risk governor blocked this auto-alert draft.');
+      return;
+    }
+
+    setProposalBusyId(proposal.id);
+    setProposalFeedback(null);
+    try {
+      const idempotencyKey = `operator_${proposal.id}_${proposal.cooldown.key}`.slice(0, 160);
+      const response = await fetch('/api/actions/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idempotencyKey,
+          proposalId: proposal.id,
+          source: 'operator_dashboard',
+          action: {
+            type: proposal.action.type,
+            mode: 'draft',
+            payload: {
+              ...proposal.action.payload,
+              packetId: proposal.packetId,
+              symbol: proposal.symbol,
+              assetClass: proposal.assetClass,
+            },
+          },
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setProposalFeedback(data?.error || 'Failed to execute proposal action.');
+        return;
+      }
+
+      await applyAttentionControl({
+        action: 'take_action',
+        symbol: proposal.symbol || undefined,
+        actionKey: proposal.action.type === 'create_plan_draft' ? 'prepare_plan' : proposal.action.type === 'create_journal_draft' ? 'journal' : 'create_alert',
+        reason: `Proposal executed: ${proposal.id}`,
+      });
+
+      setDismissedProposalIds((prev) => ({ ...prev, [proposal.id]: true }));
+      setProposalFeedback(`Draft created for ${proposal.symbol || 'focus symbol'} (${proposal.action.type.replaceAll('_', ' ')})`);
+      await Promise.all([refreshProposals(), refreshWorkflowToday(), refreshPresenceHeartbeat()]);
+    } finally {
+      setProposalBusyId(null);
+    }
+  };
+
+  const dismissProposal = async (proposal: OperatorProposal) => {
+    if (!proposal?.id) return;
+    setProposalBusyId(proposal.id);
+    try {
+      await applyAttentionControl({
+        action: 'take_action',
+        symbol: proposal.symbol || undefined,
+        actionKey: 'wait',
+        reason: `Proposal dismissed: ${proposal.id}`,
+      });
+      setDismissedProposalIds((prev) => ({ ...prev, [proposal.id]: true }));
+      setProposalFeedback(`Dismissed proposal for ${proposal.symbol || 'focus symbol'}`);
+    } finally {
+      setProposalBusyId(null);
+    }
+  };
+
   const handleFocusAction = async (action: 'create_alert' | 'prepare_plan' | 'snooze' | 'pin') => {
     const primary = presence?.neuralAttention?.focus?.primary || focusSignal?.symbol || null;
     if (!primary) return;
@@ -769,6 +895,10 @@ export default function OperatorDashboardPage() {
 
   const loopDecisionPacketId = presence?.consciousnessLoop?.decide?.decisionPacket?.id || null;
   const loopDecisionPacketRiskScore = presence?.consciousnessLoop?.decide?.decisionPacket?.riskScore;
+
+  useEffect(() => {
+    void refreshProposals();
+  }, []);
 
   useEffect(() => {
     if (!loopDecisionPacketId) {
@@ -1547,6 +1677,17 @@ export default function OperatorDashboardPage() {
               {presence.neuralAttention.nudges[0].text}
             </div>
           ) : null}
+        </div>
+
+        <div className="mb-4">
+          <OperatorProposalRail
+            source="operator_dashboard"
+            symbolFallback={presence?.neuralAttention?.focus?.primary || focusSignal?.symbol || null}
+            workflowPrefix="wf_operator"
+            limit={8}
+            maxVisible={4}
+            sticky
+          />
         </div>
 
         <section className="mb-4 rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-100">

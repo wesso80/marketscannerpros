@@ -17,6 +17,17 @@ export const revalidate = 0; // Disable ISR caching
 // v3.0 - Added cache mode support for reduced AV calls
 const SCANNER_VERSION = 'v3.0';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+const STABLECOIN_SYMBOLS = new Set([
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD', 'USDE'
+]);
+
+function normalizeCryptoSymbol(symbol: string): string {
+  return String(symbol || '').replace(/[-]?(USD|USDT)$/i, '').toUpperCase();
+}
+
+function isStablecoinSymbol(symbol: string): boolean {
+  return STABLECOIN_SYMBOLS.has(normalizeCryptoSymbol(symbol));
+}
 
 // Friendly handler for Alpha Vantage throttling/premium notices
 async function fetchAlphaJson(url: string, tag: string) {
@@ -229,7 +240,7 @@ function buildScannerLiquidityLevels(
 }
 
 export async function POST(req: NextRequest) {
-  console.info(`[scanner] VERSION: ${SCANNER_VERSION} - USDT dominance enabled`);
+  console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
   try {
     // Auth check - require valid session to use scanner
     const session = await getSessionFromCookie();
@@ -270,17 +281,23 @@ export async function POST(req: NextRequest) {
       ? inputSymbols
       : (type === "crypto" ? DEFAULT_CRYPTO : DEFAULT_EQUITIES);
 
-    // Alpha Vantage crypto symbols use format like BTC (just the base coin, remove -USD or USD suffix)
+    // Normalize crypto symbols and exclude stablecoins from scan universe.
     if (type === "crypto") {
-      symbolsToScan = symbolsToScan.map(s => {
-        // Special case: USDT itself should stay as USDT (for dominance tracking)
-        const upper = s.toUpperCase();
-        if (upper === 'USDT' || upper === 'USDC') {
-          return upper;
-        }
-        // Remove -USD, USD, -USDT, USDT suffixes; keep just the base symbol
-        return s.replace(/[-]?(USD|USDT)$/i, "").toUpperCase();
-      });
+      const originalCount = symbolsToScan.length;
+      symbolsToScan = symbolsToScan
+        .map((s) => normalizeCryptoSymbol(s))
+        .filter((s) => !!s && !isStablecoinSymbol(s));
+
+      if (symbolsToScan.length !== originalCount) {
+        console.info(`[scanner] filtered ${originalCount - symbolsToScan.length} stablecoin symbol(s) from request`);
+      }
+
+      if (symbolsToScan.length === 0) {
+        return NextResponse.json(
+          { error: 'No non-stable crypto symbols to scan' },
+          { status: 400 }
+        );
+      }
     }
     // Commodity symbols unsupported in this endpoint (no intraday); ignore mapping
 
@@ -492,12 +509,7 @@ export async function POST(req: NextRequest) {
     async function fetchCryptoCoinGecko(symbol: string, timeframe: string): Promise<Candle[]> {
       console.info(`[scanner] fetchCryptoCoinGecko called with symbol=${symbol}, timeframe=${timeframe}`);
       
-      // FIRST: Check for USDT and handle specially
       const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
-      if (baseSymbol === 'USDT') {
-        console.info(`[scanner v2.4] USDT detected - returning dominance data`);
-        return await fetchUSDTDominance(timeframe);
-      }
       
       const days = timeframe === '1d' || timeframe === 'daily'
         ? 30
@@ -506,7 +518,7 @@ export async function POST(req: NextRequest) {
           : 1;
       
       // Skip other stablecoins - they don't have trading pairs
-      const stablecoins = ['USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD'];
+      const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD', 'USDE'];
       if (stablecoins.includes(baseSymbol)) {
         console.warn(`[scanner v2.4] ${baseSymbol} is a stablecoin - skipping`);
         throw new Error(`${baseSymbol} is a stablecoin (pegged to $1) - technical analysis not applicable`);
@@ -1421,6 +1433,16 @@ export async function POST(req: NextRequest) {
 
     results.length = 0;
     results.push(...finalResults);
+
+    if (type === 'crypto') {
+      const beforeFilter = results.length;
+      const filtered = results.filter((item) => !isStablecoinSymbol(item.symbol));
+      if (filtered.length !== beforeFilter) {
+        console.info(`[scanner] removed ${beforeFilter - filtered.length} stablecoin result(s) before response`);
+      }
+      results.length = 0;
+      results.push(...filtered);
+    }
 
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0) {

@@ -164,7 +164,7 @@ async function upsertDelivery(args: {
     `INSERT INTO notification_deliveries (
       workspace_id, event_id, channel, recipient, status, provider_message_id, error, attempted_at, delivered_at, dedupe_key
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, NOW(), CASE WHEN $5 = 'sent' THEN NOW() ELSE NULL END, $8
+      $1, $2, $3, $4, $5::varchar, $6, $7, NOW(), CASE WHEN $5::varchar = 'sent'::varchar THEN NOW() ELSE NULL END, $8
     )
     ON CONFLICT (workspace_id, event_id, channel, recipient)
     DO UPDATE SET

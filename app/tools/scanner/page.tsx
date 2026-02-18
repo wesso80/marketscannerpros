@@ -12,11 +12,13 @@ import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisio
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
+import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
-import { writeOperatorState } from "@/lib/operatorState";
+import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
+import { candidateOutcomeFromConfidence, clampConfidence } from "@/lib/workflow/scoring";
 import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 
 type TimeframeOption = "1h" | "30m" | "1d";
@@ -582,8 +584,17 @@ function ScannerContent() {
   const [presenceState, setPresenceState] = useState<'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED'>('WATCHING');
   const [presenceMode, setPresenceMode] = useState<'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE'>('RANGE MODE');
   const [presenceUpdates, setPresenceUpdates] = useState<string[]>([]);
+  const [journalMonitorEnabled, setJournalMonitorEnabled] = useState(false);
+  const [journalMonitorThreshold, setJournalMonitorThreshold] = useState<number>(72);
+  const [journalMonitorCooldownMinutes, setJournalMonitorCooldownMinutes] = useState<number>(120);
+  const [journalMonitorAutoScanEnabled, setJournalMonitorAutoScanEnabled] = useState(false);
+  const [journalMonitorAutoScanSeconds, setJournalMonitorAutoScanSeconds] = useState<number>(180);
+  const [journalMonitorStatus, setJournalMonitorStatus] = useState<string | null>(null);
+  const [journalMonitorError, setJournalMonitorError] = useState<string | null>(null);
   const flowFetchAbortRef = React.useRef<AbortController | null>(null);
   const lastFlowSymbolRef = React.useRef<string | null>(null);
+  const journalMonitorLastLoggedRef = React.useRef<Record<string, number>>({});
+  const monitorAutoScanBusyRef = React.useRef(false);
   const previousPresenceRef = React.useRef<{
     state: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED';
     mode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE';
@@ -602,6 +613,31 @@ function ScannerContent() {
       if (rawMode === 'adaptive' || rawMode === 'momentum' || rawMode === 'structure' || rawMode === 'risk' || rawMode === 'flow') {
         setPersonalityMode(rawMode);
       }
+
+      const rawMonitorEnabled = window.localStorage.getItem('msp_scanner_journal_monitor_enabled_v1');
+      if (rawMonitorEnabled === 'true' || rawMonitorEnabled === 'false') {
+        setJournalMonitorEnabled(rawMonitorEnabled === 'true');
+      }
+
+      const rawMonitorThreshold = Number(window.localStorage.getItem('msp_scanner_journal_monitor_threshold_v1'));
+      if (Number.isFinite(rawMonitorThreshold)) {
+        setJournalMonitorThreshold(Math.max(50, Math.min(98, Math.round(rawMonitorThreshold))));
+      }
+
+      const rawMonitorCooldown = Number(window.localStorage.getItem('msp_scanner_journal_monitor_cooldown_v1'));
+      if (Number.isFinite(rawMonitorCooldown)) {
+        setJournalMonitorCooldownMinutes(Math.max(5, Math.min(24 * 60, Math.round(rawMonitorCooldown))));
+      }
+
+      const rawAutoScanEnabled = window.localStorage.getItem('msp_scanner_journal_monitor_autoscan_enabled_v1');
+      if (rawAutoScanEnabled === 'true' || rawAutoScanEnabled === 'false') {
+        setJournalMonitorAutoScanEnabled(rawAutoScanEnabled === 'true');
+      }
+
+      const rawAutoScanSeconds = Number(window.localStorage.getItem('msp_scanner_journal_monitor_autoscan_seconds_v1'));
+      if (Number.isFinite(rawAutoScanSeconds)) {
+        setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Math.round(rawAutoScanSeconds))));
+      }
     } catch {
       setPersonalitySignals(DEFAULT_PERSONALITY_SIGNALS);
     }
@@ -611,9 +647,22 @@ function ScannerContent() {
     try {
       window.localStorage.setItem('msp_scanner_personality_signals_v1', JSON.stringify(personalitySignals));
       window.localStorage.setItem('msp_scanner_personality_mode_v1', personalityMode);
+      window.localStorage.setItem('msp_scanner_journal_monitor_enabled_v1', String(journalMonitorEnabled));
+      window.localStorage.setItem('msp_scanner_journal_monitor_threshold_v1', String(journalMonitorThreshold));
+      window.localStorage.setItem('msp_scanner_journal_monitor_cooldown_v1', String(journalMonitorCooldownMinutes));
+      window.localStorage.setItem('msp_scanner_journal_monitor_autoscan_enabled_v1', String(journalMonitorAutoScanEnabled));
+      window.localStorage.setItem('msp_scanner_journal_monitor_autoscan_seconds_v1', String(journalMonitorAutoScanSeconds));
     } catch {
     }
-  }, [personalitySignals, personalityMode]);
+  }, [
+    personalitySignals,
+    personalityMode,
+    journalMonitorEnabled,
+    journalMonitorThreshold,
+    journalMonitorCooldownMinutes,
+    journalMonitorAutoScanEnabled,
+    journalMonitorAutoScanSeconds,
+  ]);
 
   useEffect(() => {
     const urlSymbol = searchParams.get('symbol');
@@ -820,7 +869,7 @@ function ScannerContent() {
   const emitScannerLifecycle = (scanResult: ScanResult, sourceModule: 'scanner.run' | 'scanner.bulk') => {
     const assetClass = toWorkflowAssetClass(assetType);
     const market = toDecisionPacketMarket(assetType);
-    const score = Math.max(1, Math.min(99, Math.round(scanResult.score ?? 50)));
+    const score = clampConfidence(scanResult.score ?? 50);
     const symbolKey = scanResult.symbol.toUpperCase();
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
     const workflowId = `wf_scanner_${symbolKey}_${dateKey}`;
@@ -886,7 +935,7 @@ function ScannerContent() {
       },
     });
 
-    const candidateOutcome: CandidateEvaluation['result'] = score >= 70 ? 'pass' : score >= 55 ? 'watch' : 'fail';
+    const candidateOutcome: CandidateEvaluation['result'] = candidateOutcomeFromConfidence(score);
     const candidateEvent = createWorkflowEvent<CandidateEvaluation & { decision_packet: DecisionPacket }>({
       eventType: 'candidate.created',
       workflowId,
@@ -1121,6 +1170,56 @@ function ScannerContent() {
         // Create new object reference to force React re-render
         setResult({ ...scanResult });
         emitScannerLifecycle(scanResult, 'scanner.run');
+
+        if (journalMonitorEnabled) {
+          const score = clampConfidence(scanResult.score ?? 50);
+          const direction = scanResult.direction || (score >= 60 ? 'bullish' : score <= 40 ? 'bearish' : 'neutral');
+          const symbol = String(scanResult.symbol || '').toUpperCase();
+          const dedupeKey = `${assetType}:${symbol}:${timeframe}`;
+          const now = Date.now();
+          const lastLoggedAt = journalMonitorLastLoggedRef.current[dedupeKey] || 0;
+          const cooldownMs = Math.max(5, journalMonitorCooldownMinutes) * 60 * 1000;
+
+          if (symbol && direction !== 'neutral' && score >= journalMonitorThreshold && now - lastLoggedAt >= cooldownMs) {
+            const operatorState = readOperatorState();
+            const monitorConditionType = `scanner_monitor_${assetType}`;
+            const monitorConditionMet = `${direction.toUpperCase()}_EDGE_${score}`;
+
+            fetch('/api/journal/auto-log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                symbol,
+                conditionType: monitorConditionType,
+                conditionMet: monitorConditionMet,
+                triggerPrice: scanResult.price,
+                triggeredAt: new Date().toISOString(),
+                source: 'scanner_background_monitor',
+                operatorMode: operatorState.mode,
+                operatorBias: operatorState.bias,
+                operatorRisk: operatorState.risk,
+                operatorEdge: operatorState.edge,
+                marketRegime: direction === 'neutral' ? 'Range' : 'Trend',
+                marketMood: operatorState.action === 'EXECUTE' ? 'Action Ready' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
+                derivativesBias: operatorState.bias,
+                sectorStrength: operatorState.next,
+              }),
+            })
+              .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data?.error) {
+                  throw new Error(data?.error || 'Auto-log request failed');
+                }
+                journalMonitorLastLoggedRef.current[dedupeKey] = now;
+                setJournalMonitorError(null);
+                setJournalMonitorStatus(`Auto-logged ${symbol} at score ${score}`);
+              })
+              .catch((error: any) => {
+                setJournalMonitorError(error?.message || 'Auto-log failed');
+              });
+          }
+        }
+
         setScannerCollapsed(true);
         setOrientationCollapsed(true);
         setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
@@ -1136,6 +1235,23 @@ function ScannerContent() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!journalMonitorEnabled || !journalMonitorAutoScanEnabled) return;
+    const intervalMs = Math.max(30, Math.min(3600, journalMonitorAutoScanSeconds)) * 1000;
+
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      if (loading) return;
+      if (monitorAutoScanBusyRef.current) return;
+      monitorAutoScanBusyRef.current = true;
+      void runScan().finally(() => {
+        monitorAutoScanBusyRef.current = false;
+      });
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [journalMonitorEnabled, journalMonitorAutoScanEnabled, journalMonitorAutoScanSeconds, ticker, timeframe, assetType, loading]);
 
   const quickRecoverySymbols = QUICK_PICKS[assetType].slice(0, 4);
 
@@ -2164,6 +2280,126 @@ function ScannerContent() {
                 Minimize Scanner
               </button>
             )}
+          </div>
+
+          <div style={{
+            marginTop: '1rem',
+            padding: '0.9rem',
+            background: 'var(--msp-panel-2)',
+            border: '1px solid var(--msp-border)',
+            borderRadius: '10px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+              <div style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.88rem' }}>Journal Monitor (Auto-draft on threshold)</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.82rem' }}>
+                <input
+                  type="checkbox"
+                  checked={journalMonitorEnabled}
+                  onChange={(e) => setJournalMonitorEnabled(e.target.checked)}
+                />
+                Enabled
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '0.6rem' }}>
+              <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
+                <span>Score Threshold</span>
+                <input
+                  type="number"
+                  min={50}
+                  max={98}
+                  value={journalMonitorThreshold}
+                  onChange={(e) => {
+                    const value = Number(e.target.value || 0);
+                    setJournalMonitorThreshold(Math.max(50, Math.min(98, Number.isFinite(value) ? Math.round(value) : 72)));
+                  }}
+                  style={{
+                    background: 'var(--msp-panel)',
+                    border: '1px solid var(--msp-border)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    color: 'var(--msp-text)',
+                  }}
+                />
+              </label>
+
+              <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
+                <span>Cooldown (minutes)</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={1440}
+                  value={journalMonitorCooldownMinutes}
+                  onChange={(e) => {
+                    const value = Number(e.target.value || 0);
+                    setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number.isFinite(value) ? Math.round(value) : 120)));
+                  }}
+                  style={{
+                    background: 'var(--msp-panel)',
+                    border: '1px solid var(--msp-border)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    color: 'var(--msp-text)',
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
+                <input
+                  type="checkbox"
+                  checked={journalMonitorAutoScanEnabled}
+                  onChange={(e) => setJournalMonitorAutoScanEnabled(e.target.checked)}
+                />
+                Auto-rescan while page open
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
+                Every
+                <input
+                  type="number"
+                  min={30}
+                  max={3600}
+                  value={journalMonitorAutoScanSeconds}
+                  onChange={(e) => {
+                    const value = Number(e.target.value || 0);
+                    setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number.isFinite(value) ? Math.round(value) : 180)));
+                  }}
+                  style={{
+                    width: '88px',
+                    background: 'var(--msp-panel)',
+                    border: '1px solid var(--msp-border)',
+                    borderRadius: '8px',
+                    padding: '6px 8px',
+                    color: 'var(--msp-text)',
+                  }}
+                />
+                sec
+              </label>
+            </div>
+
+            <div style={{ fontSize: '0.75rem', color: 'var(--msp-text-faint)' }}>
+              Creates journal drafts only when score ≥ threshold, direction is not neutral, and cooldown has passed for this symbol/timeframe.
+            </div>
+            {journalMonitorStatus && (
+              <div style={{ marginTop: '6px', color: 'var(--msp-bull)', fontSize: '0.75rem' }}>{journalMonitorStatus}</div>
+            )}
+            {journalMonitorError && (
+              <div style={{ marginTop: '6px', color: 'var(--msp-bear)', fontSize: '0.75rem' }}>{journalMonitorError}</div>
+            )}
+          </div>
+
+          <div style={{ marginTop: '1rem' }}>
+            <OperatorProposalRail
+              source="scanner_page"
+              symbolFallback={ticker}
+              timeframe={timeframe}
+              assetClass={assetType}
+              workflowPrefix="wf_scanner"
+              limit={6}
+              maxVisible={3}
+              compact
+            />
           </div>
         </div>
 

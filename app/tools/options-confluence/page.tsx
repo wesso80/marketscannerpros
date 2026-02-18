@@ -19,9 +19,11 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import Pill from "@/components/terminal/Pill";
+import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { writeOperatorState } from "@/lib/operatorState";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
+import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
 import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -639,21 +641,15 @@ export default function OptionsConfluenceScanner() {
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
     const workflowId = `wf_options_${symbolKey}_${dateKey}`;
 
-    const confidence = Math.max(
-      1,
-      Math.min(
-        99,
-        Math.round(
-          result.compositeScore?.confidence
-            ?? (result.signalStrength === 'strong'
-              ? 78
-              : result.signalStrength === 'moderate'
-              ? 62
-              : result.signalStrength === 'weak'
-              ? 45
-              : 50)
-        )
-      )
+    const confidence = clampConfidence(
+      result.compositeScore?.confidence
+        ?? (result.signalStrength === 'strong'
+          ? 78
+          : result.signalStrength === 'moderate'
+          ? 62
+          : result.signalStrength === 'weak'
+          ? 45
+          : 50)
     );
 
     const eventKey = `${workflowId}:${symbolKey}:${selectedTF}:${confidence}:${result.direction}`;
@@ -685,11 +681,7 @@ export default function OptionsConfluenceScanner() {
       Math.min(99, Math.round((result.expectedMove?.selectedExpiryPercent ?? 2) * 20))
     );
 
-    const candidateOutcome: CandidateEvaluation['result'] = confidence >= 70
-      ? 'pass'
-      : confidence >= 55
-      ? 'watch'
-      : 'fail';
+    const candidateOutcome: CandidateEvaluation['result'] = candidateOutcomeFromConfidence(confidence);
 
     const decisionPacket = createDecisionPacketFromScan({
       symbol: symbolKey,
@@ -730,7 +722,7 @@ export default function OptionsConfluenceScanner() {
         signal_type: 'options_confluence',
         direction,
         confidence,
-        quality_tier: confidence >= 75 ? 'A' : confidence >= 62 ? 'B' : confidence >= 48 ? 'C' : 'D',
+        quality_tier: qualityTierFromConfidence(confidence),
         source: {
           module: 'options_confluence',
           submodule: 'scan',
@@ -1585,6 +1577,7 @@ export default function OptionsConfluenceScanner() {
     } catch {
     }
   }, [operatorViewMode, operatorModeHydrated]);
+
   const riskGovernorAllows = !!result && (
     tradePermission === 'ALLOWED' &&
     !result.institutionalFilter?.noTrade &&
@@ -2080,6 +2073,19 @@ export default function OptionsConfluenceScanner() {
               Advanced
             </button>
           </div>
+        </div>
+
+        <div className="mb-2">
+          <OperatorProposalRail
+            source="options_confluence_page"
+            symbolFallback={symbol}
+            timeframe={selectedTF}
+            assetClass="equity"
+            workflowPrefix="wf_options"
+            limit={6}
+            maxVisible={3}
+            compact
+          />
         </div>
 
         <div className="options-form-controls mb-6 flex flex-wrap justify-center gap-3">
