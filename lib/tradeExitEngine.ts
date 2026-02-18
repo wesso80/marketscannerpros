@@ -43,6 +43,18 @@ export interface TradeState {
 
   exit_score?: number;
   time_elapsed_pct?: number | null;
+
+  adaptive_policy?: {
+    edge_floor_override?: number;
+    edge_drop_threshold_override?: number;
+    scale_out_at_r?: number;
+    trail_at_r?: number;
+    close_at_r?: number;
+    no_progress_time_pct?: number;
+    no_progress_r_threshold?: number;
+    expiry_time_pct?: number;
+    expiry_r_threshold?: number;
+  };
 }
 
 function toFinite(value: unknown, fallback = 0): number {
@@ -89,6 +101,8 @@ export function evaluateExit(input: TradeState): TradeState {
   let edgeDecayScore = 0;
   let timeObjectiveScore = 0;
 
+  const adaptive = ts.adaptive_policy || {};
+
   // -------------------------
   // LAYER 1: HARD RISK
   // -------------------------
@@ -123,13 +137,17 @@ export function evaluateExit(input: TradeState): TradeState {
   // -------------------------
   // LAYER 2: EDGE DECAY
   // -------------------------
-  const regimeExitFloor = getRegimeEdgeFloor(ts.regime);
+  const regimeExitFloor = Number.isFinite(adaptive.edge_floor_override)
+    ? Math.max(25, Math.min(80, Number(adaptive.edge_floor_override)))
+    : getRegimeEdgeFloor(ts.regime);
   const edgeTooLow = ts.edge_score < regimeExitFloor;
   const confidenceCollapse = confidenceDrop >= 20 && ts.momentum_state !== 'EXPANDING';
   const flowFlip = flowAgainstPosition(ts.side, ts.flow_bias);
   const momentumFailure = ts.momentum_state === 'FAILING';
 
-  const edgeDropThreshold = ts.regime === 'TREND' ? 20 : ts.regime === 'TRANSITION' ? 18 : 15;
+  const edgeDropThreshold = Number.isFinite(adaptive.edge_drop_threshold_override)
+    ? Math.max(8, Math.min(35, Number(adaptive.edge_drop_threshold_override)))
+    : (ts.regime === 'TREND' ? 20 : ts.regime === 'TRANSITION' ? 18 : 15);
   const edgeDroppedFromPeak = edgeDropFromPeak >= edgeDropThreshold;
 
   if (edgeTooLow || confidenceCollapse || flowFlip || momentumFailure || edgeDroppedFromPeak) {
@@ -157,58 +175,80 @@ export function evaluateExit(input: TradeState): TradeState {
   // -------------------------
   const targetHit = ts.targets.some((target) => ts.side === 'LONG' ? ts.mark_price >= target : ts.mark_price <= target);
 
-  if (ts.unrealized_R >= 3 && ts.momentum_state !== 'EXPANDING') {
+  const scaleOutAtR = Number.isFinite(adaptive.scale_out_at_r)
+    ? Math.max(0.5, Math.min(5, Number(adaptive.scale_out_at_r)))
+    : 2;
+  const trailAtR = Number.isFinite(adaptive.trail_at_r)
+    ? Math.max(0.25, Math.min(3, Number(adaptive.trail_at_r)))
+    : 1;
+  const closeAtR = Number.isFinite(adaptive.close_at_r)
+    ? Math.max(1, Math.min(8, Number(adaptive.close_at_r)))
+    : 3;
+  const noProgressTimePct = Number.isFinite(adaptive.no_progress_time_pct)
+    ? Math.max(0.3, Math.min(0.95, Number(adaptive.no_progress_time_pct)))
+    : 0.6;
+  const noProgressRThreshold = Number.isFinite(adaptive.no_progress_r_threshold)
+    ? Math.max(-0.5, Math.min(2, Number(adaptive.no_progress_r_threshold)))
+    : 0.5;
+  const expiryTimePct = Number.isFinite(adaptive.expiry_time_pct)
+    ? Math.max(0.7, Math.min(2, Number(adaptive.expiry_time_pct)))
+    : 1.0;
+  const expiryRThreshold = Number.isFinite(adaptive.expiry_r_threshold)
+    ? Math.max(0, Math.min(3, Number(adaptive.expiry_r_threshold)))
+    : 1.0;
+
+  if (ts.unrealized_R >= closeAtR && ts.momentum_state !== 'EXPANDING') {
     timeObjectiveScore = 10;
     return {
       ...ts,
       exit_reason: 'TIME_OBJECTIVE',
       exit_action: 'CLOSE',
-      exit_detail: '3R achieved and momentum is fading.',
+      exit_detail: `${round(closeAtR, 2)}R achieved and momentum is fading.`,
       exit_score: timeObjectiveScore,
       time_elapsed_pct: timeElapsedPct == null ? null : round(timeElapsedPct, 4),
     };
   }
 
-  if (ts.unrealized_R >= 2 || targetHit) {
+  if (ts.unrealized_R >= scaleOutAtR || targetHit) {
     timeObjectiveScore = 10;
     return {
       ...ts,
       exit_reason: 'TIME_OBJECTIVE',
       exit_action: 'SCALE_OUT',
-      exit_detail: targetHit ? 'Target hit — scale out by rule.' : '2R achieved — scale out by rule.',
+      exit_detail: targetHit ? 'Target hit — scale out by rule.' : `${round(scaleOutAtR, 2)}R achieved — scale out by rule.`,
       exit_score: timeObjectiveScore,
       time_elapsed_pct: timeElapsedPct == null ? null : round(timeElapsedPct, 4),
     };
   }
 
-  if (ts.unrealized_R >= 1 && ts.permission !== 'ALLOW') {
+  if (ts.unrealized_R >= trailAtR && ts.permission !== 'ALLOW') {
     timeObjectiveScore = 10;
     return {
       ...ts,
       exit_reason: 'TIME_OBJECTIVE',
       exit_action: 'TRAIL_STOP',
       next_stop: ts.entry_price,
-      exit_detail: '1R achieved under CAUTION/BLOCK risk posture — trail to breakeven.',
+      exit_detail: `${round(trailAtR, 2)}R achieved under CAUTION/BLOCK risk posture — trail to breakeven.`,
       exit_score: timeObjectiveScore,
       time_elapsed_pct: timeElapsedPct == null ? null : round(timeElapsedPct, 4),
     };
   }
 
   if (timeElapsedPct != null) {
-    if (timeElapsedPct > 0.6 && ts.unrealized_R < 0.5) {
+    if (timeElapsedPct > noProgressTimePct && ts.unrealized_R < noProgressRThreshold) {
       timeObjectiveScore = 10;
       return {
         ...ts,
         exit_reason: 'TIME_OBJECTIVE',
         exit_action: 'CLOSE',
-        exit_detail: 'Time stop: no progress by 60% of expected window.',
+        exit_detail: `Time stop: no progress by ${Math.round(noProgressTimePct * 100)}% of expected window.`,
         exit_score: timeObjectiveScore,
         time_elapsed_pct: round(timeElapsedPct, 4),
       };
     }
 
     const noBreakout = ts.structure_state !== 'IMPROVING';
-    if (timeElapsedPct > 1.0 && (ts.unrealized_R < 1.0 || noBreakout)) {
+    if (timeElapsedPct > expiryTimePct && (ts.unrealized_R < expiryRThreshold || noBreakout)) {
       timeObjectiveScore = 10;
       return {
         ...ts,

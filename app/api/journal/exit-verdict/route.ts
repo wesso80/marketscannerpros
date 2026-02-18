@@ -26,6 +26,12 @@ type DecisionPacketRow = {
   updated_at: string;
 };
 
+type ClosedTradePerformanceRow = {
+  r_multiple: string | number | null;
+  pl_percent: string | number | null;
+  outcome: string | null;
+};
+
 function parseNumber(value: unknown): number | null {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -57,6 +63,92 @@ function parseTargetFromJson(targets: unknown): number | null {
     if (direct != null) return direct;
   }
   return null;
+}
+
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) return (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted[mid];
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function deriveAdaptivePolicy(rows: ClosedTradePerformanceRow[], regime: Regime) {
+  const validR = rows
+    .map((row) => parseNumber(row.r_multiple))
+    .filter((value): value is number => value != null && Number.isFinite(value));
+
+  const wins = rows.filter((row) => {
+    const outcome = String(row.outcome || '').toLowerCase();
+    if (outcome === 'win') return true;
+    if (outcome === 'loss') return false;
+    const r = parseNumber(row.r_multiple);
+    return r != null ? r > 0 : false;
+  }).length;
+
+  const sampleSize = rows.length;
+  const winRate = sampleSize > 0 ? wins / sampleSize : 0;
+  const avgR = validR.length > 0 ? validR.reduce((sum, value) => sum + value, 0) / validR.length : 0;
+  const medianR = validR.length > 0 ? median(validR) : 0;
+
+  const baseEdgeFloor = regime === 'TREND' ? 50 : regime === 'TRANSITION' ? 45 : 40;
+  let edgeFloorAdjust = 0;
+  if (sampleSize >= 12) {
+    if (winRate < 0.42 || medianR < 0.2) edgeFloorAdjust = 4;
+    else if (winRate > 0.58 && avgR > 0.6) edgeFloorAdjust = -3;
+  }
+
+  const baseEdgeDropThreshold = regime === 'TREND' ? 20 : regime === 'TRANSITION' ? 18 : 15;
+  const edgeDropAdjust = sampleSize >= 12
+    ? (winRate > 0.6 ? 3 : winRate < 0.42 ? -2 : 0)
+    : 0;
+
+  const scaleOutAtR = sampleSize >= 10
+    ? (avgR > 1.0 ? 2.5 : avgR < 0.25 ? 1.6 : 2.0)
+    : 2.0;
+  const closeAtR = sampleSize >= 10
+    ? (avgR > 1.2 ? 3.5 : avgR < 0.2 ? 2.5 : 3.0)
+    : 3.0;
+  const trailAtR = sampleSize >= 10
+    ? (winRate < 0.45 ? 0.8 : winRate > 0.6 ? 1.15 : 1.0)
+    : 1.0;
+
+  const noProgressTimePct = sampleSize >= 12
+    ? (winRate < 0.45 ? 0.5 : winRate > 0.6 ? 0.72 : 0.6)
+    : 0.6;
+  const noProgressRThreshold = sampleSize >= 12
+    ? (avgR < 0.25 ? 0.3 : 0.5)
+    : 0.5;
+  const expiryTimePct = sampleSize >= 12
+    ? (winRate > 0.6 ? 1.2 : winRate < 0.45 ? 0.9 : 1.0)
+    : 1.0;
+  const expiryRThreshold = sampleSize >= 12
+    ? (avgR > 0.8 ? 1.2 : avgR < 0.2 ? 0.8 : 1.0)
+    : 1.0;
+
+  return {
+    policy: {
+      edge_floor_override: clamp(baseEdgeFloor + edgeFloorAdjust, 30, 80),
+      edge_drop_threshold_override: clamp(baseEdgeDropThreshold + edgeDropAdjust, 8, 35),
+      scale_out_at_r: clamp(scaleOutAtR, 0.5, 5),
+      trail_at_r: clamp(trailAtR, 0.25, 3),
+      close_at_r: clamp(closeAtR, 1, 8),
+      no_progress_time_pct: clamp(noProgressTimePct, 0.3, 0.95),
+      no_progress_r_threshold: clamp(noProgressRThreshold, -0.5, 2),
+      expiry_time_pct: clamp(expiryTimePct, 0.7, 2),
+      expiry_r_threshold: clamp(expiryRThreshold, 0, 3),
+    },
+    learning: {
+      sampleSize,
+      winRate,
+      avgR,
+      medianR,
+    },
+  };
 }
 
 async function getLatestPrice(symbol: string): Promise<{ price: number | null; source: string }> {
@@ -207,6 +299,21 @@ export async function GET(req: NextRequest) {
       ? (String(regimeFromTag).split('_')[1].toUpperCase() as Regime)
       : 'TRANSITION';
 
+    const closedRows = await q<ClosedTradePerformanceRow>(
+      `SELECT r_multiple, pl_percent, outcome
+         FROM journal_entries
+        WHERE workspace_id = $1
+          AND symbol = $2
+          AND is_open = false
+          AND outcome IS NOT NULL
+          AND outcome <> 'open'
+        ORDER BY COALESCE(exit_date, trade_date) DESC
+        LIMIT 120`,
+      [session.workspaceId, entry.symbol]
+    );
+
+    const adaptive = deriveAdaptivePolicy(closedRows, regime);
+
     const tradeState: TradeState = {
       trade_id: `trade_${entry.id}`,
       symbol: entry.symbol,
@@ -233,6 +340,7 @@ export async function GET(req: NextRequest) {
       exit_reason: 'NONE',
       exit_action: 'HOLD',
       exit_detail: 'Pending evaluation',
+      adaptive_policy: adaptive.policy,
     };
 
     const verdict = evaluateExit(tradeState);
@@ -253,6 +361,7 @@ export async function GET(req: NextRequest) {
         shouldClose,
         exitScore: verdict.exit_score ?? 0,
         timeElapsedPct: verdict.time_elapsed_pct ?? null,
+        learning: adaptive.learning,
         state: {
           edgeScore: verdict.edge_score,
           regime: verdict.regime,

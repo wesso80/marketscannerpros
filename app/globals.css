@@ -50,6 +50,28 @@ html, body {
   max-width: 100vw;
 }
 
+/* Global app shell */
+.msp-main-shell {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ultra-wide desktop readability rail */
+@media (min-width: 1700px) {
+  .msp-main-shell {
+    max-width: 1560px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .msp-main-shell p,
+  .msp-main-shell li {
+    max-width: 95ch;
+  }
+}
+
 /* Options page container - prevent overflow */
 .options-page-container {
   width: 100%;

@@ -28,6 +28,7 @@ interface NotificationPrefs {
 
 export default function AccountPage() {
   const { tier, isLoading, isLoggedIn } = useUserTier();
+  const [isMobile, setIsMobile] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
@@ -44,6 +45,13 @@ export default function AccountPage() {
   const [prefsError, setPrefsError] = useState<string | null>(null);
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
     // Get user info
     fetch("/api/me", { credentials: "include" })
       .then((res) => res.json())
@@ -61,6 +69,10 @@ export default function AccountPage() {
         }
       })
       .catch(() => {});
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -137,19 +149,19 @@ export default function AccountPage() {
       {/* Header */}
       <div style={{ 
         borderBottom: "1px solid rgba(51,65,85,0.5)", 
-        padding: "20px",
+        padding: isMobile ? "14px" : "20px",
         background: "rgba(15,23,42,0.8)"
       }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0 }}>
           <Link href="/tools" style={{ color: "#94a3b8", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
             ← Back to Tools
           </Link>
-          <h1 style={{ fontSize: 24, fontWeight: 700 }}>Account Settings</h1>
-          <div style={{ width: 100 }}></div>
+          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: 0 }}>Account Settings</h1>
+          {!isMobile && <div style={{ width: 100 }}></div>}
         </div>
       </div>
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px" }}>
+      <main style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "24px 14px" : "40px 20px" }}>
         <PageHowItWorks route="/account" />
 
         <AdaptivePersonalityCard
@@ -196,10 +208,10 @@ export default function AccountPage() {
               background: "var(--msp-card)",
               borderRadius: 16,
               border: "1px solid rgba(51,65,85,0.8)",
-              padding: 32,
+              padding: isMobile ? 18 : 32,
               boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
             }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+              <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
                 <span>📊</span> Subscription Status
               </h2>
               
@@ -258,9 +270,9 @@ export default function AccountPage() {
               background: "var(--msp-card)",
               borderRadius: 16,
               border: "1px solid rgba(51,65,85,0.8)",
-              padding: 32
+              padding: isMobile ? 18 : 32
             }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
+              <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
                 <span>✨</span> Your Plan Features
               </h2>
               
@@ -330,9 +342,9 @@ export default function AccountPage() {
                 background: "var(--msp-panel)",
                 borderRadius: 16,
                 border: "1px solid var(--msp-border)",
-                padding: 32
+                padding: isMobile ? 18 : 32
               }}>
-                <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
                   <span>🎁</span> Refer a Friend
                 </h2>
                 <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
@@ -344,7 +356,7 @@ export default function AccountPage() {
                   <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 8 }}>
                     Your Referral Link
                   </label>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
                     <input
                       type="text"
                       readOnly
@@ -512,7 +524,7 @@ export default function AccountPage() {
               background: "rgba(15,23,42,0.5)",
               borderRadius: 16,
               border: "1px solid rgba(51,65,85,0.5)",
-              padding: 24,
+              padding: isMobile ? 16 : 24,
               textAlign: "center"
             }}>
               <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
@@ -528,7 +540,7 @@ export default function AccountPage() {
               background: "rgba(239,68,68,0.05)",
               borderRadius: 16,
               border: "1px solid rgba(239,68,68,0.2)",
-              padding: 24,
+              padding: isMobile ? 16 : 24,
             }}>
               <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 10, color: "#f87171" }}>
                 <span>🗑️</span> Data Management

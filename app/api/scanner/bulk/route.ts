@@ -657,7 +657,7 @@ interface DerivativesData {
   longShortRatio?: number;     // L/S ratio
 }
 
-type BulkScanMode = 'deep' | 'light';
+type BulkScanMode = 'deep' | 'light' | 'hybrid';
 
 const STABLECOINS = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
 const LIGHT_SCAN_PER_PAGE = 250;
@@ -854,6 +854,7 @@ async function fetchAlphaBulkQuotes(
 
   const batchSize = 100;
   let apiCallsUsed = 0;
+  let bulkUnavailable = false;
 
   for (let index = 0; index < symbols.length; index += batchSize) {
     if (apiCallsUsed >= maxApiCalls) break;
@@ -867,10 +868,16 @@ async function fetchAlphaBulkQuotes(
       apiCallsUsed += 1;
 
       if (data?.Note || data?.Information || data?.['Error Message']) {
+        bulkUnavailable = true;
         break;
       }
 
       const rows = Array.isArray(data?.data) ? data.data : [];
+      if (rows.length === 0) {
+        bulkUnavailable = true;
+        break;
+      }
+
       for (const row of rows) {
         const ticker = normalizeTicker(row?.['01. symbol'] || row?.symbol);
         if (!ticker) continue;
@@ -878,6 +885,34 @@ async function fetchAlphaBulkQuotes(
       }
     } catch {
       apiCallsUsed += 1;
+      bulkUnavailable = true;
+      break;
+    }
+  }
+
+  if (priceMap.size === 0 && bulkUnavailable && apiCallsUsed < maxApiCalls) {
+    const maxFallbackSymbols = Math.min(symbols.length, 40);
+    for (let i = 0; i < maxFallbackSymbols && apiCallsUsed < maxApiCalls; i += 1) {
+      const symbol = symbols[i];
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        const data = await response.json();
+        apiCallsUsed += 1;
+
+        if (data?.Note || data?.Information || data?.['Error Message']) {
+          continue;
+        }
+
+        const quote = data?.['Global Quote'];
+        const ticker = normalizeTicker(quote?.['01. symbol'] || symbol);
+        if (!ticker) continue;
+        if (quote && Object.keys(quote).length > 0) {
+          priceMap.set(ticker, quote);
+        }
+      } catch {
+        apiCallsUsed += 1;
+      }
     }
   }
 
@@ -1141,7 +1176,13 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { type, timeframe = '1d' } = body; // 'equity' or 'crypto', timeframe: '15m', '30m', '1h', '1d'
-    const mode: BulkScanMode = body?.mode === 'light' ? 'light' : 'deep';
+    const requestedMode = String(body?.mode || '').toLowerCase();
+    const mode: BulkScanMode = requestedMode === 'hybrid'
+      ? 'hybrid'
+      : requestedMode === 'light'
+        ? 'light'
+        : 'deep';
+    const isLightMode = mode === 'light' || mode === 'hybrid';
     const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
     const universeSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
       ? Math.floor(universeSizeRaw)
@@ -1154,7 +1195,7 @@ export async function POST(req: NextRequest) {
     const validTimeframes = ['15m', '30m', '1h', '1d'];
     const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
 
-    if (type === 'crypto' && mode === 'light') {
+    if (type === 'crypto' && isLightMode) {
       console.log(`[bulk-scan/light] Scanning up to ${universeSize} crypto assets using market-data ranking...`);
       const lightResult = await runLightCryptoScan(universeSize, startTime, selectedTimeframe);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -1181,7 +1222,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (type === 'equity' && mode === 'light') {
+    if (type === 'equity' && isLightMode) {
       console.log(`[bulk-scan/light] Scanning up to ${universeSize} equities using hybrid movers + bulk quotes...`);
       const lightResult = await runLightEquityScan(startTime, selectedTimeframe, universeSize);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -1195,7 +1236,7 @@ export async function POST(req: NextRequest) {
         success: true,
         type,
         timeframe: selectedTimeframe,
-        mode,
+        mode: isLightMode ? 'hybrid' : mode,
         scanned: lightResult.scanned,
         duration: `${duration}s`,
         topPicks: institutional.topPicks,

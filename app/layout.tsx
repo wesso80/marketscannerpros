@@ -67,7 +67,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <AppUrlFixer />
           <Header />
-          <main>{children}</main>
+          <main className="msp-main-shell">{children}</main>
           <Footer />
           <CookieBanner />
           <AlertToast />

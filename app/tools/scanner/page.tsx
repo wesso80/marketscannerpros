@@ -557,7 +557,7 @@ function ScannerContent() {
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
     timeframe: string;
-    mode?: 'deep' | 'light';
+    mode?: 'deep' | 'light' | 'hybrid';
     sourceCoinsFetched?: number;
     sourceSymbols?: number;
     apiCallsUsed?: number;
@@ -741,7 +741,7 @@ function ScannerContent() {
         }
       } else {
         const resolvedMode = overrides?.mode ?? bulkEquityScanMode;
-        payload.mode = resolvedMode;
+        payload.mode = resolvedMode === 'light' ? 'hybrid' : resolvedMode;
         if (resolvedMode === 'light') {
           payload.universeSize = 500;
         }
@@ -1600,13 +1600,13 @@ function ScannerContent() {
                 </h4>
                 <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
                   {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
-                  {bulkScanResults.type === 'crypto' && bulkScanResults.mode === 'light' && bulkScanResults.sourceCoinsFetched
+                  {bulkScanResults.type === 'crypto' && (bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && bulkScanResults.sourceCoinsFetched
                     ? ` • source ${bulkScanResults.sourceCoinsFetched}`
                     : ''}
-                  {bulkScanResults.type === 'equity' && bulkScanResults.mode === 'light' && bulkScanResults.sourceSymbols
+                  {bulkScanResults.type === 'equity' && (bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && bulkScanResults.sourceSymbols
                     ? ` • source ${bulkScanResults.sourceSymbols}`
                     : ''}
-                  {bulkScanResults.mode === 'light' && Number.isFinite(bulkScanResults.apiCallsUsed) && Number.isFinite(bulkScanResults.apiCallsCap)
+                  {(bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && Number.isFinite(bulkScanResults.apiCallsUsed) && Number.isFinite(bulkScanResults.apiCallsCap)
                     ? ` • API ${bulkScanResults.apiCallsUsed}/${bulkScanResults.apiCallsCap}`
                     : ''}
                 </span>
