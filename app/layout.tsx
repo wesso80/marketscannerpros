@@ -67,7 +67,9 @@ export default function RootLayout({
       <body className="min-h-screen antialiased overflow-x-hidden">
         <ErrorBoundary>
           <AppUrlFixer />
-          <OperatorHeartbeat />
+          <Suspense>
+            <OperatorHeartbeat />
+          </Suspense>
           <Header />
           <main className="msp-main-shell">{children}</main>
           <Footer />
