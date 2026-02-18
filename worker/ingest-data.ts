@@ -20,7 +20,7 @@ import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
-import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC } from '../lib/coingecko';
+import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC, resolveSymbolToId } from '../lib/coingecko';
 
 // ============================================================================
 // Signal Detection Types
@@ -46,11 +46,97 @@ function getEnv(key: string): string {
 }
 
 // Refresh intervals by tier (in seconds)
-const TIER_REFRESH_INTERVALS = {
+// - Crypto defaults are tuned for CoinGecko value/coverage
+// - Non-crypto defaults preserve legacy behavior
+const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
+  1: 60,   // Tier 1: every 60 seconds
+  2: 240,  // Tier 2: every 4 minutes
+  3: 1200, // Tier 3: every 20 minutes
+};
+
+const CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS: Record<number, number> = {
+  1: 1200,  // Tier 1: every 20 minutes
+  2: 5400,  // Tier 2: every 90 minutes
+  3: 10800, // Tier 3: every 180 minutes
+};
+
+const NON_CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
   1: 30,   // Tier 1: every 30 seconds
   2: 120,  // Tier 2: every 2 minutes
   3: 300,  // Tier 3: every 5 minutes
 };
+
+function getPositiveIntFromEnv(key: string, fallback: number): number {
+  const raw = Number.parseInt(getEnv(key), 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
+type CryptoCadenceMode = 'market' | 'offhours';
+
+function getUsMarketSessionState(now = new Date()): {
+  mode: CryptoCadenceMode;
+  timezone: string;
+  openMinutes: number;
+  closeMinutes: number;
+} {
+  const timezone = getEnv('CG_MARKET_TIMEZONE') || 'America/New_York';
+  const openHour = getPositiveIntFromEnv('CG_MARKET_OPEN_HOUR', 9);
+  const openMinute = getPositiveIntFromEnv('CG_MARKET_OPEN_MINUTE', 30);
+  const closeHour = getPositiveIntFromEnv('CG_MARKET_CLOSE_HOUR', 16);
+  const closeMinute = getPositiveIntFromEnv('CG_MARKET_CLOSE_MINUTE', 0);
+  const openMinutes = openHour * 60 + openMinute;
+  const closeMinutes = closeHour * 60 + closeMinute;
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+
+  const weekday = parts.find((p) => p.type === 'weekday')?.value || 'Sun';
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value || '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value || '0');
+  const minuteOfDay = hour * 60 + minute;
+  const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday);
+  const inSession = isWeekday && minuteOfDay >= openMinutes && minuteOfDay < closeMinutes;
+
+  return {
+    mode: inSession ? 'market' : 'offhours',
+    timezone,
+    openMinutes,
+    closeMinutes,
+  };
+}
+
+function getTierRefreshIntervalSeconds(assetType: string, tier: number, cadenceMode: CryptoCadenceMode = 'market'): number {
+  const safeTier = Number.isFinite(tier) ? Math.max(1, Math.min(3, Math.floor(tier))) : 2;
+  const isCrypto = assetType === 'crypto';
+
+  if (isCrypto) {
+    if (cadenceMode === 'offhours') {
+      if (safeTier === 1) return getPositiveIntFromEnv('CG_OFFHOURS_TIER1_SECONDS', CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS[1]);
+      if (safeTier === 2) return getPositiveIntFromEnv('CG_OFFHOURS_TIER2_SECONDS', CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS[2]);
+      return getPositiveIntFromEnv('CG_OFFHOURS_TIER3_SECONDS', CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS[3]);
+    }
+
+    if (safeTier === 1) return getPositiveIntFromEnv('CG_TIER1_SECONDS', CRYPTO_TIER_REFRESH_INTERVALS[1]);
+    if (safeTier === 2) return getPositiveIntFromEnv('CG_TIER2_SECONDS', CRYPTO_TIER_REFRESH_INTERVALS[2]);
+    return getPositiveIntFromEnv('CG_TIER3_SECONDS', CRYPTO_TIER_REFRESH_INTERVALS[3]);
+  }
+
+  if (safeTier === 1) return getPositiveIntFromEnv('INGEST_TIER1_SECONDS', NON_CRYPTO_TIER_REFRESH_INTERVALS[1]);
+  if (safeTier === 2) return getPositiveIntFromEnv('INGEST_TIER2_SECONDS', NON_CRYPTO_TIER_REFRESH_INTERVALS[2]);
+  return getPositiveIntFromEnv('INGEST_TIER3_SECONDS', NON_CRYPTO_TIER_REFRESH_INTERVALS[3]);
+}
+
+function isDueForFetch(lastFetchedAt: Date | string | null | undefined, intervalSeconds: number): boolean {
+  if (!lastFetchedAt) return true;
+  const parsed = lastFetchedAt instanceof Date ? lastFetchedAt : new Date(lastFetchedAt);
+  if (Number.isNaN(parsed.getTime())) return true;
+  return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
+}
 
 // Rate limiter: Alpha Vantage ~75 calls/minute for premium, ~5 for free
 let rateLimiter: TokenBucket | null = null;
@@ -253,7 +339,11 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
  */
 async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   // Map symbol to CoinGecko ID
-  const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[symbol.toUpperCase().replace('USDT', '')];
+  const normalized = symbol.toUpperCase();
+  const coinId =
+    COINGECKO_ID_MAP[normalized] ||
+    COINGECKO_ID_MAP[normalized.replace('USDT', '')] ||
+    await resolveSymbolToId(normalized);
   
   if (!coinId) {
     console.warn(`[worker] No CoinGecko mapping for ${symbol}`);
@@ -298,11 +388,11 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
 async function getSymbolsToFetch(
   tier?: number,
   options?: { includeForex?: boolean }
-): Promise<Array<{ symbol: string; tier: number; asset_type: string }>> {
+): Promise<Array<{ symbol: string; tier: number; asset_type: string; last_fetched_at?: Date | string | null }>> {
   const db = getPool();
   const includeForex = options?.includeForex === true;
 
-  let query = 'SELECT symbol, tier, asset_type FROM symbol_universe WHERE enabled = TRUE';
+  let query = 'SELECT symbol, tier, asset_type, last_fetched_at FROM symbol_universe WHERE enabled = TRUE';
   const params: Array<string | number> = [];
 
   if (tier) {
@@ -944,14 +1034,27 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
 // Main Worker Loop
 // ============================================================================
 
-async function runIngestionCycle(includeForex = false): Promise<{ symbolsProcessed: number; apiCalls: number; errors: number }> {
-  const stats = { symbolsProcessed: 0, apiCalls: 0, errors: 0 };
+async function runIngestionCycle(
+  includeForex = false,
+  cryptoOnly = false
+): Promise<{ symbolsProcessed: number; apiCalls: number; errors: number; skippedNotDue: number }> {
+  const stats = { symbolsProcessed: 0, apiCalls: 0, errors: 0, skippedNotDue: 0 };
+  const sessionState = getUsMarketSessionState();
   
-  const symbols = await getSymbolsToFetch(undefined, { includeForex });
-  console.log(`[worker] Processing ${symbols.length} symbols...`);
+  const allSymbols = await getSymbolsToFetch(undefined, { includeForex });
+  const symbols = cryptoOnly
+    ? allSymbols.filter((s) => s.asset_type === 'crypto')
+    : allSymbols;
+  console.log(`[worker] Processing ${symbols.length} symbols... (crypto cadence mode: ${sessionState.mode})`);
 
-  for (const { symbol, tier, asset_type } of symbols) {
+  for (const { symbol, tier, asset_type, last_fetched_at } of symbols) {
     try {
+      const intervalSeconds = getTierRefreshIntervalSeconds(asset_type, tier, sessionState.mode);
+      if (!isDueForFetch(last_fetched_at, intervalSeconds)) {
+        stats.skippedNotDue++;
+        continue;
+      }
+
       let result: { apiCalls: number; success: boolean };
 
       if (asset_type === 'crypto') {
@@ -986,13 +1089,16 @@ async function main(): Promise<void> {
 
   const cliOnce = process.argv.includes('--once');
   const cliIncludeForex = process.argv.includes('--include-forex');
+  const cliCryptoOnly = process.argv.includes('--crypto-only');
   const envOnce = ['1', 'true', 'yes'].includes((getEnv('WORKER_RUN_ONCE') || '').toLowerCase());
   const envIncludeForex = ['1', 'true', 'yes'].includes((getEnv('WORKER_INCLUDE_FOREX') || '').toLowerCase());
+  const envCryptoOnly = ['1', 'true', 'yes'].includes((getEnv('WORKER_CRYPTO_ONLY') || '').toLowerCase());
   const runOnce = cliOnce || envOnce;
   const includeForex = cliIncludeForex || envIncludeForex;
+  const cryptoOnly = cliCryptoOnly || envCryptoOnly;
   const failOnErrors = ['1', 'true', 'yes'].includes((getEnv('WORKER_FAIL_ON_ERRORS') || '').toLowerCase());
   
-  if (!getEnv('ALPHA_VANTAGE_API_KEY')) {
+  if (!cryptoOnly && !getEnv('ALPHA_VANTAGE_API_KEY')) {
     console.error('[worker] ALPHA_VANTAGE_API_KEY not set');
     process.exit(1);
   }
@@ -1009,6 +1115,11 @@ async function main(): Promise<void> {
   console.log(`[worker] Redis: ${getEnv('UPSTASH_REDIS_REST_URL') ? 'enabled' : 'disabled'}`);
   console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
   console.log(`[worker] Forex ingest: ${includeForex ? 'enabled (manual override)' : 'disabled (equities + crypto only)'}`);
+  console.log(`[worker] Crypto-only mode: ${cryptoOnly ? 'enabled (CoinGecko-only ingest)' : 'disabled'}`);
+  const sessionState = getUsMarketSessionState();
+  console.log(`[worker] Market session timezone: ${sessionState.timezone}`);
+  console.log(`[worker] Market cadence (T1/T2/T3): ${getTierRefreshIntervalSeconds('crypto', 1, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 2, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 3, 'market')}s`);
+  console.log(`[worker] Off-hours cadence (T1/T2/T3): ${getTierRefreshIntervalSeconds('crypto', 1, 'offhours')}s / ${getTierRefreshIntervalSeconds('crypto', 2, 'offhours')}s / ${getTierRefreshIntervalSeconds('crypto', 3, 'offhours')}s`);
 
   await ensureIngestionSchema();
   console.log('[worker] Schema compatibility checks complete');
@@ -1022,11 +1133,11 @@ async function main(): Promise<void> {
     const startTime = Date.now();
 
     try {
-      const stats = await runIngestionCycle(includeForex);
+      const stats = await runIngestionCycle(includeForex, cryptoOnly);
       const duration = Math.round((Date.now() - startTime) / 1000);
 
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
-      console.log(`[worker] Stats: ${stats.symbolsProcessed} symbols, ${stats.apiCalls} API calls, ${stats.errors} errors`);
+      console.log(`[worker] Stats: ${stats.symbolsProcessed} symbols, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due)`);
 
       await logWorkerRun('ingest-main', stats, 'completed');
 
