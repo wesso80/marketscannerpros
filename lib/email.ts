@@ -1,19 +1,21 @@
 import { Resend } from "resend";
 
-// Direct API key from environment (for Render/Vercel)
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
-
 let resendClient: Resend | null = null;
+let resendClientKey: string | null = null;
 
 function getResendClient(): Resend | null {
-  if (!RESEND_API_KEY) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+
+  if (!apiKey) {
     console.warn("RESEND_API_KEY not set - email notifications disabled");
     return null;
   }
-  if (!resendClient) {
-    resendClient = new Resend(RESEND_API_KEY);
+
+  if (!resendClient || resendClientKey !== apiKey) {
+    resendClient = new Resend(apiKey);
+    resendClientKey = apiKey;
   }
+
   return resendClient;
 }
 
@@ -106,13 +108,14 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 async function sendEmail({ to, subject, html }: SendEmailParams) {
   const client = getResendClient();
   if (!client) {
-    console.log(`[Email Skipped] No Resend client - would send to ${to}: ${subject}`);
-    return null;
+    throw new Error('RESEND_API_KEY not set');
   }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "MarketScanner Pros <alerts@marketscannerpros.app>";
 
   try {
     const { data, error } = await client.emails.send({ 
-      from: FROM_EMAIL, 
+      from: fromEmail,
       to, 
       subject, 
       html 

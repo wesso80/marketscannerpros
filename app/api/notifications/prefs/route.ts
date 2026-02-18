@@ -44,13 +44,28 @@ export async function GET() {
       [session.workspaceId]
     );
 
-    const prefs = rows[0] || {
-      in_app_enabled: true,
-      email_enabled: false,
-      email_to: null,
-      discord_enabled: false,
-      discord_webhook_url: null,
-    };
+    let prefs = rows[0];
+
+    if (!prefs) {
+      const fallbackRows = await q<{ email: string | null }>(
+        `SELECT email
+           FROM user_subscriptions
+          WHERE workspace_id = $1
+          ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+          LIMIT 1`,
+        [session.workspaceId]
+      ).catch(() => [] as Array<{ email: string | null }>);
+
+      const fallbackEmail = toSafeEmail(fallbackRows[0]?.email);
+
+      prefs = {
+        in_app_enabled: true,
+        email_enabled: Boolean(fallbackEmail),
+        email_to: fallbackEmail,
+        discord_enabled: false,
+        discord_webhook_url: null,
+      };
+    }
 
     return NextResponse.json({ success: true, prefs });
   } catch (error) {

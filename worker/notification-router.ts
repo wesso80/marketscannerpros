@@ -211,10 +211,12 @@ async function loadPrefs(workspaceId: string): Promise<NotificationPrefs> {
     [workspaceId]
   ).catch(() => [] as Array<{ email: string | null }>);
 
+  const fallbackEmail = (fallbackRows[0]?.email || '').trim().toLowerCase();
+
   return {
     in_app_enabled: true,
-    email_enabled: false,
-    email_to: fallbackRows[0]?.email || null,
+    email_enabled: Boolean(fallbackEmail),
+    email_to: fallbackEmail || null,
     discord_enabled: false,
     discord_webhook_url: null,
   };

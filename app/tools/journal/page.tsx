@@ -86,6 +86,11 @@ function getLikelyQuoteType(symbol: string): 'crypto' | 'stock' {
   return 'stock';
 }
 
+function normalizeEntryId(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function JournalContent() {
   const journalEventMapRef = useRef<Record<number, string>>({});
 
@@ -570,7 +575,7 @@ function JournalContent() {
   };
 
   const openCloseTradeModal = async (entry: JournalEntry) => {
-    setClosingTradeId(entry.id);
+    setClosingTradeId(normalizeEntryId(entry.id));
     setCurrentClosePrice(null);
     setCurrentClosePriceError(null);
     setCloseTradeData({
@@ -601,7 +606,8 @@ function JournalContent() {
 
     const exitPrice = parseFloat(closeTradeData.exitPrice);
 
-    const existingEntry = entries.find((entry) => entry.id === id);
+    const requestedId = normalizeEntryId(id);
+    const existingEntry = entries.find((entry) => normalizeEntryId(entry.id) === requestedId);
     if (!existingEntry) return;
 
     const verdict = exitVerdicts[id];
@@ -617,13 +623,12 @@ function JournalContent() {
     const followedPlan = verdict ? Boolean(verdict.shouldClose) : null;
     const closeNotes = verdict?.reasons?.slice(0, 2).join(' | ') || null;
 
-    let closeResultEntry: JournalEntry | null = null;
-    try {
+    const attemptClose = async (journalEntryId: number) => {
       const response = await fetch('/api/journal/close-trade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          journalEntryId: id,
+          journalEntryId,
           exitPrice,
           exitTs: closeTradeData.exitDate,
           exitReason,
@@ -634,6 +639,42 @@ function JournalContent() {
       });
 
       const data = await response.json();
+      return { response, data };
+    };
+
+    let closeResultEntry: JournalEntry | null = null;
+    try {
+      let resolvedEntryId = requestedId;
+      let { response, data } = await attemptClose(resolvedEntryId);
+
+      if (!response.ok && data?.error === 'Journal entry not found') {
+        const refreshRes = await fetch('/api/journal', { cache: 'no-store' });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          const latestEntries: JournalEntry[] = Array.isArray(refreshData?.entries) ? refreshData.entries : [];
+
+          const fallbackEntry = latestEntries.find((entry) =>
+            entry?.isOpen === true &&
+            entry?.symbol === existingEntry.symbol &&
+            entry?.side === existingEntry.side &&
+            Math.abs(Number(entry?.entryPrice || 0) - Number(existingEntry.entryPrice || 0)) < 0.000001
+          ) || latestEntries.find((entry) =>
+            entry?.isOpen === true &&
+            entry?.symbol === existingEntry.symbol &&
+            entry?.side === existingEntry.side
+          );
+
+          if (fallbackEntry) {
+            resolvedEntryId = normalizeEntryId(fallbackEntry.id);
+            if (resolvedEntryId > 0 && resolvedEntryId !== requestedId) {
+              ({ response, data } = await attemptClose(resolvedEntryId));
+            }
+          }
+
+          setEntries(latestEntries);
+        }
+      }
+
       if (!response.ok || !data?.success) {
         throw new Error(data?.error || 'Failed to close trade');
       }
@@ -677,7 +718,7 @@ function JournalContent() {
       else if (pl < 0) outcome = 'loss';
     }
 
-    const parentEventId = journalEventMapRef.current[id] || draftParentEventId || null;
+    const parentEventId = journalEventMapRef.current[requestedId] || draftParentEventId || null;
     const workflowId = draftWorkflowId || buildJournalWorkflowId(existingEntry.symbol);
     const journalCompletedEvent = createWorkflowEvent({
       eventType: 'journal.completed',
@@ -693,7 +734,7 @@ function JournalContent() {
       },
       payload: {
         journal_id: `journal_${existingEntry.id}`,
-        trade_id: `trade_${existingEntry.id}`,
+        trade_id: `trade_${requestedId}`,
         symbol: existingEntry.symbol,
         side: existingEntry.side,
         outcome,
@@ -703,11 +744,11 @@ function JournalContent() {
       },
     });
 
-    delete journalEventMapRef.current[id];
+    delete journalEventMapRef.current[requestedId];
     void emitWorkflowEvents([journalCompletedEvent]);
     
     setEntries(entries.map(entry => {
-      if (entry.id === id) {
+      if (normalizeEntryId(entry.id) === requestedId) {
         if (closeResultEntry) {
           return {
             ...entry,
@@ -2464,7 +2505,7 @@ function JournalContent() {
                 </div>
 
                 {/* Close Trade Modal */}
-                {closingTradeId === entry.id && (
+                {closingTradeId === normalizeEntryId(entry.id) && (
                   <div style={{
                     background: 'rgba(16,185,129,0.1)',
                     border: '1px solid #10b981',
@@ -2623,7 +2664,7 @@ function JournalContent() {
                       />
                     </div>
                     <button
-                      onClick={() => closeTrade(entry.id)}
+                      onClick={() => closeTrade(normalizeEntryId(entry.id))}
                       style={{
                         padding: '8px 16px',
                         background: '#10b981',
