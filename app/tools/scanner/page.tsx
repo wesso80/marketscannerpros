@@ -790,7 +790,7 @@ function ScannerContent() {
         }
       } else {
         const resolvedMode = overrides?.mode ?? bulkEquityScanMode;
-        payload.mode = resolvedMode === 'light' ? 'hybrid' : resolvedMode;
+        payload.mode = resolvedMode;
         if (resolvedMode === 'light') {
           payload.universeSize = 500;
         }
@@ -1464,7 +1464,7 @@ function ScannerContent() {
                     disabled={bulkScanLoading}
                     className={`rounded-md border px-3 py-[7px] text-xs font-bold ${bulkEquityScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[var(--msp-bg)]' : 'border-transparent bg-transparent text-[var(--msp-text-muted)]'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
                   >
-                    {mode === 'light' ? 'Fast Hybrid Rank' : 'Deep Indicators'}
+                    {mode === 'light' ? 'Fast Wide Rank' : 'Deep Indicators'}
                   </button>
                 ))}
               </div>
