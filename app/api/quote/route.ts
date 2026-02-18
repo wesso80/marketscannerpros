@@ -40,9 +40,12 @@ export async function GET(req: NextRequest) {
 
     // Try to fetch price based on asset type
     let price: number | null = null;
+    let source: string | undefined;
 
     if (type === "crypto") {
-      price = await getCryptoPrice(symbol, market);
+      const cryptoQuote = await getCryptoPrice(symbol, market);
+      price = cryptoQuote?.price ?? null;
+      source = cryptoQuote?.source;
     } else if (type === "stock") {
       price = await getStockPrice(symbol);
     } else if (type === "fx") {
@@ -61,6 +64,7 @@ export async function GET(req: NextRequest) {
       price,
       symbol,
       type,
+      ...(source ? { source } : {}),
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
@@ -118,13 +122,13 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
 
 /**
  * Fetch crypto price using CoinGecko Commercial API (primary)
- * Falls back to Yahoo Finance and Alpha Vantage if CoinGecko fails
+ * Falls back to Yahoo Finance if CoinGecko fails
  */
-async function getCryptoPrice(symbol: string, market: string): Promise<number | null> {
+async function getCryptoPrice(symbol: string, market: string): Promise<{ price: number; source: 'coingecko' | 'yahoo_finance' } | null> {
   // Primary: Use CoinGecko Commercial API for all crypto
   const geckoPrice = await getCoinGeckoPrice(symbol);
   if (geckoPrice !== null) {
-    return geckoPrice;
+    return { price: geckoPrice, source: 'coingecko' };
   }
 
   // Fallback 1: Try Yahoo Finance (free, no API key required)
@@ -146,30 +150,11 @@ async function getCryptoPrice(symbol: string, market: string): Promise<number | 
       const meta = result?.meta;
       
       if (meta?.regularMarketPrice) {
-        return meta.regularMarketPrice;
+        return { price: meta.regularMarketPrice, source: 'yahoo_finance' };
       }
     }
   } catch (err) {
     console.warn("Yahoo Finance crypto fetch failed:", err);
-  }
-
-  // Fallback 2: Alpha Vantage if API key exists
-  if (ALPHA_VANTAGE_API_KEY) {
-    try {
-      const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      const data = await res.json();
-
-      const timeSeries = data["Time Series (Digital Currency Daily)"];
-      if (timeSeries) {
-        const latestDate = Object.keys(timeSeries)[0];
-        const latestData = timeSeries[latestDate];
-        const closePrice = latestData[`4a. close (${market})`];
-        if (closePrice) return parseFloat(closePrice);
-      }
-    } catch (err) {
-      console.warn("Alpha Vantage crypto fetch failed:", err);
-    }
   }
 
   return null;

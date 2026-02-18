@@ -10,8 +10,11 @@
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:outcomes": "npx tsx worker/label-outcomes.ts",
+    "worker:outcomes:loop": "npx tsx worker/label-outcomes.ts --watch",
     "worker:engine": "npx tsx worker/engine-runner.ts",
-    "worker:engine:once": "npx tsx worker/engine-runner.ts --once"
+    "worker:engine:once": "npx tsx worker/engine-runner.ts --once",
+    "worker:notifications": "npx tsx worker/notification-router.ts",
+    "worker:notifications:loop": "npx tsx worker/notification-router.ts --watch"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

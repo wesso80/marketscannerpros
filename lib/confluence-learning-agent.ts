@@ -11,6 +11,7 @@
 
 import OpenAI from 'openai';
 import { q } from '@/lib/db';
+import { getOHLC, getPriceBySymbol, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -258,6 +259,12 @@ const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+function normalizeCryptoBase(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (upper.includes('/')) return upper.split('/')[0];
+  return upper.replace(/USDT$/, '').replace(/USD$/, '');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DECOMPRESSION PULL ANALYSIS
 // When candles decompress toward their 50% level, they "pull" price
@@ -477,14 +484,10 @@ export class ConfluenceLearningAgent {
     
     try {
       if (isCrypto) {
-        const base = symbol.replace('USD', '').replace('USDT', '');
-        const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${base}&to_currency=USD&apikey=${ALPHA_VANTAGE_KEY}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data['Realtime Currency Exchange Rate']) {
-          const rate = data['Realtime Currency Exchange Rate']['5. Exchange Rate'];
-          return parseFloat(rate);
+        const base = normalizeCryptoBase(symbol);
+        const price = await getPriceBySymbol(base);
+        if (price?.price != null && Number.isFinite(price.price)) {
+          return price.price;
         }
       } else {
         // Use delayed entitlement for stock data (15-minute delayed)
@@ -508,14 +511,33 @@ export class ConfluenceLearningAgent {
   async fetchHistoricalData(symbol: string, interval: string = '30min'): Promise<OHLCV[]> {
     const isCrypto = symbol.includes('USD') && !symbol.includes('/');
     
-    let url: string;
     if (isCrypto) {
-      const base = symbol.replace('USD', '').replace('USDT', '');
-      url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${base}&market=USD&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
-    } else {
-      // Use delayed entitlement for stock data (15-minute delayed)
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      const base = normalizeCryptoBase(symbol);
+      const coinId = COINGECKO_ID_MAP[base] || await resolveSymbolToId(base);
+      if (!coinId) {
+        console.error('No CoinGecko coin id resolved for', symbol);
+        return [];
+      }
+
+      const days: 1 | 7 | 14 | 30 = interval === '1min' || interval === '5min' ? 1 : 7;
+      const ohlc = await getOHLC(coinId, days);
+      if (!ohlc || ohlc.length === 0) return [];
+
+      return ohlc
+        .map((row) => ({
+          time: Number(row[0]),
+          open: Number(row[1]),
+          high: Number(row[2]),
+          low: Number(row[3]),
+          close: Number(row[4]),
+          volume: 0,
+        }))
+        .filter((bar) => Number.isFinite(bar.time) && Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close))
+        .sort((a, b) => a.time - b.time);
     }
+
+    // Use delayed entitlement for stock data (15-minute delayed)
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
 
     const response = await fetch(url);
     const data = await response.json();

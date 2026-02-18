@@ -302,10 +302,48 @@ async function labelOutcomes() {
   console.log('\n' + '='.repeat(60));
 }
 
-// Run if called directly
-labelOutcomes()
-  .then(() => {
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const watchMode = args.includes('--watch');
+  const onceMode = args.includes('--once') || !watchMode;
+  const intervalArg = args.find((arg) => arg.startsWith('--interval-minutes='));
+  const intervalFromArg = intervalArg ? parseInt(intervalArg.replace('--interval-minutes=', ''), 10) : Number.NaN;
+  const intervalFromEnv = parseInt(process.env.OUTCOMES_INTERVAL_MINUTES || '180', 10);
+  const intervalMinutes = Number.isFinite(intervalFromArg) && intervalFromArg > 0
+    ? intervalFromArg
+    : (Number.isFinite(intervalFromEnv) && intervalFromEnv > 0 ? intervalFromEnv : 180);
+
+  if (onceMode) {
+    await labelOutcomes();
     console.log('🏁 Outcome labeling complete');
+    return;
+  }
+
+  console.log(`🔁 Outcome labeling watch mode enabled (every ${intervalMinutes} minutes)`);
+  let cycle = 0;
+  while (true) {
+    cycle += 1;
+    console.log(`\n[outcomes] === Cycle ${cycle} ===`);
+    try {
+      await labelOutcomes();
+      console.log('[outcomes] Cycle complete');
+    } catch (err) {
+      console.error('[outcomes] Cycle failed:', err instanceof Error ? err.message : err);
+    }
+
+    const sleepMs = intervalMinutes * 60 * 1000;
+    console.log(`[outcomes] Waiting ${intervalMinutes} minutes until next cycle...`);
+    await sleep(sleepMs);
+  }
+}
+
+// Run if called directly
+main()
+  .then(() => {
     process.exit(0);
   })
   .catch(err => {

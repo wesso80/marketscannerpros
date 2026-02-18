@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,35 +30,51 @@ export async function GET(request: NextRequest) {
     const normalizedSymbol = symbol.toUpperCase().trim();
     console.log(`📅 Fetching expiration dates for ${normalizedSymbol}...`);
     
-    // Use HISTORICAL_OPTIONS to get available expirations
-    const url = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${normalizedSymbol}&apikey=${ALPHA_VANTAGE_KEY}`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data['Error Message']) {
-      return NextResponse.json({
-        success: false,
-        error: data['Error Message'],
-      }, { status: 400 });
+    const providers = AV_OPTIONS_REALTIME_ENABLED
+      ? [
+          { fn: 'REALTIME_OPTIONS', requireGreeks: false },
+          { fn: 'HISTORICAL_OPTIONS', requireGreeks: false },
+        ]
+      : [{ fn: 'HISTORICAL_OPTIONS', requireGreeks: false }];
+
+    let data: any = null;
+    let options: any[] = [];
+    let sourceFunction: 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS' | null = null;
+
+    for (const provider of providers) {
+      const requireGreeks = provider.requireGreeks ? '&require_greeks=true' : '';
+      const url = `https://www.alphavantage.co/query?function=${provider.fn}&symbol=${normalizedSymbol}${requireGreeks}&apikey=${ALPHA_VANTAGE_KEY}`;
+
+      const response = await fetch(url);
+      const payload = await response.json();
+
+      if (payload?.['Error Message']) {
+        console.warn(`[options/expirations] ${provider.fn} error:`, payload['Error Message']);
+        continue;
+      }
+
+      if (payload?.['Note']) {
+        console.warn(`[options/expirations] ${provider.fn} note:`, payload['Note']);
+        continue;
+      }
+
+      if (payload?.['Information']) {
+        console.warn(`[options/expirations] ${provider.fn} info:`, payload['Information']);
+        continue;
+      }
+
+      const providerOptions = payload?.['data'] || [];
+      if (!Array.isArray(providerOptions) || providerOptions.length === 0) {
+        continue;
+      }
+
+      data = payload;
+      options = providerOptions;
+      sourceFunction = provider.fn as 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
+      break;
     }
-    
-    if (data['Note']) {
-      return NextResponse.json({
-        success: false,
-        error: 'Rate limit reached - please wait a moment',
-      }, { status: 429 });
-    }
-    
-    if (data['Information']) {
-      return NextResponse.json({
-        success: false,
-        error: 'Premium API access required for options data',
-      }, { status: 403 });
-    }
-    
-    const options = data['data'] || [];
-    if (!Array.isArray(options) || options.length === 0) {
+
+    if (!sourceFunction || !data || options.length === 0) {
       return NextResponse.json({
         success: false,
         error: 'No options data available for this symbol',
@@ -119,6 +136,7 @@ export async function GET(request: NextRequest) {
       symbol: normalizedSymbol,
       expirations,
       count: expirations.length,
+      sourceFunction,
     });
     
   } catch (error) {

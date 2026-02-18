@@ -18,11 +18,30 @@ interface ReferralInfo {
   };
 }
 
+interface NotificationPrefs {
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  emailTo: string;
+  discordEnabled: boolean;
+  discordWebhookUrl: string;
+}
+
 export default function AccountPage() {
   const { tier, isLoading, isLoggedIn } = useUserTier();
   const [email, setEmail] = useState<string | null>(null);
   const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
+    inAppEnabled: true,
+    emailEnabled: false,
+    emailTo: '',
+    discordEnabled: false,
+    discordWebhookUrl: '',
+  });
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
 
   useEffect(() => {
     // Get user info
@@ -44,11 +63,63 @@ export default function AccountPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    setPrefsLoading(true);
+    fetch('/api/notifications/prefs', { credentials: 'include' })
+      .then((res) => res.json())
+      .then((data) => {
+        const prefs = data?.prefs || {};
+        setNotificationPrefs({
+          inAppEnabled: prefs.in_app_enabled !== false,
+          emailEnabled: prefs.email_enabled === true,
+          emailTo: typeof prefs.email_to === 'string' ? prefs.email_to : '',
+          discordEnabled: prefs.discord_enabled === true,
+          discordWebhookUrl: typeof prefs.discord_webhook_url === 'string' ? prefs.discord_webhook_url : '',
+        });
+      })
+      .catch(() => {
+        setPrefsError('Unable to load notification settings');
+      })
+      .finally(() => {
+        setPrefsLoading(false);
+      });
+  }, [isLoggedIn]);
+
   const copyReferralLink = () => {
     if (referralInfo?.referralUrl) {
       navigator.clipboard.writeText(referralInfo.referralUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const saveNotificationPrefs = async () => {
+    setPrefsSaving(true);
+    setPrefsMessage(null);
+    setPrefsError(null);
+
+    try {
+      const res = await fetch('/api/notifications/prefs', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationPrefs),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPrefsError(data?.error || 'Failed to save notification settings');
+        return;
+      }
+
+      setPrefsMessage('Notification settings saved.');
+      setTimeout(() => setPrefsMessage(null), 2500);
+    } catch {
+      setPrefsError('Failed to save notification settings');
+    } finally {
+      setPrefsSaving(false);
     }
   };
 
@@ -330,6 +401,112 @@ export default function AccountPage() {
                 </div>
               </div>
             )}
+
+            {/* Notification Preferences Card */}
+            <div style={{
+              background: 'var(--msp-card)',
+              borderRadius: 16,
+              border: '1px solid rgba(51,65,85,0.8)',
+              padding: 32
+            }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span>🔔</span> Notification Delivery Settings
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>
+                Choose how trade lifecycle notifications are delivered to you.
+              </p>
+
+              {prefsLoading ? (
+                <div style={{ color: '#94a3b8', fontSize: 14 }}>Loading settings...</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
+                      <span>In-app notifications</span>
+                      <input
+                        type="checkbox"
+                        checked={notificationPrefs.inAppEnabled}
+                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, inAppEnabled: e.target.checked }))}
+                      />
+                    </label>
+
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
+                      <span>Email notifications</span>
+                      <input
+                        type="checkbox"
+                        checked={notificationPrefs.emailEnabled}
+                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, emailEnabled: e.target.checked }))}
+                      />
+                    </label>
+                    <input
+                      type="email"
+                      value={notificationPrefs.emailTo}
+                      onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, emailTo: e.target.value }))}
+                      placeholder="you@example.com"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: 'rgba(15,23,42,0.8)',
+                        border: '1px solid rgba(51,65,85,0.7)',
+                        borderRadius: 8,
+                        color: '#e5e7eb',
+                        fontSize: 13,
+                      }}
+                    />
+
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
+                      <span>Discord notifications</span>
+                      <input
+                        type="checkbox"
+                        checked={notificationPrefs.discordEnabled}
+                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, discordEnabled: e.target.checked }))}
+                      />
+                    </label>
+                    <input
+                      type="url"
+                      value={notificationPrefs.discordWebhookUrl}
+                      onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, discordWebhookUrl: e.target.value }))}
+                      placeholder="https://discord.com/api/webhooks/..."
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: 'rgba(15,23,42,0.8)',
+                        border: '1px solid rgba(51,65,85,0.7)',
+                        borderRadius: 8,
+                        color: '#e5e7eb',
+                        fontSize: 13,
+                      }}
+                    />
+                  </div>
+
+                  {prefsError && (
+                    <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{prefsError}</p>
+                  )}
+                  {prefsMessage && (
+                    <p style={{ color: '#34d399', fontSize: 13, marginBottom: 12 }}>{prefsMessage}</p>
+                  )}
+
+                  <button
+                    onClick={() => void saveNotificationPrefs()}
+                    disabled={prefsSaving}
+                    style={{
+                      padding: '10px 20px',
+                      background: 'var(--msp-accent)',
+                      border: 'none',
+                      borderRadius: 10,
+                      color: '#0b1120',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: prefsSaving ? 'not-allowed' : 'pointer',
+                      opacity: prefsSaving ? 0.7 : 1,
+                    }}
+                  >
+                    {prefsSaving ? 'Saving...' : 'Save Notification Settings'}
+                  </button>
+                </>
+              )}
+            </div>
+
             {/* Help Card */}
             <div style={{ 
               background: "rgba(15,23,42,0.5)",

@@ -6,6 +6,7 @@ import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 // NOTE: In-memory cache doesn't persist across serverless invocations
 // Each request fetches fresh data (75 calls/min on premium is sufficient)
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 });
     }
-    if (session.tier !== 'pro_trader') {
+    if (!hasProTraderAccess(session.tier)) {
       return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Options Scanner' }, { status: 403 });
     }
 
@@ -229,6 +230,10 @@ export async function POST(request: NextRequest) {
         },
         institutionalFilter,
         capitalFlow,
+      },
+      dataSources: {
+        underlyingPrice: analysis.assetType === 'crypto' ? 'coingecko' : 'alpha_vantage',
+        optionsChain: analysis.dataQuality?.optionsChainSource || 'none',
       },
       timestamp: new Date().toISOString(),
     });

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import NotificationBell from './NotificationBell';
 
 interface DropdownItem {
   href: string;
@@ -170,6 +171,7 @@ export default function Header() {
           <Dropdown label="Markets" items={marketItems} compact={isTerminalMode} />
           <Dropdown label="Calendar" items={calendarItems} align="right" compact={isTerminalMode} />
           <Dropdown label="Resources" items={resourceItems} align="right" compact={isTerminalMode} />
+          <NotificationBell compact={isTerminalMode} />
           <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
           <Link href="/dashboard" className="hover:text-teal-300 whitespace-nowrap">Dashboard</Link>
           <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>

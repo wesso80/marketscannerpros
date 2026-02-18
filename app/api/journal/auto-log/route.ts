@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
+import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 
 async function ensureJournalSchema() {
   await q(`
@@ -181,6 +182,38 @@ export async function POST(req: NextRequest) {
         true,
       ]
     );
+
+    const insertedId = Number(inserted[0]?.id || 0);
+    if (insertedId > 0) {
+      const dedupe = hashDedupeKey([
+        'TRADE_ENTERED',
+        session.workspaceId,
+        insertedId,
+        safeSymbol,
+        tradeDate,
+      ]);
+
+      await emitTradeLifecycleEvent({
+        workspaceId: session.workspaceId,
+        eventType: 'TRADE_ENTERED',
+        aggregateId: `trade_${insertedId}`,
+        dedupeKey: `trade_entered_${dedupe}`,
+        payload: {
+          journalEntryId: insertedId,
+          symbol: safeSymbol,
+          side,
+          tradeDate,
+          quantity: 1,
+          entryPrice,
+          strategy: strategyId,
+          setup: safeCondition,
+          source: 'journal_auto_log',
+          decisionPacketId: safeDecisionPacketId,
+        },
+      }).catch((error) => {
+        console.warn('[journal/auto-log] failed to emit TRADE_ENTERED event:', error);
+      });
+    }
 
     if (historyId) {
       await q(

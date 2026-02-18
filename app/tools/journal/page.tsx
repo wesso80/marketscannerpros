@@ -38,6 +38,52 @@ interface JournalEntry {
   tags: string[];
   isOpen: boolean;
   exitDate?: string;
+  status?: 'OPEN' | 'MANAGING' | 'EXIT_PENDING' | 'CLOSED' | 'FAILED_EXIT';
+  closeSource?: 'manual' | 'mark' | 'broker';
+  exitReason?: 'tp' | 'sl' | 'manual' | 'time' | 'invalidated';
+  followedPlan?: boolean;
+  exitIntentId?: string;
+}
+
+interface CloseTradeFormData {
+  exitPrice: string;
+  exitDate: string;
+  priceMode: 'current' | 'manual';
+}
+
+interface ExitVerdictData {
+  verdict: 'HOLD' | 'CLOSE';
+  shouldClose: boolean;
+  reasons: string[];
+  exitScore: number;
+  scoreBreakdown: {
+    structuralFailure: number;
+    edgeCollapse: number;
+    timeDecay: number;
+    objectiveHit: number;
+  };
+  state: {
+    structureValid: boolean;
+    edgeScore: number;
+    timeInTradeDays: number;
+    expectedWindowDays: number;
+    targetHit: boolean;
+    riskBreached: boolean;
+    momentumExpansion: boolean;
+    unrealizedPnL: number;
+    unrealizedReturnPct: number;
+    unrealizedRMultiple: number | null;
+  };
+}
+
+function getTodayISODate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getLikelyQuoteType(symbol: string): 'crypto' | 'stock' {
+  const upper = symbol.toUpperCase();
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
+  return 'stock';
 }
 
 function JournalContent() {
@@ -49,7 +95,17 @@ function JournalContent() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [journalTab, setJournalTab] = useState<'open' | 'closed'>('open');
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
-  const [closeTradeData, setCloseTradeData] = useState({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
+  const [closeTradeData, setCloseTradeData] = useState<CloseTradeFormData>({
+    exitPrice: '',
+    exitDate: getTodayISODate(),
+    priceMode: 'current',
+  });
+  const [currentClosePrice, setCurrentClosePrice] = useState<number | null>(null);
+  const [currentClosePriceLoading, setCurrentClosePriceLoading] = useState(false);
+  const [currentClosePriceError, setCurrentClosePriceError] = useState<string | null>(null);
+  const [exitVerdicts, setExitVerdicts] = useState<Record<number, ExitVerdictData>>({});
+  const [exitVerdictLoading, setExitVerdictLoading] = useState<Record<number, boolean>>({});
+  const [exitVerdictError, setExitVerdictError] = useState<Record<number, string>>({});
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterOutcome, setFilterOutcome] = useState<string>('all');
   
@@ -248,6 +304,90 @@ function JournalContent() {
     }
   }, [entries, dataLoaded]);
 
+  useEffect(() => {
+    if (!dataLoaded) return;
+
+    const openEntries = entries.filter((entry) => entry.isOpen);
+    if (openEntries.length === 0) {
+      setExitVerdicts({});
+      setExitVerdictLoading({});
+      setExitVerdictError({});
+      return;
+    }
+
+    let canceled = false;
+
+    const loadVerdicts = async () => {
+      const loadingMap: Record<number, boolean> = {};
+      for (const entry of openEntries) loadingMap[entry.id] = true;
+      setExitVerdictLoading(loadingMap);
+
+      const nextVerdicts: Record<number, ExitVerdictData> = {};
+      const nextErrors: Record<number, string> = {};
+
+      await Promise.all(openEntries.map(async (entry) => {
+        try {
+          const res = await fetch(`/api/journal/exit-verdict?entryId=${entry.id}`, { cache: 'no-store' });
+          if (!res.ok) {
+            throw new Error('Unable to compute verdict');
+          }
+          const data = await res.json();
+          if (data?.success && data?.verdict) {
+            const verdict = data.verdict;
+            const exitAction = String(verdict?.exitAction || 'HOLD');
+            const exitReason = String(verdict?.exitReason || 'NONE');
+            const exitDetail = typeof verdict?.exitDetail === 'string' ? verdict.exitDetail : '';
+            const shouldClose = Boolean(verdict?.shouldClose);
+            const edgeScore = Number(verdict?.state?.edgeScore ?? 50);
+            const timeElapsedPct = Number(verdict?.timeElapsedPct ?? 0);
+            const expectedWindowDays = 3;
+            const timeInTradeDays = Math.max(0, Math.round((timeElapsedPct / 100) * expectedWindowDays));
+
+            nextVerdicts[entry.id] = {
+              verdict: shouldClose ? 'CLOSE' : 'HOLD',
+              shouldClose,
+              reasons: [exitReason, exitDetail].filter(Boolean),
+              exitScore: Number(verdict?.exitScore ?? 0),
+              scoreBreakdown: {
+                structuralFailure: exitReason === 'HARD_STOP' ? 100 : 0,
+                edgeCollapse: exitReason === 'EDGE_DECAY' ? 100 : 0,
+                timeDecay: exitReason === 'TIME_STOP' ? 100 : 0,
+                objectiveHit: exitReason === 'TARGET_HIT' ? 100 : 0,
+              },
+              state: {
+                structureValid: exitReason !== 'HARD_STOP',
+                edgeScore: Number.isFinite(edgeScore) ? edgeScore : 50,
+                timeInTradeDays,
+                expectedWindowDays,
+                targetHit: exitReason === 'TARGET_HIT',
+                riskBreached: exitReason === 'HARD_STOP',
+                momentumExpansion: String(verdict?.state?.momentum || '').toUpperCase() === 'EXPANDING',
+                unrealizedPnL: 0,
+                unrealizedReturnPct: 0,
+                unrealizedRMultiple: Number(verdict?.state?.unrealizedR ?? 0),
+              },
+            };
+          } else {
+            throw new Error('Invalid verdict response');
+          }
+        } catch (error) {
+          nextErrors[entry.id] = error instanceof Error ? error.message : 'Verdict unavailable';
+        }
+      }));
+
+      if (canceled) return;
+      setExitVerdicts(nextVerdicts);
+      setExitVerdictError(nextErrors);
+      setExitVerdictLoading({});
+    };
+
+    void loadVerdicts();
+
+    return () => {
+      canceled = true;
+    };
+  }, [entries, dataLoaded]);
+
   const addEntry = () => {
     if (!newEntry.symbol || !newEntry.entryPrice || !newEntry.quantity) {
       alert('Please fill in all required fields (Symbol, Entry Price, Quantity)');
@@ -392,24 +532,150 @@ function JournalContent() {
     }
   };
 
-  const closeTrade = (id: number) => {
+  const fetchCurrentClosePrice = async (entry: JournalEntry) => {
+    setCurrentClosePriceLoading(true);
+    setCurrentClosePriceError(null);
+    try {
+      const baseSymbol = entry.symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+      const preferredType = getLikelyQuoteType(entry.symbol);
+
+      const attemptFetch = async (type: 'crypto' | 'stock') => {
+        const querySymbol = type === 'crypto' ? baseSymbol : entry.symbol.toUpperCase();
+        const response = await fetch(`/api/quote?symbol=${encodeURIComponent(querySymbol)}&type=${type}&market=USD`, { cache: 'no-store' });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const price = Number(data?.price);
+        return Number.isFinite(price) && price > 0 ? price : null;
+      };
+
+      const first = await attemptFetch(preferredType);
+      const second = first == null ? await attemptFetch(preferredType === 'crypto' ? 'stock' : 'crypto') : null;
+      const price = first ?? second;
+
+      if (price == null) {
+        throw new Error('Live quote unavailable for this symbol right now.');
+      }
+
+      setCurrentClosePrice(price);
+      setCloseTradeData(prev => ({
+        ...prev,
+        exitPrice: price.toFixed(4),
+      }));
+    } catch (error) {
+      setCurrentClosePrice(null);
+      setCurrentClosePriceError(error instanceof Error ? error.message : 'Failed to fetch current price');
+    } finally {
+      setCurrentClosePriceLoading(false);
+    }
+  };
+
+  const openCloseTradeModal = async (entry: JournalEntry) => {
+    setClosingTradeId(entry.id);
+    setCurrentClosePrice(null);
+    setCurrentClosePriceError(null);
+    setCloseTradeData({
+      exitPrice: '',
+      exitDate: getTodayISODate(),
+      priceMode: 'current',
+    });
+    await fetchCurrentClosePrice(entry);
+  };
+
+  const cancelCloseTrade = () => {
+    setClosingTradeId(null);
+    setCurrentClosePrice(null);
+    setCurrentClosePriceError(null);
+    setCurrentClosePriceLoading(false);
+    setCloseTradeData({
+      exitPrice: '',
+      exitDate: getTodayISODate(),
+      priceMode: 'current',
+    });
+  };
+
+  const closeTrade = async (id: number) => {
     if (!closeTradeData.exitPrice) {
       alert('Please enter an exit price');
       return;
     }
-    
+
     const exitPrice = parseFloat(closeTradeData.exitPrice);
 
     const existingEntry = entries.find((entry) => entry.id === id);
     if (!existingEntry) return;
 
-    const pl = existingEntry.side === 'LONG'
-      ? (exitPrice - existingEntry.entryPrice) * existingEntry.quantity
-      : (existingEntry.entryPrice - exitPrice) * existingEntry.quantity;
+    const verdict = exitVerdicts[id];
+    const engineReason = verdict?.reasons?.[0] || 'manual';
+    const exitReason = (() => {
+      if (engineReason === 'TARGET_HIT') return 'tp';
+      if (engineReason === 'HARD_STOP') return 'sl';
+      if (engineReason === 'TIME_STOP') return 'time';
+      if (engineReason === 'EDGE_DECAY') return 'invalidated';
+      return 'manual';
+    })() as 'tp' | 'sl' | 'manual' | 'time' | 'invalidated';
+    const closeSource = (closeTradeData.priceMode === 'current' ? 'mark' : 'manual') as 'mark' | 'manual';
+    const followedPlan = verdict ? Boolean(verdict.shouldClose) : null;
+    const closeNotes = verdict?.reasons?.slice(0, 2).join(' | ') || null;
 
-    let outcome: 'win' | 'loss' | 'breakeven' | 'open' = 'breakeven';
-    if (pl > 0) outcome = 'win';
-    else if (pl < 0) outcome = 'loss';
+    let closeResultEntry: JournalEntry | null = null;
+    try {
+      const response = await fetch('/api/journal/close-trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journalEntryId: id,
+          exitPrice,
+          exitTs: closeTradeData.exitDate,
+          exitReason,
+          closeSource,
+          followedPlan,
+          notes: closeNotes,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to close trade');
+      }
+
+      if (data?.entry) {
+        closeResultEntry = {
+          ...existingEntry,
+          ...data.entry,
+          tradeType: existingEntry.tradeType,
+          optionType: existingEntry.optionType,
+          strikePrice: existingEntry.strikePrice,
+          expirationDate: existingEntry.expirationDate,
+          strategy: existingEntry.strategy,
+          setup: existingEntry.setup,
+          notes: existingEntry.notes,
+          emotions: existingEntry.emotions,
+          tags: existingEntry.tags,
+          stopLoss: existingEntry.stopLoss,
+          target: existingEntry.target,
+          riskAmount: existingEntry.riskAmount,
+          plannedRR: existingEntry.plannedRR,
+          status: data.entry.status || 'CLOSED',
+          closeSource,
+          exitReason,
+          followedPlan: followedPlan == null ? undefined : followedPlan,
+          exitIntentId: data.exitIntentId || undefined,
+        };
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to close trade');
+      return;
+    }
+
+    const pl = closeResultEntry?.pl ?? (existingEntry.side === 'LONG'
+      ? (exitPrice - existingEntry.entryPrice) * existingEntry.quantity
+      : (existingEntry.entryPrice - exitPrice) * existingEntry.quantity);
+
+    let outcome: 'win' | 'loss' | 'breakeven' | 'open' = closeResultEntry?.outcome || 'breakeven';
+    if (!closeResultEntry) {
+      if (pl > 0) outcome = 'win';
+      else if (pl < 0) outcome = 'loss';
+    }
 
     const parentEventId = journalEventMapRef.current[id] || draftParentEventId || null;
     const workflowId = draftWorkflowId || buildJournalWorkflowId(existingEntry.symbol);
@@ -442,6 +708,14 @@ function JournalContent() {
     
     setEntries(entries.map(entry => {
       if (entry.id === id) {
+        if (closeResultEntry) {
+          return {
+            ...entry,
+            ...closeResultEntry,
+            isOpen: false,
+          };
+        }
+
         const pl = entry.side === 'LONG' 
           ? (exitPrice - entry.entryPrice) * entry.quantity 
           : (entry.entryPrice - exitPrice) * entry.quantity;
@@ -465,14 +739,25 @@ function JournalContent() {
           plPercent,
           rMultiple,
           outcome,
-          isOpen: false
+          isOpen: false,
+          status: 'CLOSED',
+          closeSource,
+          exitReason,
+          followedPlan: followedPlan == null ? undefined : followedPlan,
         };
       }
       return entry;
     }));
     
     setClosingTradeId(null);
-    setCloseTradeData({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] });
+    setCurrentClosePrice(null);
+    setCurrentClosePriceError(null);
+    setCurrentClosePriceLoading(false);
+    setCloseTradeData({
+      exitPrice: '',
+      exitDate: getTodayISODate(),
+      priceMode: 'current',
+    });
   };
 
   const clearAllEntries = async () => {
@@ -2146,7 +2431,7 @@ function JournalContent() {
                     )}
                     {entry.isOpen && (
                       <button
-                        onClick={() => setClosingTradeId(entry.id)}
+                        onClick={() => void openCloseTradeModal(entry)}
                         style={{
                           padding: '6px 12px',
                           background: '#10b981',
@@ -2191,14 +2476,114 @@ function JournalContent() {
                     alignItems: 'flex-end',
                     flexWrap: 'wrap'
                   }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
+                      {entry.isOpen && (
+                        <div
+                          style={{
+                            width: '100%',
+                            background: 'rgba(15,23,42,0.6)',
+                            border: `1px solid ${exitVerdicts[entry.id]?.shouldClose ? 'rgba(239,68,68,0.65)' : 'rgba(16,185,129,0.5)'}`,
+                            borderRadius: '10px',
+                            padding: '12px',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '10px', flexWrap: 'wrap' }}>
+                            <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 700, letterSpacing: '0.03em' }}>AI EXIT VERDICT</div>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: exitVerdicts[entry.id]?.shouldClose ? '#ef4444' : '#10b981' }}>
+                              {exitVerdictLoading[entry.id]
+                                ? 'ANALYZING'
+                                : exitVerdicts[entry.id]?.verdict || 'UNKNOWN'}
+                            </div>
+                          </div>
+
+                          {exitVerdictError[entry.id] ? (
+                            <div style={{ color: '#f87171', fontSize: '12px' }}>{exitVerdictError[entry.id]}</div>
+                          ) : exitVerdictLoading[entry.id] ? (
+                            <div style={{ color: '#94a3b8', fontSize: '12px' }}>Computing structural / edge / time / objective engines…</div>
+                          ) : exitVerdicts[entry.id] ? (
+                            <>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '8px', marginBottom: '8px' }}>
+                                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>Structure: <strong style={{ color: exitVerdicts[entry.id].state.structureValid ? '#10b981' : '#ef4444' }}>{exitVerdicts[entry.id].state.structureValid ? 'VALID' : 'INVALID'}</strong></div>
+                                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>Edge: <strong>{exitVerdicts[entry.id].state.edgeScore}</strong></div>
+                                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>Time: <strong>{exitVerdicts[entry.id].state.timeInTradeDays}d / {exitVerdicts[entry.id].state.expectedWindowDays}d</strong></div>
+                                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>Exit Score: <strong>{exitVerdicts[entry.id].exitScore}</strong></div>
+                              </div>
+
+                              <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                                Triggers — Structural {exitVerdicts[entry.id].scoreBreakdown.structuralFailure} • Edge {exitVerdicts[entry.id].scoreBreakdown.edgeCollapse} • Time {exitVerdicts[entry.id].scoreBreakdown.timeDecay} • Objective {exitVerdicts[entry.id].scoreBreakdown.objectiveHit}
+                              </div>
+
+                              {exitVerdicts[entry.id].reasons.length > 0 && (
+                                <div style={{ marginTop: '6px', color: exitVerdicts[entry.id].shouldClose ? '#fecaca' : '#bbf7d0', fontSize: '11px' }}>
+                                  Reason: {exitVerdicts[entry.id].reasons.join(' + ')}
+                                </div>
+                              )}
+                            </>
+                          ) : null}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setCloseTradeData(prev => ({ ...prev, priceMode: 'current' }))}
+                        style={{
+                          padding: '6px 10px',
+                          background: closeTradeData.priceMode === 'current' ? '#10b981' : 'transparent',
+                          border: '1px solid #10b981',
+                          borderRadius: '6px',
+                          color: closeTradeData.priceMode === 'current' ? '#fff' : '#10b981',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Use Current Price
+                      </button>
+                      <button
+                        onClick={() => setCloseTradeData(prev => ({ ...prev, priceMode: 'manual' }))}
+                        style={{
+                          padding: '6px 10px',
+                          background: closeTradeData.priceMode === 'manual' ? '#334155' : 'transparent',
+                          border: '1px solid #64748b',
+                          borderRadius: '6px',
+                          color: '#cbd5e1',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Enter Manual Price
+                      </button>
+                      {closeTradeData.priceMode === 'current' && (
+                        <button
+                          onClick={() => void fetchCurrentClosePrice(entry)}
+                          disabled={currentClosePriceLoading}
+                          style={{
+                            padding: '6px 10px',
+                            background: 'transparent',
+                            border: '1px solid #64748b',
+                            borderRadius: '6px',
+                            color: '#94a3b8',
+                            fontSize: '12px',
+                            cursor: currentClosePriceLoading ? 'not-allowed' : 'pointer',
+                            opacity: currentClosePriceLoading ? 0.6 : 1,
+                          }}
+                        >
+                          {currentClosePriceLoading ? 'Loading…' : 'Refresh'}
+                        </button>
+                      )}
+                    </div>
                     <div>
-                      <label style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Exit Price *</label>
+                      <label style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                        Exit Price *
+                        {closeTradeData.priceMode === 'current' ? ' (Current)' : ' (Manual)'}
+                      </label>
                       <input
                         type="number"
                         value={closeTradeData.exitPrice}
                         onChange={(e) => setCloseTradeData({...closeTradeData, exitPrice: e.target.value})}
-                        placeholder="0.00"
+                        placeholder={closeTradeData.priceMode === 'current' ? 'Fetching current price...' : '0.00'}
                         step="0.01"
+                        disabled={closeTradeData.priceMode === 'current' && currentClosePriceLoading}
                         style={{
                           padding: '8px 12px',
                           background: '#1e293b',
@@ -2206,9 +2591,20 @@ function JournalContent() {
                           borderRadius: '6px',
                           color: '#f1f5f9',
                           fontSize: '14px',
-                          width: '120px'
+                          width: '140px',
+                          opacity: closeTradeData.priceMode === 'current' && currentClosePriceLoading ? 0.7 : 1,
                         }}
                       />
+                      {closeTradeData.priceMode === 'current' && currentClosePrice !== null && (
+                        <div style={{ marginTop: '4px', color: '#10b981', fontSize: '11px' }}>
+                          Live: ${currentClosePrice.toFixed(4)}
+                        </div>
+                      )}
+                      {closeTradeData.priceMode === 'current' && currentClosePriceError && (
+                        <div style={{ marginTop: '4px', color: '#ef4444', fontSize: '11px' }}>
+                          {currentClosePriceError}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Exit Date</label>
@@ -2242,7 +2638,7 @@ function JournalContent() {
                       Confirm Close
                     </button>
                     <button
-                      onClick={() => { setClosingTradeId(null); setCloseTradeData({ exitPrice: '', exitDate: new Date().toISOString().split('T')[0] }); }}
+                      onClick={cancelCloseTrade}
                       style={{
                         padding: '8px 16px',
                         background: 'transparent',

@@ -11,6 +11,7 @@
 
 import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseConfluence } from './confluence-learning-agent';
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER UTILITIES (Production-grade parsing)
@@ -83,17 +84,50 @@ async function fetchPatternCandlesFallback(
   symbol: string,
   assetType: AssetType
 ): Promise<{ '1H': PatternCandle[]; '4H': PatternCandle[]; '1D': PatternCandle[] }> {
-  if (!ALPHA_VANTAGE_KEY) {
+  if (assetType !== 'crypto' && !ALPHA_VANTAGE_KEY) {
     return { '1H': [], '4H': [], '1D': [] };
   }
 
   const base = 'https://www.alphavantage.co/query';
 
   try {
-    let intradayUrl = '';
     if (assetType === 'crypto') {
-      intradayUrl = `${base}?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(symbol)}&market=USD&interval=60min&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
-    } else if (assetType === 'forex' && symbol.length >= 6) {
+      const normalized = symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+      const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[normalized] || await resolveSymbolToId(normalized);
+      if (!coinId) return { '1H': [], '4H': [], '1D': [] };
+
+      const intradayOHLC = await getOHLC(coinId, 1);
+      const dailyOHLC = await getOHLC(coinId, 30);
+
+      const oneHour = (intradayOHLC || [])
+        .map((row) => ({
+          ts: Number(row[0]),
+          open: Number(row[1]),
+          high: Number(row[2]),
+          low: Number(row[3]),
+          close: Number(row[4]),
+          volume: 0,
+        }))
+        .filter((c) => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
+        .sort((a, b) => a.ts - b.ts);
+
+      const oneDay = (dailyOHLC || [])
+        .map((row) => ({
+          ts: Number(row[0]),
+          open: Number(row[1]),
+          high: Number(row[2]),
+          low: Number(row[3]),
+          close: Number(row[4]),
+          volume: 0,
+        }))
+        .filter((c) => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
+        .sort((a, b) => a.ts - b.ts);
+
+      return { '1H': oneHour, '4H': aggregatePatternCandles(oneHour, 4), '1D': oneDay };
+    }
+
+    let intradayUrl = '';
+    if (assetType === 'forex' && symbol.length >= 6) {
       const from = symbol.slice(0, 3);
       const to = symbol.slice(3, 6);
       intradayUrl = `${base}?function=FX_INTRADAY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&interval=60min&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
@@ -108,9 +142,7 @@ async function fetchPatternCandlesFallback(
     const fourHour = aggregatePatternCandles(oneHour, 4);
 
     let dailyUrl = '';
-    if (assetType === 'crypto') {
-      dailyUrl = `${base}?function=DIGITAL_CURRENCY_DAILY&symbol=${encodeURIComponent(symbol)}&market=USD&apikey=${ALPHA_VANTAGE_KEY}`;
-    } else if (assetType === 'forex' && symbol.length >= 6) {
+    if (assetType === 'forex' && symbol.length >= 6) {
       const from = symbol.slice(0, 3);
       const to = symbol.slice(3, 6);
       dailyUrl = `${base}?function=FX_DAILY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
@@ -122,19 +154,7 @@ async function fetchPatternCandlesFallback(
     const dailyData = await dailyRes.json();
     const dailySeries = dailyData['Time Series (Daily)'] || dailyData['Time Series FX (Daily)'] || dailyData['Time Series (Digital Currency Daily)'];
 
-    const oneDay = dailySeries === dailyData['Time Series (Digital Currency Daily)']
-      ? Object.entries(dailySeries || {})
-          .map(([timestamp, values]: [string, any]) => ({
-            ts: Date.parse(timestamp),
-            open: Number(values?.['1a. open (USD)'] ?? values?.['1. open']),
-            high: Number(values?.['2a. high (USD)'] ?? values?.['2. high']),
-            low: Number(values?.['3a. low (USD)'] ?? values?.['3. low']),
-            close: Number(values?.['4a. close (USD)'] ?? values?.['4. close']),
-            volume: Number(values?.['5. volume'] ?? 0),
-          }))
-          .filter(c => Number.isFinite(c.ts) && Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close))
-          .sort((a, b) => a.ts - b.ts)
-      : parseAvTimeSeriesToPatternCandles(dailySeries);
+    const oneDay = parseAvTimeSeriesToPatternCandles(dailySeries);
 
     return { '1H': oneHour, '4H': fourHour, '1D': oneDay };
   } catch (error) {
@@ -886,6 +906,10 @@ interface AVOptionContract {
   rho?: string;
 }
 
+type AVOptionsFunction = 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
+
+const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
+
 // Get the nearest coming Friday in NY date space (YYYY-MM-DD)
 // - Friday: use today (0 days)
 // - Saturday: use next Friday (6 days)
@@ -972,6 +996,8 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
   puts: AVOptionContract[];
   selectedExpiry: string;
   dataDate: string | null;
+  sourceFunction: AVOptionsFunction;
+  freshness: 'REALTIME' | 'EOD';
 } | null> {
   if (!ALPHA_VANTAGE_KEY) {
     console.warn('No Alpha Vantage API key - skipping options chain fetch');
@@ -979,37 +1005,57 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
   }
   
   try {
-    // Use HISTORICAL_OPTIONS (end-of-day data) - available with 75 req/min premium plan
-    // When date is not specified, returns data from the previous trading session
-    const url = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`;
-    console.log(`📊 Fetching EOD options chain for ${symbol} (historical/delayed)${targetExpiration ? ` for expiry ${targetExpiration}` : ''}...`);
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    // Enhanced logging to debug API response
-    console.log(`📊 Options API response status: ${response.status}`);
-    console.log(`📊 Options API response keys: ${Object.keys(data).join(', ')}`);
-    
-    if (data['Error Message']) {
-      console.error('❌ Options API Error Message:', data['Error Message']);
-      return null;
+    const providers: Array<{ fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD'; requireGreeks: boolean }> = AV_OPTIONS_REALTIME_ENABLED
+      ? [
+          { fn: 'REALTIME_OPTIONS', freshness: 'REALTIME', requireGreeks: true },
+          { fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false },
+        ]
+      : [{ fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false }];
+
+    let data: any = null;
+    let options: AVOptionContract[] = [];
+    let selectedProvider: { fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD' } | null = null;
+
+    for (const provider of providers) {
+      const requireGreeks = provider.requireGreeks ? '&require_greeks=true' : '';
+      const url = `https://www.alphavantage.co/query?function=${provider.fn}&symbol=${symbol}${requireGreeks}&apikey=${ALPHA_VANTAGE_KEY}`;
+      console.log(`📊 Fetching ${provider.freshness} options chain via ${provider.fn} for ${symbol}${targetExpiration ? ` (target expiry ${targetExpiration})` : ''}...`);
+
+      const response = await fetch(url);
+      const payload = await response.json();
+
+      console.log(`📊 ${provider.fn} response status: ${response.status}`);
+      console.log(`📊 ${provider.fn} response keys: ${Object.keys(payload || {}).join(', ')}`);
+
+      if (payload?.['Error Message']) {
+        console.error(`❌ ${provider.fn} Error Message:`, payload['Error Message']);
+        continue;
+      }
+
+      if (payload?.['Note']) {
+        console.warn(`⚠️ ${provider.fn} Note (likely rate limit):`, payload['Note']);
+        continue;
+      }
+
+      if (payload?.['Information']) {
+        console.warn(`⚠️ ${provider.fn} Information (tier/entitlement):`, payload['Information']);
+        continue;
+      }
+
+      const providerOptions = payload?.['data'] || [];
+      if (!Array.isArray(providerOptions) || providerOptions.length === 0) {
+        console.warn(`⚠️ ${provider.fn} returned no options data`);
+        continue;
+      }
+
+      data = payload;
+      options = providerOptions;
+      selectedProvider = { fn: provider.fn, freshness: provider.freshness };
+      break;
     }
-    
-    if (data['Note']) {
-      console.warn('⚠️ Options API Note (likely rate limit):', data['Note']);
-      return null;
-    }
-    
-    if (data['Information']) {
-      console.error('❌ Options API Information (likely premium required):', data['Information']);
-      return null;
-    }
-    
-    // Alpha Vantage returns data in 'data' array
-    const options = data['data'] || [];
-    if (!Array.isArray(options) || options.length === 0) {
-      console.warn('⚠️ No options data returned. Full response:', JSON.stringify(data).substring(0, 500));
+
+    if (!selectedProvider || !data || options.length === 0) {
+      console.warn('⚠️ No options data returned from REALTIME_OPTIONS/HISTORICAL_OPTIONS providers');
       return null;
     }
     
@@ -1077,7 +1123,14 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       : null;
 
     console.log(`✅ Filtered to ${bestExpiry}: ${calls.length} calls, ${puts.length} puts`);
-    return { calls, puts, selectedExpiry: bestExpiry, dataDate };
+    return {
+      calls,
+      puts,
+      selectedExpiry: bestExpiry,
+      dataDate,
+      sourceFunction: selectedProvider.fn,
+      freshness: selectedProvider.freshness,
+    };
   } catch (err) {
     console.error('Options chain fetch failed:', err);
     return null;
@@ -3978,7 +4031,7 @@ export class OptionsConfluenceAnalyzer {
         if (optionsChain) {
           // Update data quality
           dataQuality.optionsChainSource = 'alpha_vantage';
-          dataQuality.freshness = 'EOD';  // Alpha Vantage historical is EOD
+          dataQuality.freshness = optionsChain.freshness;
           dataQuality.contractsCount = { 
             calls: optionsChain.calls.length, 
             puts: optionsChain.puts.length 
@@ -3988,7 +4041,7 @@ export class OptionsConfluenceAnalyzer {
             ...optionsChain.puts.map(p => parseFloat(p.strike || '0'))
           ])].filter(s => s > 0).sort((a, b) => a - b);
           dataQuality.chainExpiryUsed = optionsChain.selectedExpiry;
-          dataQuality.lastUpdated = optionsChain.dataDate || 'UNKNOWN_EOD';
+          dataQuality.lastUpdated = optionsChain.dataDate || (optionsChain.freshness === 'REALTIME' ? 'UNKNOWN_REALTIME' : 'UNKNOWN_EOD');
           
           // Check if API provided Greeks (numeric validation, not truthy string check)
           const samplePool = [...optionsChain.calls, ...optionsChain.puts].slice(0, 50);

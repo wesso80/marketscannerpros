@@ -33,6 +33,8 @@ import { buildBacktestEngineResult } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
 import { getBacktestStrategy, isBacktestTimeframeSupported } from '@/lib/strategies/registry';
 import type { BacktestTimeframe as RegistryBacktestTimeframe } from '@/lib/strategies/types';
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -85,6 +87,13 @@ interface PriceData {
     close: number;
     volume: number;
   };
+}
+
+type PriceDataSource = 'alpha_vantage' | 'binance' | 'coingecko';
+
+interface PriceFetchResult {
+  priceData: PriceData;
+  source: PriceDataSource;
 }
 
 // Fetch daily price data from Alpha Vantage (Stocks)
@@ -232,88 +241,69 @@ async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = '
   return priceData;
 }
 
-// Fetch daily price data from Alpha Vantage (Crypto) - FALLBACK
-async function fetchCryptoPriceDataAlphaVantage(symbol: string, market: string = 'USD', timeframe: string = 'daily'): Promise<PriceData> {
+// Fetch crypto price data from CoinGecko - FALLBACK
+async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
   const cleanSymbol = normalizeSymbol(symbol);
-  logger.info(`Fetching crypto data for ${cleanSymbol}/${market} (${timeframe})`);
-  
-  let url: string;
-  let timeSeriesKey: string;
-  
-  if (timeframe === 'daily') {
-    url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${cleanSymbol}&market=${market}&apikey=${ALPHA_VANTAGE_KEY}`;
-    timeSeriesKey = 'Time Series (Digital Currency Daily)';
-  } else {
-    // Intraday crypto: 1min, 5min, 15min, 30min, 60min
-    const interval = timeframe;
-    url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${cleanSymbol}&market=${market}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
-    timeSeriesKey = `Time Series Crypto (${interval})`;
+  logger.info(`Fetching crypto data for ${cleanSymbol} (${timeframe}) via CoinGecko`);
+
+  const coinId = COINGECKO_ID_MAP[cleanSymbol] || await resolveSymbolToId(cleanSymbol);
+  if (!coinId) {
+    throw new Error(`No CoinGecko mapping found for ${cleanSymbol}`);
   }
-  
-  const response = await fetch(url);
-  const data = await response.json();
-  const timeSeries = data[timeSeriesKey];
-  
-  if (!timeSeries) {
-    // Check for error messages
-    if (data['Error Message']) {
-      throw new Error(`Invalid crypto symbol ${cleanSymbol}: ${data['Error Message']}`);
-    }
-    if (data['Note']) {
-      throw new Error(`API rate limit exceeded. Please try again in a minute.`);
-    }
-    // Fallback: Try daily if intraday fails
-    if (timeframe !== 'daily') {
-      logger.warn(`Intraday not available for ${cleanSymbol}, falling back to daily`);
-      return fetchCryptoPriceDataAlphaVantage(symbol, market, 'daily');
-    }
-    throw new Error(`Failed to fetch crypto price data for ${cleanSymbol}. Make sure it's a valid cryptocurrency symbol.`);
+
+  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = timeframe === 'daily' ? 365 : 7;
+  const ohlc = await getOHLC(coinId, days);
+  if (!ohlc || ohlc.length === 0) {
+    throw new Error(`Failed to fetch CoinGecko OHLC data for ${cleanSymbol}`);
   }
 
   const priceData: PriceData = {};
-  for (const [date, values] of Object.entries(timeSeries)) {
-    // Crypto daily has different field names (with USD suffix), intraday uses standard fields
-    if (timeframe === 'daily') {
-      priceData[date] = {
-        open: parseFloat((values as any)['1a. open (USD)'] ?? (values as any)['1. open']),
-        high: parseFloat((values as any)['2a. high (USD)'] ?? (values as any)['2. high']),
-        low: parseFloat((values as any)['3a. low (USD)'] ?? (values as any)['3. low']),
-        close: parseFloat((values as any)['4a. close (USD)'] ?? (values as any)['4. close']),
-        volume: parseFloat((values as any)['5. volume'] ?? 0)
-      };
-    } else {
-      priceData[date] = {
-        open: parseFloat((values as any)['1. open']),
-        high: parseFloat((values as any)['2. high']),
-        low: parseFloat((values as any)['3. low']),
-        close: parseFloat((values as any)['4. close']),
-        volume: parseFloat((values as any)['5. volume'] ?? 0)
-      };
-    }
+  for (const candle of ohlc) {
+    const date = new Date(candle[0]);
+    const key = timeframe === 'daily'
+      ? date.toISOString().slice(0, 10)
+      : date.toISOString().replace('T', ' ').slice(0, 19);
+
+    priceData[key] = {
+      open: Number(candle[1]),
+      high: Number(candle[2]),
+      low: Number(candle[3]),
+      close: Number(candle[4]),
+      volume: 0,
+    };
   }
   
-  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol}`);
+  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko)`);
   return priceData;
 }
 
-// Smart crypto fetch - tries Binance first (better data), falls back to Alpha Vantage
-async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate: string, endDate: string): Promise<PriceData> {
+// Smart crypto fetch - tries Binance first (better data), falls back to CoinGecko
+async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate: string, endDate: string): Promise<PriceFetchResult> {
   try {
     // Try Binance first - better historical data for all timeframes
-    return await fetchCryptoPriceDataBinance(symbol, timeframe, startDate, endDate);
+    return {
+      priceData: await fetchCryptoPriceDataBinance(symbol, timeframe, startDate, endDate),
+      source: 'binance',
+    };
   } catch (binanceError) {
-    logger.warn(`Binance failed for ${symbol}, trying Alpha Vantage: ${binanceError}`);
-    // Fallback to Alpha Vantage
-    return await fetchCryptoPriceDataAlphaVantage(symbol, 'USD', timeframe);
+    logger.warn(`Binance failed for ${symbol}, trying CoinGecko: ${binanceError}`);
+    // Fallback to CoinGecko
+    return {
+      priceData: await fetchCryptoPriceDataCoinGecko(symbol, timeframe),
+      source: 'coingecko',
+    };
   }
 }
 
 // Smart fetch - detects crypto vs stock and supports intraday for both
-async function fetchPriceData(symbol: string, timeframe: string = 'daily', startDate: string = '', endDate: string = ''): Promise<PriceData> {
+async function fetchPriceData(symbol: string, timeframe: string = 'daily', startDate: string = '', endDate: string = ''): Promise<PriceFetchResult> {
   if (isCryptoSymbol(symbol)) {
     return fetchCryptoPriceData(symbol, timeframe, startDate, endDate);
   } else {
-    return fetchStockPriceData(symbol, timeframe);
+    return {
+      priceData: await fetchStockPriceData(symbol, timeframe),
+      source: 'alpha_vantage',
+    };
   }
 }
 
@@ -1449,7 +1439,7 @@ export async function POST(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
     }
-    if (session.tier !== 'pro_trader') {
+    if (!hasProTraderAccess(session.tier)) {
       return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
     }
 
@@ -1492,7 +1482,7 @@ export async function POST(req: NextRequest) {
 
     // Fetch real historical price data
     logger.debug(`Fetching ${isCrypto ? 'crypto (Binance)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${effectiveTimeframe})...`);
-    const priceData = await fetchPriceData(normalizedSymbol, effectiveTimeframe, startDate, endDate);
+    const { priceData, source: priceDataSource } = await fetchPriceData(normalizedSymbol, effectiveTimeframe, startDate, endDate);
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
 
     // Run backtest with real indicators
@@ -1515,7 +1505,13 @@ export async function POST(req: NextRequest) {
       totalReturn: result.totalReturn.toFixed(2)
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      dataSources: {
+        priceData: priceDataSource,
+        assetType: isCrypto ? 'crypto' : 'stock',
+      },
+    });
   } catch (error: any) {
     logger.error('Backtest error', { 
       error: error?.message || 'Failed to run backtest',

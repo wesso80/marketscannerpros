@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from "@/lib/coingecko";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -188,16 +189,27 @@ async function fetchEquityDaily(symbol: string): Promise<Candle[]> {
 }
 
 async function fetchCryptoDaily(symbol: string): Promise<Candle[]> {
-  const url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${symbol}&market=USD&apikey=${ALPHA_KEY}`;
-  const j = await fetchAlphaJson(url, `CRYPTO_DAILY ${symbol}`);
-  const ts = j["Time Series (Digital Currency Daily)"] || {};
-  return Object.entries(ts).map(([date, v]: any) => ({
-    t: date,
-    open: Number(v["1a. open (USD)"] ?? v["1. open"]),
-    high: Number(v["2a. high (USD)"] ?? v["2. high"]),
-    low: Number(v["3a. low (USD)"] ?? v["3. low"]),
-    close: Number(v["4a. close (USD)"] ?? v["4. close"]),
-  })).filter(c => Number.isFinite(c.close)).sort((a, b) => a.t.localeCompare(b.t));
+  const normalized = symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+  const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[normalized] || await resolveSymbolToId(normalized);
+  if (!coinId) {
+    throw new Error(`No CoinGecko mapping for ${symbol}`);
+  }
+
+  const ohlc = await getOHLC(coinId, 30);
+  if (!ohlc || ohlc.length === 0) {
+    throw new Error(`No CoinGecko OHLC data for ${symbol}`);
+  }
+
+  return ohlc
+    .map((candle) => ({
+      t: new Date(candle[0]).toISOString().slice(0, 10),
+      open: Number(candle[1]),
+      high: Number(candle[2]),
+      low: Number(candle[3]),
+      close: Number(candle[4]),
+    }))
+    .filter(c => Number.isFinite(c.close))
+    .sort((a, b) => a.t.localeCompare(b.t));
 }
 
 // Commodity ETFs use the same equity API
@@ -368,7 +380,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const assetClass = searchParams.get("assetClass") as "equity" | "crypto" | "commodity" | null;
 
-  if (!ALPHA_KEY) {
+  const requiresAlpha = !assetClass || assetClass === 'equity' || assetClass === 'commodity';
+  if (requiresAlpha && !ALPHA_KEY) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
@@ -426,9 +439,16 @@ export async function GET(req: NextRequest) {
       candidates = candidates.filter(c => c.assetClass === assetClass);
     }
 
+    const sources = {
+      equity: 'alpha_vantage',
+      commodity: 'alpha_vantage',
+      crypto: 'coingecko',
+    } as const;
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
+      sources,
       count: candidates.length,
       candidates,
     });

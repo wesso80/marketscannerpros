@@ -5,6 +5,7 @@
  */
 
 import OpenAI from 'openai';
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 // Types
 interface OHLCV {
@@ -79,6 +80,33 @@ const TIMEFRAMES = [
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
+function normalizeCryptoBase(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (upper.includes('/')) return upper.split('/')[0];
+  return upper.replace(/USDT$/, '').replace(/USD$/, '');
+}
+
+async function fetchCoinGeckoBars(symbol: string, days: 1 | 7 | 14 | 30 | 90 | 180 | 365): Promise<OHLCV[]> {
+  const base = normalizeCryptoBase(symbol);
+  const coinId = COINGECKO_ID_MAP[base] || await resolveSymbolToId(base);
+  if (!coinId) return [];
+
+  const ohlc = await getOHLC(coinId, days);
+  if (!ohlc || ohlc.length === 0) return [];
+
+  return ohlc
+    .map((row) => ({
+      time: Number(row[0]),
+      open: Number(row[1]),
+      high: Number(row[2]),
+      low: Number(row[3]),
+      close: Number(row[4]),
+      volume: 0,
+    }))
+    .filter((bar) => Number.isFinite(bar.time) && Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close))
+    .sort((a, b) => a.time - b.time);
+}
+
 export class AIConfluenceAgent {
   private openai: OpenAI;
   private historicalPatterns: Map<string, HistoricalPattern[]> = new Map();
@@ -95,16 +123,15 @@ export class AIConfluenceAgent {
 
   async fetchHistoricalData(symbol: string, interval: string = '30min', outputSize: string = 'full'): Promise<OHLCV[]> {
     const isCrypto = symbol.includes('USD') || symbol.includes('BTC') || symbol.includes('ETH');
-    
-    let url: string;
+
     if (isCrypto) {
-      // Use crypto endpoint
-      const [from, to] = symbol.includes('/') ? symbol.split('/') : [symbol.replace('USD', ''), 'USD'];
-      url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${from}&market=${to}&interval=${interval}&outputsize=${outputSize}&apikey=${ALPHA_VANTAGE_KEY}`;
-    } else {
-      // Stock endpoint (15-minute delayed data)
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      const days: 1 | 7 | 14 | 30 = outputSize === 'full' ? 30 : 7;
+      return fetchCoinGeckoBars(symbol, days);
     }
+
+    let url: string;
+    // Stock endpoint (15-minute delayed data)
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -136,15 +163,14 @@ export class AIConfluenceAgent {
 
   async fetchDailyData(symbol: string): Promise<OHLCV[]> {
     const isCrypto = symbol.includes('USD') || symbol.includes('BTC');
-    
-    let url: string;
+
     if (isCrypto) {
-      const from = symbol.replace('USD', '').replace('USDT', '');
-      url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol=${from}&market=USD&apikey=${ALPHA_VANTAGE_KEY}`;
-    } else {
-      // Use delayed entitlement for stock data (15-minute delayed)
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      return fetchCoinGeckoBars(symbol, 365);
     }
+
+    let url: string;
+    // Use delayed entitlement for stock data (15-minute delayed)
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
 
     const response = await fetch(url);
     const data = await response.json();

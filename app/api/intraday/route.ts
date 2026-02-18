@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -31,6 +32,7 @@ interface IntradayResponse {
   interval: IntradayInterval;
   lastRefreshed: string;
   timeZone: string;
+  source?: 'coingecko' | 'alpha_vantage';
   data: IntradayBar[];
   metadata: {
     information: string;
@@ -63,31 +65,78 @@ export async function GET(req: NextRequest) {
     }, { status: 400 });
   }
 
-  if (!ALPHA_VANTAGE_KEY) {
+  const isCrypto = isCryptoSymbol(symbol);
+
+  if (!isCrypto && !ALPHA_VANTAGE_KEY) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
   }
 
-  const isCrypto = isCryptoSymbol(symbol);
-
   try {
-    const url = new URL('https://www.alphavantage.co/query');
-    
     if (isCrypto) {
-      // Use CRYPTO_INTRADAY for cryptocurrency
-      url.searchParams.set('function', 'CRYPTO_INTRADAY');
-      url.searchParams.set('symbol', symbol);
-      url.searchParams.set('market', 'USD');
-      url.searchParams.set('interval', interval);
-      url.searchParams.set('outputsize', outputSize);
-    } else {
-      // Use TIME_SERIES_INTRADAY for stocks
-      url.searchParams.set('function', 'TIME_SERIES_INTRADAY');
-      url.searchParams.set('symbol', symbol);
-      url.searchParams.set('interval', interval);
-      url.searchParams.set('outputsize', outputSize);
-      url.searchParams.set('adjusted', adjusted.toString());
-      url.searchParams.set('extended_hours', extendedHours.toString());
+      const normalized = symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+      const coinId = COINGECKO_ID_MAP[symbol.toUpperCase()] || COINGECKO_ID_MAP[normalized] || await resolveSymbolToId(normalized);
+
+      if (!coinId) {
+        return NextResponse.json({
+          error: 'No CoinGecko mapping available for this crypto symbol',
+          symbol,
+        }, { status: 404 });
+      }
+
+      const days = outputSize === 'full' ? 7 : 1;
+      const ohlc = await getOHLC(coinId, days as 1 | 7);
+
+      if (!ohlc || ohlc.length === 0) {
+        return NextResponse.json({
+          error: 'No intraday data available for this symbol',
+          symbol,
+        }, { status: 404 });
+      }
+
+      const bars: IntradayBar[] = ohlc
+        .map((candle) => ({
+          timestamp: new Date(candle[0]).toISOString(),
+          open: Number(candle[1]),
+          high: Number(candle[2]),
+          low: Number(candle[3]),
+          close: Number(candle[4]),
+          volume: 0,
+        }))
+        .filter((bar) => Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close))
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      const lastRefreshed = bars[bars.length - 1]?.timestamp || new Date().toISOString();
+
+      const result: IntradayResponse = {
+        symbol,
+        interval,
+        lastRefreshed,
+        timeZone: 'UTC',
+        source: 'coingecko',
+        data: bars,
+        metadata: {
+          information: `CoinGecko OHLC (${days}d window)`,
+          symbol,
+          lastRefreshed,
+          interval,
+          outputSize,
+          timeZone: 'UTC'
+        },
+        isCrypto: true,
+      };
+
+      return NextResponse.json(result);
     }
+
+    const url = new URL('https://www.alphavantage.co/query');
+
+    // Use TIME_SERIES_INTRADAY for stocks
+    url.searchParams.set('function', 'TIME_SERIES_INTRADAY');
+    url.searchParams.set('symbol', symbol);
+    url.searchParams.set('interval', interval);
+    url.searchParams.set('outputsize', outputSize);
+    url.searchParams.set('adjusted', adjusted.toString());
+    url.searchParams.set('extended_hours', extendedHours.toString());
     url.searchParams.set('apikey', ALPHA_VANTAGE_KEY);
 
     const response = await fetch(url.toString(), {
@@ -122,11 +171,9 @@ export async function GET(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Parse the response - different key format for crypto
+    // Parse the response
     const metaData = data['Meta Data'];
-    const timeSeriesKey = isCrypto 
-      ? `Time Series Crypto (${interval})`
-      : `Time Series (${interval})`;
+    const timeSeriesKey = `Time Series (${interval})`;
     const timeSeries = data[timeSeriesKey];
 
     if (!timeSeries || !metaData) {
@@ -149,20 +196,21 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const result: IntradayResponse = {
-      symbol: isCrypto ? metaData['2. Digital Currency Code'] : metaData['2. Symbol'],
+      symbol: metaData['2. Symbol'],
       interval: interval,
       lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
-      timeZone: isCrypto ? metaData['7. Time Zone'] : metaData['6. Time Zone'],
+      timeZone: metaData['6. Time Zone'],
+      source: 'alpha_vantage',
       data: bars,
       metadata: {
         information: metaData['1. Information'],
-        symbol: isCrypto ? metaData['2. Digital Currency Code'] : metaData['2. Symbol'],
+        symbol: metaData['2. Symbol'],
         lastRefreshed: metaData['3. Last Refreshed'] || metaData['6. Last Refreshed'],
-        interval: isCrypto ? metaData['5. Interval'] : metaData['4. Interval'],
-        outputSize: isCrypto ? metaData['4. Output Size'] : metaData['5. Output Size'],
-        timeZone: isCrypto ? metaData['7. Time Zone'] : metaData['6. Time Zone']
+        interval: metaData['4. Interval'],
+        outputSize: metaData['5. Output Size'],
+        timeZone: metaData['6. Time Zone']
       },
-      isCrypto
+      isCrypto: false
     };
 
     return NextResponse.json(result);

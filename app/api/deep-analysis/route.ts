@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from '@/lib/auth';
 import { estimateGreeks } from '@/lib/options-confluence-analyzer';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -1153,7 +1154,7 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use Golden Egg Deep Analysis' }, { status: 401 });
     }
-    if (session.tier !== 'pro_trader') {
+    if (!hasProTraderAccess(session.tier)) {
       return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Golden Egg Deep Analysis' }, { status: 403 });
     }
 

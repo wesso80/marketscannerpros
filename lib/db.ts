@@ -1,4 +1,4 @@
-import { Pool, QueryResult } from "pg";
+import { Pool, PoolClient, QueryResult } from "pg";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -30,4 +30,19 @@ export const pool = {
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
   const res = await pool.query(text, params);
   return res.rows as T[];
+}
+
+export async function tx<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }

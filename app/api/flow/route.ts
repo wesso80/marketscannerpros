@@ -4,6 +4,7 @@ import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from '@/lib/coingecko';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -272,7 +273,7 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    if (session.tier !== 'pro_trader') {
+    if (!hasProTraderAccess(session.tier)) {
       return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Capital Flow Engine' }, { status: 403 });
     }
 
