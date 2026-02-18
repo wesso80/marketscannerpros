@@ -1199,7 +1199,7 @@ function ScannerContent() {
                 operatorBias: operatorState.bias,
                 operatorRisk: operatorState.risk,
                 operatorEdge: operatorState.edge,
-                marketRegime: direction === 'neutral' ? 'Range' : 'Trend',
+                marketRegime: 'Trend',
                 marketMood: operatorState.action === 'EXECUTE' ? 'Action Ready' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
                 derivativesBias: operatorState.bias,
                 sectorStrength: operatorState.next,
