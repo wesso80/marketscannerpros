@@ -91,6 +91,18 @@ function normalizeEntryId(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function computeUnrealized(entry: JournalEntry, currentPrice: number): { pl: number; plPercent: number } {
+  const pl = entry.side === 'LONG'
+    ? (currentPrice - entry.entryPrice) * entry.quantity
+    : (entry.entryPrice - currentPrice) * entry.quantity;
+
+  const plPercent = entry.entryPrice > 0
+    ? ((currentPrice - entry.entryPrice) / entry.entryPrice) * 100 * (entry.side === 'LONG' ? 1 : -1)
+    : 0;
+
+  return { pl, plPercent };
+}
+
 function JournalContent() {
   const journalEventMapRef = useRef<Record<number, string>>({});
 
@@ -108,6 +120,7 @@ function JournalContent() {
   const [currentClosePrice, setCurrentClosePrice] = useState<number | null>(null);
   const [currentClosePriceLoading, setCurrentClosePriceLoading] = useState(false);
   const [currentClosePriceError, setCurrentClosePriceError] = useState<string | null>(null);
+  const [openTradePrices, setOpenTradePrices] = useState<Record<number, number>>({});
   const [exitVerdicts, setExitVerdicts] = useState<Record<number, ExitVerdictData>>({});
   const [exitVerdictLoading, setExitVerdictLoading] = useState<Record<number, boolean>>({});
   const [exitVerdictError, setExitVerdictError] = useState<Record<number, string>>({});
@@ -871,6 +884,58 @@ function JournalContent() {
   const openTrades = entries.filter(e => e.isOpen === true || e.isOpen === undefined && e.outcome === 'open');
   const closedTrades = entries.filter(e => e.isOpen === false || (e.isOpen === undefined && e.outcome !== 'open'));
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchOpenTradePrices = async () => {
+      if (!dataLoaded || openTrades.length === 0) {
+        if (!cancelled) setOpenTradePrices({});
+        return;
+      }
+
+      const nextPrices: Record<number, number> = {};
+
+      await Promise.all(openTrades.map(async (trade) => {
+        try {
+          const baseSymbol = trade.symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
+          const preferredType = getLikelyQuoteType(trade.symbol);
+
+          const attemptFetch = async (type: 'crypto' | 'stock') => {
+            const querySymbol = type === 'crypto' ? baseSymbol : trade.symbol.toUpperCase();
+            const response = await fetch(`/api/quote?symbol=${encodeURIComponent(querySymbol)}&type=${type}&market=USD`, { cache: 'no-store' });
+            if (!response.ok) return null;
+            const data = await response.json();
+            const price = Number(data?.price);
+            return Number.isFinite(price) && price > 0 ? price : null;
+          };
+
+          const first = await attemptFetch(preferredType);
+          const second = first == null ? await attemptFetch(preferredType === 'crypto' ? 'stock' : 'crypto') : null;
+          const price = first ?? second;
+
+          if (price != null) {
+            nextPrices[normalizeEntryId(trade.id)] = price;
+          }
+        } catch {
+        }
+      }));
+
+      if (!cancelled) {
+        setOpenTradePrices(nextPrices);
+      }
+    };
+
+    void fetchOpenTradePrices();
+    const intervalId = window.setInterval(() => {
+      void fetchOpenTradePrices();
+    }, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [dataLoaded, openTrades]);
+
   // Filter entries based on current tab
   const filteredEntries = (journalTab === 'open' ? openTrades : closedTrades).filter(entry => {
     if (filterTag !== 'all' && !entry.tags.includes(filterTag)) return false;
@@ -1170,9 +1235,20 @@ function JournalContent() {
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '12px' }}>
                     Entry ${trade.entryPrice.toFixed(2)}
+                    {Number.isFinite(openTradePrices[normalizeEntryId(trade.id)]) ? ` • Current $${openTradePrices[normalizeEntryId(trade.id)].toFixed(4)}` : ''}
                     {trade.stopLoss ? ` • Stop $${trade.stopLoss.toFixed(2)}` : ''}
                     {trade.target ? ` • Target $${trade.target.toFixed(2)}` : ''}
                   </div>
+                  {Number.isFinite(openTradePrices[normalizeEntryId(trade.id)]) && (
+                    (() => {
+                      const unrealized = computeUnrealized(trade, openTradePrices[normalizeEntryId(trade.id)]);
+                      return (
+                        <div style={{ color: unrealized.pl >= 0 ? '#10b981' : '#ef4444', fontSize: '12px', marginTop: '4px', fontWeight: 600 }}>
+                          Unrealized {unrealized.pl >= 0 ? '+' : ''}${unrealized.pl.toFixed(2)} ({unrealized.plPercent >= 0 ? '+' : ''}{unrealized.plPercent.toFixed(2)}%)
+                        </div>
+                      );
+                    })()
+                  )}
                 </div>
               ))}
             </div>
@@ -2698,7 +2774,7 @@ function JournalContent() {
                 {/* Trade Details */}
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(4, 1fr)', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
                   gap: '16px',
                   marginBottom: '16px',
                   paddingBottom: '16px',
@@ -2728,6 +2804,35 @@ function JournalContent() {
                       {entry.strategy || '-'}
                     </div>
                   </div>
+                  {entry.isOpen && (
+                    <div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Current Price</div>
+                      <div style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600' }}>
+                        {Number.isFinite(openTradePrices[normalizeEntryId(entry.id)])
+                          ? `$${openTradePrices[normalizeEntryId(entry.id)].toFixed(4)}`
+                          : '—'}
+                      </div>
+                    </div>
+                  )}
+                  {entry.isOpen && (
+                    <div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Unrealized</div>
+                      <div style={{
+                        color: Number.isFinite(openTradePrices[normalizeEntryId(entry.id)])
+                          ? (computeUnrealized(entry, openTradePrices[normalizeEntryId(entry.id)]).pl >= 0 ? '#10b981' : '#ef4444')
+                          : '#94a3b8',
+                        fontSize: '16px',
+                        fontWeight: '600'
+                      }}>
+                        {Number.isFinite(openTradePrices[normalizeEntryId(entry.id)])
+                          ? (() => {
+                              const u = computeUnrealized(entry, openTradePrices[normalizeEntryId(entry.id)]);
+                              return `${u.pl >= 0 ? '+' : ''}$${u.pl.toFixed(2)} (${u.plPercent >= 0 ? '+' : ''}${u.plPercent.toFixed(2)}%)`;
+                            })()
+                          : '—'}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes Section */}
