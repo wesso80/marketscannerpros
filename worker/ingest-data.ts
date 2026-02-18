@@ -947,15 +947,28 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
   }
 }
 
-async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; success: boolean }> {
+async function processCryptoSymbol(symbol: string): Promise<{
+  apiCalls: number;
+  success: boolean;
+  coingeckoAttempted: number;
+  coingeckoSucceeded: number;
+  coingeckoNoData: number;
+  coingeckoFailed: number;
+}> {
   let apiCalls = 0;
+  const coingeckoAttempted = 1;
   
   try {
     // CoinGecko only for crypto ingestion
     let bars = await fetchCoinGeckoDaily(symbol);
+    let coingeckoSucceeded = 0;
+    let coingeckoNoData = 0;
 
     if (bars.length === 0) {
+      coingeckoNoData = 1;
       console.log(`[worker] CoinGecko unavailable/no mapping for ${symbol}; skipping crypto fallback source`);
+    } else {
+      coingeckoSucceeded = 1;
     }
 
     if (bars.length > 0) {
@@ -1021,12 +1034,26 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
     }
 
     await markSymbolFetched(symbol, true);
-    return { apiCalls, success: true };
+    return {
+      apiCalls,
+      success: true,
+      coingeckoAttempted,
+      coingeckoSucceeded,
+      coingeckoNoData,
+      coingeckoFailed: 0,
+    };
 
   } catch (err: any) {
     console.error(`[worker] Error processing crypto ${symbol}:`, err?.message || err);
     await markSymbolFetched(symbol, false);
-    return { apiCalls, success: false };
+    return {
+      apiCalls,
+      success: false,
+      coingeckoAttempted,
+      coingeckoSucceeded: 0,
+      coingeckoNoData: 0,
+      coingeckoFailed: 1,
+    };
   }
 }
 
@@ -1037,8 +1064,26 @@ async function processCryptoSymbol(symbol: string): Promise<{ apiCalls: number; 
 async function runIngestionCycle(
   includeForex = false,
   cryptoOnly = false
-): Promise<{ symbolsProcessed: number; apiCalls: number; errors: number; skippedNotDue: number }> {
-  const stats = { symbolsProcessed: 0, apiCalls: 0, errors: 0, skippedNotDue: 0 };
+): Promise<{
+  symbolsProcessed: number;
+  apiCalls: number;
+  errors: number;
+  skippedNotDue: number;
+  coingeckoAttempted: number;
+  coingeckoSucceeded: number;
+  coingeckoNoData: number;
+  coingeckoFailed: number;
+}> {
+  const stats = {
+    symbolsProcessed: 0,
+    apiCalls: 0,
+    errors: 0,
+    skippedNotDue: 0,
+    coingeckoAttempted: 0,
+    coingeckoSucceeded: 0,
+    coingeckoNoData: 0,
+    coingeckoFailed: 0,
+  };
   const sessionState = getUsMarketSessionState();
   
   const allSymbols = await getSymbolsToFetch(undefined, { includeForex });
@@ -1055,7 +1100,14 @@ async function runIngestionCycle(
         continue;
       }
 
-      let result: { apiCalls: number; success: boolean };
+      let result: {
+        apiCalls: number;
+        success: boolean;
+        coingeckoAttempted?: number;
+        coingeckoSucceeded?: number;
+        coingeckoNoData?: number;
+        coingeckoFailed?: number;
+      };
 
       if (asset_type === 'crypto') {
         result = await processCryptoSymbol(symbol);
@@ -1064,6 +1116,10 @@ async function runIngestionCycle(
       }
 
       stats.apiCalls += result.apiCalls;
+      stats.coingeckoAttempted += result.coingeckoAttempted || 0;
+      stats.coingeckoSucceeded += result.coingeckoSucceeded || 0;
+      stats.coingeckoNoData += result.coingeckoNoData || 0;
+      stats.coingeckoFailed += result.coingeckoFailed || 0;
       stats.symbolsProcessed++;
       
       if (!result.success) {
@@ -1138,6 +1194,7 @@ async function main(): Promise<void> {
 
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
       console.log(`[worker] Stats: ${stats.symbolsProcessed} symbols, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due)`);
+      console.log(`[worker] CoinGecko stats: attempted=${stats.coingeckoAttempted}, succeeded=${stats.coingeckoSucceeded}, noData=${stats.coingeckoNoData}, failed=${stats.coingeckoFailed}`);
 
       await logWorkerRun('ingest-main', stats, 'completed');
 
