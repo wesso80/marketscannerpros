@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { tx } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth";
 import { emitTradeLifecycleEvent, hashDedupeKey } from "@/lib/notifications/tradeEvents";
 
@@ -157,20 +158,23 @@ export async function POST(req: NextRequest) {
 
     await ensureJournalSchema();
 
-    // Clear existing and insert new (simple sync approach)
-    await q(`DELETE FROM journal_entries WHERE workspace_id = $1`, [workspaceId]);
+    // Clear and re-insert atomically to avoid transient not-found windows during close requests.
+    await tx(async (client) => {
+      await client.query(`DELETE FROM journal_entries WHERE workspace_id = $1`, [workspaceId]);
 
-    // Insert entries
-    for (const e of entries || []) {
-      await q(
-        `INSERT INTO journal_entries (
-          workspace_id, trade_date, symbol, side, trade_type, option_type, strike_price, 
-          expiration_date, quantity, entry_price, exit_price, exit_date, pl, pl_percent, 
-          strategy, setup, notes, emotions, outcome, tags, is_open,
-          stop_loss, target, risk_amount, r_multiple, planned_rr,
-          status, close_source, exit_reason, followed_plan, exit_intent_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
-        [
+      for (const e of entries || []) {
+        const numericId = Number(e?.id);
+        const hasStableId = Number.isInteger(numericId) && numericId > 0;
+
+        const columns = [
+          'workspace_id', 'trade_date', 'symbol', 'side', 'trade_type', 'option_type', 'strike_price',
+          'expiration_date', 'quantity', 'entry_price', 'exit_price', 'exit_date', 'pl', 'pl_percent',
+          'strategy', 'setup', 'notes', 'emotions', 'outcome', 'tags', 'is_open',
+          'stop_loss', 'target', 'risk_amount', 'r_multiple', 'planned_rr',
+          'status', 'close_source', 'exit_reason', 'followed_plan', 'exit_intent_id'
+        ];
+
+        const values: any[] = [
           workspaceId,
           e.date,
           e.symbol,
@@ -202,48 +206,68 @@ export async function POST(req: NextRequest) {
           e.exitReason || null,
           typeof e.followedPlan === 'boolean' ? e.followedPlan : null,
           e.exitIntentId || null,
-        ]
-      );
+        ];
 
-      if (e?.isOpen !== false) {
-        const symbol = String(e?.symbol || '').toUpperCase().slice(0, 20);
-        const side = String(e?.side || 'LONG').toUpperCase();
-        const quantity = Number(e?.quantity || 0);
-        const entryPrice = Number(e?.entryPrice || 0);
-        const tradeDate = String(e?.date || '');
+        if (hasStableId) {
+          columns.unshift('id');
+          values.unshift(numericId);
+        }
 
-        if (symbol && Number.isFinite(quantity) && Number.isFinite(entryPrice) && tradeDate) {
-          const fingerprint = hashDedupeKey([
-            'TRADE_ENTERED',
-            workspaceId,
-            symbol,
-            side,
-            tradeDate,
-            quantity,
-            entryPrice,
-          ]);
+        const placeholders = values.map((_, idx) => `$${idx + 1}`).join(', ');
 
-          await emitTradeLifecycleEvent({
-            workspaceId,
-            eventType: 'TRADE_ENTERED',
-            aggregateId: `trade_${symbol}_${tradeDate}_${fingerprint.slice(0, 12)}`,
-            dedupeKey: `trade_entered_${fingerprint}`,
-            payload: {
+        await client.query(
+          `INSERT INTO journal_entries (${columns.join(', ')}) VALUES (${placeholders})`,
+          values
+        );
+
+        if (e?.isOpen !== false) {
+          const symbol = String(e?.symbol || '').toUpperCase().slice(0, 20);
+          const side = String(e?.side || 'LONG').toUpperCase();
+          const quantity = Number(e?.quantity || 0);
+          const entryPrice = Number(e?.entryPrice || 0);
+          const tradeDate = String(e?.date || '');
+
+          if (symbol && Number.isFinite(quantity) && Number.isFinite(entryPrice) && tradeDate) {
+            const fingerprint = hashDedupeKey([
+              'TRADE_ENTERED',
+              workspaceId,
               symbol,
               side,
               tradeDate,
               quantity,
               entryPrice,
-              strategy: e?.strategy || null,
-              setup: e?.setup || null,
-              source: 'journal_sync',
-            },
-          }).catch((error) => {
-            console.warn('[journal] failed to emit TRADE_ENTERED event:', error);
-          });
+            ]);
+
+            await emitTradeLifecycleEvent({
+              workspaceId,
+              eventType: 'TRADE_ENTERED',
+              aggregateId: `trade_${symbol}_${tradeDate}_${fingerprint.slice(0, 12)}`,
+              dedupeKey: `trade_entered_${fingerprint}`,
+              payload: {
+                symbol,
+                side,
+                tradeDate,
+                quantity,
+                entryPrice,
+                strategy: e?.strategy || null,
+                setup: e?.setup || null,
+                source: 'journal_sync',
+              },
+            }).catch((error) => {
+              console.warn('[journal] failed to emit TRADE_ENTERED event:', error);
+            });
+          }
         }
       }
-    }
+
+      await client.query(`
+        SELECT setval(
+          pg_get_serial_sequence('journal_entries', 'id'),
+          GREATEST(COALESCE((SELECT MAX(id) FROM journal_entries), 1), 1),
+          true
+        )
+      `);
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

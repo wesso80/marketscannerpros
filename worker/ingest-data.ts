@@ -55,9 +55,9 @@ const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
 };
 
 const CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS: Record<number, number> = {
-  1: 1200,  // Tier 1: every 20 minutes
-  2: 5400,  // Tier 2: every 90 minutes
-  3: 10800, // Tier 3: every 180 minutes
+  1: 300,   // Tier 1: every 5 minutes
+  2: 900,   // Tier 2: every 15 minutes
+  3: 1800,  // Tier 3: every 30 minutes
 };
 
 const NON_CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
@@ -606,6 +606,15 @@ async function markSymbolFetched(symbol: string, success: boolean): Promise<void
   }
 }
 
+async function markSymbolNoData(symbol: string): Promise<void> {
+  const db = getPool();
+  await db.query(`
+    UPDATE symbol_universe
+    SET last_fetched_at = NOW(), fetch_error_count = fetch_error_count + 1, updated_at = NOW()
+    WHERE symbol = $1
+  `, [symbol.toUpperCase()]);
+}
+
 async function logWorkerRun(name: string, stats: any, status: string, error?: string): Promise<void> {
   const db = getPool();
   await db.query(`
@@ -967,9 +976,18 @@ async function processCryptoSymbol(symbol: string): Promise<{
     if (bars.length === 0) {
       coingeckoNoData = 1;
       console.log(`[worker] CoinGecko unavailable/no mapping for ${symbol}; skipping crypto fallback source`);
-    } else {
-      coingeckoSucceeded = 1;
+      await markSymbolNoData(symbol);
+      return {
+        apiCalls,
+        success: false,
+        coingeckoAttempted,
+        coingeckoSucceeded,
+        coingeckoNoData,
+        coingeckoFailed: 0,
+      };
     }
+
+    coingeckoSucceeded = 1;
 
     if (bars.length > 0) {
       await upsertBars(symbol, 'daily', bars);
