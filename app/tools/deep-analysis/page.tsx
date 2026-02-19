@@ -1781,8 +1781,8 @@ export default function DeepAnalysisPage() {
                         transition: "background 0.2s"
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.5rem" }}>
-                        <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ color: "#E2E8F0", fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem", lineHeight: "1.4" }}>
                             {item.title}
                           </div>
@@ -1796,7 +1796,7 @@ export default function DeepAnalysisPage() {
                             )}
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, flexWrap: "wrap" }}>
                           {/* Impact Tag */}
                           {(() => {
                             const impact = getNewsImpact(item.title, item.summary || '');
@@ -1808,7 +1808,7 @@ export default function DeepAnalysisPage() {
                                 color: impact.color,
                                 fontSize: "0.65rem",
                                 fontWeight: "600",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "normal",
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "0.25rem"
@@ -1826,7 +1826,7 @@ export default function DeepAnalysisPage() {
                             fontSize: "0.7rem",
                             fontWeight: "700",
                             textTransform: "uppercase",
-                            whiteSpace: "nowrap"
+                            whiteSpace: "normal"
                           }}>
                             {item.sentiment}
                           </span>

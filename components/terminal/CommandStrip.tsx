@@ -41,7 +41,7 @@ export default function CommandStrip({
         {dataHealth ? <Pill tone="neutral">Data: {dataHealth}</Pill> : null}
         {mode ? <Pill tone="accent">Mode: {mode}</Pill> : null}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
           {onDensityChange ? (
             <div className="inline-flex rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-0.5">
               <button

@@ -1636,7 +1636,7 @@ function JournalContent() {
           }} />
           
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: showAiAnalysis ? '16px' : 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: '1 1 260px' }}>
               <span style={{ 
                 fontSize: '24px',
                 background: 'var(--msp-accent)',
@@ -1672,9 +1672,13 @@ function JournalContent() {
                 cursor: aiLoading || entries.length === 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '8px',
                 transition: 'all 0.2s ease',
-                boxShadow: aiLoading ? 'none' : 'var(--msp-shadow)'
+                boxShadow: aiLoading ? 'none' : 'var(--msp-shadow)',
+                maxWidth: '100%',
+                textAlign: 'center',
+                flexWrap: 'wrap'
               }}
             >
               {aiLoading ? (
@@ -2150,7 +2154,7 @@ function JournalContent() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                   Entry Price *
@@ -2197,7 +2201,7 @@ function JournalContent() {
             </div>
 
             {/* Risk Management Fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ color: '#ef4444', fontSize: '13px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   🛑 Stop Loss
@@ -2355,7 +2359,7 @@ function JournalContent() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                   Strategy
@@ -2468,7 +2472,7 @@ function JournalContent() {
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowAddForm(false)}
                 style={{
@@ -2511,7 +2515,8 @@ function JournalContent() {
           background: 'rgba(30,41,59,0.5)',
           borderRadius: '12px',
           padding: '4px',
-          width: 'fit-content'
+          width: '100%',
+          flexWrap: 'wrap'
         }}>
           <button
             onClick={() => setJournalTab('open')}
@@ -2524,7 +2529,9 @@ function JournalContent() {
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              flex: 1,
+              minWidth: '180px'
             }}
           >
             📈 Open Trades ({openTrades.length})
@@ -2540,7 +2547,9 @@ function JournalContent() {
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              flex: 1,
+              minWidth: '180px'
             }}
           >
             ✅ Closed Trades ({closedTrades.length})
@@ -2664,8 +2673,8 @@ function JournalContent() {
                 }}
               >
                 {/* Header Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
                     <div>
                       <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '2px' }}>
                         {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -2701,7 +2710,7 @@ function JournalContent() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
                     {entry.isOpen ? (
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ 
@@ -3066,7 +3075,8 @@ function JournalContent() {
                     gap: '8px', 
                     marginTop: '16px',
                     paddingTop: '16px',
-                    borderTop: '1px solid #334155'
+                    borderTop: '1px solid #334155',
+                    flexWrap: 'wrap'
                   }}>
                     {entry.tags.map(tag => (
                       <span
