@@ -1287,6 +1287,21 @@ export default function OptionsConfluenceScanner() {
     0,
   );
   const dealerIntel = result?.dealerIntelligence;
+  const dealerRegimeCompact = dealerGamma
+    ? dealerGamma.regime === 'SHORT_GAMMA'
+      ? 'EXPANSION (Short Gamma)'
+      : dealerGamma.regime === 'LONG_GAMMA'
+        ? 'COMPRESSION (Long Gamma)'
+        : 'NEUTRAL'
+    : 'UNKNOWN';
+  const dealerVolatilityBias = dealerIntel?.volatilityState
+    ? dealerIntel.volatilityState === 'amplified'
+      ? 'Amplified'
+      : dealerIntel.volatilityState === 'suppressed'
+        ? 'Suppressed'
+        : 'Mixed'
+    : 'Mixed';
+  const dealerWallProximity = dealerIntel?.attention?.distanceToWallPct;
 
   const tradeabilityState: 'EXECUTABLE' | 'CONDITIONAL' | 'AVOID' = !result
     ? 'CONDITIONAL'
@@ -2261,6 +2276,54 @@ export default function OptionsConfluenceScanner() {
               </div>
             </div>
 
+            <div className="-mt-[0.92rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.5rem]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem]">
+                  <span className="font-extrabold uppercase tracking-[0.04em] text-slate-400">Dealer Structure:</span>
+                  <span className={`font-extrabold ${dealerGamma?.regime === 'SHORT_GAMMA' ? 'text-red-300' : dealerGamma?.regime === 'LONG_GAMMA' ? 'text-emerald-300' : 'text-slate-300'}`}>
+                    {dealerRegimeCompact}
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">Call {dealerIntel?.dealerStructure?.callWall?.toFixed(2) || 'N/A'}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">Put {dealerIntel?.dealerStructure?.putWall?.toFixed(2) || 'N/A'}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">Wall Distance {dealerWallProximity != null ? `${dealerWallProximity.toFixed(1)}%` : 'N/A'}</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">Volatility Bias {dealerVolatilityBias}</span>
+                </div>
+                {dealerHistogramStrikes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDealerHistogram((previous) => !previous)}
+                    className="rounded-full border border-slate-400/30 bg-slate-900/60 px-[0.45rem] py-[1px] text-[0.56rem] font-extrabold uppercase tracking-[0.04em] text-slate-300 sm:text-[0.58rem]"
+                  >
+                    {showDealerHistogram ? 'Hide Dealer Detail' : 'Dealer Detail'}
+                  </button>
+                )}
+              </div>
+              {showDealerHistogram && dealerHistogramStrikes.length > 0 && (
+                <div className="mt-2 grid gap-[0.28rem] rounded-[8px] border border-slate-400/20 bg-slate-900/35 p-[0.38rem_0.45rem]">
+                  {dealerHistogramStrikes.map((strike) => (
+                    <div key={`bar-${strike.side}-${strike.strike}`} className="grid grid-cols-[36px_minmax(0,1fr)_52px] items-center gap-1.5 sm:grid-cols-[42px_minmax(0,1fr)_58px] sm:gap-2">
+                      <div className="text-[0.6rem] font-bold leading-none text-slate-300 sm:text-[0.62rem]">{strike.strike.toFixed(0)}</div>
+                      <div className="min-w-0 h-[8px] overflow-hidden rounded-full border border-slate-500/25 bg-slate-900/70">
+                        <div
+                          className={`h-full ${strike.side === 'positive' ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}
+                          style={{ width: `${dealerHistogramMaxAbs > 0 ? Math.max(8, (Math.abs(strike.netGexUsd) / dealerHistogramMaxAbs) * 100) : 0}%` }}
+                        />
+                      </div>
+                      <div className={`text-right text-[0.56rem] font-bold leading-none sm:text-[0.58rem] ${strike.side === 'positive' ? 'text-emerald-300' : 'text-red-300'}`}>
+                        {formatUsdCompact(Math.abs(strike.netGexUsd))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
               <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
                 <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
@@ -2807,44 +2870,10 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
                 <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Dealer Positioning</div>
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Dealer Context</div>
                   <div className="text-[0.76rem] font-extrabold text-slate-200">{dealerRegimeLabel}</div>
-                  <div className="mt-1 text-[0.7rem] text-slate-400">Net GEX {dealerGamma ? formatUsdCompact(dealerGamma.netGexUsd) : 'N/A'}</div>
-                  <div className="text-[0.7rem] text-slate-400">Gamma Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'} • Pin Zone {dealerGamma?.pinZone || 'UNKNOWN'}</div>
-                  <div className="text-[0.7rem] text-slate-400">Call Wall {dealerIntel?.dealerStructure?.callWall?.toFixed(2) || 'N/A'} • Put Wall {dealerIntel?.dealerStructure?.putWall?.toFixed(2) || 'N/A'}</div>
-                  <div className="text-[0.7rem] text-slate-400">Volatility State {dealerIntel?.volatilityState?.toUpperCase() || 'MIXED'} • Setup x{dealerIntel?.setupScoreMultiplier?.toFixed(2) || '1.00'}</div>
-                  {dealerHistogramStrikes.length > 0 && (
-                    <div className="mt-2 rounded-[8px] border border-slate-400/20 bg-slate-900/35 p-[0.38rem_0.45rem]">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-[0.62rem] font-bold uppercase tracking-[0.03em] text-slate-500">Strike Histogram</div>
-                        <button
-                          type="button"
-                          onClick={() => setShowDealerHistogram((previous) => !previous)}
-                          className="rounded-full border border-slate-400/30 bg-slate-900/60 px-[0.45rem] py-[1px] text-[0.56rem] font-extrabold uppercase tracking-[0.04em] text-slate-300 sm:text-[0.58rem]"
-                        >
-                          {showDealerHistogram ? 'Hide' : 'Advanced'}
-                        </button>
-                      </div>
-                      {showDealerHistogram && (
-                        <div className="mt-2 grid gap-[0.28rem]">
-                          {dealerHistogramStrikes.map((strike) => (
-                            <div key={`${strike.side}-${strike.strike}`} className="grid grid-cols-[36px_minmax(0,1fr)_52px] items-center gap-1.5 sm:grid-cols-[42px_minmax(0,1fr)_58px] sm:gap-2">
-                              <div className="text-[0.6rem] font-bold leading-none text-slate-300 sm:text-[0.62rem]">{strike.strike.toFixed(0)}</div>
-                              <div className="min-w-0 h-[8px] overflow-hidden rounded-full border border-slate-500/25 bg-slate-900/70">
-                                <div
-                                  className={`h-full ${strike.side === 'positive' ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}
-                                  style={{ width: `${dealerHistogramMaxAbs > 0 ? Math.max(8, (Math.abs(strike.netGexUsd) / dealerHistogramMaxAbs) * 100) : 0}%` }}
-                                />
-                              </div>
-                              <div className={`text-right text-[0.56rem] font-bold leading-none sm:text-[0.58rem] ${strike.side === 'positive' ? 'text-emerald-300' : 'text-red-300'}`}>
-                                {formatUsdCompact(Math.abs(strike.netGexUsd))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="mt-1 text-[0.7rem] text-slate-400">Net GEX {dealerGamma ? formatUsdCompact(dealerGamma.netGexUsd) : 'N/A'} • Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'}</div>
+                  <div className="text-[0.7rem] text-slate-400">Volatility {dealerVolatilityBias} • Setup x{dealerIntel?.setupScoreMultiplier?.toFixed(2) || '1.00'}</div>
                   {dealerTopStrikes.length > 0 && (
                     <div className="mt-1 text-[0.68rem] text-slate-500">
                       Top Strikes: {dealerTopStrikes.map((item) => `${item.strike}${item.netGexUsd >= 0 ? '(+)' : '(-)'}`).join(', ')}
