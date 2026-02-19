@@ -1919,7 +1919,7 @@ function JournalContent() {
                       Equity Curve
                     </h3>
                   </div>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <span style={{ color: '#94a3b8' }}>
                       Peak: <span style={{ color: '#10b981', fontWeight: '600' }}>${equityCurve[equityCurve.length - 1]?.peak.toFixed(2) || '0.00'}</span>
                     </span>
@@ -1992,10 +1992,10 @@ function JournalContent() {
                   </svg>
                   
                   {/* Y-axis labels */}
-                  <div style={{ position: 'absolute', top: 0, left: -5, transform: 'translateX(-100%)', fontSize: '10px', color: '#64748b' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, fontSize: '10px', color: '#64748b', background: 'rgba(15,23,42,0.75)', padding: '1px 4px', borderRadius: '4px' }}>
                     ${Math.max(...equityCurve.map(p => p.balance)).toFixed(0)}
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, left: -5, transform: 'translateX(-100%)', fontSize: '10px', color: '#64748b' }}>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, fontSize: '10px', color: '#64748b', background: 'rgba(15,23,42,0.75)', padding: '1px 4px', borderRadius: '4px' }}>
                     ${Math.min(...equityCurve.map(p => p.balance), 0).toFixed(0)}
                   </div>
                 </div>
