@@ -524,6 +524,8 @@ export default function OptionsConfluenceScanner() {
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
   const [showDealerHistogram, setShowDealerHistogram] = useState(false);
+  const [cursorLightEnabled, setCursorLightEnabled] = useState(false);
+  const [cursorLight, setCursorLight] = useState({ x: 50, y: 20, active: false });
   const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
   const [trapDoors, setTrapDoors] = useState<Record<TrapDoorKey, boolean>>({
     evidence: true,
@@ -537,7 +539,22 @@ export default function OptionsConfluenceScanner() {
     narrative: null,
     logs: null,
   });
+  const scannerSurfaceRef = useRef<HTMLDivElement | null>(null);
   const lastWorkflowEventKeyRef = useRef('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pointerFineQuery = window.matchMedia('(pointer: fine)');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setCursorLightEnabled(pointerFineQuery.matches && !reducedMotionQuery.matches);
+    update();
+    pointerFineQuery.addEventListener('change', update);
+    reducedMotionQuery.addEventListener('change', update);
+    return () => {
+      pointerFineQuery.removeEventListener('change', update);
+      reducedMotionQuery.removeEventListener('change', update);
+    };
+  }, []);
 
   const activateSection = (key: TrapDoorKey) => {
     setTrapDoors((previousState) => ({ ...previousState, [key]: true }));
@@ -549,6 +566,23 @@ export default function OptionsConfluenceScanner() {
     requestAnimationFrame(() => {
       setTimeout(scrollToAnchor, 40);
     });
+  };
+
+  const handleScannerSurfaceMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!cursorLightEnabled || !scannerSurfaceRef.current) return;
+    const bounds = scannerSurfaceRef.current.getBoundingClientRect();
+    const relativeX = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const relativeY = ((event.clientY - bounds.top) / bounds.height) * 100;
+    setCursorLight({
+      x: Math.max(0, Math.min(100, relativeX)),
+      y: Math.max(0, Math.min(100, relativeY)),
+      active: true,
+    });
+  };
+
+  const handleScannerSurfaceLeave = () => {
+    if (!cursorLightEnabled) return;
+    setCursorLight((previous) => ({ ...previous, active: false }));
   };
 
   const normalizeOptionsSetup = (payload: any): OptionsSetup => {
@@ -1317,6 +1351,9 @@ export default function OptionsConfluenceScanner() {
     : tradeabilityState === 'CONDITIONAL'
       ? 'border-amber-500/45 bg-amber-500/15 text-amber-300'
       : 'border-red-500/45 bg-red-500/15 text-red-300';
+  const executionGlowClass = tradePermission === 'ALLOWED' && commandStatus === 'ACTIVE'
+    ? 'ring-2 ring-[var(--msp-accent-glow)]'
+    : 'ring-1 ring-slate-500/20';
 
   const isGuidedMode = operatorViewMode === 'guided';
   const narrativeVisible = !isGuidedMode && trapDoors.narrative;
@@ -2031,6 +2068,23 @@ export default function OptionsConfluenceScanner() {
       subtitle="Get intelligent strike & expiration recommendations based on Time Confluence analysis. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
     >
 
+      <div
+        ref={scannerSurfaceRef}
+        className="relative"
+        onMouseMove={handleScannerSurfaceMove}
+        onMouseLeave={handleScannerSurfaceLeave}
+      >
+        {cursorLightEnabled && (
+          <div
+            className={`pointer-events-none absolute inset-0 z-[0] transition-opacity duration-200 ${cursorLight.active ? 'opacity-100' : 'opacity-0'}`}
+            style={{
+              background: `radial-gradient(420px circle at ${cursorLight.x}% ${cursorLight.y}%, var(--msp-accent-glow), transparent 62%)`,
+            }}
+          />
+        )}
+
+        <div className="relative z-[1]">
+
         {/* Command Strip */}
         {result && (
           <CommandStrip
@@ -2348,7 +2402,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </DepthCard>
 
-                <DepthCard className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)]" tiltStrength={5.5}>
+                <DepthCard className={`rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)] ${executionGlowClass}`} tiltStrength={5.5}>
                   <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Execution</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
                     <div className="text-slate-100">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
@@ -4402,6 +4456,9 @@ export default function OptionsConfluenceScanner() {
             </div>
           </div>
         )}
+
+        </div>
+      </div>
 
     </TerminalShell>
   );
