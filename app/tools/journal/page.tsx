@@ -926,7 +926,7 @@ function JournalContent() {
     delete journalEventMapRef.current[requestedId];
     void emitWorkflowEvents([journalCompletedEvent]);
     
-    setEntries(entries.map(entry => {
+    setEntries((prevEntries) => prevEntries.map(entry => {
       if (normalizeEntryId(entry.id) === requestedId) {
         if (closeResultEntry) {
           return {

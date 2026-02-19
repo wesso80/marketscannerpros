@@ -347,6 +347,28 @@ export async function POST(req: NextRequest) {
 
     const incomingEntries = Array.isArray(entries) ? entries : [];
 
+    const existingCountRows = await q<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM journal_entries WHERE workspace_id = $1`,
+      [workspaceId]
+    );
+    const existingCount = Number(existingCountRows[0]?.count || 0);
+
+    const isSuspiciousPartialReplace =
+      existingCount >= 10 &&
+      incomingEntries.length > 0 &&
+      incomingEntries.length <= Math.max(1, Math.floor(existingCount * 0.2));
+
+    if (isSuspiciousPartialReplace && body?.forceReplace !== true) {
+      return NextResponse.json(
+        {
+          error: 'Blocked potentially destructive partial journal replace. Retry with full entry set or forceReplace=true.',
+          existingCount,
+          incomingCount: incomingEntries.length,
+        },
+        { status: 409 }
+      );
+    }
+
     const incomingSymbols = Array.from(
       new Set(
         incomingEntries
@@ -373,6 +395,16 @@ export async function POST(req: NextRequest) {
         symbolUniverseBySymbol.get(key)!.add(normalizeUniverseAssetType(row.asset_type));
       }
     }
+
+    const pendingTradeEnteredEvents: Array<{
+      symbol: string;
+      side: string;
+      tradeDate: string;
+      quantity: number;
+      entryPrice: number;
+      strategy: string | null;
+      setup: string | null;
+    }> = [];
 
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
@@ -490,33 +522,14 @@ export async function POST(req: NextRequest) {
           const tradeDate = String(e?.date || '');
 
           if (symbol && Number.isFinite(quantity) && Number.isFinite(entryPrice) && tradeDate) {
-            const fingerprint = hashDedupeKey([
-              'TRADE_ENTERED',
-              workspaceId,
+            pendingTradeEnteredEvents.push({
               symbol,
               side,
               tradeDate,
               quantity,
               entryPrice,
-            ]);
-
-            await emitTradeLifecycleEvent({
-              workspaceId,
-              eventType: 'TRADE_ENTERED',
-              aggregateId: `trade_${symbol}_${tradeDate}_${fingerprint.slice(0, 12)}`,
-              dedupeKey: `trade_entered_${fingerprint}`,
-              payload: {
-                symbol,
-                side,
-                tradeDate,
-                quantity,
-                entryPrice,
-                strategy: e?.strategy || null,
-                setup: e?.setup || null,
-                source: 'journal_sync',
-              },
-            }).catch((error) => {
-              console.warn('[journal] failed to emit TRADE_ENTERED event:', error);
+              strategy: e?.strategy || null,
+              setup: e?.setup || null,
             });
           }
         }
@@ -530,6 +543,37 @@ export async function POST(req: NextRequest) {
         )
       `);
     });
+
+    for (const eventData of pendingTradeEnteredEvents) {
+      const fingerprint = hashDedupeKey([
+        'TRADE_ENTERED',
+        workspaceId,
+        eventData.symbol,
+        eventData.side,
+        eventData.tradeDate,
+        eventData.quantity,
+        eventData.entryPrice,
+      ]);
+
+      await emitTradeLifecycleEvent({
+        workspaceId,
+        eventType: 'TRADE_ENTERED',
+        aggregateId: `trade_${eventData.symbol}_${eventData.tradeDate}_${fingerprint.slice(0, 12)}`,
+        dedupeKey: `trade_entered_${fingerprint}`,
+        payload: {
+          symbol: eventData.symbol,
+          side: eventData.side,
+          tradeDate: eventData.tradeDate,
+          quantity: eventData.quantity,
+          entryPrice: eventData.entryPrice,
+          strategy: eventData.strategy,
+          setup: eventData.setup,
+          source: 'journal_sync',
+        },
+      }).catch((error) => {
+        console.warn('[journal] failed to emit TRADE_ENTERED event:', error);
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

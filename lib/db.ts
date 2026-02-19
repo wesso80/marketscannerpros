@@ -16,6 +16,10 @@ function getPool(): Pool {
       max: 5,
       ssl: requiresSSL ? { rejectUnauthorized: false } : undefined,
     });
+
+    global.__pgPool.on('error', (err) => {
+      console.error('[db] Unexpected idle client error:', err);
+    });
   }
   return global.__pgPool;
 }
@@ -40,7 +44,11 @@ export async function tx<T>(work: (client: PoolClient) => Promise<T>): Promise<T
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[db] ROLLBACK failed after transaction error:', rollbackError);
+    }
     throw error;
   } finally {
     client.release();
