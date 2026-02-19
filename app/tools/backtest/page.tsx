@@ -119,6 +119,14 @@ interface EquityPoint {
   drawdown: number;
 }
 
+type DateAnchorSource = 'ipo' | 'coverage' | 'fallback';
+
+type DateAnchorInfo = {
+  source: DateAnchorSource;
+  startDate: string;
+  assetType: 'stock' | 'crypto' | 'unknown';
+};
+
 function BacktestContent() {
   const lastPlanEventKeyRef = useRef('');
   const previousEdgeGroupRef = useRef<EdgeGroupId | null>(null);
@@ -151,6 +159,7 @@ function BacktestContent() {
   const [showReplayDetails, setShowReplayDetails] = useState(false);
   const [replayMinSignalScore, setReplayMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
+  const [dateAnchorInfo, setDateAnchorInfo] = useState<DateAnchorInfo | null>(null);
 
   const workflowId = useMemo(() => {
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
@@ -470,8 +479,14 @@ function BacktestContent() {
           : null;
 
         if (!cancelled && assetType === 'crypto') {
-          setStartDate(coverageStartDate || fallbackStartDate);
+          const resolvedStart = coverageStartDate || fallbackStartDate;
+          setStartDate(resolvedStart);
           setEndDate(today);
+          setDateAnchorInfo({
+            source: coverageStartDate ? 'coverage' : 'fallback',
+            startDate: resolvedStart,
+            assetType: 'crypto',
+          });
           lastResolvedSymbolRef.current = normalizedSymbol;
           return;
         }
@@ -488,6 +503,11 @@ function BacktestContent() {
                 : fallbackStartDate;
             setStartDate(fallbackStartForEquity);
             setEndDate(today);
+            setDateAnchorInfo({
+              source: coverageStartDate ? 'coverage' : 'fallback',
+              startDate: fallbackStartForEquity,
+              assetType: 'stock',
+            });
             lastResolvedSymbolRef.current = normalizedSymbol;
           }
           return;
@@ -504,10 +524,14 @@ function BacktestContent() {
 
         if (ipoDate) {
           setStartDate(ipoDate);
+          setDateAnchorInfo({ source: 'ipo', startDate: ipoDate, assetType: 'stock' });
         } else if (coverageStartDate) {
-          setStartDate(coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate);
+          const resolvedStart = coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate;
+          setStartDate(resolvedStart);
+          setDateAnchorInfo({ source: 'coverage', startDate: resolvedStart, assetType: 'stock' });
         } else {
           setStartDate(fallbackStartDate);
+          setDateAnchorInfo({ source: 'fallback', startDate: fallbackStartDate, assetType: 'stock' });
         }
 
         setEndDate(today);
@@ -520,6 +544,11 @@ function BacktestContent() {
             : fallbackStartDate;
         setStartDate(fallbackStartForEquity);
         setEndDate(today);
+        setDateAnchorInfo({
+          source: coverageStartDate ? 'coverage' : 'fallback',
+          startDate: fallbackStartForEquity,
+          assetType: 'unknown',
+        });
         lastResolvedSymbolRef.current = normalizedSymbol;
       }
     }, 350);
@@ -1100,6 +1129,40 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
               />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 10px',
+                borderRadius: '999px',
+                border: '1px solid rgba(148,163,184,0.35)',
+                background: 'rgba(148,163,184,0.12)',
+                color: '#cbd5e1',
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '0.02em'
+              }}>
+                <span>
+                  Date Anchor:
+                  {' '}
+                  {dateAnchorInfo?.source === 'ipo'
+                    ? 'IPO'
+                    : dateAnchorInfo?.source === 'coverage'
+                    ? 'Coverage'
+                    : 'Fallback'}
+                </span>
+                <span style={{ color: '#94a3b8' }}>•</span>
+                <span>
+                  Earliest used: {dateAnchorInfo?.startDate || startDate}
+                </span>
+                <span style={{ color: '#94a3b8' }}>•</span>
+                <span>
+                  Asset: {dateAnchorInfo?.assetType || 'unknown'}
+                </span>
+              </div>
             </div>
 
             <div>
