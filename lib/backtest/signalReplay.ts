@@ -3,6 +3,8 @@ import { buildBacktestEngineResult, type BacktestTrade } from '@/lib/backtest/en
 import { brainSignalSnapshotSchema, type BrainSignalSnapshot } from '@/lib/backtest/signalSnapshots';
 import { parseBacktestTimeframe, resamplePriceData, computeCoverage } from '@/lib/backtest/timeframe';
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
+import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
+import { buildValidationPayload } from '@/lib/backtest/validationPayload';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -309,9 +311,11 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
     const emptyResult = buildBacktestEngineResult([], [], params.initialCapital);
     const strategyDirection = inferStrategyDirection(params.mode, emptyResult.trades);
     const diagnostics = buildBacktestDiagnostics(emptyResult, strategyDirection, parsedTimeframe.normalized, 0);
+    const validation = buildValidationPayload(params.mode, strategyDirection, emptyResult);
 
     return {
       ...emptyResult,
+      validation,
       dataSources: {
         priceData: isCrypto ? 'binance' : 'alpha_vantage',
         assetType: isCrypto ? 'crypto' : 'stock',
@@ -438,16 +442,20 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
 
     let shouldExit = false;
     let exit = close;
+    let exitReason: BacktestTrade['exitReason'] | null = null;
 
     if (hitStop) {
       shouldExit = true;
       exit = position.stop;
+      exitReason = 'stop';
     } else if (hitTarget) {
       shouldExit = true;
       exit = position.target;
+      exitReason = 'target';
     } else if (signal && signal.direction !== position.side) {
       shouldExit = true;
       exit = close;
+      exitReason = 'signal_flip';
     }
 
     if (!shouldExit) continue;
@@ -463,12 +471,16 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
     trades.push({
       entryDate: position.entryDate,
       exitDate: dates[i],
+      entryTs: position.entryDate,
+      exitTs: dates[i],
       symbol: params.symbol.toUpperCase(),
       side: position.side,
+      direction: position.side === 'LONG' ? 'long' : 'short',
       entry: position.entry,
       exit,
       return: returnDollars,
       returnPercent,
+      exitReason: exitReason ?? 'signal_flip',
       holdingPeriodDays: i - position.entryIdx + 1,
     });
 
@@ -489,19 +501,25 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
     trades.push({
       entryDate: position.entryDate,
       exitDate: dates[lastIndex],
+      entryTs: position.entryDate,
+      exitTs: dates[lastIndex],
       symbol: params.symbol.toUpperCase(),
       side: position.side,
+      direction: position.side === 'LONG' ? 'long' : 'short',
       entry: position.entry,
       exit,
       return: returnDollars,
       returnPercent,
+      exitReason: 'end_of_data',
       holdingPeriodDays: lastIndex - position.entryIdx + 1,
     });
   }
 
-  const result = buildBacktestEngineResult(trades, dates, params.initialCapital);
+  const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
+  const result = buildBacktestEngineResult(enrichedTrades, dates, params.initialCapital);
   const strategyDirection = inferStrategyDirection(params.mode, result.trades);
   const diagnostics = buildBacktestDiagnostics(result, strategyDirection, parsedTimeframe.normalized, coverage.bars);
+  const validation = buildValidationPayload(params.mode, strategyDirection, result);
 
   let noDataReason: string | null = null;
   if (snapshots.length === 0) {
@@ -520,6 +538,7 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
 
   return {
     ...result,
+    validation,
     dataSources: {
       priceData: isCrypto ? 'binance' : 'alpha_vantage',
       assetType: isCrypto ? 'crypto' : 'stock',
@@ -557,6 +576,7 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
       minAvailable: coverage.minAvailable,
       maxAvailable: coverage.maxAvailable,
       bars: coverage.bars,
+      provider: isCrypto ? 'binance' : 'alpha_vantage',
     },
   };
 }

@@ -1,66 +1,43 @@
 import type { BacktestTrade } from './engine';
 
-export type TradeForensicsInput = {
-  entryDate: string;
-  exitDate: string;
-  symbol: string;
-  side: 'LONG' | 'SHORT';
-  direction?: 'long' | 'short';
-  entryTs?: string;
-  exitTs?: string;
-  entry: number;
-  exit: number;
-  return: number;
-  returnPercent: number;
-  mfe?: number;
-  mae?: number;
-  exitReason?: BacktestTrade['exitReason'];
-  holdingPeriodDays: number;
-};
-
 export function enrichTradesWithMetadata(
-  trades: TradeForensicsInput[],
+  trades: BacktestTrade[],
   dates: string[],
   highs: number[],
   lows: number[],
 ): BacktestTrade[] {
-  const dateToIndex = new Map<string, number>();
-  for (let index = 0; index < dates.length; index++) {
-    dateToIndex.set(dates[index], index);
+  if (!trades.length || !dates.length || !highs.length || !lows.length) {
+    return trades;
+  }
+
+  const dateIndex = new Map<string, number>();
+  for (let i = 0; i < dates.length; i++) {
+    dateIndex.set(dates[i], i);
   }
 
   return trades.map((trade) => {
-    const entryIdx = dateToIndex.get(trade.entryDate);
-    const exitIdx = dateToIndex.get(trade.exitDate);
-    const normalizedDirection = trade.direction ?? (trade.side === 'SHORT' ? 'short' : 'long');
+    const entryIdx = dateIndex.get(trade.entryDate);
+    const exitIdx = dateIndex.get(trade.exitDate);
 
-    if (entryIdx == null || exitIdx == null || exitIdx < entryIdx) {
-      return {
-        ...trade,
-        direction: normalizedDirection,
-        entryTs: trade.entryTs ?? trade.entryDate,
-        exitTs: trade.exitTs ?? trade.exitDate,
-      };
+    if (entryIdx === undefined || exitIdx === undefined || entryIdx > exitIdx) {
+      return trade;
     }
 
     const tradeHigh = Math.max(...highs.slice(entryIdx, exitIdx + 1));
     const tradeLow = Math.min(...lows.slice(entryIdx, exitIdx + 1));
 
-    const mfe = normalizedDirection === 'short'
-      ? ((trade.entry - tradeLow) / trade.entry) * 100
-      : ((tradeHigh - trade.entry) / trade.entry) * 100;
+    const rawMfe = trade.side === 'LONG'
+      ? ((tradeHigh - trade.entry) / trade.entry) * 100
+      : ((trade.entry - tradeLow) / trade.entry) * 100;
 
-    const mae = normalizedDirection === 'short'
-      ? ((trade.entry - tradeHigh) / trade.entry) * 100
-      : ((tradeLow - trade.entry) / trade.entry) * 100;
+    const rawMae = trade.side === 'LONG'
+      ? ((tradeLow - trade.entry) / trade.entry) * 100
+      : ((trade.entry - tradeHigh) / trade.entry) * 100;
 
     return {
       ...trade,
-      direction: normalizedDirection,
-      entryTs: trade.entryTs ?? trade.entryDate,
-      exitTs: trade.exitTs ?? trade.exitDate,
-      mfe,
-      mae,
+      mfe: Math.max(0, rawMfe),
+      mae: Math.min(0, rawMae),
     };
   });
 }
