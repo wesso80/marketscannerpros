@@ -775,13 +775,14 @@ function ScannerContent() {
     type: 'equity' | 'crypto',
     overrides?: { mode?: 'deep' | 'light' }
   ) => {
+    const requestedTimeframe = bulkScanTimeframe;
     setBulkScanType(type);
     setBulkScanLoading(true);
     setBulkScanError(null);
     setBulkScanResults(null);
     
     try {
-      const payload: any = { type, timeframe: bulkScanTimeframe };
+      const payload: any = { type, timeframe: requestedTimeframe };
       if (type === 'crypto') {
         const resolvedMode = overrides?.mode ?? bulkCryptoScanMode;
         payload.mode = resolvedMode;
@@ -836,7 +837,8 @@ function ScannerContent() {
               rsi: topPick.indicators?.rsi,
               macd_hist: topPick.indicators?.macd_hist,
             },
-            'scanner.bulk'
+            'scanner.bulk',
+            { assetType: type, timeframe: requestedTimeframe }
           );
         }
       } else {
@@ -863,9 +865,15 @@ function ScannerContent() {
   // AI Page Context - share scan results with copilot
   const { setPageData } = useAIPageContext();
 
-  const emitScannerLifecycle = (scanResult: ScanResult, sourceModule: 'scanner.run' | 'scanner.bulk') => {
-    const assetClass = toWorkflowAssetClass(assetType);
-    const market = toDecisionPacketMarket(assetType);
+  const emitScannerLifecycle = (
+    scanResult: ScanResult,
+    sourceModule: 'scanner.run' | 'scanner.bulk',
+    context: { assetType: AssetType; timeframe: string }
+  ) => {
+    const contextAssetType = context.assetType;
+    const contextTimeframe = context.timeframe;
+    const assetClass = toWorkflowAssetClass(contextAssetType);
+    const market = toDecisionPacketMarket(contextAssetType);
     const score = clampConfidence(scanResult.score ?? 50);
     const symbolKey = scanResult.symbol.toUpperCase();
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
@@ -882,7 +890,7 @@ function ScannerContent() {
       ? Math.max(1, Math.min(99, Math.round((scanResult.atr / scanResult.price) * 100 * 20)))
       : 35;
     const volatilityRegime = riskScore >= 70 ? 'high' : riskScore >= 45 ? 'moderate' : 'low';
-    const timeframeBias = [timeframe];
+    const timeframeBias = [contextTimeframe];
 
     const decisionPacket = createDecisionPacketFromScan({
       symbol: symbolKey,
@@ -915,13 +923,13 @@ function ScannerContent() {
         created_at: new Date().toISOString(),
         symbol: symbolKey,
         asset_class: assetClass,
-        timeframe,
+        timeframe: contextTimeframe,
         signal_type: 'confluence_scan',
         direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
         confidence: score,
         source: {
           module: sourceModule,
-          submodule: assetType,
+          submodule: contextAssetType,
         },
         evidence: {
           score,
@@ -980,7 +988,7 @@ function ScannerContent() {
           symbol: symbolKey,
           asset_class: assetClass,
           direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
-          timeframe,
+          timeframe: contextTimeframe,
           setup: {
             source: sourceModule,
             signal_type: 'confluence_scan',
@@ -1118,6 +1126,9 @@ function ScannerContent() {
     setOperatorTransition(null);
     setScanKey(prev => prev + 1); // Force new render
 
+    const requestedAssetType = assetType;
+    const requestedTimeframe = timeframe;
+
     try {
       // Add cache-busting timestamp to ensure fresh data
       const cacheBuster = Date.now();
@@ -1130,8 +1141,8 @@ function ScannerContent() {
         },
         cache: "no-store",
         body: JSON.stringify({
-          type: assetType === "forex" ? "forex" : assetType,
-          timeframe,
+          type: requestedAssetType === "forex" ? "forex" : requestedAssetType,
+          timeframe: requestedTimeframe,
           minScore: 0,
           symbols: [ticker.trim().toUpperCase()],
         }),
@@ -1166,20 +1177,23 @@ function ScannerContent() {
         }));
         // Create new object reference to force React re-render
         setResult({ ...scanResult });
-        emitScannerLifecycle(scanResult, 'scanner.run');
+        emitScannerLifecycle(scanResult, 'scanner.run', {
+          assetType: requestedAssetType,
+          timeframe: requestedTimeframe,
+        });
 
         if (journalMonitorEnabled) {
           const score = clampConfidence(scanResult.score ?? 50);
           const direction = scanResult.direction || (score >= 60 ? 'bullish' : score <= 40 ? 'bearish' : 'neutral');
           const symbol = String(scanResult.symbol || '').toUpperCase();
-          const dedupeKey = `${assetType}:${symbol}:${timeframe}`;
+          const dedupeKey = `${requestedAssetType}:${symbol}:${requestedTimeframe}`;
           const now = Date.now();
           const lastLoggedAt = journalMonitorLastLoggedRef.current[dedupeKey] || 0;
           const cooldownMs = Math.max(5, journalMonitorCooldownMinutes) * 60 * 1000;
 
           if (symbol && direction !== 'neutral' && score >= journalMonitorThreshold && now - lastLoggedAt >= cooldownMs) {
             const operatorState = readOperatorState();
-            const monitorConditionType = `scanner_monitor_${assetType}`;
+            const monitorConditionType = `scanner_monitor_${requestedAssetType}`;
             const monitorConditionMet = `${direction.toUpperCase()}_EDGE_${score}`;
 
             fetch('/api/journal/auto-log', {
@@ -1192,7 +1206,7 @@ function ScannerContent() {
                 triggerPrice: scanResult.price,
                 triggeredAt: new Date().toISOString(),
                 source: 'scanner_background_monitor',
-                assetClass: toWorkflowAssetClass(assetType),
+                assetClass: toWorkflowAssetClass(requestedAssetType),
                 operatorMode: operatorState.mode,
                 operatorBias: operatorState.bias,
                 operatorRisk: operatorState.risk,
