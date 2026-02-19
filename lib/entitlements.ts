@@ -19,3 +19,7 @@ export function normalizeTier(tier: string | null | undefined): AppTier {
 export function getDailyAiLimit(tier: string | null | undefined): number {
   return AI_DAILY_LIMITS[normalizeTier(tier)];
 }
+
+export function hasProAccess(tier: string | null | undefined): boolean {
+  return normalizeTier(tier) !== "free";
+}
