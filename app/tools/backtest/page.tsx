@@ -661,11 +661,13 @@ function BacktestContent() {
     endDate?: string;
     timeframe?: string;
     replayMinSignalScore?: number;
+    strategy?: string;
   }) => {
     const effectiveStartDate = overrides?.startDate ?? startDate;
     const effectiveEndDate = overrides?.endDate ?? endDate;
     const effectiveTimeframe = overrides?.timeframe ?? timeframe;
     const effectiveReplayMinSignalScore = overrides?.replayMinSignalScore ?? replayMinSignalScore;
+    const effectiveStrategy = overrides?.strategy ?? strategy;
 
     const rangeDays = getRangeDays(effectiveStartDate, effectiveEndDate);
     const minDays = getMinimumDaysForTimeframe(effectiveTimeframe);
@@ -698,11 +700,11 @@ function BacktestContent() {
     setAiError(null);
     
     try {
-      const endpoint = strategy === 'brain_signal_replay'
+      const endpoint = effectiveStrategy === 'brain_signal_replay'
         ? '/api/backtest/brain'
-        : strategy === 'options_signal_replay'
+        : effectiveStrategy === 'options_signal_replay'
         ? '/api/backtest/options'
-        : strategy === 'time_scanner_signal_replay'
+        : effectiveStrategy === 'time_scanner_signal_replay'
         ? '/api/backtest/time-scanner'
         : '/api/backtest';
 
@@ -712,7 +714,7 @@ function BacktestContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
-          strategy,
+          strategy: effectiveStrategy,
           startDate: effectiveStartDate,
           endDate: effectiveEndDate,
           initialCapital: parseFloat(initialCapital),
@@ -776,6 +778,12 @@ function BacktestContent() {
     const overrides = applyCoachAdjustment(adjustmentKey);
     if (!overrides) return;
     await runBacktest(overrides);
+  };
+
+  const applySuggestedAlternative = async (strategyId: string) => {
+    setStrategy(strategyId);
+    setBacktestError(null);
+    await runBacktest({ strategy: strategyId });
   };
 
   const summarizeBacktest = async () => {
@@ -1471,7 +1479,26 @@ function BacktestContent() {
                             background: 'rgba(30,41,59,0.45)'
                           }}
                         >
-                          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                            <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
+                            <button
+                              onClick={() => applySuggestedAlternative(alternative.strategyId)}
+                              disabled={isLoading}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(16,185,129,0.35)',
+                                background: 'rgba(16,185,129,0.15)',
+                                color: '#10b981',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                opacity: isLoading ? 0.65 : 1,
+                              }}
+                            >
+                              {isLoading ? 'Applying…' : 'Apply'}
+                            </button>
+                          </div>
                           <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{alternative.why}</div>
                         </div>
                       ))}
@@ -2408,9 +2435,9 @@ function BacktestContent() {
                             borderRadius: '4px',
                             fontSize: '11px',
                             fontWeight: '600',
-                            background: 'rgba(16,185,129,0.15)',
-                            color: '#10b981',
-                            border: '1px solid rgba(16,185,129,0.3)'
+                            background: trade.side === 'SHORT' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
+                            color: trade.side === 'SHORT' ? '#ef4444' : '#10b981',
+                            border: trade.side === 'SHORT' ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)'
                           }}>
                             {trade.side}
                           </span>
