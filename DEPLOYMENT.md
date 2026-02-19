@@ -1,7 +1,7 @@
 # Deployment Guide
 
 ## Stack Notes
-- Runtime: Next.js App Router on Vercel.
+- Runtime: Next.js App Router on Render.
 - Auth: custom signed cookie session (`ms_auth`), not NextAuth.
 - Data: Neon/Postgres via `DATABASE_URL`.
 - Workflow loop: `/api/workflow/events`, `/api/workflow/today`, `/api/workflow/tasks`.
@@ -20,7 +20,7 @@
 - `PRO_OVERRIDE_EMAILS`
 
 ## Deploy Sequence (Recommended)
-1. Push `main` and deploy on Vercel.
+1. Push `main` and deploy on Render.
 2. Run Neon migration `migrations/020_workflow_operator_loop.sql` (idempotent).
 3. Run Neon migration `migrations/021_operator_state.sql` (idempotent).
 4. Confirm build/runtime health and workflow loop smoke checks.
