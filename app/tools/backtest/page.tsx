@@ -132,6 +132,16 @@ interface EquityPoint {
   drawdown: number;
 }
 
+interface TimeframeScanResult {
+  timeframe: string;
+  totalReturn: number;
+  winRate: number;
+  profitFactor: number;
+  maxDrawdown: number;
+  totalTrades: number;
+  score: number;
+}
+
 type DateAnchorSource = 'ipo' | 'coverage' | 'fallback';
 
 type DateAnchorInfo = {
@@ -171,6 +181,14 @@ function BacktestContent() {
   const [showInverseComparison, setShowInverseComparison] = useState(false);
   const [showReplayDetails, setShowReplayDetails] = useState(false);
   const [replayMinSignalScore, setReplayMinSignalScore] = useState(60);
+  const [isScanningTimeframes, setIsScanningTimeframes] = useState(false);
+  const [timeframeScanResults, setTimeframeScanResults] = useState<TimeframeScanResult[]>([]);
+  const [timeframeScanError, setTimeframeScanError] = useState<string | null>(null);
+  const [recommendationStrategy, setRecommendationStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
+  const [recommendationTimeframe, setRecommendationTimeframe] = useState('daily');
+  const [recommendationStartDate, setRecommendationStartDate] = useState('2024-01-01');
+  const [recommendationEndDate, setRecommendationEndDate] = useState('2024-12-31');
+  const [recommendationMinSignalScore, setRecommendationMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
   const [dateAnchorInfo, setDateAnchorInfo] = useState<DateAnchorInfo | null>(null);
 
@@ -656,6 +674,132 @@ function BacktestContent() {
     return nextStartDate;
   };
 
+  const resolveBacktestEndpoint = (strategyId: string) => (
+    strategyId === 'brain_signal_replay'
+      ? '/api/backtest/brain'
+      : strategyId === 'options_signal_replay'
+        ? '/api/backtest/options'
+        : strategyId === 'time_scanner_signal_replay'
+          ? '/api/backtest/time-scanner'
+          : '/api/backtest'
+  );
+
+  const requestBacktest = async (params: {
+    strategy: string;
+    timeframe: string;
+    startDate: string;
+    endDate: string;
+    replayMinSignalScore: number;
+  }): Promise<BacktestResult> => {
+    const response = await fetch(resolveBacktestEndpoint(params.strategy), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol,
+        strategy: params.strategy,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        initialCapital: parseFloat(initialCapital),
+        timeframe: params.timeframe,
+        minSignalScore: params.replayMinSignalScore,
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result?.error || 'Backtest failed');
+    }
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result as BacktestResult;
+  };
+
+  const scanBestTimeframe = async () => {
+    if (!Number.isFinite(parseFloat(initialCapital)) || parseFloat(initialCapital) <= 0) {
+      setBacktestError('Initial capital must be greater than 0.');
+      return;
+    }
+
+    const baselineRangeDays = getRangeDays(startDate, endDate);
+    if (!Number.isFinite(baselineRangeDays) || baselineRangeDays <= 0) {
+      setBacktestError('Please select a valid date range before scanning.');
+      return;
+    }
+
+    const candidateTimeframes = Array.from(new Set([
+      timeframe,
+      '5min',
+      '15min',
+      '30min',
+      '60min',
+      '4h',
+      'daily',
+      '1w',
+    ]));
+
+    setIsScanningTimeframes(true);
+    setTimeframeScanError(null);
+    setTimeframeScanResults([]);
+    setBacktestError(null);
+
+    try {
+      const rows: TimeframeScanResult[] = [];
+
+      for (const tf of candidateTimeframes) {
+        const minDays = getMinimumDaysForTimeframe(tf);
+        if (baselineRangeDays < minDays) {
+          continue;
+        }
+
+        try {
+          const result = await requestBacktest({
+            strategy,
+            timeframe: tf,
+            startDate,
+            endDate,
+            replayMinSignalScore,
+          });
+
+          const score =
+            result.totalReturn +
+            (result.winRate * 0.15) +
+            (result.profitFactor * 8) -
+            (result.maxDrawdown * 0.3);
+
+          rows.push({
+            timeframe: tf,
+            totalReturn: result.totalReturn,
+            winRate: result.winRate,
+            profitFactor: result.profitFactor,
+            maxDrawdown: result.maxDrawdown,
+            totalTrades: result.totalTrades,
+            score,
+          });
+        } catch {
+          continue;
+        }
+      }
+
+      const ranked = rows.sort((a, b) => b.score - a.score);
+      setTimeframeScanResults(ranked);
+
+      if (!ranked.length) {
+        setTimeframeScanError('No timeframe candidates produced a valid backtest for this strategy and date range.');
+      }
+    } finally {
+      setIsScanningTimeframes(false);
+    }
+  };
+
+  const applyBestTimeframeAndRerun = async () => {
+    if (!timeframeScanResults.length) return;
+    const best = timeframeScanResults[0];
+    setTimeframe(best.timeframe);
+    await runBacktest({ timeframe: best.timeframe });
+  };
+
   const runBacktest = async (overrides?: {
     startDate?: string;
     endDate?: string;
@@ -700,39 +844,13 @@ function BacktestContent() {
     setAiError(null);
     
     try {
-      const endpoint = effectiveStrategy === 'brain_signal_replay'
-        ? '/api/backtest/brain'
-        : effectiveStrategy === 'options_signal_replay'
-        ? '/api/backtest/options'
-        : effectiveStrategy === 'time_scanner_signal_replay'
-        ? '/api/backtest/time-scanner'
-        : '/api/backtest';
-
-      // Fetch price data and run selected backtest engine
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol,
-          strategy: effectiveStrategy,
-          startDate: effectiveStartDate,
-          endDate: effectiveEndDate,
-          initialCapital: parseFloat(initialCapital),
-          timeframe: effectiveTimeframe,
-          minSignalScore: effectiveReplayMinSignalScore,
-        })
+      const result = await requestBacktest({
+        strategy: effectiveStrategy,
+        timeframe: effectiveTimeframe,
+        startDate: effectiveStartDate,
+        endDate: effectiveEndDate,
+        replayMinSignalScore: effectiveReplayMinSignalScore,
       });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result?.error || 'Backtest failed');
-      }
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
       setResults(result);
     } catch (error) {
       console.error('Backtest error:', error);
@@ -784,6 +902,45 @@ function BacktestContent() {
     setStrategy(strategyId);
     setBacktestError(null);
     await runBacktest({ strategy: strategyId });
+  };
+
+  const loadSuggestionToRunner = (strategyId: string) => {
+    setRecommendationStrategy(strategyId);
+    setBacktestError(null);
+  };
+
+  const loadCurrentInputsToRunner = () => {
+    setRecommendationStrategy(strategy);
+    setRecommendationTimeframe(timeframe);
+    setRecommendationStartDate(startDate);
+    setRecommendationEndDate(endDate);
+    setRecommendationMinSignalScore(replayMinSignalScore);
+    setBacktestError(null);
+  };
+
+  const runRecommendation = async () => {
+    const candidateStrategy = recommendationStrategy.trim();
+    if (!isBacktestStrategy(candidateStrategy)) {
+      setBacktestError(`Unknown strategy in recommendation runner: ${candidateStrategy}`);
+      return;
+    }
+
+    const score = Math.max(1, Math.min(95, Number(recommendationMinSignalScore) || replayMinSignalScore));
+
+    setStrategy(candidateStrategy);
+    setTimeframe(recommendationTimeframe);
+    setStartDate(recommendationStartDate);
+    setEndDate(recommendationEndDate);
+    setReplayMinSignalScore(score);
+    setBacktestError(null);
+
+    await runBacktest({
+      strategy: candidateStrategy,
+      timeframe: recommendationTimeframe,
+      startDate: recommendationStartDate,
+      endDate: recommendationEndDate,
+      replayMinSignalScore: score,
+    });
   };
 
   const summarizeBacktest = async () => {
@@ -1256,7 +1413,7 @@ function BacktestContent() {
 
           <button
             onClick={() => runBacktest()}
-            disabled={isLoading}
+            disabled={isLoading || isScanningTimeframes}
             style={{
               width: '100%',
               padding: '14px',
@@ -1272,6 +1429,96 @@ function BacktestContent() {
           >
             {isLoading ? '⏳ Validating Strategy...' : '🚀 Validate Strategy'}
           </button>
+
+          <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={scanBestTimeframe}
+              disabled={isLoading || isScanningTimeframes}
+              style={{
+                flex: '1 1 200px',
+                padding: '10px 12px',
+                background: 'rgba(56,189,248,0.15)',
+                border: '1px solid rgba(56,189,248,0.35)',
+                borderRadius: '8px',
+                color: '#67e8f9',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes ? 0.65 : 1,
+              }}
+            >
+              {isScanningTimeframes ? 'Scanning timeframes…' : '🔎 Scan Best Timeframe'}
+            </button>
+
+            <button
+              type="button"
+              onClick={applyBestTimeframeAndRerun}
+              disabled={isLoading || isScanningTimeframes || timeframeScanResults.length === 0}
+              style={{
+                flex: '1 1 200px',
+                padding: '10px 12px',
+                background: 'rgba(16,185,129,0.15)',
+                border: '1px solid rgba(16,185,129,0.35)',
+                borderRadius: '8px',
+                color: '#6ee7b7',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes || timeframeScanResults.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || timeframeScanResults.length === 0 ? 0.65 : 1,
+              }}
+            >
+              ⚡ Use Best & Rerun
+            </button>
+          </div>
+
+          {timeframeScanError && (
+            <div style={{
+              marginTop: '8px',
+              color: '#fca5a5',
+              fontSize: '12px',
+              border: '1px solid rgba(239,68,68,0.35)',
+              borderRadius: '8px',
+              padding: '8px 10px',
+              background: 'rgba(127,29,29,0.2)'
+            }}>
+              {timeframeScanError}
+            </div>
+          )}
+
+          {timeframeScanResults.length > 0 && (
+            <div style={{
+              marginTop: '10px',
+              border: '1px solid rgba(51,65,85,0.7)',
+              borderRadius: '10px',
+              background: 'rgba(15,23,42,0.5)',
+              padding: '10px'
+            }}>
+              <div style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+                Timeframe Scan Leaderboard
+              </div>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                {timeframeScanResults.slice(0, 5).map((row, idx) => (
+                  <div key={row.timeframe} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '88px 1fr',
+                    gap: '10px',
+                    padding: '7px 8px',
+                    borderRadius: '8px',
+                    border: idx === 0 ? '1px solid rgba(16,185,129,0.45)' : '1px solid rgba(51,65,85,0.6)',
+                    background: idx === 0 ? 'rgba(16,185,129,0.1)' : 'rgba(30,41,59,0.45)'
+                  }}>
+                    <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700 }}>
+                      {idx + 1}. {row.timeframe}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {row.profitFactor.toFixed(2)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {backtestError && (
             <div style={{
@@ -1481,23 +1728,42 @@ function BacktestContent() {
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                             <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
-                            <button
-                              onClick={() => applySuggestedAlternative(alternative.strategyId)}
-                              disabled={isLoading}
-                              style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                border: '1px solid rgba(16,185,129,0.35)',
-                                background: 'rgba(16,185,129,0.15)',
-                                color: '#10b981',
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                cursor: isLoading ? 'not-allowed' : 'pointer',
-                                opacity: isLoading ? 0.65 : 1,
-                              }}
-                            >
-                              {isLoading ? 'Applying…' : 'Apply'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => loadSuggestionToRunner(alternative.strategyId)}
+                                disabled={isLoading}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(148,163,184,0.35)',
+                                  background: 'rgba(148,163,184,0.12)',
+                                  color: '#cbd5e1',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                                  opacity: isLoading ? 0.65 : 1,
+                                }}
+                              >
+                                Load
+                              </button>
+                              <button
+                                onClick={() => applySuggestedAlternative(alternative.strategyId)}
+                                disabled={isLoading}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(16,185,129,0.35)',
+                                  background: 'rgba(16,185,129,0.15)',
+                                  color: '#10b981',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                                  opacity: isLoading ? 0.65 : 1,
+                                }}
+                              >
+                                {isLoading ? 'Applying…' : 'Apply'}
+                              </button>
+                            </div>
                           </div>
                           <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{alternative.why}</div>
                         </div>
@@ -1505,6 +1771,132 @@ function BacktestContent() {
                     </div>
                   </div>
                 )}
+
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(51,65,85,0.6)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>
+                      Recommendation Runner (TradingView-style inputs)
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadCurrentInputsToRunner}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '999px',
+                        border: '1px solid rgba(148,163,184,0.35)',
+                        background: 'rgba(148,163,184,0.12)',
+                        color: '#cbd5e1',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Load Current Inputs
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px', marginTop: '8px' }}>
+                    <input
+                      value={recommendationStrategy}
+                      onChange={(e) => setRecommendationStrategy(e.target.value)}
+                      list="backtest-strategy-recommendation-options"
+                      placeholder="Strategy ID"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '6px',
+                        color: '#f1f5f9',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <input
+                      value={recommendationTimeframe}
+                      onChange={(e) => setRecommendationTimeframe(e.target.value)}
+                      list="backtest-timeframe-options"
+                      placeholder="Timeframe"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '6px',
+                        color: '#f1f5f9',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <input
+                      type="date"
+                      value={recommendationStartDate}
+                      onChange={(e) => setRecommendationStartDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '6px',
+                        color: '#f1f5f9',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <input
+                      type="date"
+                      value={recommendationEndDate}
+                      onChange={(e) => setRecommendationEndDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '6px',
+                        color: '#f1f5f9',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      max={95}
+                      value={recommendationMinSignalScore}
+                      onChange={(e) => setRecommendationMinSignalScore(Math.max(1, Math.min(95, Number(e.target.value) || 1)))}
+                      placeholder="Replay Min Score"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: '#0f172a',
+                        border: '1px solid #334155',
+                        borderRadius: '6px',
+                        color: '#f1f5f9',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={runRecommendation}
+                      disabled={isLoading}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(16,185,129,0.35)',
+                        background: 'rgba(16,185,129,0.15)',
+                        color: '#10b981',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        opacity: isLoading ? 0.65 : 1,
+                      }}
+                    >
+                      {isLoading ? 'Running…' : 'Run Recommendation'}
+                    </button>
+                  </div>
+                  <datalist id="backtest-strategy-recommendation-options">
+                    {BACKTEST_STRATEGY_CATEGORIES.flatMap((category) => category.strategies).map((item) => (
+                      <option key={item.id} value={item.id} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
             )}
 
