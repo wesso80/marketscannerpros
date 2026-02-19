@@ -476,13 +476,17 @@ function BacktestContent() {
           return;
         }
 
-        const response = await fetch(`/api/company-overview?symbol=${encodeURIComponent(normalizedSymbol)}`, {
+        const response = await fetch(`/api/company-overview?symbol=${encodeURIComponent(normalizedSymbol)}&includeQuote=0`, {
           cache: 'no-store',
         });
 
         if (!response.ok) {
           if (!cancelled) {
-            setStartDate(coverageStartDate || fallbackStartDate);
+            const fallbackStartForEquity =
+              coverageStartDate && /^\d{4}-\d{2}-\d{2}$/.test(coverageStartDate)
+                ? (coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate)
+                : fallbackStartDate;
+            setStartDate(fallbackStartForEquity);
             setEndDate(today);
             lastResolvedSymbolRef.current = normalizedSymbol;
           }
@@ -501,7 +505,7 @@ function BacktestContent() {
         if (ipoDate) {
           setStartDate(ipoDate);
         } else if (coverageStartDate) {
-          setStartDate(coverageStartDate);
+          setStartDate(coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate);
         } else {
           setStartDate(fallbackStartDate);
         }
@@ -510,7 +514,11 @@ function BacktestContent() {
         lastResolvedSymbolRef.current = normalizedSymbol;
       } catch {
         if (cancelled) return;
-        setStartDate(coverageStartDate || fallbackStartDate);
+        const fallbackStartForEquity =
+          coverageStartDate && /^\d{4}-\d{2}-\d{2}$/.test(coverageStartDate)
+            ? (coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate)
+            : fallbackStartDate;
+        setStartDate(fallbackStartForEquity);
         setEndDate(today);
         lastResolvedSymbolRef.current = normalizedSymbol;
       }

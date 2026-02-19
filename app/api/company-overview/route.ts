@@ -5,20 +5,26 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
+  const includeQuote = searchParams.get('includeQuote') === '1';
   
   if (!symbol) {
     return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
   }
   
   try {
-    // Fetch both overview and current quote in parallel
-    const [overviewResponse, quoteResponse] = await Promise.all([
-      fetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
-      fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`)
-    ]);
+    const overviewResponse = await fetch(
+      `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
+    );
     
     const data = await overviewResponse.json();
-    const quoteData = await quoteResponse.json();
+
+    let quoteData: any = null;
+    if (includeQuote) {
+      const quoteResponse = await fetch(
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
+      );
+      quoteData = await quoteResponse.json();
+    }
     
     if (data['Error Message'] || data['Note']) {
       return NextResponse.json(
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract current price from quote
-    const globalQuote = quoteData['Global Quote'] || {};
+    const globalQuote = quoteData?.['Global Quote'] || {};
     const currentPrice = globalQuote['05. price'] || null;
     const changePercent = globalQuote['10. change percent'] || null;
     
