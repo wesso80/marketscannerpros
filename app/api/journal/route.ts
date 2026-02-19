@@ -120,6 +120,16 @@ function normalizeUniverseAssetType(value: unknown): 'crypto' | 'equity' | 'fore
   return 'equity';
 }
 
+function normalizePacketMarketToAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' | null {
+  const normalized = String(value || '').toLowerCase().trim();
+  if (!normalized) return null;
+  if (normalized === 'crypto' || normalized === 'coin' || normalized === 'coins') return 'crypto';
+  if (normalized === 'forex' || normalized === 'fx') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  if (normalized === 'equity' || normalized === 'stock' || normalized === 'stocks') return 'equity';
+  return null;
+}
+
 function resolveAssetClassWithUniverse(args: {
   symbol: string;
   fallback: 'crypto' | 'equity' | 'forex' | 'commodity';
@@ -181,6 +191,8 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS followed_plan BOOLEAN`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_intent_id VARCHAR(120)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
+
+  await q(`ALTER TABLE IF EXISTS decision_packets ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 }
 
 // GET - Load journal entries
@@ -240,8 +252,8 @@ export async function GET(req: NextRequest) {
 
     const packetAssetClassById = new Map<string, string>();
     if (packetIds.length > 0) {
-      const packetRows = await q<{ packet_id: string; asset_class: string | null }>(
-        `SELECT packet_id, asset_class
+      const packetRows = await q<{ packet_id: string; asset_class: string | null; market: string | null }>(
+        `SELECT packet_id, asset_class, market
            FROM decision_packets
           WHERE workspace_id = $1
             AND packet_id = ANY($2::text[])`,
@@ -250,7 +262,12 @@ export async function GET(req: NextRequest) {
 
       for (const row of packetRows) {
         if (row.packet_id) {
-          packetAssetClassById.set(row.packet_id, row.asset_class || 'equity');
+          const packetAssetClass = row.asset_class
+            ? normalizeJournalAssetClass(row.asset_class)
+            : normalizePacketMarketToAssetClass(row.market);
+          if (packetAssetClass) {
+            packetAssetClassById.set(row.packet_id, packetAssetClass);
+          }
         }
       }
     }
@@ -260,8 +277,9 @@ export async function GET(req: NextRequest) {
       const packetId = getDecisionPacketTag(e.tags);
       const packetAssetClass = packetId ? packetAssetClassById.get(packetId) : null;
       const contextAssetClass = inferAssetClassFromEntryContext(e);
+      const persistedAssetClass = e.asset_class ? normalizeJournalAssetClass(e.asset_class) : null;
       const fallbackAssetClass = normalizeJournalAssetClass(
-        e.asset_class || taggedAssetClass || packetAssetClass || contextAssetClass || inferAssetClassFromSymbol(e.symbol)
+        packetAssetClass || taggedAssetClass || contextAssetClass || persistedAssetClass || inferAssetClassFromSymbol(e.symbol)
       );
       const resolvedAssetClass = resolveAssetClassWithUniverse({
         symbol: String(e.symbol || ''),

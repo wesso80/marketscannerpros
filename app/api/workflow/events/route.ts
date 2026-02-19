@@ -39,9 +39,11 @@ const ALLOWED_EVENT_TYPES = new Set<WorkflowEventType>([
 ]);
 
 function normalizeAlertAssetType(assetClass?: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
-  if (assetClass === 'crypto') return 'crypto';
-  if (assetClass === 'forex') return 'forex';
-  if (assetClass === 'commodities') return 'commodity';
+  const normalized = String(assetClass || '').trim().toLowerCase();
+  if (normalized === 'crypto' || normalized === 'coin' || normalized === 'coins') return 'crypto';
+  if (normalized === 'forex' || normalized === 'fx') return 'forex';
+  if (normalized === 'commodities' || normalized === 'commodity') return 'commodity';
+  if (normalized === 'equity' || normalized === 'stock' || normalized === 'stocks') return 'equity';
   return 'equity';
 }
 
@@ -696,7 +698,34 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   const workflowId = event.correlation?.workflow_id;
   if (!workflowId) return false;
   const decisionPacketId = extractDecisionPacketId(event);
-  const assetClass = normalizeAlertAssetType(event.entity?.asset_class);
+  const explicitAssetClass = (
+    toStringOrNull(event.entity?.asset_class)
+    || toStringOrNull(planPayload?.asset_class)
+    || toStringOrNull(planPayload?.setup?.asset_class)
+    || toStringOrNull(planPayload?.market)
+    || toStringOrNull(planPayload?.setup?.market)
+  );
+
+  let assetClass = explicitAssetClass ? normalizeAlertAssetType(explicitAssetClass) : null;
+
+  if (!assetClass && decisionPacketId) {
+    const packetRows = await q<{ asset_class: string | null; market: string | null }>(
+      `SELECT asset_class, market
+         FROM decision_packets
+        WHERE workspace_id = $1
+          AND packet_id = $2
+        LIMIT 1`,
+      [workspaceId, decisionPacketId]
+    );
+    const packetAsset = packetRows[0]?.asset_class || packetRows[0]?.market;
+    if (packetAsset) {
+      assetClass = normalizeAlertAssetType(packetAsset);
+    }
+  }
+
+  if (!assetClass) {
+    assetClass = normalizeAlertAssetType(event.entity?.asset_class);
+  }
 
   await ensureJournalSchema();
 
