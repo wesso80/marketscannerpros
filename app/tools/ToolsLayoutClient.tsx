@@ -59,7 +59,7 @@ export default function ToolsLayoutClient({
         <AdaptiveTraderPersonalityBar skill={skill} />
       </ErrorBoundary>
       <ErrorBoundary fallback={null}>
-        <div className="mx-auto w-full max-w-[1400px] px-3 md:px-4">
+        <div className="mx-auto w-full max-w-none px-3 md:px-4">
           <Suspense fallback={null}>
             <OperatorCommandStrip />
           </Suspense>

@@ -59,9 +59,9 @@ html, body {
 /* Ultra-wide desktop readability rail */
 @media (min-width: 1700px) {
   .msp-main-shell {
-    max-width: 1560px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
     padding-left: 16px;
     padding-right: 16px;
   }

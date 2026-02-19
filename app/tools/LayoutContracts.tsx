@@ -23,7 +23,7 @@ export function getToolsLayoutMode(pathname: string): ToolsLayoutMode {
 
 export function CommandLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="msp-layout-command mx-auto w-full max-w-[1400px] px-4 md:px-4">
+    <div className="msp-layout-command mx-auto w-full max-w-none px-4 md:px-4">
       {children}
     </div>
   );
