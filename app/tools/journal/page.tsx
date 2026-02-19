@@ -137,6 +137,14 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
     return Number.isFinite(price) && price > 0 ? price : null;
   };
 
+  const tryCachedFetch = async (symbol: string): Promise<number | null> => {
+    if (!symbol) return null;
+    const response = await fetch(`/api/cached/quote?symbol=${encodeURIComponent(symbol)}`, { cache: 'no-store' });
+    const data = response.ok ? await response.json() : null;
+    const price = Number(data?.price);
+    return Number.isFinite(price) && price > 0 ? price : null;
+  };
+
   const candidates: Array<{ symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }> = [
     primary,
     {
@@ -167,6 +175,19 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
     attempted.add(dedupe);
 
     const price = await tryFetch(candidate).catch(() => null);
+    if (price != null) return price;
+  }
+
+  const cachedSymbols = [
+    upperSymbol,
+    upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
+  ];
+
+  const attemptedCached = new Set<string>();
+  for (const symbol of cachedSymbols) {
+    if (!symbol || attemptedCached.has(symbol)) continue;
+    attemptedCached.add(symbol);
+    const price = await tryCachedFetch(symbol).catch(() => null);
     if (price != null) return price;
   }
 
@@ -1050,7 +1071,7 @@ function JournalContent() {
         try {
           const price = await fetchQuoteWithFallback(trade);
 
-          if (Number.isFinite(price) && price > 0) {
+          if (price != null && Number.isFinite(price) && price > 0) {
             nextPrices[normalizeEntryId(trade.id)] = price;
           }
         } catch {
