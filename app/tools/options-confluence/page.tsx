@@ -19,6 +19,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import Pill from "@/components/terminal/Pill";
+import DepthCard from "@/components/DepthCard";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { writeOperatorState } from "@/lib/operatorState";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
@@ -2276,7 +2277,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             </div>
 
-            <div className="-mt-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.5rem]">
+            <DepthCard className="-mt-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.5rem]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem]">
                   <span className="font-extrabold uppercase tracking-[0.04em] text-slate-400">Dealer Structure:</span>
@@ -2322,11 +2323,11 @@ export default function OptionsConfluenceScanner() {
                   ))}
                 </div>
               )}
-            </div>
+            </DepthCard>
 
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
               <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
-                <div className="rounded-[10px] border border-slate-500/25 bg-slate-900/40 p-[0.7rem] opacity-[0.9]">
+                <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.9]" tiltStrength={4}>
                   <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Decision Core</div>
                   <div className="mt-[0.2rem] text-[0.9rem] font-black text-slate-200">
                     {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'ready for execution' : 'requires trigger confirmation'}`}
@@ -2345,9 +2346,9 @@ export default function OptionsConfluenceScanner() {
                   <div className="mt-[0.35rem] text-[0.72rem] text-slate-400">
                     {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
                   </div>
-                </div>
+                </DepthCard>
 
-                <div className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)]">
+                <DepthCard className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)]" tiltStrength={5.5}>
                   <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Execution</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
                     <div className="text-slate-100">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
@@ -2356,9 +2357,9 @@ export default function OptionsConfluenceScanner() {
                     <div className="text-slate-200">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
                     <div className="text-slate-400">Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
                   </div>
-                </div>
+                </DepthCard>
 
-                <div className="rounded-[10px] border border-slate-500/25 bg-slate-900/40 p-[0.7rem] opacity-[0.9]">
+                <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.9]" tiltStrength={4}>
                   <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
                     <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
@@ -2367,7 +2368,7 @@ export default function OptionsConfluenceScanner() {
                     <div className="text-slate-300">Contract: {result.primaryStrike ? `${result.primaryStrike.strike}${result.primaryStrike.type === 'call' ? 'C' : 'P'}` : 'N/A'}</div>
                     <div className="text-slate-400">Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
                   </div>
-                </div>
+                </DepthCard>
               </div>
             </div>
 
