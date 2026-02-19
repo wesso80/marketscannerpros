@@ -49,15 +49,15 @@ function getEnv(key: string): string {
 // - Crypto defaults are tuned for CoinGecko value/coverage
 // - Non-crypto defaults preserve legacy behavior
 const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
-  1: 60,   // Tier 1: every 60 seconds
-  2: 240,  // Tier 2: every 4 minutes
-  3: 1200, // Tier 3: every 20 minutes
+  1: 45,   // Tier 1: every 45 seconds
+  2: 120,  // Tier 2: every 2 minutes
+  3: 600,  // Tier 3: every 10 minutes
 };
 
 const CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS: Record<number, number> = {
-  1: 300,   // Tier 1: every 5 minutes
-  2: 900,   // Tier 2: every 15 minutes
-  3: 1800,  // Tier 3: every 30 minutes
+  1: 120,   // Tier 1: every 2 minutes
+  2: 300,   // Tier 2: every 5 minutes
+  3: 900,   // Tier 3: every 15 minutes
 };
 
 const NON_CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
@@ -71,7 +71,60 @@ function getPositiveIntFromEnv(key: string, fallback: number): number {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
+function getBoolFromEnv(key: string, fallback: boolean): boolean {
+  const raw = (getEnv(key) || '').trim().toLowerCase();
+  if (!raw) return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(raw);
+}
+
 type CryptoCadenceMode = 'market' | 'offhours';
+type EquitySessionMode = 'market' | 'premarket' | 'postmarket' | 'closed';
+
+function parseClockToMinuteOfDay(raw: string): number | null {
+  const trimmed = (raw || '').trim();
+  const match = /^(\d{1,2}):(\d{2})$/.exec(trimmed);
+  if (!match) return null;
+
+  const hour = Number.parseInt(match[1], 10);
+  const minute = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function parseSlotMinutes(raw: string, fallback: string[]): number[] {
+  const source = (raw || '').trim();
+  const tokens = source
+    ? source.split(',').map((entry) => entry.trim()).filter(Boolean)
+    : fallback;
+
+  const parsed = tokens
+    .map(parseClockToMinuteOfDay)
+    .filter((value): value is number => value != null);
+
+  return Array.from(new Set(parsed)).sort((left, right) => left - right);
+}
+
+function getTimePartsForZone(timezone: string, now = new Date()): {
+  weekday: string;
+  minuteOfDay: number;
+} {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+
+  const weekday = parts.find((part) => part.type === 'weekday')?.value || 'Sun';
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value || '0');
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value || '0');
+  return {
+    weekday,
+    minuteOfDay: hour * 60 + minute,
+  };
+}
 
 function getUsMarketSessionState(now = new Date()): {
   mode: CryptoCadenceMode;
@@ -87,18 +140,7 @@ function getUsMarketSessionState(now = new Date()): {
   const openMinutes = openHour * 60 + openMinute;
   const closeMinutes = closeHour * 60 + closeMinute;
 
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(now);
-
-  const weekday = parts.find((p) => p.type === 'weekday')?.value || 'Sun';
-  const hour = Number(parts.find((p) => p.type === 'hour')?.value || '0');
-  const minute = Number(parts.find((p) => p.type === 'minute')?.value || '0');
-  const minuteOfDay = hour * 60 + minute;
+  const { weekday, minuteOfDay } = getTimePartsForZone(timezone, now);
   const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday);
   const inSession = isWeekday && minuteOfDay >= openMinutes && minuteOfDay < closeMinutes;
 
@@ -108,6 +150,49 @@ function getUsMarketSessionState(now = new Date()): {
     openMinutes,
     closeMinutes,
   };
+}
+
+function getUsEquitySessionState(now = new Date()): {
+  mode: EquitySessionMode;
+  timezone: string;
+  minuteOfDay: number;
+  premarketScanSlots: number[];
+  postmarketScanSlots: number[];
+  slotToleranceMinutes: number;
+} {
+  const timezone = getEnv('EQUITY_MARKET_TIMEZONE') || getEnv('CG_MARKET_TIMEZONE') || 'America/New_York';
+  const marketOpen = getPositiveIntFromEnv('EQUITY_MARKET_OPEN_HOUR', 9) * 60 + getPositiveIntFromEnv('EQUITY_MARKET_OPEN_MINUTE', 30);
+  const marketClose = getPositiveIntFromEnv('EQUITY_MARKET_CLOSE_HOUR', 16) * 60 + getPositiveIntFromEnv('EQUITY_MARKET_CLOSE_MINUTE', 0);
+  const premarketStart = getPositiveIntFromEnv('EQUITY_PREMARKET_START_HOUR', 4) * 60 + getPositiveIntFromEnv('EQUITY_PREMARKET_START_MINUTE', 0);
+  const postmarketEnd = getPositiveIntFromEnv('EQUITY_POSTMARKET_END_HOUR', 20) * 60 + getPositiveIntFromEnv('EQUITY_POSTMARKET_END_MINUTE', 0);
+
+  const { weekday, minuteOfDay } = getTimePartsForZone(timezone, now);
+  const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday);
+  const premarketScanSlots = parseSlotMinutes(getEnv('EQUITY_PREMARKET_SCAN_TIMES'), ['04:15', '08:45']);
+  const postmarketScanSlots = parseSlotMinutes(getEnv('EQUITY_POSTMARKET_SCAN_TIMES'), ['16:15', '19:30']);
+  const slotToleranceMinutes = Math.max(0, getPositiveIntFromEnv('EQUITY_OFFHOURS_SLOT_TOLERANCE_MINUTES', 0));
+
+  if (!isWeekday) {
+    return { mode: 'closed', timezone, minuteOfDay, premarketScanSlots, postmarketScanSlots, slotToleranceMinutes };
+  }
+
+  if (minuteOfDay >= marketOpen && minuteOfDay < marketClose) {
+    return { mode: 'market', timezone, minuteOfDay, premarketScanSlots, postmarketScanSlots, slotToleranceMinutes };
+  }
+
+  if (minuteOfDay >= premarketStart && minuteOfDay < marketOpen) {
+    return { mode: 'premarket', timezone, minuteOfDay, premarketScanSlots, postmarketScanSlots, slotToleranceMinutes };
+  }
+
+  if (minuteOfDay >= marketClose && minuteOfDay < postmarketEnd) {
+    return { mode: 'postmarket', timezone, minuteOfDay, premarketScanSlots, postmarketScanSlots, slotToleranceMinutes };
+  }
+
+  return { mode: 'closed', timezone, minuteOfDay, premarketScanSlots, postmarketScanSlots, slotToleranceMinutes };
+}
+
+function isScanSlotMatch(minuteOfDay: number, slots: number[], toleranceMinutes: number): boolean {
+  return slots.some((slotMinute) => Math.abs(minuteOfDay - slotMinute) <= toleranceMinutes);
 }
 
 function getTierRefreshIntervalSeconds(assetType: string, tier: number, cadenceMode: CryptoCadenceMode = 'market'): number {
@@ -156,6 +241,42 @@ function getRateLimiter(): TokenBucket {
 
 let pool: Pool | null = null;
 let redis: Redis | null = null;
+
+function hashWorkerLaneToKey(lane: string): number {
+  let hash = 0;
+  const input = `msp-ingest-lane-${lane}`;
+  for (let index = 0; index < input.length; index++) {
+    hash = ((hash << 5) - hash + input.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash) || 1;
+}
+
+async function acquireWorkerLaneLock(lane: string): Promise<(() => Promise<void>) | null> {
+  const db = getPool();
+  const client = await db.connect();
+  const lockKey = hashWorkerLaneToKey(lane);
+
+  try {
+    const result = await client.query<{ locked: boolean }>('SELECT pg_try_advisory_lock($1) AS locked', [lockKey]);
+    const locked = result.rows[0]?.locked === true;
+
+    if (!locked) {
+      client.release();
+      return null;
+    }
+
+    return async () => {
+      try {
+        await client.query('SELECT pg_advisory_unlock($1)', [lockKey]);
+      } finally {
+        client.release();
+      }
+    };
+  } catch (error) {
+    client.release();
+    throw error;
+  }
+}
 
 function getPool(): Pool {
   if (!pool) {
@@ -340,19 +461,31 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
 async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   // Map symbol to CoinGecko ID
   const normalized = symbol.toUpperCase();
-  const coinId =
+  const allowDynamicResolve = getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false);
+  const ohlcRetries = getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1);
+  const ohlcTimeoutMs = getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000);
+  const mappedId =
     COINGECKO_ID_MAP[normalized] ||
-    COINGECKO_ID_MAP[normalized.replace('USDT', '')] ||
-    await resolveSymbolToId(normalized);
+    COINGECKO_ID_MAP[normalized.replace('USDT', '')];
+  const coinId =
+    mappedId ||
+    (allowDynamicResolve ? await resolveSymbolToId(normalized) : null);
   
   if (!coinId) {
-    console.warn(`[worker] No CoinGecko mapping for ${symbol}`);
+    if (!allowDynamicResolve) {
+      console.warn(`[worker] No CoinGecko mapping for ${symbol} (dynamic resolve disabled)`);
+    } else {
+      console.warn(`[worker] No CoinGecko mapping for ${symbol}`);
+    }
     return [];
   }
 
   try {
     // Get 30 days of OHLC data
-    const ohlcData = await getCoinGeckoOHLC(coinId, 30);
+    const ohlcData = await getCoinGeckoOHLC(coinId, 30, {
+      retries: ohlcRetries,
+      timeoutMs: ohlcTimeoutMs,
+    });
     
     if (!ohlcData || ohlcData.length === 0) {
       console.warn(`[worker] No CoinGecko OHLC data for ${symbol} (${coinId})`);
@@ -1081,12 +1214,15 @@ async function processCryptoSymbol(symbol: string): Promise<{
 
 async function runIngestionCycle(
   includeForex = false,
-  cryptoOnly = false
+  cryptoOnly = false,
+  equitiesOnly = false
 ): Promise<{
   symbolsProcessed: number;
+  symbolsDue: number;
   apiCalls: number;
   errors: number;
   skippedNotDue: number;
+  skippedEquityOffhours: number;
   coingeckoAttempted: number;
   coingeckoSucceeded: number;
   coingeckoNoData: number;
@@ -1094,29 +1230,48 @@ async function runIngestionCycle(
 }> {
   const stats = {
     symbolsProcessed: 0,
+    symbolsDue: 0,
     apiCalls: 0,
     errors: 0,
     skippedNotDue: 0,
+    skippedEquityOffhours: 0,
     coingeckoAttempted: 0,
     coingeckoSucceeded: 0,
     coingeckoNoData: 0,
     coingeckoFailed: 0,
   };
   const sessionState = getUsMarketSessionState();
+  const equitySessionState = getUsEquitySessionState();
+  const runEquityOffhoursScan =
+    equitySessionState.mode === 'premarket'
+      ? isScanSlotMatch(equitySessionState.minuteOfDay, equitySessionState.premarketScanSlots, equitySessionState.slotToleranceMinutes)
+      : equitySessionState.mode === 'postmarket'
+        ? isScanSlotMatch(equitySessionState.minuteOfDay, equitySessionState.postmarketScanSlots, equitySessionState.slotToleranceMinutes)
+        : false;
   
   const allSymbols = await getSymbolsToFetch(undefined, { includeForex });
   const symbols = cryptoOnly
     ? allSymbols.filter((s) => s.asset_type === 'crypto')
-    : allSymbols;
-  console.log(`[worker] Processing ${symbols.length} symbols... (crypto cadence mode: ${sessionState.mode})`);
+    : equitiesOnly
+      ? allSymbols.filter((s) => s.asset_type !== 'crypto')
+      : allSymbols;
+  console.log(`[worker] Processing ${symbols.length} symbols... (crypto cadence mode: ${sessionState.mode}, equity session: ${equitySessionState.mode}${runEquityOffhoursScan ? ', off-hours scan slot=active' : ''})`);
 
   for (const { symbol, tier, asset_type, last_fetched_at } of symbols) {
     try {
+      if (asset_type !== 'crypto' && equitySessionState.mode !== 'market' && !runEquityOffhoursScan) {
+        stats.skippedEquityOffhours++;
+        continue;
+      }
+
       const intervalSeconds = getTierRefreshIntervalSeconds(asset_type, tier, sessionState.mode);
-      if (!isDueForFetch(last_fetched_at, intervalSeconds)) {
+      const bypassDueCheck = asset_type !== 'crypto' && equitySessionState.mode !== 'market' && runEquityOffhoursScan;
+      if (!bypassDueCheck && !isDueForFetch(last_fetched_at, intervalSeconds)) {
         stats.skippedNotDue++;
         continue;
       }
+
+      stats.symbolsDue++;
 
       let result: {
         apiCalls: number;
@@ -1164,13 +1319,22 @@ async function main(): Promise<void> {
   const cliOnce = process.argv.includes('--once');
   const cliIncludeForex = process.argv.includes('--include-forex');
   const cliCryptoOnly = process.argv.includes('--crypto-only');
+  const cliEquitiesOnly = process.argv.includes('--equities-only');
   const envOnce = ['1', 'true', 'yes'].includes((getEnv('WORKER_RUN_ONCE') || '').toLowerCase());
   const envIncludeForex = ['1', 'true', 'yes'].includes((getEnv('WORKER_INCLUDE_FOREX') || '').toLowerCase());
   const envCryptoOnly = ['1', 'true', 'yes'].includes((getEnv('WORKER_CRYPTO_ONLY') || '').toLowerCase());
+  const envEquitiesOnly = ['1', 'true', 'yes'].includes((getEnv('WORKER_EQUITIES_ONLY') || '').toLowerCase());
   const runOnce = cliOnce || envOnce;
   const includeForex = cliIncludeForex || envIncludeForex;
   const cryptoOnly = cliCryptoOnly || envCryptoOnly;
+  const equitiesOnly = cliEquitiesOnly || envEquitiesOnly;
   const failOnErrors = ['1', 'true', 'yes'].includes((getEnv('WORKER_FAIL_ON_ERRORS') || '').toLowerCase());
+  const workerLane = cryptoOnly ? 'crypto' : equitiesOnly ? 'equities' : 'mixed';
+
+  if (cryptoOnly && equitiesOnly) {
+    console.error('[worker] Cannot enable both --crypto-only and --equities-only');
+    process.exit(1);
+  }
   
   if (!cryptoOnly && !getEnv('ALPHA_VANTAGE_API_KEY')) {
     console.error('[worker] ALPHA_VANTAGE_API_KEY not set');
@@ -1190,6 +1354,10 @@ async function main(): Promise<void> {
   console.log(`[worker] Mode: ${runOnce ? 'one-cycle' : 'continuous'}`);
   console.log(`[worker] Forex ingest: ${includeForex ? 'enabled (manual override)' : 'disabled (equities + crypto only)'}`);
   console.log(`[worker] Crypto-only mode: ${cryptoOnly ? 'enabled (CoinGecko-only ingest)' : 'disabled'}`);
+  console.log(`[worker] Equities-only mode: ${equitiesOnly ? 'enabled (Alpha Vantage-only ingest)' : 'disabled'}`);
+  console.log(`[worker] Lane lock: ${workerLane}`);
+  console.log(`[worker] CoinGecko dynamic resolve: ${getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false) ? 'enabled' : 'disabled (mapped symbols only)'}`);
+  console.log(`[worker] CoinGecko OHLC request profile: retries=${getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1)}, timeoutMs=${getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000)}`);
   const sessionState = getUsMarketSessionState();
   console.log(`[worker] Market session timezone: ${sessionState.timezone}`);
   console.log(`[worker] Market cadence (T1/T2/T3): ${getTierRefreshIntervalSeconds('crypto', 1, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 2, 'market')}s / ${getTierRefreshIntervalSeconds('crypto', 3, 'market')}s`);
@@ -1197,6 +1365,20 @@ async function main(): Promise<void> {
 
   await ensureIngestionSchema();
   console.log('[worker] Schema compatibility checks complete');
+
+  const releaseLaneLock = await acquireWorkerLaneLock(workerLane);
+  if (!releaseLaneLock) {
+    console.log(`[worker] Another ${workerLane} ingest worker is already running; exiting`);
+    process.exit(0);
+  }
+
+  process.on('SIGINT', () => {
+    void releaseLaneLock();
+  });
+
+  process.on('SIGTERM', () => {
+    void releaseLaneLock();
+  });
 
   let cycleCount = 0;
   const CYCLE_INTERVAL_MS = 60000; // Run full cycle every 60 seconds
@@ -1207,14 +1389,14 @@ async function main(): Promise<void> {
     const startTime = Date.now();
 
     try {
-      const stats = await runIngestionCycle(includeForex, cryptoOnly);
+      const stats = await runIngestionCycle(includeForex, cryptoOnly, equitiesOnly);
       const duration = Math.round((Date.now() - startTime) / 1000);
 
       console.log(`[worker] Cycle ${cycleCount} completed in ${duration}s`);
-      console.log(`[worker] Stats: ${stats.symbolsProcessed} symbols, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due)`);
+      console.log(`[worker] Stats: due=${stats.symbolsDue}, processed=${stats.symbolsProcessed}, ${stats.apiCalls} API calls, ${stats.errors} errors, ${stats.skippedNotDue || 0} skipped (not due), ${stats.skippedEquityOffhours || 0} skipped (equity off-hours)`);
       console.log(`[worker] CoinGecko stats: attempted=${stats.coingeckoAttempted}, succeeded=${stats.coingeckoSucceeded}, noData=${stats.coingeckoNoData}, failed=${stats.coingeckoFailed}`);
 
-      await logWorkerRun('ingest-main', stats, 'completed');
+      await logWorkerRun(`ingest-${workerLane}`, stats, 'completed');
 
       if (runOnce) {
         if (failOnErrors && stats.errors > 0) {
@@ -1227,7 +1409,7 @@ async function main(): Promise<void> {
 
     } catch (err: any) {
       console.error(`[worker] Cycle ${cycleCount} failed:`, err?.message || err);
-      await logWorkerRun('ingest-main', {}, 'failed', err?.message || String(err));
+      await logWorkerRun(`ingest-${workerLane}`, {}, 'failed', err?.message || String(err));
 
       if (runOnce) {
         process.exit(1);

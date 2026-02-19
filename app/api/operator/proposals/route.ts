@@ -47,6 +47,12 @@ const ASSIST_EXECUTE_WHITELIST = new Set<ActionKind>([
   'order.export',
 ]);
 
+function isMissingRelationError(error: unknown): boolean {
+  const code = String((error as any)?.code || '');
+  const message = String((error as any)?.message || '').toLowerCase();
+  return code === '42P01' || message.includes('relation') && message.includes('does not exist');
+}
+
 function num(value: unknown, fallback = 0): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
@@ -166,25 +172,44 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const limit = Math.max(1, Math.min(20, Number(searchParams.get('limit') || 8)));
 
-    const [packets, stateRows] = await Promise.all([
-      q<DecisionPacketRow>(
-        `SELECT id, packet_id, symbol, asset_class, status, signal_score, confidence, risk_score, packet_data, updated_at, created_at
-         FROM decision_packets
-         WHERE workspace_id = $1
-           AND updated_at >= NOW() - INTERVAL '7 days'
-           AND status = ANY($2)
-         ORDER BY updated_at DESC
-         LIMIT 80`,
-        [session.workspaceId, ['candidate', 'planned', 'alerted']]
-      ),
-      q<OperatorStateRow>(
-        `SELECT current_focus, risk_environment, cognitive_load, context_state
-         FROM operator_state
-         WHERE workspace_id = $1
-         LIMIT 1`,
-        [session.workspaceId]
-      ),
-    ]);
+    let packets: DecisionPacketRow[] = [];
+    let stateRows: OperatorStateRow[] = [];
+    try {
+      [packets, stateRows] = await Promise.all([
+        q<DecisionPacketRow>(
+          `SELECT id, packet_id, symbol, asset_class, status, signal_score, confidence, risk_score, packet_data, updated_at, created_at
+           FROM decision_packets
+           WHERE workspace_id = $1
+             AND updated_at >= NOW() - INTERVAL '7 days'
+             AND status = ANY($2)
+           ORDER BY updated_at DESC
+           LIMIT 80`,
+          [session.workspaceId, ['candidate', 'planned', 'alerted']]
+        ),
+        q<OperatorStateRow>(
+          `SELECT current_focus, risk_environment, cognitive_load, context_state
+           FROM operator_state
+           WHERE workspace_id = $1
+           LIMIT 1`,
+          [session.workspaceId]
+        ),
+      ]);
+    } catch (error) {
+      if (isMissingRelationError(error)) {
+        console.warn('[operator/proposals] missing operator tables; returning empty proposals');
+        return NextResponse.json({
+          success: true,
+          proposals: [],
+          context: {
+            focus: null,
+            riskEnvironment: 'unknown',
+            totalCandidates: 0,
+          },
+          generatedAt: new Date().toISOString(),
+        });
+      }
+      throw error;
+    }
 
     const operatorState = stateRows[0] || { current_focus: null, risk_environment: null, cognitive_load: null, context_state: null };
     const contextState = parseObj(operatorState.context_state);
@@ -258,16 +283,26 @@ export async function GET(req: NextRequest) {
     });
 
     const proposalIds = scored.map((proposal) => proposal.id);
-    const cooldownRows = proposalIds.length
-      ? await q<{ proposal_id: string }>(
+    let cooldownRows: Array<{ proposal_id: string }> = [];
+    if (proposalIds.length) {
+      try {
+        cooldownRows = await q<{ proposal_id: string }>(
           `SELECT proposal_id
            FROM operator_action_executions
            WHERE workspace_id = $1
              AND proposal_id = ANY($2)
              AND created_at >= NOW() - INTERVAL '90 minutes'`,
           [session.workspaceId, proposalIds]
-        )
-      : [];
+        );
+      } catch (error) {
+        if (isMissingRelationError(error)) {
+          console.warn('[operator/proposals] operator_action_executions missing; skipping cooldown checks');
+          cooldownRows = [];
+        } else {
+          throw error;
+        }
+      }
+    }
     const blockedByCooldown = new Set(cooldownRows.map((row) => row.proposal_id));
 
     const proposals = scored

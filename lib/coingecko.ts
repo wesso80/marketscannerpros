@@ -322,7 +322,11 @@ export async function getMarketData(
  */
 export async function getOHLC(
   coinId: string,
-  days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7
+  days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7,
+  requestOptions?: {
+    retries?: number;
+    timeoutMs?: number;
+  }
 ): Promise<number[][] | null> {
   try {
     const params = new URLSearchParams({
@@ -333,6 +337,8 @@ export async function getOHLC(
     return await cgFetch<number[][]>(`/coins/${coinId}/ohlc`, {
       params,
       init: { next: { revalidate: 300 } },
+      retries: requestOptions?.retries,
+      timeoutMs: requestOptions?.timeoutMs,
     });
   } catch (error) {
     console.error('[CoinGecko] OHLC fetch error:', error);
