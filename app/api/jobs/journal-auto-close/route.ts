@@ -78,6 +78,7 @@ async function fetchCurrentPrice(req: NextRequest, symbol: string, assetClass: '
   quoteUrl.searchParams.set('symbol', quote.symbol);
   quoteUrl.searchParams.set('type', quote.type);
   quoteUrl.searchParams.set('market', quote.market);
+  quoteUrl.searchParams.set('strict', '1');
 
   const response = await fetch(quoteUrl.toString(), { cache: 'no-store' });
   if (!response.ok) return null;

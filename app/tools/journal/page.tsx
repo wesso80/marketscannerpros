@@ -81,16 +81,51 @@ function getTodayISODate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+const KNOWN_CRYPTO_SYMBOLS = new Set([
+  'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'LINK',
+  'UNI', 'ATOM', 'LTC', 'BCH', 'XLM', 'ALGO', 'VET', 'FIL', 'AAVE', 'EOS',
+  'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX', 'SUSHI', 'YFI', 'CRV',
+  'GRT', 'ENJ', 'MANA', 'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD',
+  'FLOW', 'ICP', 'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA',
+  'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP', 'ARB',
+  'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS', 'RUNE',
+  'OSMO', 'CELO', 'ONE', 'ZIL', 'ICX', 'QTUM', 'ONT', 'ZRX', 'BAT',
+]);
+
+function normalizeAssetClassInput(value: string | null): JournalEntry['assetClass'] | undefined {
+  const normalized = (value || '').trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'equity' || normalized === 'stock' || normalized === 'stocks') return 'equity';
+  if (normalized === 'forex' || normalized === 'fx') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return undefined;
+}
+
+function toWorkflowAssetClass(assetClass?: JournalEntry['assetClass']): JournalDraft['asset_class'] {
+  if (assetClass === 'crypto') return 'crypto';
+  if (assetClass === 'equity') return 'equity';
+  if (assetClass === 'forex') return 'forex';
+  if (assetClass === 'commodity') return 'commodities';
+  return 'mixed';
+}
+
+function isLikelyCryptoSymbol(symbol: string): boolean {
+  const upper = symbol.toUpperCase().trim();
+  if (!upper) return false;
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return true;
+  const base = upper.replace(/-?USDT$/, '').replace(/-?USD$/, '');
+  return KNOWN_CRYPTO_SYMBOLS.has(base);
+}
+
 function getLikelyQuoteType(symbol: string): 'crypto' | 'stock' {
-  const upper = symbol.toUpperCase();
-  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
-  return 'stock';
+  return isLikelyCryptoSymbol(symbol) ? 'crypto' : 'stock';
 }
 
 function toQuoteType(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): 'crypto' | 'stock' | 'fx' {
   if (entry.assetClass === 'crypto') return 'crypto';
   if (entry.assetClass === 'forex') return 'fx';
-  return getLikelyQuoteType(entry.symbol);
+  return 'stock';
 }
 
 function buildQuoteParams(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): { symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string } {
@@ -129,7 +164,7 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
 
   const tryFetch = async (quote: { symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }): Promise<number | null> => {
     const response = await fetch(
-      `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
+      `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}&strict=1`,
       { cache: 'no-store' }
     );
     const data = response.ok ? await response.json() : null;
@@ -137,34 +172,33 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
     return Number.isFinite(price) && price > 0 ? price : null;
   };
 
-  const tryCachedFetch = async (symbol: string): Promise<number | null> => {
-    if (!symbol) return null;
-    const response = await fetch(`/api/cached/quote?symbol=${encodeURIComponent(symbol)}`, { cache: 'no-store' });
-    const data = response.ok ? await response.json() : null;
-    const price = Number(data?.price);
-    return Number.isFinite(price) && price > 0 ? price : null;
-  };
+  const candidates: Array<{ symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }> = [primary];
 
-  const candidates: Array<{ symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }> = [
-    primary,
-    {
+  if (primary.type === 'crypto') {
+    candidates.push({
       symbol: upperSymbol,
-      type: 'stock',
+      type: 'crypto',
       market: 'USD',
-    },
-    {
+    });
+    candidates.push({
       symbol: upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
       type: 'crypto',
       market: 'USD',
-    },
-  ];
-
-  const pair = upperSymbol.replace(/[^A-Z]/g, '');
-  if (pair.length >= 6) {
+    });
+  } else if (primary.type === 'fx') {
+    const pair = upperSymbol.replace(/[^A-Z]/g, '');
+    if (pair.length >= 6) {
+      candidates.push({
+        symbol: pair.slice(0, 3),
+        type: 'fx',
+        market: pair.slice(3, 6),
+      });
+    }
+  } else {
     candidates.push({
-      symbol: pair.slice(0, 3),
-      type: 'fx',
-      market: pair.slice(3, 6),
+      symbol: upperSymbol,
+      type: 'stock',
+      market: 'USD',
     });
   }
 
@@ -178,19 +212,6 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
     if (price != null) return price;
   }
 
-  const cachedSymbols = [
-    upperSymbol,
-    upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
-  ];
-
-  const attemptedCached = new Set<string>();
-  for (const symbol of cachedSymbols) {
-    if (!symbol || attemptedCached.has(symbol)) continue;
-    attemptedCached.add(symbol);
-    const price = await tryCachedFetch(symbol).catch(() => null);
-    if (price != null) return price;
-  }
-
   return null;
 }
 
@@ -198,7 +219,7 @@ function getAssetClassLabel(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>):
   if (entry.assetClass === 'crypto') return 'CRYPTO';
   if (entry.assetClass === 'forex') return 'FOREX';
   if (entry.assetClass === 'commodity') return 'COMMODITY';
-  return getLikelyQuoteType(entry.symbol) === 'crypto' ? 'CRYPTO' : 'EQUITY';
+  return 'EQUITY';
 }
 
 function normalizeEntryId(value: unknown): number {
@@ -281,6 +302,7 @@ function JournalContent() {
   const draftScore = searchParams.get('score');
   const draftStop = searchParams.get('stop') || searchParams.get('stopLoss');
   const draftTarget = searchParams.get('target');
+  const draftAssetClass = searchParams.get('assetClass') || searchParams.get('asset_class') || searchParams.get('assetType');
   const draftWorkflowId = searchParams.get('workflowId');
   const draftParentEventId = searchParams.get('parentEventId');
 
@@ -626,10 +648,14 @@ function JournalContent() {
       .filter(t => t.length > 0);
 
     // New trades are always open
+    const entryAssetClass = normalizeAssetClassInput(draftAssetClass)
+      ?? (getLikelyQuoteType(newEntry.symbol) === 'crypto' ? 'crypto' : 'equity');
+
     const journalEntry: JournalEntry = {
       id: Date.now(),
       date: newEntry.date,
       symbol: newEntry.symbol.toUpperCase(),
+      assetClass: entryAssetClass,
       side: newEntry.side,
       tradeType: newEntry.tradeType,
       optionType: newEntry.optionType || undefined,
@@ -654,6 +680,7 @@ function JournalContent() {
     };
 
     const workflowId = draftWorkflowId || buildJournalWorkflowId(journalEntry.symbol);
+    const workflowAssetClass = toWorkflowAssetClass(journalEntry.assetClass);
     const journalUpdatedEvent = createWorkflowEvent<JournalDraft>({
       eventType: 'journal.updated',
       workflowId,
@@ -664,13 +691,13 @@ function JournalContent() {
         entity_type: 'journal',
         entity_id: `journal_${journalEntry.id}`,
         symbol: journalEntry.symbol,
-        asset_class: 'mixed',
+        asset_class: workflowAssetClass,
       },
       payload: {
         journal_id: `journal_${journalEntry.id}`,
         created_at: new Date().toISOString(),
         symbol: journalEntry.symbol,
-        asset_class: 'mixed',
+        asset_class: workflowAssetClass,
         side: journalEntry.side === 'LONG' ? 'long' : 'short',
         trade_type: journalEntry.tradeType,
         quantity: journalEntry.quantity,
@@ -906,6 +933,7 @@ function JournalContent() {
 
     const parentEventId = journalEventMapRef.current[requestedId] || draftParentEventId || null;
     const workflowId = draftWorkflowId || buildJournalWorkflowId(existingEntry.symbol);
+    const workflowAssetClass = toWorkflowAssetClass(existingEntry.assetClass);
     const journalCompletedEvent = createWorkflowEvent({
       eventType: 'journal.completed',
       workflowId,
@@ -916,7 +944,7 @@ function JournalContent() {
         entity_type: 'journal',
         entity_id: `journal_${existingEntry.id}`,
         symbol: existingEntry.symbol,
-        asset_class: 'mixed',
+        asset_class: workflowAssetClass,
       },
       payload: {
         journal_id: `journal_${existingEntry.id}`,

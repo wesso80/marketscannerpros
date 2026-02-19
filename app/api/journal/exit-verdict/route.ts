@@ -186,6 +186,7 @@ async function getLatestPrice(req: NextRequest, symbol: string, assetClass: 'cry
   quoteUrl.searchParams.set('symbol', quoteSymbol);
   quoteUrl.searchParams.set('type', type);
   quoteUrl.searchParams.set('market', quoteMarket);
+  quoteUrl.searchParams.set('strict', '1');
 
   try {
     const res = await fetch(quoteUrl.toString(), { cache: 'no-store' });

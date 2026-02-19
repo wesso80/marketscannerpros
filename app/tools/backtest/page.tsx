@@ -16,6 +16,12 @@ import {
   getBacktestStrategy,
   isBacktestStrategy,
 } from '@/lib/strategies/registry';
+import {
+  findEdgeGroupForStrategy,
+  getPreferredStrategyForEdgeGroup,
+  STRATEGY_EDGE_GROUPS,
+  type EdgeGroupId,
+} from '@/lib/backtest/edgeGroups';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
 
@@ -102,55 +108,10 @@ interface EquityPoint {
   drawdown: number;
 }
 
-type EdgeGroupId =
-  | 'msp_aio_systems'
-  | 'scalping_edge'
-  | 'trend_following'
-  | 'mean_reversion'
-  | 'breakout'
-  | 'liquidity_play';
-
-interface StrategyEdgeGroup {
-  id: EdgeGroupId;
-  label: string;
-  categoryIds: (typeof BACKTEST_STRATEGY_CATEGORIES)[number]['id'][];
-}
-
-const STRATEGY_EDGE_GROUPS: readonly StrategyEdgeGroup[] = [
-  {
-    id: 'msp_aio_systems',
-    label: 'MSP AIO Systems',
-    categoryIds: ['msp_elite'],
-  },
-  {
-    id: 'scalping_edge',
-    label: 'Scalping Edge',
-    categoryIds: ['intraday_scalping'],
-  },
-  {
-    id: 'trend_following',
-    label: 'Trend Following',
-    categoryIds: ['moving_averages', 'trend_filters'],
-  },
-  {
-    id: 'mean_reversion',
-    label: 'Mean Reversion',
-    categoryIds: ['mean_reversion', 'momentum'],
-  },
-  {
-    id: 'breakout',
-    label: 'Breakout',
-    categoryIds: ['swing', 'volatility', 'volume_analysis'],
-  },
-  {
-    id: 'liquidity_play',
-    label: 'Liquidity Play',
-    categoryIds: ['multi_indicator'],
-  },
-] as const;
-
 function BacktestContent() {
   const lastPlanEventKeyRef = useRef('');
+  const previousEdgeGroupRef = useRef<EdgeGroupId | null>(null);
+  const lastResolvedSymbolRef = useRef('');
   const searchParams = useSearchParams();
   const { tier, isLoading: tierLoading } = useUserTier();
   
@@ -202,6 +163,7 @@ function BacktestContent() {
   const activeEdgeStrategies = activeEdgeGroup?.categories.flatMap((category) => category.strategies) ?? [];
 
   const strategyMeta = getBacktestStrategy(strategy);
+  const getWorkflowAssetClass = (assetType?: 'stock' | 'crypto') => (assetType === 'crypto' ? 'crypto' : 'equity');
 
   const journalDraftHref = useMemo(() => {
     if (!results) return '/tools/journal';
@@ -223,6 +185,7 @@ function BacktestContent() {
       timeframe,
       bias,
       score: String(score),
+      assetClass: getWorkflowAssetClass(results.dataSources?.assetType),
       workflowId,
       parentEventId: planEventId || '',
     });
@@ -237,20 +200,35 @@ function BacktestContent() {
   }, [urlStrategy]);
 
   useEffect(() => {
-    const matchingGroup = edgeGroupCategories.find((group) =>
-      group.categories.some((category) => category.strategies.some((item) => item.id === strategy))
-    );
+    const matchingGroup = findEdgeGroupForStrategy(strategy, STRATEGY_EDGE_GROUPS);
 
-    if (matchingGroup && matchingGroup.id !== edgeGroup) {
-      setEdgeGroup(matchingGroup.id);
-    }
-  }, [strategy, edgeGroupCategories, edgeGroup]);
+    if (!matchingGroup) return;
+    setEdgeGroup((previous) => (previous === matchingGroup.id ? previous : matchingGroup.id));
+  }, [strategy]);
 
   useEffect(() => {
     if (!activeEdgeStrategies.length) return;
-    const strategyAllowed = activeEdgeStrategies.some((item) => item.id === strategy);
+
+    const currentEdgeGroup = edgeGroup;
+    const previousEdgeGroup = previousEdgeGroupRef.current;
+    previousEdgeGroupRef.current = currentEdgeGroup;
+
+    const availableStrategyIds = activeEdgeStrategies.map((item) => item.id);
+    const strategyAllowed = availableStrategyIds.includes(strategy);
+
+    if (previousEdgeGroup !== currentEdgeGroup) {
+      const preferredStrategy = getPreferredStrategyForEdgeGroup(currentEdgeGroup, availableStrategyIds);
+      if (preferredStrategy && preferredStrategy !== strategy) {
+        setStrategy(preferredStrategy);
+        return;
+      }
+    }
+
     if (!strategyAllowed) {
-      setStrategy(activeEdgeStrategies[0].id);
+      const fallbackStrategy = getPreferredStrategyForEdgeGroup(currentEdgeGroup, availableStrategyIds);
+      if (fallbackStrategy && fallbackStrategy !== strategy) {
+        setStrategy(fallbackStrategy);
+      }
     }
   }, [edgeGroup, activeEdgeStrategies, strategy]);
 
@@ -329,12 +307,13 @@ function BacktestContent() {
     const riskAmount = Number(initialCapital) * 0.0025;
     const unitRisk = Math.max(Math.abs(entry - stop), 0.01);
     const quantity = Math.max(1, Math.floor(riskAmount / unitRisk));
+    const workflowAssetClass = getWorkflowAssetClass(results.dataSources?.assetType);
 
     const tradePlan: TradePlan = {
       plan_id: `plan_${symbol}_${Date.now()}`,
       created_at: new Date().toISOString(),
       symbol,
-      asset_class: /^[A-Z]{2,6}$/.test(symbol) ? 'equity' : 'mixed',
+      asset_class: workflowAssetClass,
       direction,
       timeframe,
       setup: {
@@ -391,7 +370,7 @@ function BacktestContent() {
       journal_id: `jrnl_draft_${symbol}_${Date.now()}`,
       created_at: new Date().toISOString(),
       symbol,
-      asset_class: /^[A-Z]{2,6}$/.test(symbol) ? 'equity' : 'mixed',
+      asset_class: getWorkflowAssetClass(results.dataSources?.assetType),
       side: results.totalReturn >= 0 ? 'long' : 'short',
       trade_type: 'spot',
       quantity: 1,
@@ -448,6 +427,81 @@ function BacktestContent() {
       setSymbol(urlSymbol.toUpperCase());
     }
   }, [urlSymbol]);
+
+  useEffect(() => {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    if (!normalizedSymbol) return;
+    if (normalizedSymbol === lastResolvedSymbolRef.current) return;
+
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const fallbackStart = new Date(`${today}T00:00:00Z`);
+      fallbackStart.setUTCFullYear(fallbackStart.getUTCFullYear() - 5);
+      const fallbackStartDate = fallbackStart.toISOString().slice(0, 10);
+
+      try {
+        const rangeResponse = await fetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(normalizedSymbol)}`, {
+          cache: 'no-store',
+        });
+
+        const rangePayload = rangeResponse.ok ? await rangeResponse.json() : null;
+        const assetType = String(rangePayload?.assetType || '').toLowerCase();
+        const cryptoCoverageStartDate = typeof rangePayload?.coverage?.startDate === 'string'
+          ? rangePayload.coverage.startDate
+          : null;
+
+        if (!cancelled && assetType === 'crypto') {
+          setStartDate(cryptoCoverageStartDate || fallbackStartDate);
+          setEndDate(today);
+          lastResolvedSymbolRef.current = normalizedSymbol;
+          return;
+        }
+
+        const response = await fetch(`/api/company-overview?symbol=${encodeURIComponent(normalizedSymbol)}`, {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setStartDate(fallbackStartDate);
+            setEndDate(today);
+            lastResolvedSymbolRef.current = normalizedSymbol;
+          }
+          return;
+        }
+
+        const payload = await response.json();
+        const rawIpoDate = payload?.data?.ipoDate;
+        const ipoDate =
+          typeof rawIpoDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawIpoDate)
+            ? rawIpoDate
+            : null;
+
+        if (cancelled) return;
+
+        if (ipoDate) {
+          setStartDate(ipoDate);
+        } else {
+          setStartDate(fallbackStartDate);
+        }
+
+        setEndDate(today);
+        lastResolvedSymbolRef.current = normalizedSymbol;
+      } catch {
+        if (cancelled) return;
+        setStartDate(fallbackStartDate);
+        setEndDate(today);
+        lastResolvedSymbolRef.current = normalizedSymbol;
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [symbol]);
 
   // Tier gate - Pro Trader only
   if (tierLoading) {

@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     const symbol = url.searchParams.get("symbol")?.toUpperCase() || "";
     const type = (url.searchParams.get("type") as AssetType) || "crypto";
     const market = url.searchParams.get("market")?.toUpperCase() || "USD";
+    const strict = ['1', 'true', 'yes'].includes((url.searchParams.get('strict') || '').toLowerCase());
 
     if (!symbol) {
       return NextResponse.json(
@@ -47,9 +48,9 @@ export async function GET(req: NextRequest) {
       price = cryptoQuote?.price ?? null;
       source = cryptoQuote?.source;
     } else if (type === "stock") {
-      price = await getStockPrice(symbol);
+      price = await getStockPrice(symbol, { strict });
     } else if (type === "fx") {
-      price = await getFxPrice(symbol, market);
+      price = await getFxPrice(symbol, market, { strict });
     }
 
     if (price === null || isNaN(price)) {
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       price,
       symbol,
       type,
+      strict,
       ...(source ? { source } : {}),
       timestamp: new Date().toISOString(),
     });
@@ -140,12 +142,13 @@ async function getCryptoPrice(symbol: string, _market: string): Promise<{ price:
  * - prefer_cache: Cache first, AV fallback
  * - cache_only: Cache only
  */
-async function getStockPrice(symbol: string): Promise<number | null> {
+async function getStockPrice(symbol: string, options?: { strict?: boolean }): Promise<number | null> {
+  const strict = Boolean(options?.strict);
   const useCache = shouldUseCache();
   const allowAVFallback = canFallbackToAV();
 
   // Try cached data first (if cache mode enabled)
-  if (useCache) {
+  if (useCache && !strict) {
     try {
       const cachedQuote = await getQuote(symbol);
       if (cachedQuote?.price) {
@@ -186,7 +189,8 @@ async function getStockPrice(symbol: string): Promise<number | null> {
  * Fetch FX rate - uses cache layer when enabled
  * Example: symbol=EUR, market=USD → EUR/USD rate
  */
-async function getFxPrice(symbol: string, market: string): Promise<number | null> {
+async function getFxPrice(symbol: string, market: string, options?: { strict?: boolean }): Promise<number | null> {
+  const strict = Boolean(options?.strict);
   const useCache = shouldUseCache();
   const allowAVFallback = canFallbackToAV();
 
@@ -194,7 +198,7 @@ async function getFxPrice(symbol: string, market: string): Promise<number | null
   const fxSymbol = `${symbol}${market}`;
 
   // Try cached data first (if cache mode enabled)
-  if (useCache) {
+  if (useCache && !strict) {
     try {
       const cachedQuote = await getQuote(fxSymbol);
       if (cachedQuote?.price) {

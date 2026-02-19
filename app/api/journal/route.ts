@@ -193,6 +193,46 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_intent_id VARCHAR(120)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 
+  await q(`
+    UPDATE journal_entries
+       SET asset_class = CASE
+         WHEN EXISTS (
+           SELECT 1
+             FROM unnest(COALESCE(tags, ARRAY[]::text[])) AS t(tag)
+            WHERE lower(tag) = 'asset_class_crypto'
+         ) THEN 'crypto'
+         WHEN EXISTS (
+           SELECT 1
+             FROM unnest(COALESCE(tags, ARRAY[]::text[])) AS t(tag)
+            WHERE lower(tag) = 'asset_class_forex'
+         ) THEN 'forex'
+         WHEN EXISTS (
+           SELECT 1
+             FROM unnest(COALESCE(tags, ARRAY[]::text[])) AS t(tag)
+            WHERE lower(tag) = 'asset_class_commodity'
+         ) THEN 'commodity'
+         WHEN (
+           lower(COALESCE(setup, '')) LIKE '%coingecko%'
+           OR lower(COALESCE(notes, '')) LIKE '%coingecko%'
+           OR lower(COALESCE(strategy, '')) LIKE '%crypto%'
+           OR lower(COALESCE(notes, '')) LIKE '%crypto%'
+         ) THEN 'crypto'
+         WHEN (
+           lower(COALESCE(setup, '')) LIKE '%forex%'
+           OR lower(COALESCE(notes, '')) LIKE '%forex%'
+           OR lower(COALESCE(strategy, '')) LIKE '%forex%'
+         ) THEN 'forex'
+         WHEN (
+           lower(COALESCE(setup, '')) LIKE '%commodity%'
+           OR lower(COALESCE(notes, '')) LIKE '%commodity%'
+           OR lower(COALESCE(strategy, '')) LIKE '%commodity%'
+         ) THEN 'commodity'
+         WHEN upper(COALESCE(symbol, '')) LIKE '%USDT' OR upper(COALESCE(symbol, '')) LIKE '%USD' THEN 'crypto'
+         ELSE 'equity'
+       END
+     WHERE asset_class IS NULL
+  `);
+
   await q(`ALTER TABLE IF EXISTS decision_packets ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 }
 
@@ -279,14 +319,15 @@ export async function GET(req: NextRequest) {
       const packetAssetClass = packetId ? packetAssetClassById.get(packetId) : null;
       const contextAssetClass = inferAssetClassFromEntryContext(e);
       const persistedAssetClass = e.asset_class ? normalizeJournalAssetClass(e.asset_class) : null;
-      const fallbackAssetClass = normalizeJournalAssetClass(
-        packetAssetClass || taggedAssetClass || contextAssetClass || persistedAssetClass || inferAssetClassFromSymbol(e.symbol)
-      );
-      const resolvedAssetClass = resolveAssetClassWithUniverse({
-        symbol: String(e.symbol || ''),
-        fallback: fallbackAssetClass,
-        universeTypes: symbolUniverseBySymbol.get(String(e.symbol || '').toUpperCase()),
-      });
+      const resolvedAssetClass = persistedAssetClass
+        ? persistedAssetClass
+        : resolveAssetClassWithUniverse({
+            symbol: String(e.symbol || ''),
+            fallback: normalizeJournalAssetClass(
+              packetAssetClass || taggedAssetClass || contextAssetClass || inferAssetClassFromSymbol(e.symbol)
+            ),
+            universeTypes: symbolUniverseBySymbol.get(String(e.symbol || '').toUpperCase()),
+          });
 
       return {
       id: e.id,
@@ -458,14 +499,16 @@ export async function POST(req: NextRequest) {
 
         const taggedAssetClass = getTaggedAssetClass(e?.tags);
         const contextAssetClass = inferAssetClassFromEntryContext(e || {});
-        const resolvedFallbackAssetClass = normalizeJournalAssetClass(
-          e?.assetClass || taggedAssetClass || contextAssetClass || inferAssetClassFromSymbol(e?.symbol)
-        );
-        const entryAssetClass = resolveAssetClassWithUniverse({
-          symbol: String(e?.symbol || ''),
-          fallback: resolvedFallbackAssetClass,
-          universeTypes: symbolUniverseBySymbol.get(String(e?.symbol || '').toUpperCase()),
-        });
+        const explicitAssetClass = e?.assetClass ? normalizeJournalAssetClass(e.assetClass) : null;
+        const entryAssetClass = explicitAssetClass
+          ? explicitAssetClass
+          : resolveAssetClassWithUniverse({
+              symbol: String(e?.symbol || ''),
+              fallback: normalizeJournalAssetClass(
+                taggedAssetClass || contextAssetClass || inferAssetClassFromSymbol(e?.symbol)
+              ),
+              universeTypes: symbolUniverseBySymbol.get(String(e?.symbol || '').toUpperCase()),
+            });
 
         const values: any[] = [
           workspaceId,

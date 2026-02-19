@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
         sharesOutstanding: data.SharesOutstanding,
         dividendDate: data.DividendDate,
         exDividendDate: data.ExDividendDate,
+        ipoDate: data.IPODate || null,
         // New: current price data
         currentPrice,
         changePercent,

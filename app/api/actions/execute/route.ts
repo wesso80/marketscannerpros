@@ -118,6 +118,20 @@ function asNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+function normalizeJournalAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'forex' || normalized === 'fx') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return 'equity';
+}
+
+function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
+  const upper = String(symbol || '').toUpperCase();
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
+  return 'equity';
+}
+
 function createIdempotencyFallback(workspaceId: string, actionType: string, payload: Record<string, any>) {
   return createHash('sha256')
     .update(JSON.stringify({ workspaceId, actionType, payload }))
@@ -235,15 +249,22 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
   const side = asUpper(payload.side || payload.direction || 'LONG', 8) || 'LONG';
   const entryPrice = Math.max(0, asNumber(payload.entryPrice ?? payload.triggerPrice ?? payload.price ?? 0, 0));
 
-  const tags = ['operator_draft', 'assist_execute', payload.packetId ? `dp_${String(payload.packetId).slice(0, 50)}` : 'dp_none'];
+  const assetClass = normalizeJournalAssetClass(payload.assetClass || payload.asset_class || payload.market || inferAssetClassFromSymbol(symbol));
+
+  const tags = [
+    'operator_draft',
+    'assist_execute',
+    payload.packetId ? `dp_${String(payload.packetId).slice(0, 50)}` : 'dp_none',
+    `asset_class_${assetClass}`,
+  ];
 
   const inserted = await q<{ id: number }>(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-      strategy, setup, notes, emotions, outcome, tags, is_open
+      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14
+      $8, $9, $10, $11, $12, $13, $14, $15
     )
     RETURNING id`,
     [
@@ -261,6 +282,7 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
       'open',
       tags,
       true,
+      assetClass,
     ]
   );
 
