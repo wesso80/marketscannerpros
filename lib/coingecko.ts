@@ -381,6 +381,33 @@ export async function getOHLCRange(
   }
 }
 
+export async function getMarketChartHistory(
+  coinId: string,
+  days: number | 'max' = 'max',
+  requestOptions?: {
+    retries?: number;
+    timeoutMs?: number;
+  }
+): Promise<{ prices: [number, number][] } | null> {
+  try {
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      days: String(days),
+      interval: 'daily',
+    });
+
+    return await cgFetch<{ prices: [number, number][] }>(`/coins/${coinId}/market_chart`, {
+      params,
+      init: { next: { revalidate: 900 } },
+      retries: requestOptions?.retries,
+      timeoutMs: requestOptions?.timeoutMs,
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Market chart history fetch error:', error);
+    return null;
+  }
+}
+
 /**
  * Get detailed coin info
  * Endpoint: /coins/{id}

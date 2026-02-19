@@ -20,7 +20,13 @@ import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
-import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC, getOHLCRange as getCoinGeckoOHLCRange, resolveSymbolToId } from '../lib/coingecko';
+import {
+  COINGECKO_ID_MAP,
+  getOHLC as getCoinGeckoOHLC,
+  getOHLCRange as getCoinGeckoOHLCRange,
+  getMarketChartHistory as getCoinGeckoMarketChartHistory,
+  resolveSymbolToId,
+} from '../lib/coingecko';
 
 // ============================================================================
 // Signal Detection Types
@@ -491,27 +497,78 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
       timeoutMs: ohlcTimeoutMs,
     });
 
-    if (!ohlcData || ohlcData.length === 0) {
-      ohlcData = await getCoinGeckoOHLC(coinId, 365, {
+    let bars: AVBar[] = [];
+
+    if (ohlcData && ohlcData.length > 0) {
+      bars = ohlcData.map(candle => ({
+        timestamp: new Date(candle[0]).toISOString().slice(0, 10),
+        open: candle[1],
+        high: candle[2],
+        low: candle[3],
+        close: candle[4],
+        volume: 0,
+      }));
+    } else {
+      const marketChart = await getCoinGeckoMarketChartHistory(coinId, 'max', {
         retries: ohlcRetries,
         timeoutMs: ohlcTimeoutMs,
       });
-    }
-    
-    if (!ohlcData || ohlcData.length === 0) {
-      console.warn(`[worker] No CoinGecko OHLC data for ${symbol} (${coinId})`);
-      return [];
+
+      const prices = marketChart?.prices || [];
+
+      if (prices.length > 0) {
+        const byDate = new Map<string, number[]>();
+        for (const point of prices) {
+          if (!Array.isArray(point) || point.length < 2) continue;
+          const ts = Number(point[0]);
+          const px = Number(point[1]);
+          if (!Number.isFinite(ts) || !Number.isFinite(px) || px <= 0) continue;
+          const day = new Date(ts).toISOString().slice(0, 10);
+          if (!byDate.has(day)) byDate.set(day, []);
+          byDate.get(day)!.push(px);
+        }
+
+        bars = Array.from(byDate.entries())
+          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+          .map(([day, dayPrices]) => {
+            const open = dayPrices[0];
+            const close = dayPrices[dayPrices.length - 1];
+            const high = Math.max(...dayPrices);
+            const low = Math.min(...dayPrices);
+            return {
+              timestamp: day,
+              open,
+              high,
+              low,
+              close,
+              volume: 0,
+            };
+          });
+      }
+
+      if (bars.length === 0) {
+        const fallbackOhlc = await getCoinGeckoOHLC(coinId, 365, {
+          retries: ohlcRetries,
+          timeoutMs: ohlcTimeoutMs,
+        });
+
+        if (fallbackOhlc && fallbackOhlc.length > 0) {
+          bars = fallbackOhlc.map(candle => ({
+            timestamp: new Date(candle[0]).toISOString().slice(0, 10),
+            open: candle[1],
+            high: candle[2],
+            low: candle[3],
+            close: candle[4],
+            volume: 0,
+          }));
+        }
+      }
     }
 
-    // CoinGecko returns [timestamp, open, high, low, close]
-    const bars: AVBar[] = ohlcData.map(candle => ({
-      timestamp: new Date(candle[0]).toISOString().slice(0, 10),
-      open: candle[1],
-      high: candle[2],
-      low: candle[3],
-      close: candle[4],
-      volume: 0, // CoinGecko OHLC doesn't include volume
-    }));
+    if (bars.length === 0) {
+      console.warn(`[worker] No CoinGecko history data for ${symbol} (${coinId})`);
+      return [];
+    }
 
     // Sort oldest first
     bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
