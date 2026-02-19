@@ -82,7 +82,12 @@ export const scannerRequestSchema = z.object({
 export type ScannerRequest = z.infer<typeof scannerRequestSchema>;
 
 // Backtest Request
-export const backtestTimeframeSchema = z.enum(["1min", "5min", "15min", "30min", "60min", "daily"]);
+export const backtestTimeframeSchema = z
+  .string()
+  .min(1)
+  .max(20)
+  .regex(/^(daily|\d+\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days))$/i, 'Invalid timeframe format')
+  .transform((value) => value.trim().toLowerCase());
 
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,

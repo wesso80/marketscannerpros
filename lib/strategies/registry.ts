@@ -15,6 +15,9 @@ export const BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] =
     id: 'msp_elite',
     label: '🔥 MSP Elite Strategies',
     strategies: [
+      { id: 'brain_signal_replay', label: '🧠 Brain Signal Replay (Decision Packets)', timeframes: ALL_TIMEFRAMES },
+      { id: 'options_signal_replay', label: '🎯 Options Confluence Replay', timeframes: ALL_TIMEFRAMES },
+      { id: 'time_scanner_signal_replay', label: '⏱️ Time Scanner Replay', timeframes: ALL_TIMEFRAMES },
       { id: 'msp_day_trader', label: 'MSP Day Trader AIO (Score 5+)', timeframes: ALL_TIMEFRAMES },
       { id: 'msp_day_trader_strict', label: 'MSP Day Trader Strict (Score 6+)', timeframes: ALL_TIMEFRAMES },
       { id: 'msp_day_trader_v3', label: '📈 Day Trader v3 Optimized (More Trades)', timeframes: ALL_TIMEFRAMES },

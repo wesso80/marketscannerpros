@@ -31,10 +31,16 @@ import { backtestRequestSchema, type BacktestRequest } from '../../../lib/valida
 import { getSessionFromCookie } from '@/lib/auth';
 import { buildBacktestEngineResult } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
-import { getBacktestStrategy, isBacktestTimeframeSupported } from '@/lib/strategies/registry';
-import type { BacktestTimeframe as RegistryBacktestTimeframe } from '@/lib/strategies/types';
+import { getBacktestStrategy } from '@/lib/strategies/registry';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import {
+  parseBacktestTimeframe,
+  isStrategyTimeframeCompatible,
+  resamplePriceData,
+  computeCoverage,
+} from '@/lib/backtest/timeframe';
+import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -98,15 +104,19 @@ interface PriceFetchResult {
 
 // Fetch daily price data from Alpha Vantage (Stocks)
 async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
+  const parsedTimeframe = parseBacktestTimeframe(timeframe);
+  if (!parsedTimeframe) {
+    throw new Error(`Unsupported timeframe: ${timeframe}`);
+  }
+
   let url: string;
   let timeSeriesKey: string;
   
-  if (timeframe === 'daily') {
+  if (parsedTimeframe.kind === 'daily') {
     url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = 'Time Series (Daily)';
   } else {
-    // Intraday timeframes: 15min, 30min, 60min
-    const interval = timeframe; // Already in correct format
+    const interval = parsedTimeframe.alphaInterval || '1min';
     url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = `Time Series (${interval})`;
   }
@@ -137,6 +147,10 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
     };
   }
   
+  if (parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
+    return resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
+  }
+
   return priceData;
 }
 
@@ -144,17 +158,13 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
 async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = 'daily', startDate: string, endDate: string): Promise<PriceData> {
   const cleanSymbol = normalizeSymbol(symbol);
   const binanceSymbol = `${cleanSymbol}USDT`;
+
+  const parsedTimeframe = parseBacktestTimeframe(timeframe);
+  if (!parsedTimeframe) {
+    throw new Error(`Unsupported timeframe: ${timeframe}`);
+  }
   
-  // Map timeframe to Binance interval
-  const intervalMap: Record<string, string> = {
-    '1min': '1m',
-    '5min': '5m', 
-    '15min': '15m',
-    '30min': '30m',
-    '60min': '1h',
-    'daily': '1d'
-  };
-  const interval = intervalMap[timeframe] || '1d';
+  const interval = parsedTimeframe.binanceInterval;
   
   // Calculate timestamps
   const startTime = new Date(startDate).getTime();
@@ -221,7 +231,7 @@ async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = '
     
     // Format date based on timeframe
     let dateKey: string;
-    if (timeframe === 'daily') {
+    if (parsedTimeframe.kind === 'daily') {
       dateKey = date.toISOString().split('T')[0];
     } else {
       // For intraday, use full datetime
@@ -237,8 +247,12 @@ async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = '
     };
   }
   
-  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars from Binance for ${cleanSymbol}`);
-  return priceData;
+  const finalPriceData = parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
+    ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
+    : priceData;
+
+  logger.info(`Fetched ${Object.keys(finalPriceData).length} ${timeframe} bars from Binance for ${cleanSymbol}`);
+  return finalPriceData;
 }
 
 // Fetch crypto price data from CoinGecko - FALLBACK
@@ -246,12 +260,17 @@ async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string =
   const cleanSymbol = normalizeSymbol(symbol);
   logger.info(`Fetching crypto data for ${cleanSymbol} (${timeframe}) via CoinGecko`);
 
+  const parsedTimeframe = parseBacktestTimeframe(timeframe);
+  if (!parsedTimeframe) {
+    throw new Error(`Unsupported timeframe: ${timeframe}`);
+  }
+
   const coinId = COINGECKO_ID_MAP[cleanSymbol] || await resolveSymbolToId(cleanSymbol);
   if (!coinId) {
     throw new Error(`No CoinGecko mapping found for ${cleanSymbol}`);
   }
 
-  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = timeframe === 'daily' ? 365 : 7;
+  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = parsedTimeframe.kind === 'daily' ? 365 : 7;
   const ohlc = await getOHLC(coinId, days);
   if (!ohlc || ohlc.length === 0) {
     throw new Error(`Failed to fetch CoinGecko OHLC data for ${cleanSymbol}`);
@@ -260,7 +279,7 @@ async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string =
   const priceData: PriceData = {};
   for (const candle of ohlc) {
     const date = new Date(candle[0]);
-    const key = timeframe === 'daily'
+    const key = parsedTimeframe.kind === 'daily'
       ? date.toISOString().slice(0, 10)
       : date.toISOString().replace('T', ' ').slice(0, 19);
 
@@ -273,8 +292,12 @@ async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string =
     };
   }
   
-  logger.info(`Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko)`);
-  return priceData;
+  const finalPriceData = parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
+    ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
+    : priceData;
+
+  logger.info(`Fetched ${Object.keys(finalPriceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko)`);
+  return finalPriceData;
 }
 
 // Smart crypto fetch - tries Binance first (better data), falls back to CoinGecko
@@ -1460,11 +1483,18 @@ export async function POST(req: NextRequest) {
     const isCrypto = isCryptoSymbol(symbol);
     const normalizedSymbol = isCrypto ? normalizeSymbol(symbol) : symbol.toUpperCase();
     
-    const effectiveTimeframe = timeframe as RegistryBacktestTimeframe;
-    if (!isBacktestTimeframeSupported(strategyDefinition.id, effectiveTimeframe)) {
+    const parsedTimeframe = parseBacktestTimeframe(timeframe);
+    if (!parsedTimeframe) {
+      return NextResponse.json(
+        { error: `Unsupported timeframe format: ${timeframe}` },
+        { status: 400 }
+      );
+    }
+
+    if (!isStrategyTimeframeCompatible(strategyDefinition.timeframes, parsedTimeframe)) {
       return NextResponse.json(
         {
-          error: `Timeframe ${effectiveTimeframe} is not supported for strategy ${strategyDefinition.label}`,
+          error: `Timeframe ${parsedTimeframe.normalized} is not supported for strategy ${strategyDefinition.label}`,
         },
         { status: 400 }
       );
@@ -1476,27 +1506,36 @@ export async function POST(req: NextRequest) {
       startDate, 
       endDate, 
       initialCapital,
-      timeframe: effectiveTimeframe,
+      timeframe: parsedTimeframe.normalized,
       assetType: isCrypto ? 'crypto' : 'stock'
     });
 
     // Fetch real historical price data
-    logger.debug(`Fetching ${isCrypto ? 'crypto (Binance)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${effectiveTimeframe})...`);
-    const { priceData, source: priceDataSource } = await fetchPriceData(normalizedSymbol, effectiveTimeframe, startDate, endDate);
+    logger.debug(`Fetching ${isCrypto ? 'crypto (Binance)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${parsedTimeframe.normalized})...`);
+    const { priceData, source: priceDataSource } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate);
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
+
+    const coverage = computeCoverage(priceData, startDate, endDate);
 
     // Run backtest with real indicators
     const { trades, dates } = runStrategy(
       strategyDefinition.id,
       priceData,
       initialCapital,
-      startDate,
-      endDate,
+      coverage.appliedStartDate,
+      coverage.appliedEndDate,
       normalizedSymbol,
-      effectiveTimeframe
+      parsedTimeframe.normalized
     );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
     const result = buildBacktestEngineResult(trades, dates, initialCapital);
+    const strategyDirection = inferStrategyDirection(strategyDefinition.id, result.trades);
+    const diagnostics = buildBacktestDiagnostics(
+      result,
+      strategyDirection,
+      parsedTimeframe.normalized,
+      coverage.bars,
+    );
 
     logger.info('Backtest completed successfully', { 
       symbol, 
@@ -1511,6 +1550,26 @@ export async function POST(req: NextRequest) {
         priceData: priceDataSource,
         assetType: isCrypto ? 'crypto' : 'stock',
       },
+      dataCoverage: {
+        requested: {
+          startDate,
+          endDate,
+        },
+        applied: {
+          startDate: coverage.appliedStartDate,
+          endDate: coverage.appliedEndDate,
+        },
+        minAvailable: coverage.minAvailable,
+        maxAvailable: coverage.maxAvailable,
+        bars: coverage.bars,
+      },
+      strategyProfile: {
+        id: strategyDefinition.id,
+        label: strategyDefinition.label,
+        direction: strategyDirection,
+        invalidation: diagnostics.invalidation,
+      },
+      diagnostics,
     });
   } catch (error: any) {
     logger.error('Backtest error', { 

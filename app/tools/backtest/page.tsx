@@ -16,7 +16,6 @@ import {
   getBacktestStrategy,
   isBacktestStrategy,
 } from '@/lib/strategies/registry';
-import type { BacktestTimeframe } from '@/lib/strategies/types';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
 
@@ -40,6 +39,49 @@ interface BacktestResult {
   worstTrade: Trade | null;
   equityCurve: EquityPoint[];
   trades: Trade[];
+  dataSources?: {
+    priceData: 'alpha_vantage' | 'binance' | 'coingecko';
+    assetType: 'stock' | 'crypto';
+  };
+  signalReplay?: {
+    snapshots: number;
+    qualifiedSignals: number;
+    mode: 'brain_signal_replay' | 'options_signal_replay' | 'time_scanner_signal_replay';
+    minSignalScore: number;
+  };
+  dataCoverage?: {
+    requested: { startDate: string; endDate: string };
+    applied: { startDate: string; endDate: string };
+    minAvailable: string;
+    maxAvailable: string;
+    bars: number;
+  };
+  strategyProfile?: {
+    id: string;
+    label: string;
+    direction: 'bullish' | 'bearish' | 'both';
+    invalidation?: {
+      status: 'valid' | 'watch' | 'invalidated';
+      rule: string;
+      reason: string;
+    };
+  };
+  diagnostics?: {
+    score: number;
+    verdict: 'healthy' | 'watch' | 'invalidated';
+    failureTags: string[];
+    summary: string;
+    adjustments: Array<{
+      key: string;
+      title: string;
+      reason: string;
+    }>;
+    invalidation: {
+      status: 'valid' | 'watch' | 'invalidated';
+      rule: string;
+      reason: string;
+    };
+  };
 }
 
 interface Trade {
@@ -124,7 +166,7 @@ function BacktestContent() {
   const [initialCapital, setInitialCapital] = useState('10000');
   const [strategy, setStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
   const [edgeGroup, setEdgeGroup] = useState<EdgeGroupId>('msp_aio_systems');
-  const [timeframe, setTimeframe] = useState<BacktestTimeframe>('daily');
+  const [timeframe, setTimeframe] = useState('daily');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -133,6 +175,8 @@ function BacktestContent() {
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
   const [showEvidenceLayer, setShowEvidenceLayer] = useState(false);
+  const [showReplayDetails, setShowReplayDetails] = useState(false);
+  const [replayMinSignalScore, setReplayMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
 
   const workflowId = useMemo(() => {
@@ -438,13 +482,25 @@ function BacktestContent() {
     );
   }
 
-  const timeframeMinimumDays: Record<'1min' | '5min' | '15min' | '30min' | '60min' | 'daily', number> = {
-    '1min': 3,
-    '5min': 5,
-    '15min': 10,
-    '30min': 14,
-    '60min': 21,
-    'daily': 120,
+  const getMinimumDaysForTimeframe = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'daily' || normalized.endsWith('d') || normalized.includes('day')) return 120;
+
+    const compact = normalized.replace(/\s+/g, '');
+    const minuteMatch = compact.match(/^(\d+)(m|min|mins|minute|minutes)$/);
+    const hourMatch = compact.match(/^(\d+)(h|hr|hrs|hour|hours)$/);
+
+    let minutes = 60;
+    if (minuteMatch) minutes = Number(minuteMatch[1]);
+    else if (hourMatch) minutes = Number(hourMatch[1]) * 60;
+
+    if (minutes <= 1) return 3;
+    if (minutes <= 5) return 5;
+    if (minutes <= 15) return 10;
+    if (minutes <= 30) return 14;
+    if (minutes <= 60) return 21;
+    if (minutes <= 240) return 45;
+    return 90;
   };
 
   const getRangeDays = (from: string, to: string) => {
@@ -453,8 +509,13 @@ function BacktestContent() {
     return Math.floor((end - start) / 86400000) + 1;
   };
 
+  const isReplayStrategy =
+    strategy === 'brain_signal_replay' ||
+    strategy === 'options_signal_replay' ||
+    strategy === 'time_scanner_signal_replay';
+
   const applySuggestedDateRange = () => {
-    const minDays = timeframeMinimumDays[timeframe];
+    const minDays = getMinimumDaysForTimeframe(timeframe);
     const end = new Date(`${endDate}T00:00:00Z`);
     if (Number.isNaN(end.getTime())) return;
     end.setUTCDate(end.getUTCDate() - (minDays - 1));
@@ -463,9 +524,29 @@ function BacktestContent() {
     setBacktestError(null);
   };
 
-  const runBacktest = async () => {
-    const rangeDays = getRangeDays(startDate, endDate);
-    const minDays = timeframeMinimumDays[timeframe];
+  const expandDateRange = (extraDays: number): string | null => {
+    const start = new Date(`${startDate}T00:00:00Z`);
+    if (Number.isNaN(start.getTime())) return null;
+    start.setUTCDate(start.getUTCDate() - Math.max(1, extraDays));
+    const nextStartDate = start.toISOString().slice(0, 10);
+    setStartDate(nextStartDate);
+    setBacktestError(null);
+    return nextStartDate;
+  };
+
+  const runBacktest = async (overrides?: {
+    startDate?: string;
+    endDate?: string;
+    timeframe?: string;
+    replayMinSignalScore?: number;
+  }) => {
+    const effectiveStartDate = overrides?.startDate ?? startDate;
+    const effectiveEndDate = overrides?.endDate ?? endDate;
+    const effectiveTimeframe = overrides?.timeframe ?? timeframe;
+    const effectiveReplayMinSignalScore = overrides?.replayMinSignalScore ?? replayMinSignalScore;
+
+    const rangeDays = getRangeDays(effectiveStartDate, effectiveEndDate);
+    const minDays = getMinimumDaysForTimeframe(effectiveTimeframe);
 
     if (Number.isNaN(rangeDays)) {
       setBacktestError('Please select valid start and end dates.');
@@ -483,7 +564,7 @@ function BacktestContent() {
     }
 
     if (rangeDays < minDays) {
-      setBacktestError(`Selected range is too short for ${timeframe}. Use at least ${minDays} days for reliable results.`);
+      setBacktestError(`Selected range is too short for ${effectiveTimeframe}. Use at least ${minDays} days for reliable results.`);
       return;
     }
 
@@ -494,17 +575,26 @@ function BacktestContent() {
     setAiError(null);
     
     try {
-      // Fetch price data and technical indicators from Alpha Vantage
-      const response = await fetch(`/api/backtest`, {
+      const endpoint = strategy === 'brain_signal_replay'
+        ? '/api/backtest/brain'
+        : strategy === 'options_signal_replay'
+        ? '/api/backtest/options'
+        : strategy === 'time_scanner_signal_replay'
+        ? '/api/backtest/time-scanner'
+        : '/api/backtest';
+
+      // Fetch price data and run selected backtest engine
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
           strategy,
-          startDate,
-          endDate,
+          startDate: effectiveStartDate,
+          endDate: effectiveEndDate,
           initialCapital: parseFloat(initialCapital),
-          timeframe
+          timeframe: effectiveTimeframe,
+          minSignalScore: effectiveReplayMinSignalScore,
         })
       });
 
@@ -526,6 +616,43 @@ function BacktestContent() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const applyCoachAdjustment = (adjustmentKey: string): {
+    startDate?: string;
+    replayMinSignalScore?: number;
+  } | null => {
+    if (adjustmentKey === 'expand_sample' || adjustmentKey === 'increase_coverage') {
+      const currentRange = getRangeDays(startDate, endDate);
+      const extraDays = Number.isFinite(currentRange) ? Math.max(30, Math.floor(currentRange * 0.5)) : 90;
+      const nextStartDate = expandDateRange(extraDays);
+      return nextStartDate ? { startDate: nextStartDate } : null;
+    }
+
+    if (adjustmentKey === 'tighten_entries' || adjustmentKey === 'raise_expectancy') {
+      if (!isReplayStrategy) {
+        setBacktestError('This adjustment is auto-applicable for replay strategies. For indicator strategies, tighten your strategy rules and rerun.');
+        return null;
+      }
+
+      const nextScore = Math.min(95, replayMinSignalScore + 5);
+      setReplayMinSignalScore(nextScore);
+      setBacktestError(null);
+      return { replayMinSignalScore: nextScore };
+    }
+
+    if (adjustmentKey === 'reduce_drawdown' || adjustmentKey === 'improve_rr') {
+      setBacktestError('Apply this manually by tightening stop/target logic in strategy rules, then rerun.');
+      return null;
+    }
+
+    return null;
+  };
+
+  const applyCoachAdjustmentAndRerun = async (adjustmentKey: string) => {
+    const overrides = applyCoachAdjustment(adjustmentKey);
+    if (!overrides) return;
+    await runBacktest(overrides);
   };
 
   const summarizeBacktest = async () => {
@@ -817,10 +944,12 @@ function BacktestContent() {
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
                 Timeframe
               </label>
-              <select
+              <input
                 value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value as BacktestTimeframe)}
+                onChange={(e) => setTimeframe(e.target.value)}
                 onWheel={(e) => e.currentTarget.blur()}
+                list="backtest-timeframe-options"
+                placeholder="e.g. 6m, 12m, 1h, daily"
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -830,31 +959,21 @@ function BacktestContent() {
                   color: '#f1f5f9',
                   fontSize: '14px'
                 }}
-              >
-                {BACKTEST_TIMEFRAME_GROUPS.map((group) => (
-                  <optgroup key={group.id} label={group.label}>
-                    {group.timeframes.map((value) => {
-                      const strategyMeta = getBacktestStrategy(strategy);
-                      const supported = strategyMeta?.timeframes.includes(value) ?? true;
-
-                      return (
-                        <option key={value} value={value} disabled={!supported}>
-                          {value === '1min' && '1 Minute'}
-                          {value === '5min' && '5 Minutes'}
-                          {value === '15min' && '15 Minutes'}
-                          {value === '30min' && '30 Minutes'}
-                          {value === '60min' && '1 Hour'}
-                          {value === 'daily' && 'Daily'}
-                          {!supported ? ' (Unavailable)' : ''}
-                        </option>
-                      );
-                    })}
-                  </optgroup>
+              />
+              <datalist id="backtest-timeframe-options">
+                {Array.from(new Set(BACKTEST_TIMEFRAME_GROUPS.flatMap((group) => group.timeframes))).map((value) => (
+                  <option key={value} value={value} />
                 ))}
-              </select>
+                {['2min', '3min', '6min', '10min', '12min', '20min', '45min', '2h', '4h'].map((value) => (
+                  <option key={value} value={value} />
+                ))}
+              </datalist>
+              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                Free input enabled. Use formats like 6m, 12m, 1h, 2h, daily.
+              </p>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
-                  ✓ Crypto uses CoinGecko data (full historical)
+                  ✓ Custom intraday timeframes may be resampled from base bars.
                 </p>
               )}
             </div>
@@ -919,10 +1038,35 @@ function BacktestContent() {
                 placeholder="10000"
               />
             </div>
+
+            {isReplayStrategy && (
+              <div>
+                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                  Min Signal Score
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={replayMinSignalScore}
+                  onChange={(e) => setReplayMinSignalScore(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '6px',
+                    color: '#f1f5f9',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <button
-            onClick={runBacktest}
+            onClick={() => runBacktest()}
             disabled={isLoading}
             style={{
               width: '100%',
@@ -1018,6 +1162,299 @@ function BacktestContent() {
                 </div>
               </div>
             </div>
+
+            {results.diagnostics && (
+              <div style={{
+                background: 'var(--msp-card)',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '14px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                boxShadow: 'var(--msp-shadow)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Post-Backtest Coach
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>{results.diagnostics.summary}</div>
+                  </div>
+                  <span style={{
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    background: results.diagnostics.verdict === 'healthy'
+                      ? 'rgba(16,185,129,0.15)'
+                      : results.diagnostics.verdict === 'watch'
+                      ? 'rgba(251,191,36,0.15)'
+                      : 'rgba(239,68,68,0.15)',
+                    border: results.diagnostics.verdict === 'healthy'
+                      ? '1px solid rgba(16,185,129,0.35)'
+                      : results.diagnostics.verdict === 'watch'
+                      ? '1px solid rgba(251,191,36,0.35)'
+                      : '1px solid rgba(239,68,68,0.35)',
+                    color: results.diagnostics.verdict === 'healthy'
+                      ? '#6ee7b7'
+                      : results.diagnostics.verdict === 'watch'
+                      ? '#fde68a'
+                      : '#fca5a5',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    Score {results.diagnostics.score}/100
+                  </span>
+                </div>
+
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(51,65,85,0.55)',
+                  background: 'rgba(15,23,42,0.55)',
+                  color: '#cbd5e1',
+                  fontSize: '12px'
+                }}>
+                  <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Directional Invalidation</div>
+                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.diagnostics.invalidation.rule}</div>
+                  <div style={{ color: '#cbd5e1', marginTop: '4px' }}>{results.diagnostics.invalidation.reason}</div>
+                </div>
+
+                {results.diagnostics.adjustments.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      What to Adjust Next
+                    </div>
+                    <div style={{ display: 'grid', gap: '6px' }}>
+                      {results.diagnostics.adjustments.map((adjustment) => (
+                        <div
+                          key={adjustment.key}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(51,65,85,0.5)',
+                            background: 'rgba(30,41,59,0.45)'
+                          }}
+                        >
+                          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{adjustment.title}</div>
+                          <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{adjustment.reason}</div>
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => applyCoachAdjustment(adjustment.key)}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(16,185,129,0.45)',
+                                background: 'rgba(16,185,129,0.14)',
+                                color: '#6ee7b7',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em'
+                              }}
+                            >
+                              Apply
+                            </button>
+                            <button
+                              onClick={() => applyCoachAdjustmentAndRerun(adjustment.key)}
+                              disabled={isLoading}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(59,130,246,0.45)',
+                                background: isLoading ? 'rgba(30,41,59,0.75)' : 'rgba(59,130,246,0.14)',
+                                color: isLoading ? '#94a3b8' : '#93c5fd',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em'
+                              }}
+                            >
+                              Apply + Rerun
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {results.diagnostics.failureTags.length > 0 && (
+                  <div style={{ marginTop: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {results.diagnostics.failureTags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '999px',
+                          border: '1px solid rgba(148,163,184,0.3)',
+                          background: 'rgba(148,163,184,0.12)',
+                          color: '#cbd5e1',
+                          fontSize: '10px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em'
+                        }}
+                      >
+                        {tag.replaceAll('_', ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {results.dataCoverage && (
+              <div style={{
+                background: 'var(--msp-card)',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '14px',
+                padding: '12px 14px',
+                marginBottom: '16px',
+                boxShadow: 'var(--msp-shadow)'
+              }}>
+                <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                  Data Coverage
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '12px' }}>
+                  Coverage: {results.dataCoverage.minAvailable} → {results.dataCoverage.maxAvailable}
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px' }}>
+                  Applied range: {results.dataCoverage.applied.startDate} → {results.dataCoverage.applied.endDate} · {results.dataCoverage.bars} bars
+                </div>
+              </div>
+            )}
+
+            {results.signalReplay && (
+              (() => {
+                const snapshots = Math.max(0, results.signalReplay.snapshots);
+                const qualified = Math.max(0, results.signalReplay.qualifiedSignals);
+                const ratioPct = snapshots > 0 ? (qualified / snapshots) * 100 : 0;
+                const sourceFilter = results.signalReplay.mode === 'brain_signal_replay'
+                  ? 'decision_packets (all sources)'
+                  : results.signalReplay.mode === 'options_signal_replay'
+                  ? "signal_source = 'options.confluence'"
+                  : "signal_source IN ('scanner.run', 'scanner.bulk')";
+
+                return (
+              <div style={{
+                background: 'var(--msp-card)',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '14px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                boxShadow: 'var(--msp-shadow)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Replay Diagnostics
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '12px' }}>
+                      {results.signalReplay.mode === 'brain_signal_replay'
+                        ? 'Brain signals'
+                        : results.signalReplay.mode === 'options_signal_replay'
+                        ? 'Options confluence signals'
+                        : 'Time scanner signals'}
+                      {' · '}Minimum score {results.signalReplay.minSignalScore}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      padding: '6px 10px',
+                      borderRadius: '999px',
+                      background: 'rgba(59,130,246,0.15)',
+                      border: '1px solid rgba(59,130,246,0.35)',
+                      color: '#93c5fd',
+                      fontSize: '11px',
+                      fontWeight: 700
+                    }}>
+                      Snapshots: {results.signalReplay.snapshots}
+                    </span>
+                    <span style={{
+                      padding: '6px 10px',
+                      borderRadius: '999px',
+                      background: 'rgba(16,185,129,0.15)',
+                      border: '1px solid rgba(16,185,129,0.35)',
+                      color: '#6ee7b7',
+                      fontSize: '11px',
+                      fontWeight: 700
+                    }}>
+                      Qualified: {results.signalReplay.qualifiedSignals}
+                    </span>
+                    <span style={{
+                      padding: '6px 10px',
+                      borderRadius: '999px',
+                      background: 'rgba(168,85,247,0.14)',
+                      border: '1px solid rgba(168,85,247,0.35)',
+                      color: '#d8b4fe',
+                      fontSize: '11px',
+                      fontWeight: 700
+                    }}>
+                      Quality: {ratioPct.toFixed(1)}%
+                    </span>
+                    {results.dataSources?.priceData && (
+                      <span style={{
+                        padding: '6px 10px',
+                        borderRadius: '999px',
+                        background: 'rgba(148,163,184,0.14)',
+                        border: '1px solid rgba(148,163,184,0.35)',
+                        color: '#cbd5e1',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase'
+                      }}>
+                        Source: {results.dataSources.priceData}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setShowReplayDetails((prev) => !prev)}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '999px',
+                        background: showReplayDetails ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.1)',
+                        border: '1px solid rgba(16,185,129,0.35)',
+                        color: '#6ee7b7',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {showReplayDetails ? 'Hide Details' : 'Show Details'}
+                    </button>
+                  </div>
+                </div>
+
+                {showReplayDetails && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(51,65,85,0.55)',
+                    background: 'rgba(15,23,42,0.55)',
+                    color: '#cbd5e1',
+                    fontSize: '12px',
+                    display: 'grid',
+                    gap: '6px'
+                  }}>
+                    <div>
+                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Replay mode:</span>
+                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.signalReplay.mode}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Source filter:</span>
+                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{sourceFilter}</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#94a3b8', marginRight: '6px' }}>Qualified / snapshots:</span>
+                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{qualified} / {snapshots}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+                );
+              })()
+            )}
 
             <div style={{
               background: 'var(--msp-card)',
