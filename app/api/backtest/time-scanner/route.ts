@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       mode: 'time_scanner_signal_replay',
       sourceFilter: {
         exact: ['scanner.run', 'scanner.bulk'],
+        like: ['scanner.run%', 'scanner.bulk%'],
       },
     });
 

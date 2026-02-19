@@ -34,15 +34,15 @@ function normalizeSymbol(symbol: string): string {
   return symbol.toUpperCase().replace(/-?USD$/, '').replace(/-?USDT$/, '');
 }
 
-function toBarKey(timestamp: string, timeframe: string): string {
+function toBarKey(timestamp: string, isDailyBars: boolean): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return '';
-  if (timeframe === 'daily') return date.toISOString().slice(0, 10);
+  if (isDailyBars) return date.toISOString().slice(0, 10);
   return date.toISOString().replace('T', ' ').slice(0, 19);
 }
 
-function resolveBarIndexFromTime(sortedDates: string[], timestamp: string, timeframe: string): number {
-  const desired = toBarKey(timestamp, timeframe);
+function resolveBarIndexFromTime(sortedDates: string[], timestamp: string, isDailyBars: boolean): number {
+  const desired = toBarKey(timestamp, isDailyBars);
   if (!desired) return -1;
   for (let i = 0; i < sortedDates.length; i++) {
     if (sortedDates[i] >= desired) return i;
@@ -82,7 +82,7 @@ async function fetchStockPriceData(symbol: string, timeframe: string): Promise<P
       volume: Number((values as any)['5. volume']),
     };
   }
-  if (parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
+  if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
     return resamplePriceData(parsed, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
   }
 
@@ -137,7 +137,7 @@ async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate
       volume: Number(candle[5]),
     };
   }
-  if (parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
+  if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
     return resamplePriceData(parsed, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
   }
 
@@ -170,6 +170,44 @@ type SourceFilter = {
   like?: string[];
 };
 
+function formatSourceFilterLabel(filter?: SourceFilter): string {
+  const exact = (filter?.exact || []).filter(Boolean);
+  const like = (filter?.like || []).filter(Boolean);
+
+  if (!exact.length && !like.length) {
+    return 'decision_packets (all sources)';
+  }
+
+  const parts: string[] = [];
+  if (exact.length) {
+    parts.push(`signal_source IN (${exact.map((value) => `'${value}'`).join(', ')})`);
+  }
+  if (like.length) {
+    parts.push(`signal_source LIKE (${like.map((value) => `'${value}'`).join(', ')})`);
+  }
+
+  return parts.join(' OR ');
+}
+
+function buildReplaySymbolCandidates(symbol: string): string[] {
+  const upper = String(symbol || '').trim().toUpperCase();
+  if (!upper) return [];
+
+  const stripped = upper.replace(/-?USDT$/, '').replace(/-?USD$/, '');
+  const candidates = [
+    upper,
+    stripped,
+    `${stripped}USD`,
+    `${stripped}USDT`,
+    `${stripped}-USD`,
+    `${stripped}-USDT`,
+  ]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return Array.from(new Set(candidates));
+}
+
 type ReplayRequest = {
   workspaceId: string;
   symbol: string;
@@ -189,13 +227,15 @@ function replayStrategyLabel(mode: ReplayRequest['mode']): string {
 }
 
 async function fetchSignalSnapshots(params: ReplayRequest): Promise<BrainSignalSnapshot[]> {
+  const symbolCandidates = buildReplaySymbolCandidates(params.symbol);
+
   const whereParts = [
     'workspace_id = $1',
-    'UPPER(symbol) = $2',
+    'UPPER(symbol) = ANY($2::text[])',
     'created_at::date >= $3::date',
     'created_at::date <= $4::date',
   ];
-  const args: any[] = [params.workspaceId, params.symbol.toUpperCase(), params.startDate, params.endDate];
+  const args: any[] = [params.workspaceId, symbolCandidates, params.startDate, params.endDate];
 
   if (params.sourceFilter?.exact?.length) {
     args.push(params.sourceFilter.exact);
@@ -261,6 +301,9 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
   ]);
 
   const isCrypto = isCryptoSymbol(params.symbol);
+  const symbolCandidates = buildReplaySymbolCandidates(params.symbol);
+  const sourceFilterLabel = formatSourceFilterLabel(params.sourceFilter);
+  const isDailyBars = parsedTimeframe.kind === 'daily';
 
   if (!snapshots.length) {
     const emptyResult = buildBacktestEngineResult([], [], params.initialCapital);
@@ -278,6 +321,14 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
         qualifiedSignals: 0,
         mode: params.mode,
         minSignalScore: params.minSignalScore,
+        sourceFilterLabel,
+        symbolCandidates,
+        noDataReason: 'No decision packets matched symbol/date/source filters in this workspace.',
+        filterStats: {
+          rejectedByScore: 0,
+          rejectedByNeutralBias: 0,
+          rejectedByOutOfRange: 0,
+        },
       },
       strategyProfile: {
         id: params.mode,
@@ -314,15 +365,27 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
 
   const signalsByBar = new Map<number, SignalAtBar>();
   let qualifiedSignals = 0;
+  let rejectedByScore = 0;
+  let rejectedByNeutralBias = 0;
+  let rejectedByOutOfRange = 0;
 
   for (const snapshot of snapshots) {
     const score = snapshot.signalScore ?? 0;
-    if (score < params.minSignalScore) continue;
-    if (snapshot.bias === 'neutral') continue;
+    if (score < params.minSignalScore) {
+      rejectedByScore += 1;
+      continue;
+    }
+    if (snapshot.bias === 'neutral') {
+      rejectedByNeutralBias += 1;
+      continue;
+    }
 
     const direction: Direction = snapshot.bias === 'bullish' ? 'LONG' : 'SHORT';
-    const barIndex = resolveBarIndexFromTime(dates, snapshot.createdAt, parsedTimeframe.normalized);
-    if (barIndex < 1 || barIndex >= dates.length) continue;
+    const barIndex = resolveBarIndexFromTime(dates, snapshot.createdAt, isDailyBars);
+    if (barIndex < 1 || barIndex >= dates.length) {
+      rejectedByOutOfRange += 1;
+      continue;
+    }
 
     const existing = signalsByBar.get(barIndex);
     const nextSignal: SignalAtBar = {
@@ -440,6 +503,21 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
   const strategyDirection = inferStrategyDirection(params.mode, result.trades);
   const diagnostics = buildBacktestDiagnostics(result, strategyDirection, parsedTimeframe.normalized, coverage.bars);
 
+  let noDataReason: string | null = null;
+  if (snapshots.length === 0) {
+    noDataReason = 'No decision packets matched symbol/date/source filters in this workspace.';
+  } else if (qualifiedSignals === 0) {
+    if (rejectedByScore === snapshots.length) {
+      noDataReason = `All matched snapshots were below minimum score ${params.minSignalScore}.`;
+    } else if (rejectedByNeutralBias === snapshots.length) {
+      noDataReason = 'All matched snapshots were neutral bias and cannot open replay positions.';
+    } else if (rejectedByOutOfRange === snapshots.length) {
+      noDataReason = 'Matched snapshots were outside the available price-bar timeline for the selected timeframe/date range.';
+    } else {
+      noDataReason = 'Matched snapshots existed, but none qualified after replay filters.';
+    }
+  }
+
   return {
     ...result,
     dataSources: {
@@ -451,6 +529,14 @@ export async function runSignalReplayBacktest(params: ReplayRequest) {
       qualifiedSignals,
       mode: params.mode,
       minSignalScore: params.minSignalScore,
+      sourceFilterLabel,
+      symbolCandidates,
+      noDataReason,
+      filterStats: {
+        rejectedByScore,
+        rejectedByNeutralBias,
+        rejectedByOutOfRange,
+      },
     },
     strategyProfile: {
       id: params.mode,

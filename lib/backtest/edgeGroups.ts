@@ -68,6 +68,33 @@ export function findEdgeGroupForStrategy(
   );
 }
 
+export function edgeGroupContainsStrategy(
+  edgeGroupId: EdgeGroupId,
+  strategyId: string,
+  groups: readonly StrategyEdgeGroup[]
+): boolean {
+  const group = groups.find((item) => item.id === edgeGroupId);
+  if (!group) return false;
+
+  return group.categoryIds.some((categoryId) =>
+    BACKTEST_STRATEGY_CATEGORIES
+      .find((category) => category.id === categoryId)
+      ?.strategies.some((strategy) => strategy.id === strategyId)
+  );
+}
+
+export function findEdgeGroupForStrategyWithPreference(
+  strategyId: string,
+  currentEdgeGroupId: EdgeGroupId | null,
+  groups: readonly StrategyEdgeGroup[]
+): StrategyEdgeGroup | null {
+  if (currentEdgeGroupId && edgeGroupContainsStrategy(currentEdgeGroupId, strategyId, groups)) {
+    return groups.find((group) => group.id === currentEdgeGroupId) || null;
+  }
+
+  return findEdgeGroupForStrategy(strategyId, groups);
+}
+
 export function getFirstStrategyForEdgeGroup(
   edgeGroupId: EdgeGroupId,
   groups: readonly (StrategyEdgeGroup & { categories: Array<(typeof BACKTEST_STRATEGY_CATEGORIES)[number]> })[]

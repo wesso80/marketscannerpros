@@ -85,8 +85,8 @@ export type ScannerRequest = z.infer<typeof scannerRequestSchema>;
 export const backtestTimeframeSchema = z
   .string()
   .min(1)
-  .max(20)
-  .regex(/^(daily|\d+\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days))$/i, 'Invalid timeframe format')
+  .max(24)
+  .regex(/^(daily|\d+\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mon|mons|month|months|y|yr|yrs|year|years))$/i, 'Invalid timeframe format')
   .transform((value) => value.trim().toLowerCase());
 
 export const backtestRequestSchema = z.object({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BACKTEST_STRATEGY_CATEGORIES } from '../lib/strategies/registry';
 import {
+  findEdgeGroupForStrategyWithPreference,
   findEdgeGroupForStrategy,
   getPreferredStrategyForEdgeGroup,
   STRATEGY_EDGE_GROUPS,
@@ -63,5 +64,15 @@ describe('backtest edge-group regression', () => {
 
     const preferred = getPreferredStrategyForEdgeGroup('breakdown_play_bears', Array.from(strategyIds));
     expect(preferred).toBe('msp_day_trader_strict');
+  });
+
+  it('keeps bears edge group when strategy exists in multiple groups', () => {
+    const resolved = findEdgeGroupForStrategyWithPreference(
+      'msp_day_trader_strict',
+      'breakdown_play_bears',
+      STRATEGY_EDGE_GROUPS
+    );
+
+    expect(resolved?.id).toBe('breakdown_play_bears');
   });
 });

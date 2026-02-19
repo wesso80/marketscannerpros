@@ -29,6 +29,27 @@ describe('backtest timeframe acceptance', () => {
     expect(compatible).toBe(true);
   });
 
+  it('accepts week, month, and year timeframe formats', () => {
+    const oneWeek = parseBacktestTimeframe('1w');
+    const oneMonth = parseBacktestTimeframe('1mo');
+    const oneYear = parseBacktestTimeframe('1y');
+
+    expect(oneWeek?.normalized).toBe('1w');
+    expect(oneWeek?.kind).toBe('daily');
+    expect(oneWeek?.needsResample).toBe(true);
+
+    expect(oneMonth?.normalized).toBe('1mo');
+    expect(oneMonth?.kind).toBe('daily');
+    expect(oneMonth?.needsResample).toBe(true);
+
+    expect(oneYear?.normalized).toBe('1y');
+    expect(oneYear?.kind).toBe('daily');
+    expect(oneYear?.needsResample).toBe(true);
+
+    const compatible = isStrategyTimeframeCompatible(['daily'], oneWeek!);
+    expect(compatible).toBe(true);
+  });
+
   it('auto-clamps applied range to available coverage', () => {
     const priceData = {
       '2024-01-10': { open: 1, high: 2, low: 1, close: 2, volume: 10 },

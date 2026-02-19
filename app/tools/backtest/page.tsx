@@ -17,11 +17,14 @@ import {
   isBacktestStrategy,
 } from '@/lib/strategies/registry';
 import {
+  findEdgeGroupForStrategyWithPreference,
   findEdgeGroupForStrategy,
   getPreferredStrategyForEdgeGroup,
   STRATEGY_EDGE_GROUPS,
   type EdgeGroupId,
 } from '@/lib/backtest/edgeGroups';
+import { parseBacktestTimeframe } from '@/lib/backtest/timeframe';
+import { buildInverseComparisonSnapshot } from '@/lib/backtest/inverseComparison';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft, TradePlan } from '@/lib/workflow/types';
 
@@ -54,6 +57,14 @@ interface BacktestResult {
     qualifiedSignals: number;
     mode: 'brain_signal_replay' | 'options_signal_replay' | 'time_scanner_signal_replay';
     minSignalScore: number;
+    sourceFilterLabel?: string;
+    symbolCandidates?: string[];
+    noDataReason?: string | null;
+    filterStats?: {
+      rejectedByScore: number;
+      rejectedByNeutralBias: number;
+      rejectedByOutOfRange: number;
+    };
   };
   dataCoverage?: {
     requested: { startDate: string; endDate: string };
@@ -136,6 +147,7 @@ function BacktestContent() {
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [showOptionsBanner, setShowOptionsBanner] = useState(fromOptionsScanner);
   const [showEvidenceLayer, setShowEvidenceLayer] = useState(false);
+  const [showInverseComparison, setShowInverseComparison] = useState(false);
   const [showReplayDetails, setShowReplayDetails] = useState(false);
   const [replayMinSignalScore, setReplayMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
@@ -164,6 +176,10 @@ function BacktestContent() {
 
   const strategyMeta = getBacktestStrategy(strategy);
   const getWorkflowAssetClass = (assetType?: 'stock' | 'crypto') => (assetType === 'crypto' ? 'crypto' : 'equity');
+  const inverseComparison = useMemo(() => {
+    if (!results || !showInverseComparison) return null;
+    return buildInverseComparisonSnapshot(results);
+  }, [results, showInverseComparison]);
 
   const journalDraftHref = useMemo(() => {
     if (!results) return '/tools/journal';
@@ -200,11 +216,11 @@ function BacktestContent() {
   }, [urlStrategy]);
 
   useEffect(() => {
-    const matchingGroup = findEdgeGroupForStrategy(strategy, STRATEGY_EDGE_GROUPS);
+    const matchingGroup = findEdgeGroupForStrategyWithPreference(strategy, edgeGroup, STRATEGY_EDGE_GROUPS);
 
     if (!matchingGroup) return;
     setEdgeGroup((previous) => (previous === matchingGroup.id ? previous : matchingGroup.id));
-  }, [strategy]);
+  }, [strategy, edgeGroup]);
 
   useEffect(() => {
     if (!activeEdgeStrategies.length) return;
@@ -440,6 +456,7 @@ function BacktestContent() {
       const fallbackStart = new Date(`${today}T00:00:00Z`);
       fallbackStart.setUTCFullYear(fallbackStart.getUTCFullYear() - 5);
       const fallbackStartDate = fallbackStart.toISOString().slice(0, 10);
+      let coverageStartDate: string | null = null;
 
       try {
         const rangeResponse = await fetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(normalizedSymbol)}`, {
@@ -448,12 +465,12 @@ function BacktestContent() {
 
         const rangePayload = rangeResponse.ok ? await rangeResponse.json() : null;
         const assetType = String(rangePayload?.assetType || '').toLowerCase();
-        const cryptoCoverageStartDate = typeof rangePayload?.coverage?.startDate === 'string'
+        coverageStartDate = typeof rangePayload?.coverage?.startDate === 'string'
           ? rangePayload.coverage.startDate
           : null;
 
         if (!cancelled && assetType === 'crypto') {
-          setStartDate(cryptoCoverageStartDate || fallbackStartDate);
+          setStartDate(coverageStartDate || fallbackStartDate);
           setEndDate(today);
           lastResolvedSymbolRef.current = normalizedSymbol;
           return;
@@ -465,7 +482,7 @@ function BacktestContent() {
 
         if (!response.ok) {
           if (!cancelled) {
-            setStartDate(fallbackStartDate);
+            setStartDate(coverageStartDate || fallbackStartDate);
             setEndDate(today);
             lastResolvedSymbolRef.current = normalizedSymbol;
           }
@@ -483,6 +500,8 @@ function BacktestContent() {
 
         if (ipoDate) {
           setStartDate(ipoDate);
+        } else if (coverageStartDate) {
+          setStartDate(coverageStartDate);
         } else {
           setStartDate(fallbackStartDate);
         }
@@ -491,7 +510,7 @@ function BacktestContent() {
         lastResolvedSymbolRef.current = normalizedSymbol;
       } catch {
         if (cancelled) return;
-        setStartDate(fallbackStartDate);
+        setStartDate(coverageStartDate || fallbackStartDate);
         setEndDate(today);
         lastResolvedSymbolRef.current = normalizedSymbol;
       }
@@ -537,16 +556,15 @@ function BacktestContent() {
   }
 
   const getMinimumDaysForTimeframe = (value: string) => {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'daily' || normalized.endsWith('d') || normalized.includes('day')) return 120;
+    const parsed = parseBacktestTimeframe(value);
+    if (!parsed) return 21;
 
-    const compact = normalized.replace(/\s+/g, '');
-    const minuteMatch = compact.match(/^(\d+)(m|min|mins|minute|minutes)$/);
-    const hourMatch = compact.match(/^(\d+)(h|hr|hrs|hour|hours)$/);
+    const minutes = parsed.minutes;
 
-    let minutes = 60;
-    if (minuteMatch) minutes = Number(minuteMatch[1]);
-    else if (hourMatch) minutes = Number(hourMatch[1]) * 60;
+    if (minutes >= 525600) return 365 * 3;
+    if (minutes >= 43200) return 365 * 2;
+    if (minutes >= 10080) return 365;
+    if (minutes >= 1440) return 120;
 
     if (minutes <= 1) return 3;
     if (minutes <= 5) return 5;
@@ -625,6 +643,7 @@ function BacktestContent() {
     setIsLoading(true);
     setBacktestError(null);
     setResults(null);
+    setShowInverseComparison(false);
     setAiText(null);
     setAiError(null);
     
@@ -1021,9 +1040,12 @@ function BacktestContent() {
                 {['2min', '3min', '6min', '10min', '12min', '20min', '45min', '2h', '4h'].map((value) => (
                   <option key={value} value={value} />
                 ))}
+                {['1w', '2w', '1mo', '3mo', '6mo', '1y', '2y'].map((value) => (
+                  <option key={value} value={value} />
+                ))}
               </datalist>
               <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                Free input enabled. Use formats like 6m, 12m, 1h, 2h, daily.
+                Free input enabled. Use formats like 6m, 1h, 1d/daily, 1w, 1mo, 1y.
               </p>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
@@ -1186,8 +1208,27 @@ function BacktestContent() {
               marginBottom: '16px',
               boxShadow: 'var(--msp-shadow)'
             }}>
-              <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-                Command Layer
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Command Layer
+                </div>
+                <button
+                  onClick={() => setShowInverseComparison((previous) => !previous)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    background: showInverseComparison ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.1)',
+                    color: '#fca5a5',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {showInverseComparison ? 'Hide Inverse Compare' : 'Run Inverse (Short) Compare'}
+                </button>
               </div>
               <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
@@ -1215,6 +1256,56 @@ function BacktestContent() {
                   </div>
                 </div>
               </div>
+
+              {showInverseComparison && inverseComparison && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(239,68,68,0.28)',
+                  background: 'rgba(127,29,29,0.12)'
+                }}>
+                  <div style={{ color: '#fca5a5', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                    Inverse (Short) Replay
+                  </div>
+                  <div style={{ color: '#fecaca', fontSize: '12px', marginBottom: '8px' }}>
+                    Mirrors each signal direction in the same sample window to simulate long-fail vs short-side outcome.
+                  </div>
+                  <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
+                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Return</div>
+                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%</div>
+                      <div style={{ color: inverseComparison.inverse.totalReturn >= 0 ? '#6ee7b7' : '#fca5a5', fontSize: '12px', fontWeight: 700 }}>
+                        Inverse: {inverseComparison.inverse.totalReturn >= 0 ? '+' : ''}{inverseComparison.inverse.totalReturn.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Win Rate</div>
+                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.winRate.toFixed(1)}%</div>
+                      <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
+                        Inverse: {inverseComparison.inverse.winRate.toFixed(1)}%
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Max Drawdown</div>
+                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.maxDrawdown.toFixed(2)}%</div>
+                      <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
+                        Inverse: {inverseComparison.inverse.maxDrawdown.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
+                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>Profit Factor</div>
+                      <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.profitFactor.toFixed(2)}</div>
+                      <div style={{ color: '#fecaca', fontSize: '12px', fontWeight: 700 }}>
+                        Inverse: {inverseComparison.inverse.profitFactor.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ color: '#fda4af', fontSize: '11px', marginTop: '8px' }}>
+                    Delta vs base — Return {inverseComparison.delta.totalReturn >= 0 ? '+' : ''}{inverseComparison.delta.totalReturn.toFixed(2)}%, Win Rate {inverseComparison.delta.winRate >= 0 ? '+' : ''}{inverseComparison.delta.winRate.toFixed(1)}%, Drawdown {inverseComparison.delta.maxDrawdown >= 0 ? '+' : ''}{inverseComparison.delta.maxDrawdown.toFixed(2)}%.
+                  </div>
+                </div>
+              )}
             </div>
 
             {results.diagnostics && (
@@ -1384,11 +1475,11 @@ function BacktestContent() {
                 const snapshots = Math.max(0, results.signalReplay.snapshots);
                 const qualified = Math.max(0, results.signalReplay.qualifiedSignals);
                 const ratioPct = snapshots > 0 ? (qualified / snapshots) * 100 : 0;
-                const sourceFilter = results.signalReplay.mode === 'brain_signal_replay'
+                const sourceFilter = results.signalReplay.sourceFilterLabel || (results.signalReplay.mode === 'brain_signal_replay'
                   ? 'decision_packets (all sources)'
                   : results.signalReplay.mode === 'options_signal_replay'
                   ? "signal_source = 'options.confluence'"
-                  : "signal_source IN ('scanner.run', 'scanner.bulk')";
+                  : "signal_source IN ('scanner.run', 'scanner.bulk')");
 
                 return (
               <div style={{
@@ -1499,10 +1590,38 @@ function BacktestContent() {
                       <span style={{ color: '#94a3b8', marginRight: '6px' }}>Source filter:</span>
                       <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{sourceFilter}</span>
                     </div>
+                    {Array.isArray(results.signalReplay.symbolCandidates) && results.signalReplay.symbolCandidates.length > 0 && (
+                      <div>
+                        <span style={{ color: '#94a3b8', marginRight: '6px' }}>Symbol candidates:</span>
+                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.signalReplay.symbolCandidates.join(', ')}</span>
+                      </div>
+                    )}
                     <div>
                       <span style={{ color: '#94a3b8', marginRight: '6px' }}>Qualified / snapshots:</span>
                       <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{qualified} / {snapshots}</span>
                     </div>
+                    {results.signalReplay.filterStats && (
+                      <div>
+                        <span style={{ color: '#94a3b8', marginRight: '6px' }}>Rejected:</span>
+                        <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+                          score {results.signalReplay.filterStats.rejectedByScore}, neutral {results.signalReplay.filterStats.rejectedByNeutralBias}, range {results.signalReplay.filterStats.rejectedByOutOfRange}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {results.signalReplay.noDataReason && (
+                  <div style={{
+                    marginTop: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    background: 'rgba(239,68,68,0.08)',
+                    color: '#fca5a5',
+                    fontSize: '12px'
+                  }}>
+                    No replay trades: {results.signalReplay.noDataReason}
                   </div>
                 )}
               </div>

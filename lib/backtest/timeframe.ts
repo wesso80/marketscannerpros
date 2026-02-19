@@ -26,40 +26,69 @@ function toKeyDate(key: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(asDate) ? asDate : '';
 }
 
-function parseMinutesFromRaw(raw: string): number | null {
+function parseMinutesFromRaw(raw: string): { minutes: number; normalized: string } | null {
   const value = String(raw || '').trim().toLowerCase();
   if (!value) return null;
-  if (value === 'daily' || value === '1d' || value === 'day') return 1440;
+  if (value === 'daily' || value === '1d' || value === 'day') {
+    return { minutes: 1440, normalized: 'daily' };
+  }
 
   const compact = value.replace(/\s+/g, '');
 
   const minuteMatch = compact.match(/^(\d+)(m|min|mins|minute|minutes)$/);
-  if (minuteMatch) return Number(minuteMatch[1]);
+  if (minuteMatch) {
+    return { minutes: Number(minuteMatch[1]), normalized: `${Number(minuteMatch[1])}min` };
+  }
 
   const hourMatch = compact.match(/^(\d+)(h|hr|hrs|hour|hours)$/);
-  if (hourMatch) return Number(hourMatch[1]) * 60;
+  if (hourMatch) {
+    return { minutes: Number(hourMatch[1]) * 60, normalized: `${Number(hourMatch[1]) * 60}min` };
+  }
 
   const dayMatch = compact.match(/^(\d+)(d|day|days)$/);
-  if (dayMatch) return Number(dayMatch[1]) * 1440;
+  if (dayMatch) {
+    const days = Number(dayMatch[1]);
+    return { minutes: days * 1440, normalized: days <= 1 ? 'daily' : `${days}d` };
+  }
+
+  const weekMatch = compact.match(/^(\d+)(w|wk|wks|week|weeks)$/);
+  if (weekMatch) {
+    const weeks = Number(weekMatch[1]);
+    return { minutes: weeks * 7 * 1440, normalized: `${weeks}w` };
+  }
+
+  const monthMatch = compact.match(/^(\d+)(mo|mon|mons|month|months)$/);
+  if (monthMatch) {
+    const months = Number(monthMatch[1]);
+    return { minutes: months * 30 * 1440, normalized: `${months}mo` };
+  }
+
+  const yearMatch = compact.match(/^(\d+)(y|yr|yrs|year|years)$/);
+  if (yearMatch) {
+    const years = Number(yearMatch[1]);
+    return { minutes: years * 365 * 1440, normalized: `${years}y` };
+  }
 
   return null;
 }
 
 export function parseBacktestTimeframe(raw: string): ParsedBacktestTimeframe | null {
-  const minutes = parseMinutesFromRaw(raw);
-  if (!minutes || !Number.isFinite(minutes)) return null;
-  if (minutes < 1 || minutes > 1440) return null;
+  const parsed = parseMinutesFromRaw(raw);
+  if (!parsed || !Number.isFinite(parsed.minutes)) return null;
+
+  const { minutes, normalized } = parsed;
+  if (minutes < 1 || minutes > 365 * 1440 * 20) return null;
 
   if (minutes >= 1440) {
     return {
       raw,
-      normalized: 'daily',
+      normalized,
       kind: 'daily',
-      minutes: 1440,
+      minutes,
       alphaInterval: null,
       binanceInterval: '1d',
       sourceMinutes: 1440,
-      needsResample: false,
+      needsResample: minutes > 1440,
     };
   }
 

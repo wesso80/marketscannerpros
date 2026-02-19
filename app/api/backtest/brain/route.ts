@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
       initialCapital: body.initialCapital,
       minSignalScore: body.minSignalScore,
       mode: 'brain_signal_replay',
+      sourceFilter: {
+        like: ['%'],
+      },
     });
 
     return NextResponse.json(result);

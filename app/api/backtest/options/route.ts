@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       mode: 'options_signal_replay',
       sourceFilter: {
         exact: ['options.confluence'],
+        like: ['options.confluence%'],
       },
     });
 

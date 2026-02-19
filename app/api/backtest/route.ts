@@ -147,7 +147,7 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
     };
   }
   
-  if (parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
+  if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
     return resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
   }
 
@@ -247,7 +247,7 @@ async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = '
     };
   }
   
-  const finalPriceData = parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
+  const finalPriceData = parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
     ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
     : priceData;
 
@@ -292,7 +292,7 @@ async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string =
     };
   }
   
-  const finalPriceData = parsedTimeframe.kind === 'intraday' && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
+  const finalPriceData = parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
     ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
     : priceData;
 
@@ -611,7 +611,8 @@ function runStrategy(
   symbol: string,
   timeframe: string = 'daily'
 ): StrategyResult {
-  const isIntraday = timeframe !== 'daily';
+  const parsedTimeframe = parseBacktestTimeframe(timeframe);
+  const isIntraday = parsedTimeframe ? parsedTimeframe.kind === 'intraday' : timeframe !== 'daily';
   
   // Get all available dates and filter by date range
   const allDates = Object.keys(priceData).sort();
@@ -625,7 +626,15 @@ function runStrategy(
   logger.info(`Backtest data: ${dates.length} bars from ${dates[0] || 'N/A'} to ${dates[dates.length - 1] || 'N/A'}`);
   
   // Minimum data requirements
-  const minDataPoints = isIntraday ? 50 : 100;
+  const minDataPoints = isIntraday
+    ? 50
+    : (parsedTimeframe?.minutes ?? 1440) >= 525600
+    ? 3
+    : (parsedTimeframe?.minutes ?? 1440) >= 43200
+    ? 24
+    : (parsedTimeframe?.minutes ?? 1440) >= 10080
+    ? 52
+    : 100;
   if (dates.length < minDataPoints) {
     const tfLabel = isIntraday ? `${timeframe} bars` : 'days';
     throw new Error(`Insufficient data for ${symbol}. Got ${dates.length} ${tfLabel}, need at least ${minDataPoints}. Try adjusting date range.`);
