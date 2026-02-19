@@ -29,9 +29,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
 import { getSessionFromCookie } from '@/lib/auth';
-import { buildBacktestEngineResult, type BacktestTrade, type BacktestValidation } from '@/lib/backtest/engine';
+import { buildBacktestEngineResult, type BacktestTrade } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
-import { getAlternativeBacktestStrategies, getBacktestStrategy } from '@/lib/strategies/registry';
+import { getBacktestStrategy } from '@/lib/strategies/registry';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import {
@@ -42,6 +42,7 @@ import {
 } from '@/lib/backtest/timeframe';
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
+import { buildValidationPayload } from '@/lib/backtest/validationPayload';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -92,44 +93,51 @@ interface StrategyResult {
   closes: number[];
 }
 
-function buildValidationPayload(
-  strategyId: string,
-  strategyDirection: 'bullish' | 'bearish' | 'both',
-  result: { winRate: number; profitFactor: number; totalReturn: number },
-): BacktestValidation {
-  const invalidated = result.winRate < 40 || result.profitFactor < 1 || result.totalReturn <= 0;
-  const validated = result.winRate >= 50 && result.profitFactor >= 1.2 && result.totalReturn > 0;
+type Position = {
+  side?: 'LONG' | 'SHORT';
+  entry: number;
+  entryDate: string;
+  entryIdx: number;
+};
 
-  const status: BacktestValidation['status'] = invalidated
-    ? 'invalidated'
-    : validated
-      ? 'validated'
-      : 'mixed';
+function calcReturnDollars(side: 'LONG' | 'SHORT', entry: number, exit: number, qty: number) {
+  return side === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+}
 
-  const reason = status === 'invalidated'
-    ? `Invalidated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
-    : status === 'validated'
-      ? `Validated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
-      : `Mixed: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`;
+function calcReturnPercent(side: 'LONG' | 'SHORT', entry: number, exit: number) {
+  return side === 'LONG'
+    ? ((exit - entry) / entry) * 100
+    : ((entry - exit) / entry) * 100;
+}
 
-  let suggestedAlternatives: BacktestValidation['suggestedAlternatives'] | undefined;
-  if (status === 'invalidated' && strategyDirection !== 'both') {
-    const targetDirection = strategyDirection === 'bullish' ? 'bearish' : 'bullish';
-    const alternatives = getAlternativeBacktestStrategies(strategyId, targetDirection);
-    if (alternatives.length > 0) {
-      suggestedAlternatives = alternatives.map((candidate) => ({
-        strategyId: candidate.id,
-        why: `${candidate.label} aligns with ${targetDirection} bias${candidate.patternType ? ` (${candidate.patternType.replace('_', ' ')})` : ''}.`,
-      }));
-    }
-  }
+function computeSLTP(
+  side: 'LONG' | 'SHORT',
+  entry: number,
+  atrVal: number,
+  slATR: number,
+  tpATR: number,
+) {
+  const sl = side === 'LONG'
+    ? entry - atrVal * slATR
+    : entry + atrVal * slATR;
 
-  return {
-    status,
-    direction: strategyDirection,
-    reason,
-    suggestedAlternatives,
-  };
+  const tp = side === 'LONG'
+    ? entry + atrVal * tpATR
+    : entry - atrVal * tpATR;
+
+  return { sl, tp };
+}
+
+function checkHitSLTP(
+  side: 'LONG' | 'SHORT',
+  high: number,
+  low: number,
+  sl: number,
+  tp: number,
+) {
+  const hitSL = side === 'LONG' ? low <= sl : high >= sl;
+  const hitTP = side === 'LONG' ? high >= tp : low <= tp;
+  return { hitSL, hitTP };
 }
 
 interface PriceData {
@@ -689,7 +697,7 @@ function runStrategy(
   
   const closes = dates.map(d => priceData[d].close);
   const trades: Trade[] = [];
-  let position: { entry: number; entryDate: string; entryIdx: number } | null = null;
+  let position: Position | null = null;
   
   // Get all OHLC data for MSP strategies
   const highs = dates.map(d => priceData[d].high);
@@ -871,17 +879,19 @@ function runStrategy(
       const slATR = 1.5;
       const tpATR = 3.0;
       
-      if (longSignal) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+      if (!position && longSignal) {
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+      } else if (!position && shortSignal) {
+        position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
+        const side = position.side ?? 'LONG';
         const entryPrice = position.entry;
-        const sl = entryPrice - (atr[i] || close * 0.02) * slATR;
-        const tp = entryPrice + (atr[i] || close * 0.02) * tpATR;
+        const atrVal = (atr[i] || close * 0.02);
+        const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
         
         // Exit conditions
-        const hitSL = lows[i] <= sl;
-        const hitTP = highs[i] >= tp;
-        const biasReversal = totalBias <= 0; // Exit when bias goes neutral/negative
+        const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+        const biasReversal = side === 'LONG' ? totalBias <= 0 : totalBias >= 0;
         const barsHeld = i - position.entryIdx;
         
         if (hitSL || hitTP || biasReversal) {
@@ -890,16 +900,16 @@ function runStrategy(
           if (hitTP) exitPrice = tp;
           const exitReason: BacktestTrade['exitReason'] = hitSL ? 'stop' : hitTP ? 'target' : 'signal_flip';
           
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (exitPrice - position.entry) * shares;
-          const returnPercent = ((exitPrice - position.entry) / position.entry) * 100;
+          const shares = (initialCapital * 0.95) / entryPrice;
+          const returnDollars = calcReturnDollars(side, entryPrice, exitPrice, shares);
+          const returnPercent = calcReturnPercent(side, entryPrice, exitPrice);
           
           trades.push({
             entryDate: position.entryDate,
             exitDate: date,
             symbol,
-            side: 'LONG',
-            entry: position.entry,
+            side,
+            entry: entryPrice,
             exit: exitPrice,
             return: returnDollars,
             returnPercent,
@@ -1011,18 +1021,24 @@ function runStrategy(
       const tpATR = 3.5;
       
       if (!position && longSignal) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+      } else if (!position && shortSignal) {
+        position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
+        const side = position.side ?? 'LONG';
         const entryPrice = position.entry;
-        const sl = entryPrice - (atr[i] || close * 0.02) * slATR;
-        const tp = entryPrice + (atr[i] || close * 0.02) * tpATR;
+        const atrVal = (atr[i] || close * 0.02);
+        const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
         
         // Exit conditions
-        const hitSL = lows[i] <= sl;
-        const hitTP = highs[i] >= tp;
-        const trendFlip = bearTrend && adx[i] > 25;
+        const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+        const trendFlip = side === 'LONG'
+          ? (bearTrend && adx[i] > 25)
+          : (bullTrend && adx[i] > 25);
         const barsHeld = i - position.entryIdx;
-        const timeExit = barsHeld >= 20 && close < entryPrice + (atr[i] || 0) * 0.5;
+        const timeExit = side === 'LONG'
+          ? (barsHeld >= 20 && close < entryPrice + atrVal * 0.5)
+          : (barsHeld >= 20 && close > entryPrice - atrVal * 0.5);
         
         if (hitSL || hitTP || trendFlip || timeExit) {
           let exitPrice = close;
@@ -1036,16 +1052,16 @@ function runStrategy(
                 ? 'timeout'
                 : 'signal_flip';
           
-          const shares = (initialCapital * 0.95) / position.entry;
-          const returnDollars = (exitPrice - position.entry) * shares;
-          const returnPercent = ((exitPrice - position.entry) / position.entry) * 100;
+          const shares = (initialCapital * 0.95) / entryPrice;
+          const returnDollars = calcReturnDollars(side, entryPrice, exitPrice, shares);
+          const returnPercent = calcReturnPercent(side, entryPrice, exitPrice);
           
           trades.push({
             entryDate: position.entryDate,
             exitDate: date,
             symbol,
-            side: 'LONG',
-            entry: position.entry,
+            side,
+            entry: entryPrice,
             exit: exitPrice,
             return: returnDollars,
             returnPercent,
@@ -1568,6 +1584,30 @@ function runStrategy(
     }
   }
   
+  if (position) {
+    const side = position.side ?? 'LONG';
+    const lastIdx = dates.length - 1;
+    const exitDate = dates[lastIdx];
+    const exitPrice = closes[lastIdx];
+    const barsHeld = lastIdx - position.entryIdx;
+    const shares = (initialCapital * 0.95) / position.entry;
+
+    trades.push({
+      entryDate: position.entryDate,
+      exitDate,
+      symbol,
+      side,
+      entry: position.entry,
+      exit: exitPrice,
+      return: calcReturnDollars(side, position.entry, exitPrice, shares),
+      returnPercent: calcReturnPercent(side, position.entry, exitPrice),
+      exitReason: 'end_of_data',
+      holdingPeriodDays: barsHeld + 1,
+    });
+
+    position = null;
+  }
+
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
   return { trades: enrichedTrades, dates, closes };
 }
