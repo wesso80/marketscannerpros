@@ -715,7 +715,7 @@ function JournalContent() {
     try {
       const price = await fetchQuoteWithFallback(entry);
 
-      if (!Number.isFinite(price) || price <= 0) {
+      if (price == null || !Number.isFinite(price) || price <= 0) {
         throw new Error('Live quote unavailable for this symbol right now.');
       }
 
