@@ -554,7 +554,7 @@ function ScannerContent() {
   const [bulkScanLoading, setBulkScanLoading] = useState(false);
   const [bulkScanTimeframe, setBulkScanTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
   const [bulkCryptoScanMode, setBulkCryptoScanMode] = useState<'deep' | 'light'>('light');
-  const [bulkEquityScanMode, setBulkEquityScanMode] = useState<'deep' | 'light'>('light');
+  const [bulkEquityScanMode] = useState<'deep' | 'light'>('deep');
   const [bulkCryptoUniverseSize, setBulkCryptoUniverseSize] = useState<number>(500);
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
@@ -789,11 +789,8 @@ function ScannerContent() {
           payload.universeSize = bulkCryptoUniverseSize;
         }
       } else {
-        const resolvedMode = overrides?.mode ?? bulkEquityScanMode;
+        const resolvedMode: 'deep' = 'deep';
         payload.mode = resolvedMode;
-        if (resolvedMode === 'light') {
-          payload.universeSize = 500;
-        }
       }
 
       const res = await fetch('/api/scanner/bulk', {
@@ -1454,20 +1451,8 @@ function ScannerContent() {
 
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="text-[13px] font-semibold text-[var(--msp-text-muted)]">Equity scan depth:</span>
-              <div className="flex gap-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1">
-                {(['light', 'deep'] as const).map((mode) => (
-                  <button
-                    key={`equity-${mode}`}
-                    onClick={() => {
-                      setBulkEquityScanMode(mode);
-                      void runBulkScan('equity', { mode });
-                    }}
-                    disabled={bulkScanLoading}
-                    className={`rounded-md border px-3 py-[7px] text-xs font-bold ${bulkEquityScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[var(--msp-bg)]' : 'border-transparent bg-transparent text-[var(--msp-text-muted)]'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
-                  >
-                    {mode === 'light' ? 'Fast Wide Rank' : 'Deep Indicators'}
-                  </button>
-                ))}
+              <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-[7px] text-xs font-bold text-[var(--msp-text)]">
+                Deep Indicators
               </div>
             </div>
           </div>
@@ -1640,12 +1625,12 @@ function ScannerContent() {
               {bulkScanLoading && bulkScanType === 'equity' ? (
                 <>
                   <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  {bulkEquityScanMode === 'light' ? 'Ranking Stock Universe...' : 'Finding Stock Setups...'}
+                  Finding Stock Setups...
                 </>
               ) : (
                 <>
                   <span style={{ fontSize: "20px" }}>📈</span>
-                  {bulkEquityScanMode === 'light' ? 'Find Fast Top 10 Stocks' : 'Find Top 10 Stock Setups'}
+                  Find Top 10 Stock Setups
                 </>
               )}
             </button>
