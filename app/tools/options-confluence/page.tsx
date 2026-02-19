@@ -522,6 +522,7 @@ export default function OptionsConfluenceScanner() {
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
+  const [showDealerHistogram, setShowDealerHistogram] = useState(false);
   const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
   const [trapDoors, setTrapDoors] = useState<Record<TrapDoorKey, boolean>>({
     evidence: true,
@@ -1273,6 +1274,18 @@ export default function OptionsConfluenceScanner() {
         .sort((a, b) => Math.abs(b.netGexUsd) - Math.abs(a.netGexUsd))
         .slice(0, 3)
     : [];
+  const dealerHistogramStrikes = dealerGamma
+    ? [
+        ...dealerGamma.topPositiveStrikes.map((item) => ({ ...item, side: 'positive' as const })),
+        ...dealerGamma.topNegativeStrikes.map((item) => ({ ...item, side: 'negative' as const })),
+      ]
+        .sort((a, b) => Math.abs(b.netGexUsd) - Math.abs(a.netGexUsd))
+        .slice(0, 6)
+    : [];
+  const dealerHistogramMaxAbs = dealerHistogramStrikes.reduce(
+    (maxValue, item) => Math.max(maxValue, Math.abs(item.netGexUsd)),
+    0,
+  );
   const dealerIntel = result?.dealerIntelligence;
 
   const tradeabilityState: 'EXECUTABLE' | 'CONDITIONAL' | 'AVOID' = !result
@@ -2800,6 +2813,38 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.7rem] text-slate-400">Gamma Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'} • Pin Zone {dealerGamma?.pinZone || 'UNKNOWN'}</div>
                   <div className="text-[0.7rem] text-slate-400">Call Wall {dealerIntel?.dealerStructure?.callWall?.toFixed(2) || 'N/A'} • Put Wall {dealerIntel?.dealerStructure?.putWall?.toFixed(2) || 'N/A'}</div>
                   <div className="text-[0.7rem] text-slate-400">Volatility State {dealerIntel?.volatilityState?.toUpperCase() || 'MIXED'} • Setup x{dealerIntel?.setupScoreMultiplier?.toFixed(2) || '1.00'}</div>
+                  {dealerHistogramStrikes.length > 0 && (
+                    <div className="mt-2 rounded-[8px] border border-slate-400/20 bg-slate-900/35 p-[0.38rem_0.45rem]">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[0.62rem] font-bold uppercase tracking-[0.03em] text-slate-500">Strike Histogram</div>
+                        <button
+                          type="button"
+                          onClick={() => setShowDealerHistogram((previous) => !previous)}
+                          className="rounded-full border border-slate-400/30 bg-slate-900/60 px-[0.45rem] py-[1px] text-[0.56rem] font-extrabold uppercase tracking-[0.04em] text-slate-300 sm:text-[0.58rem]"
+                        >
+                          {showDealerHistogram ? 'Hide' : 'Advanced'}
+                        </button>
+                      </div>
+                      {showDealerHistogram && (
+                        <div className="mt-2 grid gap-[0.28rem]">
+                          {dealerHistogramStrikes.map((strike) => (
+                            <div key={`${strike.side}-${strike.strike}`} className="grid grid-cols-[36px_minmax(0,1fr)_52px] items-center gap-1.5 sm:grid-cols-[42px_minmax(0,1fr)_58px] sm:gap-2">
+                              <div className="text-[0.6rem] font-bold leading-none text-slate-300 sm:text-[0.62rem]">{strike.strike.toFixed(0)}</div>
+                              <div className="min-w-0 h-[8px] overflow-hidden rounded-full border border-slate-500/25 bg-slate-900/70">
+                                <div
+                                  className={`h-full ${strike.side === 'positive' ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}
+                                  style={{ width: `${dealerHistogramMaxAbs > 0 ? Math.max(8, (Math.abs(strike.netGexUsd) / dealerHistogramMaxAbs) * 100) : 0}%` }}
+                                />
+                              </div>
+                              <div className={`text-right text-[0.56rem] font-bold leading-none sm:text-[0.58rem] ${strike.side === 'positive' ? 'text-emerald-300' : 'text-red-300'}`}>
+                                {formatUsdCompact(Math.abs(strike.netGexUsd))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {dealerTopStrikes.length > 0 && (
                     <div className="mt-1 text-[0.68rem] text-slate-500">
                       Top Strikes: {dealerTopStrikes.map((item) => `${item.strike}${item.netGexUsd >= 0 ? '(+)' : '(-)'}`).join(', ')}
