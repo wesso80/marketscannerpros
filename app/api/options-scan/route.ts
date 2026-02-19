@@ -7,6 +7,7 @@ import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institu
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
 
 // NOTE: In-memory cache doesn't persist across serverless invocations
 // Each request fetches fresh data (75 calls/min on premium is sufficient)
@@ -185,6 +186,26 @@ export async function POST(request: NextRequest) {
         stateMachineContext,
       },
     });
+    const dealerGamma = calculateDealerGammaSnapshot(analysis.openInterestAnalysis, analysis.currentPrice);
+    const baseScore = Number(analysis.compositeScore?.confidence ?? 50);
+    const dealerIntelligence = buildDealerIntelligence({
+      snapshot: dealerGamma,
+      currentPrice: analysis.currentPrice,
+      baseScore,
+      setupDescriptor: `${analysis.strategyRecommendation?.strategy || ''} ${analysis.tradeSnapshot?.oneLine || ''}`,
+      direction: analysis.direction,
+    });
+
+    if (analysis.compositeScore) {
+      analysis.compositeScore.confidence = dealerIntelligence.adjustedScore;
+    }
+
+    if (dealerIntelligence.setupScoreMultiplier !== 1) {
+      analysis.qualityReasons = [
+        ...(analysis.qualityReasons || []),
+        `Dealer positioning adjusted setup score (${dealerIntelligence.setupScoreMultiplier.toFixed(2)}x)`,
+      ];
+    }
 
     const stateMachine = capitalFlow.brain_decision_v1?.state_machine;
     if (stateMachine) {
@@ -230,6 +251,8 @@ export async function POST(request: NextRequest) {
         },
         institutionalFilter,
         capitalFlow,
+        dealerGamma,
+        dealerIntelligence,
       },
       dataSources: {
         underlyingPrice: analysis.assetType === 'crypto' ? 'coingecko' : 'alpha_vantage',

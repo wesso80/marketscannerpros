@@ -89,6 +89,46 @@ interface OpenInterestAnalysis {
   expirationDate: string;
 }
 
+interface DealerGammaStrike {
+  strike: number;
+  netGexUsd: number;
+  callGexUsd: number;
+  putGexUsd: number;
+}
+
+interface DealerGammaSnapshot {
+  regime: 'LONG_GAMMA' | 'SHORT_GAMMA' | 'NEUTRAL';
+  netGexUsd: number;
+  callGexUsd: number;
+  putGexUsd: number;
+  gammaFlipPrice: number | null;
+  flipDistancePct: number | null;
+  pinZone: 'IN' | 'OUT' | 'UNKNOWN';
+  topPositiveStrikes: DealerGammaStrike[];
+  topNegativeStrikes: DealerGammaStrike[];
+  basedOnExpiration: string | null;
+  coverage: 'partial' | 'none';
+}
+
+interface DealerIntelligence {
+  volatilityState: 'suppressed' | 'amplified' | 'mixed';
+  setupType: 'momentum' | 'mean_reversion' | 'neutral';
+  setupScoreMultiplier: number;
+  adjustedScore: number;
+  dealerStructure: {
+    callWall: number | null;
+    putWall: number | null;
+    gammaFlip: number | null;
+    topNodes: Array<{ strike: number; netGexUsd: number }>;
+  };
+  attention: {
+    triggered: boolean;
+    reason: string | null;
+    distanceToFlipPct: number | null;
+    distanceToWallPct: number | null;
+  };
+}
+
 // PRO TRADER TYPES
 interface IVAnalysis {
   currentIV: number;
@@ -346,6 +386,8 @@ interface OptionsSetup {
   primaryExpiration: ExpirationRecommendation | null;
   alternativeExpirations: ExpirationRecommendation[];
   openInterestAnalysis: OpenInterestAnalysis | null;
+  dealerGamma?: DealerGammaSnapshot;
+  dealerIntelligence?: DealerIntelligence;
   greeksAdvice: GreeksAdvice;
   maxRiskPercent: number;
   stopLossStrategy: string;
@@ -562,6 +604,8 @@ export default function OptionsConfluenceScanner() {
           greeksAdvice: result.greeksAdvice,
           entryTiming: result.entryTiming,
           openInterestAnalysis: result.openInterestAnalysis,
+          dealerGamma: result.dealerGamma,
+          dealerIntelligence: result.dealerIntelligence,
           ivAnalysis: result.ivAnalysis,
           unusualActivity: result.unusualActivity,
           tradeLevels: result.tradeLevels,
@@ -987,6 +1031,15 @@ export default function OptionsConfluenceScanner() {
     return price.toFixed(6);
   };
 
+  const formatUsdCompact = (value: number) => {
+    const abs = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+    if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+    if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(2)}K`;
+    return `${sign}$${abs.toFixed(0)}`;
+  };
+
   const gradeClass = (grade: string) => {
     switch (grade) {
       case 'A+': return 'text-emerald-500';
@@ -1206,6 +1259,21 @@ export default function OptionsConfluenceScanner() {
     : result.institutionalFilter?.noTrade
       ? 'BLOCKED'
       : (commandStatus === 'ACTIVE' ? 'ALLOWED' : 'WAIT');
+
+  const dealerGamma = result?.dealerGamma;
+  const dealerRegimeLabel = !dealerGamma
+    ? 'N/A'
+    : dealerGamma.regime === 'LONG_GAMMA'
+      ? '🟢 Long Gamma (Compression)'
+      : dealerGamma.regime === 'SHORT_GAMMA'
+        ? '🔴 Short Gamma (Expansion)'
+        : '🟡 Neutral Gamma';
+  const dealerTopStrikes = dealerGamma
+    ? [...dealerGamma.topPositiveStrikes, ...dealerGamma.topNegativeStrikes]
+        .sort((a, b) => Math.abs(b.netGexUsd) - Math.abs(a.netGexUsd))
+        .slice(0, 3)
+    : [];
+  const dealerIntel = result?.dealerIntelligence;
 
   const tradeabilityState: 'EXECUTABLE' | 'CONDITIONAL' | 'AVOID' = !result
     ? 'CONDITIONAL'
@@ -2724,6 +2792,22 @@ export default function OptionsConfluenceScanner() {
                 <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence</div>
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                </div>
+                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Dealer Positioning</div>
+                  <div className="text-[0.76rem] font-extrabold text-slate-200">{dealerRegimeLabel}</div>
+                  <div className="mt-1 text-[0.7rem] text-slate-400">Net GEX {dealerGamma ? formatUsdCompact(dealerGamma.netGexUsd) : 'N/A'}</div>
+                  <div className="text-[0.7rem] text-slate-400">Gamma Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'} • Pin Zone {dealerGamma?.pinZone || 'UNKNOWN'}</div>
+                  <div className="text-[0.7rem] text-slate-400">Call Wall {dealerIntel?.dealerStructure?.callWall?.toFixed(2) || 'N/A'} • Put Wall {dealerIntel?.dealerStructure?.putWall?.toFixed(2) || 'N/A'}</div>
+                  <div className="text-[0.7rem] text-slate-400">Volatility State {dealerIntel?.volatilityState?.toUpperCase() || 'MIXED'} • Setup x{dealerIntel?.setupScoreMultiplier?.toFixed(2) || '1.00'}</div>
+                  {dealerTopStrikes.length > 0 && (
+                    <div className="mt-1 text-[0.68rem] text-slate-500">
+                      Top Strikes: {dealerTopStrikes.map((item) => `${item.strike}${item.netGexUsd >= 0 ? '(+)' : '(-)'}`).join(', ')}
+                    </div>
+                  )}
+                  {dealerIntel?.attention?.triggered && (
+                    <div className="mt-1 text-[0.68rem] font-bold text-amber-300">⚠ {dealerIntel.attention.reason}</div>
+                  )}
                 </div>
               </div>
             </div>
