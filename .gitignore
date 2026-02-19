@@ -21,3 +21,13 @@ marketscannerpros.zip
 
 # Worker build artifacts
 .tmp-worker/
+
+# Generated diagnostics / temporary scan artifacts
+coingecko-*.log
+fast-*-scan-*.log
+worker-monitor-*.log
+tmp-crypto-scan.log
+reports/coingecko-*.log
+reports/coingecko-*.json
+reports/quick-coingecko-*.json
+scripts/tmp-*
