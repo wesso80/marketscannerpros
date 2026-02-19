@@ -70,6 +70,7 @@ function inferAssetClassFromEntryContext(entry: {
   if (
     haystack.includes('asset_class_crypto') ||
     haystack.includes('scanner_monitor_crypto') ||
+    haystack.includes('source: scanner.bulk') ||
     haystack.includes(' source: crypto') ||
     haystack.includes('source: scanner_background_monitor') && haystack.includes('crypto') ||
     haystack.includes('coingecko') ||

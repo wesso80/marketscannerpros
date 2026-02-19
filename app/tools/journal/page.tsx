@@ -123,6 +123,35 @@ function buildQuoteParams(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): {
   };
 }
 
+async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): Promise<number | null> {
+  const primary = buildQuoteParams(entry);
+
+  const tryFetch = async (quote: { symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }): Promise<number | null> => {
+    const response = await fetch(
+      `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
+      { cache: 'no-store' }
+    );
+    const data = response.ok ? await response.json() : null;
+    const price = Number(data?.price);
+    return Number.isFinite(price) && price > 0 ? price : null;
+  };
+
+  const primaryPrice = await tryFetch(primary).catch(() => null);
+  if (primaryPrice != null) return primaryPrice;
+
+  if (primary.type === 'stock') {
+    const upperSymbol = entry.symbol.toUpperCase().trim();
+    const cryptoFallback = {
+      symbol: upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
+      type: 'crypto' as const,
+      market: 'USD',
+    };
+    return await tryFetch(cryptoFallback).catch(() => null);
+  }
+
+  return null;
+}
+
 function getAssetClassLabel(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): 'CRYPTO' | 'EQUITY' | 'FOREX' | 'COMMODITY' {
   if (entry.assetClass === 'crypto') return 'CRYPTO';
   if (entry.assetClass === 'forex') return 'FOREX';
@@ -663,14 +692,7 @@ function JournalContent() {
     setCurrentClosePriceLoading(true);
     setCurrentClosePriceError(null);
     try {
-      const quote = buildQuoteParams(entry);
-      const response = await fetch(
-        `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
-        { cache: 'no-store' }
-      );
-
-      const data = response.ok ? await response.json() : null;
-      const price = Number(data?.price);
+      const price = await fetchQuoteWithFallback(entry);
 
       if (!Number.isFinite(price) || price <= 0) {
         throw new Error('Live quote unavailable for this symbol right now.');
@@ -1005,14 +1027,7 @@ function JournalContent() {
 
       await Promise.all(openTrades.map(async (trade) => {
         try {
-          const quote = buildQuoteParams(trade);
-          const response = await fetch(
-            `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
-            { cache: 'no-store' }
-          );
-
-          const data = response.ok ? await response.json() : null;
-          const price = Number(data?.price);
+          const price = await fetchQuoteWithFallback(trade);
 
           if (Number.isFinite(price) && price > 0) {
             nextPrices[normalizeEntryId(trade.id)] = price;

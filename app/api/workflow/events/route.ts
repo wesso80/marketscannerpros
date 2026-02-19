@@ -39,11 +39,22 @@ const ALLOWED_EVENT_TYPES = new Set<WorkflowEventType>([
 ]);
 
 function normalizeAlertAssetType(assetClass?: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const resolved = normalizeAlertAssetTypeNullable(assetClass);
+  return resolved || 'equity';
+}
+
+function normalizeAlertAssetTypeNullable(assetClass?: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' | null {
   const normalized = String(assetClass || '').trim().toLowerCase();
   if (normalized === 'crypto' || normalized === 'coin' || normalized === 'coins') return 'crypto';
   if (normalized === 'forex' || normalized === 'fx') return 'forex';
   if (normalized === 'commodities' || normalized === 'commodity') return 'commodity';
   if (normalized === 'equity' || normalized === 'stock' || normalized === 'stocks') return 'equity';
+  return null;
+}
+
+function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
+  const upper = String(symbol || '').toUpperCase();
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
   return 'equity';
 }
 
@@ -706,7 +717,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     || toStringOrNull(planPayload?.setup?.market)
   );
 
-  let assetClass = explicitAssetClass ? normalizeAlertAssetType(explicitAssetClass) : null;
+  let assetClass = explicitAssetClass ? normalizeAlertAssetTypeNullable(explicitAssetClass) : null;
 
   if (!assetClass && decisionPacketId) {
     const packetRows = await q<{ asset_class: string | null; market: string | null }>(
@@ -719,12 +730,34 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     );
     const packetAsset = packetRows[0]?.asset_class || packetRows[0]?.market;
     if (packetAsset) {
-      assetClass = normalizeAlertAssetType(packetAsset);
+      assetClass = normalizeAlertAssetTypeNullable(packetAsset);
     }
   }
 
   if (!assetClass) {
-    assetClass = normalizeAlertAssetType(event.entity?.asset_class);
+    const universeRows = await q<{ asset_type: string }>(
+      `SELECT DISTINCT asset_type
+         FROM symbol_universe
+        WHERE symbol = $1`,
+      [symbol]
+    );
+    const universeTypes = new Set(
+      universeRows
+        .map((row) => normalizeAlertAssetTypeNullable(row.asset_type))
+        .filter((value): value is 'crypto' | 'equity' | 'forex' | 'commodity' => Boolean(value))
+    );
+
+    if (universeTypes.size === 1) {
+      assetClass = Array.from(universeTypes)[0];
+    }
+  }
+
+  if (!assetClass) {
+    assetClass = normalizeAlertAssetTypeNullable(event.entity?.asset_class);
+  }
+
+  if (!assetClass) {
+    assetClass = inferAssetClassFromSymbol(symbol);
   }
 
   await ensureJournalSchema();
