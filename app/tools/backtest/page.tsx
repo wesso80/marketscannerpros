@@ -142,6 +142,17 @@ interface TimeframeScanResult {
   score: number;
 }
 
+interface UniverseScanResult {
+  symbol: string;
+  timeframe: string;
+  totalReturn: number;
+  winRate: number;
+  profitFactor: number;
+  maxDrawdown: number;
+  totalTrades: number;
+  score: number;
+}
+
 type DateAnchorSource = 'ipo' | 'coverage' | 'fallback';
 
 type DateAnchorInfo = {
@@ -184,6 +195,10 @@ function BacktestContent() {
   const [isScanningTimeframes, setIsScanningTimeframes] = useState(false);
   const [timeframeScanResults, setTimeframeScanResults] = useState<TimeframeScanResult[]>([]);
   const [timeframeScanError, setTimeframeScanError] = useState<string | null>(null);
+  const [universeSymbolsInput, setUniverseSymbolsInput] = useState('SPY, QQQ, AAPL, MSFT, NVDA, TSLA, AMZN, META');
+  const [isScanningUniverse, setIsScanningUniverse] = useState(false);
+  const [universeScanResults, setUniverseScanResults] = useState<UniverseScanResult[]>([]);
+  const [universeScanError, setUniverseScanError] = useState<string | null>(null);
   const [recommendationStrategy, setRecommendationStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
   const [recommendationTimeframe, setRecommendationTimeframe] = useState('daily');
   const [recommendationStartDate, setRecommendationStartDate] = useState('2024-01-01');
@@ -690,12 +705,13 @@ function BacktestContent() {
     startDate: string;
     endDate: string;
     replayMinSignalScore: number;
+    symbol?: string;
   }): Promise<BacktestResult> => {
     const response = await fetch(resolveBacktestEndpoint(params.strategy), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        symbol,
+        symbol: params.symbol ?? symbol,
         strategy: params.strategy,
         startDate: params.startDate,
         endDate: params.endDate,
@@ -800,13 +816,122 @@ function BacktestContent() {
     await runBacktest({ timeframe: best.timeframe });
   };
 
+  const parseUniverseSymbols = () => {
+    const parsed = universeSymbolsInput
+      .split(',')
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value.length > 0);
+
+    return Array.from(new Set(parsed));
+  };
+
+  const scanBestUniversePair = async () => {
+    const symbols = parseUniverseSymbols();
+    if (symbols.length === 0) {
+      setUniverseScanError('Please enter at least one symbol in the universe list.');
+      return;
+    }
+
+    const baselineRangeDays = getRangeDays(startDate, endDate);
+    if (!Number.isFinite(baselineRangeDays) || baselineRangeDays <= 0) {
+      setUniverseScanError('Please select a valid date range before scanning.');
+      return;
+    }
+
+    const candidateTimeframes = Array.from(new Set([
+      timeframe,
+      '5min',
+      '15min',
+      '30min',
+      '60min',
+      '4h',
+      'daily',
+    ]));
+
+    const maxCombos = 60;
+    let testedCombos = 0;
+
+    setIsScanningUniverse(true);
+    setUniverseScanError(null);
+    setUniverseScanResults([]);
+    setBacktestError(null);
+
+    try {
+      const rows: UniverseScanResult[] = [];
+
+      for (const scanSymbol of symbols) {
+        for (const tf of candidateTimeframes) {
+          if (testedCombos >= maxCombos) break;
+
+          const minDays = getMinimumDaysForTimeframe(tf);
+          if (baselineRangeDays < minDays) {
+            continue;
+          }
+
+          testedCombos += 1;
+
+          try {
+            const result = await requestBacktest({
+              symbol: scanSymbol,
+              strategy,
+              timeframe: tf,
+              startDate,
+              endDate,
+              replayMinSignalScore,
+            });
+
+            const score =
+              result.totalReturn +
+              (result.winRate * 0.15) +
+              (result.profitFactor * 8) -
+              (result.maxDrawdown * 0.3);
+
+            rows.push({
+              symbol: scanSymbol,
+              timeframe: tf,
+              totalReturn: result.totalReturn,
+              winRate: result.winRate,
+              profitFactor: result.profitFactor,
+              maxDrawdown: result.maxDrawdown,
+              totalTrades: result.totalTrades,
+              score,
+            });
+          } catch {
+            continue;
+          }
+        }
+
+        if (testedCombos >= maxCombos) break;
+      }
+
+      const ranked = rows.sort((a, b) => b.score - a.score);
+      setUniverseScanResults(ranked);
+
+      if (!ranked.length) {
+        setUniverseScanError('No valid symbol + timeframe combinations produced a backtest result.');
+      }
+    } finally {
+      setIsScanningUniverse(false);
+    }
+  };
+
+  const applyBestUniversePairAndRerun = async () => {
+    if (!universeScanResults.length) return;
+    const best = universeScanResults[0];
+    setSymbol(best.symbol);
+    setTimeframe(best.timeframe);
+    await runBacktest({ symbol: best.symbol, timeframe: best.timeframe });
+  };
+
   const runBacktest = async (overrides?: {
+    symbol?: string;
     startDate?: string;
     endDate?: string;
     timeframe?: string;
     replayMinSignalScore?: number;
     strategy?: string;
   }) => {
+    const effectiveSymbol = (overrides?.symbol ?? symbol).toUpperCase();
     const effectiveStartDate = overrides?.startDate ?? startDate;
     const effectiveEndDate = overrides?.endDate ?? endDate;
     const effectiveTimeframe = overrides?.timeframe ?? timeframe;
@@ -845,6 +970,7 @@ function BacktestContent() {
     
     try {
       const result = await requestBacktest({
+        symbol: effectiveSymbol,
         strategy: effectiveStrategy,
         timeframe: effectiveTimeframe,
         startDate: effectiveStartDate,
@@ -1169,6 +1295,30 @@ function BacktestContent() {
               />
             </div>
 
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                Universe Symbols (for symbol + timeframe scan)
+              </label>
+              <input
+                type="text"
+                value={universeSymbolsInput}
+                onChange={(e) => setUniverseSymbolsInput(e.target.value.toUpperCase())}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
+                placeholder="SPY, QQQ, AAPL, MSFT, NVDA"
+              />
+              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                Comma-separated tickers. Scanner ranks best symbol + timeframe combo for this strategy.
+              </p>
+            </div>
+
             <div>
               <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
                 Edge Type
@@ -1413,7 +1563,7 @@ function BacktestContent() {
 
           <button
             onClick={() => runBacktest()}
-            disabled={isLoading || isScanningTimeframes}
+            disabled={isLoading || isScanningTimeframes || isScanningUniverse}
             style={{
               width: '100%',
               padding: '14px',
@@ -1434,7 +1584,7 @@ function BacktestContent() {
             <button
               type="button"
               onClick={scanBestTimeframe}
-              disabled={isLoading || isScanningTimeframes}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse}
               style={{
                 flex: '1 1 200px',
                 padding: '10px 12px',
@@ -1444,8 +1594,8 @@ function BacktestContent() {
                 color: '#67e8f9',
                 fontSize: '12px',
                 fontWeight: 700,
-                cursor: isLoading || isScanningTimeframes ? 'not-allowed' : 'pointer',
-                opacity: isLoading || isScanningTimeframes ? 0.65 : 1,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
               {isScanningTimeframes ? 'Scanning timeframes…' : '🔎 Scan Best Timeframe'}
@@ -1454,7 +1604,7 @@ function BacktestContent() {
             <button
               type="button"
               onClick={applyBestTimeframeAndRerun}
-              disabled={isLoading || isScanningTimeframes || timeframeScanResults.length === 0}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse || timeframeScanResults.length === 0}
               style={{
                 flex: '1 1 200px',
                 padding: '10px 12px',
@@ -1464,11 +1614,51 @@ function BacktestContent() {
                 color: '#6ee7b7',
                 fontSize: '12px',
                 fontWeight: 700,
-                cursor: isLoading || isScanningTimeframes || timeframeScanResults.length === 0 ? 'not-allowed' : 'pointer',
-                opacity: isLoading || isScanningTimeframes || timeframeScanResults.length === 0 ? 0.65 : 1,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse || timeframeScanResults.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse || timeframeScanResults.length === 0 ? 0.65 : 1,
               }}
             >
               ⚡ Use Best & Rerun
+            </button>
+
+            <button
+              type="button"
+              onClick={scanBestUniversePair}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse}
+              style={{
+                flex: '1 1 220px',
+                padding: '10px 12px',
+                background: 'rgba(168,85,247,0.15)',
+                border: '1px solid rgba(168,85,247,0.35)',
+                borderRadius: '8px',
+                color: '#d8b4fe',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
+              }}
+            >
+              {isScanningUniverse ? 'Scanning universe…' : '🌐 Scan Universe'}
+            </button>
+
+            <button
+              type="button"
+              onClick={applyBestUniversePairAndRerun}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0}
+              style={{
+                flex: '1 1 220px',
+                padding: '10px 12px',
+                background: 'rgba(59,130,246,0.15)',
+                border: '1px solid rgba(59,130,246,0.35)',
+                borderRadius: '8px',
+                color: '#93c5fd',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0 ? 0.65 : 1,
+              }}
+            >
+              🧭 Use Best Pair & Rerun
             </button>
           </div>
 
@@ -1510,6 +1700,54 @@ function BacktestContent() {
                   }}>
                     <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700 }}>
                       {idx + 1}. {row.timeframe}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {row.profitFactor.toFixed(2)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {universeScanError && (
+            <div style={{
+              marginTop: '8px',
+              color: '#fca5a5',
+              fontSize: '12px',
+              border: '1px solid rgba(239,68,68,0.35)',
+              borderRadius: '8px',
+              padding: '8px 10px',
+              background: 'rgba(127,29,29,0.2)'
+            }}>
+              {universeScanError}
+            </div>
+          )}
+
+          {universeScanResults.length > 0 && (
+            <div style={{
+              marginTop: '10px',
+              border: '1px solid rgba(51,65,85,0.7)',
+              borderRadius: '10px',
+              background: 'rgba(15,23,42,0.5)',
+              padding: '10px'
+            }}>
+              <div style={{ color: '#cbd5e1', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+                Universe Scan Leaderboard (Symbol + Timeframe)
+              </div>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                {universeScanResults.slice(0, 8).map((row, idx) => (
+                  <div key={`${row.symbol}-${row.timeframe}-${idx}`} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 1fr',
+                    gap: '10px',
+                    padding: '7px 8px',
+                    borderRadius: '8px',
+                    border: idx === 0 ? '1px solid rgba(59,130,246,0.45)' : '1px solid rgba(51,65,85,0.6)',
+                    background: idx === 0 ? 'rgba(59,130,246,0.1)' : 'rgba(30,41,59,0.45)'
+                  }}>
+                    <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 700 }}>
+                      {idx + 1}. {row.symbol} · {row.timeframe}
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '12px' }}>
                       Return {row.totalReturn >= 0 ? '+' : ''}{row.totalReturn.toFixed(2)}% · WR {row.winRate.toFixed(1)}% · PF {row.profitFactor.toFixed(2)} · DD {row.maxDrawdown.toFixed(2)}% · Trades {row.totalTrades}
