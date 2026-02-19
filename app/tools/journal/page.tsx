@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
@@ -237,6 +237,14 @@ function computeUnrealized(entry: JournalEntry, currentPrice: number): { pl: num
     : 0;
 
   return { pl, plPercent };
+}
+
+function isCompatibleLivePrice(entry: Pick<JournalEntry, 'entryPrice'>, livePrice: number): boolean {
+  if (!Number.isFinite(livePrice) || livePrice <= 0) return false;
+  const entryPrice = Number(entry.entryPrice);
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) return true;
+  const ratio = livePrice / entryPrice;
+  return ratio >= 0.05 && ratio <= 20;
 }
 
 function JournalContent() {
@@ -774,6 +782,10 @@ function JournalContent() {
         throw new Error('Live quote unavailable for this symbol right now.');
       }
 
+      if (!isCompatibleLivePrice(entry, price)) {
+        throw new Error('Live quote looks mismatched for this entry.');
+      }
+
       setCurrentClosePrice(price);
       setCloseTradeData(prev => ({
         ...prev,
@@ -1087,9 +1099,18 @@ function JournalContent() {
     document.body.removeChild(link);
   };
 
-  // Separate open and closed trades
-  const openTrades = entries.filter(e => e.isOpen === true || e.isOpen === undefined && e.outcome === 'open');
-  const closedTrades = entries.filter(e => e.isOpen === false || (e.isOpen === undefined && e.outcome !== 'open'));
+  const openTrades = useMemo(
+    () => entries.filter((entry) => entry.isOpen === true || (entry.isOpen === undefined && entry.outcome === 'open')),
+    [entries]
+  );
+  const closedTrades = useMemo(
+    () => entries.filter((entry) => entry.isOpen === false || (entry.isOpen === undefined && entry.outcome !== 'open')),
+    [entries]
+  );
+  const openTradeQuoteKey = useMemo(
+    () => openTrades.map((trade) => `${normalizeEntryId(trade.id)}:${trade.symbol}:${trade.assetClass || 'unknown'}:${trade.entryPrice}`).join('|'),
+    [openTrades]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1114,7 +1135,26 @@ function JournalContent() {
       }));
 
       if (!cancelled) {
-        setOpenTradePrices(nextPrices);
+        setOpenTradePrices((prev) => {
+          const merged: Record<number, number> = { ...prev };
+
+          for (const trade of openTrades) {
+            const id = normalizeEntryId(trade.id);
+            const nextPrice = nextPrices[id];
+            if (!Number.isFinite(nextPrice)) continue;
+            if (!isCompatibleLivePrice(trade, nextPrice)) continue;
+            merged[id] = nextPrice;
+          }
+
+          for (const key of Object.keys(merged)) {
+            const id = Number(key);
+            if (!openTrades.some((trade) => normalizeEntryId(trade.id) === id)) {
+              delete merged[id];
+            }
+          }
+
+          return merged;
+        });
       }
     };
 
@@ -1127,7 +1167,7 @@ function JournalContent() {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [dataLoaded, openTrades]);
+  }, [dataLoaded, openTradeQuoteKey]);
 
   // Filter entries based on current tab
   const filteredEntries = (journalTab === 'open' ? openTrades : closedTrades).filter(entry => {

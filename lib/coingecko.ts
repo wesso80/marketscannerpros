@@ -346,6 +346,41 @@ export async function getOHLC(
   }
 }
 
+export async function getOHLCRange(
+  coinId: string,
+  fromUnixSeconds: number,
+  toUnixSeconds: number,
+  requestOptions?: {
+    retries?: number;
+    timeoutMs?: number;
+  }
+): Promise<number[][] | null> {
+  try {
+    const from = Math.floor(fromUnixSeconds);
+    const to = Math.floor(toUnixSeconds);
+
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from <= 0 || to <= 0 || from >= to) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      from: String(from),
+      to: String(to),
+    });
+
+    return await cgFetch<number[][]>(`/coins/${coinId}/ohlc/range`, {
+      params,
+      init: { next: { revalidate: 900 } },
+      retries: requestOptions?.retries,
+      timeoutMs: requestOptions?.timeoutMs,
+    });
+  } catch (error) {
+    console.error('[CoinGecko] OHLC range fetch error:', error);
+    return null;
+  }
+}
+
 /**
  * Get detailed coin info
  * Endpoint: /coins/{id}

@@ -20,7 +20,7 @@ import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
-import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC, resolveSymbolToId } from '../lib/coingecko';
+import { COINGECKO_ID_MAP, getOHLC as getCoinGeckoOHLC, getOHLCRange as getCoinGeckoOHLCRange, resolveSymbolToId } from '../lib/coingecko';
 
 // ============================================================================
 // Signal Detection Types
@@ -456,7 +456,7 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
 
 /**
  * Fetch crypto OHLC from CoinGecko (preferred - no rate limit issues)
- * Returns 30 days of daily candles
+ * Returns multi-year daily candles when range endpoint is available
  */
 async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   // Map symbol to CoinGecko ID
@@ -464,6 +464,8 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   const allowDynamicResolve = getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false);
   const ohlcRetries = getPositiveIntFromEnv('WORKER_CG_OHLC_RETRIES', 1);
   const ohlcTimeoutMs = getPositiveIntFromEnv('WORKER_CG_OHLC_TIMEOUT_MS', 6000);
+  const requestedHistoryDays = getPositiveIntFromEnv('WORKER_CG_HISTORY_DAYS', 3650);
+  const historyDays = Math.max(30, Math.min(3650, requestedHistoryDays));
   const mappedId =
     COINGECKO_ID_MAP[normalized] ||
     COINGECKO_ID_MAP[normalized.replace('USDT', '')];
@@ -481,11 +483,20 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
   }
 
   try {
-    // Get 30 days of OHLC data
-    const ohlcData = await getCoinGeckoOHLC(coinId, 30, {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const fromSeconds = nowSeconds - (historyDays * 24 * 60 * 60);
+
+    let ohlcData = await getCoinGeckoOHLCRange(coinId, fromSeconds, nowSeconds, {
       retries: ohlcRetries,
       timeoutMs: ohlcTimeoutMs,
     });
+
+    if (!ohlcData || ohlcData.length === 0) {
+      ohlcData = await getCoinGeckoOHLC(coinId, 365, {
+        retries: ohlcRetries,
+        timeoutMs: ohlcTimeoutMs,
+      });
+    }
     
     if (!ohlcData || ohlcData.length === 0) {
       console.warn(`[worker] No CoinGecko OHLC data for ${symbol} (${coinId})`);
@@ -505,7 +516,7 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
     // Sort oldest first
     bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     
-    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol}`);
+    console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol} (requested ${historyDays}d)`);
     return bars;
 
   } catch (err: any) {
