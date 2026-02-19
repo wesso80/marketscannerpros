@@ -125,6 +125,7 @@ function buildQuoteParams(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): {
 
 async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): Promise<number | null> {
   const primary = buildQuoteParams(entry);
+  const upperSymbol = entry.symbol.toUpperCase().trim();
 
   const tryFetch = async (quote: { symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }): Promise<number | null> => {
     const response = await fetch(
@@ -136,17 +137,37 @@ async function fetchQuoteWithFallback(entry: Pick<JournalEntry, 'assetClass' | '
     return Number.isFinite(price) && price > 0 ? price : null;
   };
 
-  const primaryPrice = await tryFetch(primary).catch(() => null);
-  if (primaryPrice != null) return primaryPrice;
-
-  if (primary.type === 'stock') {
-    const upperSymbol = entry.symbol.toUpperCase().trim();
-    const cryptoFallback = {
-      symbol: upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
-      type: 'crypto' as const,
+  const candidates: Array<{ symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string }> = [
+    primary,
+    {
+      symbol: upperSymbol,
+      type: 'stock',
       market: 'USD',
-    };
-    return await tryFetch(cryptoFallback).catch(() => null);
+    },
+    {
+      symbol: upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
+      type: 'crypto',
+      market: 'USD',
+    },
+  ];
+
+  const pair = upperSymbol.replace(/[^A-Z]/g, '');
+  if (pair.length >= 6) {
+    candidates.push({
+      symbol: pair.slice(0, 3),
+      type: 'fx',
+      market: pair.slice(3, 6),
+    });
+  }
+
+  const attempted = new Set<string>();
+  for (const candidate of candidates) {
+    const dedupe = `${candidate.type}:${candidate.symbol}:${candidate.market}`;
+    if (!candidate.symbol || attempted.has(dedupe)) continue;
+    attempted.add(dedupe);
+
+    const price = await tryFetch(candidate).catch(() => null);
+    if (price != null) return price;
   }
 
   return null;

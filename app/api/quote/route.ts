@@ -122,39 +122,12 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
 
 /**
  * Fetch crypto price using CoinGecko Commercial API (primary)
- * Falls back to Yahoo Finance if CoinGecko fails
  */
-async function getCryptoPrice(symbol: string, market: string): Promise<{ price: number; source: 'coingecko' | 'yahoo_finance' } | null> {
+async function getCryptoPrice(symbol: string, _market: string): Promise<{ price: number; source: 'coingecko' } | null> {
   // Primary: Use CoinGecko Commercial API for all crypto
   const geckoPrice = await getCoinGeckoPrice(symbol);
   if (geckoPrice !== null) {
     return { price: geckoPrice, source: 'coingecko' };
-  }
-
-  // Fallback 1: Try Yahoo Finance (free, no API key required)
-  try {
-    // Yahoo Finance uses format: BTC-USD, ETH-USD, etc.
-    const yahooSymbol = `${symbol}-${market}`;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`;
-    
-    const res = await fetch(url, { 
-      cache: 'no-store',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      const result = data.chart?.result?.[0];
-      const meta = result?.meta;
-      
-      if (meta?.regularMarketPrice) {
-        return { price: meta.regularMarketPrice, source: 'yahoo_finance' };
-      }
-    }
-  } catch (err) {
-    console.warn("Yahoo Finance crypto fetch failed:", err);
   }
 
   return null;
