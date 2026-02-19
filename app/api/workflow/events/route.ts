@@ -763,19 +763,21 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   await ensureJournalSchema();
 
   const planTag = `plan_${planId}`;
+  const workflowTag = `workflow_${workflowId}`;
   const dedupe = await q(
     `SELECT id FROM journal_entries
      WHERE workspace_id = $1
        AND symbol = $2
-       AND COALESCE(asset_class, 'equity') = $5
+       AND COALESCE(asset_class, 'equity') = $6
        AND is_open = true
        AND outcome = 'open'
        AND (
          COALESCE(tags, ARRAY[]::text[]) @> ARRAY[$3]::text[]
-         OR notes ILIKE $4
+         OR COALESCE(tags, ARRAY[]::text[]) @> ARRAY[$4]::text[]
+         OR notes ILIKE $5
        )
      LIMIT 1`,
-    [workspaceId, symbol, planTag, `%${planId}%`, assetClass]
+    [workspaceId, symbol, planTag, workflowTag, `%${planId}%`, assetClass]
   );
 
   if (dedupe.length > 0) return false;
@@ -784,6 +786,10 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   const side = direction === 'short' ? 'SHORT' : 'LONG';
   const tradeDate = new Date().toISOString().slice(0, 10);
   const entryPrice = extractPlanAlertPrice(event);
+
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+    return false;
+  }
 
   const setupSource = String(planPayload?.setup?.source || planPayload?.setup?.signal_type || 'scanner.plan').slice(0, 100);
   const strategy = String(planPayload?.setup?.signal_type || 'confluence_scan').slice(0, 100);
