@@ -2851,25 +2851,25 @@ export default function OptionsConfluenceScanner() {
                 Institutional State
               </div>
               <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow State</div>
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
                 </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Market Regime</div>
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalMarketRegime}</div>
                 </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                <div className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.5rem_0.6rem] shadow-[var(--msp-shadow)]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Trade Permission</div>
                   <div className={`font-black ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
                     {tradePermission}
                   </div>
                 </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence</div>
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
                 </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.5rem_0.6rem]">
+                <div className="rounded-[10px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.5rem_0.6rem]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Dealer Context</div>
                   <div className="text-[0.76rem] font-extrabold text-slate-200">{dealerRegimeLabel}</div>
                   <div className="mt-1 text-[0.7rem] text-slate-400">Net GEX {dealerGamma ? formatUsdCompact(dealerGamma.netGexUsd) : 'N/A'} • Flip {dealerGamma?.gammaFlipPrice ? dealerGamma.gammaFlipPrice.toFixed(2) : 'N/A'}</div>
