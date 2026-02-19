@@ -20,6 +20,19 @@ interface IntradayData {
   data: IntradayBar[];
 }
 
+interface DealerStructure {
+  callWall: number | null;
+  putWall: number | null;
+  gammaFlip: number | null;
+  topNodes: Array<{ strike: number; netGexUsd: number }>;
+}
+
+interface DealerOverlayData {
+  regime: 'LONG_GAMMA' | 'SHORT_GAMMA' | 'NEUTRAL';
+  structure: DealerStructure;
+  attentionTriggered: boolean;
+}
+
 type Interval = '1min' | '5min' | '15min' | '30min' | '60min';
 
 const POPULAR_STOCKS = [
@@ -158,13 +171,15 @@ function CandlestickChart({
   width = 800, 
   height = 400,
   onHover,
-  indicators = []
+  indicators = [],
+  dealerOverlay = null,
 }: { 
   data: IntradayBar[]; 
   width?: number; 
   height?: number;
   onHover?: (bar: IntradayBar | null) => void;
   indicators?: IndicatorType[];
+  dealerOverlay?: DealerOverlayData | null;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -226,6 +241,30 @@ function CandlestickChart({
   // Generate time labels
   const labelInterval = Math.max(1, Math.floor(data.length / 8));
   const timeLabels = data.filter((_, i) => i % labelInterval === 0);
+  const latestPrice = data[data.length - 1]?.close || 0;
+  const dealerLines = dealerOverlay ? [
+    {
+      key: 'call-wall',
+      level: dealerOverlay.structure.callWall,
+      label: 'Dealer Call Wall',
+      color: '#22c55e',
+      dashed: false,
+    },
+    {
+      key: 'put-wall',
+      level: dealerOverlay.structure.putWall,
+      label: 'Dealer Put Wall',
+      color: '#ef4444',
+      dashed: false,
+    },
+    {
+      key: 'gamma-flip',
+      level: dealerOverlay.structure.gammaFlip,
+      label: 'Gamma Flip',
+      color: '#38bdf8',
+      dashed: true,
+    },
+  ].filter((line): line is { key: string; level: number; label: string; color: string; dashed: boolean } => Number.isFinite(line.level)) : [];
 
   return (
     <div className="relative">
@@ -272,6 +311,48 @@ function CandlestickChart({
             </text>
           </g>
         ))}
+
+        {/* Dealer Structure Lines (Operator-centric overlay) */}
+        {dealerLines.map((line) => {
+          const y = scaleY(line.level);
+          const distancePct = latestPrice > 0 ? Math.abs(latestPrice - line.level) / latestPrice : 1;
+          const isNear = distancePct <= 0.005;
+
+          return (
+            <g key={line.key}>
+              {isNear && (
+                <line
+                  x1={padding.left}
+                  y1={y}
+                  x2={width - padding.right}
+                  y2={y}
+                  stroke={line.color}
+                  strokeWidth="6"
+                  opacity="0.18"
+                />
+              )}
+              <line
+                x1={padding.left}
+                y1={y}
+                x2={width - padding.right}
+                y2={y}
+                stroke={line.color}
+                strokeWidth={isNear ? '2' : '1.2'}
+                strokeDasharray={line.dashed ? '4,4' : undefined}
+                opacity={isNear ? '0.95' : '0.7'}
+              />
+              <text
+                x={padding.left + 8}
+                y={y - 6}
+                fill={line.color}
+                fontSize="10"
+                fontWeight="700"
+              >
+                {line.label} {formatPrice(line.level)}
+              </text>
+            </g>
+          );
+        })}
 
         {/* Time labels */}
         {timeLabels.map((bar, i) => {
@@ -531,6 +612,7 @@ export default function IntradayChartsPage() {
   const [assetType, setAssetType] = useState<AssetType>('stocks');
   const [isCrypto, setIsCrypto] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorType[]>([]);
+  const [dealerOverlay, setDealerOverlay] = useState<DealerOverlayData | null>(null);
 
   const toggleIndicator = (ind: IndicatorType) => {
     setIndicators(prev => 
@@ -538,7 +620,41 @@ export default function IntradayChartsPage() {
     );
   };
 
-  const fetchData = useCallback(async (sym: string, int: Interval) => {
+  const fetchDealerOverlay = useCallback(async (sym: string, int: Interval) => {
+    const scanModeMap: Record<Interval, string> = {
+      '1min': 'scalping',
+      '5min': 'intraday_30m',
+      '15min': 'intraday_1h',
+      '30min': 'intraday_4h',
+      '60min': 'swing_1d',
+    };
+
+    try {
+      const response = await fetch(
+        `/api/options/gex?symbol=${encodeURIComponent(sym)}&scanMode=${encodeURIComponent(scanModeMap[int])}`
+      );
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        setDealerOverlay(null);
+        return;
+      }
+
+      setDealerOverlay({
+        regime: payload.data?.dealerGamma?.regime || 'NEUTRAL',
+        structure: payload.data?.dealerIntelligence?.dealerStructure || {
+          callWall: null,
+          putWall: null,
+          gammaFlip: null,
+          topNodes: [],
+        },
+        attentionTriggered: Boolean(payload.data?.dealerIntelligence?.attention?.triggered),
+      });
+    } catch {
+      setDealerOverlay(null);
+    }
+  }, []);
+
+  const fetchData = useCallback(async (sym: string, int: Interval, includeDealer = true) => {
     if (!sym) return;
     
     setLoading(true);
@@ -557,13 +673,20 @@ export default function IntradayChartsPage() {
       setData(result);
       setSymbol(sym);
       setIsCrypto(result.isCrypto || false);
+      if (includeDealer && !(result.isCrypto || false)) {
+        await fetchDealerOverlay(sym, int);
+      }
+      if (result.isCrypto) {
+        setDealerOverlay(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch intraday data');
       setData(null);
+      setDealerOverlay(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchDealerOverlay]);
 
   // Initial load with a popular stock
   useEffect(() => {
@@ -574,7 +697,7 @@ export default function IntradayChartsPage() {
   useEffect(() => {
     if (!autoRefresh || !symbol) return;
     const timer = window.setInterval(() => {
-      fetchData(symbol, interval);
+      fetchData(symbol, interval, false);
     }, 60000);
     return () => window.clearInterval(timer);
   }, [autoRefresh, symbol, interval, fetchData]);
@@ -784,6 +907,23 @@ export default function IntradayChartsPage() {
                   </div>
                 </div>
 
+                {dealerOverlay && (
+                  <div className="bg-slate-900/80 backdrop-blur rounded-lg px-4 py-2 text-sm border border-slate-700">
+                    <div className="text-[11px] uppercase tracking-wide text-slate-400">Dealer Structure</div>
+                    <div className="text-slate-200 font-semibold">
+                      {dealerOverlay.regime === 'LONG_GAMMA' ? '🟢 Compression Bias' : dealerOverlay.regime === 'SHORT_GAMMA' ? '🔴 Expansion Bias' : '🟡 Mixed Bias'}
+                    </div>
+                    <div className="text-[12px] text-slate-400 mt-1">
+                      Flip {dealerOverlay.structure.gammaFlip ? formatPrice(dealerOverlay.structure.gammaFlip) : 'N/A'} •
+                      Call Wall {dealerOverlay.structure.callWall ? formatPrice(dealerOverlay.structure.callWall) : 'N/A'} •
+                      Put Wall {dealerOverlay.structure.putWall ? formatPrice(dealerOverlay.structure.putWall) : 'N/A'}
+                    </div>
+                    {dealerOverlay.attentionTriggered && (
+                      <div className="text-[12px] text-amber-300 mt-1">⚠ Dealer inflection zone approaching</div>
+                    )}
+                  </div>
+                )}
+
                 {/* OHLC for hovered bar */}
                 {hoveredBar && (
                   <div className="bg-slate-900/80 backdrop-blur rounded-lg px-4 py-2 text-sm">
@@ -897,6 +1037,7 @@ export default function IntradayChartsPage() {
                   height={400}
                   onHover={setHoveredBar}
                   indicators={indicators}
+                  dealerOverlay={dealerOverlay}
                 />
               </div>
             </div>
