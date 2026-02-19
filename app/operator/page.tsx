@@ -10,6 +10,7 @@ import FocusStrip from '@/components/operator/FocusStrip';
 import OperatorProposalRail from '@/components/operator/OperatorProposalRail';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
+import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 
 type Tone = 'aligned' | 'building' | 'conflict';
@@ -501,6 +502,8 @@ function layerToneLabel(score: number, yellowFloor = 60): { tone: Tone; label: s
 }
 
 export default function OperatorDashboardPage() {
+  const { tier } = useUserTier();
+  const canUseBrain = canAccessBrain(tier);
   const lastSignalEventKeyRef = useRef('');
   const [loading, setLoading] = useState(true);
   const [operatorMode, setOperatorMode] = useState<OperatorMode>('OBSERVE');
@@ -939,7 +942,7 @@ export default function OperatorDashboardPage() {
     );
   }, [loopDecisionPacketRiskScore]);
 
-  const operatorBrainState = presence?.adaptiveInputs?.operatorBrain?.state;
+  const operatorBrainState = canUseBrain ? presence?.adaptiveInputs?.operatorBrain?.state : undefined;
 
   useEffect(() => {
     const cadenceMs = heartbeatIntervalForBrainState(operatorBrainState);
@@ -1190,7 +1193,7 @@ export default function OperatorDashboardPage() {
   const showRiskCommand = !isHidden('risk_command');
   const showLiveAlerts = !isHidden('live_alerts');
   const showWorkflowToday = !isHidden('workflow_today');
-  const showLearningLoop = !minimalSurface && !isHidden('learning_loop');
+  const showLearningLoop = canUseBrain && !minimalSurface && !isHidden('learning_loop');
   const showAggressiveActions = !isHidden('aggressive_actions') && (modeDirectives?.quickActions ?? true);
   const showLearningFirst = showLearningLoop && showWorkflowToday && widgetRank('learning_loop') < widgetRank('workflow_today');
   const showPresenceFirst = widgetRank('operator_presence') <= widgetRank('operator_kpis');
@@ -1636,7 +1639,7 @@ export default function OperatorDashboardPage() {
           nextStep={modeActionable.nextStep}
           heartbeat={{
             modeKey: presence?.experienceMode?.key || null,
-            brainState: presence?.adaptiveInputs?.operatorBrain?.state || null,
+            brainState: canUseBrain ? (presence?.adaptiveInputs?.operatorBrain?.state || null) : null,
             monologue: heartbeatMonologue,
             drift: heartbeatDrift,
             lastBeatAt: heartbeatLastBeatAt,
@@ -1745,7 +1748,7 @@ export default function OperatorDashboardPage() {
                   Market: {presence.adaptiveInputs.marketReality.mode.replaceAll('_', ' ')} · Operator: {presence.adaptiveInputs.operatorReality.mode.replaceAll('_', ' ')} · Cognitive: {presence.adaptiveInputs.cognitiveLoad.level} · Intent: {presence.adaptiveInputs.intentDirection.replaceAll('_', ' ')}
                 </div>
               ) : null}
-              {presence?.adaptiveInputs?.operatorBrain ? (
+              {canUseBrain && presence?.adaptiveInputs?.operatorBrain ? (
                 <div className="mt-1 text-cyan-100/80">
                   Brain: {presence.adaptiveInputs.operatorBrain.state} · Fatigue {formatNumber(presence.adaptiveInputs.operatorBrain.fatigueScore)} · Risk Capacity {presence.adaptiveInputs.operatorBrain.riskCapacity} · Threshold Shift {formatNumber(presence.adaptiveInputs.operatorBrain.thresholdShift)}
                 </div>
@@ -1777,7 +1780,7 @@ export default function OperatorDashboardPage() {
             </div>
           ) : null}
 
-          {presence?.consciousnessLoop ? (
+          {canUseBrain && presence?.consciousnessLoop ? (
             <div className="mt-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
               <div className="font-semibold text-emerald-200">Consciousness Loop</div>
               <div className="mt-1 text-emerald-100/90">
@@ -1817,7 +1820,7 @@ export default function OperatorDashboardPage() {
                   Feedback 7d: V {formatNumber(presence.adaptiveInputs.learningFeedback.validatedPct)}% · WC {formatNumber(presence.adaptiveInputs.learningFeedback.wrongContextPct)}% · T {formatNumber(presence.adaptiveInputs.learningFeedback.timingIssuePct)}% · Penalty {formatNumber(presence.adaptiveInputs.learningFeedback.penalty)} · Bonus {formatNumber(presence.adaptiveInputs.learningFeedback.bonus)}
                 </div>
               ) : null}
-              {presence?.adaptiveInputs?.operatorBrain?.guidance ? (
+              {canUseBrain && presence?.adaptiveInputs?.operatorBrain?.guidance ? (
                 <div className="mt-1 text-emerald-100/80">
                   Brain Guidance: {presence.adaptiveInputs.operatorBrain.guidance}
                 </div>

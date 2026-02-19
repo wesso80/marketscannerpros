@@ -78,7 +78,8 @@ function PricingContent() {
     { text: "Multi-timeframe scanning", highlight: false },
     { text: "🤖 MSP Analyst AI (10/day)", highlight: true },
     { text: "Basic portfolio tracker (3 positions)", highlight: false },
-    { text: "Trade journal", highlight: false },
+    { text: "Basic trade journal", highlight: false },
+    { text: "Basic operator dashboard", highlight: false },
     { text: "Community support", highlight: false }
   ];
 
@@ -92,6 +93,8 @@ function PricingContent() {
     { text: "🤖 AI Tools & Market Focus", highlight: false },
     { text: "Portfolio insights & P&L tracking", highlight: false },
     { text: "Journal insights & analytics", highlight: false },
+    { text: "Operator dashboard (standard)", highlight: false },
+    { text: "Brain access not included", highlight: false },
     { text: "CSV exports (all tools)", highlight: false },
     { text: "Priority support", highlight: false }
   ];
@@ -99,6 +102,7 @@ function PricingContent() {
   const proTraderFeatures = [
     { text: "Everything in Pro", highlight: false },
     { text: "🤖 MSP Analyst AI (200/day)", highlight: true },
+    { text: "🧠 Brain access (exclusive)", highlight: true },
     { text: "🧠 Smart Alerts (AI-triggered)", highlight: true },
     { text: "🤖 AI + Derivatives Intelligence", highlight: true },
     { text: "🥚 Golden Egg Deep Analysis", highlight: true },
@@ -282,6 +286,9 @@ function PricingContent() {
             padding: '32px 28px'
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Free</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.5, margin: '0 0 16px' }}>
+              Get started with core scanning, 10 AI questions/day, basic portfolio tracking, plus basic journal and operator dashboard.
+            </p>
             <div style={{ marginBottom: 24 }}>
               <span style={{ fontSize: 42, fontWeight: 700 }}>$0</span>
               <span style={{ fontSize: 16, color: '#9ca3af', marginLeft: 8 }}>forever</span>
@@ -352,6 +359,9 @@ function PricingContent() {
             }} aria-hidden="true"></div>
             
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10 }}>Pro</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.5, margin: '0 0 16px' }}>
+              Unlock unlimited scans, 50 AI questions/day, market intelligence tools, deeper portfolio/journal insights, and standard operator dashboard.
+            </p>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
               <span style={{ fontSize: 42, fontWeight: 700, color: '#22c55e' }}>
                 {billingPeriod === 'monthly' ? '$39.99' : '$399.99'}
@@ -424,6 +434,9 @@ function PricingContent() {
             overflow: 'hidden'
           }}>
             <h2 style={{ fontSize: 24, fontWeight: 650, marginBottom: 10, color: '#60a5fa' }}>Pro Trader</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.5, margin: '0 0 16px' }}>
+              Get the full stack: exclusive Brain access, 200 AI questions/day, Smart Alerts, derivatives intelligence, Golden Egg analysis, confluence scanners, and backtesting.
+            </p>
             <div style={{ marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 12 }}>
               <span style={{ fontSize: 42, fontWeight: 700, color: '#60a5fa' }}>
                 {billingPeriod === 'monthly' ? '$89.99' : '$899.99'}

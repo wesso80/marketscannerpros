@@ -39,6 +39,7 @@ import { runMigrations } from "@/lib/migrations";
 import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
+import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user session for tier checking; allow free-for-all mode to bypass auth
-    const freeForAll = process.env.FREE_FOR_ALL_MODE === "true";
+    const freeForAll = isFreeForAllMode();
     let session = await getSessionFromCookie();
     let isAnonymous = false;
     
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
     }
 
     const workspaceId = session!.workspaceId;
-    const tier = session!.tier;
+    const tier = normalizeTier(session!.tier);
 
     const directionValue = String(scanner?.direction || '').toLowerCase();
     const adaptiveDirection: 'bullish' | 'bearish' | 'neutral' | undefined =
@@ -193,13 +194,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Define tier limits (fair-use caps to prevent abuse)
-    const tierLimits: Record<string, number> = {
-      'free': 10,        // Free/anonymous users: 10 questions/day
-      'pro': 50,         // Pro subscribers: 50 questions/day
-      'pro_trader': 200, // Pro Trader: 200/day (generous for professional workflows)
-    };
-
-    const dailyLimit = tierLimits[tier] || 10; // Default to free tier
+    const dailyLimit = AI_DAILY_LIMITS[tier];
 
     // Check usage against daily limit
     if (dailyLimit) {

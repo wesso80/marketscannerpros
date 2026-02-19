@@ -61,6 +61,7 @@ export function useUserTier(): TierInfo {
 
 // Feature access helpers
 export const canAccessBacktest = (tier: UserTier) => tier === "pro_trader";
+export const canAccessBrain = (tier: UserTier) => tier === "pro_trader";
 export const canAccessUnlimitedScanning = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canExportCSV = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 // TradingView scripts no longer available

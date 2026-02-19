@@ -31,7 +31,12 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({
+        positions: [],
+        closedPositions: [],
+        performanceHistory: [],
+        localOnly: true,
+      });
     }
 
     const workspaceId = session.workspaceId;
@@ -127,7 +132,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: true, localOnly: true });
     }
 
     const workspaceId = session.workspaceId;

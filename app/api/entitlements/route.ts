@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyBearer } from "@/lib/jwt";
+import { isFreeForAllMode } from "@/lib/entitlements";
 
 // Response type
 type Ent = {
-  tier: "free" | "pro";
+  tier: "free" | "pro" | "pro_trader";
   status: "active" | "expired";
-  source?: "revenuecat" | "override" | "database";
+  source?: "revenuecat" | "override" | "database" | "free_mode";
   expiresAt?: string | null;
 };
 
@@ -24,13 +25,15 @@ async function rcEntitlements(appUserId: string): Promise<Ent | null> {
     if (!r.ok) return null;
 
     const j = await r.json();
-    const ent = j?.subscriber?.entitlements?.["pro"];
+    const proTraderEnt = j?.subscriber?.entitlements?.["pro_trader"];
+    const proEnt = j?.subscriber?.entitlements?.["pro"];
+    const ent = proTraderEnt || proEnt;
     if (!ent) return null;
 
     const exp = ent.expires_date ? Date.parse(ent.expires_date) : 0;
     const active = exp > Date.now();
     return {
-      tier: "pro",
+      tier: proTraderEnt ? "pro_trader" : "pro",
       status: active ? "active" : "expired",
       source: "revenuecat",
       expiresAt: ent.expires_date ?? null,
@@ -42,19 +45,15 @@ async function rcEntitlements(appUserId: string): Promise<Ent | null> {
 
 export async function GET(req: NextRequest) {
   try {
-    // ===== TEMPORARY: EVERYONE GETS PRO FOR FREE =====
-    // This keeps everything free until you're ready to enable payments
-    // Set FREE_FOR_ALL_MODE=false in env to disable
-    const freeForAll = process.env.FREE_FOR_ALL_MODE !== "false"; // defaults to true
+    const freeForAll = isFreeForAllMode();
     if (freeForAll) {
       return NextResponse.json({ 
-        tier: "pro", 
+        tier: "pro_trader", 
         status: "active", 
         source: "free_mode",
         expiresAt: null 
       });
     }
-    // ===== END TEMPORARY FREE MODE =====
 
     const auth = req.headers.get("authorization") ?? "";
     const claims = await verifyBearer(auth);
@@ -76,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     // Ask RevenueCat
     const rc = await rcEntitlements(userId);
-    if (rc && rc.status === "active" && rc.tier === "pro") {
+    if (rc && rc.status === "active") {
       return NextResponse.json(rc);
     }
 

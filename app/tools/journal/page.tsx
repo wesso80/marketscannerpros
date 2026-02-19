@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 import CommandCenterStateBar from '@/components/CommandCenterStateBar';
-import { useUserTier, canExportCSV, canAccessAdvancedJournal } from '@/lib/useUserTier';
+import { useUserTier, canExportCSV, canAccessAdvancedJournal, canAccessBrain } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import type { JournalDraft } from '@/lib/workflow/types';
@@ -224,6 +224,7 @@ function JournalContent() {
 
   const searchParams = useSearchParams();
   const { tier } = useUserTier();
+  const canUseBrain = canAccessBrain(tier);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [journalTab, setJournalTab] = useState<'open' | 'closed'>('open');
@@ -356,6 +357,12 @@ function JournalContent() {
 
   // AI Journal Analysis function
   async function runAiAnalysis() {
+    if (!canUseBrain) {
+      setAiError('AI Trading Coach is available on Pro Trader only.');
+      setShowAiAnalysis(false);
+      return;
+    }
+
     setAiLoading(true);
     setAiError(null);
     setShowAiAnalysis(true);
@@ -1613,6 +1620,7 @@ function JournalContent() {
         )}
         
         {/* AI Trading Coach Section */}
+        {canUseBrain ? (
         <div style={{
           width: '100%',
           maxWidth: 'none',
@@ -1837,6 +1845,28 @@ function JournalContent() {
             </div>
           )}
         </div>
+        ) : (
+        <div style={{
+          width: '100%',
+          maxWidth: 'none',
+          margin: '16px auto 0',
+          background: 'var(--msp-card)',
+          border: '1px solid var(--msp-border)',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '18px' }}>🧠</span>
+            <h3 style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              AI Trading Coach (Pro Trader)
+            </h3>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0, lineHeight: '1.6' }}>
+            Your current tier includes basic journal. Upgrade to Pro Trader to unlock Brain-powered AI coaching and trade-pattern analysis.
+          </p>
+        </div>
+        )}
 
         {/* Strategy Leaderboard & Equity Curve Row */}
         {closedTrades.length >= 3 && (

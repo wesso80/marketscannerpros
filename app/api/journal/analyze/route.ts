@@ -11,6 +11,7 @@ import OpenAI from "openai";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getDailyAiLimit, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
     }
 
-    const freeForAll = process.env.FREE_FOR_ALL_MODE === "true";
+    const freeForAll = isFreeForAllMode();
     const session = await getSessionFromCookie();
     
     if (!session?.workspaceId && !freeForAll) {
@@ -61,11 +62,11 @@ export async function POST(req: NextRequest) {
     }
 
     const workspaceId = session?.workspaceId || "free-mode";
-    const tier = session?.tier || "free";
+    const tier = normalizeTier(session?.tier);
 
     // Check AI usage limits
-    if (tier !== "pro_trader" && workspaceId !== "free-mode") {
-      const dailyLimit = tier === "pro" ? 50 : 5;
+    if (workspaceId !== "free-mode") {
+      const dailyLimit = getDailyAiLimit(tier);
       const today = new Date().toISOString().split('T')[0];
       
       const usageResult = await q(
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       const currentUsage = parseInt(usageResult[0]?.count || "0");
       if (currentUsage >= dailyLimit) {
         return NextResponse.json({
-          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for unlimited.' : 'Upgrade to Pro Trader for unlimited AI access.'}`,
+          error: `Daily AI limit reached (${dailyLimit} questions). ${tier === 'free' ? 'Upgrade to Pro for 50 questions/day or Pro Trader for 200/day.' : 'Upgrade to Pro Trader for 200/day.'}`,
           limitReached: true
         }, { status: 429 });
       }
