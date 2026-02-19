@@ -92,6 +92,11 @@ function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
   return 'equity';
 }
 
+async function ensureExitVerdictSchema() {
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
+  await q(`ALTER TABLE IF EXISTS decision_packets ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
+}
+
 function deriveAdaptivePolicy(rows: ClosedTradePerformanceRow[], regime: Regime) {
   const validR = rows
     .map((row) => parseNumber(row.r_multiple))
@@ -209,6 +214,8 @@ export async function GET(req: NextRequest) {
     if (!Number.isFinite(entryId) || entryId <= 0) {
       return NextResponse.json({ error: 'Valid entryId is required' }, { status: 400 });
     }
+
+    await ensureExitVerdictSchema();
 
     const rows = await q<JournalRow>(
       `SELECT id, symbol, asset_class, side, trade_date, entry_price, quantity, stop_loss, target, risk_amount, is_open, status, tags
