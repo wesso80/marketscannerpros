@@ -2326,7 +2326,7 @@ export default function OptionsConfluenceScanner() {
 
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
               <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
+                <div className="rounded-[10px] border border-slate-500/25 bg-slate-900/40 p-[0.7rem] opacity-[0.9]">
                   <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Decision Core</div>
                   <div className="mt-[0.2rem] text-[0.9rem] font-black text-slate-200">
                     {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'ready for execution' : 'requires trigger confirmation'}`}
@@ -2347,18 +2347,18 @@ export default function OptionsConfluenceScanner() {
                   </div>
                 </div>
 
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
-                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Risk + Execution</div>
+                <div className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)]">
+                  <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Execution</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
-                    <div className="text-slate-200">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
+                    <div className="text-slate-100">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
                     <div className="text-red-300">Stop: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
                     <div className="text-emerald-300">Targets: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
-                    <div className="text-slate-300">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                    <div className="text-slate-200">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
                     <div className="text-slate-400">Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
                   </div>
                 </div>
 
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.7rem]">
+                <div className="rounded-[10px] border border-slate-500/25 bg-slate-900/40 p-[0.7rem] opacity-[0.9]">
                   <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
                     <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
