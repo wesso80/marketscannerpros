@@ -242,7 +242,7 @@ function BacktestContent() {
 
     if (!matchingGroup) return;
     setEdgeGroup((previous) => (previous === matchingGroup.id ? previous : matchingGroup.id));
-  }, [strategy, edgeGroup]);
+  }, [strategy]);
 
   useEffect(() => {
     if (!activeEdgeStrategies.length) return;
