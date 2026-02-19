@@ -152,3 +152,15 @@ services:
           property: url
       - key: CRON_SECRET
         sync: false
+
+  - type: cron
+    name: stale-auto-draft-cleanup
+    runtime: node
+    schedule: "15 0 * * *"  # Daily at 00:15 UTC - close stale scanner auto drafts older than 48h
+    buildCommand: npm install
+    startCommand: npm run worker:cleanup:stale-auto-drafts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

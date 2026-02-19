@@ -17,6 +17,7 @@
     "worker:outcomes:loop": "npx tsx worker/label-outcomes.ts --watch",
     "worker:engine": "npx tsx worker/engine-runner.ts",
     "worker:engine:once": "npx tsx worker/engine-runner.ts --once",
+    "worker:cleanup:stale-auto-drafts": "npx tsx worker/cleanup-stale-auto-drafts.ts",
     "worker:notifications": "npx tsx worker/notification-router.ts",
     "worker:notifications:loop": "npx tsx worker/notification-router.ts --watch"
   },

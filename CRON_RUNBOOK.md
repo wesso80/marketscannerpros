@@ -20,6 +20,7 @@ This project uses **Render cron services only**.
 | daily-scan | `30 21 * * *` | `POST /api/jobs/scan-daily` |
 | learning-outcomes | `*/15 * * * *` | `POST /api/jobs/learning-outcomes` |
 | journal-auto-close | `*/5 * * * *` | `POST /api/jobs/journal-auto-close?limit=200` |
+| stale-auto-draft-cleanup | `15 0 * * *` | `npm run worker:cleanup:stale-auto-drafts` |
 
 ## Render configuration checklist
 
