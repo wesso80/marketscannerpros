@@ -1,5 +1,7 @@
 # Authentication & Subscription System Setup
 
+> Reference: Entitlement routing and tier enforcement map is documented in `ENTITLEMENT_POLICY_MAP.md`.
+
 ## ✅ Completed
 
 ### 1. Marketing Site Cleanup
