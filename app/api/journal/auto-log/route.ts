@@ -3,6 +3,32 @@ import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 
+function normalizeJournalAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'forex') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return 'equity';
+}
+
+function inferJournalAssetClass(args: { symbol?: string; conditionType?: string; source?: string; assetClass?: unknown; assetType?: unknown }) {
+  if (args.assetClass || args.assetType) {
+    return normalizeJournalAssetClass(args.assetClass || args.assetType);
+  }
+
+  const condition = String(args.conditionType || '').toLowerCase();
+  if (condition.includes('_crypto')) return 'crypto';
+  if (condition.includes('_forex')) return 'forex';
+
+  const source = String(args.source || '').toLowerCase();
+  if (source.includes('crypto')) return 'crypto';
+  if (source.includes('forex')) return 'forex';
+
+  const symbol = String(args.symbol || '').toUpperCase();
+  if (symbol.endsWith('USD') || symbol.endsWith('USDT')) return 'crypto';
+  return 'equity';
+}
+
 async function ensureJournalSchema() {
   await q(`
     CREATE TABLE IF NOT EXISTS journal_entries (
@@ -41,6 +67,7 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_amount DECIMAL(20,8)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS r_multiple DECIMAL(10,4)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS planned_rr DECIMAL(10,4)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 }
 
 function inferSide(conditionType?: string, conditionMet?: string): 'LONG' | 'SHORT' {
@@ -87,6 +114,8 @@ export async function POST(req: NextRequest) {
       workflowId,
       parentEventId,
       decisionPacketId,
+      assetClass,
+      assetType,
     } = body || {};
 
     if (!symbol) {
@@ -118,6 +147,13 @@ export async function POST(req: NextRequest) {
     const safeDecisionPacketId = typeof decisionPacketId === 'string' && decisionPacketId.trim()
       ? decisionPacketId.trim().slice(0, 120)
       : null;
+    const safeAssetClass = inferJournalAssetClass({
+      symbol: safeSymbol,
+      conditionType,
+      source,
+      assetClass,
+      assetType,
+    });
 
     const tradeStory = [
       'AUTO TRADE STORY',
@@ -151,7 +187,7 @@ export async function POST(req: NextRequest) {
       psychologyPrompt,
     ].join('\n');
 
-    const tags = ['auto_alert', 'triggered_feed', safeSource, `mode_${safeOperatorMode.toLowerCase()}`];
+    const tags = ['auto_alert', 'triggered_feed', safeSource, `mode_${safeOperatorMode.toLowerCase()}`, `asset_class_${safeAssetClass}`];
     if (safeDecisionPacketId) {
       tags.push(`dp_${safeDecisionPacketId}`);
     }
@@ -159,10 +195,10 @@ export async function POST(req: NextRequest) {
     const inserted = await q(
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-        strategy, setup, notes, emotions, outcome, tags, is_open
+        strategy, setup, notes, emotions, outcome, tags, is_open, asset_class
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14
+        $8, $9, $10, $11, $12, $13, $14, $15
       )
       RETURNING id`,
       [
@@ -180,6 +216,7 @@ export async function POST(req: NextRequest) {
         'open',
         tags,
         true,
+        safeAssetClass,
       ]
     );
 
@@ -209,6 +246,7 @@ export async function POST(req: NextRequest) {
           setup: safeCondition,
           source: 'journal_auto_log',
           decisionPacketId: safeDecisionPacketId,
+          assetClass: safeAssetClass,
         },
       }).catch((error) => {
         console.warn('[journal/auto-log] failed to emit TRADE_ENTERED event:', error);

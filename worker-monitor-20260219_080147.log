@@ -1,0 +1,5 @@
+﻿[monitor] starting at 2026-02-19T08:01:47.4243092+11:00
+[monitor] workspace: C:\Users\brad\Downloads\marketing-site (1)\marketing-site
+[monitor] durationMinutes=60 intervalSeconds=60 iterations=60
+{"ts":"2026-02-19T08:01:47.4403087+11:00","iteration":1,"workers":{"ingest":3,"engine":3,"notifications":3,"outcomes":3},"db":{"dbError":"Invalid JSON primitive: dotenv."}}
+{"ts":"2026-02-19T08:02:48.6605027+11:00","iteration":2,"workers":{"ingest":3,"engine":3,"notifications":3,"outcomes":3},"db":{"dbError":"Invalid JSON primitive: dotenv."}}

@@ -8,6 +8,7 @@ interface JournalEntry {
   id: number;
   date: string;
   symbol: string;
+  assetClass?: 'crypto' | 'equity' | 'forex' | 'commodity';
   side: 'LONG' | 'SHORT';
   tradeType: 'Spot' | 'Options' | 'Futures' | 'Margin';
   optionType?: 'Call' | 'Put';
@@ -36,6 +37,34 @@ interface JournalEntry {
   exitReason?: 'tp' | 'sl' | 'manual' | 'time' | 'invalidated';
   followedPlan?: boolean;
   exitIntentId?: string;
+}
+
+function normalizeJournalAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'forex') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return 'equity';
+}
+
+function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
+  const upper = String(symbol || '').toUpperCase();
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
+  return 'equity';
+}
+
+function getTaggedAssetClass(tags: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' | null {
+  if (!Array.isArray(tags)) return null;
+  const tag = tags.find((item) => typeof item === 'string' && item.startsWith('asset_class_'));
+  if (!tag || typeof tag !== 'string') return null;
+  const raw = tag.slice('asset_class_'.length);
+  return normalizeJournalAssetClass(raw);
+}
+
+function getDecisionPacketTag(tags: unknown): string | null {
+  if (!Array.isArray(tags)) return null;
+  const tag = tags.find((item) => typeof item === 'string' && item.startsWith('dp_') && item.length > 3);
+  return typeof tag === 'string' ? tag.slice(3) : null;
 }
 
 async function ensureJournalSchema() {
@@ -81,6 +110,7 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_reason VARCHAR(20)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS followed_plan BOOLEAN`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_intent_id VARCHAR(120)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 }
 
 // GET - Load journal entries
@@ -103,10 +133,44 @@ export async function GET(req: NextRequest) {
       [workspaceId]
     );
 
-    const entries: JournalEntry[] = entriesRaw.map((e: any) => ({
+    const packetIds = Array.from(
+      new Set(
+        entriesRaw
+          .map((row: any) => getDecisionPacketTag(row?.tags))
+          .filter((packetId): packetId is string => Boolean(packetId))
+      )
+    );
+
+    const packetAssetClassById = new Map<string, string>();
+    if (packetIds.length > 0) {
+      const packetRows = await q<{ packet_id: string; asset_class: string | null }>(
+        `SELECT packet_id, asset_class
+           FROM decision_packets
+          WHERE workspace_id = $1
+            AND packet_id = ANY($2::text[])`,
+        [workspaceId, packetIds]
+      );
+
+      for (const row of packetRows) {
+        if (row.packet_id) {
+          packetAssetClassById.set(row.packet_id, row.asset_class || 'equity');
+        }
+      }
+    }
+
+    const entries: JournalEntry[] = entriesRaw.map((e: any) => {
+      const taggedAssetClass = getTaggedAssetClass(e.tags);
+      const packetId = getDecisionPacketTag(e.tags);
+      const packetAssetClass = packetId ? packetAssetClassById.get(packetId) : null;
+      const resolvedAssetClass = normalizeJournalAssetClass(
+        e.asset_class || taggedAssetClass || packetAssetClass || inferAssetClassFromSymbol(e.symbol)
+      );
+
+      return {
       id: e.id,
       date: e.trade_date,
       symbol: e.symbol,
+      assetClass: resolvedAssetClass,
       side: e.side,
       tradeType: e.trade_type,
       optionType: e.option_type || undefined,
@@ -135,7 +199,8 @@ export async function GET(req: NextRequest) {
       exitReason: e.exit_reason || undefined,
       followedPlan: typeof e.followed_plan === 'boolean' ? e.followed_plan : undefined,
       exitIntentId: e.exit_intent_id || undefined,
-    }));
+      };
+    });
 
     return NextResponse.json({ entries });
   } catch (error) {
@@ -181,6 +246,7 @@ export async function POST(req: NextRequest) {
           : [
               'synthetic',
               String(rawEntry?.symbol || '').toUpperCase(),
+              String(rawEntry?.assetClass || ''),
               String(rawEntry?.date || ''),
               String(rawEntry?.side || ''),
               String(rawEntry?.entryPrice || ''),
@@ -206,8 +272,11 @@ export async function POST(req: NextRequest) {
           'expiration_date', 'quantity', 'entry_price', 'exit_price', 'exit_date', 'pl', 'pl_percent',
           'strategy', 'setup', 'notes', 'emotions', 'outcome', 'tags', 'is_open',
           'stop_loss', 'target', 'risk_amount', 'r_multiple', 'planned_rr',
-          'status', 'close_source', 'exit_reason', 'followed_plan', 'exit_intent_id'
+          'status', 'close_source', 'exit_reason', 'followed_plan', 'exit_intent_id', 'asset_class'
         ];
+
+        const taggedAssetClass = getTaggedAssetClass(e?.tags);
+        const entryAssetClass = normalizeJournalAssetClass(e?.assetClass || taggedAssetClass || inferAssetClassFromSymbol(e?.symbol));
 
         const values: any[] = [
           workspaceId,
@@ -241,6 +310,7 @@ export async function POST(req: NextRequest) {
           e.exitReason || null,
           typeof e.followedPlan === 'boolean' ? e.followedPlan : null,
           e.exitIntentId || null,
+          entryAssetClass,
         ];
 
         if (hasStableId) {

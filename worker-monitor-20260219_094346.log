@@ -1,0 +1,5 @@
+﻿[monitor] starting at 2026-02-19T09:43:46.2336151+11:00
+[monitor] workspace: C:\Users\brad\Downloads\marketing-site (1)\marketing-site
+[monitor] durationMinutes=1 intervalSeconds=60 iterations=1
+{"ts":"2026-02-19T09:43:46.2456176+11:00","iteration":1,"workers":{"ingest":3,"engine":3,"notifications":3,"outcomes":3},"db":{"quotes":{"latest":"2026-02-18T22:43:00.663Z","last_5m":24},"crypto_quotes":{"latest":"2026-02-18T22:43:00.663Z","last_5m":24},"crypto_universe":{"latest":"2026-02-18T22:43:00.734Z","last_5m":26},"ingest_latest":{"finished_at":"2026-02-18T22:31:20.045Z","status":"completed","coingecko_attempted":171,"coingecko_succeeded":121,"coingecko_nodata":50,"coingecko_failed":0,"skipped_not_due":0},"ai_events":{"last_5m":10,"latest":"2026-02-18T22:43:46.269Z"},"notification_deliveries":{"last_5m":0,"latest":"2026-02-18T22:16:28.519Z"}}}
+[monitor] finished at 2026-02-19T09:43:47.2507644+11:00

@@ -137,3 +137,18 @@ services:
           property: url
       - key: CRON_SECRET
         sync: false
+
+  - type: cron
+    name: journal-auto-close
+    runtime: node
+    schedule: "*/5 * * * *"  # Every 5 minutes - auto-close TP/SL/time-stop eligible journal trades
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/jobs/journal-auto-close?limit=200" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          name: marketscannerpros
+          type: web
+          property: url
+      - key: CRON_SECRET
+        sync: false

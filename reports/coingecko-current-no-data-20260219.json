@@ -1,0 +1,261 @@
+﻿[dotenv@17.2.4] injecting env (34) from .env.local -- tip: ≡ƒæÑ sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.4] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  specify custom .env file path with { path: '/custom/path/.env' }
+{
+  "summary": {
+    "crypto_total": "171",
+    "crypto_with_errors": "50",
+    "latest_crypto_fetch": "2026-02-18T23:26:08.040Z"
+  },
+  "symbols": [
+    {
+      "symbol": "CRV",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:21:00.691Z"
+    },
+    {
+      "symbol": "EGLD",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:16:50.053Z"
+    },
+    {
+      "symbol": "ETC",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:21:00.940Z"
+    },
+    {
+      "symbol": "JUP",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:18:53.909Z"
+    },
+    {
+      "symbol": "KAVA",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:21:00.817Z"
+    },
+    {
+      "symbol": "SAND",
+      "fetch_error_count": 3,
+      "last_fetched_at": "2026-02-18T23:22:04.473Z"
+    },
+    {
+      "symbol": "ACH",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:28.379Z"
+    },
+    {
+      "symbol": "ALICE",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:55:38.311Z"
+    },
+    {
+      "symbol": "ANKR",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.266Z"
+    },
+    {
+      "symbol": "AR",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:07:00.214Z"
+    },
+    {
+      "symbol": "BICO",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:06:59.593Z"
+    },
+    {
+      "symbol": "BRETT",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:31.017Z"
+    },
+    {
+      "symbol": "BTT",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.304Z"
+    },
+    {
+      "symbol": "CELO",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.516Z"
+    },
+    {
+      "symbol": "CHR",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:34.321Z"
+    },
+    {
+      "symbol": "CKB",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:28.253Z"
+    },
+    {
+      "symbol": "COTI",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:30.764Z"
+    },
+    {
+      "symbol": "DGB",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.937Z"
+    },
+    {
+      "symbol": "ENJ",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.765Z"
+    },
+    {
+      "symbol": "HOOK",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:34.445Z"
+    },
+    {
+      "symbol": "HOT",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.639Z"
+    },
+    {
+      "symbol": "ICX",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:03:52.772Z"
+    },
+    {
+      "symbol": "IO",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:30.891Z"
+    },
+    {
+      "symbol": "IOTA",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:30.513Z"
+    },
+    {
+      "symbol": "KNC",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.889Z"
+    },
+    {
+      "symbol": "LSK",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.559Z"
+    },
+    {
+      "symbol": "MATIC",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:49:12.060Z"
+    },
+    {
+      "symbol": "NKN",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:06:59.965Z"
+    },
+    {
+      "symbol": "NMR",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:28.630Z"
+    },
+    {
+      "symbol": "OCEAN",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:03:52.896Z"
+    },
+    {
+      "symbol": "OGN",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:55:38.186Z"
+    },
+    {
+      "symbol": "PHA",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:34.193Z"
+    },
+    {
+      "symbol": "REQ",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:06:59.716Z"
+    },
+    {
+      "symbol": "ROSE",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:30.388Z"
+    },
+    {
+      "symbol": "RVN",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.814Z"
+    },
+    {
+      "symbol": "SC",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:07:00.089Z"
+    },
+    {
+      "symbol": "SKL",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:59:44.389Z"
+    },
+    {
+      "symbol": "SPELL",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:06:59.842Z"
+    },
+    {
+      "symbol": "SSV",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:54:37.305Z"
+    },
+    {
+      "symbol": "STORJ",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:03:52.647Z"
+    },
+    {
+      "symbol": "SYS",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:34.065Z"
+    },
+    {
+      "symbol": "TRB",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:28.504Z"
+    },
+    {
+      "symbol": "TURBO",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:31.145Z"
+    },
+    {
+      "symbol": "VANRY",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:09:07.153Z"
+    },
+    {
+      "symbol": "WLD",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T23:07:03.434Z"
+    },
+    {
+      "symbol": "XTZ",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.176Z"
+    },
+    {
+      "symbol": "XYO",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.430Z"
+    },
+    {
+      "symbol": "ZEN",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:51:33.683Z"
+    },
+    {
+      "symbol": "ZIL",
+      "fetch_error_count": 2,
+      "last_fetched_at": "2026-02-18T22:50:30.640Z"
+    },
+    {
+      "symbol": "IMX",
+      "fetch_error_count": 1,
+      "last_fetched_at": "2026-02-18T23:03:56.820Z"
+    }
+  ]
+}

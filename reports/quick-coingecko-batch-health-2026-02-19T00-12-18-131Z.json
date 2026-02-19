@@ -1,0 +1,1897 @@
+{
+  "summary": {
+    "generatedAt": "2026-02-19T00:12:18.130Z",
+    "elapsedMs": 499,
+    "totals": {
+      "symbols": 171,
+      "mappedIds": 31,
+      "uniqueIds": 31,
+      "ok": 29,
+      "unmapped": 140,
+      "noPrice": 2,
+      "failed": 142
+    }
+  },
+  "failedSymbols": [
+    {
+      "symbol": "AAVE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ACH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ALGO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ALICE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AMP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ANKR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "API3",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ARPA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ASTR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AUDIO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AXS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAND",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BCH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BICO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BLUR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BRETT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BTT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "C98",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CAKE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CELO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CELR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CFX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CHR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CHZ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CKB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "COMP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "COTI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CRO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CRV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CTSI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DASH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DENT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DGB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DYDX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "EGLD",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ENA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ENJ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ETC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FIL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FLOW",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FLR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FTM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FXS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GALA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GLM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GMX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GNO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GRT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HBAR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HOOK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HOT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ICP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ICX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ILV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "IMX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "IO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "IOTA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JASMY",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JTO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JUP",
+      "coinId": "jupiter-ag",
+      "status": "no_price",
+      "price": null
+    },
+    {
+      "symbol": "KAVA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "KNC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "KSM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LDO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LRC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LSK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MAGIC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MANA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MASK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MATIC",
+      "coinId": "matic-network",
+      "status": "no_price",
+      "price": null
+    },
+    {
+      "symbol": "MEME",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MEW",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MINA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MKR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NEO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NEXO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NKN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NMR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OCEAN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OGN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ONE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ONT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ORDI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PENDLE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PHA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "POPCAT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PYTH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "QTUM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RARE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "REQ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RLC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ROSE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RSR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RUNE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RVN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SAND",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SATS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SFP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SKL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SLP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SNX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SPELL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SSV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STG",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STORJ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STRK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SUPER",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SUSHI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SXP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SYS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TAO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "THETA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TIA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TON",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TRB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TURBO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TWT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "UMA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "VANRY",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "VET",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "WAVES",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "WLD",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XDC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XMR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XTZ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XYO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "YFI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZEC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZEN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZIL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZRO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZRX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    }
+  ],
+  "allResults": [
+    {
+      "symbol": "AAVE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ACH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ADA",
+      "coinId": "cardano",
+      "status": "ok",
+      "price": 0.27304539356271157
+    },
+    {
+      "symbol": "ALGO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ALICE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AMP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ANKR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "API3",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "APT",
+      "coinId": "aptos",
+      "status": "ok",
+      "price": 0.878518365239362
+    },
+    {
+      "symbol": "AR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ARB",
+      "coinId": "arbitrum",
+      "status": "ok",
+      "price": 0.10768577754186469
+    },
+    {
+      "symbol": "ARPA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ASTR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ATOM",
+      "coinId": "cosmos",
+      "status": "ok",
+      "price": 2.338915664892007
+    },
+    {
+      "symbol": "AUDIO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "AVAX",
+      "coinId": "avalanche-2",
+      "status": "ok",
+      "price": 8.85213810356964
+    },
+    {
+      "symbol": "AXS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAND",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BAT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BCH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BICO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BLUR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BNB",
+      "coinId": "binancecoin",
+      "status": "ok",
+      "price": 604.7353273626879
+    },
+    {
+      "symbol": "BONK",
+      "coinId": "bonk",
+      "status": "ok",
+      "price": 0.000006179326652954098
+    },
+    {
+      "symbol": "BRETT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "BTC",
+      "coinId": "bitcoin",
+      "status": "ok",
+      "price": 66514.91522453669
+    },
+    {
+      "symbol": "BTT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "C98",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CAKE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CELO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CELR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CFX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CHR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CHZ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CKB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "COMP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "COTI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CRO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CRV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "CTSI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DASH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DENT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DGB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "DOGE",
+      "coinId": "dogecoin",
+      "status": "ok",
+      "price": 0.09852268431180045
+    },
+    {
+      "symbol": "DOT",
+      "coinId": "polkadot",
+      "status": "ok",
+      "price": 1.31166416864096
+    },
+    {
+      "symbol": "DYDX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "EGLD",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ENA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ENJ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ETC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ETH",
+      "coinId": "ethereum",
+      "status": "ok",
+      "price": 1956.906117020439
+    },
+    {
+      "symbol": "FET",
+      "coinId": "fetch-ai",
+      "status": "ok",
+      "price": 0.16374637493627522
+    },
+    {
+      "symbol": "FIL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FLOW",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FLR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FTM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "FXS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GALA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GLM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GMX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GNO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "GRT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HBAR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HOOK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "HOT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ICP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ICX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ILV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "IMX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "INJ",
+      "coinId": "injective-protocol",
+      "status": "ok",
+      "price": 2.9803960081436296
+    },
+    {
+      "symbol": "IO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "IOTA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JASMY",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JTO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "JUP",
+      "coinId": "jupiter-ag",
+      "status": "no_price",
+      "price": null
+    },
+    {
+      "symbol": "KAS",
+      "coinId": "kaspa",
+      "status": "ok",
+      "price": 0.031007212099464606
+    },
+    {
+      "symbol": "KAVA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "KNC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "KSM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LDO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LINK",
+      "coinId": "chainlink",
+      "status": "ok",
+      "price": 8.595347551626132
+    },
+    {
+      "symbol": "LRC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LSK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "LTC",
+      "coinId": "litecoin",
+      "status": "ok",
+      "price": 53.32342007459141
+    },
+    {
+      "symbol": "MAGIC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MANA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MASK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MATIC",
+      "coinId": "matic-network",
+      "status": "no_price",
+      "price": null
+    },
+    {
+      "symbol": "MEME",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MEW",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MINA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MKR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "MNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NEAR",
+      "coinId": "near",
+      "status": "ok",
+      "price": 1.0133844043406166
+    },
+    {
+      "symbol": "NEO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NEXO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NKN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "NMR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OCEAN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OGN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ONE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ONT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "OP",
+      "coinId": "optimism",
+      "status": "ok",
+      "price": 0.16583368355748607
+    },
+    {
+      "symbol": "ORDI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PENDLE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PEPE",
+      "coinId": "pepe",
+      "status": "ok",
+      "price": 0.000004226363835488112
+    },
+    {
+      "symbol": "PHA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "POPCAT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "PYTH",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "QTUM",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RARE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RENDER",
+      "coinId": "render-token",
+      "status": "ok",
+      "price": 1.417540305113079
+    },
+    {
+      "symbol": "REQ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RLC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ROSE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RSR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RUNE",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "RVN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SAND",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SATS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SEI",
+      "coinId": "sei-network",
+      "status": "ok",
+      "price": 0.07268094196740496
+    },
+    {
+      "symbol": "SFP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SHIB",
+      "coinId": "shiba-inu",
+      "status": "ok",
+      "price": 0.000006294800730177564
+    },
+    {
+      "symbol": "SKL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SLP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SNT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SNX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SOL",
+      "coinId": "solana",
+      "status": "ok",
+      "price": 81.54234835476773
+    },
+    {
+      "symbol": "SPELL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SSV",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STG",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STORJ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STRK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "STX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SUI",
+      "coinId": "sui",
+      "status": "ok",
+      "price": 0.9295443356475839
+    },
+    {
+      "symbol": "SUPER",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SUSHI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SXP",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "SYS",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TAO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "THETA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TIA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TON",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TRB",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TRX",
+      "coinId": "tron",
+      "status": "ok",
+      "price": 0.27851937249094155
+    },
+    {
+      "symbol": "TURBO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "TWT",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "UMA",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "UNI",
+      "coinId": "uniswap",
+      "status": "ok",
+      "price": 3.4020847748098766
+    },
+    {
+      "symbol": "VANRY",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "VET",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "WAVES",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "WIF",
+      "coinId": "dogwifcoin",
+      "status": "ok",
+      "price": 0.2216138819132843
+    },
+    {
+      "symbol": "WLD",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XDC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XLM",
+      "coinId": "stellar",
+      "status": "ok",
+      "price": 0.16109322029377213
+    },
+    {
+      "symbol": "XMR",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XRP",
+      "coinId": "ripple",
+      "status": "ok",
+      "price": 1.4208684991169644
+    },
+    {
+      "symbol": "XTZ",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "XYO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "YFI",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZEC",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZEN",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZIL",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZK",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZRO",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    },
+    {
+      "symbol": "ZRX",
+      "coinId": null,
+      "status": "unmapped",
+      "price": null
+    }
+  ]
+}

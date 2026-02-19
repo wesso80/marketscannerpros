@@ -681,6 +681,7 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_amount DECIMAL(20,8)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS r_multiple DECIMAL(10,4)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS planned_rr DECIMAL(10,4)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
 }
 
 async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEvent) {
@@ -695,6 +696,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   const workflowId = event.correlation?.workflow_id;
   if (!workflowId) return false;
   const decisionPacketId = extractDecisionPacketId(event);
+  const assetClass = normalizeAlertAssetType(event.entity?.asset_class);
 
   await ensureJournalSchema();
 
@@ -703,6 +705,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     `SELECT id FROM journal_entries
      WHERE workspace_id = $1
        AND symbol = $2
+       AND COALESCE(asset_class, 'equity') = $5
        AND is_open = true
        AND outcome = 'open'
        AND (
@@ -710,7 +713,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
          OR notes ILIKE $4
        )
      LIMIT 1`,
-    [workspaceId, symbol, planTag, `%${planId}%`]
+    [workspaceId, symbol, planTag, `%${planId}%`, assetClass]
   );
 
   if (dedupe.length > 0) return false;
@@ -732,7 +735,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     `Risk Score: ${planPayload?.risk?.risk_score ?? 'n/a'}`,
   ].join('\n');
 
-  const tags = ['auto_plan_draft', `workflow_${workflowId}`, planTag];
+  const tags = ['auto_plan_draft', `workflow_${workflowId}`, planTag, `asset_class_${assetClass}`];
   if (decisionPacketId) {
     tags.push(`dp_${decisionPacketId}`);
   }
@@ -740,10 +743,10 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   await q(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-      strategy, setup, notes, emotions, outcome, tags, is_open
+      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14
+      $8, $9, $10, $11, $12, $13, $14, $15
     )`,
     [
       workspaceId,
@@ -760,6 +763,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
       'open',
       tags,
       true,
+      assetClass,
     ]
   );
 

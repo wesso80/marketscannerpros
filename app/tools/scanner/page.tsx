@@ -1195,6 +1195,7 @@ function ScannerContent() {
                 triggerPrice: scanResult.price,
                 triggeredAt: new Date().toISOString(),
                 source: 'scanner_background_monitor',
+                assetClass: toWorkflowAssetClass(assetType),
                 operatorMode: operatorState.mode,
                 operatorBias: operatorState.bias,
                 operatorRisk: operatorState.risk,

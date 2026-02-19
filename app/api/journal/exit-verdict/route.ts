@@ -6,6 +6,7 @@ import { evaluateExit, type Regime, type TradeState } from '../../../../lib/trad
 type JournalRow = {
   id: number;
   symbol: string;
+  asset_class: string | null;
   side: 'LONG' | 'SHORT';
   trade_date: string;
   entry_price: string | number;
@@ -75,6 +76,20 @@ function median(values: number[]): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function normalizeJournalAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'forex') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return 'equity';
+}
+
+function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
+  const upper = String(symbol || '').toUpperCase();
+  if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
+  return 'equity';
 }
 
 function deriveAdaptivePolicy(rows: ClosedTradePerformanceRow[], regime: Regime) {
@@ -151,26 +166,31 @@ function deriveAdaptivePolicy(rows: ClosedTradePerformanceRow[], regime: Regime)
   };
 }
 
-async function getLatestPrice(symbol: string): Promise<{ price: number | null; source: string }> {
-  const direct = await q<{ price: string | number; fetched_at: string }>(
-    `SELECT price, fetched_at FROM quotes_latest WHERE symbol = $1 LIMIT 1`,
-    [symbol.toUpperCase()]
-  );
-  if (direct.length > 0) {
-    const price = parseNumber(direct[0].price);
-    if (price != null) return { price, source: 'quotes_latest' };
-  }
+async function getLatestPrice(req: NextRequest, symbol: string, assetClass: 'crypto' | 'equity' | 'forex' | 'commodity'): Promise<{ price: number | null; source: string }> {
+  const type = assetClass === 'crypto' ? 'crypto' : assetClass === 'forex' ? 'fx' : 'stock';
+  const upper = symbol.toUpperCase().trim();
 
-  const base = symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
-  if (base && base !== symbol.toUpperCase()) {
-    const fallback = await q<{ price: string | number; fetched_at: string }>(
-      `SELECT price, fetched_at FROM quotes_latest WHERE symbol = $1 LIMIT 1`,
-      [base]
-    );
-    if (fallback.length > 0) {
-      const price = parseNumber(fallback[0].price);
-      if (price != null) return { price, source: 'quotes_latest_base' };
+  const quoteSymbol = type === 'crypto'
+    ? upper.replace(/USDT$/, '').replace(/USD$/, '')
+    : type === 'fx'
+    ? upper.slice(0, 3)
+    : upper;
+  const quoteMarket = type === 'fx' && upper.length >= 6 ? upper.slice(3, 6) : 'USD';
+
+  const quoteUrl = new URL('/api/quote', req.url);
+  quoteUrl.searchParams.set('symbol', quoteSymbol);
+  quoteUrl.searchParams.set('type', type);
+  quoteUrl.searchParams.set('market', quoteMarket);
+
+  try {
+    const res = await fetch(quoteUrl.toString(), { cache: 'no-store' });
+    if (!res.ok) return { price: null, source: 'none' };
+    const data = await res.json();
+    const price = parseNumber(data?.price);
+    if (price != null && price > 0) {
+      return { price, source: `quote_api_${type}` };
     }
+  } catch {
   }
 
   return { price: null, source: 'none' };
@@ -191,7 +211,7 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = await q<JournalRow>(
-      `SELECT id, symbol, side, trade_date, entry_price, quantity, stop_loss, target, risk_amount, is_open, status, tags
+      `SELECT id, symbol, asset_class, side, trade_date, entry_price, quantity, stop_loss, target, risk_amount, is_open, status, tags
          FROM journal_entries
         WHERE workspace_id = $1 AND id = $2
         LIMIT 1`,
@@ -242,6 +262,8 @@ export async function GET(req: NextRequest) {
     const tags = Array.isArray(entry.tags) ? entry.tags : [];
     const packetIdFromTag = parseDpTag(tags);
 
+    const entryAssetClass = normalizeJournalAssetClass(entry.asset_class || inferAssetClassFromSymbol(entry.symbol));
+
     const packetRows = packetIdFromTag
       ? await q<DecisionPacketRow>(
           `SELECT packet_id, signal_score, invalidation, targets, updated_at
@@ -254,9 +276,10 @@ export async function GET(req: NextRequest) {
           `SELECT packet_id, signal_score, invalidation, targets, updated_at
              FROM decision_packets
             WHERE workspace_id = $1 AND symbol = $2
+              AND COALESCE(asset_class, 'equity') = $3
             ORDER BY updated_at DESC
             LIMIT 1`,
-          [session.workspaceId, entry.symbol]
+          [session.workspaceId, entry.symbol, entryAssetClass]
         );
 
     const packet = packetRows[0];
@@ -264,7 +287,7 @@ export async function GET(req: NextRequest) {
     const packetInvalidation = packet ? parseNumber(packet.invalidation) : null;
     const packetTarget = packet ? parseTargetFromJson(packet.targets) : null;
 
-    const { price: latestPrice, source: priceSource } = await getLatestPrice(entry.symbol);
+    const { price: latestPrice, source: priceSource } = await getLatestPrice(req, entry.symbol, entryAssetClass);
     const currentPrice = latestPrice ?? entryPrice;
 
     if ((entry.status || 'OPEN').toUpperCase() === 'OPEN') {

@@ -5,7 +5,7 @@
  * @description Scans top symbols for each asset class and stores results
  * @cron Runs daily at 9:30 PM UTC (4:30 PM EST after market close)
  * 
- * Protected by CRON_SECRET - only callable by Vercel Cron or admin
+ * Protected by CRON_SECRET - only callable by Render cron (or admin)
  */
 
 import { NextRequest, NextResponse } from "next/server";

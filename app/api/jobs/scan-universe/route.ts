@@ -14,7 +14,7 @@
  * 6. Aroon (25) - Trend direction - 1 pt
  * 7. CCI (20) - Commodity channel index - 1 pt
  * 
- * Protected by CRON_SECRET - callable by Vercel Cron or admin
+ * Protected by CRON_SECRET - callable by Render cron (or admin)
  */
 
 import { NextRequest, NextResponse } from "next/server";

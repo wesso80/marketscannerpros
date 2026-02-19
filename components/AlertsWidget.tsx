@@ -415,6 +415,14 @@ export default function AlertsWidget({
 
     try {
       const operatorState = readOperatorState();
+      const matchedAlert = alerts.find((a) => a.id === entry.alert_id);
+      const inferredAssetClass = matchedAlert?.asset_type === 'crypto'
+        ? 'crypto'
+        : matchedAlert?.asset_type === 'forex'
+        ? 'forex'
+        : matchedAlert?.asset_type === 'commodity'
+        ? 'commodity'
+        : 'equity';
       const res = await fetch('/api/journal/auto-log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -426,6 +434,7 @@ export default function AlertsWidget({
           triggerPrice: entry.trigger_price,
           triggeredAt: entry.triggered_at,
           source: 'alerts_triggered_feed',
+          assetClass: inferredAssetClass,
           operatorMode: operatorState.mode,
           operatorBias: operatorState.bias,
           operatorRisk: operatorState.risk,

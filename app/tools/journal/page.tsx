@@ -15,6 +15,7 @@ interface JournalEntry {
   id: number;
   date: string;
   symbol: string;
+  assetClass?: 'crypto' | 'equity' | 'forex' | 'commodity';
   side: 'LONG' | 'SHORT';
   tradeType: 'Spot' | 'Options' | 'Futures' | 'Margin';
   optionType?: 'Call' | 'Put';
@@ -86,6 +87,49 @@ function getLikelyQuoteType(symbol: string): 'crypto' | 'stock' {
   return 'stock';
 }
 
+function toQuoteType(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): 'crypto' | 'stock' | 'fx' {
+  if (entry.assetClass === 'crypto') return 'crypto';
+  if (entry.assetClass === 'forex') return 'fx';
+  return getLikelyQuoteType(entry.symbol);
+}
+
+function buildQuoteParams(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): { symbol: string; type: 'crypto' | 'stock' | 'fx'; market: string } {
+  const type = toQuoteType(entry);
+  const upperSymbol = entry.symbol.toUpperCase().trim();
+
+  if (type === 'crypto') {
+    return {
+      symbol: upperSymbol.replace(/USDT$/, '').replace(/USD$/, ''),
+      type,
+      market: 'USD',
+    };
+  }
+
+  if (type === 'fx') {
+    const pair = upperSymbol.replace(/[^A-Z]/g, '');
+    const base = pair.length >= 6 ? pair.slice(0, 3) : pair.slice(0, 3) || 'EUR';
+    const quote = pair.length >= 6 ? pair.slice(3, 6) : 'USD';
+    return {
+      symbol: base,
+      type,
+      market: quote,
+    };
+  }
+
+  return {
+    symbol: upperSymbol,
+    type,
+    market: 'USD',
+  };
+}
+
+function getAssetClassLabel(entry: Pick<JournalEntry, 'assetClass' | 'symbol'>): 'CRYPTO' | 'EQUITY' | 'FOREX' | 'COMMODITY' {
+  if (entry.assetClass === 'crypto') return 'CRYPTO';
+  if (entry.assetClass === 'forex') return 'FOREX';
+  if (entry.assetClass === 'commodity') return 'COMMODITY';
+  return getLikelyQuoteType(entry.symbol) === 'crypto' ? 'CRYPTO' : 'EQUITY';
+}
+
 function normalizeEntryId(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -105,6 +149,7 @@ function computeUnrealized(entry: JournalEntry, currentPrice: number): { pl: num
 
 function JournalContent() {
   const journalEventMapRef = useRef<Record<number, string>>({});
+  const autoClosingEntryIdsRef = useRef<Record<number, boolean>>({});
 
   const searchParams = useSearchParams();
   const { tier } = useUserTier();
@@ -385,6 +430,70 @@ function JournalContent() {
                 unrealizedRMultiple: Number(verdict?.state?.unrealizedR ?? 0),
               },
             };
+
+            const currentPrice = Number(data?.currentPrice);
+            if (shouldClose && Number.isFinite(currentPrice) && currentPrice > 0 && !autoClosingEntryIdsRef.current[entry.id]) {
+              autoClosingEntryIdsRef.current[entry.id] = true;
+
+              const mappedExitReason = exitReason === 'TARGET_HIT'
+                ? 'tp'
+                : exitReason === 'HARD_STOP'
+                ? 'sl'
+                : exitReason === 'TIME_STOP'
+                ? 'time'
+                : exitReason === 'EDGE_DECAY'
+                ? 'invalidated'
+                : 'manual';
+
+              try {
+                const closeResponse = await fetch('/api/journal/close-trade', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    journalEntryId: entry.id,
+                    exitPrice: currentPrice,
+                    exitTs: new Date().toISOString(),
+                    exitReason: mappedExitReason,
+                    closeSource: 'mark',
+                    followedPlan: true,
+                    notes: [exitReason, exitDetail].filter(Boolean).join(' | ').slice(0, 2000),
+                  }),
+                });
+
+                const closeData = await closeResponse.json().catch(() => ({}));
+                if (closeResponse.ok && closeData?.success && closeData?.entry) {
+                  setEntries((prev) => prev.map((existing) => {
+                    if (normalizeEntryId(existing.id) !== normalizeEntryId(entry.id)) return existing;
+
+                    return {
+                      ...existing,
+                      ...closeData.entry,
+                      tradeType: existing.tradeType,
+                      optionType: existing.optionType,
+                      strikePrice: existing.strikePrice,
+                      expirationDate: existing.expirationDate,
+                      strategy: existing.strategy,
+                      setup: existing.setup,
+                      notes: existing.notes,
+                      emotions: existing.emotions,
+                      tags: existing.tags,
+                      stopLoss: existing.stopLoss,
+                      target: existing.target,
+                      riskAmount: existing.riskAmount,
+                      plannedRR: existing.plannedRR,
+                      status: closeData.entry.status || 'CLOSED',
+                      closeSource: 'mark',
+                      exitReason: mappedExitReason,
+                      followedPlan: true,
+                      exitIntentId: closeData.exitIntentId || existing.exitIntentId,
+                    };
+                  }));
+                }
+              } catch {
+              } finally {
+                autoClosingEntryIdsRef.current[entry.id] = false;
+              }
+            }
           } else {
             throw new Error('Invalid verdict response');
           }
@@ -554,23 +663,16 @@ function JournalContent() {
     setCurrentClosePriceLoading(true);
     setCurrentClosePriceError(null);
     try {
-      const baseSymbol = entry.symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
-      const preferredType = getLikelyQuoteType(entry.symbol);
+      const quote = buildQuoteParams(entry);
+      const response = await fetch(
+        `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
+        { cache: 'no-store' }
+      );
 
-      const attemptFetch = async (type: 'crypto' | 'stock') => {
-        const querySymbol = type === 'crypto' ? baseSymbol : entry.symbol.toUpperCase();
-        const response = await fetch(`/api/quote?symbol=${encodeURIComponent(querySymbol)}&type=${type}&market=USD`, { cache: 'no-store' });
-        if (!response.ok) return null;
-        const data = await response.json();
-        const price = Number(data?.price);
-        return Number.isFinite(price) && price > 0 ? price : null;
-      };
+      const data = response.ok ? await response.json() : null;
+      const price = Number(data?.price);
 
-      const first = await attemptFetch(preferredType);
-      const second = first == null ? await attemptFetch(preferredType === 'crypto' ? 'stock' : 'crypto') : null;
-      const price = first ?? second;
-
-      if (price == null) {
+      if (!Number.isFinite(price) || price <= 0) {
         throw new Error('Live quote unavailable for this symbol right now.');
       }
 
@@ -839,12 +941,13 @@ function JournalContent() {
     }
 
     // CSV headers
-    const headers = ['Date', 'Symbol', 'Side', 'Trade Type', 'Option Type', 'Strike Price', 'Expiration', 'Quantity', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Strategy', 'Setup', 'Notes', 'Emotions', 'Tags', 'Outcome'];
+    const headers = ['Date', 'Symbol', 'Asset Class', 'Side', 'Trade Type', 'Option Type', 'Strike Price', 'Expiration', 'Quantity', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Strategy', 'Setup', 'Notes', 'Emotions', 'Tags', 'Outcome'];
     
     // CSV rows
     const rows = filteredEntries.map(entry => [
       entry.date,
       entry.symbol,
+      getAssetClassLabel(entry),
       entry.side,
       entry.tradeType || 'Spot',
       entry.optionType || '',
@@ -868,12 +971,17 @@ function JournalContent() {
       .map(row => row.join(','))
       .join('\n');
 
+    const assetClasses = Array.from(new Set(filteredEntries.map((entry) => getAssetClassLabel(entry))));
+    const assetScope = assetClasses.length === 1 ? assetClasses[0].toLowerCase() : 'mixed';
+    const tabScope = journalTab === 'open' ? 'open' : 'closed';
+    const dateScope = new Date().toISOString().split('T')[0];
+
     // Create download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `trade-journal-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `trade-journal-${tabScope}-${assetScope}-${dateScope}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -897,23 +1005,16 @@ function JournalContent() {
 
       await Promise.all(openTrades.map(async (trade) => {
         try {
-          const baseSymbol = trade.symbol.toUpperCase().replace(/USDT$/, '').replace(/USD$/, '');
-          const preferredType = getLikelyQuoteType(trade.symbol);
+          const quote = buildQuoteParams(trade);
+          const response = await fetch(
+            `/api/quote?symbol=${encodeURIComponent(quote.symbol)}&type=${quote.type}&market=${encodeURIComponent(quote.market)}`,
+            { cache: 'no-store' }
+          );
 
-          const attemptFetch = async (type: 'crypto' | 'stock') => {
-            const querySymbol = type === 'crypto' ? baseSymbol : trade.symbol.toUpperCase();
-            const response = await fetch(`/api/quote?symbol=${encodeURIComponent(querySymbol)}&type=${type}&market=USD`, { cache: 'no-store' });
-            if (!response.ok) return null;
-            const data = await response.json();
-            const price = Number(data?.price);
-            return Number.isFinite(price) && price > 0 ? price : null;
-          };
+          const data = response.ok ? await response.json() : null;
+          const price = Number(data?.price);
 
-          const first = await attemptFetch(preferredType);
-          const second = first == null ? await attemptFetch(preferredType === 'crypto' ? 'stock' : 'crypto') : null;
-          const price = first ?? second;
-
-          if (price != null) {
+          if (Number.isFinite(price) && price > 0) {
             nextPrices[normalizeEntryId(trade.id)] = price;
           }
         } catch {
@@ -1230,7 +1331,21 @@ function JournalContent() {
                   padding: '10px 12px'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '13px' }}>{trade.symbol}</span>
+                    <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {trade.symbol}
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.03em',
+                        padding: '2px 6px',
+                        borderRadius: '999px',
+                        border: '1px solid #334155',
+                        color: '#94a3b8',
+                        background: 'rgba(15,23,42,0.65)'
+                      }}>
+                        {getAssetClassLabel(trade)}
+                      </span>
+                    </span>
                     <span style={{ color: trade.side === 'LONG' ? '#10b981' : '#ef4444', fontSize: '11px', fontWeight: 700 }}>{trade.side}</span>
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '12px' }}>
@@ -2499,7 +2614,21 @@ function JournalContent() {
                         {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
                       <div style={{ fontSize: '20px', fontWeight: '700', color: '#f1f5f9' }}>
-                        {entry.symbol}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          {entry.symbol}
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            letterSpacing: '0.03em',
+                            padding: '2px 7px',
+                            borderRadius: '999px',
+                            border: '1px solid #334155',
+                            color: '#94a3b8',
+                            background: 'rgba(15,23,42,0.65)'
+                          }}>
+                            {getAssetClassLabel(entry)}
+                          </span>
+                        </span>
                       </div>
                     </div>
                     <div style={{
