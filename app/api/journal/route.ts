@@ -53,6 +53,51 @@ function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
   return 'equity';
 }
 
+function inferAssetClassFromEntryContext(entry: {
+  setup?: unknown;
+  notes?: unknown;
+  strategy?: unknown;
+  tags?: unknown;
+}): 'crypto' | 'equity' | 'forex' | 'commodity' | null {
+  const setup = String(entry.setup || '').toLowerCase();
+  const notes = String(entry.notes || '').toLowerCase();
+  const strategy = String(entry.strategy || '').toLowerCase();
+  const tags = Array.isArray(entry.tags)
+    ? entry.tags.map((tag) => String(tag || '').toLowerCase()).join(' ')
+    : '';
+  const haystack = `${setup} ${notes} ${strategy} ${tags}`;
+
+  if (
+    haystack.includes('asset_class_crypto') ||
+    haystack.includes('scanner_monitor_crypto') ||
+    haystack.includes(' source: crypto') ||
+    haystack.includes('source: scanner_background_monitor') && haystack.includes('crypto') ||
+    haystack.includes('coingecko') ||
+    haystack.includes(' derivatives sentiment')
+  ) {
+    return 'crypto';
+  }
+
+  if (
+    haystack.includes('asset_class_forex') ||
+    haystack.includes('scanner_monitor_forex') ||
+    haystack.includes(' forex') ||
+    haystack.includes('fx ')
+  ) {
+    return 'forex';
+  }
+
+  if (
+    haystack.includes('asset_class_commodity') ||
+    haystack.includes('commodity') ||
+    haystack.includes('commodities')
+  ) {
+    return 'commodity';
+  }
+
+  return null;
+}
+
 function getTaggedAssetClass(tags: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' | null {
   if (!Array.isArray(tags)) return null;
   const tag = tags.find((item) => typeof item === 'string' && item.startsWith('asset_class_'));
@@ -65,6 +110,31 @@ function getDecisionPacketTag(tags: unknown): string | null {
   if (!Array.isArray(tags)) return null;
   const tag = tags.find((item) => typeof item === 'string' && item.startsWith('dp_') && item.length > 3);
   return typeof tag === 'string' ? tag.slice(3) : null;
+}
+
+function normalizeUniverseAssetType(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'crypto') return 'crypto';
+  if (normalized === 'forex') return 'forex';
+  if (normalized === 'commodity' || normalized === 'commodities') return 'commodity';
+  return 'equity';
+}
+
+function resolveAssetClassWithUniverse(args: {
+  symbol: string;
+  fallback: 'crypto' | 'equity' | 'forex' | 'commodity';
+  universeTypes?: Set<'crypto' | 'equity' | 'forex' | 'commodity'>;
+}): 'crypto' | 'equity' | 'forex' | 'commodity' {
+  const { fallback, universeTypes } = args;
+  if (!universeTypes || universeTypes.size === 0) return fallback;
+  if (universeTypes.has(fallback)) return fallback;
+  if (universeTypes.size === 1) return Array.from(universeTypes)[0];
+
+  if (universeTypes.has('crypto') && !universeTypes.has('equity')) return 'crypto';
+  if (universeTypes.has('forex') && !universeTypes.has('equity')) return 'forex';
+  if (universeTypes.has('commodity') && !universeTypes.has('equity')) return 'commodity';
+
+  return fallback;
 }
 
 async function ensureJournalSchema() {
@@ -133,6 +203,33 @@ export async function GET(req: NextRequest) {
       [workspaceId]
     );
 
+    const symbols = Array.from(
+      new Set(
+        entriesRaw
+          .map((row: any) => String(row?.symbol || '').toUpperCase().trim())
+          .filter((symbol: string) => symbol.length > 0)
+      )
+    );
+
+    const symbolUniverseBySymbol = new Map<string, Set<'crypto' | 'equity' | 'forex' | 'commodity'>>();
+    if (symbols.length > 0) {
+      const universeRows = await q<{ symbol: string; asset_type: string }>(
+        `SELECT symbol, asset_type
+           FROM symbol_universe
+          WHERE symbol = ANY($1::text[])`,
+        [symbols]
+      );
+
+      for (const row of universeRows) {
+        const key = String(row.symbol || '').toUpperCase();
+        if (!key) continue;
+        if (!symbolUniverseBySymbol.has(key)) {
+          symbolUniverseBySymbol.set(key, new Set());
+        }
+        symbolUniverseBySymbol.get(key)!.add(normalizeUniverseAssetType(row.asset_type));
+      }
+    }
+
     const packetIds = Array.from(
       new Set(
         entriesRaw
@@ -162,9 +259,15 @@ export async function GET(req: NextRequest) {
       const taggedAssetClass = getTaggedAssetClass(e.tags);
       const packetId = getDecisionPacketTag(e.tags);
       const packetAssetClass = packetId ? packetAssetClassById.get(packetId) : null;
-      const resolvedAssetClass = normalizeJournalAssetClass(
-        e.asset_class || taggedAssetClass || packetAssetClass || inferAssetClassFromSymbol(e.symbol)
+      const contextAssetClass = inferAssetClassFromEntryContext(e);
+      const fallbackAssetClass = normalizeJournalAssetClass(
+        e.asset_class || taggedAssetClass || packetAssetClass || contextAssetClass || inferAssetClassFromSymbol(e.symbol)
       );
+      const resolvedAssetClass = resolveAssetClassWithUniverse({
+        symbol: String(e.symbol || ''),
+        fallback: fallbackAssetClass,
+        universeTypes: symbolUniverseBySymbol.get(String(e.symbol || '').toUpperCase()),
+      });
 
       return {
       id: e.id,
@@ -225,6 +328,33 @@ export async function POST(req: NextRequest) {
 
     const incomingEntries = Array.isArray(entries) ? entries : [];
 
+    const incomingSymbols = Array.from(
+      new Set(
+        incomingEntries
+          .map((entry: any) => String(entry?.symbol || '').toUpperCase().trim())
+          .filter((symbol: string) => symbol.length > 0)
+      )
+    );
+
+    const symbolUniverseBySymbol = new Map<string, Set<'crypto' | 'equity' | 'forex' | 'commodity'>>();
+    if (incomingSymbols.length > 0) {
+      const universeRows = await q<{ symbol: string; asset_type: string }>(
+        `SELECT symbol, asset_type
+           FROM symbol_universe
+          WHERE symbol = ANY($1::text[])`,
+        [incomingSymbols]
+      );
+
+      for (const row of universeRows) {
+        const key = String(row.symbol || '').toUpperCase();
+        if (!key) continue;
+        if (!symbolUniverseBySymbol.has(key)) {
+          symbolUniverseBySymbol.set(key, new Set());
+        }
+        symbolUniverseBySymbol.get(key)!.add(normalizeUniverseAssetType(row.asset_type));
+      }
+    }
+
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
       const existingIdRows = await client.query<{ id: number }>(
@@ -276,7 +406,15 @@ export async function POST(req: NextRequest) {
         ];
 
         const taggedAssetClass = getTaggedAssetClass(e?.tags);
-        const entryAssetClass = normalizeJournalAssetClass(e?.assetClass || taggedAssetClass || inferAssetClassFromSymbol(e?.symbol));
+        const contextAssetClass = inferAssetClassFromEntryContext(e || {});
+        const resolvedFallbackAssetClass = normalizeJournalAssetClass(
+          e?.assetClass || taggedAssetClass || contextAssetClass || inferAssetClassFromSymbol(e?.symbol)
+        );
+        const entryAssetClass = resolveAssetClassWithUniverse({
+          symbol: String(e?.symbol || ''),
+          fallback: resolvedFallbackAssetClass,
+          universeTypes: symbolUniverseBySymbol.get(String(e?.symbol || '').toUpperCase()),
+        });
 
         const values: any[] = [
           workspaceId,

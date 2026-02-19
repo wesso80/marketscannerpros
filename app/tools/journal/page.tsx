@@ -2935,7 +2935,9 @@ function JournalContent() {
                   </div>
                   {entry.isOpen && (
                     <div>
-                      <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>Current Price</div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>
+                        Current Price ({getAssetClassLabel(entry)})
+                      </div>
                       <div style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600' }}>
                         {Number.isFinite(openTradePrices[normalizeEntryId(entry.id)])
                           ? `$${openTradePrices[normalizeEntryId(entry.id)].toFixed(4)}`
