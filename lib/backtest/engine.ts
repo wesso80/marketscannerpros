@@ -3,11 +3,34 @@ export interface BacktestTrade {
   exitDate: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
+  direction?: 'long' | 'short';
+  entryTs?: string;
+  exitTs?: string;
   entry: number;
   exit: number;
   return: number;
   returnPercent: number;
+  mfe?: number;
+  mae?: number;
+  exitReason?: 'stop' | 'target' | 'timeout' | 'signal_flip' | 'manual' | 'end_of_data';
   holdingPeriodDays: number;
+}
+
+export interface BacktestValidation {
+  status: 'validated' | 'invalidated' | 'mixed';
+  direction: 'bullish' | 'bearish' | 'both';
+  reason: string;
+  suggestedAlternatives?: Array<{ strategyId: string; why: string }>;
+}
+
+export interface BacktestDataCoverage {
+  requested: { startDate?: string; endDate?: string };
+  applied: { startDate: string; endDate: string };
+  minAvailable: string;
+  maxAvailable: string;
+  bars: number;
+  provider: 'alpha_vantage' | 'binance' | 'coingecko';
+  notes?: string;
 }
 
 export interface BacktestEquityPoint {
@@ -36,6 +59,9 @@ export interface BacktestEngineResult {
   worstTrade: BacktestTrade | null;
   equityCurve: BacktestEquityPoint[];
   trades: BacktestTrade[];
+  validation?: BacktestValidation;
+  dataCoverage?: BacktestDataCoverage;
+  diagnostics?: unknown;
 }
 
 export function createEmptyBacktestResult(): BacktestEngineResult {

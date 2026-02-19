@@ -72,6 +72,13 @@ interface BacktestResult {
     minAvailable: string;
     maxAvailable: string;
     bars: number;
+    provider?: 'alpha_vantage' | 'binance' | 'coingecko';
+  };
+  validation?: {
+    status: 'validated' | 'invalidated' | 'mixed';
+    direction: 'bullish' | 'bearish' | 'both';
+    reason: string;
+    suggestedAlternatives?: Array<{ strategyId: string; why: string }>;
   };
   strategyProfile?: {
     id: string;
@@ -106,10 +113,16 @@ interface Trade {
   exitDate: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
+  direction?: 'long' | 'short';
+  entryTs?: string;
+  exitTs?: string;
   entry: number;
   exit: number;
   return: number;
   returnPercent: number;
+  mfe?: number;
+  mae?: number;
+  exitReason?: 'stop' | 'target' | 'timeout' | 'signal_flip' | 'manual' | 'end_of_data';
   holdingPeriodDays: number;
 }
 
@@ -1082,8 +1095,29 @@ function BacktestContent() {
                 ))}
               </datalist>
               <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                Free input enabled. Use formats like 6m, 1h, 1d/daily, 1w, 1mo, 1y.
+                Free input enabled. Use formats like 6m, 2h, 2hour, 1d/daily.
               </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                {['1min', '5min', '15min', '30min', '60min', 'daily'].map((tf) => (
+                  <button
+                    key={tf}
+                    type="button"
+                    onClick={() => setTimeframe(tf)}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '999px',
+                      border: timeframe === tf ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.35)',
+                      background: timeframe === tf ? 'rgba(16,185,129,0.18)' : 'rgba(30,41,59,0.5)',
+                      color: timeframe === tf ? '#6ee7b7' : '#cbd5e1',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
                   ✓ Custom intraday timeframes may be resampled from base bars.
@@ -1379,6 +1413,74 @@ function BacktestContent() {
               )}
             </div>
 
+            {results.validation && (
+              <div style={{
+                background: 'var(--msp-card)',
+                border: '1px solid rgba(51,65,85,0.8)',
+                borderRadius: '14px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                boxShadow: 'var(--msp-shadow)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Validation
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>{results.validation.reason}</div>
+                  </div>
+                  <span style={{
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    background: results.validation.status === 'validated'
+                      ? 'rgba(16,185,129,0.15)'
+                      : results.validation.status === 'mixed'
+                        ? 'rgba(251,191,36,0.15)'
+                        : 'rgba(239,68,68,0.15)',
+                    border: results.validation.status === 'validated'
+                      ? '1px solid rgba(16,185,129,0.35)'
+                      : results.validation.status === 'mixed'
+                        ? '1px solid rgba(251,191,36,0.35)'
+                        : '1px solid rgba(239,68,68,0.35)',
+                    color: results.validation.status === 'validated'
+                      ? '#6ee7b7'
+                      : results.validation.status === 'mixed'
+                        ? '#fde68a'
+                        : '#fca5a5',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    {results.validation.status} ({results.validation.direction})
+                  </span>
+                </div>
+
+                {results.validation.suggestedAlternatives && results.validation.suggestedAlternatives.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Suggested Alternatives
+                    </div>
+                    <div style={{ display: 'grid', gap: '6px' }}>
+                      {results.validation.suggestedAlternatives.map((alternative) => (
+                        <div
+                          key={alternative.strategyId}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(51,65,85,0.5)',
+                            background: 'rgba(30,41,59,0.45)'
+                          }}
+                        >
+                          <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
+                          <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{alternative.why}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {results.diagnostics && (
               <div style={{
                 background: 'var(--msp-card)',
@@ -1537,6 +1639,7 @@ function BacktestContent() {
                 </div>
                 <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '4px' }}>
                   Applied range: {results.dataCoverage.applied.startDate} → {results.dataCoverage.applied.endDate} · {results.dataCoverage.bars} bars
+                  {results.dataCoverage.provider ? ` · Provider: ${results.dataCoverage.provider}` : ''}
                 </div>
               </div>
             )}

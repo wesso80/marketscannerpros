@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseTimeframe } from '../lib/timeframes';
 import {
   computeCoverage,
   isStrategyTimeframeCompatible,
@@ -10,6 +11,7 @@ describe('backtest timeframe acceptance', () => {
     const sixMinute = parseBacktestTimeframe('6m');
     const twelveMinute = parseBacktestTimeframe('12min');
     const twoHour = parseBacktestTimeframe('2h');
+    const canonicalTwoHour = parseTimeframe('2h');
 
     expect(sixMinute?.normalized).toBe('6min');
     expect(sixMinute?.kind).toBe('intraday');
@@ -17,8 +19,11 @@ describe('backtest timeframe acceptance', () => {
     expect(twelveMinute?.normalized).toBe('12min');
     expect(twelveMinute?.kind).toBe('intraday');
 
-    expect(twoHour?.normalized).toBe('120min');
+    expect(twoHour?.normalized).toBe('2hour');
     expect(twoHour?.kind).toBe('intraday');
+
+    expect(canonicalTwoHour?.normalized).toBe('2hour');
+    expect(canonicalTwoHour?.totalMinutes).toBe(120);
   });
 
   it('keeps intraday compatibility for strategies that support intraday presets', () => {
@@ -29,25 +34,20 @@ describe('backtest timeframe acceptance', () => {
     expect(compatible).toBe(true);
   });
 
-  it('accepts week, month, and year timeframe formats', () => {
-    const oneWeek = parseBacktestTimeframe('1w');
-    const oneMonth = parseBacktestTimeframe('1mo');
-    const oneYear = parseBacktestTimeframe('1y');
+  it('accepts day granularity and rejects unsupported units', () => {
+    const oneDay = parseBacktestTimeframe('1d');
+    const twoDay = parseBacktestTimeframe('2day');
+    const unsupportedWeek = parseBacktestTimeframe('1w');
 
-    expect(oneWeek?.normalized).toBe('1w');
-    expect(oneWeek?.kind).toBe('daily');
-    expect(oneWeek?.needsResample).toBe(true);
+    expect(oneDay?.normalized).toBe('daily');
+    expect(oneDay?.kind).toBe('daily');
+    expect(oneDay?.needsResample).toBe(false);
 
-    expect(oneMonth?.normalized).toBe('1mo');
-    expect(oneMonth?.kind).toBe('daily');
-    expect(oneMonth?.needsResample).toBe(true);
+    expect(twoDay?.normalized).toBe('2day');
+    expect(twoDay?.kind).toBe('daily');
+    expect(twoDay?.needsResample).toBe(true);
 
-    expect(oneYear?.normalized).toBe('1y');
-    expect(oneYear?.kind).toBe('daily');
-    expect(oneYear?.needsResample).toBe(true);
-
-    const compatible = isStrategyTimeframeCompatible(['daily'], oneWeek!);
-    expect(compatible).toBe(true);
+    expect(unsupportedWeek).toBeNull();
   });
 
   it('auto-clamps applied range to available coverage', () => {

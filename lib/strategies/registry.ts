@@ -1,7 +1,9 @@
 import {
   BACKTEST_TIMEFRAMES,
   type BacktestStrategyCategory,
+  type BacktestStrategyDirection,
   type BacktestStrategyDefinition,
+  type BacktestStrategyPatternType,
   type BacktestTimeframe,
   type BacktestTimeframeGroup,
 } from './types';
@@ -10,7 +12,7 @@ const ALL_TIMEFRAMES = [...BACKTEST_TIMEFRAMES] as const;
 
 export const DEFAULT_BACKTEST_STRATEGY = 'msp_day_trader';
 
-export const BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] = [
+const RAW_BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] = [
   {
     id: 'msp_elite',
     label: '🔥 MSP Elite Strategies',
@@ -116,6 +118,42 @@ export const BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] =
   },
 ] as const;
 
+function inferDirectionFromStrategyId(strategyId: string): BacktestStrategyDirection {
+  const lowered = strategyId.toLowerCase();
+  if (/(bear|short|breakdown|downtrend)/.test(lowered)) return 'bearish';
+  if (/(both|bi[-_]?direction|two[-_]?way)/.test(lowered)) return 'both';
+  return 'bullish';
+}
+
+function inferPatternType(categoryId: string, strategyId: string): BacktestStrategyPatternType | undefined {
+  const lowered = strategyId.toLowerCase();
+  if (/breakdown|downtrend|short/.test(lowered)) return 'breakdown';
+  if (/breakout|orb|momentum/.test(lowered)) return 'breakout';
+  if (/pullback/.test(lowered)) return 'trend_pullback';
+  if (/revert|reversal|mean|williams|stoch|cci|rsi/.test(lowered)) return 'mean_reversion';
+
+  if (categoryId === 'mean_reversion') return 'mean_reversion';
+  if (categoryId === 'swing') return 'trend_pullback';
+  if (categoryId === 'volatility' || categoryId === 'volume_analysis') return 'breakout';
+  return undefined;
+}
+
+function normalizeStrategy(
+  categoryId: string,
+  strategy: BacktestStrategyDefinition,
+): BacktestStrategyDefinition {
+  return {
+    ...strategy,
+    direction: strategy.direction ?? inferDirectionFromStrategyId(strategy.id),
+    patternType: strategy.patternType ?? inferPatternType(categoryId, strategy.id),
+  };
+}
+
+export const BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] = RAW_BACKTEST_STRATEGY_CATEGORIES.map((category) => ({
+  ...category,
+  strategies: category.strategies.map((strategy) => normalizeStrategy(category.id, strategy)),
+}));
+
 const strategyMap = new Map<string, BacktestStrategyDefinition>();
 for (const category of BACKTEST_STRATEGY_CATEGORIES) {
   for (const strategy of category.strategies) {
@@ -145,6 +183,25 @@ export const BACKTEST_TIMEFRAME_GROUPS: readonly BacktestTimeframeGroup[] = [
 
 export function getBacktestStrategy(id: string): BacktestStrategyDefinition | undefined {
   return strategyMap.get(id);
+}
+
+export function getAlternativeBacktestStrategies(
+  strategyId: string,
+  targetDirection: BacktestStrategyDirection,
+): BacktestStrategyDefinition[] {
+  const current = strategyMap.get(strategyId);
+  if (!current) return [];
+
+  const candidates = Array.from(strategyMap.values())
+    .filter((strategy) => strategy.id !== strategyId)
+    .filter((strategy) => strategy.direction === targetDirection);
+
+  const samePattern = current.patternType
+    ? candidates.filter((strategy) => strategy.patternType === current.patternType)
+    : [];
+
+  const pool = samePattern.length > 0 ? samePattern : candidates;
+  return pool.slice(0, 3);
 }
 
 export function isBacktestStrategy(id: string): boolean {

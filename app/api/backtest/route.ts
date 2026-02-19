@@ -29,9 +29,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
 import { getSessionFromCookie } from '@/lib/auth';
-import { buildBacktestEngineResult } from '@/lib/backtest/engine';
+import { buildBacktestEngineResult, type BacktestTrade, type BacktestValidation } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
-import { getBacktestStrategy } from '@/lib/strategies/registry';
+import { getAlternativeBacktestStrategies, getBacktestStrategy } from '@/lib/strategies/registry';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import {
@@ -41,6 +41,7 @@ import {
   computeCoverage,
 } from '@/lib/backtest/timeframe';
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
+import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
 
@@ -72,10 +73,16 @@ interface Trade {
   exitDate: string;
   symbol: string;
   side: 'LONG' | 'SHORT';
+  direction?: 'long' | 'short';
+  entryTs?: string;
+  exitTs?: string;
   entry: number;
   exit: number;
   return: number;
   returnPercent: number;
+  mfe?: number;
+  mae?: number;
+  exitReason?: BacktestTrade['exitReason'];
   holdingPeriodDays: number;
 }
 
@@ -83,6 +90,46 @@ interface StrategyResult {
   trades: Trade[];
   dates: string[];
   closes: number[];
+}
+
+function buildValidationPayload(
+  strategyId: string,
+  strategyDirection: 'bullish' | 'bearish' | 'both',
+  result: { winRate: number; profitFactor: number; totalReturn: number },
+): BacktestValidation {
+  const invalidated = result.winRate < 40 || result.profitFactor < 1 || result.totalReturn <= 0;
+  const validated = result.winRate >= 50 && result.profitFactor >= 1.2 && result.totalReturn > 0;
+
+  const status: BacktestValidation['status'] = invalidated
+    ? 'invalidated'
+    : validated
+      ? 'validated'
+      : 'mixed';
+
+  const reason = status === 'invalidated'
+    ? `Invalidated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
+    : status === 'validated'
+      ? `Validated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
+      : `Mixed: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`;
+
+  let suggestedAlternatives: BacktestValidation['suggestedAlternatives'] | undefined;
+  if (status === 'invalidated' && strategyDirection !== 'both') {
+    const targetDirection = strategyDirection === 'bullish' ? 'bearish' : 'bullish';
+    const alternatives = getAlternativeBacktestStrategies(strategyId, targetDirection);
+    if (alternatives.length > 0) {
+      suggestedAlternatives = alternatives.map((candidate) => ({
+        strategyId: candidate.id,
+        why: `${candidate.label} aligns with ${targetDirection} bias${candidate.patternType ? ` (${candidate.patternType.replace('_', ' ')})` : ''}.`,
+      }));
+    }
+  }
+
+  return {
+    status,
+    direction: strategyDirection,
+    reason,
+    suggestedAlternatives,
+  };
 }
 
 interface PriceData {
@@ -753,6 +800,8 @@ function runStrategy(
       position,
       trades,
       indicators: {
+        highs,
+        lows,
         ema9,
         ema21,
         sma50,
@@ -839,6 +888,7 @@ function runStrategy(
           let exitPrice = close;
           if (hitSL) exitPrice = sl;
           if (hitTP) exitPrice = tp;
+          const exitReason: BacktestTrade['exitReason'] = hitSL ? 'stop' : hitTP ? 'target' : 'signal_flip';
           
           const shares = (initialCapital * 0.95) / position.entry;
           const returnDollars = (exitPrice - position.entry) * shares;
@@ -853,6 +903,7 @@ function runStrategy(
             exit: exitPrice,
             return: returnDollars,
             returnPercent,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -977,6 +1028,13 @@ function runStrategy(
           let exitPrice = close;
           if (hitSL) exitPrice = sl;
           if (hitTP) exitPrice = tp;
+          const exitReason: BacktestTrade['exitReason'] = hitSL
+            ? 'stop'
+            : hitTP
+              ? 'target'
+              : timeExit
+                ? 'timeout'
+                : 'signal_flip';
           
           const shares = (initialCapital * 0.95) / position.entry;
           const returnDollars = (exitPrice - position.entry) * shares;
@@ -991,6 +1049,7 @@ function runStrategy(
             exit: exitPrice,
             return: returnDollars,
             returnPercent,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1026,11 +1085,13 @@ function runStrategy(
         // Quick scalp: exit at 0.8% gain or 0.5% loss or after 10 bars
         if (gain >= 0.008 || gain <= -0.005 || barsHeld >= 10) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.008 ? 'target' : gain <= -0.005 ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1060,11 +1121,13 @@ function runStrategy(
         if (highs[i] >= target || lows[i] <= stop || barsHeld >= 15) {
           const exitPrice = highs[i] >= target ? target : (lows[i] <= stop ? stop : close);
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = highs[i] >= target ? 'target' : lows[i] <= stop ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: exitPrice,
             return: (exitPrice - position.entry) * shares,
             returnPercent: ((exitPrice - position.entry) / position.entry) * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1088,11 +1151,19 @@ function runStrategy(
         
         if (gain >= 0.015 || gain <= -0.008 || momentumFading || barsHeld >= 8) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.015
+            ? 'target'
+            : gain <= -0.008
+              ? 'stop'
+              : barsHeld >= 8
+                ? 'timeout'
+                : 'signal_flip';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1113,11 +1184,13 @@ function runStrategy(
         
         if (revertedToMean || gain <= -0.01 || barsHeld >= 12) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = revertedToMean ? 'target' : gain <= -0.01 ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1144,11 +1217,19 @@ function runStrategy(
         
         if (gain >= 0.08 || gain <= -0.03 || trendBroken || barsHeld >= 30) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.08
+            ? 'target'
+            : gain <= -0.03
+              ? 'stop'
+              : barsHeld >= 30
+                ? 'timeout'
+                : 'signal_flip';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1171,11 +1252,13 @@ function runStrategy(
         
         if (gain >= 0.10 || failedBreakout || barsHeld >= 25) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.10 ? 'target' : failedBreakout ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1199,11 +1282,13 @@ function runStrategy(
         // Hold for drift effect (5-15 days)
         if (gain >= 0.12 || gain <= -0.05 || barsHeld >= 15) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.12 ? 'target' : gain <= -0.05 ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1233,6 +1318,7 @@ function runStrategy(
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason: 'signal_flip',
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1261,6 +1347,7 @@ function runStrategy(
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason: 'signal_flip',
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1282,11 +1369,19 @@ function runStrategy(
         
         if (gain >= 0.06 || gain <= -0.025 || volumeDry || barsHeld >= 15) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.06
+            ? 'target'
+            : gain <= -0.025
+              ? 'stop'
+              : barsHeld >= 15
+                ? 'timeout'
+                : 'signal_flip';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1309,11 +1404,13 @@ function runStrategy(
         
         if (gain >= 0.05 || gain <= -0.03 || barsHeld >= 10) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = gain >= 0.05 ? 'target' : gain <= -0.03 ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1338,11 +1435,13 @@ function runStrategy(
         
         if (williamsROverbought || barsHeld >= 15) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = williamsROverbought ? 'signal_flip' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1364,11 +1463,13 @@ function runStrategy(
         
         if (histPeaked || barsHeld >= 20) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = histPeaked ? 'signal_flip' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1391,11 +1492,13 @@ function runStrategy(
         
         if (rsi[i] > 65 || gain <= -0.03 || barsHeld >= 15) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = rsi[i] > 65 ? 'signal_flip' : gain <= -0.03 ? 'stop' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: gain * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1418,11 +1521,13 @@ function runStrategy(
         
         if (backInsideChannel || barsHeld >= 20) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = backInsideChannel ? 'signal_flip' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1448,11 +1553,13 @@ function runStrategy(
         
         if (exitScore <= 2 || barsHeld >= 25) {
           const shares = (initialCapital * 0.95) / position.entry;
+          const exitReason: BacktestTrade['exitReason'] = exitScore <= 2 ? 'signal_flip' : 'timeout';
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side: 'LONG',
             entry: position.entry, exit: close,
             return: (close - position.entry) * shares,
             returnPercent: ((close - position.entry) / position.entry) * 100,
+            exitReason,
             holdingPeriodDays: barsHeld + 1
           });
           position = null;
@@ -1461,7 +1568,8 @@ function runStrategy(
     }
   }
   
-  return { trades, dates, closes };
+  const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);
+  return { trades: enrichedTrades, dates, closes };
 }
 
 export async function POST(req: NextRequest) {
@@ -1538,13 +1646,14 @@ export async function POST(req: NextRequest) {
     );
     logger.debug(`Backtest complete: ${trades.length} trades executed`);
     const result = buildBacktestEngineResult(trades, dates, initialCapital);
-    const strategyDirection = inferStrategyDirection(strategyDefinition.id, result.trades);
+    const strategyDirection = strategyDefinition.direction ?? inferStrategyDirection(strategyDefinition.id, result.trades);
     const diagnostics = buildBacktestDiagnostics(
       result,
       strategyDirection,
       parsedTimeframe.normalized,
       coverage.bars,
     );
+    const validation = buildValidationPayload(strategyDefinition.id, strategyDirection, result);
 
     logger.info('Backtest completed successfully', { 
       symbol, 
@@ -1571,7 +1680,9 @@ export async function POST(req: NextRequest) {
         minAvailable: coverage.minAvailable,
         maxAvailable: coverage.maxAvailable,
         bars: coverage.bars,
+        provider: priceDataSource,
       },
+      validation,
       strategyProfile: {
         id: strategyDefinition.id,
         label: strategyDefinition.label,

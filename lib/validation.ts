@@ -2,6 +2,7 @@
 // Centralized validation schemas using Zod
 
 import { z } from "zod";
+import { parseTimeframe } from '@/lib/timeframes';
 
 // ============= Common Schemas =============
 import { isBacktestStrategy } from '@/lib/strategies/registry';
@@ -86,8 +87,16 @@ export const backtestTimeframeSchema = z
   .string()
   .min(1)
   .max(24)
-  .regex(/^(daily|\d+\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mon|mons|month|months|y|yr|yrs|year|years))$/i, 'Invalid timeframe format')
-  .transform((value) => value.trim().toLowerCase());
+  .refine((value) => {
+    const trimmed = value.trim().toLowerCase();
+    const isLegacy = ['1min', '5min', '15min', '30min', '60min', 'daily'].includes(trimmed);
+    const isFlexible = /^\d+(min|m|hour|h|day|d)$/i.test(trimmed);
+    return isLegacy || isFlexible;
+  }, 'Invalid timeframe format')
+  .transform((value) => {
+    const parsed = parseTimeframe(value);
+    return parsed?.normalized || value.trim().toLowerCase();
+  });
 
 export const backtestRequestSchema = z.object({
   symbol: symbolSchema,
