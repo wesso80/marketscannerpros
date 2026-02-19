@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { isFreeForAllMode } from '@/lib/entitlements';
 
 export async function POST(req: NextRequest) {
   // Allow running migration with setup key or in FREE_FOR_ALL_MODE
   const { searchParams } = new URL(req.url);
   const setupKey = searchParams.get('key');
   const secret = process.env.CRON_SECRET || process.env.APP_SIGNING_SECRET;
-  const freeForAll = process.env.FREE_FOR_ALL_MODE === 'true';
+  const freeForAll = isFreeForAllMode();
   
   // Allow if: FREE_FOR_ALL_MODE, valid key, or valid auth header
   const authHeader = req.headers.get('authorization');

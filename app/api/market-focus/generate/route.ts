@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import OpenAI from "openai";
 import { q } from "@/lib/db";
+import { isFreeForAllMode } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // Allow up to 60 seconds for generation
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
   
   let authorized = false;
   
-  if (process.env.FREE_FOR_ALL_MODE === "true") {
+  if (isFreeForAllMode()) {
     authorized = true;
   } else if (adminKey && apiKey === adminKey) {
     authorized = true;

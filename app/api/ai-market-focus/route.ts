@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { isFreeForAllMode } from "@/lib/entitlements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,7 +108,7 @@ export async function GET(_req: NextRequest) {
   }
 
   // 2) FREE_FOR_ALL_MODE: show full content including AI explanations to everyone
-  if (process.env.FREE_FOR_ALL_MODE === "true") {
+  if (isFreeForAllMode()) {
     return NextResponse.json(latest);
   }
 

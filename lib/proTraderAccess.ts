@@ -1,5 +1,7 @@
+import { isFreeForAllMode } from '@/lib/entitlements';
+
 export function isTemporaryProTraderBypassActive(nowMs: number = Date.now()): boolean {
-  const freeForAllMode = process.env.FREE_FOR_ALL_MODE === 'true';
+  const freeForAllMode = isFreeForAllMode();
   if (freeForAllMode) return true;
 
   const untilRaw = process.env.PRO_TRADER_BYPASS_UNTIL || process.env.TEMP_PRO_TRADER_BYPASS_UNTIL;
@@ -25,7 +27,7 @@ function logBypassStatusOnce(): void {
   if (state[globalKey]) return;
   state[globalKey] = true;
 
-  const freeForAllMode = process.env.FREE_FOR_ALL_MODE === 'true';
+  const freeForAllMode = isFreeForAllMode();
   const bypassActive = isTemporaryProTraderBypassActive();
   const expiresAt = getBypassExpiryIso();
 
