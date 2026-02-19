@@ -2276,7 +2276,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             </div>
 
-            <div className="-mt-[0.92rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.5rem]">
+            <div className="-mt-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.5rem]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem]">
                   <span className="font-extrabold uppercase tracking-[0.04em] text-slate-400">Dealer Structure:</span>
@@ -2376,7 +2376,7 @@ export default function OptionsConfluenceScanner() {
               {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
             </div>
 
-            <div className={`-mt-[0.85rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
+            <div className={`-mt-[0.35rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.75rem]">
                 <span className="font-extrabold uppercase tracking-[0.05em]">Tradeability State</span>
                 <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 EXECUTABLE' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
@@ -2384,7 +2384,7 @@ export default function OptionsConfluenceScanner() {
             </div>
 
             {isGuidedMode && (
-              <div className="-mt-[0.85rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.55rem]">
+              <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.55rem]">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[0.74rem]">
                   <span className="text-slate-300">Guided mode keeps Analyst sections collapsed for faster decision flow.</span>
                   <button
@@ -2398,7 +2398,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            <div className="-mt-[0.85rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.72rem]">
+            <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.72rem]">
               <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Workflow Layers</div>
               <div className="mt-[0.35rem] grid gap-[0.25rem] text-[0.72rem] text-slate-300 md:grid-cols-2">
                 <div><span className="font-extrabold text-slate-200">Layer 1 — Decision Panel:</span> score, bias, risk, trigger, tradeability</div>
@@ -2407,7 +2407,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             </div>
 
-            <div className="-mt-[0.95rem] flex flex-wrap items-center gap-[0.45rem]">
+            <div className="-mt-[0.45rem] flex flex-wrap items-center gap-[0.45rem]">
               {([
                 { key: 'evidence', label: '1) Evidence', count: `${result.confluenceStack} TF` },
                 { key: 'contracts', label: '2) Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
@@ -2427,7 +2427,7 @@ export default function OptionsConfluenceScanner() {
               ))}
             </div>
 
-            <div className="-mt-[0.65rem] grid gap-[0.45rem]">
+            <div className="-mt-[0.35rem] grid gap-[0.45rem]">
               {([
                 { key: 'evidence', title: '1) Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
                 { key: 'contracts', title: '2) Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
