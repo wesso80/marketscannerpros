@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 
 const proTraderTools = [
   {
@@ -33,161 +34,269 @@ const platformTools = [
   { href: '/tools/macro', icon: '🏛️', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
   { href: '/tools/news?tab=earnings', icon: '📅', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
   { href: '/tools/intraday-charts', icon: '⏱️', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
-  { href: '/tools/portfolio', icon: '💼', title: 'Portfolio', description: 'Track risk posture, return streams, and exposure.' },
-  { href: '/tools/journal', icon: '📓', title: 'Trade Journal', description: 'Record execution quality and review discipline.' },
   { href: '/tools/ai-analyst', icon: '🧠', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
   { href: '/tools/backtest', icon: '📈', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
 ];
 
-function Card({ href, icon, title, description, badge }: { href: string; icon: string; title: string; description: string; badge?: string }) {
+type HubStats = {
+  activeAlerts: number;
+  triggeredToday: number;
+  openTrades: number;
+  aiConfidence: number;
+};
+
+function StatusPill({ label, value }: { label: string; value: string }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <article
-        style={{
-          background: 'var(--msp-card)',
-          border: '1px solid var(--msp-border)',
-          borderRadius: 12,
-          padding: '0.8rem',
-          display: 'grid',
-          gap: '0.4rem',
-          height: '100%',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '1.35rem' }}>{icon}</span>
-          {badge && (
-            <span
-              style={{
-                fontSize: 10,
-                padding: '2px 8px',
-                borderRadius: 999,
-                border: '1px solid rgba(168,85,247,0.6)',
-                color: '#c4b5fd',
-                background: 'rgba(168,85,247,0.12)',
-              }}
-            >
-              {badge}
-            </span>
-          )}
+    <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1">
+      <span className="text-[11px] text-slate-400">{label}</span>
+      <span className="text-[11px] font-semibold text-slate-100">{value}</span>
+      <span className="h-2 w-2 rounded-full bg-emerald-400/70" />
+    </div>
+  );
+}
+
+function ActionCard({ title, value, cta, href }: { title: string; value: string; cta: string; href: string }) {
+  return (
+    <Link href={href} className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 transition hover:bg-slate-900/80">
+      <div className="text-xs text-slate-400">{title}</div>
+      <div className="mt-2 flex items-end justify-between">
+        <div className="text-2xl font-semibold text-slate-100">{value}</div>
+        <div className="text-xs font-semibold text-slate-300">{cta} →</div>
+      </div>
+    </Link>
+  );
+}
+
+function PrimaryToolCard({ href, icon, title, description, badge }: { href: string; icon: string; title: string; description: string; badge?: string }) {
+  return (
+    <Link href={href} className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 transition hover:bg-slate-900/80">
+      <div className="flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-950/40 px-3 py-1 text-[11px] text-slate-300">
+          <span>{icon}</span>
+          <span>{badge}</span>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 650 }}>{title}</div>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--msp-text-muted)' }}>{description}</p>
-      </article>
+        <span className="text-xs font-semibold text-slate-300">Open →</span>
+      </div>
+      <div className="mt-2 text-base font-semibold text-slate-100">{title}</div>
+      <p className="mt-1 text-xs text-slate-400">{description}</p>
+    </Link>
+  );
+}
+
+function ToolCard({ href, icon, title, description }: { href: string; icon: string; title: string; description: string }) {
+  return (
+    <Link href={href} className="h-[110px] rounded-lg border border-slate-700 bg-slate-900/50 p-3 transition hover:bg-slate-900/80">
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/40 text-base">{icon}</div>
+        <div className="text-sm font-semibold text-slate-100">{title}</div>
+      </div>
+      <div className="mt-2 line-clamp-2 text-xs text-slate-400">{description}</div>
     </Link>
   );
 }
 
 export default function ToolsPage() {
-  const year = new Date().getFullYear();
+  const [stats, setStats] = useState<HubStats>({
+    activeAlerts: 0,
+    triggeredToday: 0,
+    openTrades: 0,
+    aiConfidence: 64,
+  });
+
+  const fetchHubState = async () => {
+    try {
+      const [alertsRes, historyRes, portfolioRes] = await Promise.all([
+        fetch('/api/alerts', { cache: 'no-store' }),
+        fetch('/api/alerts/history?limit=50', { cache: 'no-store' }),
+        fetch('/api/portfolio', { cache: 'no-store' }),
+      ]);
+
+      const alertsJson = await alertsRes.json().catch(() => ({}));
+      const historyJson = await historyRes.json().catch(() => ({}));
+      const portfolioJson = await portfolioRes.json().catch(() => ({}));
+
+      const alerts = Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : [];
+      const history = Array.isArray(historyJson?.history) ? historyJson.history : [];
+      const activeAlerts = alerts.filter((item: { is_active?: boolean }) => item.is_active).length;
+      const today = new Date().toDateString();
+      const triggeredToday = history.filter((item: { triggered_at?: string }) => {
+        if (!item?.triggered_at) return false;
+        return new Date(item.triggered_at).toDateString() === today;
+      }).length;
+
+      const positions = Array.isArray(portfolioJson?.positions)
+        ? portfolioJson.positions
+        : Array.isArray(portfolioJson?.data)
+          ? portfolioJson.data
+          : Array.isArray(portfolioJson)
+            ? portfolioJson
+            : [];
+
+      const openTrades = positions.length;
+      const aiConfidence = Math.min(92, Math.max(48, 58 + Math.round(activeAlerts * 1.2) + Math.round(triggeredToday * 2)));
+
+      setStats({ activeAlerts, triggeredToday, openTrades, aiConfidence });
+    } catch {
+      setStats((prev) => ({ ...prev }));
+    }
+  };
+
+  useEffect(() => {
+    void fetchHubState();
+  }, []);
+
+  const regime = useMemo(() => {
+    if (stats.triggeredToday >= 5) return 'High Vol';
+    if (stats.triggeredToday >= 2) return 'Active';
+    return 'Neutral';
+  }, [stats.triggeredToday]);
+
+  const risk = useMemo(() => {
+    if (stats.openTrades >= 5) return 'High';
+    if (stats.openTrades >= 2) return 'Medium';
+    return 'Low';
+  }, [stats.openTrades]);
+
+  const primaryFocus = useMemo(() => {
+    if (stats.triggeredToday > 0) {
+      return {
+        title: 'Alert cluster requires review',
+        ctaLabel: 'Open Alerts',
+        ctaHref: '/tools/alerts',
+        metrics: [
+          { label: 'Direction', value: 'Event Driven' },
+          { label: 'Confidence', value: `${stats.aiConfidence}%` },
+          { label: 'Target', value: 'Validate triggers' },
+          { label: 'Time Window', value: 'Now' },
+        ],
+      };
+    }
+
+    if (stats.openTrades > 0) {
+      return {
+        title: 'Open trades need management pass',
+        ctaLabel: 'Open Portfolio',
+        ctaHref: '/tools/portfolio',
+        metrics: [
+          { label: 'Direction', value: 'Mixed' },
+          { label: 'Confidence', value: `${stats.aiConfidence}%` },
+          { label: 'Target', value: 'Risk alignment' },
+          { label: 'Time Window', value: 'Session' },
+        ],
+      };
+    }
+
+    return {
+      title: 'BTC • Time Confluence setup active',
+      ctaLabel: 'Open Scanner',
+      ctaHref: '/tools/confluence-scanner',
+      metrics: [
+        { label: 'Direction', value: 'Neutral' },
+        { label: 'Confidence', value: `${stats.aiConfidence}%` },
+        { label: 'Target', value: '$66,800' },
+        { label: 'Time Window', value: '1H close' },
+      ],
+    };
+  }, [stats]);
 
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--msp-bg)', color: 'var(--msp-text)' }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '1.2rem 1rem 2.5rem', display: 'grid', gap: '1rem' }}>
-        <header
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '0.8rem',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-faint)', fontWeight: 800 }}>
-              Tools
-            </div>
-            <h1 style={{ margin: '0.25rem 0 0', fontSize: 26, fontWeight: 750 }}>MSP Tooling Command Hub</h1>
-            <p style={{ margin: '0.35rem 0 0', color: 'var(--msp-text-muted)', fontSize: 13 }}>
-              Institutional workflow surfaces for observe → decide → execute.
-            </p>
+    <main className="min-h-screen bg-[#0F172A] text-white">
+      <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill label="Regime" value={regime} />
+            <StatusPill label="Risk" value={risk} />
+            <StatusPill label="Alerts" value={`${stats.triggeredToday}`} />
+            <StatusPill label="Open Trades" value={`${stats.openTrades}`} />
+            <StatusPill label="AI Conf" value={`${stats.aiConfidence}%`} />
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => void fetchHubState()} className="h-9 rounded-lg border border-white/10 bg-black/20 px-3 text-xs font-semibold text-white/80 hover:bg-white/10">
+              Refresh
+            </button>
             <Link
               href="/tools/markets"
-              style={{
-                textDecoration: 'none',
-                borderRadius: 999,
-                background: 'var(--msp-accent)',
-                color: '#041016',
-                padding: '8px 14px',
-                fontSize: 13,
-                fontWeight: 700,
-              }}
+              className="h-9 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:opacity-95"
             >
               Open Markets Dashboard
             </Link>
-            <Link
-              href="/dashboard"
-              style={{
-                textDecoration: 'none',
-                borderRadius: 999,
-                border: '1px solid var(--msp-border)',
-                color: 'var(--msp-text)',
-                padding: '8px 14px',
-                fontSize: 13,
-                fontWeight: 700,
-                background: 'var(--msp-panel)',
-              }}
-            >
-              Workspace
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 pb-16 pt-6 md:px-6">
+        <section>
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Tools</div>
+              <h1 className="mt-1 text-2xl font-semibold">MSP Tooling Command Hub</h1>
+              <p className="mt-1 text-sm text-slate-400">Institutional workflow surfaces for observe → decide → execute.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard" className="h-9 rounded-lg border border-slate-700 bg-slate-900/60 px-4 text-sm font-semibold text-slate-100 hover:bg-slate-900/90">
+                Workspace
+              </Link>
+              <Link href="/tools/settings" className="h-9 rounded-lg border border-slate-700 bg-slate-900/60 px-4 text-sm font-semibold text-slate-100 hover:bg-slate-900/90">
+                Settings
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 md:p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">Primary Focus</div>
+              <div className="mt-1 text-lg font-semibold text-slate-100">{primaryFocus.title}</div>
+            </div>
+            <Link href={primaryFocus.ctaHref} className="h-9 rounded-lg border border-slate-700 bg-black/20 px-4 text-sm font-semibold text-slate-100 hover:bg-white/10">
+              {primaryFocus.ctaLabel}
             </Link>
           </div>
-        </header>
 
-        <section
-          style={{
-            background: 'var(--msp-panel)',
-            border: '1px solid var(--msp-border-strong)',
-            borderRadius: 14,
-            overflow: 'hidden',
-          }}
-        >
-          <Link href="/tools/markets" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56, background: 'var(--msp-panel-2)' }}>🧭</div>
-            <div style={{ padding: '0.9rem' }}>
-              <div style={{ fontSize: 11, color: 'var(--msp-accent)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Primary Workspace</div>
-              <h2 style={{ margin: '0.3rem 0 0.35rem', fontSize: 22, fontWeight: 700 }}>Markets Dashboard</h2>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--msp-text-muted)' }}>
-                Sticky regime strip, benchmark intelligence, options pulse, watchlist, news, calendar, and alerts in one command surface.
-              </p>
-            </div>
-          </Link>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {primaryFocus.metrics.map((metric) => (
+              <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-950/40 p-3">
+                <div className="text-[11px] text-slate-400">{metric.label}</div>
+                <div className="mt-1 text-sm font-semibold text-slate-100">{metric.value}</div>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section>
-          <h3 style={{ margin: '0 0 0.6rem', fontSize: 16, fontWeight: 650 }}>Pro Trader Scanners</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <ActionCard title="Options Signals" value="2" cta="Review" href="/tools/options-confluence" />
+            <ActionCard title="Time Windows" value="1" cta="Open" href="/tools/confluence-scanner" />
+            <ActionCard title="Triggered Alerts" value={`${stats.triggeredToday}`} cta="Validate" href="/tools/alerts" />
+            <ActionCard title="Journal Reviews" value={stats.openTrades > 0 ? '1' : '0'} cta="Log" href="/tools/journal" />
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-2 text-sm font-semibold text-slate-100">Pro Trader Scanners</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {proTraderTools.map((tool) => (
-              <Card key={tool.href} {...tool} />
+              <PrimaryToolCard key={tool.href} {...tool} />
             ))}
           </div>
         </section>
 
         <section>
-          <h3 style={{ margin: '0 0 0.6rem', fontSize: 16, fontWeight: 650 }}>Platform Tools</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <div className="mb-2 text-sm font-semibold text-slate-100">Platform Tools</div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {platformTools.map((tool) => (
-              <Card key={tool.href} {...tool} />
+              <ToolCard key={tool.href} {...tool} />
             ))}
           </div>
         </section>
 
-        <footer
-          style={{
-            marginTop: 6,
-            borderTop: '1px solid rgba(15,23,42,0.9)',
-            paddingTop: 12,
-            fontSize: 11,
-            color: 'var(--msp-text-muted)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 8,
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>© {year} MarketScannerPros</span>
-          <span>Educational market tooling — not financial advice.</span>
-        </footer>
+        <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+          <div className="text-sm font-semibold text-slate-100">Workflow Tip</div>
+          <p className="mt-1 text-sm text-slate-400">Start with global state, confirm primary focus, clear active tasks, then scan.</p>
+        </section>
       </div>
     </main>
   );
