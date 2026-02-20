@@ -161,6 +161,11 @@ type DateAnchorInfo = {
   assetType: 'stock' | 'crypto' | 'unknown';
 };
 
+type AvailableDateRange = {
+  startDate: string;
+  endDate: string;
+};
+
 function BacktestContent() {
   const lastPlanEventKeyRef = useRef('');
   const previousEdgeGroupRef = useRef<EdgeGroupId | null>(null);
@@ -207,6 +212,7 @@ function BacktestContent() {
   const [recommendationMinSignalScore, setRecommendationMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
   const [dateAnchorInfo, setDateAnchorInfo] = useState<DateAnchorInfo | null>(null);
+  const [availableDateRange, setAvailableDateRange] = useState<AvailableDateRange | null>(null);
 
   const workflowId = useMemo(() => {
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
@@ -506,6 +512,7 @@ function BacktestContent() {
     if (normalizedSymbol === lastResolvedSymbolRef.current) return;
 
     let cancelled = false;
+    setAvailableDateRange(null);
 
     const timer = setTimeout(async () => {
       const today = new Date().toISOString().slice(0, 10);
@@ -513,6 +520,7 @@ function BacktestContent() {
       fallbackStart.setUTCFullYear(fallbackStart.getUTCFullYear() - 5);
       const fallbackStartDate = fallbackStart.toISOString().slice(0, 10);
       let coverageStartDate: string | null = null;
+      let coverageEndDate: string | null = null;
 
       try {
         const rangeResponse = await fetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(normalizedSymbol)}`, {
@@ -524,11 +532,16 @@ function BacktestContent() {
         coverageStartDate = typeof rangePayload?.coverage?.startDate === 'string'
           ? rangePayload.coverage.startDate
           : null;
+        coverageEndDate = typeof rangePayload?.coverage?.endDate === 'string'
+          ? rangePayload.coverage.endDate
+          : null;
 
         if (!cancelled && assetType === 'crypto') {
           const resolvedStart = coverageStartDate || fallbackStartDate;
+          const resolvedEnd = coverageEndDate || today;
           setStartDate(resolvedStart);
-          setEndDate(today);
+          setEndDate(resolvedEnd);
+          setAvailableDateRange({ startDate: resolvedStart, endDate: resolvedEnd });
           setDateAnchorInfo({
             source: coverageStartDate ? 'coverage' : 'fallback',
             startDate: resolvedStart,
@@ -548,8 +561,10 @@ function BacktestContent() {
               coverageStartDate && /^\d{4}-\d{2}-\d{2}$/.test(coverageStartDate)
                 ? (coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate)
                 : fallbackStartDate;
+            const resolvedEnd = coverageEndDate || today;
             setStartDate(fallbackStartForEquity);
-            setEndDate(today);
+            setEndDate(resolvedEnd);
+            setAvailableDateRange({ startDate: fallbackStartForEquity, endDate: resolvedEnd });
             setDateAnchorInfo({
               source: coverageStartDate ? 'coverage' : 'fallback',
               startDate: fallbackStartForEquity,
@@ -571,17 +586,20 @@ function BacktestContent() {
 
         if (ipoDate) {
           setStartDate(ipoDate);
+          setAvailableDateRange({ startDate: ipoDate, endDate: coverageEndDate || today });
           setDateAnchorInfo({ source: 'ipo', startDate: ipoDate, assetType: 'stock' });
         } else if (coverageStartDate) {
           const resolvedStart = coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate;
           setStartDate(resolvedStart);
+          setAvailableDateRange({ startDate: resolvedStart, endDate: coverageEndDate || today });
           setDateAnchorInfo({ source: 'coverage', startDate: resolvedStart, assetType: 'stock' });
         } else {
           setStartDate(fallbackStartDate);
+          setAvailableDateRange({ startDate: fallbackStartDate, endDate: today });
           setDateAnchorInfo({ source: 'fallback', startDate: fallbackStartDate, assetType: 'stock' });
         }
 
-        setEndDate(today);
+        setEndDate(coverageEndDate || today);
         lastResolvedSymbolRef.current = normalizedSymbol;
       } catch {
         if (cancelled) return;
@@ -589,8 +607,10 @@ function BacktestContent() {
           coverageStartDate && /^\d{4}-\d{2}-\d{2}$/.test(coverageStartDate)
             ? (coverageStartDate < fallbackStartDate ? coverageStartDate : fallbackStartDate)
             : fallbackStartDate;
+        const resolvedEnd = coverageEndDate || today;
         setStartDate(fallbackStartForEquity);
-        setEndDate(today);
+        setEndDate(resolvedEnd);
+        setAvailableDateRange({ startDate: fallbackStartForEquity, endDate: resolvedEnd });
         setDateAnchorInfo({
           source: coverageStartDate ? 'coverage' : 'fallback',
           startDate: fallbackStartForEquity,
@@ -663,6 +683,12 @@ function BacktestContent() {
     const start = new Date(`${from}T00:00:00Z`).getTime();
     const end = new Date(`${to}T00:00:00Z`).getTime();
     return Math.floor((end - start) / 86400000) + 1;
+  };
+
+  const applyMaximumAvailableRange = () => {
+    if (!availableDateRange) return;
+    setStartDate(availableDateRange.startDate);
+    setEndDate(availableDateRange.endDate);
   };
 
   const resolveMinimumScanTrades = () => Math.max(1, Math.floor(Number(minimumScanTrades) || 1));
@@ -1392,7 +1418,10 @@ function BacktestContent() {
               </label>
               <input
                 value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
+                onChange={(e) => {
+                  setTimeframe(e.target.value);
+                  applyMaximumAvailableRange();
+                }}
                 onWheel={(e) => e.currentTarget.blur()}
                 list="backtest-timeframe-options"
                 placeholder="e.g. 6m, 12m, 1h, daily"
@@ -1425,7 +1454,10 @@ function BacktestContent() {
                   <button
                     key={tf}
                     type="button"
-                    onClick={() => setTimeframe(tf)}
+                    onClick={() => {
+                      setTimeframe(tf);
+                      applyMaximumAvailableRange();
+                    }}
                     style={{
                       padding: '4px 8px',
                       borderRadius: '999px',
@@ -1456,6 +1488,8 @@ function BacktestContent() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                min={availableDateRange?.startDate}
+                max={availableDateRange?.endDate}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -1476,6 +1510,8 @@ function BacktestContent() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                min={availableDateRange?.startDate}
+                max={availableDateRange?.endDate}
                 style={{
                   width: '100%',
                   padding: '10px 12px',
@@ -1520,6 +1556,11 @@ function BacktestContent() {
                   Asset: {dateAnchorInfo?.assetType || 'unknown'}
                 </span>
               </div>
+              {availableDateRange && (
+                <p style={{ fontSize: '11px', color: '#10b981', marginTop: '6px' }}>
+                  Max available range for selected timeframe: {availableDateRange.startDate} → {availableDateRange.endDate}
+                </p>
+              )}
             </div>
 
             <div>
