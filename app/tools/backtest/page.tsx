@@ -196,6 +196,7 @@ function BacktestContent() {
   const [timeframeScanResults, setTimeframeScanResults] = useState<TimeframeScanResult[]>([]);
   const [timeframeScanError, setTimeframeScanError] = useState<string | null>(null);
   const [universeSymbolsInput, setUniverseSymbolsInput] = useState('SPY, QQQ, AAPL, MSFT, NVDA, TSLA, AMZN, META');
+  const [minimumScanTrades, setMinimumScanTrades] = useState(5);
   const [isScanningUniverse, setIsScanningUniverse] = useState(false);
   const [universeScanResults, setUniverseScanResults] = useState<UniverseScanResult[]>([]);
   const [universeScanError, setUniverseScanError] = useState<string | null>(null);
@@ -664,6 +665,8 @@ function BacktestContent() {
     return Math.floor((end - start) / 86400000) + 1;
   };
 
+  const resolveMinimumScanTrades = () => Math.max(1, Math.floor(Number(minimumScanTrades) || 1));
+
   const isReplayStrategy =
     strategy === 'brain_signal_replay' ||
     strategy === 'options_signal_replay' ||
@@ -754,7 +757,7 @@ function BacktestContent() {
       'daily',
       '1w',
     ]));
-    const minimumTradesForLeaderboard = 5;
+    const minimumTradesForLeaderboard = resolveMinimumScanTrades();
 
     setIsScanningTimeframes(true);
     setTimeframeScanError(null);
@@ -853,7 +856,7 @@ function BacktestContent() {
 
     const maxCombos = 60;
     const concurrency = 6;
-    const minimumTradesForLeaderboard = 5;
+    const minimumTradesForLeaderboard = resolveMinimumScanTrades();
 
     setIsScanningUniverse(true);
     setUniverseScanError(null);
@@ -1537,6 +1540,28 @@ function BacktestContent() {
                   fontSize: '14px'
                 }}
                 placeholder="10000"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
+                Min Trades (Scan Leaderboards)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={200}
+                value={minimumScanTrades}
+                onChange={(e) => setMinimumScanTrades(Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: '6px',
+                  color: '#f1f5f9',
+                  fontSize: '14px'
+                }}
               />
             </div>
 
