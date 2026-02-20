@@ -166,7 +166,7 @@ type AvailableDateRange = {
   endDate: string;
 };
 
-const TOP_MARKET_CAP_STOCKS_AND_CRYPTO = [
+const TOP_MARKET_CAP_STOCKS = [
   'AAPL',
   'MSFT',
   'NVDA',
@@ -177,8 +177,9 @@ const TOP_MARKET_CAP_STOCKS_AND_CRYPTO = [
   'AVGO',
   'LLY',
   'JPM',
-  'BTCUSD',
 ].join(', ');
+
+const TOP_MARKET_CAP_CRYPTO = 'BTCUSD';
 
 function BacktestContent() {
   const lastPlanEventKeyRef = useRef('');
@@ -895,8 +896,8 @@ function BacktestContent() {
     await runBacktest({ timeframe: best.timeframe });
   };
 
-  const parseUniverseSymbols = () => {
-    const parsed = universeSymbolsInput
+  const parseUniverseSymbols = (input: string = universeSymbolsInput) => {
+    const parsed = input
       .split(',')
       .map((value) => value.trim().toUpperCase())
       .filter((value) => value.length > 0);
@@ -904,8 +905,8 @@ function BacktestContent() {
     return Array.from(new Set(parsed));
   };
 
-  const scanBestUniversePair = async () => {
-    const symbols = parseUniverseSymbols();
+  const scanBestUniversePair = async (universeOverride?: string) => {
+    const symbols = parseUniverseSymbols(universeOverride ?? universeSymbolsInput);
     if (symbols.length === 0) {
       setUniverseScanError('Please enter at least one symbol in the universe list.');
       return;
@@ -1004,9 +1005,14 @@ function BacktestContent() {
     await runBacktest({ symbol: best.symbol, timeframe: best.timeframe });
   };
 
-  const scanTopMarketCapUniverse = async () => {
-    setUniverseSymbolsInput(TOP_MARKET_CAP_STOCKS_AND_CRYPTO);
-    await scanBestUniversePair();
+  const scanTopMarketCapStocks = async () => {
+    setUniverseSymbolsInput(TOP_MARKET_CAP_STOCKS);
+    await scanBestUniversePair(TOP_MARKET_CAP_STOCKS);
+  };
+
+  const scanTopMarketCapCrypto = async () => {
+    setUniverseSymbolsInput(TOP_MARKET_CAP_CRYPTO);
+    await scanBestUniversePair(TOP_MARKET_CAP_CRYPTO);
   };
 
   const runBacktest = async (overrides?: {
@@ -1766,7 +1772,7 @@ function BacktestContent() {
 
             <button
               type="button"
-              onClick={scanTopMarketCapUniverse}
+              onClick={scanTopMarketCapStocks}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse}
               style={{
                 flex: '1 1 260px',
@@ -1781,7 +1787,27 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
-              🌍 Scan Top 10 Stocks + BTC
+              🏛️ Scan Top 10 Stocks
+            </button>
+
+            <button
+              type="button"
+              onClick={scanTopMarketCapCrypto}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse}
+              style={{
+                flex: '1 1 220px',
+                padding: '10px 12px',
+                background: 'rgba(217,70,239,0.15)',
+                border: '1px solid rgba(217,70,239,0.35)',
+                borderRadius: '8px',
+                color: '#f0abfc',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
+              }}
+            >
+              🪙 Scan Crypto (BTC)
             </button>
 
             <button
