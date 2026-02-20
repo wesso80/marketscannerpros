@@ -771,8 +771,8 @@ export default function IntradayChartsPage() {
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        <div className="mb-3 flex items-center justify-between gap-4">
+      <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
           <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
             ← Dashboard
@@ -780,7 +780,7 @@ export default function IntradayChartsPage() {
         </div>
 
         {stats && (
-          <div className="mb-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="grid gap-2 lg:grid-cols-4">
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Permission To Trade</div>
@@ -821,7 +821,7 @@ export default function IntradayChartsPage() {
           </div>
         )}
 
-        <div className="mb-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+        <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg bg-slate-800 p-1">
@@ -875,7 +875,7 @@ export default function IntradayChartsPage() {
             </form>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-1">
             {(assetType === 'stocks' ? POPULAR_STOCKS : POPULAR_CRYPTO).slice(0, 8).map((item) => (
               <button
                 key={item.symbol}
@@ -883,12 +883,12 @@ export default function IntradayChartsPage() {
                   setSearchInput(item.symbol);
                   fetchData(item.symbol, interval);
                 }}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                   symbol === item.symbol
                     ? assetType === 'crypto'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
+                      ? 'border-orange-400 bg-orange-500/10 text-orange-200'
+                      : 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
+                    : 'border-slate-700 text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 {item.symbol}
@@ -911,10 +911,10 @@ export default function IntradayChartsPage() {
         )}
 
         {data && stats && (
-          <div className="grid gap-3 xl:grid-cols-3">
-            <div className="xl:col-span-2 space-y-3">
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="grid gap-2 xl:grid-cols-3">
+            <div className="xl:col-span-2 space-y-2">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-xs uppercase tracking-wide text-slate-400">{data.symbol}</div>
                     <div className="flex items-center gap-3">
@@ -955,7 +955,7 @@ export default function IntradayChartsPage() {
                   </div>
                 </div>
 
-                <div className="mb-2 flex flex-wrap items-center gap-2 border-t border-slate-700 pt-3">
+                <div className="mb-1 flex flex-wrap items-center gap-2 border-t border-slate-700 pt-2">
                   <span className="mr-1 text-xs text-gray-400">Overlays</span>
                   <button
                     onClick={() => toggleIndicator('ema9')}
@@ -1027,7 +1027,7 @@ export default function IntradayChartsPage() {
                   )}
                 </div>
 
-                <div className="overflow-x-auto pt-2">
+                <div className="overflow-x-auto pt-1">
                   <CandlestickChart
                     data={data.data}
                     width={Math.max(800, data.data.length * 8)}
@@ -1037,7 +1037,7 @@ export default function IntradayChartsPage() {
                     dealerOverlay={dealerOverlay}
                   />
                 </div>
-                <div className="mt-3 overflow-x-auto">
+                <div className="mt-2 overflow-x-auto">
                   <VolumeChart
                     data={data.data}
                     width={Math.max(800, data.data.length * 8)}
@@ -1047,8 +1047,8 @@ export default function IntradayChartsPage() {
               </div>
             </div>
 
-            <div className="space-y-3 xl:sticky xl:top-20 self-start">
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+            <div className="space-y-2 xl:sticky xl:top-20 self-start">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Context</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
@@ -1110,7 +1110,7 @@ export default function IntradayChartsPage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Actions</div>
                 <ExplorerActionGrid
                   assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
@@ -1126,7 +1126,7 @@ export default function IntradayChartsPage() {
           </div>
         )}
 
-        <details className="mt-6 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+        <details className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <summary className="cursor-pointer list-none text-sm font-medium text-slate-200">
             Help & methodology
           </summary>
