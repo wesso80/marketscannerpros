@@ -437,6 +437,37 @@ interface OptionsSetup {
     most_likely_path: string[];
     risk: string[];
   };
+  universalScoringV21?: {
+    version: 'msp.score.v2.1';
+    mode: 'options_scanner';
+    timeGate?: {
+      permission: 'ALLOW' | 'WAIT' | 'BLOCK';
+      quality: number;
+    };
+    topCandidates?: Array<{
+      permission: {
+        state: 'ALLOW' | 'WAIT' | 'BLOCK';
+        blockers: string[];
+        warnings: string[];
+      };
+      scores: {
+        context: number;
+        setup: number;
+        execution: number;
+        confidence: number;
+        quality: 'low' | 'medium' | 'high';
+        tfConfluenceScore: number;
+        timeWindowFit?: number;
+      };
+      features: {
+        context: Record<string, number>;
+        execution: Record<string, number>;
+      };
+      explain: {
+        bullets: string[];
+      };
+    }>;
+  };
 }
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -1318,6 +1349,48 @@ export default function OptionsConfluenceScanner() {
       ? 'BLOCKED'
       : (commandStatus === 'ACTIVE' ? 'ALLOWED' : 'WAIT');
 
+  const universalTopCandidate = result?.universalScoringV21?.topCandidates?.[0];
+  const contextScore = Math.max(0, Math.min(100, Math.round(
+    universalTopCandidate?.scores?.context
+      ?? (result?.aiMarketState?.regime?.confidence ?? 55)
+  )));
+  const setupScore = Math.max(0, Math.min(100, Math.round(
+    universalTopCandidate?.scores?.setup
+      ?? (result?.compositeScore?.confidence ?? 50)
+  )));
+  const executionScore = Math.max(0, Math.min(100, Math.round(
+    universalTopCandidate?.scores?.execution
+      ?? (result?.tradeLevels ? 66 : 44)
+  )));
+  const unifiedConfidence = Math.max(1, Math.min(99, Math.round(
+    universalTopCandidate?.scores?.confidence
+      ?? (result?.compositeScore?.confidence ?? 50)
+  )));
+  const unifiedPermission = universalTopCandidate?.permission?.state
+    ? universalTopCandidate.permission.state
+    : (tradePermission === 'ALLOWED' ? 'ALLOW' : tradePermission === 'BLOCKED' ? 'BLOCK' : 'WAIT');
+  const unifiedQuality = universalTopCandidate?.scores?.quality
+    ? universalTopCandidate.scores.quality.toUpperCase()
+    : qualityTierFromConfidence(unifiedConfidence) === 'A'
+      ? 'HIGH'
+      : qualityTierFromConfidence(unifiedConfidence) === 'B'
+        ? 'MEDIUM'
+        : 'LOW';
+
+  const layerMetricVolFit = universalTopCandidate?.features?.context?.volFit;
+  const layerMetricRegime = universalTopCandidate?.features?.context?.underlyingRegimeAlignment;
+  const layerMetricLiquidity = universalTopCandidate?.features?.context?.liquidityHealth;
+  const layerMetricFill = universalTopCandidate?.features?.execution?.fillQuality;
+  const layerMetricTimeFit = universalTopCandidate?.scores?.timeWindowFit;
+  const deploymentReasons = (
+    universalTopCandidate
+      ? [
+          ...(universalTopCandidate.permission.blockers || []).map((reason) => reason.replaceAll('_', ' ')),
+          ...(universalTopCandidate.permission.warnings || []).map((reason) => reason.replaceAll('_', ' ')),
+        ]
+      : decisionReasons
+  ).filter(Boolean).slice(0, 3);
+
   const dealerGamma = result?.dealerGamma;
   const dealerRegimeLabel = !dealerGamma
     ? 'N/A'
@@ -2112,7 +2185,7 @@ export default function OptionsConfluenceScanner() {
           <CommandStrip
             symbol={result.symbol}
             status={commandStatus}
-            confidence={result.compositeScore?.confidence ?? 0}
+            confidence={unifiedConfidence}
             dataHealth={`${dataHealth}${(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? ' ✔' : ''}`}
             mode={adaptiveModeMeta.label}
             density={density}
@@ -2132,7 +2205,7 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{commandStatus}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
@@ -2930,8 +3003,23 @@ export default function OptionsConfluenceScanner() {
 
             {/* Institutional Header Layer (3-second trader test) */}
             <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem] shadow-[var(--msp-shadow)]">
-              <div className="mb-[0.6rem] text-[0.72rem] font-extrabold uppercase tracking-[0.45px] text-[var(--msp-muted)]">
-                Institutional State
+              <div className="mb-[0.6rem] flex flex-wrap items-center justify-between gap-2 text-[0.72rem] font-extrabold uppercase tracking-[0.45px] text-[var(--msp-muted)]">
+                <span>Context Layer</span>
+                <span className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.67rem] text-slate-300">Context Score {contextScore}</span>
+              </div>
+              <div className="mb-[0.55rem] grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
+                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Vol Fit</div>
+                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricVolFit === 'number' ? layerMetricVolFit.toFixed(2) : '—'}</div>
+                </div>
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
+                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Regime Align</div>
+                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricRegime === 'number' ? layerMetricRegime.toFixed(2) : '—'}</div>
+                </div>
+                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
+                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Liquidity Health</div>
+                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricLiquidity === 'number' ? layerMetricLiquidity.toFixed(2) : '—'}</div>
+                </div>
               </div>
               <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
                 <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
@@ -2944,13 +3032,13 @@ export default function OptionsConfluenceScanner() {
                 </div>
                 <div className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.5rem_0.6rem] shadow-[var(--msp-shadow)]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Trade Permission</div>
-                  <div className={`font-black ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
-                    {tradePermission}
+                  <div className={`font-black ${unifiedPermission === 'ALLOW' ? 'text-emerald-500' : unifiedPermission === 'BLOCK' ? 'text-red-500' : 'text-amber-500'}`}>
+                    {unifiedPermission}
                   </div>
                 </div>
                 <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                  <div className="text-[0.85rem] font-extrabold text-slate-200">{unifiedConfidence.toFixed(0)}%</div>
                 </div>
                 <div className="rounded-[10px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.5rem_0.6rem]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Dealer Context</div>
@@ -2986,8 +3074,32 @@ export default function OptionsConfluenceScanner() {
                   <div><span className="font-bold uppercase text-slate-500">Setup Type:</span> <span className="font-extrabold text-slate-50">{setupLabel || 'Awaiting Confirmation'}</span></div>
                 </div>
                 <div className={`min-w-[190px] justify-self-end rounded-[10px] p-[0.45rem_0.6rem] text-right ${commandStatusToneCardClass}`}>
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence Score</div>
-                  <div className={`text-[1.15rem] font-black ${commandStatusClass}`}>{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
+                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Setup Score</div>
+                  <div className={`text-[1.15rem] font-black ${commandStatusClass}`}>{setupScore}%</div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.6rem_0.7rem]">
+                <div className="mb-1 text-[0.66rem] font-bold uppercase text-slate-400">Execution Layer</div>
+                <div className="grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                  <div className="text-[0.78rem] text-slate-200">Execution Score <span className="font-black">{executionScore}</span></div>
+                  <div className="text-[0.78rem] text-slate-200">Fill Quality <span className="font-black">{typeof layerMetricFill === 'number' ? layerMetricFill.toFixed(2) : '—'}</span></div>
+                  <div className="text-[0.78rem] text-slate-200">Time Fit <span className="font-black">{typeof layerMetricTimeFit === 'number' ? layerMetricTimeFit.toFixed(2) : '—'}</span></div>
+                </div>
+              </div>
+
+              <div className={`rounded-xl border p-[0.7rem_0.75rem] ${unifiedPermission === 'ALLOW' ? 'border-emerald-500/40 bg-emerald-500/10' : unifiedPermission === 'BLOCK' ? 'border-red-500/40 bg-red-500/10' : 'border-amber-500/40 bg-amber-500/10'}`}>
+                <div className="mb-[0.35rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">MSP Deployment Status</div>
+                <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+                  <div className="text-[0.8rem] text-slate-100">Permission: <span className="font-black">{unifiedPermission}</span></div>
+                  <div className="text-[0.8rem] text-slate-100">Confidence: <span className="font-black">{unifiedConfidence}%</span></div>
+                  <div className="text-[0.8rem] text-slate-100">Quality: <span className="font-black">{unifiedQuality}</span></div>
+                  <div className="text-[0.8rem] text-slate-100">Context/Setup/Execution: <span className="font-black">{contextScore}/{setupScore}/{executionScore}</span></div>
+                </div>
+                <div className="mt-[0.45rem] grid gap-1 text-[0.74rem] text-slate-300">
+                  {deploymentReasons.length > 0
+                    ? deploymentReasons.map((reason, idx) => (<div key={idx}>• {reason}</div>))
+                    : <div>• No blockers. Execution profile is clean.</div>}
                 </div>
               </div>
 

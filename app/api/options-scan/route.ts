@@ -8,6 +8,67 @@ import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
+import { AVOptionRow, scoreOptionCandidatesV21 } from '@/lib/scoring/options-v21';
+
+const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
+
+async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Promise<{
+  rows: AVOptionRow[];
+  provider: 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS' | 'none';
+  warnings: string[];
+}> {
+  if (!ALPHA_VANTAGE_KEY) {
+    return { rows: [], provider: 'none', warnings: ['missing_alpha_vantage_key'] };
+  }
+
+  const providers = AV_OPTIONS_REALTIME_ENABLED
+    ? ['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']
+    : ['HISTORICAL_OPTIONS'];
+
+  const warnings: string[] = [];
+  for (const fn of providers) {
+    const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_KEY}`;
+    const response = await fetch(url);
+    const payload = await response.json();
+
+    if (payload?.['Error Message']) {
+      warnings.push(`${fn}:error_message`);
+      continue;
+    }
+    if (payload?.['Note']) {
+      warnings.push(`${fn}:note`);
+      continue;
+    }
+    if (payload?.['Information']) {
+      warnings.push(`${fn}:information`);
+      continue;
+    }
+
+    const data = Array.isArray(payload?.data) ? payload.data as AVOptionRow[] : [];
+    if (!data.length) {
+      warnings.push(`${fn}:empty_data`);
+      continue;
+    }
+
+    const rows = expirationDate
+      ? data.filter((row) => String(row.expiration || '') === expirationDate)
+      : data;
+
+    if (!rows.length) {
+      warnings.push(`${fn}:expiry_filter_empty`);
+      continue;
+    }
+
+    return {
+      rows,
+      provider: fn as 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS',
+      warnings,
+    };
+  }
+
+  return { rows: [], provider: 'none', warnings };
+}
 
 // NOTE: In-memory cache doesn't persist across serverless invocations
 // Each request fetches fresh data (75 calls/min on premium is sufficient)
@@ -30,6 +91,10 @@ export async function POST(request: NextRequest) {
     const playbook = String(body?.playbook || 'momentum_pullback').toLowerCase().trim();
     const direction: 'long' | 'short' =
       String(body?.direction || 'long').toLowerCase() === 'short' ? 'short' : 'long';
+    const timePermissionRaw = String(body?.timePermission || body?.timeScanner?.permission || 'ALLOW').toUpperCase();
+    const timePermission = timePermissionRaw === 'BLOCK' ? 'BLOCK' : timePermissionRaw === 'WAIT' ? 'WAIT' : 'ALLOW';
+    const timeQualityRaw = Number(body?.timeQuality ?? body?.timeScanner?.quality ?? 100);
+    const timeQuality = Number.isFinite(timeQualityRaw) ? Math.max(0, Math.min(100, timeQualityRaw)) : 100;
     
     if (!symbol) {
       return NextResponse.json({
@@ -239,6 +304,39 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    const rawOptions = await fetchRawOptionsRows(symbol.toUpperCase(), expirationDate);
+    const lastUpdated = analysis.dataQuality?.lastUpdated ? Date.parse(analysis.dataQuality.lastUpdated) : Number.NaN;
+    const staleSeconds = Number.isFinite(lastUpdated)
+      ? Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))
+      : 9999;
+    const tfConfluenceScoreRaw = Number(analysis.compositeScore?.alignedWeightPct ?? analysis.compositeScore?.confidence ?? 50);
+    const tfConfluenceScore = Number.isFinite(tfConfluenceScoreRaw) ? Math.max(0, Math.min(100, tfConfluenceScoreRaw)) : 50;
+    const regimeAlignment = analysis.aiMarketState?.tradeQualityGate === 'HIGH'
+      ? 0.9
+      : analysis.aiMarketState?.tradeQualityGate === 'MODERATE'
+        ? 0.7
+        : analysis.aiMarketState?.tradeQualityGate === 'LOW'
+          ? 0.5
+          : 0.4;
+    const macroRisk = (analysis.disclaimerFlags || []).some((flag) => /earnings|fomc|cpi|event|volatility/i.test(flag)) ? 0.35 : 0.8;
+
+    const scoredOptionCandidatesV21 = scoreOptionCandidatesV21({
+      symbol: symbol.toUpperCase(),
+      timeframe: scanMode,
+      spot: Number(analysis.currentPrice || 0),
+      expectedMovePct: Number(analysis.expectedMove?.selectedExpiryPercent || 3),
+      ivRank: Number(analysis.ivAnalysis?.ivRank ?? analysis.ivAnalysis?.ivRankHeuristic ?? 50),
+      marketDirection: analysis.direction === 'bullish' ? 'bullish' : analysis.direction === 'bearish' ? 'bearish' : 'neutral',
+      marketRegimeAlignment: regimeAlignment,
+      tfConfluenceScore,
+      staleSeconds,
+      freshness: analysis.dataQuality?.freshness || 'STALE',
+      macroRisk,
+      optionsRows: rawOptions.rows,
+      timePermission,
+      timeQuality,
+    });
+
     console.log(`✅ Options scan complete: ${symbol.toUpperCase()} - ${analysis.direction} signal, Grade: ${analysis.tradeQuality}`);
     
     return NextResponse.json({
@@ -253,6 +351,21 @@ export async function POST(request: NextRequest) {
         capitalFlow,
         dealerGamma,
         dealerIntelligence,
+        universalScoringV21: {
+          version: 'msp.score.v2.1',
+          mode: 'options_scanner',
+          timeGate: {
+            permission: timePermission,
+            quality: timeQuality,
+          },
+          topCandidates: scoredOptionCandidatesV21.slice(0, 12),
+          diagnostics: {
+            optionsProvider: rawOptions.provider,
+            warnings: rawOptions.warnings,
+            staleSeconds,
+            tfConfluenceScore,
+          },
+        },
       },
       dataSources: {
         underlyingPrice: analysis.assetType === 'crypto' ? 'coingecko' : 'alpha_vantage',

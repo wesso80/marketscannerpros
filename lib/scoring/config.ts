@@ -1,0 +1,13 @@
+export const GATE_MULTIPLIER = {
+  ALLOW: 1.0,
+  WAIT: 0.72,
+  BLOCK: 0.35,
+} as const;
+
+export const OPTIONS_SCORING_THRESHOLDS = {
+  MAX_SPREAD_PCT: 8,
+  MIN_OI: 50,
+  MIN_VOL: 5,
+  MIN_CREDIT_TO_RISK: 0.08,
+  MAX_STALE_SEC_REALTIME: 180,
+} as const;
