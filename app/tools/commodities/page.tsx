@@ -81,6 +81,15 @@ export default function CommoditiesPage() {
     }
   }, []);
 
+  const safeNumber = (value: unknown): number | null => {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+
+  const safeFixed = (value: unknown, digits = 2, fallback = 'N/A'): string => {
+    const num = safeNumber(value);
+    return num === null ? fallback : num.toFixed(digits);
+  };
+
   useEffect(() => {
     fetchCommodities();
     
@@ -95,10 +104,14 @@ export default function CommoditiesPage() {
   useEffect(() => {
     if (data) {
       const commoditySymbols = data.commodities.map(c => c.symbol);
+      const topGainerName = data.summary?.topGainer?.name || 'N/A';
+      const topLoserName = data.summary?.topLoser?.name || 'N/A';
+      const topGainerPct = safeFixed(data.summary?.topGainer?.changePercent, 2);
+      const topLoserPct = safeFixed(data.summary?.topLoser?.changePercent, 2);
       const summaryText = data.summary ? 
         `Commodities: ${data.summary.gainers} gainers, ${data.summary.losers} losers. ` +
-        `Top Gainer: ${data.summary.topGainer?.name} (+${data.summary.topGainer?.changePercent.toFixed(2)}%). ` +
-        `Top Loser: ${data.summary.topLoser?.name} (${data.summary.topLoser?.changePercent.toFixed(2)}%)` : 
+        `Top Gainer: ${topGainerName} (+${topGainerPct}%). ` +
+        `Top Loser: ${topLoserName} (${topLoserPct}%)` : 
         'Loading commodity data...';
       
       setPageData({
@@ -120,15 +133,18 @@ export default function CommoditiesPage() {
   ) || [];
 
   const formatPrice = (price: number, unit: string) => {
+    const numericPrice = safeNumber(price) ?? 0;
     if (unit.includes('cents')) {
-      return `${price.toFixed(2)}¢`;
+      return `${numericPrice.toFixed(2)}¢`;
     }
-    return `$${price.toFixed(2)}`;
+    return `$${numericPrice.toFixed(2)}`;
   };
 
   const formatChange = (change: number, changePercent: number) => {
-    const sign = change >= 0 ? '+' : '';
-    return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
+    const numericChange = safeNumber(change) ?? 0;
+    const numericChangePercent = safeNumber(changePercent) ?? 0;
+    const sign = numericChange >= 0 ? '+' : '';
+    return `${sign}${numericChange.toFixed(2)} (${sign}${numericChangePercent.toFixed(2)}%)`;
   };
 
   // Gate for Pro+ users
@@ -237,7 +253,7 @@ export default function CommoditiesPage() {
                 <div>
                   <div style={{ fontWeight: 600, color: '#22c55e' }}>{data.summary.topGainer.name}</div>
                   <div style={{ color: '#22c55e', fontSize: '0.9rem' }}>
-                    +{data.summary.topGainer.changePercent.toFixed(2)}%
+                    +{safeFixed(data.summary.topGainer.changePercent, 2, '0.00')}%
                   </div>
                 </div>
               </div>
@@ -258,7 +274,7 @@ export default function CommoditiesPage() {
                 <div>
                   <div style={{ fontWeight: 600, color: '#ef4444' }}>{data.summary.topLoser.name}</div>
                   <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>
-                    {data.summary.topLoser.changePercent.toFixed(2)}%
+                    {safeFixed(data.summary.topLoser.changePercent, 2, '0.00')}%
                   </div>
                 </div>
               </div>
@@ -296,9 +312,9 @@ export default function CommoditiesPage() {
             <div style={{ 
               fontWeight: 600, 
               fontSize: '1.25rem',
-              color: data.summary.avgChange >= 0 ? '#22c55e' : '#ef4444'
+              color: (safeNumber(data.summary.avgChange) ?? 0) >= 0 ? '#22c55e' : '#ef4444'
             }}>
-              {data.summary.avgChange >= 0 ? '+' : ''}{data.summary.avgChange.toFixed(2)}%
+              {(safeNumber(data.summary.avgChange) ?? 0) >= 0 ? '+' : ''}{safeFixed(data.summary.avgChange, 2, '0.00')}%
             </div>
           </div>
         </div>
@@ -378,7 +394,8 @@ export default function CommoditiesPage() {
         gap: '1rem' 
       }}>
         {filteredCommodities.map((commodity) => {
-          const isPositive = commodity.changePercent >= 0;
+          const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
+          const isPositive = safeCommodityChangePercent >= 0;
           const catConfig = CATEGORY_CONFIG[commodity.category as keyof typeof CATEGORY_CONFIG];
           
           return (
