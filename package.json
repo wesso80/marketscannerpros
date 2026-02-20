@@ -23,7 +23,8 @@
     "worker:upe:global": "npx tsx worker/upe-global-regime.ts",
     "worker:upe:global:open": "npx tsx worker/upe-global-regime.ts --type=open",
     "worker:upe:global:close": "npx tsx worker/upe-global-regime.ts --type=close",
-    "worker:upe:global:dry": "npx tsx worker/upe-global-regime.ts --type=open --dry-run"
+    "worker:upe:global:dry": "npx tsx worker/upe-global-regime.ts --type=open --dry-run",
+    "worker:upe:crcs:hourly": "npx tsx worker/upe-crcs-hourly.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

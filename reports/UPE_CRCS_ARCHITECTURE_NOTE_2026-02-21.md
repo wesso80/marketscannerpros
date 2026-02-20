@@ -104,6 +104,11 @@ Tenant overlays cannot:
 6. Add blocked-action disabled tooltip behavior.
 7. Add explorer deployment/relative view consumption.
 
+## Implementation Status
+- ✅ Phase A complete: schema + global snapshot worker.
+- ✅ Phase B baseline complete: hourly CRCS base worker (`worker/upe-crcs-hourly.ts`) writing `crcs_hourly_base` and `micro_regime_snapshots`.
+- ⏳ Pending: scheduler wiring at `:05 ET`, UPE read endpoints, Movers consumption.
+
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`
 - Rollback command:
