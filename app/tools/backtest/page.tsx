@@ -849,7 +849,7 @@ function BacktestContent() {
     ]));
 
     const maxCombos = 60;
-    let testedCombos = 0;
+    const concurrency = 6;
 
     setIsScanningUniverse(true);
     setUniverseScanError(null);
@@ -859,18 +859,15 @@ function BacktestContent() {
     try {
       const rows: UniverseScanResult[] = [];
 
-      for (const scanSymbol of symbols) {
-        for (const tf of candidateTimeframes) {
-          if (testedCombos >= maxCombos) break;
+      const combos = symbols
+        .flatMap((scanSymbol) => candidateTimeframes.map((tf) => ({ scanSymbol, tf })))
+        .filter(({ tf }) => baselineRangeDays >= getMinimumDaysForTimeframe(tf))
+        .slice(0, maxCombos);
 
-          const minDays = getMinimumDaysForTimeframe(tf);
-          if (baselineRangeDays < minDays) {
-            continue;
-          }
-
-          testedCombos += 1;
-
-          try {
+      for (let i = 0; i < combos.length; i += concurrency) {
+        const batch = combos.slice(i, i + concurrency);
+        const settled = await Promise.allSettled(
+          batch.map(async ({ scanSymbol, tf }) => {
             const result = await requestBacktest({
               symbol: scanSymbol,
               strategy,
@@ -886,7 +883,7 @@ function BacktestContent() {
               (result.profitFactor * 8) -
               (result.maxDrawdown * 0.3);
 
-            rows.push({
+            return {
               symbol: scanSymbol,
               timeframe: tf,
               totalReturn: result.totalReturn,
@@ -895,13 +892,15 @@ function BacktestContent() {
               maxDrawdown: result.maxDrawdown,
               totalTrades: result.totalTrades,
               score,
-            });
-          } catch {
-            continue;
-          }
-        }
+            } satisfies UniverseScanResult;
+          })
+        );
 
-        if (testedCombos >= maxCombos) break;
+        settled.forEach((entry) => {
+          if (entry.status === 'fulfilled') {
+            rows.push(entry.value);
+          }
+        });
       }
 
       const ranked = rows.sort((a, b) => b.score - a.score);
