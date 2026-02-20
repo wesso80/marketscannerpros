@@ -80,6 +80,21 @@ Tenant overlays cannot:
 - convert blocked to eligible
 - loosen risk beyond global posture
 
+## Tenant Profiles v1 (Locked)
+### Presets
+- `conservative`: default size `0.7`, low volatility tolerance, stricter small/micro/high-beta permissions.
+- `balanced`: default size `0.85`, medium tolerance, follows global tiering (tighten-only).
+- `aggressive`: default size `1.0`, high tolerance, may allow conditional small/high-beta only when global mode is not defensive.
+
+### Limited advanced tweaks (tighten-only)
+- Size slider constrained to `0.6-1.0`, further capped by global capital mode.
+- Volatility tolerance selector: `low | med | high`.
+- Cluster tightening toggles: `block_microcaps`, `block_high_beta`, `only_large_mid`.
+
+### Overlay placement
+- Overlay math is applied **inside UPE service read endpoints**, never in UI clients.
+- UPE returns both global and tenant-adjusted outputs (`globalEligibility`, `eligibilityUser`, `CRCS_final`, `CRCS_user`, `sizingCap`, `profileName`).
+
 ## Phase-1 Build Order (Pilot Discipline)
 1. Create UPE schema/tables.
 2. Implement global regime snapshot jobs.
