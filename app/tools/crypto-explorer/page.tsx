@@ -445,7 +445,7 @@ function CryptoDetailPageContent() {
 
         {coinData && !loading && (
           <>
-            <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur md:sticky md:top-2">
+            <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
               {[
                 ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
                 ['Price', formatPrice(coinData.market.price_usd)],
@@ -458,7 +458,7 @@ function CryptoDetailPageContent() {
                 ['Risk', decision.riskTag],
                 ['Permission', decision.tradePermission],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}
                 </div>
               ))}
@@ -466,7 +466,7 @@ function CryptoDetailPageContent() {
 
             <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>

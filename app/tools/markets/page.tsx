@@ -101,7 +101,7 @@ export default function MarketsPage() {
           ))}
         </nav>
 
-        <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1.5 md:sticky md:top-2">
+        <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1 md:sticky md:top-2 md:gap-1.5 md:p-1.5">
           {[
             ['Regime', 'Neutral Trend'],
             ['Risk', 'Moderate'],
@@ -112,7 +112,7 @@ export default function MarketsPage() {
             ['Data', 'Live'],
             ['Last Refresh', '09:42:11'],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-full border border-[var(--msp-border)] px-2 py-0.5 text-[10px] text-[var(--msp-text-muted)]">
+            <div key={k} className="rounded-full border border-[var(--msp-border)] px-1.5 py-0.5 text-[9px] leading-tight text-[var(--msp-text-muted)] md:px-2 md:text-[10px]">
               <span className="font-semibold text-[var(--msp-text)]">{k}</span> · {v}
             </div>
           ))}
@@ -123,7 +123,7 @@ export default function MarketsPage() {
 
         <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
           <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-2">
-            <div className="mb-1 flex items-center justify-between">
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Zone 2 • Action</p>
                 <h2 className="text-xs font-bold text-[var(--msp-text)]">Today&apos;s Plays / Watchlist / Scans</h2>

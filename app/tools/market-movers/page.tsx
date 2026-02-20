@@ -444,8 +444,8 @@ export default function MarketMoversPage() {
         icon="📈"
       />
 
-      <main className="mx-auto w-full max-w-[1500px] space-y-2 px-3 pb-6 pt-3">
-        <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur md:sticky md:top-2">
+      <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
           {[
             ['Mode', environment.marketMode],
             ['Breadth', environment.breadthState],
@@ -457,7 +457,7 @@ export default function MarketMoversPage() {
             ['Data', loading ? 'Refreshing' : error ? 'Degraded' : 'Live'],
             ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : '—'],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+            <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
               <span className="font-semibold text-slate-100">{k}</span> · {v}
             </div>
           ))}
@@ -513,12 +513,12 @@ export default function MarketMoversPage() {
 
             <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                     <h2 className="text-xs font-bold">Today&apos;s Plays / Movers Queue</h2>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     {([
                       ['gainers', 'Top Gainers'],
                       ['losers', 'Top Losers'],
