@@ -112,7 +112,12 @@ Tenant overlays cannot:
    - `GET /api/upe/crcs/latest?asset_class=equity|crypto&limit=...`
    - `GET /api/upe/crcs/symbol?symbol=...&asset_class=equity|crypto`
    - Read-time tenant overlays applied in `lib/upe.ts` (tighten-only + sizing cap by capital mode)
-- ⏳ Pending: scheduler wiring at `:05 ET`, Movers consumption + blocked-action tooltip UX.
+- ✅ Movers pilot wired (`app/tools/market-movers/page.tsx`):
+   - UPE CRCS ingest (`/api/upe/crcs/latest?asset_class=crypto`)
+   - Sorting priority updated to eligibility → CRCS user → confluence → relvol
+   - CRCS and hourly micro delta columns added
+   - Blocked action rendered as disabled control with tooltip explanation
+- ⏳ Pending: scheduler wiring at `:05 ET`; extend UPE consumption into explorer surfaces.
 
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`

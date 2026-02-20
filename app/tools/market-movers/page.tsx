@@ -27,11 +27,27 @@ interface EvaluatedMover extends Mover {
   blockReason?: string;
   cluster: Cluster;
   setupClass: 'Breakout' | 'Reversal' | 'Early Momentum' | 'Watch';
+  crcsFinal?: number;
+  crcsUser?: number;
+  microAdjustment?: number;
+  overlayReasons?: string[];
+  profileName?: string;
   thresholdsUsed: {
     liquidityMin: number;
     relVolMin: number;
     confluenceMin: number;
   };
+}
+
+interface UpeMoverRow {
+  symbol: string;
+  globalEligibility: Eligibility;
+  eligibilityUser: Eligibility;
+  crcsFinal: number;
+  crcsUser: number;
+  microAdjustment: number;
+  overlayReasons: string[];
+  profileName: string;
 }
 
 interface MoversData {
@@ -74,6 +90,16 @@ function toTitleCluster(cluster: Cluster) {
   return 'Defensive';
 }
 
+function toReasonLabel(reason: string) {
+  if (reason === 'global_blocked') return 'Blocked by global governance';
+  if (reason === 'profile_only_large_mid') return 'Blocked by profile (large/mid only)';
+  if (reason === 'profile_block_microcaps') return 'Blocked by profile microcap rule';
+  if (reason === 'profile_block_high_beta') return 'Blocked by profile high-beta rule';
+  if (reason === 'vol_tolerance_low_high_beta') return 'Blocked by low volatility tolerance';
+  if (reason === 'vol_tolerance_med_high_beta') return 'Downgraded by medium volatility tolerance';
+  return reason;
+}
+
 export default function MarketMoversPage() {
   const [data, setData] = useState<MoversData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,15 +107,21 @@ export default function MarketMoversPage() {
   const [activeTab, setActiveTab] = useState<MoverTab>('gainers');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [setupMode, setSetupMode] = useState<SetupMode>('breakout');
+  const [upeBySymbol, setUpeBySymbol] = useState<Record<string, UpeMoverRow>>({});
 
   const { setPageData } = useAIPageContext();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/market-movers');
+        const [res, upeRes] = await Promise.all([
+          fetch('/api/market-movers'),
+          fetch('/api/upe/crcs/latest?asset_class=crypto&limit=300', { cache: 'no-store' }),
+        ]);
+
         if (!res.ok) throw new Error('Failed to fetch market movers');
         const result = await res.json();
+        const upeResult = upeRes.ok ? await upeRes.json() : null;
 
         if (result.error) {
           setError(result.error);
@@ -137,6 +169,23 @@ export default function MarketMoversPage() {
           : result;
 
         setData(formatted);
+
+        const nextUpeBySymbol: Record<string, UpeMoverRow> = {};
+        for (const row of upeResult?.rows || []) {
+          const symbol = String(row.symbol || '').toUpperCase();
+          if (!symbol) continue;
+          nextUpeBySymbol[symbol] = {
+            symbol,
+            globalEligibility: row.globalEligibility,
+            eligibilityUser: row.eligibilityUser,
+            crcsFinal: Number(row.crcsFinal || 0),
+            crcsUser: Number(row.crcsUser || 0),
+            microAdjustment: Number(row.microAdjustment || 0),
+            overlayReasons: Array.isArray(row.overlayReasons) ? row.overlayReasons : [],
+            profileName: String(row.profileName || 'balanced'),
+          };
+        }
+        setUpeBySymbol(nextUpeBySymbol);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -316,6 +365,14 @@ export default function MarketMoversPage() {
           deployment = 'conditional';
         }
 
+        const upe = upeBySymbol[mover.ticker];
+        if (upe?.eligibilityUser) {
+          deployment = upe.eligibilityUser;
+          if (upe.overlayReasons?.length) {
+            blockReasons.unshift(...upe.overlayReasons.map(toReasonLabel));
+          }
+        }
+
         return {
           ...mover,
           relVolume,
@@ -324,6 +381,11 @@ export default function MarketMoversPage() {
           liquidityScore,
           deployment,
           blockReason: blockReasons[0],
+          crcsFinal: upe?.crcsFinal,
+          crcsUser: upe?.crcsUser,
+          microAdjustment: upe?.microAdjustment,
+          overlayReasons: upe?.overlayReasons,
+          profileName: upe?.profileName,
           cluster,
           setupClass,
           thresholdsUsed: threshold,
@@ -333,6 +395,7 @@ export default function MarketMoversPage() {
         const tierScore = (v: Eligibility) => (v === 'eligible' ? 0 : v === 'conditional' ? 1 : 2);
         const tierDiff = tierScore(a.deployment) - tierScore(b.deployment);
         if (tierDiff !== 0) return tierDiff;
+        if ((b.crcsUser ?? -1) !== (a.crcsUser ?? -1)) return (b.crcsUser ?? -1) - (a.crcsUser ?? -1);
         if (b.confluenceScore !== a.confluenceScore) return b.confluenceScore - a.confluenceScore;
         if (environment.adaptiveConfidence !== 0) {
           const bias = environment.adaptiveConfidence >= 60 ? 1 : -1;
@@ -341,7 +404,7 @@ export default function MarketMoversPage() {
         if (b.relVolume !== a.relVolume) return b.relVolume - a.relVolume;
         return Math.abs(b.changePercent) - Math.abs(a.changePercent);
       });
-  }, [rows, environment, setupMode]);
+  }, [rows, environment, setupMode, upeBySymbol]);
 
   const permissionedCount = useMemo(
     () => evaluatedRows.filter((row) => row.deployment === 'eligible').length,
@@ -374,6 +437,9 @@ export default function MarketMoversPage() {
           ticker: row.ticker,
           cluster: row.cluster,
           deployment: row.deployment,
+          crcsUser: row.crcsUser ?? null,
+          crcsFinal: row.crcsFinal ?? null,
+          microAdjustment: row.microAdjustment ?? null,
           relVolume: Number(row.relVolume.toFixed(2)),
           confluenceScore: row.confluenceScore,
           liquidityScore: row.liquidityScore,
@@ -573,6 +639,8 @@ export default function MarketMoversPage() {
                         <th className="px-2 py-1 text-right">%Chg</th>
                         <th className="px-2 py-1 text-right">RelVol</th>
                         <th className="px-2 py-1 text-left">Structure</th>
+                        <th className="px-2 py-1 text-right">CRCS</th>
+                        <th className="px-2 py-1 text-right">ΔHr</th>
                         <th className="px-2 py-1 text-right">Confluence</th>
                         <th className="px-2 py-1 text-right">Liquidity</th>
                         <th className="px-2 py-1 text-center">Deploy</th>
@@ -591,6 +659,16 @@ export default function MarketMoversPage() {
                           </td>
                           <td className="px-2 py-1.5 text-right text-slate-200">{mover.relVolume.toFixed(2)}x</td>
                           <td className="px-2 py-1.5 text-slate-300">{mover.structureBias}</td>
+                          <td className="px-2 py-1.5 text-right text-cyan-300">{mover.crcsUser !== undefined ? mover.crcsUser.toFixed(1) : '—'}</td>
+                          <td className={`px-2 py-1.5 text-right ${
+                            mover.microAdjustment === undefined
+                              ? 'text-slate-500'
+                              : mover.microAdjustment >= 0
+                              ? 'text-emerald-300'
+                              : 'text-rose-300'
+                          }`}>
+                            {mover.microAdjustment === undefined ? '—' : `${mover.microAdjustment >= 0 ? '+' : ''}${mover.microAdjustment.toFixed(2)}`}
+                          </td>
                           <td className="px-2 py-1.5 text-right text-slate-200">{mover.confluenceScore}</td>
                           <td className="px-2 py-1.5 text-right text-slate-400">{mover.liquidityScore}</td>
                           <td className="px-2 py-1.5 text-center">
@@ -608,9 +686,14 @@ export default function MarketMoversPage() {
                           </td>
                           <td className="px-2 py-1.5 text-center">
                             {mover.deployment === 'blocked' ? (
-                              <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-500" title={mover.blockReason || 'Blocked by governance'}>
+                              <button
+                                type="button"
+                                disabled
+                                className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-500"
+                                title={mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}
+                              >
                                 Blocked
-                              </span>
+                              </button>
                             ) : (
                               <Link
                                 href={`/tools/options-confluence?symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
