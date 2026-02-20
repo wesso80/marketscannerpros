@@ -771,8 +771,8 @@ export default function IntradayChartsPage() {
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
+      <main className="max-w-7xl mx-auto px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-4">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
           <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
             ← Dashboard
@@ -780,11 +780,11 @@ export default function IntradayChartsPage() {
         </div>
 
         {stats && (
-          <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-            <div className="grid gap-3 lg:grid-cols-4">
+          <div className="mb-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+            <div className="grid gap-2 lg:grid-cols-4">
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Permission To Trade</div>
-                <div className={`mt-1 text-xl font-semibold ${
+                <div className={`mt-1 text-lg font-semibold ${
                   permissionState === 'Yes' ? 'text-emerald-400' : permissionState === 'No' ? 'text-rose-400' : 'text-amber-300'
                 }`}>
                   {permissionState}
@@ -815,14 +815,14 @@ export default function IntradayChartsPage() {
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Recommended Playbook</div>
-                <div className="mt-1 text-sm text-slate-100">{playbook}</div>
+                <div className="mt-1 text-xs text-slate-100 leading-5">{playbook}</div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mb-3 rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg bg-slate-800 p-1">
                 <button
@@ -830,7 +830,7 @@ export default function IntradayChartsPage() {
                     setAssetType('stocks');
                     fetchData('AAPL', interval);
                   }}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
                     assetType === 'stocks'
                       ? 'bg-emerald-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700'
@@ -843,7 +843,7 @@ export default function IntradayChartsPage() {
                     setAssetType('crypto');
                     fetchData('BTC', interval);
                   }}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
                     assetType === 'crypto'
                       ? 'bg-orange-500 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700'
@@ -898,7 +898,7 @@ export default function IntradayChartsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
             {error}
           </div>
         )}
@@ -911,14 +911,14 @@ export default function IntradayChartsPage() {
         )}
 
         {data && stats && (
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-3 xl:grid-cols-3">
             <div className="xl:col-span-2 space-y-3">
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-xs uppercase tracking-wide text-slate-400">{data.symbol}</div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-semibold">${formatPrice(stats.last.close)}</h2>
+                      <h2 className="text-xl font-semibold">${formatPrice(stats.last.close)}</h2>
                       <span className={`text-sm ${stats.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {stats.change >= 0 ? '▲' : '▼'} {stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%
                       </span>
@@ -1031,7 +1031,7 @@ export default function IntradayChartsPage() {
                   <CandlestickChart
                     data={data.data}
                     width={Math.max(800, data.data.length * 8)}
-                    height={380}
+                    height={360}
                     onHover={setHoveredBar}
                     indicators={indicators}
                     dealerOverlay={dealerOverlay}
@@ -1047,8 +1047,8 @@ export default function IntradayChartsPage() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <div className="space-y-3 xl:sticky xl:top-20 self-start">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Context</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
@@ -1110,7 +1110,7 @@ export default function IntradayChartsPage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Actions</div>
                 <ExplorerActionGrid
                   assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
