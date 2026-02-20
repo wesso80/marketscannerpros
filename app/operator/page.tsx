@@ -1623,6 +1623,9 @@ export default function OperatorDashboardPage() {
     </div>
   );
 
+  const deploymentBlocked = riskGovernorDebug?.decisions.systemExecution.allowed === false;
+  const deploymentBlockReason = riskGovernorDebug?.decisions.systemExecution.reason || riskGovernorDebug?.decisions.autoAlert.reason || 'Risk governor blocked deployment.';
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
       <ToolsPageHeader
@@ -1691,6 +1694,18 @@ export default function OperatorDashboardPage() {
             </div>
           </div>
         </section>
+
+        {deploymentBlocked ? (
+          <section className="mb-4 rounded-xl border border-red-500/60 bg-red-600/15 p-4">
+            <div className="text-sm font-black uppercase tracking-[0.08em] text-red-200">Execution Locked · Risk Governor Active</div>
+            <div className="mt-1 text-xs text-red-100/90">{deploymentBlockReason}</div>
+          </section>
+        ) : null}
+
+        <div className={deploymentBlocked ? 'relative' : ''}>
+          {deploymentBlocked ? (
+            <div className="pointer-events-none absolute inset-0 z-10 rounded-xl border border-red-500/35 bg-red-500/5" />
+          ) : null}
 
         <section className="mb-4 grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
@@ -1785,11 +1800,19 @@ export default function OperatorDashboardPage() {
         <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Action Terminal</h2>
           <div className="flex flex-wrap gap-2 text-xs font-semibold">
-            <Link href={connectedRoutes.alerts} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-emerald-200 hover:bg-emerald-500/20">Create Alert</Link>
-            <Link href={connectedRoutes.journalDraft} className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-blue-200 hover:bg-blue-500/20">Draft Plan</Link>
-            <button type="button" onClick={() => { void handleFocusAction('snooze'); }} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200 hover:bg-amber-500/20">Snooze</button>
-            <button type="button" onClick={() => { void handleFocusAction('pin'); }} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-cyan-200 hover:bg-cyan-500/20">Pin Focus</button>
-            <button type="button" className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-rose-200 hover:bg-rose-500/20">Override</button>
+            {deploymentBlocked ? (
+              <span className="rounded-md border border-emerald-500/20 bg-slate-900/40 px-3 py-2 text-slate-500">Create Alert</span>
+            ) : (
+              <Link href={connectedRoutes.alerts} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-emerald-200 hover:bg-emerald-500/20">Create Alert</Link>
+            )}
+            {deploymentBlocked ? (
+              <span className="rounded-md border border-blue-500/20 bg-slate-900/40 px-3 py-2 text-slate-500">Draft Plan</span>
+            ) : (
+              <Link href={connectedRoutes.journalDraft} className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-blue-200 hover:bg-blue-500/20">Draft Plan</Link>
+            )}
+            <button type="button" disabled={deploymentBlocked} onClick={() => { void handleFocusAction('snooze'); }} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40">Snooze</button>
+            <button type="button" disabled={deploymentBlocked} onClick={() => { void handleFocusAction('pin'); }} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-cyan-200 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40">Pin Focus</button>
+            <button type="button" disabled={deploymentBlocked} className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-rose-200 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40">Override</button>
           </div>
         </section>
 
@@ -1831,6 +1854,7 @@ export default function OperatorDashboardPage() {
             </div>
           </details>
         </section>
+        </div>
       </div>
     </div>
   );
