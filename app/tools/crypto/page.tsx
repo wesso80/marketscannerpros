@@ -367,12 +367,6 @@ function CryptoCommandCenterContent() {
     });
   }, [marketData, morningDecision.adaptiveConfidence, morningDecision.verdict, setPageData]);
 
-  if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;
-  }
-
-  const currentSection = sectionItems.find((s) => s.id === activeSection);
-
   const logs = useMemo(() => {
     const topCoin = marketData?.trending?.coins?.[0]?.symbol || 'BTC';
     const capMove = marketData?.market?.marketCapChange24h;
@@ -403,6 +397,12 @@ function CryptoCommandCenterContent() {
       ],
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);
+
+  if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
+    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;
+  }
+
+  const currentSection = sectionItems.find((s) => s.id === activeSection);
 
   function renderPrimaryWidget() {
     switch (activeSection) {
