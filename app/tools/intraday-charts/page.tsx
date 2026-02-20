@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 
 interface IntradayBar {
   timestamp: string;
@@ -732,100 +733,161 @@ export default function IntradayChartsPage() {
     return { first, last, change, changePercent, high, low, totalVolume, avgVolume, vwap };
   })() : null;
 
+  const rangePercent = stats
+    ? ((stats.high - stats.low) / Math.max(stats.last.close, 1)) * 100
+    : 0;
+
+  const volatilityState = rangePercent >= 3 ? 'Expansion' : rangePercent >= 1.5 ? 'Normal' : 'Compression';
+  const liquidityState = !stats ? 'Unknown' : stats.avgVolume >= 500000 ? 'Strong' : stats.avgVolume >= 100000 ? 'Stable' : 'Thin';
+  const dealerState = dealerOverlay
+    ? dealerOverlay.regime === 'LONG_GAMMA'
+      ? 'Supportive'
+      : dealerOverlay.regime === 'SHORT_GAMMA'
+        ? 'Hostile'
+        : 'Neutral'
+    : 'Unavailable';
+
+  const permissionState: 'Yes' | 'Conditional' | 'No' = !stats
+    ? 'Conditional'
+    : dealerOverlay?.regime === 'SHORT_GAMMA' && volatilityState === 'Expansion'
+      ? 'No'
+      : dealerOverlay?.regime === 'LONG_GAMMA' && volatilityState !== 'Expansion' && liquidityState !== 'Thin'
+        ? 'Yes'
+        : 'Conditional';
+
+  const permissionReason = permissionState === 'Yes'
+    ? 'Structure supports intraday execution.'
+    : permissionState === 'No'
+      ? 'Short-gamma expansion risk is elevated.'
+      : 'Mixed structure. Size down and wait for confirmation.';
+
+  const playbook = permissionState === 'Yes'
+    ? 'Trend continuation on pullback to VWAP/EMA cluster.'
+    : permissionState === 'No'
+      ? 'Stand down or hedge only. Avoid fresh directional risk.'
+      : 'Wait for reclaim/reject at VWAP before committing.';
+
+  const blockedActionReason = permissionState === 'No' ? 'Execution blocked by session risk state' : '';
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0F172A]/95 backdrop-blur border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-gray-400 hover:text-white">
-                ← Dashboard
-              </Link>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                📈 Intraday Charts
-                <span className={`text-sm font-normal px-2 py-0.5 rounded ${
-                  isCrypto 
-                    ? 'text-orange-400 bg-orange-500/20' 
-                    : 'text-emerald-400 bg-emerald-500/20'
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
+          <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
+            ← Dashboard
+          </Link>
+        </div>
+
+        {stats && (
+          <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+            <div className="grid gap-3 lg:grid-cols-4">
+              <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Permission To Trade</div>
+                <div className={`mt-1 text-xl font-semibold ${
+                  permissionState === 'Yes' ? 'text-emerald-400' : permissionState === 'No' ? 'text-rose-400' : 'text-amber-300'
                 }`}>
-                  {isCrypto ? '₿ Crypto' : 'Real-Time'}
-                </span>
-              </h1>
+                  {permissionState}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">{permissionReason}</div>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Volatility</div>
+                <div className={`mt-1 text-lg font-semibold ${
+                  volatilityState === 'Expansion' ? 'text-rose-300' : volatilityState === 'Compression' ? 'text-emerald-300' : 'text-slate-200'
+                }`}>
+                  {volatilityState}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">Session range {rangePercent.toFixed(2)}%</div>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Dealer Context</div>
+                <div className={`mt-1 text-lg font-semibold ${
+                  dealerState === 'Supportive' ? 'text-emerald-300' : dealerState === 'Hostile' ? 'text-rose-300' : 'text-slate-200'
+                }`}>
+                  {dealerState}
+                </div>
+                <div className="mt-1 text-xs text-slate-400">
+                  {dealerOverlay
+                    ? `Flip ${dealerOverlay.structure.gammaFlip ? `$${formatPrice(dealerOverlay.structure.gammaFlip)}` : 'N/A'}`
+                    : 'Overlay unavailable'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Recommended Playbook</div>
+                <div className="mt-1 text-sm text-slate-100">{playbook}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg bg-slate-800 p-1">
+                <button
+                  onClick={() => {
+                    setAssetType('stocks');
+                    fetchData('AAPL', interval);
+                  }}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    assetType === 'stocks'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  Stocks
+                </button>
+                <button
+                  onClick={() => {
+                    setAssetType('crypto');
+                    fetchData('BTC', interval);
+                  }}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    assetType === 'crypto'
+                      ? 'bg-orange-500 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-slate-700'
+                  }`}
+                >
+                  Crypto
+                </button>
+              </div>
+              {assetType === 'crypto' && (
+                <span className="text-xs text-orange-300 bg-orange-500/20 px-2 py-1 rounded">24/7</span>
+              )}
             </div>
 
-            {/* Search */}
-            <form onSubmit={handleSearch} className="flex gap-2">
+            <form onSubmit={handleSearch} className="flex w-full max-w-xl gap-2">
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
-                placeholder="Enter symbol (e.g., AAPL)"
-                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none w-48"
+                placeholder={assetType === 'crypto' ? 'Symbol (e.g., BTC)' : 'Symbol (e.g., AAPL)'}
+                className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 rounded-lg font-medium transition"
+                className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium transition hover:bg-emerald-700 disabled:bg-slate-700"
               >
-                {loading ? 'Finding Intraday Setup...' : 'Find Intraday Setup'}
+                {loading ? 'Loading...' : 'Load'}
               </button>
             </form>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Asset Type Toggle */}
-        <div className="mb-4 flex items-center gap-4">
-          <div className="flex bg-slate-800 rounded-lg p-1">
-            <button
-              onClick={() => {
-                setAssetType('stocks');
-                fetchData('AAPL', interval);
-              }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                assetType === 'stocks'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              📈 Stocks
-            </button>
-            <button
-              onClick={() => {
-                setAssetType('crypto');
-                fetchData('BTC', interval);
-              }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                assetType === 'crypto'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              ₿ Crypto
-            </button>
-          </div>
-          {assetType === 'crypto' && (
-            <span className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded">
-              24/7 Trading
-            </span>
-          )}
-        </div>
-
-        {/* Quick Picks */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {(assetType === 'stocks' ? POPULAR_STOCKS : POPULAR_CRYPTO).map((item) => (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(assetType === 'stocks' ? POPULAR_STOCKS : POPULAR_CRYPTO).slice(0, 8).map((item) => (
               <button
                 key={item.symbol}
                 onClick={() => {
                   setSearchInput(item.symbol);
                   fetchData(item.symbol, interval);
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                   symbol === item.symbol
-                    ? assetType === 'crypto' ? 'bg-orange-500 text-white' : 'bg-emerald-600 text-white'
+                    ? assetType === 'crypto'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-emerald-600 text-white'
                     : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
                 }`}
               >
@@ -835,45 +897,12 @@ export default function IntradayChartsPage() {
           </div>
         </div>
 
-        {/* Interval Selector */}
-        <div className="mb-6 flex flex-wrap items-center gap-4">
-          <span className="text-gray-400">Interval:</span>
-          <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
-            {INTERVALS.map((int) => (
-              <button
-                key={int.value}
-                onClick={() => handleIntervalChange(int.value)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  interval === int.value
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-slate-700'
-                }`}
-                title={int.description}
-              >
-                {int.label}
-              </button>
-            ))}
-          </div>
-
-          <label className="flex items-center gap-2 ml-auto text-sm text-gray-400">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-emerald-600 focus:ring-emerald-500"
-            />
-            Auto-refresh (60s)
-          </label>
-        </div>
-
-        {/* Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
             {error}
           </div>
         )}
 
-        {/* Loading State */}
         {loading && !data && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -881,326 +910,250 @@ export default function IntradayChartsPage() {
           </div>
         )}
 
-        {/* Chart Section */}
         {data && stats && (
-          <>
-            {/* Symbol Header */}
-            <div className="mb-6 bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h2 className="text-3xl font-bold flex items-center gap-3">
-                    {data.symbol}
-                    <span className={`text-2xl ${stats.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${formatPrice(stats.last.close)}
-                    </span>
-                  </h2>
-                  <div className="flex items-center gap-4 mt-1 text-sm">
-                    <span className={stats.change >= 0 ? 'text-green-400' : 'text-red-400'}>
-                      {stats.change >= 0 ? '▲' : '▼'} ${formatPrice(Math.abs(stats.change))} ({stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%)
-                    </span>
-                    <span className="text-gray-400">
-                      {data.interval} • {data.data.length} bars
-                    </span>
-                    <span className="text-gray-500">
-                      Last: {new Date(data.lastRefreshed).toLocaleString()}
-                    </span>
+          <div className="grid gap-4 xl:grid-cols-3">
+            <div className="xl:col-span-2 space-y-3">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-slate-400">{data.symbol}</div>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-semibold">${formatPrice(stats.last.close)}</h2>
+                      <span className={`text-sm ${stats.change >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {stats.change >= 0 ? '▲' : '▼'} {stats.changePercent >= 0 ? '+' : ''}{stats.changePercent.toFixed(2)}%
+                      </span>
+                      <span className="text-xs text-slate-400">{data.data.length} bars</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex gap-1 rounded-lg bg-slate-800 p-1">
+                      {INTERVALS.map((int) => (
+                        <button
+                          key={int.value}
+                          onClick={() => handleIntervalChange(int.value)}
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                            interval === int.value
+                              ? 'bg-emerald-600 text-white'
+                              : 'text-gray-400 hover:bg-slate-700 hover:text-white'
+                          }`}
+                          title={int.description}
+                        >
+                          {int.label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-gray-400">
+                      <input
+                        type="checkbox"
+                        checked={autoRefresh}
+                        onChange={(e) => setAutoRefresh(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      Auto 60s
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mb-2 flex flex-wrap items-center gap-2 border-t border-slate-700 pt-3">
+                  <span className="mr-1 text-xs text-gray-400">Overlays</span>
+                  <button
+                    onClick={() => toggleIndicator('ema9')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('ema9')
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    EMA 9
+                  </button>
+                  <button
+                    onClick={() => toggleIndicator('ema21')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('ema21')
+                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    EMA 21
+                  </button>
+                  <button
+                    onClick={() => toggleIndicator('sma20')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('sma20')
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    SMA 20
+                  </button>
+                  <button
+                    onClick={() => toggleIndicator('sma50')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('sma50')
+                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    SMA 50
+                  </button>
+                  <button
+                    onClick={() => toggleIndicator('vwap')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('vwap')
+                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    VWAP
+                  </button>
+                  <button
+                    onClick={() => toggleIndicator('bollinger')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      indicators.includes('bollinger')
+                        ? 'bg-gray-500/20 text-gray-300 border border-gray-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    Bollinger
+                  </button>
+                  {indicators.length > 0 && (
+                    <button
+                      onClick={() => setIndicators([])}
+                      className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-red-400 transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto pt-2">
+                  <CandlestickChart
+                    data={data.data}
+                    width={Math.max(800, data.data.length * 8)}
+                    height={380}
+                    onHover={setHoveredBar}
+                    indicators={indicators}
+                    dealerOverlay={dealerOverlay}
+                  />
+                </div>
+                <div className="mt-3 overflow-x-auto">
+                  <VolumeChart
+                    data={data.data}
+                    width={Math.max(800, data.data.length * 8)}
+                    height={76}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Context</div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">VWAP</div>
+                    <div className="text-slate-100">${formatPrice(stats.vwap)}</div>
+                  </div>
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">Range</div>
+                    <div className="text-slate-100">${formatPrice(stats.high - stats.low)}</div>
+                  </div>
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">Session High</div>
+                    <div className="text-emerald-300">${formatPrice(stats.high)}</div>
+                  </div>
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">Session Low</div>
+                    <div className="text-rose-300">${formatPrice(stats.low)}</div>
+                  </div>
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">Avg Bar Volume</div>
+                    <div className="text-slate-100">{formatVolume(stats.avgVolume)}</div>
+                  </div>
+                  <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+                    <div className="text-slate-400">Liquidity</div>
+                    <div className="text-slate-100">{liquidityState}</div>
                   </div>
                 </div>
 
                 {dealerOverlay && (
-                  <div className="bg-slate-900/80 backdrop-blur rounded-lg px-4 py-2 text-sm border border-slate-700">
-                    <div className="text-[11px] uppercase tracking-wide text-slate-400">Dealer Structure</div>
-                    <div className="text-slate-200 font-semibold">
-                      {dealerOverlay.regime === 'LONG_GAMMA' ? '🟢 Compression Bias' : dealerOverlay.regime === 'SHORT_GAMMA' ? '🔴 Expansion Bias' : '🟡 Mixed Bias'}
+                  <div className="mt-3 rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-xs text-slate-300">
+                    <div className="font-medium text-slate-200">Dealer Structure</div>
+                    <div className="mt-1">
+                      Regime {dealerOverlay.regime === 'LONG_GAMMA' ? 'Long Gamma' : dealerOverlay.regime === 'SHORT_GAMMA' ? 'Short Gamma' : 'Neutral'}
                     </div>
-                    <div className="text-[12px] text-slate-400 mt-1">
-                      Flip {dealerOverlay.structure.gammaFlip ? formatPrice(dealerOverlay.structure.gammaFlip) : 'N/A'} •
-                      Call Wall {dealerOverlay.structure.callWall ? formatPrice(dealerOverlay.structure.callWall) : 'N/A'} •
-                      Put Wall {dealerOverlay.structure.putWall ? formatPrice(dealerOverlay.structure.putWall) : 'N/A'}
+                    <div className="mt-1 text-slate-400">
+                      Flip {dealerOverlay.structure.gammaFlip ? `$${formatPrice(dealerOverlay.structure.gammaFlip)}` : 'N/A'} •
+                      Call Wall {dealerOverlay.structure.callWall ? `$${formatPrice(dealerOverlay.structure.callWall)}` : 'N/A'} •
+                      Put Wall {dealerOverlay.structure.putWall ? `$${formatPrice(dealerOverlay.structure.putWall)}` : 'N/A'}
                     </div>
                     {dealerOverlay.attentionTriggered && (
-                      <div className="text-[12px] text-amber-300 mt-1">⚠ Dealer inflection zone approaching</div>
+                      <div className="mt-1 text-amber-300">Attention: inflection zone near spot.</div>
                     )}
                   </div>
                 )}
 
-                {/* OHLC for hovered bar */}
                 {hoveredBar && (
-                  <div className="bg-slate-900/80 backdrop-blur rounded-lg px-4 py-2 text-sm">
-                    <div className="text-gray-400 mb-1">{formatTime(hoveredBar.timestamp)} • {formatDate(hoveredBar.timestamp)}</div>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <span className="text-gray-500">O</span>
-                        <span className="ml-1">${formatPrice(hoveredBar.open)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">H</span>
-                        <span className="ml-1 text-green-400">${formatPrice(hoveredBar.high)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">L</span>
-                        <span className="ml-1 text-red-400">${formatPrice(hoveredBar.low)}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">C</span>
-                        <span className={`ml-1 ${hoveredBar.close >= hoveredBar.open ? 'text-green-400' : 'text-red-400'}`}>
-                          ${formatPrice(hoveredBar.close)}
-                        </span>
+                  <div className="mt-3 rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-xs">
+                    <div className="mb-1 text-slate-400">{formatTime(hoveredBar.timestamp)} • {formatDate(hoveredBar.timestamp)}</div>
+                    <div className="grid grid-cols-4 gap-2 text-slate-100">
+                      <div>O ${formatPrice(hoveredBar.open)}</div>
+                      <div className="text-emerald-300">H ${formatPrice(hoveredBar.high)}</div>
+                      <div className="text-rose-300">L ${formatPrice(hoveredBar.low)}</div>
+                      <div className={hoveredBar.close >= hoveredBar.open ? 'text-emerald-300' : 'text-rose-300'}>
+                        C ${formatPrice(hoveredBar.close)}
                       </div>
                     </div>
-                    <div className="text-gray-400 mt-1">
-                      Vol: {formatVolume(hoveredBar.volume)}
-                    </div>
+                    <div className="mt-1 text-slate-400">Volume {formatVolume(hoveredBar.volume)}</div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Candlestick Chart */}
-            <div className="mb-2 bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-              {/* Indicator Toggles */}
-              <div className="px-4 py-3 border-b border-slate-700 flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-400 mr-2">Overlays:</span>
-                <button
-                  onClick={() => toggleIndicator('ema9')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('ema9')
-                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  EMA 9
-                </button>
-                <button
-                  onClick={() => toggleIndicator('ema21')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('ema21')
-                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  EMA 21
-                </button>
-                <button
-                  onClick={() => toggleIndicator('sma20')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('sma20')
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  SMA 20
-                </button>
-                <button
-                  onClick={() => toggleIndicator('sma50')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('sma50')
-                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  SMA 50
-                </button>
-                <button
-                  onClick={() => toggleIndicator('vwap')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('vwap')
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  VWAP
-                </button>
-                <button
-                  onClick={() => toggleIndicator('bollinger')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                    indicators.includes('bollinger')
-                      ? 'bg-gray-500/20 text-gray-300 border border-gray-500/50'
-                      : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                  }`}
-                >
-                  Bollinger
-                </button>
-                {indicators.length > 0 && (
-                  <button
-                    onClick={() => setIndicators([])}
-                    className="ml-2 px-2 py-1 text-xs text-gray-500 hover:text-red-400 transition"
-                  >
-                    Clear All
-                  </button>
-                )}
-              </div>
-              <div className="p-4 overflow-x-auto">
-                <CandlestickChart 
-                  data={data.data} 
-                  width={Math.max(800, data.data.length * 8)} 
-                  height={400}
-                  onHover={setHoveredBar}
-                  indicators={indicators}
-                  dealerOverlay={dealerOverlay}
+              <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Actions</div>
+                <ExplorerActionGrid
+                  assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
+                  symbol={symbol}
+                  blocked={permissionState === 'No'}
+                  blockReason={blockedActionReason}
                 />
+                <div className="mt-2 text-[11px] text-slate-400">
+                  Last refresh {new Date(data.lastRefreshed).toLocaleString()}
+                </div>
               </div>
             </div>
-
-            {/* Volume Chart */}
-            <div className="mb-6 bg-slate-800/50 rounded-xl p-4 border border-slate-700 overflow-x-auto">
-              <VolumeChart 
-                data={data.data} 
-                width={Math.max(800, data.data.length * 8)} 
-                height={80} 
-              />
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">Session High</div>
-                <div className="text-xl font-semibold text-green-400">${formatPrice(stats.high)}</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">Session Low</div>
-                <div className="text-xl font-semibold text-red-400">${formatPrice(stats.low)}</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">VWAP</div>
-                <div className="text-xl font-semibold text-blue-400">${formatPrice(stats.vwap)}</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">Total Volume</div>
-                <div className="text-xl font-semibold">{formatVolume(stats.totalVolume)}</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">Avg Volume/Bar</div>
-                <div className="text-xl font-semibold">{formatVolume(stats.avgVolume)}</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <div className="text-gray-400 text-sm">Range</div>
-                <div className="text-xl font-semibold">${formatPrice(stats.high - stats.low)}</div>
-              </div>
-            </div>
-
-            {/* Data Table - Desktop */}
-            <div className="hidden md:block bg-slate-800/50 rounded-xl border border-slate-700">
-              <div className="px-4 py-3 border-b border-slate-700">
-                <h3 className="font-semibold">Recent Bars (Latest 20)</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-900/50">
-                      <th className="text-left px-4 py-2 text-gray-400 font-medium">Time</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">Open</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">High</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">Low</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">Close</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">Volume</th>
-                      <th className="text-right px-4 py-2 text-gray-400 font-medium">Change</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.data.slice(-20).reverse().map((bar, i) => {
-                      const change = bar.close - bar.open;
-                      const changePercent = (change / bar.open) * 100;
-                      const isUp = change >= 0;
-                      return (
-                        <tr 
-                          key={i} 
-                          className="border-t border-slate-700/50 hover:bg-slate-700/30 transition"
-                        >
-                          <td className="px-4 py-2 text-gray-300">
-                            {formatTime(bar.timestamp)} <span className="text-gray-500">{formatDate(bar.timestamp)}</span>
-                          </td>
-                          <td className="text-right px-4 py-2">${formatPrice(bar.open)}</td>
-                          <td className="text-right px-4 py-2 text-green-400">${formatPrice(bar.high)}</td>
-                          <td className="text-right px-4 py-2 text-red-400">${formatPrice(bar.low)}</td>
-                          <td className={`text-right px-4 py-2 font-medium ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                            ${formatPrice(bar.close)}
-                          </td>
-                          <td className="text-right px-4 py-2 text-gray-400">{formatVolume(bar.volume)}</td>
-                          <td className={`text-right px-4 py-2 ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                            {isUp ? '+' : ''}{changePercent.toFixed(2)}%
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Data Cards - Mobile */}
-            <div className="md:hidden">
-              <div className="px-4 py-3 border-b border-slate-700 bg-slate-800/50">
-                <h3 className="font-semibold">Recent Bars (Latest 20)</h3>
-              </div>
-              <div className="space-y-2 p-2">
-                {data.data.slice(-20).reverse().map((bar, i) => {
-                  const change = bar.close - bar.open;
-                  const changePercent = (change / bar.open) * 100;
-                  const isUp = change >= 0;
-                  return (
-                    <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-400 text-sm">{formatTime(bar.timestamp)} {formatDate(bar.timestamp)}</span>
-                        <span className={`text-sm font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>
-                          {isUp ? '+' : ''}{changePercent.toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 text-sm">
-                        <div>
-                          <div className="text-gray-500 text-xs">Open</div>
-                          <div className="text-white">${formatPrice(bar.open)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs">High</div>
-                          <div className="text-green-400">${formatPrice(bar.high)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs">Low</div>
-                          <div className="text-red-400">${formatPrice(bar.low)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs">Close</div>
-                          <div className={isUp ? 'text-green-400' : 'text-red-400'}>${formatPrice(bar.close)}</div>
-                        </div>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">Vol: {formatVolume(bar.volume)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
-        {/* Help Section */}
-        <div className="mt-8 bg-slate-800/30 rounded-xl p-6 border border-slate-700">
-          <h3 className="text-lg font-semibold mb-4">📊 About Intraday Charts</h3>
-          <div className="grid md:grid-cols-2 gap-6 text-sm text-gray-400">
+        <details className="mt-6 rounded-xl border border-slate-700 bg-slate-900/40 p-4">
+          <summary className="cursor-pointer list-none text-sm font-medium text-slate-200">
+            Help & methodology
+          </summary>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm text-gray-400">
             <div>
-              <h4 className="text-white font-medium mb-2">Candlestick Basics</h4>
+              <div className="mb-2 font-medium text-white">Candlestick basics</div>
               <ul className="space-y-1">
-                <li>• <span className="text-green-400">Green candles</span> = Close higher than Open (bullish)</li>
-                <li>• <span className="text-red-400">Red candles</span> = Close lower than Open (bearish)</li>
-                <li>• The body shows Open-Close range</li>
-                <li>• Wicks show the High and Low</li>
+                <li>• Green candles close above open.</li>
+                <li>• Red candles close below open.</li>
+                <li>• Wicks represent intrabar high and low.</li>
+                <li>• VWAP and moving averages frame entries.</li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-medium mb-2">Available Intervals</h4>
+              <div className="mb-2 font-medium text-white">Intervals</div>
               <ul className="space-y-1">
-                <li>• <strong>1 min</strong> - Scalping, high-frequency analysis</li>
-                <li>• <strong>5 min</strong> - Day trading (most popular)</li>
-                <li>• <strong>15 min</strong> - Intraday swing trades</li>
-                <li>• <strong>30 min / 1 hour</strong> - Position entries</li>
+                <li>• 1m for high-frequency reads.</li>
+                <li>• 5m for standard day-trade setups.</li>
+                <li>• 15m for slower intraday structure.</li>
+                <li>• 30m and 60m for higher-timeframe bias.</li>
               </ul>
             </div>
           </div>
           <p className="mt-4 text-xs text-gray-500">
-            Data provided by Alpha Vantage. Includes extended hours trading (4:00 AM - 8:00 PM ET).
-            Charts update every 60 seconds when auto-refresh is enabled.
+            Data from Alpha Vantage. Auto-refresh checks every 60 seconds when enabled.
           </p>
-        </div>
+        </details>
       </main>
     </div>
   );
