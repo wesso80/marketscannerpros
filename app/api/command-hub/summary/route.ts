@@ -62,18 +62,26 @@ export async function GET() {
                WHERE status IN ('candidate', 'planned', 'alerted')
                  AND (
                    LOWER(COALESCE(market, '')) = 'options'
-                   OR LOWER(COALESCE(signal_source, '')) LIKE '%option%'
-                   OR LOWER(COALESCE(packet_data::text, '')) LIKE '%options%'
+                   OR LOWER(COALESCE(signal_source, '')) = 'options.confluence'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE 'options.confluence%'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE '%options_scanner%'
+                   OR LOWER(COALESCE(packet_data::text, '')) LIKE '%options.confluence%'
                  )
              )::int AS options_signals,
              COUNT(*) FILTER (
                WHERE status IN ('candidate', 'planned', 'alerted')
                  AND (
-                   LOWER(COALESCE(signal_source, '')) LIKE '%confluence%'
-                   OR LOWER(COALESCE(signal_source, '')) LIKE '%time%'
+                   LOWER(COALESCE(signal_source, '')) = 'scanner.run'
+                   OR LOWER(COALESCE(signal_source, '')) = 'scanner.bulk'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE 'scanner.run%'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE 'scanner.bulk%'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE '%time_scanner%'
+                   OR LOWER(COALESCE(signal_source, '')) LIKE '%time.confluence%'
                    OR LOWER(COALESCE(packet_data::text, '')) LIKE '%time confluence%'
                    OR LOWER(COALESCE(packet_data::text, '')) LIKE '%confluence_scan%'
                  )
+                 AND LOWER(COALESCE(market, '')) <> 'options'
+                 AND LOWER(COALESCE(signal_source, '')) NOT LIKE 'options.confluence%'
              )::int AS time_windows
            FROM decision_packets
            WHERE workspace_id = $1
