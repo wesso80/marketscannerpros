@@ -68,6 +68,7 @@ interface ScanResult {
   aroon_up?: number;
   aroon_down?: number;
   obv?: number;
+  volume?: number;
   lastCandleTime?: string;
   chartData?: {
     candles: { t: string; o: number; h: number; l: number; c: number }[];
