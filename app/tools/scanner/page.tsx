@@ -1475,9 +1475,9 @@ function ScannerContent() {
                 ].map((item) => (
                   <div
                     key={item.step}
-                    className={`rounded-lg border px-3 py-2 text-center text-[0.72rem] font-extrabold uppercase tracking-[0.08em] ${
+                    className={`rounded-lg border px-3 py-2 text-center text-[0.72rem] font-extrabold uppercase tracking-[0.08em] transition-all duration-300 ${
                       scannerStep === item.step
-                        ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]'
+                        ? 'scale-[1.01] border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]'
                         : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-faint)]'
                     }`}
                   >
@@ -1487,7 +1487,7 @@ function ScannerContent() {
               </div>
             </div>
 
-            <div className={`mb-4 transition-all duration-300 ${scannerStep === 1 ? 'opacity-100 translate-y-0' : 'opacity-95'}`}>
+            <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-95'}`}>
               <div className="msp-card mb-3 px-4 py-4">
                 <div className="grid gap-3 md:grid-cols-12">
                   <div className="md:col-span-3">
@@ -1589,7 +1589,7 @@ function ScannerContent() {
             </div>
 
             {bulkScanResults && (
-              <div className={`mb-4 transition-all duration-300 ${scannerStep === 2 ? 'opacity-100 translate-y-0' : 'opacity-95'}`}>
+              <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 2 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
                 <div className="msp-card mb-3 px-4 py-3">
                   <div className="grid gap-2 md:grid-cols-6">
                     <select value={rankDirection} onChange={(e) => setRankDirection(e.target.value as 'all' | 'long' | 'short')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
@@ -1609,8 +1609,8 @@ function ScannerContent() {
                       ? 'var(--msp-bear)'
                       : 'var(--msp-warn)';
                     return (
-                      <div key={pick.symbol} className="rounded-xl border bg-[var(--msp-panel)] p-3" style={{ borderColor }}>
-                        <div className="mb-2 flex items-start justify-between">
+                      <div key={pick.symbol} className="flex h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--msp-border-strong)]" style={{ borderColor }}>
+                        <div className="mb-2.5 flex items-start justify-between">
                           <div>
                             <div className="text-[0.95rem] font-black text-[var(--msp-text)]">{pick.symbol}</div>
                             <div className={`text-[0.7rem] font-extrabold uppercase ${pick._direction === 'long' ? 'text-[var(--msp-bull)]' : pick._direction === 'short' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-warn)]'}`}>{pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'TACTICAL'}</div>
@@ -1620,21 +1620,21 @@ function ScannerContent() {
                             <div className="text-[0.66rem] font-bold uppercase text-[var(--msp-text-faint)]">#{pick._rank}</div>
                           </div>
                         </div>
-                        <div className="mb-2 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
+                        <div className="mb-2.5 grid flex-1 gap-1.5 text-[0.72rem] text-[var(--msp-text-muted)]">
                           <div>Structure: <span className="font-bold text-[var(--msp-text)]">{pick._quality.toUpperCase()}</span></div>
                           <div>TF Alignment: <span className="font-bold text-[var(--msp-text)]">{pick._tfAlignment}/4</span></div>
                           <div>Volatility: <span className="font-bold text-[var(--msp-text)]">{pick._volatility.toUpperCase()}</span></div>
                         </div>
-                        <div className="flex gap-2">
-                          <button onClick={() => deployRankCandidate(pick)} className="flex-1 rounded-md border border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] px-2 py-1.5 text-[0.68rem] font-extrabold uppercase text-[var(--msp-accent)]">Deploy</button>
-                          <button onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
+                        <div className="mt-auto flex gap-2">
+                          <button onClick={() => deployRankCandidate(pick)} className="h-8 flex-1 rounded-md border border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-accent)]">Deploy</button>
+                          <button onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
                           <button onClick={() => {
                             fetch('/api/watchlist', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ symbol: pick.symbol, name: pick.name || pick.symbol, type: bulkScanResults.type === 'crypto' ? 'crypto' : 'stock', price: pick.indicators?.price }),
                             }).catch(() => {});
-                          }} className="flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
+                          }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
                         </div>
                       </div>
                     );
@@ -2845,7 +2845,7 @@ function ScannerContent() {
         )}
 
         {result && useInstitutionalDecisionCockpitV2 && (
-          <div className="msp-card mb-4 px-4 py-4 md:px-5 md:py-5">
+          <div className={`msp-card mb-4 px-4 py-4 transition-all duration-300 ease-out md:px-5 md:py-5 ${scannerStep === 3 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
             {(() => {
               const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
               const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
