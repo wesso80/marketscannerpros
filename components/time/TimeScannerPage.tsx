@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import ContextLayer from '@/components/time/ContextLayer';
 import DebugDrawer from '@/components/time/DebugDrawer';
-import ExecutionLayer from '@/components/time/ExecutionLayer';
-import SetupLayer from '@/components/time/SetupLayer';
-import TimeControls from '@/components/time/TimeControls';
-import TimeGateBar from '@/components/time/TimeGateBar';
-import TimeHeaderBar from '@/components/time/TimeHeaderBar';
 import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
@@ -20,6 +14,8 @@ const TF_TO_MINUTES: Record<ScanModeType, number> = {
   intraday_4h: 240,
   swing_1d: 1440,
 };
+
+const TIMEFRAME_OPTIONS: ScanModeType[] = ['intraday_1h', 'intraday_4h', 'swing_1d'];
 
 const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
   context: {
@@ -66,6 +62,72 @@ const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
 };
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+function permissionTone(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
+  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'GO' };
+  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'WAIT' };
+  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'BLOCK' };
+}
+
+function riskLabel(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
+  if (permission === 'BLOCK') return 'HIGH';
+  if (permission === 'WAIT') return 'MOD';
+  return 'LOW';
+}
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="w-[88px] rounded-xl border border-slate-800 bg-slate-950/30 px-2.5 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="text-sm font-semibold text-slate-100">{value}</div>
+    </div>
+  );
+}
+
+function scoreDot(score: number) {
+  if (score >= 70) return 'bg-emerald-400';
+  if (score >= 45) return 'bg-amber-400';
+  return 'bg-rose-400';
+}
+
+function ConfluenceRow({ label, score }: { label: string; score: number }) {
+  return (
+    <div className="grid grid-cols-[1.2fr_2fr_56px_20px] items-center gap-2.5">
+      <div className="text-xs text-slate-300">{label}</div>
+      <div className="h-2.5 w-full rounded-full bg-slate-800">
+        <div className="h-2.5 rounded-full bg-slate-500" style={{ width: `${Math.max(1, Math.min(99, score))}%` }} />
+      </div>
+      <div className="text-right text-xs font-semibold text-slate-200">{Math.round(score)}%</div>
+      <div className="flex justify-end">
+        <div className={`h-2.5 w-2.5 rounded-full ${scoreDot(score)}`} />
+      </div>
+    </div>
+  );
+}
+
+function ExecutionField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
+      <div className="text-[11px] uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="text-sm font-semibold text-slate-100">{value}</div>
+    </div>
+  );
+}
+
+function IntelAccordionSection({ title, summary, children }: { title: string; summary: string; children: ReactNode }) {
+  return (
+    <details className="rounded-2xl border border-slate-800 bg-slate-900/25">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
+        <div>
+          <div className="text-sm font-semibold text-slate-100">{title}</div>
+          <div className="text-xs text-slate-400">{summary}</div>
+        </div>
+        <div className="h-7 w-7 rounded-lg border border-slate-700 bg-slate-950/30" />
+      </summary>
+      <div className="border-t border-slate-800 px-4 py-3 text-sm text-slate-200">{children}</div>
+    </details>
+  );
+}
 
 function normalizeDirection(value: unknown): Direction {
   const v = String(value || '').toLowerCase();
@@ -246,54 +308,166 @@ export default function TimeScannerPage() {
 
   const out = computeTimeConfluenceV2(input);
   const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
+  const tone = permissionTone(out.permission);
+  const rrEstimate = out.executionScore >= 70 ? '2.3' : out.executionScore >= 45 ? '1.7' : '1.2';
+  const confluenceRows = [
+    { label: 'Trend Alignment', score: out.contextScore },
+    { label: 'Flow Strength', score: out.setupScore },
+    { label: 'Close Confirmation', score: out.executionScore },
+    { label: 'Cluster Integrity', score: input.setup.window.clusterIntegrity * 100 },
+    { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
+  ];
 
   return (
     <TimeScannerShell>
-      <TimeHeaderBar
-        symbol={displaySymbol}
-        permission={out.permission}
-        gateScore={out.gateScore}
-        timeConfluenceScore={out.timeConfluenceScore}
-        direction={out.direction}
-      />
-
-      <div className="mx-auto w-full max-w-6xl px-4 pb-10">
-        <TimeControls
-          symbol={symbol}
-          onSymbolChange={setSymbol}
-          primaryTf={scanMode}
-          onPrimaryTfChange={(value) => setScanMode(value as ScanModeType)}
-          onRunScan={() => {
-            void runScan();
-          }}
-          loading={loading}
-        />
+      <main className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-4 lg:px-6 lg:py-6">
 
         {error && (
-          <div className="mt-3 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
             {error}
           </div>
         )}
 
-        <div className="mt-4">
-          <TimeGateBar
-            permission={out.permission}
-            gateScore={out.gateScore}
-            timeConfluenceScore={out.timeConfluenceScore}
-            reasons={out.reasons}
-          />
-        </div>
+        <section className={`w-full rounded-2xl border bg-slate-900/40 px-4 lg:px-6 ${tone.border}`}>
+          <div className="grid min-h-[88px] grid-cols-1 items-center gap-3 py-3 lg:grid-cols-[1.3fr_0.9fr_1.2fr] lg:py-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <input
+                  value={symbol}
+                  onChange={(event) => setSymbol(event.target.value.toUpperCase())}
+                  placeholder="SYMBOL"
+                  className="w-24 rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-sm font-semibold text-slate-100"
+                />
+                <select
+                  value={scanMode}
+                  onChange={(event) => setScanMode(event.target.value as ScanModeType)}
+                  className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
+                >
+                  {TIMEFRAME_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void runScan();
+                  }}
+                  disabled={loading}
+                  className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1.5 text-xs font-semibold text-slate-100 disabled:opacity-40"
+                >
+                  {loading ? 'Scanning…' : 'Run'}
+                </button>
+              </div>
+              <div className="mt-1.5 truncate text-xs text-slate-400">
+                {out.direction} • {scanMode} • {displaySymbol}
+              </div>
+            </div>
 
-        <div className="mt-6 space-y-6">
-          <ContextLayer context={input.context} out={out} />
-          <SetupLayer setup={input.setup} out={out} />
-          <ExecutionLayer execution={input.execution} out={out} />
-        </div>
+            <div className="flex justify-start lg:justify-center">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
+                <div className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
+                <div className="text-sm font-semibold tracking-wide text-slate-100">{tone.label}</div>
+              </div>
+            </div>
 
-        <div className="mt-6">
-          <DebugDrawer debug={out.debug} />
-        </div>
-      </div>
+            <div className="flex items-center justify-between gap-2 lg:justify-end">
+              <div className="grid grid-cols-3 gap-2">
+                <MetricPill label="Conf" value={`${Math.round(out.timeConfluenceScore)}%`} />
+                <MetricPill label="Risk" value={riskLabel(out.permission)} />
+                <MetricPill label="R:R" value={rrEstimate} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-100">Confluence Engine</div>
+                <div className="text-xs text-slate-400">Time alignment → permission quality</div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/25 p-3">
+                <div className="space-y-3">
+                  {confluenceRows.map((row) => (
+                    <ConfluenceRow key={row.label} label={row.label} score={row.score} />
+                  ))}
+                </div>
+                <div className="mt-3 text-xs text-slate-500">
+                  Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {input.setup.window.status}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-100">Execution</div>
+                <div className="text-xs text-slate-400">Only what you need to execute timing</div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
+                <div className="space-y-2">
+                  <ExecutionField label="Close" value={input.execution.closeConfirmation} />
+                  <ExecutionField label="Risk" value={input.execution.riskState} />
+                  <ExecutionField label="Liquidity" value={input.execution.liquidityOK ? 'OK' : 'THIN'} />
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <MetricPill label="Gate" value={`${Math.round(out.gateScore)}%`} />
+                    <MetricPill label="Time" value={`${Math.round(out.timeConfluenceScore)}%`} />
+                    <MetricPill label="Window" value={`${Math.round(input.execution.entryWindowQuality * 100)}%`} />
+                  </div>
+
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-400">
+                    {input.execution.notes?.[0] || 'No execution notes'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <IntelAccordionSection title="AI Signal Breakdown" summary="Why timing permission is GO / WAIT / BLOCK">
+            <ul className="space-y-1.5 text-sm text-slate-200">
+              {out.reasons.length === 0 ? <li>No reasons available.</li> : out.reasons.slice(0, 8).map((reason) => <li key={reason}>• {reason}</li>)}
+            </ul>
+          </IntelAccordionSection>
+
+          <IntelAccordionSection title="Institutional Flow" summary="Cluster + close timing structure">
+            <div>Cluster Integrity: {Math.round(input.setup.window.clusterIntegrity * 100)}%</div>
+            <div>Direction Consistency: {Math.round(input.setup.window.directionConsistency * 100)}%</div>
+            <div>Close Strength: {Math.round(input.execution.closeStrength * 100)}%</div>
+          </IntelAccordionSection>
+
+          <IntelAccordionSection title="Pattern Confirmation" summary="HTF/Regime context and alignment">
+            <div>Macro Bias: {input.context.macroBias}</div>
+            <div>HTF Bias: {input.context.htfBias}</div>
+            <div>Regime: {input.context.regime}</div>
+            <div>Vol State: {input.context.volState}</div>
+          </IntelAccordionSection>
+
+          <IntelAccordionSection title="Risk Warnings" summary="Timing and execution blockers">
+            <div className="space-y-1.5">
+              {input.setup.warnings.length === 0 ? <div>No warnings.</div> : input.setup.warnings.map((warning) => <div key={warning}>• {warning}</div>)}
+            </div>
+          </IntelAccordionSection>
+
+          <IntelAccordionSection title="Narrative Context" summary="Execution notes and scanner context">
+            <div className="space-y-1.5">
+              {(input.execution.notes || []).length === 0 ? (
+                <div>No narrative notes.</div>
+              ) : (
+                (input.execution.notes || []).map((note) => <div key={note}>• {note}</div>)
+              )}
+            </div>
+          </IntelAccordionSection>
+
+          <IntelAccordionSection title="Snapshot History" summary="Debug payload and internals">
+            <DebugDrawer debug={out.debug} />
+          </IntelAccordionSection>
+        </section>
+      </main>
     </TimeScannerShell>
   );
 }
