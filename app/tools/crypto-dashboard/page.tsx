@@ -4,50 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useAIPageContext } from '@/lib/ai/pageContext';
-import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
-import TopMoversWidget from '@/components/TopMoversWidget';
-import CategoryHeatmapWidget from '@/components/CategoryHeatmapWidget';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
-
-interface FundingRate {
-  symbol: string;
-  fundingRatePercent: number;
-  annualized: number;
-  sentiment: string;
-}
-
-interface LongShortRatio {
-  symbol: string;
-  longAccount: number;
-  shortAccount: number;
-  longShortRatio: number;
-}
-
-interface OpenInterestCoin {
-  symbol: string;
-  openInterestValue: number;
-  change24h: number;
-  signal: string;
-}
-
-interface LiquidationCoin {
-  symbol: string;
-  longLiquidations: number;
-  shortLiquidations: number;
-  totalLiquidations: number;
-  longValue: number;
-  shortValue: number;
-  totalValue: number;
-  dominantSide: 'longs' | 'shorts' | 'balanced';
-}
-
-interface DashboardData {
-  fundingRates: { coins: FundingRate[]; avgRate: number; sentiment: string } | null;
-  longShort: { coins: LongShortRatio[]; overall: string; avgLong: number; avgShort: number } | null;
-  openInterest: { summary: any; coins: OpenInterestCoin[] } | null;
-  liquidations: { summary: any; coins: LiquidationCoin[] } | null;
-  prices: { [key: string]: { price: number; change24h: number } };
-}
+import DerivativesDecisionRow from '@/components/derivatives/DerivativesDecisionRow';
+import DerivativesMarketStrip from '@/components/derivatives/DerivativesMarketStrip';
+import DerivativesCoreGrid from '@/components/derivatives/DerivativesCoreGrid';
+import TradeIdeasSection from '@/components/derivatives/TradeIdeasSection';
+import DerivativesContextSection from '@/components/derivatives/DerivativesContextSection';
+import type { DashboardData, DerivativesTradeIdea } from '@/components/derivatives/types';
 
 export default function CryptoDashboard() {
   const { tier } = useUserTier();
@@ -298,7 +261,7 @@ export default function CryptoDashboard() {
         : 'Liquidations balanced (no directional edge)'
     : 'Liquidation confirmation pending';
 
-  const tradeIdeas = [
+  const tradeIdeas: DerivativesTradeIdea[] = [
     {
       id: 'btc',
       symbol: 'BTC',
@@ -338,6 +301,24 @@ export default function CryptoDashboard() {
     },
   ];
 
+  const marketStripItems = primarySymbols.map((coin) => {
+    const priceData = data.prices[coin];
+    const oiDelta = oiBySymbol.get(coin) ?? 0;
+    const fundingSkew = fundingBySymbol.get(coin) ?? 0;
+    const volLabel = Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
+
+    return {
+      symbol: coin,
+      price: priceData?.price,
+      change24h: priceData?.change24h,
+      oiDelta,
+      fundingSkew,
+      volLabel,
+    };
+  });
+
+  const decisionDrivers = [fundingDriver, oiDriver, liquidationDriver];
+
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 pb-24 pt-6 md:px-6">
       {/* Page Header */}
@@ -376,261 +357,27 @@ export default function CryptoDashboard() {
         <CryptoMorningDecisionCard />
       </div>
 
-      {/* Zone 1: Operator Decision Row */}
-      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-3 md:px-4">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-            {[
-              ['Permission', permission],
-              ['Bias', biasLabel],
-              ['Rotation', rotation],
-              ['Vol Regime', volRegime],
-              ['Liquidity', liquidityState],
-              ['Playbook', playbook],
-            ].map(([label, value]) => (
-              <div key={label} className="h-12 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <div className="text-[11px] text-white/50">{label}</div>
-                <div className="truncate text-sm font-semibold text-white">{value}</div>
-              </div>
-            ))}
-          </div>
+      <DerivativesDecisionRow
+        permission={permission}
+        biasLabel={biasLabel}
+        rotation={rotation}
+        volRegime={volRegime}
+        liquidityState={liquidityState}
+        playbook={playbook}
+        drivers={decisionDrivers}
+      />
 
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <div className="text-sm font-semibold text-white">Why</div>
-            <div className="text-xs text-white/50">3 drivers behind today’s decision</div>
-            <div className="mt-3 grid gap-2">
-              {[fundingDriver, oiDriver, liquidationDriver].map((item, idx) => (
-                <div key={idx} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
-                  • {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <DerivativesMarketStrip items={marketStripItems} />
 
-      {/* Zone 2: Market Strip */}
-      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {primarySymbols.map((coin) => {
-          const priceData = data.prices[coin];
-          const changeClass = priceData && priceData.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400';
-          const oiDelta = oiBySymbol.get(coin) ?? 0;
-          const fundingSkew = fundingBySymbol.get(coin) ?? 0;
-          const miniVol = Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
-          return (
-            <div key={coin} className="rounded-xl border border-white/10 bg-black/10 p-3 text-left">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-white">{coin}</span>
-                {priceData ? (
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-white">
-                      ${priceData.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                    </div>
-                    <div className={`text-xs ${changeClass}`}>
-                      {priceData.change24h >= 0 ? '+' : ''}{priceData.change24h.toFixed(2)}%
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-gray-500 text-xs">Refreshing...</div>
-                )}
-              </div>
+      <DerivativesCoreGrid
+        data={data}
+        volRegime={volRegime}
+        liquidityState={liquidityState}
+      />
 
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
-                  <div className="text-[11px] text-white/50">OI Δ</div>
-                  <div className="text-xs font-semibold text-white/80">{oiDelta >= 0 ? '+' : ''}{oiDelta.toFixed(2)}%</div>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
-                  <div className="text-[11px] text-white/50">Funding</div>
-                  <div className="text-xs font-semibold text-white/80">{fundingSkew >= 0 ? '+' : ''}{fundingSkew.toFixed(3)}%</div>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
-                  <div className="text-[11px] text-white/50">Vol</div>
-                  <div className="text-xs font-semibold text-white/80">{miniVol}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      </div>
+      <TradeIdeasSection ideas={tradeIdeas} />
 
-      {/* Zone 3: Core Derivatives State */}
-      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {/* Positioning / Leverage */}
-        <div className="rounded-xl border border-white/10 bg-white/5">
-          <div className="px-3 py-3 md:px-4">
-            <div className="text-sm font-semibold text-white">Positioning</div>
-            <div className="text-xs text-white/50">Funding + Long/Short + Open Interest</div>
-          </div>
-          <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
-            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80 mb-2">Funding Rates</div>
-              <div className="grid gap-2">
-                {(data.fundingRates?.coins || []).slice(0, 6).map((fr) => (
-                  <div key={fr.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                    <div className="text-xs text-white/70">{fr.symbol}</div>
-                    <div className="text-xs font-semibold text-white">{fr.fundingRatePercent.toFixed(4)}%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80 mb-2">Long / Short Ratio</div>
-              <div className="grid gap-2">
-                {(data.longShort?.coins || []).slice(0, 6).map((ls) => (
-                  <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white">{ls.symbol}</span>
-                      <span className="text-white/60">{ls.longAccount.toFixed(1)} / {ls.shortAccount.toFixed(1)}</span>
-                    </div>
-                    <div className="mt-2 h-2 w-full rounded bg-black/30 overflow-hidden">
-                      <div className="h-2 rounded bg-emerald-500/60" style={{ width: `${ls.longAccount}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80 mb-2">Open Interest (Δ 24h)</div>
-              <div className="grid gap-2">
-                {(data.openInterest?.coins || []).slice(0, 6).map((coin) => (
-                  <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                    <div className="text-xs text-white/70">{coin.symbol}</div>
-                    <div className="text-xs font-semibold text-white">{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stress / Liquidation / Vol */}
-        <div className="rounded-xl border border-white/10 bg-white/5">
-          <div className="px-3 py-3 md:px-4">
-            <div className="text-sm font-semibold text-white">Stress</div>
-            <div className="text-xs text-white/50">Liquidations + Volatility + Liquidity</div>
-          </div>
-          <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
-            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="text-xs font-semibold text-white/80">Liquidations (24h)</div>
-              <div className="text-[11px] text-white/50">Directional stress + confirmation</div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <div className="text-[11px] text-white/50">Longs</div>
-                  <div className="mt-1 text-sm font-semibold text-white">${(((data.liquidations?.summary?.totalLongValue || 0) / 1e6)).toFixed(2)}M</div>
-                </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <div className="text-[11px] text-white/50">Shorts</div>
-                  <div className="mt-1 text-sm font-semibold text-white">${(((data.liquidations?.summary?.totalShortValue || 0) / 1e6)).toFixed(2)}M</div>
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2">
-                {(data.liquidations?.coins || []).slice(0, 5).map((coin) => (
-                  <div key={coin.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white">{coin.symbol}</span>
-                      <span className="text-white/60">L ${(coin.longValue / 1e6).toFixed(1)}M • S ${(coin.shortValue / 1e6).toFixed(1)}M</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                <div className="text-xs font-semibold text-white/80">Volatility Regime</div>
-                <div className="mt-1 text-sm font-semibold text-white">{volRegime}</div>
-                <div className="mt-1 text-xs text-white/50">
-                  {volRegime === 'Expansion' ? 'Wicks likely — avoid chasing entries.' : 'Volatility is manageable for structured entries.'}
-                </div>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                <div className="text-xs font-semibold text-white/80">Liquidity</div>
-                <div className="mt-1 text-sm font-semibold text-white">{liquidityState}</div>
-                <div className="mt-1 text-xs text-white/50">
-                  {liquidityState === 'Contracting' ? 'Lower follow-through probability.' : 'Sufficient participation for cleaner setups.'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Zone 4: Trade Ideas */}
-      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-        <div className="text-sm font-semibold text-white">Today’s Permissioned Trades</div>
-        <div className="text-xs text-white/50">Trade idea output aligned to shared state — max 3 cards.</div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {tradeIdeas.map((idea) => (
-            <div key={idea.id} className="rounded-xl border border-white/10 bg-black/10 p-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-white">{idea.symbol}</div>
-                <div className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-semibold text-white/70">{idea.direction}</div>
-              </div>
-
-              <div className="mt-2 text-xs text-white/50">Setup</div>
-              <div className="text-sm font-semibold text-white/80">{idea.setupType}</div>
-
-              <div className="mt-3 text-xs text-white/50">Trigger</div>
-              <div className="text-sm text-white/80">{idea.trigger}</div>
-
-              <div className="mt-3 text-xs text-white/50">Invalidation</div>
-              <div className="text-sm text-white/80">{idea.invalidation}</div>
-
-              <div className="mt-3 flex items-center justify-between">
-                <div className="text-xs text-white/50">Risk mode</div>
-                <div className="text-xs font-semibold text-white/80">{idea.riskMode}</div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <a
-                  href={`/tools/alerts?symbol=${encodeURIComponent(idea.symbol)}`}
-                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
-                >
-                  Alert
-                </a>
-                <a
-                  href={`/tools/watchlists?symbol=${encodeURIComponent(idea.symbol)}`}
-                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
-                >
-                  Watch
-                </a>
-                <a
-                  href={`/tools/journal?note=${encodeURIComponent(`Derivatives idea: ${idea.symbol} ${idea.direction}`)}`}
-                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
-                >
-                  Journal
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Zone 5: Context (collapsible) */}
-      <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
-        <summary className="cursor-pointer list-none px-3 py-3 md:px-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-white">Context (Discovery)</div>
-              <div className="text-xs text-white/50">Trending / Gainers / Sectors — non-core derivatives context</div>
-            </div>
-            <div className="text-xs font-semibold text-white/70">Toggle</div>
-          </div>
-        </summary>
-        <div className="border-t border-white/10 p-3 md:p-4">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            <TrendingCoinsWidget />
-            <TopMoversWidget />
-            <CategoryHeatmapWidget />
-          </div>
-        </div>
-      </details>
+      <DerivativesContextSection />
     </div>
   );
 }
