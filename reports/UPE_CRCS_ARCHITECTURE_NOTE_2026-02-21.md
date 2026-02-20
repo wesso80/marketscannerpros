@@ -107,7 +107,12 @@ Tenant overlays cannot:
 ## Implementation Status
 - ✅ Phase A complete: schema + global snapshot worker.
 - ✅ Phase B baseline complete: hourly CRCS base worker (`worker/upe-crcs-hourly.ts`) writing `crcs_hourly_base` and `micro_regime_snapshots`.
-- ⏳ Pending: scheduler wiring at `:05 ET`, UPE read endpoints, Movers consumption.
+- ✅ Phase C complete: UPE read endpoints added:
+   - `GET /api/upe/snapshot/global`
+   - `GET /api/upe/crcs/latest?asset_class=equity|crypto&limit=...`
+   - `GET /api/upe/crcs/symbol?symbol=...&asset_class=equity|crypto`
+   - Read-time tenant overlays applied in `lib/upe.ts` (tighten-only + sizing cap by capital mode)
+- ⏳ Pending: scheduler wiring at `:05 ET`, Movers consumption + blocked-action tooltip UX.
 
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`
