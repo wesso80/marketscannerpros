@@ -691,6 +691,39 @@ function BacktestContent() {
     setEndDate(availableDateRange.endDate);
   };
 
+  const clampDateToAvailableRange = (value: string) => {
+    if (!availableDateRange) return value;
+    if (value < availableDateRange.startDate) return availableDateRange.startDate;
+    if (value > availableDateRange.endDate) return availableDateRange.endDate;
+    return value;
+  };
+
+  const handleStartDateChange = (value: string) => {
+    const normalized = clampDateToAvailableRange(value);
+    const normalizedEnd = clampDateToAvailableRange(endDate);
+
+    if (normalized > normalizedEnd) {
+      setStartDate(normalizedEnd);
+      setEndDate(normalizedEnd);
+      return;
+    }
+
+    setStartDate(normalized);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    const normalized = clampDateToAvailableRange(value);
+    const normalizedStart = clampDateToAvailableRange(startDate);
+
+    if (normalized < normalizedStart) {
+      setStartDate(normalized);
+      setEndDate(normalized);
+      return;
+    }
+
+    setEndDate(normalized);
+  };
+
   const resolveMinimumScanTrades = () => Math.max(1, Math.floor(Number(minimumScanTrades) || 1));
 
   const isReplayStrategy =
@@ -1487,7 +1520,7 @@ function BacktestContent() {
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleStartDateChange(e.target.value)}
                 min={availableDateRange?.startDate}
                 max={availableDateRange?.endDate}
                 style={{
@@ -1509,7 +1542,7 @@ function BacktestContent() {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => handleEndDateChange(e.target.value)}
                 min={availableDateRange?.startDate}
                 max={availableDateRange?.endDate}
                 style={{
