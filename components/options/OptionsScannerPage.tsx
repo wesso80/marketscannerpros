@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import DeskHeaderSticky from '@/components/options/layer0/DeskHeaderSticky';
 import OptionsScannerLayout from '@/components/options/layout/OptionsScannerLayout';
 import { buildInitialEvidenceOpen, getAutoOpenKeys } from '@/lib/options/autoOpenLogic';
 import { mapOptionsScanResponseToV3 } from '@/lib/options/mapPayload';
@@ -136,43 +135,20 @@ function OptionsScannerPageContent() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <DeskHeaderSticky header={payload?.header || fallbackHeader} />
-
-      <main className="mx-auto w-full max-w-[1280px] space-y-4 px-4 py-4">
-        <section className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <input
-              value={symbol}
-              onChange={(event) => setSymbol(event.target.value.toUpperCase())}
-              placeholder="Symbol"
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100"
-            />
-            <select
-              value={scanMode}
-              onChange={(event) => setScanMode(event.target.value as ScanModeType)}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100"
-            >
-              {TIMEFRAME_OPTIONS.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                void runScan();
-              }}
-              disabled={loading}
-              className="rounded-lg bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200 disabled:opacity-50"
-            >
-              {loading ? 'Scanning…' : 'Run Options v3'}
-            </button>
-          </div>
-          {error && <div className="mt-3 text-sm text-rose-300">{error}</div>}
-        </section>
+      <main className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-4 lg:px-6 lg:py-6">
+        {error && <div className="text-sm text-rose-300">{error}</div>}
 
         <OptionsScannerLayout
           header={payload?.header || fallbackHeader}
           decision={payload?.decision || fallbackDecision}
+          symbol={symbol}
+          scanMode={scanMode}
+          loading={loading}
+          onSymbolChange={(next) => setSymbol(next.toUpperCase())}
+          onScanModeChange={(next) => setScanMode(next)}
+          onRunScan={() => {
+            void runScan();
+          }}
           setup={
             payload?.setup || {
               setupType: 'N/A',

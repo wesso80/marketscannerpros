@@ -12,9 +12,26 @@ import {
   SetupModel,
 } from '@/types/optionsScanner';
 
+type ScanModeType =
+  | 'scalping'
+  | 'intraday_30m'
+  | 'intraday_1h'
+  | 'intraday_4h'
+  | 'swing_1d'
+  | 'swing_3d'
+  | 'swing_1w'
+  | 'macro_monthly'
+  | 'macro_yearly';
+
 type OptionsScannerLayoutProps = {
   header: DeskHeaderModel;
   decision: DecisionModel;
+  symbol: string;
+  scanMode: ScanModeType;
+  loading: boolean;
+  onSymbolChange: (next: string) => void;
+  onScanModeChange: (next: ScanModeType) => void;
+  onRunScan: () => void;
   setup: SetupModel;
   plan: ExecutionPlanModel;
   evidenceSummary: EvidenceSummaryModel;
@@ -30,10 +47,16 @@ type OptionsScannerLayoutProps = {
 
 export default function OptionsScannerLayout(props: OptionsScannerLayoutProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <Layer1DeskContext
         header={props.header}
         decision={props.decision}
+        symbol={props.symbol}
+        scanMode={props.scanMode}
+        loading={props.loading}
+        onSymbolChange={props.onSymbolChange}
+        onScanModeChange={props.onScanModeChange}
+        onRunScan={props.onRunScan}
         actions={props.actions}
         viewMode={props.viewMode}
         onToggleViewMode={props.onToggleViewMode}
