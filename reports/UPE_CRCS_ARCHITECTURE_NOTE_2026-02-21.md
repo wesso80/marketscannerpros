@@ -126,7 +126,11 @@ Tenant overlays cannot:
    - Added top deployment gate + environment breakdown
    - Added action-row parity with blocked-action disabled behavior
    - Moved research-heavy blocks into collapsed informational zone
-- ⏳ Pending: mirror same UPE decision-console consumption depth in Crypto Explorer and finalize shared component extraction.
+- ✅ Crypto Explorer parity pass (`app/tools/crypto-explorer/page.tsx`):
+   - UPE symbol + global snapshot consumption integrated
+   - Permission, CRCS, and micro-delta surfaced in state strip
+   - Action-row controls now enforce blocked disabled state with tooltip reasons
+- ⏳ Pending: finalize shared explorer component extraction (gate/context/action blocks).
 
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`

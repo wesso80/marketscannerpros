@@ -87,6 +87,25 @@ interface SearchResult {
   thumb: string;
 }
 
+interface UpeSymbolRow {
+  symbol: string;
+  globalEligibility: 'eligible' | 'conditional' | 'blocked';
+  eligibilityUser: 'eligible' | 'conditional' | 'blocked';
+  crcsFinal: number;
+  crcsUser: number;
+  microAdjustment: number;
+  profileName: string;
+  overlayReasons: string[];
+}
+
+interface UpeGlobalSnapshot {
+  regime: 'risk_on' | 'neutral' | 'risk_off';
+  capitalMode: 'normal' | 'reduced' | 'defensive';
+  volatilityState: string | null;
+  liquidityState: string | null;
+  adaptiveConfidence: number | null;
+}
+
 const POPULAR_COINS = [
   { symbol: 'BTC', name: 'Bitcoin' },
   { symbol: 'ETH', name: 'Ethereum' },
@@ -273,6 +292,9 @@ function CryptoDetailPageContent() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [chartView, setChartView] = useState<'sparkline' | 'ohlc'>('ohlc');
   const [btc7dChange, setBtc7dChange] = useState<number | null>(null);
+  const [upeSignal, setUpeSignal] = useState<UpeSymbolRow | null>(null);
+  const [upeGlobal, setUpeGlobal] = useState<UpeGlobalSnapshot | null>(null);
+  const [upeMicroState, setUpeMicroState] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const hasLoadedInitial = useRef(false);
 
@@ -318,12 +340,29 @@ function CryptoDetailPageContent() {
     setSelectedCoin(symbolOrId);
     setShowDropdown(false);
     setSearchQuery('');
+    setUpeSignal(null);
 
     try {
-      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbolOrId)}`, { cache: 'no-store' });
+      const [res, upeSymbolRes, upeGlobalRes] = await Promise.all([
+        fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbolOrId)}`, { cache: 'no-store' }),
+        fetch(`/api/upe/crcs/symbol?symbol=${encodeURIComponent(symbolOrId.toUpperCase())}&asset_class=crypto`, { cache: 'no-store' }),
+        fetch('/api/upe/snapshot/global', { cache: 'no-store' }),
+      ]);
+
       if (!res.ok) throw new Error('Failed to fetch coin data');
       const data = await res.json();
       setCoinData(data);
+
+      if (upeSymbolRes.ok) {
+        const upeSymbolData = await upeSymbolRes.json();
+        setUpeSignal((upeSymbolData?.row || null) as UpeSymbolRow | null);
+      }
+
+      if (upeGlobalRes.ok) {
+        const upeGlobalData = await upeGlobalRes.json();
+        setUpeGlobal((upeGlobalData?.globalSnapshot || null) as UpeGlobalSnapshot | null);
+        setUpeMicroState(upeGlobalData?.microStates?.crypto?.microState || null);
+      }
 
       if (data?.coin?.symbol?.toUpperCase() === 'BTC') {
         setBtc7dChange(data.price_changes?.['7d'] ?? null);
@@ -342,6 +381,9 @@ function CryptoDetailPageContent() {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setCoinData(null);
       setBtc7dChange(null);
+      setUpeSignal(null);
+      setUpeGlobal(null);
+      setUpeMicroState(null);
     } finally {
       setLoading(false);
     }
@@ -365,6 +407,21 @@ function CryptoDetailPageContent() {
   }
 
   const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
+  const permissionLabel = upeSignal
+    ? upeSignal.eligibilityUser === 'eligible'
+      ? 'Eligible'
+      : upeSignal.eligibilityUser === 'conditional'
+      ? 'Conditional'
+      : 'Blocked'
+    : decision.tradePermission === 'Yes'
+    ? 'Eligible'
+    : decision.tradePermission === 'No'
+    ? 'Blocked'
+    : 'Conditional';
+  const isBlocked = permissionLabel === 'Blocked';
+  const blockReason = upeSignal?.overlayReasons?.length
+    ? upeSignal.overlayReasons.join(' • ')
+    : 'Blocked by governance profile or global gate';
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
@@ -454,9 +511,12 @@ function CryptoDetailPageContent() {
                 ['Align', `${decision.alignmentScore}%`],
                 ['Vol', decision.volatilityState],
                 ['Liquidity', decision.liquidityState],
-                ['Regime', decision.regimeTag],
+                ['Regime', upeGlobal?.regime || decision.regimeTag],
+                ['Micro', upeMicroState || 'neutral'],
                 ['Risk', decision.riskTag],
-                ['Permission', decision.tradePermission],
+                ['Permission', permissionLabel],
+                ['CRCS', upeSignal ? upeSignal.crcsUser.toFixed(1) : '—'],
+                ['ΔHr', upeSignal ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}
@@ -519,21 +579,37 @@ function CryptoDetailPageContent() {
                   <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/70 p-2">
                     <p className="text-[10px] uppercase text-slate-500">Trade Permission</p>
                     <div className="mt-1 flex items-center justify-between">
-                      <p className="text-sm font-bold text-slate-100">{decision.tradePermission}</p>
+                      <p className="text-sm font-bold text-slate-100">{permissionLabel}</p>
                       <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
-                      {decision.tradePermission === 'Yes' && 'Structure and liquidity conditions support execution workflow.'}
-                      {decision.tradePermission === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack before entry.'}
-                      {decision.tradePermission === 'No' && 'Condition stack fails risk policy. Monitor, do not force setup.'}
+                      {permissionLabel === 'Eligible' && 'Structure and liquidity conditions support execution workflow.'}
+                      {permissionLabel === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack before entry.'}
+                      {permissionLabel === 'Blocked' && 'Condition stack fails risk policy. Monitor, do not force setup.'}
                     </p>
                   </div>
 
                   <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    <Link href={`/tools/watchlists?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
-                    <Link href={`/tools/alerts?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
-                    <Link href={`/tools/scanner?asset=crypto&symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
-                    <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${coinData.coin.symbol.toUpperCase()} setup`)}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
+                    {isBlocked ? (
+                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Add to Watchlist</button>
+                    ) : (
+                      <Link href={`/tools/watchlists?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
+                    )}
+                    {isBlocked ? (
+                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Create Alert</button>
+                    ) : (
+                      <Link href={`/tools/alerts?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
+                    )}
+                    {isBlocked ? (
+                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Run Confluence Scan</button>
+                    ) : (
+                      <Link href={`/tools/scanner?asset=crypto&symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
+                    )}
+                    {isBlocked ? (
+                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Open Journal Draft</button>
+                    ) : (
+                      <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${coinData.coin.symbol.toUpperCase()} setup`)}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
+                    )}
                   </div>
                 </div>
               </div>
