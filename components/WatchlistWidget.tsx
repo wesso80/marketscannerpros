@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 
 interface Watchlist {
@@ -30,6 +30,10 @@ interface QuoteData {
   change: number;
   changePercent: number;
 }
+
+type IdeaStage = 'Pre-Staging' | 'Structure Building' | 'Trigger Watch' | 'Execution Ready' | 'Conflict' | 'Invalidated';
+type WatchlistMode = 'PRE-STAGING' | 'ACTIVE' | 'RISK-CONTROL';
+type SortMode = 'confidence' | 'edge' | 'volatility' | 'momentum' | 'recent';
 
 const COLORS = [
   { name: 'emerald', class: 'bg-emerald-500', text: 'text-emerald-400' },
@@ -68,6 +72,15 @@ export default function WatchlistWidget() {
   const [showAddSymbol, setShowAddSymbol] = useState(false);
   const [newSymbol, setNewSymbol] = useState('');
   const [newAssetType, setNewAssetType] = useState('equity');
+  const [watchlistMode, setWatchlistMode] = useState<WatchlistMode>('PRE-STAGING');
+  const [stageFilter, setStageFilter] = useState<'all' | IdeaStage>('all');
+  const [biasFilter, setBiasFilter] = useState<'all' | 'long' | 'short' | 'neutral'>('all');
+  const [confidenceFilter, setConfidenceFilter] = useState<50 | 60 | 70>(60);
+  const [volatilityFilter, setVolatilityFilter] = useState<'all' | 'expanding' | 'controlled' | 'compressed'>('all');
+  const [alignmentFilter, setAlignmentFilter] = useState<1 | 2 | 3 | 4>(1);
+  const [readyOnly, setReadyOnly] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>('confidence');
+  const [compactView, setCompactView] = useState(false);
 
   const getHeatState = (quote?: QuoteData) => {
     if (!quote) {
@@ -296,18 +309,155 @@ export default function WatchlistWidget() {
   };
   const currentLimits = limits[tier] || limits.free;
   const activeSymbols = items.length;
-  const scannerReady = items.filter((item) => {
-    const quote = quotes[item.symbol];
-    return getHeatState(quote).label === 'EDGE BUILDING';
-  }).length;
-  const hotSignals = items.filter((item) => {
-    const quote = quotes[item.symbol];
-    return !!quote && Math.abs(quote.changePercent) >= 2;
-  }).length;
+
+  const ideaRows = useMemo(() => {
+    return items.map((item) => {
+      const quote = quotes[item.symbol];
+      const changePercent = quote?.changePercent ?? 0;
+      const absChange = Math.abs(changePercent);
+      const confidence = Math.max(35, Math.min(95, Math.round(55 + (changePercent * 8))));
+      const alignmentScore = confidence >= 80 ? 4 : confidence >= 68 ? 3 : confidence >= 58 ? 2 : 1;
+      const edge: 'Bullish' | 'Bearish' | 'Neutral' = changePercent > 0.35 ? 'Bullish' : changePercent < -0.35 ? 'Bearish' : 'Neutral';
+      const quality: 'High' | 'Medium' | 'Low' = confidence >= 75 ? 'High' : confidence >= 60 ? 'Medium' : 'Low';
+      const momentumState: 'Rising' | 'Mixed' | 'Fading' = absChange >= 1.2 ? 'Rising' : absChange >= 0.5 ? 'Mixed' : 'Fading';
+      const volatilityState: 'Expanding' | 'Controlled' | 'Compressed' = absChange >= 2 ? 'Expanding' : absChange >= 0.8 ? 'Controlled' : 'Compressed';
+
+      let stage: IdeaStage = 'Pre-Staging';
+      if (!quote) {
+        stage = 'Pre-Staging';
+      } else if (changePercent <= -3) {
+        stage = 'Invalidated';
+      } else if (edge === 'Neutral' && absChange >= 0.8) {
+        stage = 'Conflict';
+      } else if (confidence >= 78 && alignmentScore >= 3) {
+        stage = 'Execution Ready';
+      } else if (confidence >= 66) {
+        stage = 'Trigger Watch';
+      } else if (confidence >= 56) {
+        stage = 'Structure Building';
+      }
+
+      const structureState = stage === 'Execution Ready'
+        ? 'Confirmed'
+        : stage === 'Trigger Watch'
+        ? 'Watching Trigger'
+        : stage === 'Structure Building'
+        ? 'Building'
+        : stage === 'Conflict'
+        ? 'Conflicted'
+        : stage === 'Invalidated'
+        ? 'Broken'
+        : 'Pre-Staging';
+
+      const edgeTemperature = Math.max(5, Math.min(100, confidence + (stage === 'Execution Ready' ? 8 : 0) - (stage === 'Invalidated' ? 20 : 0)));
+
+      return {
+        item,
+        quote,
+        confidence,
+        alignmentScore,
+        edge,
+        quality,
+        momentumState,
+        volatilityState,
+        stage,
+        structureState,
+        edgeTemperature,
+        updatedAt: quote ? Date.now() : new Date(item.created_at).getTime(),
+      };
+    });
+  }, [items, quotes]);
+
+  const readyToDeploy = ideaRows.filter((row) => row.stage === 'Execution Ready').length;
+  const structureBuilding = ideaRows.filter((row) => row.stage === 'Structure Building').length;
+  const triggerWatch = ideaRows.filter((row) => row.stage === 'Trigger Watch').length;
+  const conflictCount = ideaRows.filter((row) => row.stage === 'Conflict').length;
+  const invalidatedCount = ideaRows.filter((row) => row.stage === 'Invalidated').length;
+  const coolingCount = ideaRows.filter((row) => row.momentumState === 'Fading').length;
+  const hotSignals = ideaRows.filter((row) => row.edgeTemperature >= 75).length;
+
   const avgChangePercent = items.length > 0
-    ? items.reduce((sum, item) => sum + (quotes[item.symbol]?.changePercent ?? 0), 0) / items.length
+    ? items.reduce((sum, item) => sum + (quotes[item.symbol]?.changePercent ?? 0), 0) / Math.max(1, items.length)
     : 0;
   const biasLabel = avgChangePercent > 0.3 ? 'Bullish' : avgChangePercent < -0.3 ? 'Bearish' : 'Neutral';
+  const avgConfidence = ideaRows.length > 0
+    ? Math.round(ideaRows.reduce((sum, row) => sum + row.confidence, 0) / ideaRows.length)
+    : 0;
+  const avgAlignment = ideaRows.length > 0
+    ? (ideaRows.reduce((sum, row) => sum + row.alignmentScore, 0) / ideaRows.length).toFixed(1)
+    : '0.0';
+  const deploymentReadinessPct = activeSymbols > 0 ? Math.round((readyToDeploy / activeSymbols) * 100) : 0;
+
+  const filteredIdeas = useMemo(() => {
+    const rows = ideaRows.filter((row) => {
+      if (readyOnly && row.stage !== 'Execution Ready') return false;
+      if (stageFilter !== 'all' && row.stage !== stageFilter) return false;
+      if (biasFilter !== 'all') {
+        const bias = row.edge === 'Bullish' ? 'long' : row.edge === 'Bearish' ? 'short' : 'neutral';
+        if (bias !== biasFilter) return false;
+      }
+      if (row.confidence < confidenceFilter) return false;
+      if (volatilityFilter !== 'all' && row.volatilityState.toLowerCase() !== volatilityFilter) return false;
+      if (row.alignmentScore < alignmentFilter) return false;
+      return true;
+    });
+
+    const volatilityRank: Record<'Expanding' | 'Controlled' | 'Compressed', number> = {
+      Expanding: 3,
+      Controlled: 2,
+      Compressed: 1,
+    };
+    const momentumRank: Record<'Rising' | 'Mixed' | 'Fading', number> = {
+      Rising: 3,
+      Mixed: 2,
+      Fading: 1,
+    };
+
+    rows.sort((a, b) => {
+      if (sortMode === 'edge') return b.edgeTemperature - a.edgeTemperature;
+      if (sortMode === 'volatility') return volatilityRank[b.volatilityState] - volatilityRank[a.volatilityState];
+      if (sortMode === 'momentum') return momentumRank[b.momentumState] - momentumRank[a.momentumState];
+      if (sortMode === 'recent') return b.updatedAt - a.updatedAt;
+      return b.confidence - a.confidence;
+    });
+
+    return rows;
+  }, [ideaRows, readyOnly, stageFilter, biasFilter, confidenceFilter, volatilityFilter, alignmentFilter, sortMode]);
+
+  const runScanAll = () => {
+    const first = filteredIdeas[0]?.item?.symbol || items[0]?.symbol;
+    if (!first) return;
+    window.location.href = `/tools/scanner?symbol=${encodeURIComponent(first)}`;
+  };
+
+  const runConfluenceCheck = () => {
+    if (items.length === 0) return;
+    void fetchQuotes(items.map((i) => i.symbol));
+  };
+
+  const exportWatchlist = () => {
+    const headers = ['symbol', 'asset_type', 'stage', 'confidence', 'alignment', 'edge', 'quality', 'momentum', 'volatility', 'last_updated'];
+    const rows = filteredIdeas.map((row) => [
+      row.item.symbol,
+      row.item.asset_type,
+      row.stage,
+      String(row.confidence),
+      `${row.alignmentScore}/4`,
+      row.edge,
+      row.quality,
+      row.momentumState,
+      row.volatilityState,
+      new Date(row.updatedAt).toISOString(),
+    ]);
+    const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedWatchlist?.name || 'watchlist'}-export.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return (
@@ -322,215 +472,277 @@ export default function WatchlistWidget() {
   }
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-700/50">
-        <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
-          <div className="text-[0.68rem] uppercase tracking-[0.08em] text-slate-400 font-semibold mb-1">
-            Watchlist Status
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
-              <div className="text-slate-500 uppercase tracking-wide">Active Symbols</div>
-              <div className="text-slate-100 font-semibold">{activeSymbols}</div>
-            </div>
-            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
-              <div className="text-slate-500 uppercase tracking-wide">Scanner Ready</div>
-              <div className="text-emerald-400 font-semibold">{scannerReady}</div>
-            </div>
-            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
-              <div className="text-slate-500 uppercase tracking-wide">Bias</div>
-              <div className={`font-semibold ${biasLabel === 'Bullish' ? 'text-emerald-400' : biasLabel === 'Bearish' ? 'text-red-400' : 'text-amber-400'}`}>{biasLabel}</div>
-            </div>
-            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
-              <div className="text-slate-500 uppercase tracking-wide">Hot Signals</div>
-              <div className="text-amber-400 font-semibold">{hotSignals}</div>
-            </div>
-            <div className="rounded border border-slate-700/70 bg-slate-800/40 px-2 py-1.5">
-              <div className="text-slate-500 uppercase tracking-wide">Mode</div>
-              <div className="text-slate-100 font-semibold">Pre-Staging</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            📋 Watchlists
-            <span className="text-xs text-slate-400">
-              ({watchlists.length}/{currentLimits.watchlists})
-            </span>
-          </h2>
-          <button
-            onClick={() => setShowCreate(true)}
-            disabled={watchlists.length >= currentLimits.watchlists}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 
-              disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
-          >
-            + New List
-          </button>
-        </div>
-
-        {/* Watchlist tabs */}
-        {watchlists.length > 0 && (
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-            {watchlists.map((w) => (
-              <button
-                key={w.id}
-                onClick={() => setSelectedWatchlist(w)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-all
-                  ${selectedWatchlist?.id === w.id 
-                    ? `${getColorClass(w.color)} text-white` 
-                    : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
-                  }`}
-              >
-                <span>{ICONS[w.icon] || '⭐'}</span>
-                <span>{w.name}</span>
-                <span className="text-xs opacity-70">({w.item_count})</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
+    <div className="rounded-xl border border-slate-700/60 bg-slate-800/50">
       <div className="p-4">
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
             {error}
             <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
           </div>
         )}
 
         {watchlists.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-3">📋</div>
-            <p className="text-slate-400 mb-1">No Active Watchlists</p>
-            <p className="text-slate-500 mb-4 text-sm">Initialize Tracking Set</p>
+          <div className="py-10 text-center">
+            <div className="mb-3 text-4xl">📋</div>
+            <p className="mb-1 text-slate-300">No active watchlists</p>
+            <p className="mb-4 text-sm text-slate-500">Initialize your first idea pipeline</p>
             <button
               onClick={() => setShowCreate(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-500"
             >
-              Initialize Tracking Set
+              Create Watchlist
             </button>
           </div>
         ) : selectedWatchlist ? (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className={`text-lg font-semibold ${getTextColorClass(selectedWatchlist.color)}`}>
-                  {ICONS[selectedWatchlist.icon]} {selectedWatchlist.name}
-                </h3>
-                {selectedWatchlist.description && (
-                  <p className="text-sm text-slate-400">{selectedWatchlist.description}</p>
-                )}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {watchlists.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => setSelectedWatchlist(w)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] ${
+                        selectedWatchlist.id === w.id
+                          ? `${getColorClass(w.color)} text-white`
+                          : 'border border-slate-700 bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {ICONS[w.icon] || '⭐'} {w.name} ({w.item_count})
+                    </button>
+                  ))}
+                </div>
+                <select
+                  value={watchlistMode}
+                  onChange={(e) => setWatchlistMode(e.target.value as WatchlistMode)}
+                  className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-slate-100"
+                >
+                  <option value="PRE-STAGING">PRE-STAGING</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="RISK-CONTROL">RISK-CONTROL</option>
+                </select>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowAddSymbol(true)}
-                  disabled={items.length >= currentLimits.items}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
-                >
-                  + Add Symbol
-                </button>
-                <button
-                  onClick={() => deleteWatchlist(selectedWatchlist.id)}
-                  className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-sm rounded-lg transition-colors"
-                >
-                  🗑️
+            </div>
+
+            <div className={`rounded-xl border px-4 py-4 ${
+              invalidatedCount > 0
+                ? 'border-red-500/40 bg-red-500/10'
+                : conflictCount > readyToDeploy
+                ? 'border-amber-500/40 bg-amber-500/10'
+                : readyToDeploy > 0
+                ? 'border-emerald-500/40 bg-emerald-500/10'
+                : 'border-slate-700 bg-slate-900/40'
+            }`}>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <div className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Watchlist</div>
+                  <div className="mt-1 text-lg font-black text-white">{selectedWatchlist.name.toUpperCase()}</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">Mode: {watchlistMode}</div>
+                  <div className={`mt-1 text-xs font-semibold uppercase tracking-[0.06em] ${biasLabel === 'Bullish' ? 'text-emerald-400' : biasLabel === 'Bearish' ? 'text-red-400' : 'text-amber-300'}`}>
+                    Bias: {biasLabel}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
+                    <div className="uppercase tracking-wide text-slate-500">Hot Signals</div>
+                    <div className="font-bold text-amber-300">{hotSignals}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
+                    <div className="uppercase tracking-wide text-slate-500">Ready to Deploy</div>
+                    <div className="font-bold text-emerald-400">{readyToDeploy}</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
+                    <div className="uppercase tracking-wide text-slate-500">Avg Confidence</div>
+                    <div className="font-bold text-slate-100">{avgConfidence}%</div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
+                    <div className="uppercase tracking-wide text-slate-500">Avg Alignment</div>
+                    <div className="font-bold text-slate-100">{avgAlignment}/4</div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 md:items-end">
+                  <div className="text-xs text-slate-400">{activeSymbols} symbols • readiness {deploymentReadinessPct}%</div>
+                  <div className="flex w-full flex-wrap gap-2 md:justify-end">
+                    <button
+                      onClick={() => setShowAddSymbol(true)}
+                      disabled={items.length >= currentLimits.items}
+                      className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      + Add Symbol
+                    </button>
+                    <button
+                      onClick={() => setShowCreate(true)}
+                      disabled={watchlists.length >= currentLimits.watchlists}
+                      className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
+                    >
+                      + Create List
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-5">
+              {[
+                { label: 'Ready to Deploy', value: readyToDeploy, pct: activeSymbols ? Math.round((readyToDeploy / activeSymbols) * 100) : 0, tone: 'text-emerald-400' },
+                { label: 'Structure Building', value: structureBuilding, pct: activeSymbols ? Math.round((structureBuilding / activeSymbols) * 100) : 0, tone: 'text-cyan-300' },
+                { label: 'Trigger Watch', value: triggerWatch, pct: activeSymbols ? Math.round((triggerWatch / activeSymbols) * 100) : 0, tone: 'text-amber-300' },
+                { label: 'Conflict', value: conflictCount, pct: activeSymbols ? Math.round((conflictCount / activeSymbols) * 100) : 0, tone: 'text-orange-300' },
+                { label: 'Invalidated', value: invalidatedCount, pct: activeSymbols ? Math.round((invalidatedCount / activeSymbols) * 100) : 0, tone: 'text-red-400' },
+              ].map((metric) => (
+                <div key={metric.label} className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-3 py-2">
+                  <div className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{metric.label}</div>
+                  <div className={`mt-1 text-lg font-black ${metric.tone}`}>{metric.value}</div>
+                  <div className="text-[0.65rem] text-slate-500">{metric.pct}% of total</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="sticky top-4 z-20 rounded-xl border border-slate-700 bg-slate-900/75 p-3 backdrop-blur">
+              <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-6">
+                <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as 'all' | IdeaStage)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value="all">Stage: All</option>
+                  <option value="Execution Ready">Stage: Ready</option>
+                  <option value="Structure Building">Stage: Building</option>
+                  <option value="Trigger Watch">Stage: Trigger Watch</option>
+                  <option value="Conflict">Stage: Conflict</option>
+                  <option value="Invalidated">Stage: Invalid</option>
+                </select>
+                <select value={biasFilter} onChange={(e) => setBiasFilter(e.target.value as 'all' | 'long' | 'short' | 'neutral')} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value="all">Bias: All</option>
+                  <option value="long">Bias: Long</option>
+                  <option value="short">Bias: Short</option>
+                  <option value="neutral">Bias: Neutral</option>
+                </select>
+                <select value={confidenceFilter} onChange={(e) => setConfidenceFilter(Number(e.target.value) as 50 | 60 | 70)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value={50}>Confidence: &gt;50</option>
+                  <option value={60}>Confidence: &gt;60</option>
+                  <option value={70}>Confidence: &gt;70</option>
+                </select>
+                <select value={volatilityFilter} onChange={(e) => setVolatilityFilter(e.target.value as 'all' | 'expanding' | 'controlled' | 'compressed')} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value="all">Volatility: All</option>
+                  <option value="expanding">Volatility: Expanding</option>
+                  <option value="controlled">Volatility: Controlled</option>
+                  <option value="compressed">Volatility: Compressed</option>
+                </select>
+                <select value={alignmentFilter} onChange={(e) => setAlignmentFilter(Number(e.target.value) as 1 | 2 | 3 | 4)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value={1}>Alignment: 1TF+</option>
+                  <option value={2}>Alignment: 2TF+</option>
+                  <option value={3}>Alignment: 3TF+</option>
+                  <option value={4}>Alignment: 4TF</option>
+                </select>
+                <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
+                  <option value="confidence">Sort: Confidence</option>
+                  <option value="edge">Sort: Edge Temperature</option>
+                  <option value="volatility">Sort: Volatility</option>
+                  <option value="momentum">Sort: Momentum</option>
+                  <option value="recent">Sort: Recently Updated</option>
+                </select>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button onClick={() => setReadyOnly((prev) => !prev)} className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase ${readyOnly ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
+                    {readyOnly ? 'Ready Only: On' : 'Ready Only'}
+                  </button>
+                  <span className="text-xs text-slate-500">{filteredIdeas.length} visible</span>
+                </div>
+                <button onClick={() => setCompactView((prev) => !prev)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-300">
+                  {compactView ? 'Compact View' : 'Grid View'}
                 </button>
               </div>
             </div>
 
             {itemsLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((row) => (
-                  <div key={row} className="h-14 bg-slate-700/50 rounded-lg animate-pulse" />
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map((row) => (
+                  <div key={row} className="h-44 animate-pulse rounded-xl bg-slate-700/40" />
                 ))}
               </div>
-            ) : items.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
-                <p>No symbols in this watchlist</p>
-                <button
-                  onClick={() => setShowAddSymbol(true)}
-                  className="mt-2 text-emerald-400 hover:text-emerald-300"
-                >
-                  Add your first symbol →
+            ) : filteredIdeas.length === 0 ? (
+              <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
+                <p>No symbols match current filters</p>
+                <button onClick={() => { setStageFilter('all'); setBiasFilter('all'); setReadyOnly(false); }} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
+                  Reset filters
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {items.map((item) => {
-                  const quote = quotes[item.symbol];
-                  const heatState = getHeatState(quote);
+              <div className={`grid gap-3 ${compactView ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+                {filteredIdeas.map((row) => {
+                  const { item, quote } = row;
+                  const stageTone = row.stage === 'Execution Ready'
+                    ? 'border-emerald-500/60'
+                    : row.stage === 'Trigger Watch'
+                    ? 'border-amber-500/60'
+                    : row.stage === 'Structure Building'
+                    ? 'border-cyan-400/50'
+                    : row.stage === 'Conflict'
+                    ? 'border-orange-500/50'
+                    : row.stage === 'Invalidated'
+                    ? 'border-red-500/60'
+                    : 'border-blue-500/40';
+
                   return (
-                    <div
-                      key={item.id}
-                      className="p-3 bg-slate-700/30 rounded-lg hover:bg-slate-700/50 transition-colors group"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
-                          <div>
-                            <p className="font-semibold text-white">{item.symbol}</p>
-                            <p className="text-xs text-slate-400 capitalize">{item.asset_type}</p>
-                          </div>
-                          <span className={`mt-0.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${heatState.className}`}>
-                            <span>{heatState.icon}</span>
-                            <span>{heatState.label}</span>
-                          </span>
+                    <div key={item.id} className={`flex h-full flex-col rounded-xl border bg-slate-900/55 p-3 ${stageTone}`}>
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-lg font-black text-white">{item.symbol}</div>
+                          <div className="text-[11px] uppercase tracking-[0.06em] text-slate-500">{item.asset_type}</div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          {quote ? (
-                            <div className="text-right">
-                              <p className="font-mono text-white">{formatPrice(quote.price)}</p>
-                              <p className={`text-xs ${quote.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent?.toFixed(2)}%
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="text-right">
-                              <p className="font-mono text-slate-500">-</p>
-                            </div>
-                          )}
-                          <button
-                            onClick={() => removeSymbol(item.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-400 transition-all"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                        <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-slate-200">
+                          {row.stage}
+                        </span>
                       </div>
 
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <button
-                          onClick={() => launchTool('scan', item.symbol)}
-                          className="px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[11px] font-semibold uppercase tracking-wide hover:bg-emerald-500/20"
-                        >
-                          Scan
-                        </button>
-                        <button
-                          onClick={() => launchTool('deep', item.symbol)}
-                          className="px-2 py-1 rounded border border-slate-500/40 bg-slate-700/40 text-slate-200 text-[11px] font-semibold uppercase tracking-wide hover:bg-slate-700/70"
-                        >
-                          Deep
-                        </button>
-                        <button
-                          onClick={() => launchTool('flow', item.symbol)}
-                          className="px-2 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 text-[11px] font-semibold uppercase tracking-wide hover:bg-purple-500/20"
-                        >
-                          Option Flow
-                        </button>
-                        <button
-                          onClick={() => launchTool('alert', item.symbol)}
-                          className="px-2 py-1 rounded border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] font-semibold uppercase tracking-wide hover:bg-amber-500/20"
-                        >
-                          Alert
-                        </button>
+                      <div className="grid gap-1 text-[12px] text-slate-300">
+                        <div>Confidence: <span className="font-bold text-white">{row.confidence}%</span></div>
+                        <div>Timeframe Alignment: <span className="font-bold text-white">{row.alignmentScore}/4</span></div>
+                        <div>Edge: <span className={`font-bold ${row.edge === 'Bullish' ? 'text-emerald-400' : row.edge === 'Bearish' ? 'text-red-400' : 'text-amber-300'}`}>{row.edge}</span></div>
+                        <div>Quality: <span className="font-bold text-white">{row.quality}</span></div>
+                        <div>Momentum: <span className="font-bold text-white">{row.momentumState}</span></div>
+                        <div>Volatility: <span className="font-bold text-white">{row.volatilityState}</span></div>
+                        <div>Structure: <span className="font-bold text-white">{row.structureState}</span></div>
+                        <div>Price: <span className="font-mono font-bold text-slate-100">{formatPrice(quote?.price)}</span></div>
+                      </div>
+
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-700">
+                        <div
+                          className={`h-full ${row.edgeTemperature >= 75 ? 'bg-emerald-400' : row.edgeTemperature >= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
+                          style={{ width: `${row.edgeTemperature}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-slate-400">
+                        {row.volatilityState === 'Expanding' && <span>⚡ Volatility Expansion</span>}
+                        {row.alignmentScore >= 3 && <span>🧠 Multi-TF Aligned</span>}
+                        {row.stage === 'Conflict' && <span>⚠ Conflict</span>}
+                        {row.momentumState === 'Rising' && <span>🔥 Momentum Shift</span>}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-4 gap-1.5">
+                        <button onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-emerald-300">Scan</button>
+                        <button onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-200">Deep</button>
+                        <button onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-purple-300">Options</button>
+                        <button onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-amber-300">Alert</button>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button onClick={() => window.location.href = `/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+
+            <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
+              <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Scan All Symbols</button>
+                <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Run Confluence Check</button>
+                <button onClick={() => setReadyOnly(true)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Filter Ready Only</button>
+                <button onClick={exportWatchlist} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300">Export Watchlist</button>
+                <button onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
