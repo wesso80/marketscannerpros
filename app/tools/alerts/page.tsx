@@ -229,8 +229,8 @@ function AlertsContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-6 lg:px-6">
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3 md:h-[88px] md:px-6">
+    <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 py-6 md:px-6">
+      <section className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 md:h-[88px] md:px-6">
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <div className="flex gap-2 lg:gap-3">
             <MetricPill label="Active" value={`${activeAlerts.length}`} />
@@ -265,7 +265,7 @@ function AlertsContent() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
+      <section className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 md:p-4">
         <div className="mb-3 flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="inline-flex h-9 rounded-lg border border-slate-700 bg-slate-950/30 p-1">
             <button onClick={() => setConsoleTab('basic')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Basic</button>
@@ -276,7 +276,7 @@ function AlertsContent() {
           <div className="text-xs text-slate-400">{alertRows.length} shown</div>
         </div>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/25">
+          <div className="rounded-xl border border-slate-800 bg-slate-950/25">
             <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Active Alerts Console</div>
             {alertRows.length === 0 ? (
               <div className="px-4 py-5 text-sm text-slate-400">No active alerts. Use Quick Alert or New Alert to arm your radar.</div>
@@ -286,15 +286,15 @@ function AlertsContent() {
                   const status = deriveStatus(alert);
                   const type = classifyAlertType(alert);
                   return (
-                    <div key={alert.id} className="h-[60px] border-b border-slate-800 px-4">
+                    <div key={alert.id} className="group h-[60px] border-b border-slate-800 px-3">
                       <div className="flex h-full items-center justify-between gap-3">
                         <div className="flex items-center gap-3 overflow-hidden">
-                          <span className="rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
-                          <span className="truncate text-sm text-slate-200">{alert.condition_type.replaceAll('_', ' ')} {alert.condition_value}</span>
-                          <span className="text-xs text-slate-400">{type}</span>
+                          <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
+                          <span className="truncate text-sm font-semibold text-slate-100">{alert.condition_type.replaceAll('_', ' ')} {alert.condition_value}</span>
+                          <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400">{type}</span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="ml-auto flex items-center gap-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                           <span className="text-xs text-slate-400">Triggered {alert.trigger_count}x</span>
                           <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
                             {status}
@@ -311,7 +311,7 @@ function AlertsContent() {
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-4">
+          <div className="rounded-xl border border-slate-700 bg-slate-950/35 p-3">
             <div className="text-sm font-semibold text-slate-100">Trigger Summary</div>
             <div className="mt-3 space-y-2 text-sm text-slate-300">
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{fmtDateTime(history[0]?.triggered_at)}</span></div>
@@ -328,7 +328,7 @@ function AlertsContent() {
       </section>
 
       <section className="space-y-3">
-        <details className="rounded-2xl border border-slate-800 bg-slate-900/25" open={zone3Open}>
+        <details className="rounded-xl border border-slate-800 bg-slate-900/25" open={zone3Open}>
           <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
             <div>
               <div className="text-sm font-semibold text-slate-100">Trigger Log + Intelligence</div>
@@ -337,7 +337,7 @@ function AlertsContent() {
             <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</button>
           </summary>
           <div className="border-t border-slate-800 px-4 py-3">
-            <div className="max-h-[420px] overflow-auto rounded-xl border border-slate-800">
+            <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-800">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-[#0b1220]/95 text-slate-300 backdrop-blur">
                   <tr>
@@ -369,7 +369,7 @@ function AlertsContent() {
           </div>
         </details>
 
-        <details className="rounded-2xl border border-slate-800 bg-slate-900/25" open={zone4Open}>
+        <details className="rounded-xl border border-slate-800 bg-slate-900/25" open={zone4Open}>
           <summary onClick={(e) => { e.preventDefault(); setZone4Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
             <div>
               <div className="text-sm font-semibold text-slate-100">Alert Capabilities</div>
