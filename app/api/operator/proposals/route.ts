@@ -341,6 +341,17 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('[operator/proposals] GET error:', error);
-    return NextResponse.json({ error: 'Failed to generate proposals' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      proposals: [],
+      context: {
+        focus: null,
+        riskEnvironment: 'unknown',
+        totalCandidates: 0,
+      },
+      generatedAt: new Date().toISOString(),
+      degraded: true,
+      error: 'Operator proposals temporarily unavailable',
+    });
   }
 }

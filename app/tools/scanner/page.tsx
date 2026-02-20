@@ -597,7 +597,7 @@ function ScannerContent() {
   const [journalMonitorStatus, setJournalMonitorStatus] = useState<string | null>(null);
   const [journalMonitorError, setJournalMonitorError] = useState<string | null>(null);
   const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
-  const [rankMinConfidence, setRankMinConfidence] = useState<60 | 70 | 80>(70);
+  const [rankMinConfidence, setRankMinConfidence] = useState<50 | 60 | 70 | 80>(70);
   const [rankQuality, setRankQuality] = useState<'all' | 'high' | 'medium'>('all');
   const [rankTfAlignment, setRankTfAlignment] = useState<2 | 3>(2);
   const [rankVolatility, setRankVolatility] = useState<'all' | 'low' | 'moderate' | 'high'>('all');
@@ -1282,6 +1282,9 @@ function ScannerContent() {
   const rankedCandidates = React.useMemo(() => {
     if (!bulkScanResults?.topPicks?.length) return [] as Array<any>;
 
+    const isFastModeResults = bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid';
+    const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 60) : rankMinConfidence;
+
     const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
       const confidence = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
       const direction = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'all';
@@ -1306,7 +1309,7 @@ function ScannerContent() {
 
     const filtered = withMeta.filter((pick: any) => {
       if (rankDirection !== 'all' && pick._direction !== rankDirection) return false;
-      if (pick._confidence < rankMinConfidence) return false;
+      if (pick._confidence < effectiveMinConfidence) return false;
       if (rankQuality !== 'all' && pick._quality !== rankQuality) return false;
       if (pick._tfAlignment < rankTfAlignment) return false;
       if (rankVolatility !== 'all' && pick._volatility !== rankVolatility) return false;
@@ -1647,7 +1650,7 @@ function ScannerContent() {
                 <div className="msp-card mb-3 px-4 py-3">
                   <div className="grid gap-2 md:grid-cols-6">
                     <select value={rankDirection} onChange={(e) => setRankDirection(e.target.value as 'all' | 'long' | 'short')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
-                    <select value={rankMinConfidence} onChange={(e) => setRankMinConfidence(Number(e.target.value) as 60 | 70 | 80)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value={60}>Min Conf: 60</option><option value={70}>Min Conf: 70</option><option value={80}>Min Conf: 80</option></select>
+                    <select value={rankMinConfidence} onChange={(e) => setRankMinConfidence(Number(e.target.value) as 50 | 60 | 70 | 80)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value={50}>Min Conf: 50</option><option value={60}>Min Conf: 60</option><option value={70}>Min Conf: 70</option><option value={80}>Min Conf: 80</option></select>
                     <select value={rankQuality} onChange={(e) => setRankQuality(e.target.value as 'all' | 'high' | 'medium')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
                     <select value={rankTfAlignment} onChange={(e) => setRankTfAlignment(Number(e.target.value) as 2 | 3)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value={2}>TF Align: 2/4+</option><option value={3}>TF Align: 3/4+</option></select>
                     <select value={rankVolatility} onChange={(e) => setRankVolatility(e.target.value as 'all' | 'low' | 'moderate' | 'high')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Volatility: All</option><option value="low">Volatility: Low</option><option value="moderate">Volatility: Moderate</option><option value="high">Volatility: High</option></select>
