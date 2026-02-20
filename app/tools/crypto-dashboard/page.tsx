@@ -160,7 +160,7 @@ export default function CryptoDashboard() {
     );
   }
 
-  const getMarketBias = (): { bias: string; confidence: number; signals: string[] } => {
+  const getMarketBias = (): { bias: string; confidence: number; signals: string[]; bullishScore: number; bearishScore: number } => {
     const signals: string[] = [];
     let bullishScore = 0;
     let bearishScore = 0;
@@ -215,31 +215,137 @@ export default function CryptoDashboard() {
     else if (bearishScore > bullishScore) bias = 'LEAN BEARISH';
     else bias = 'NEUTRAL';
 
-    return { bias, confidence: confidence || 50, signals };
+    return { bias, confidence: confidence || 50, signals, bullishScore, bearishScore };
   };
 
   const marketBias = getMarketBias();
 
-  const getBiasClasses = () => {
-    if (marketBias.bias.includes('BULLISH')) return 'bg-green-900/20 border-green-500';
-    if (marketBias.bias.includes('BEARISH')) return 'bg-red-900/20 border-red-500';
-    return 'bg-gray-800/50 border-gray-600';
-  };
+  const primarySymbols = ['BTC', 'ETH', 'SOL'];
 
-  const getBiasEmoji = () => {
-    if (marketBias.bias.includes('BULLISH')) return '🟢';
-    if (marketBias.bias.includes('BEARISH')) return '🔴';
-    return '⚪';
-  };
+  const oiBySymbol = new Map((data.openInterest?.coins || []).map((item) => [item.symbol, item.change24h]));
+  const fundingBySymbol = new Map((data.fundingRates?.coins || []).map((item) => [item.symbol, item.fundingRatePercent]));
+
+  const volatilityProxy = Math.max(
+    ...primarySymbols.map((symbol) => Math.abs(data.prices[symbol]?.change24h || 0)),
+    0
+  );
+
+  const volRegime = volatilityProxy >= 3 ? 'Expansion' : volatilityProxy >= 1.5 ? 'Normal' : 'Compression';
+  const liquidityState = data.openInterest?.summary?.marketSignal === 'risk_on'
+    ? 'Expanding'
+    : data.openInterest?.summary?.marketSignal === 'risk_off'
+      ? 'Contracting'
+      : 'Stable';
+
+  const rotation = (() => {
+    const btc = data.prices.BTC?.change24h || 0;
+    const eth = data.prices.ETH?.change24h || 0;
+    const sol = data.prices.SOL?.change24h || 0;
+    if (btc >= eth && btc >= sol && btc > 0.4) return 'BTC-led';
+    if (sol >= btc && sol >= eth && sol > 1.2) return 'Meme-led';
+    if (eth >= btc && eth >= sol && eth > 0.4) return 'DeFi-led';
+    if (eth > btc || sol > btc) return 'Alts-led';
+    return 'Mixed';
+  })();
+
+  const biasLabel = marketBias.bias === 'LEAN BULLISH'
+    ? 'Lean Bullish'
+    : marketBias.bias === 'LEAN BEARISH'
+      ? 'Lean Bearish'
+      : marketBias.bias === 'BULLISH'
+        ? 'Bullish'
+        : marketBias.bias === 'BEARISH'
+          ? 'Bearish'
+          : 'Neutral';
+
+  const permission = volRegime === 'Expansion' && liquidityState === 'Contracting' && marketBias.bearishScore >= marketBias.bullishScore
+    ? 'No'
+    : marketBias.confidence >= 67
+      ? 'Yes'
+      : 'Conditional';
+
+  const playbook = permission === 'No'
+    ? 'No-trade'
+    : biasLabel.includes('Bearish')
+      ? 'Fade pumps'
+      : biasLabel.includes('Bullish') && volRegime === 'Expansion'
+        ? 'Trend follow'
+        : biasLabel.includes('Bullish')
+          ? 'Mean reversion'
+          : 'No-trade';
+
+  const fundingDriver = data.fundingRates
+    ? data.fundingRates.avgRate > 0.01
+      ? 'Funding elevated (longs paying)'
+      : data.fundingRates.avgRate < -0.01
+        ? 'Funding negative (shorts paying)'
+        : 'Funding neutral across majors'
+    : 'Funding data pending';
+
+  const oiDriver = data.openInterest?.summary
+    ? data.openInterest.summary.marketSignal === 'risk_on'
+      ? 'OI building (leverage increasing)'
+      : data.openInterest.summary.marketSignal === 'risk_off'
+        ? 'OI unwinding (deleveraging)'
+        : 'OI mixed across exchanges'
+    : 'OI trend pending';
+
+  const liquidationDriver = data.liquidations?.summary
+    ? data.liquidations.summary.marketBias === 'longs_liquidated'
+      ? 'Liquidations skewed to longs (downside confirmation)'
+      : data.liquidations.summary.marketBias === 'shorts_liquidated'
+        ? 'Liquidations skewed to shorts (squeeze risk)'
+        : 'Liquidations balanced (no directional edge)'
+    : 'Liquidation confirmation pending';
+
+  const tradeIdeas = [
+    {
+      id: 'btc',
+      symbol: 'BTC',
+      direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
+      setupType: permission === 'No' ? 'No-trade' : biasLabel.includes('Bearish') ? 'Fade / short rallies' : biasLabel.includes('Bullish') ? 'Trend follow' : 'Mean reversion',
+      trigger: permission === 'No'
+        ? 'Vol expansion + contracting liquidity; wait for compression.'
+        : biasLabel.includes('Bearish')
+          ? 'OI rising + positive funding + long-liq pressure on failed bounce.'
+          : 'OI building + squeeze risk + reclaim above intraday VWAP.',
+      invalidation: biasLabel.includes('Bearish') ? 'Break and hold above prior local high.' : 'Lose VWAP and fail retest.',
+      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+    },
+    {
+      id: 'eth',
+      symbol: 'ETH',
+      direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
+      setupType: biasLabel.includes('Bearish') ? 'Breakdown retest' : 'Trend follow',
+      trigger: biasLabel.includes('Bearish')
+        ? 'Breakdown retest failure with weak OI follow-through.'
+        : 'Momentum continuation with supportive funding/OI alignment.',
+      invalidation: biasLabel.includes('Bearish') ? 'Reclaim above retest zone.' : 'Rejection and close back below trend trigger.',
+      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+    },
+    {
+      id: 'sol',
+      symbol: 'SOL',
+      direction: permission === 'No' ? 'Flat' : volRegime === 'Expansion' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
+      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Fade' : 'Trend follow',
+      trigger: volRegime === 'Expansion'
+        ? 'Wait for volatility compression before directional entries.'
+        : biasLabel.includes('Bearish')
+          ? 'Short failed breakout with rising leverage.'
+          : 'Long breakout with OI confirmation.',
+      invalidation: volRegime === 'Expansion' ? 'N/A' : 'Reverse through setup origin level.',
+      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="mx-auto w-full max-w-[1280px] px-4 pb-24 pt-6 md:px-6">
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">₿ Crypto Derivatives Dashboard</h1>
-            <p className="text-gray-400">Find real-time funding, open interest, liquidations, and positioning context</p>
+            <p className="text-gray-400">Bias → Rotation → Volatility → Execution</p>
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
@@ -265,314 +371,266 @@ export default function CryptoDashboard() {
         )}
       </div>
 
-      <div className="mb-8">
+      {/* Zone 0: keep state anchor */}
+      <div className="mb-4">
         <CryptoMorningDecisionCard />
       </div>
 
-      {/* Price Ticker */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {['BTC', 'ETH', 'SOL'].map((coin) => {
+      {/* Zone 1: Operator Decision Row */}
+      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 px-3 py-3 md:px-4">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_420px]">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {[
+              ['Permission', permission],
+              ['Bias', biasLabel],
+              ['Rotation', rotation],
+              ['Vol Regime', volRegime],
+              ['Liquidity', liquidityState],
+              ['Playbook', playbook],
+            ].map(([label, value]) => (
+              <div key={label} className="h-12 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <div className="text-[11px] text-white/50">{label}</div>
+                <div className="truncate text-sm font-semibold text-white">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+            <div className="text-sm font-semibold text-white">Why</div>
+            <div className="text-xs text-white/50">3 drivers behind today’s decision</div>
+            <div className="mt-3 grid gap-2">
+              {[fundingDriver, oiDriver, liquidationDriver].map((item, idx) => (
+                <div key={idx} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
+                  • {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Zone 2: Market Strip */}
+      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {primarySymbols.map((coin) => {
           const priceData = data.prices[coin];
-          const changeClass = priceData && priceData.change24h >= 0 ? 'text-green-400' : 'text-red-400';
+          const changeClass = priceData && priceData.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400';
+          const oiDelta = oiBySymbol.get(coin) ?? 0;
+          const fundingSkew = fundingBySymbol.get(coin) ?? 0;
+          const miniVol = Math.abs(priceData?.change24h || 0) >= 3 ? 'Expansion' : Math.abs(priceData?.change24h || 0) >= 1.5 ? 'Normal' : 'Compression';
           return (
-            <div key={coin} className="bg-[#1E293B] rounded-xl p-4 border border-gray-700">
+            <div key={coin} className="rounded-xl border border-white/10 bg-black/10 p-3 text-left">
               <div className="flex items-center justify-between">
-                <span className="text-lg font-bold">{coin}</span>
+                <span className="text-sm font-semibold text-white">{coin}</span>
                 {priceData ? (
                   <div className="text-right">
-                    <div className="text-lg font-mono">
+                    <div className="text-sm font-semibold text-white">
                       ${priceData.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </div>
-                    <div className={`text-sm ${changeClass}`}>
+                    <div className={`text-xs ${changeClass}`}>
                       {priceData.change24h >= 0 ? '+' : ''}{priceData.change24h.toFixed(2)}%
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500">Refreshing...</div>
+                  <div className="text-gray-500 text-xs">Refreshing...</div>
                 )}
+              </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
+                  <div className="text-[11px] text-white/50">OI Δ</div>
+                  <div className="text-xs font-semibold text-white/80">{oiDelta >= 0 ? '+' : ''}{oiDelta.toFixed(2)}%</div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
+                  <div className="text-[11px] text-white/50">Funding</div>
+                  <div className="text-xs font-semibold text-white/80">{fundingSkew >= 0 ? '+' : ''}{fundingSkew.toFixed(3)}%</div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
+                  <div className="text-[11px] text-white/50">Vol</div>
+                  <div className="text-xs font-semibold text-white/80">{miniVol}</div>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+      </div>
 
-      {/* Market Bias Summary */}
-      <div className={`mb-8 p-6 rounded-xl border-2 ${getBiasClasses()}`}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="text-sm text-gray-400 mb-1">COMBINED DERIVATIVES SIGNAL</h2>
-            <div className="text-3xl font-bold">{getBiasEmoji()} {marketBias.bias}</div>
-            <div className="text-sm text-gray-400 mt-1">{marketBias.confidence}% signal alignment</div>
+      {/* Zone 3: Core Derivatives State */}
+      <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {/* Positioning / Leverage */}
+        <div className="rounded-xl border border-white/10 bg-white/5">
+          <div className="px-3 py-3 md:px-4">
+            <div className="text-sm font-semibold text-white">Positioning</div>
+            <div className="text-xs text-white/50">Funding + Long/Short + Open Interest</div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {marketBias.signals.map((signal, i) => (
-              <span key={i} className="text-xs bg-black/30 px-3 py-1 rounded-full">{signal}</span>
-            ))}
+          <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
+            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+              <div className="text-xs font-semibold text-white/80 mb-2">Funding Rates</div>
+              <div className="grid gap-2">
+                {(data.fundingRates?.coins || []).slice(0, 6).map((fr) => (
+                  <div key={fr.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="text-xs text-white/70">{fr.symbol}</div>
+                    <div className="text-xs font-semibold text-white">{fr.fundingRatePercent.toFixed(4)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+              <div className="text-xs font-semibold text-white/80 mb-2">Long / Short Ratio</div>
+              <div className="grid gap-2">
+                {(data.longShort?.coins || []).slice(0, 6).map((ls) => (
+                  <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white">{ls.symbol}</span>
+                      <span className="text-white/60">{ls.longAccount.toFixed(1)} / {ls.shortAccount.toFixed(1)}</span>
+                    </div>
+                    <div className="mt-2 h-2 w-full rounded bg-black/30 overflow-hidden">
+                      <div className="h-2 rounded bg-emerald-500/60" style={{ width: `${ls.longAccount}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+              <div className="text-xs font-semibold text-white/80 mb-2">Open Interest (Δ 24h)</div>
+              <div className="grid gap-2">
+                {(data.openInterest?.coins || []).slice(0, 6).map((coin) => (
+                  <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="text-xs text-white/70">{coin.symbol}</div>
+                    <div className="text-xs font-semibold text-white">{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stress / Liquidation / Vol */}
+        <div className="rounded-xl border border-white/10 bg-white/5">
+          <div className="px-3 py-3 md:px-4">
+            <div className="text-sm font-semibold text-white">Stress</div>
+            <div className="text-xs text-white/50">Liquidations + Volatility + Liquidity</div>
+          </div>
+          <div className="grid gap-3 border-t border-white/10 p-3 md:p-4">
+            <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+              <div className="text-xs font-semibold text-white/80">Liquidations (24h)</div>
+              <div className="text-[11px] text-white/50">Directional stress + confirmation</div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                  <div className="text-[11px] text-white/50">Longs</div>
+                  <div className="mt-1 text-sm font-semibold text-white">${(((data.liquidations?.summary?.totalLongValue || 0) / 1e6)).toFixed(2)}M</div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                  <div className="text-[11px] text-white/50">Shorts</div>
+                  <div className="mt-1 text-sm font-semibold text-white">${(((data.liquidations?.summary?.totalShortValue || 0) / 1e6)).toFixed(2)}M</div>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2">
+                {(data.liquidations?.coins || []).slice(0, 5).map((coin) => (
+                  <div key={coin.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white">{coin.symbol}</span>
+                      <span className="text-white/60">L ${(coin.longValue / 1e6).toFixed(1)}M • S ${(coin.shortValue / 1e6).toFixed(1)}M</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                <div className="text-xs font-semibold text-white/80">Volatility Regime</div>
+                <div className="mt-1 text-sm font-semibold text-white">{volRegime}</div>
+                <div className="mt-1 text-xs text-white/50">
+                  {volRegime === 'Expansion' ? 'Wicks likely — avoid chasing entries.' : 'Volatility is manageable for structured entries.'}
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/10 p-3">
+                <div className="text-xs font-semibold text-white/80">Liquidity</div>
+                <div className="mt-1 text-sm font-semibold text-white">{liquidityState}</div>
+                <div className="mt-1 text-xs text-white/50">
+                  {liquidityState === 'Contracting' ? 'Lower follow-through probability.' : 'Sufficient participation for cleaner setups.'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Market Pulse - Trending, Top Movers, Sectors */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <TrendingCoinsWidget />
-        <TopMoversWidget />
-        <CategoryHeatmapWidget />
-      </div>
+      {/* Zone 4: Trade Ideas */}
+      <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+        <div className="text-sm font-semibold text-white">Today’s Permissioned Trades</div>
+        <div className="text-xs text-white/50">Trade idea output aligned to shared state — max 3 cards.</div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Funding Rates */}
-        <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">💰 Funding Rates</h3>
-            {data.fundingRates && (
-              <span className={`text-xs px-2 py-1 rounded ${
-                data.fundingRates.avgRate > 0.01 ? 'bg-red-500/20 text-red-400' :
-                data.fundingRates.avgRate < -0.01 ? 'bg-green-500/20 text-green-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                Avg: {data.fundingRates.avgRate.toFixed(4)}%
-              </span>
-            )}
-          </div>
-          {data.fundingRates ? (
-            <div className="space-y-2">
-              {data.fundingRates.coins.slice(0, 6).map((fr) => (
-                <div key={fr.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
-                  <span className="font-medium">{fr.symbol}</span>
-                  <div className="text-right">
-                    <span className={`font-mono ${
-                      fr.fundingRatePercent > 0.01 ? 'text-red-400' :
-                      fr.fundingRatePercent < 0 ? 'text-green-400' : 'text-gray-400'
-                    }`}>
-                      {fr.fundingRatePercent.toFixed(4)}%
-                    </span>
-                    <span className="text-xs text-gray-500 ml-2">({fr.annualized.toFixed(1)}% APR)</span>
-                  </div>
-                </div>
-              ))}
-              <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
-                <strong>💡 Trading Insight:</strong>{' '}
-                {data.fundingRates.avgRate > 0.05 
-                  ? 'Extreme positive funding - longs overleveraged. Consider shorting or waiting.'
-                  : data.fundingRates.avgRate < -0.01
-                  ? 'Negative funding - shorts paying. Bullish signal, shorts may get squeezed.'
-                  : 'Funding neutral - no clear directional bias.'}
+        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {tradeIdeas.map((idea) => (
+            <div key={idea.id} className="rounded-xl border border-white/10 bg-black/10 p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-white">{idea.symbol}</div>
+                <div className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-semibold text-white/70">{idea.direction}</div>
+              </div>
+
+              <div className="mt-2 text-xs text-white/50">Setup</div>
+              <div className="text-sm font-semibold text-white/80">{idea.setupType}</div>
+
+              <div className="mt-3 text-xs text-white/50">Trigger</div>
+              <div className="text-sm text-white/80">{idea.trigger}</div>
+
+              <div className="mt-3 text-xs text-white/50">Invalidation</div>
+              <div className="text-sm text-white/80">{idea.invalidation}</div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-xs text-white/50">Risk mode</div>
+                <div className="text-xs font-semibold text-white/80">{idea.riskMode}</div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <a
+                  href={`/tools/alerts?symbol=${encodeURIComponent(idea.symbol)}`}
+                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
+                >
+                  Alert
+                </a>
+                <a
+                  href={`/tools/watchlists?symbol=${encodeURIComponent(idea.symbol)}`}
+                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
+                >
+                  Watch
+                </a>
+                <a
+                  href={`/tools/journal?note=${encodeURIComponent(`Derivatives idea: ${idea.symbol} ${idea.direction}`)}`}
+                  className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
+                >
+                  Journal
+                </a>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">Refreshing funding rates...</div>
-          )}
-        </div>
-
-        {/* Long/Short Ratio */}
-        <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">📊 Long/Short Ratio</h3>
-            {data.longShort && (
-              <span className={`text-xs px-2 py-1 rounded ${
-                data.longShort.overall === 'Bullish' ? 'bg-green-500/20 text-green-400' :
-                data.longShort.overall === 'Bearish' ? 'bg-red-500/20 text-red-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {data.longShort.overall}
-              </span>
-            )}
-          </div>
-          {data.longShort ? (
-            <div className="space-y-3">
-              {data.longShort.coins.slice(0, 6).map((ls) => (
-                <div key={ls.symbol} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{ls.symbol}</span>
-                    <span className="text-gray-400">
-                      {ls.longAccount.toFixed(1)}% L / {ls.shortAccount.toFixed(1)}% S
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden flex">
-                    <div className="bg-green-500 h-full" style={{ width: `${ls.longAccount}%` }} />
-                    <div className="bg-red-500 h-full" style={{ width: `${ls.shortAccount}%` }} />
-                  </div>
-                </div>
-              ))}
-              <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
-                <strong>💡 Trading Insight:</strong>{' '}
-                {data.longShort.overall === 'Bullish'
-                  ? 'More accounts long - bullish sentiment. Be cautious of overcrowded trades.'
-                  : data.longShort.overall === 'Bearish'
-                  ? 'More accounts short - bearish sentiment. Watch for short squeezes.'
-                  : 'Balanced positioning - no clear retail bias.'}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">Refreshing L/S ratios...</div>
-          )}
-        </div>
-
-        {/* Open Interest */}
-        <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">📈 Open Interest</h3>
-            {data.openInterest?.summary && (
-              <span className={`text-xs px-2 py-1 rounded ${
-                data.openInterest.summary.marketSignal === 'risk_on' ? 'bg-green-500/20 text-green-400' :
-                data.openInterest.summary.marketSignal === 'risk_off' ? 'bg-red-500/20 text-red-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {data.openInterest.summary.totalFormatted} Total
-              </span>
-            )}
-          </div>
-          {data.openInterest ? (
-            <div className="space-y-2">
-              {data.openInterest.coins.slice(0, 6).map((coin) => (
-                <div key={coin.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
-                  <div>
-                    <span className="font-medium">{coin.symbol}</span>
-                    <span className={`ml-2 text-xs ${
-                      coin.signal === 'longs_building' ? 'text-green-400' :
-                      coin.signal === 'deleveraging' ? 'text-red-400' : 'text-gray-400'
-                    }`}>
-                      {coin.signal.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <span className={`font-mono ${
-                    coin.change24h > 0 ? 'text-green-400' :
-                    coin.change24h < 0 ? 'text-red-400' : 'text-gray-400'
-                  }`}>
-                    {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%
-                  </span>
-                </div>
-              ))}
-              <div className="mt-4 p-3 bg-black/30 rounded-lg text-xs text-gray-400">
-                <strong>💡 Trading Insight:</strong> {data.openInterest.summary.interpretation}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">Refreshing open interest...</div>
-          )}
-        </div>
-
-        {/* Liquidations */}
-        <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold">💥 Liquidations (Real Data)</h3>
-            {data.liquidations?.summary && (
-              <span className={`text-xs px-2 py-1 rounded ${
-                data.liquidations.summary.marketBias === 'shorts_liquidated' ? 'bg-green-500/20 text-green-400' :
-                data.liquidations.summary.marketBias === 'longs_liquidated' ? 'bg-red-500/20 text-red-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {data.liquidations.summary.stressLevel} stress
-              </span>
-            )}
-          </div>
-          {data.liquidations ? (
-            <div className="space-y-3">
-              <div className="p-3 mb-3 rounded-lg bg-black/30 text-sm">
-                {data.liquidations.summary.interpretation}
-              </div>
-              {/* Totals Row */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-red-500/10 rounded-lg p-3 text-center">
-                  <div className="text-red-400 text-lg font-bold">
-                    ${(data.liquidations.summary.totalLongValue / 1000000).toFixed(2)}M
-                  </div>
-                  <div className="text-xs text-gray-400">Longs Liquidated</div>
-                </div>
-                <div className="bg-green-500/10 rounded-lg p-3 text-center">
-                  <div className="text-green-400 text-lg font-bold">
-                    ${(data.liquidations.summary.totalShortValue / 1000000).toFixed(2)}M
-                  </div>
-                  <div className="text-xs text-gray-400">Shorts Liquidated</div>
-                </div>
-              </div>
-              {data.liquidations.coins.slice(0, 5).map((coin: LiquidationCoin) => (
-                <div key={coin.symbol} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{coin.symbol}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${
-                      coin.dominantSide === 'longs' ? 'bg-red-500/20 text-red-400' :
-                      coin.dominantSide === 'shorts' ? 'bg-green-500/20 text-green-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {coin.dominantSide === 'longs' ? '🔴 Longs' : coin.dominantSide === 'shorts' ? '🟢 Shorts' : '⚪ Balanced'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-mono text-gray-300">
-                      ${(coin.totalValue / 1000).toFixed(0)}K
-                    </span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      ({coin.totalLiquidations} liqs)
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">Refreshing liquidation data...</div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Trading Signals Summary */}
-      <div className="bg-[#1E293B] rounded-xl p-6 border border-gray-700 mb-8">
-        <h3 className="text-lg font-bold mb-4">🎯 Combined Trading Signals</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-black/30 rounded-lg p-4">
-            <h4 className="text-sm text-gray-400 mb-2">SCALP (1-4h)</h4>
-            <div className="text-xl font-bold mb-2">
-              {data.liquidations?.summary.marketBias === 'shorts_liquidated' ? '🟢 BULLISH' :
-               data.liquidations?.summary.marketBias === 'longs_liquidated' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
+      {/* Zone 5: Context (collapsible) */}
+      <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
+        <summary className="cursor-pointer list-none px-3 py-3 md:px-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-white">Context (Discovery)</div>
+              <div className="text-xs text-white/50">Trending / Gainers / Sectors — non-core derivatives context</div>
             </div>
-            <p className="text-xs text-gray-500">Based on real liquidation data</p>
+            <div className="text-xs font-semibold text-white/70">Toggle</div>
           </div>
-          <div className="bg-black/30 rounded-lg p-4">
-            <h4 className="text-sm text-gray-400 mb-2">SWING (1-7d)</h4>
-            <div className="text-xl font-bold mb-2">
-              {data.openInterest?.summary.marketSignal === 'risk_on' ? '🟢 BULLISH' :
-               data.openInterest?.summary.marketSignal === 'risk_off' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
-            </div>
-            <p className="text-xs text-gray-500">Based on OI trends and positioning</p>
-          </div>
-          <div className="bg-black/30 rounded-lg p-4">
-            <h4 className="text-sm text-gray-400 mb-2">FADE SIGNAL</h4>
-            <div className="text-xl font-bold mb-2">
-              {data.fundingRates && data.fundingRates.avgRate > 0.05 ? '🔴 FADE LONGS' :
-               data.fundingRates && data.fundingRates.avgRate < -0.02 ? '🟢 FADE SHORTS' : '⚪ NO FADE'}
-            </div>
-            <p className="text-xs text-gray-500">Contrarian signal from extreme funding</p>
+        </summary>
+        <div className="border-t border-white/10 p-3 md:p-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <TrendingCoinsWidget />
+            <TopMoversWidget />
+            <CategoryHeatmapWidget />
           </div>
         </div>
-      </div>
-
-      {/* Educational Footer */}
-      <div className="p-6 bg-gray-800/30 rounded-xl border border-gray-700">
-        <h4 className="text-sm font-bold text-gray-400 mb-3">📚 Understanding Crypto Derivatives</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500">
-          <div>
-            <strong className="text-gray-400">Funding Rates:</strong> Periodic payments between longs and shorts. 
-            Positive = longs pay shorts (bullish crowd). Negative = shorts pay longs (bearish crowd). 
-            Extreme rates often precede reversals.
-          </div>
-          <div>
-            <strong className="text-gray-400">Open Interest:</strong> Total value of outstanding futures contracts. 
-            Rising OI + rising price = new money entering longs. Falling OI = positions closing (deleveraging).
-          </div>
-          <div>
-            <strong className="text-gray-400">Long/Short Ratio:</strong> Shows what percentage of accounts are long vs short. 
-            Useful for gauging retail sentiment, but smart money often fades extremes.
-          </div>
-          <div>
-            <strong className="text-gray-400">Liquidations:</strong> Forced position closures. 
-            Large long liquidations create selling pressure. Large short liquidations create short squeezes.
-          </div>
-        </div>
-        <p className="text-xs text-gray-600 mt-4 text-center">
-          Data powered by CoinGecko
-        </p>
-      </div>
+      </details>
     </div>
   );
 }
