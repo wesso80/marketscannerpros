@@ -188,8 +188,8 @@ export const COINGECKO_ID_MAP: Record<string, string> = {
   'OP': 'optimism',
   'OPUSDT': 'optimism',
   // Special tokens
-  'JUP': 'jupiter-ag',
-  'JUPUSDT': 'jupiter-ag',
+  'JUP': 'jupiter-exchange-solana',
+  'JUPUSDT': 'jupiter-exchange-solana',
   'RENDER': 'render-token',
   'RENDERUSDT': 'render-token',
   'KAS': 'kaspa',
