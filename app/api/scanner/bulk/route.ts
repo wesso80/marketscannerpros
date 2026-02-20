@@ -659,6 +659,62 @@ interface DerivativesData {
 
 type BulkScanMode = 'deep' | 'light' | 'hybrid';
 
+type Permission = 'allowed' | 'watch' | 'blocked';
+type DirectionV2 = 'long' | 'short' | 'neutral';
+
+interface InstitutionalPickScoreV2 {
+  version: '2.0';
+  context: {
+    regime: 'trend' | 'range' | 'expansion' | 'contraction' | 'unknown';
+    riskMode: 'risk_on' | 'risk_off' | 'neutral';
+    biasAllowed: 'long_only' | 'short_only' | 'both' | 'none';
+    contextScore: number;
+    tags: string[];
+  };
+  setup: {
+    direction: DirectionV2;
+    tfAlignment: 0 | 1 | 2 | 3 | 4;
+    alignmentFlags: {
+      trendAligned: boolean;
+      momentumAligned: boolean;
+      flowAligned: boolean;
+      directional: boolean;
+    };
+    subscores: {
+      structure: number;
+      momentum: number;
+      flow: number;
+      volatility: number;
+    };
+    setupScore: number;
+    notes: string[];
+  };
+  execution: {
+    permission: Permission;
+    executionScore: number;
+    blockReasons: Array<
+      | 'direction_neutral'
+      | 'tf_alignment_low'
+      | 'quality_below_threshold'
+      | 'risk_mode_block'
+      | 'volatility_unfavorable'
+      | 'liquidity_unfavorable'
+      | 'no_trigger'
+      | 'data_integrity_low'
+    >;
+  };
+  final: {
+    confidence: number;
+    qualityTier: 'high' | 'medium' | 'low';
+    rankScore: number;
+  };
+  meta?: {
+    mode: 'deep' | 'light';
+    engine: 'deepScoreV2' | 'lightCryptoV2' | 'lightEquityV2';
+    computedAt: string;
+  };
+}
+
 const STABLECOINS = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
 const LIGHT_SCAN_PER_PAGE = 250;
 const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
@@ -666,6 +722,244 @@ const LIGHT_EQUITY_MAX_API_CALLS = Math.max(2, Number(process.env.SCANNER_LIGHT_
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function clampInt(value: number, min: number, max: number): number {
+  return Math.round(clamp(value, min, max));
+}
+
+function toDirectionV2(direction: string | undefined): DirectionV2 {
+  if (direction === 'bullish') return 'long';
+  if (direction === 'bearish') return 'short';
+  return 'neutral';
+}
+
+function deriveRegime(adxValue?: number, atrPercent?: number): InstitutionalPickScoreV2['context']['regime'] {
+  if (Number.isFinite(atrPercent) && (atrPercent as number) >= 5) return 'expansion';
+  if (Number.isFinite(atrPercent) && (atrPercent as number) <= 0.8) return 'contraction';
+  if (Number.isFinite(adxValue) && (adxValue as number) >= 28) return 'trend';
+  if (Number.isFinite(adxValue) && (adxValue as number) < 20) return 'range';
+  return 'unknown';
+}
+
+function deriveRiskMode(atrPercent?: number, momentumAbs?: number): InstitutionalPickScoreV2['context']['riskMode'] {
+  if ((Number.isFinite(atrPercent) && (atrPercent as number) >= 6) || (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 8)) {
+    return 'risk_off';
+  }
+  if ((Number.isFinite(atrPercent) && (atrPercent as number) <= 3) && (Number.isFinite(momentumAbs) && (momentumAbs as number) >= 1)) {
+    return 'risk_on';
+  }
+  return 'neutral';
+}
+
+function buildInstitutionalPickScoreV2(
+  pick: any,
+  params: {
+    type: 'equity' | 'crypto';
+    timeframe: string;
+    mode: BulkScanMode;
+    engine: 'deepScoreV2' | 'lightCryptoV2' | 'lightEquityV2';
+  }
+): InstitutionalPickScoreV2 {
+  const direction = toDirectionV2(pick?.direction);
+  const directional = direction !== 'neutral';
+
+  const indicators = pick?.indicators || {};
+  const price = Number(indicators?.price);
+  const ema200 = Number(indicators?.ema200);
+  const rsiValue = Number(indicators?.rsi);
+  const macdValue = Number(indicators?.macd);
+  const macdSignal = Number(indicators?.macdSignal);
+  const adxValue = Number(indicators?.adx);
+  const atrValue = Number(indicators?.atr);
+  const change24h = Number(pick?.change24h ?? indicators?.change24h ?? 0);
+  const volume = Number(indicators?.volume);
+
+  const atrPercent = Number.isFinite(atrValue) && Number.isFinite(price) && price > 0
+    ? (atrValue / price) * 100
+    : undefined;
+
+  const trendAligned = Number.isFinite(price) && Number.isFinite(ema200)
+    ? (direction === 'long' ? price > ema200 : direction === 'short' ? price < ema200 : false)
+    : false;
+
+  const momentumAligned = Number.isFinite(rsiValue) && Number.isFinite(macdValue)
+    ? (direction === 'long'
+      ? rsiValue >= 50 && macdValue >= (Number.isFinite(macdSignal) ? macdSignal : 0)
+      : direction === 'short'
+      ? rsiValue <= 50 && macdValue <= (Number.isFinite(macdSignal) ? macdSignal : 0)
+      : false)
+    : (direction === 'long' ? change24h > 0 : direction === 'short' ? change24h < 0 : false);
+
+  const bullishSignals = Number(pick?.signals?.bullish || 0);
+  const bearishSignals = Number(pick?.signals?.bearish || 0);
+  const neutralSignals = Number(pick?.signals?.neutral || 0);
+  const signalTotal = bullishSignals + bearishSignals + neutralSignals;
+  const flowAligned = direction === 'long'
+    ? bullishSignals > bearishSignals
+    : direction === 'short'
+    ? bearishSignals > bullishSignals
+    : false;
+
+  const tfAlignmentRaw = [trendAligned, momentumAligned, flowAligned, directional].filter(Boolean).length;
+  const tfAlignment = clamp(tfAlignmentRaw, 0, 4) as 0 | 1 | 2 | 3 | 4;
+
+  const alignmentScore = (tfAlignment / 4) * 100;
+
+  const structureScore = Number.isFinite(adxValue)
+    ? clamp((adxValue / 45) * 100, 0, 100)
+    : clamp(40 + (directional ? 15 : 0) + (Math.abs(change24h) > 1 ? 15 : 0), 0, 100);
+
+  const momentumScore = Number.isFinite(rsiValue)
+    ? clamp(
+        direction === 'long'
+          ? ((rsiValue - 35) / 35) * 100
+          : direction === 'short'
+          ? ((65 - rsiValue) / 35) * 100
+          : 45,
+        0,
+        100,
+      )
+    : clamp(50 + (direction === 'long' ? change24h * 4 : direction === 'short' ? -change24h * 4 : 0), 0, 100);
+
+  const flowScore = signalTotal > 0
+    ? clamp(
+        direction === 'long'
+          ? (bullishSignals / signalTotal) * 100
+          : direction === 'short'
+          ? (bearishSignals / signalTotal) * 100
+          : (neutralSignals / signalTotal) * 100,
+        0,
+        100,
+      )
+    : 50;
+
+  const volatilityScore = Number.isFinite(atrPercent)
+    ? clamp(100 - (Math.abs((atrPercent as number) - 2.5) * 22), 0, 100)
+    : 55;
+
+  const setupScoreRaw =
+    0.4 * alignmentScore +
+    0.3 * structureScore +
+    0.15 * momentumScore +
+    0.15 * flowScore;
+  const setupScore = clamp(setupScoreRaw, 0, 100);
+
+  const regime = deriveRegime(Number.isFinite(adxValue) ? adxValue : undefined, atrPercent);
+  const riskMode = deriveRiskMode(atrPercent, Math.abs(change24h));
+
+  const biasAllowed: InstitutionalPickScoreV2['context']['biasAllowed'] = !directional
+    ? 'none'
+    : riskMode === 'risk_off'
+    ? 'none'
+    : direction === 'long'
+    ? 'long_only'
+    : 'short_only';
+
+  const liquidityScore = Number.isFinite(volume) && volume > 0
+    ? clamp((Math.log10(volume + 1) / 9) * 100, 0, 100)
+    : params.type === 'crypto'
+    ? 60
+    : 50;
+  const contextScore = clamp((structureScore * 0.4) + (volatilityScore * 0.25) + (liquidityScore * 0.35), 0, 100);
+
+  const tags: string[] = [];
+  if (contextScore >= 70) tags.push('breadth_strong');
+  if (volatilityScore >= 55) tags.push('vol_controlled');
+  if (liquidityScore >= 55) tags.push('liquidity_normal');
+  if (tags.length === 0) tags.push('mixed_context');
+
+  const notes: string[] = [];
+  if (!Number.isFinite(rsiValue) || !Number.isFinite(macdValue)) notes.push('momentum_proxy_used');
+  if (!Number.isFinite(adxValue)) notes.push('structure_proxy_used');
+  if (!Number.isFinite(atrPercent)) notes.push('volatility_proxy_used');
+
+  const blockReasons: InstitutionalPickScoreV2['execution']['blockReasons'] = [];
+  if (!directional) blockReasons.push('direction_neutral');
+  if (tfAlignment <= 2) blockReasons.push('tf_alignment_low');
+  if (setupScore < 55) blockReasons.push('quality_below_threshold');
+  if (biasAllowed === 'none') blockReasons.push('risk_mode_block');
+  if (volatilityScore < 35) blockReasons.push('volatility_unfavorable');
+  if (liquidityScore < 30) blockReasons.push('liquidity_unfavorable');
+  if (setupScore < 60 && directional) blockReasons.push('no_trigger');
+  if (notes.length >= 2) blockReasons.push('data_integrity_low');
+
+  const uniqueBlockReasons = Array.from(new Set(blockReasons));
+  const permission: Permission = uniqueBlockReasons.length >= 2
+    ? 'blocked'
+    : uniqueBlockReasons.length === 1
+    ? 'watch'
+    : 'allowed';
+
+  const executionScoreBase =
+    (setupScore * 0.5) +
+    (volatilityScore * 0.25) +
+    (contextScore * 0.25);
+  const executionScorePenalty = uniqueBlockReasons.length * 12;
+  const executionScore = clamp(executionScoreBase - executionScorePenalty, 0, 100);
+
+  let confidence =
+    (0.55 * setupScore) +
+    (0.25 * contextScore) +
+    (0.20 * executionScore);
+
+  if (permission === 'watch') confidence = Math.min(confidence, 69);
+  if (permission === 'blocked') confidence = Math.min(confidence, 54);
+  confidence = clampInt(confidence, 1, 99);
+
+  const qualityTier: 'high' | 'medium' | 'low' = permission !== 'allowed'
+    ? 'low'
+    : (setupScore >= 75 && tfAlignment >= 3)
+    ? 'high'
+    : setupScore >= 55
+    ? 'medium'
+    : 'low';
+
+  const rankScore = clampInt((0.70 * confidence) + (0.30 * contextScore), 0, 100);
+
+  return {
+    version: '2.0',
+    context: {
+      regime,
+      riskMode,
+      biasAllowed,
+      contextScore: clampInt(contextScore, 0, 100),
+      tags,
+    },
+    setup: {
+      direction,
+      tfAlignment,
+      alignmentFlags: {
+        trendAligned,
+        momentumAligned,
+        flowAligned,
+        directional,
+      },
+      subscores: {
+        structure: clampInt(structureScore, 0, 100),
+        momentum: clampInt(momentumScore, 0, 100),
+        flow: clampInt(flowScore, 0, 100),
+        volatility: clampInt(volatilityScore, 0, 100),
+      },
+      setupScore: clampInt(setupScore, 0, 100),
+      notes,
+    },
+    execution: {
+      permission,
+      executionScore: clampInt(executionScore, 0, 100),
+      blockReasons: uniqueBlockReasons,
+    },
+    final: {
+      confidence,
+      qualityTier,
+      rankScore,
+    },
+    meta: {
+      mode: params.mode === 'deep' ? 'deep' : 'light',
+      engine: params.engine,
+      computedAt: new Date().toISOString(),
+    },
+  };
 }
 
 function scoreLightCryptoCandidate(coin: {
@@ -1053,9 +1347,25 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
 
 function applyInstitutionalFilterToTopPicks(
   topPicks: any[],
-  params: { type: 'equity' | 'crypto'; timeframe: string; traderRiskDNA?: 'aggressive' | 'balanced' | 'defensive' }
+  params: {
+    type: 'equity' | 'crypto';
+    timeframe: string;
+    mode: BulkScanMode;
+    traderRiskDNA?: 'aggressive' | 'balanced' | 'defensive';
+  }
 ) {
   const withFilter = topPicks.map((pick) => {
+    const scoreV2 = buildInstitutionalPickScoreV2(pick, {
+      type: params.type,
+      timeframe: params.timeframe,
+      mode: params.mode,
+      engine: params.mode === 'deep'
+        ? 'deepScoreV2'
+        : params.type === 'crypto'
+        ? 'lightCryptoV2'
+        : 'lightEquityV2',
+    });
+
     const atrPercent = Number.isFinite(pick?.indicators?.atr) && Number.isFinite(pick?.indicators?.price) && pick.indicators.price > 0
       ? (pick.indicators.atr / pick.indicators.price) * 100
       : undefined;
@@ -1070,7 +1380,7 @@ function applyInstitutionalFilterToTopPicks(
         : 'unknown';
 
     const institutionalFilter = computeInstitutionalFilter({
-      baseScore: Number(pick?.score ?? 50),
+      baseScore: Number(scoreV2.final.confidence),
       strategy: inferStrategyFromText(`${params.type} ${pick?.direction || 'neutral'} ${params.timeframe}`),
       regime,
       liquidity: {
@@ -1093,14 +1403,21 @@ function applyInstitutionalFilterToTopPicks(
 
     return {
       ...pick,
+      scoreV2,
+      score: scoreV2.final.confidence,
       institutionalFilter,
     };
   });
 
-  const filtered = withFilter.filter((pick) => !pick.institutionalFilter.noTrade);
+  const filtered = withFilter.filter((pick) => !pick.institutionalFilter.noTrade && pick.scoreV2?.execution?.permission !== 'blocked');
   const blockedCount = withFilter.length - filtered.length;
+  const ranked = [...withFilter].sort((a, b) => {
+    const left = Number(a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
+    const right = Number(b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
+    return right - left;
+  });
   return {
-    topPicks: filtered.length > 0 ? filtered : (withFilter.length > 0 ? [withFilter.sort((a, b) => b.score - a.score)[0]] : []),
+    topPicks: filtered.length > 0 ? filtered : (ranked.length > 0 ? [ranked[0]] : []),
     blockedCount,
   };
 }
@@ -1202,6 +1519,7 @@ export async function POST(req: NextRequest) {
       const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
         type,
         timeframe: selectedTimeframe,
+        mode,
         traderRiskDNA: adaptive?.profile?.riskDNA,
       });
 
@@ -1229,6 +1547,7 @@ export async function POST(req: NextRequest) {
       const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
         type,
         timeframe: selectedTimeframe,
+        mode,
         traderRiskDNA: adaptive?.profile?.riskDNA,
       });
 
@@ -1327,6 +1646,7 @@ export async function POST(req: NextRequest) {
     const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
       type,
       timeframe: selectedTimeframe,
+      mode,
       traderRiskDNA: adaptive?.profile?.riskDNA,
     });
     

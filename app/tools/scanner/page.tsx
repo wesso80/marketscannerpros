@@ -1283,12 +1283,14 @@ function ScannerContent() {
     if (!bulkScanResults?.topPicks?.length) return [] as Array<any>;
 
     const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
-      const confidence = Math.max(1, Math.min(99, Math.round(pick.score ?? 50)));
+      const confidence = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
       const direction = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'all';
-      const quality = confidence >= 70 ? 'high' : confidence >= 55 ? 'medium' : 'low';
+      const quality = (pick?.scoreV2?.final?.qualityTier as 'high' | 'medium' | 'low' | undefined) ?? (confidence >= 70 ? 'high' : confidence >= 55 ? 'medium' : 'low');
       const atrPercent = Number(pick.indicators?.atr_percent ?? 0);
       const volatility = atrPercent >= 3 ? 'high' : atrPercent >= 1.5 ? 'moderate' : 'low';
-      const tfAlignment = confidence >= 75 ? 4 : confidence >= 65 ? 3 : confidence >= 55 ? 2 : 1;
+      const tfAlignment = Number.isFinite(Number(pick?.scoreV2?.setup?.tfAlignment))
+        ? Number(pick?.scoreV2?.setup?.tfAlignment)
+        : (confidence >= 75 ? 4 : confidence >= 65 ? 3 : confidence >= 55 ? 2 : 1);
       const trendQuality = Number(pick.indicators?.adx ?? 0);
       return {
         ...pick,
@@ -1322,7 +1324,7 @@ function ScannerContent() {
   }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort]);
 
   const deployRankCandidate = (pick: any) => {
-    const edgeScore = Math.max(1, Math.min(99, Math.round(pick.score ?? 50)));
+    const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
     const bias: 'bullish' | 'bearish' | 'neutral' = pick.direction === 'bullish'
       ? 'bullish'
       : pick.direction === 'bearish'
