@@ -754,6 +754,7 @@ function BacktestContent() {
       'daily',
       '1w',
     ]));
+    const minimumTradesForLeaderboard = 5;
 
     setIsScanningTimeframes(true);
     setTimeframeScanError(null);
@@ -798,11 +799,13 @@ function BacktestContent() {
         }
       }
 
-      const ranked = rows.sort((a, b) => b.score - a.score);
+      const ranked = rows
+        .filter((row) => row.totalTrades >= minimumTradesForLeaderboard)
+        .sort((a, b) => b.score - a.score);
       setTimeframeScanResults(ranked);
 
       if (!ranked.length) {
-        setTimeframeScanError('No timeframe candidates produced a valid backtest for this strategy and date range.');
+        setTimeframeScanError(`No timeframe candidates produced at least ${minimumTradesForLeaderboard} trades for this strategy and date range.`);
       }
     } finally {
       setIsScanningTimeframes(false);
@@ -850,6 +853,7 @@ function BacktestContent() {
 
     const maxCombos = 60;
     const concurrency = 6;
+    const minimumTradesForLeaderboard = 5;
 
     setIsScanningUniverse(true);
     setUniverseScanError(null);
@@ -903,11 +907,13 @@ function BacktestContent() {
         });
       }
 
-      const ranked = rows.sort((a, b) => b.score - a.score);
+      const ranked = rows
+        .filter((row) => row.totalTrades >= minimumTradesForLeaderboard)
+        .sort((a, b) => b.score - a.score);
       setUniverseScanResults(ranked);
 
       if (!ranked.length) {
-        setUniverseScanError('No valid symbol + timeframe combinations produced a backtest result.');
+        setUniverseScanError(`No valid symbol + timeframe combinations produced at least ${minimumTradesForLeaderboard} trades.`);
       }
     } finally {
       setIsScanningUniverse(false);
