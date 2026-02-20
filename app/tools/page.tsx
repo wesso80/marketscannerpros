@@ -42,7 +42,12 @@ type HubStats = {
   activeAlerts: number;
   triggeredToday: number;
   openTrades: number;
+  optionsSignals: number;
+  timeWindows: number;
+  journalReviews: number;
   aiConfidence: number;
+  regime: 'neutral' | 'active' | 'high-vol';
+  riskEnvironment: string;
 };
 
 function StatusPill({ label, value }: { label: string; value: string }) {
@@ -100,42 +105,31 @@ export default function ToolsPage() {
     activeAlerts: 0,
     triggeredToday: 0,
     openTrades: 0,
+    optionsSignals: 0,
+    timeWindows: 0,
+    journalReviews: 0,
     aiConfidence: 64,
+    regime: 'neutral',
+    riskEnvironment: 'normal',
   });
 
   const fetchHubState = async () => {
     try {
-      const [alertsRes, historyRes, portfolioRes] = await Promise.all([
-        fetch('/api/alerts', { cache: 'no-store' }),
-        fetch('/api/alerts/history?limit=50', { cache: 'no-store' }),
-        fetch('/api/portfolio', { cache: 'no-store' }),
-      ]);
+      const summaryRes = await fetch('/api/command-hub/summary', { cache: 'no-store' });
+      const summaryJson = await summaryRes.json().catch(() => ({}));
+      const summary = summaryJson?.summary || {};
 
-      const alertsJson = await alertsRes.json().catch(() => ({}));
-      const historyJson = await historyRes.json().catch(() => ({}));
-      const portfolioJson = await portfolioRes.json().catch(() => ({}));
-
-      const alerts = Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : [];
-      const history = Array.isArray(historyJson?.history) ? historyJson.history : [];
-      const activeAlerts = alerts.filter((item: { is_active?: boolean }) => item.is_active).length;
-      const today = new Date().toDateString();
-      const triggeredToday = history.filter((item: { triggered_at?: string }) => {
-        if (!item?.triggered_at) return false;
-        return new Date(item.triggered_at).toDateString() === today;
-      }).length;
-
-      const positions = Array.isArray(portfolioJson?.positions)
-        ? portfolioJson.positions
-        : Array.isArray(portfolioJson?.data)
-          ? portfolioJson.data
-          : Array.isArray(portfolioJson)
-            ? portfolioJson
-            : [];
-
-      const openTrades = positions.length;
-      const aiConfidence = Math.min(92, Math.max(48, 58 + Math.round(activeAlerts * 1.2) + Math.round(triggeredToday * 2)));
-
-      setStats({ activeAlerts, triggeredToday, openTrades, aiConfidence });
+      setStats({
+        activeAlerts: Number(summary.activeAlerts || 0),
+        triggeredToday: Number(summary.triggeredToday || 0),
+        openTrades: Number(summary.openTrades || 0),
+        optionsSignals: Number(summary.optionsSignals || 0),
+        timeWindows: Number(summary.timeWindows || 0),
+        journalReviews: Number(summary.journalReviews || 0),
+        aiConfidence: Number(summary.aiConfidence || 64),
+        regime: summary.regime === 'high-vol' ? 'high-vol' : summary.regime === 'active' ? 'active' : 'neutral',
+        riskEnvironment: String(summary.riskEnvironment || 'normal'),
+      });
     } catch {
       setStats((prev) => ({ ...prev }));
     }
@@ -146,16 +140,19 @@ export default function ToolsPage() {
   }, []);
 
   const regime = useMemo(() => {
-    if (stats.triggeredToday >= 5) return 'High Vol';
-    if (stats.triggeredToday >= 2) return 'Active';
+    if (stats.regime === 'high-vol') return 'High Vol';
+    if (stats.regime === 'active') return 'Active';
     return 'Neutral';
-  }, [stats.triggeredToday]);
+  }, [stats.regime]);
 
   const risk = useMemo(() => {
+    const normalized = stats.riskEnvironment.toLowerCase();
+    if (normalized === 'overloaded' || normalized === 'high') return 'High';
+    if (normalized === 'elevated' || normalized === 'medium') return 'Medium';
     if (stats.openTrades >= 5) return 'High';
     if (stats.openTrades >= 2) return 'Medium';
     return 'Low';
-  }, [stats.openTrades]);
+  }, [stats.riskEnvironment, stats.openTrades]);
 
   const primaryFocus = useMemo(() => {
     if (stats.triggeredToday > 0) {
@@ -268,10 +265,10 @@ export default function ToolsPage() {
 
         <section>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <ActionCard title="Options Signals" value="2" cta="Review" href="/tools/options-confluence" />
-            <ActionCard title="Time Windows" value="1" cta="Open" href="/tools/confluence-scanner" />
+            <ActionCard title="Options Signals" value={`${stats.optionsSignals}`} cta="Review" href="/tools/options-confluence" />
+            <ActionCard title="Time Windows" value={`${stats.timeWindows}`} cta="Open" href="/tools/confluence-scanner" />
             <ActionCard title="Triggered Alerts" value={`${stats.triggeredToday}`} cta="Validate" href="/tools/alerts" />
-            <ActionCard title="Journal Reviews" value={stats.openTrades > 0 ? '1' : '0'} cta="Log" href="/tools/journal" />
+            <ActionCard title="Journal Reviews" value={`${stats.journalReviews}`} cta="Log" href="/tools/journal" />
           </div>
         </section>
 
