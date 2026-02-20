@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -124,6 +125,25 @@ interface EquityData {
     volume: number;
   }>;
   lastUpdated: string;
+}
+
+interface UpeSymbolRow {
+  symbol: string;
+  globalEligibility: 'eligible' | 'conditional' | 'blocked';
+  eligibilityUser: 'eligible' | 'conditional' | 'blocked';
+  crcsFinal: number;
+  crcsUser: number;
+  microAdjustment: number;
+  profileName: string;
+  overlayReasons: string[];
+}
+
+interface UpeGlobalSnapshot {
+  regime: 'risk_on' | 'neutral' | 'risk_off';
+  capitalMode: 'normal' | 'reduced' | 'defensive';
+  volatilityState: string | null;
+  liquidityState: string | null;
+  adaptiveConfidence: number | null;
 }
 
 // Popular stocks for quick selection
@@ -329,6 +349,9 @@ export default function EquityExplorerPage() {
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [data, setData] = useState<EquityData | null>(null);
+  const [upeSignal, setUpeSignal] = useState<UpeSymbolRow | null>(null);
+  const [upeGlobal, setUpeGlobal] = useState<UpeGlobalSnapshot | null>(null);
+  const [upeMicroState, setUpeMicroState] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -348,14 +371,27 @@ export default function EquityExplorerPage() {
     } else {
       setLoading(true);
       setData(null);
+      setUpeSignal(null);
+      setUpeGlobal(null);
+      setUpeMicroState(null);
     }
     setError(null);
 
     try {
-      const response = await fetch(`/api/equity/detail?symbol=${encodeURIComponent(sym)}`, {
-        signal: abortControllerRef.current.signal,
-        cache: 'no-store',
-      });
+      const [response, upeResponse, upeGlobalResponse] = await Promise.all([
+        fetch(`/api/equity/detail?symbol=${encodeURIComponent(sym)}`, {
+          signal: abortControllerRef.current.signal,
+          cache: 'no-store',
+        }),
+        fetch(`/api/upe/crcs/symbol?symbol=${encodeURIComponent(sym.toUpperCase())}&asset_class=equity`, {
+          signal: abortControllerRef.current.signal,
+          cache: 'no-store',
+        }),
+        fetch('/api/upe/snapshot/global', {
+          signal: abortControllerRef.current.signal,
+          cache: 'no-store',
+        }),
+      ]);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -365,9 +401,32 @@ export default function EquityExplorerPage() {
       const result = await response.json();
       setData(result);
       setSymbol(sym.toUpperCase());
+
+      if (upeResponse.ok) {
+        const upeResult = await upeResponse.json();
+        if (upeResult?.row) {
+          setUpeSignal(upeResult.row as UpeSymbolRow);
+        } else {
+          setUpeSignal(null);
+        }
+      } else {
+        setUpeSignal(null);
+      }
+
+      if (upeGlobalResponse.ok) {
+        const globalResult = await upeGlobalResponse.json();
+        setUpeGlobal((globalResult?.globalSnapshot || null) as UpeGlobalSnapshot | null);
+        setUpeMicroState(globalResult?.microStates?.equity?.microState || null);
+      } else {
+        setUpeGlobal(null);
+        setUpeMicroState(null);
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      setUpeSignal(null);
+      setUpeGlobal(null);
+      setUpeMicroState(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -477,11 +536,50 @@ export default function EquityExplorerPage() {
         {/* Data Display */}
         {data && !loading && (
           <div className="space-y-2">
+            <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+              <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
+                <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Deployment Gate</p>
+                    <span className="text-[10px] text-slate-500">US session anchor</span>
+                  </div>
+                  <div className="mb-2 flex flex-wrap gap-1">
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Permission: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Eligible' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Blocked') : 'Pending'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Capital Mode: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode || 'reduced'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Large Cap</p><p className="text-xs font-semibold text-emerald-300">Eligible</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Mid Cap</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">High Beta</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Earnings Risk</p><p className="text-xs font-semibold text-slate-200">Review</p></div>
+                  </div>
+                  <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Blocked conditions detected — monitor only, do not force deployment.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation before deployment.' : 'Conditions favorable for standard workflow execution.'}</p>
+                </div>
+
+                <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown</p>
+                    <span className="text-[10px] text-slate-500">Inputs</span>
+                  </div>
+                  <div className="grid gap-1.5 text-xs">
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{upeGlobal?.regime || 'neutral'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Equities Micro Regime</span><p className="font-semibold text-slate-100">{upeMicroState || 'neutral'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Liquidity</span><p className="font-semibold text-slate-100">{upeGlobal?.liquidityState || 'stable'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confidence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'N/A'}</p></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
               {[
                 ['Asset', `${data.company.symbol} • ${data.company.exchange}`],
                 ['Price', formatPrice(data.quote.price)],
                 ['24h', `${data.quote.changePercent >= 0 ? '+' : ''}${data.quote.changePercent.toFixed(2)}%`],
+                ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Eligible' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Blocked') : 'Pending'],
+                ['CRCS', upeSignal ? upeSignal.crcsUser.toFixed(1) : '—'],
+                ['ΔHr', upeSignal ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
                 ['Trend', getQuickSignals(data).trend.label],
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
@@ -494,13 +592,23 @@ export default function EquityExplorerPage() {
               ))}
             </section>
 
-            {/* Company Header */}
-            <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-              <div className="mb-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Snapshot</p>
-                <h2 className="text-xs font-bold">Company + Price Console</h2>
-              </div>
-              <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-slate-700 bg-slate-950/60 p-2">
+            <section className="grid gap-2 lg:grid-cols-[1fr_420px]">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <h2 className="text-xs font-bold">Price + Permission Console</h2>
+                  </div>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"
+                  >
+                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-slate-700 bg-slate-950/60 p-2">
                 <div>
                   <div className="mb-1 flex items-center gap-2">
                     <h2 className="text-lg font-bold">{data.company.symbol}</h2>
@@ -525,7 +633,7 @@ export default function EquityExplorerPage() {
                     Last updated: {data.quote.latestTradingDay}
                   </p>
                 </div>
-              </div>
+                </div>
               
               {/* Mini Chart */}
               {data.chart.length > 0 && (
@@ -537,6 +645,13 @@ export default function EquityExplorerPage() {
               {/* Quick Signal Summary */}
               {(() => {
                 const signals = getQuickSignals(data);
+                const eligibilityLabel = upeSignal
+                  ? upeSignal.eligibilityUser === 'eligible'
+                    ? 'Eligible'
+                    : upeSignal.eligibilityUser === 'conditional'
+                    ? 'Conditional'
+                    : 'Blocked'
+                  : 'Pending';
                 return (
                   <div className="mt-2 flex flex-wrap justify-center gap-1">
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
@@ -557,11 +672,108 @@ export default function EquityExplorerPage() {
                         {signals.volatility.icon} {signals.volatility.label}
                       </span>
                     </div>
+                    <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                      <span className="text-[10px] uppercase text-slate-500">Permission</span>
+                      <span
+                        className={`text-xs font-semibold ${
+                          eligibilityLabel === 'Eligible'
+                            ? 'text-emerald-300'
+                            : eligibilityLabel === 'Conditional'
+                            ? 'text-amber-300'
+                            : eligibilityLabel === 'Blocked'
+                            ? 'text-rose-300'
+                            : 'text-slate-400'
+                        }`}
+                      >
+                        {eligibilityLabel}
+                      </span>
+                    </div>
+                    {upeSignal && (
+                      <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                        <span className="text-[10px] uppercase text-slate-500">Action</span>
+                        {upeSignal.eligibilityUser === 'blocked' ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-500"
+                            title={upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Blocked by governance profile or global gate'}
+                          >
+                            Blocked
+                          </button>
+                        ) : (
+                          <Link
+                            href={`/tools/confluence-scanner?symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
+                            className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200"
+                          >
+                            Open Scanner
+                          </Link>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
-            </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
+                  {upeSignal?.eligibilityUser === 'blocked' ? (
+                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Create Alert</button>
+                  ) : (
+                    <Link href={`/tools/alerts?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
+                  )}
+                  {upeSignal?.eligibilityUser === 'blocked' ? (
+                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Add to Watchlist</button>
+                  ) : (
+                    <Link href={`/tools/watchlists?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
+                  )}
+                  {upeSignal?.eligibilityUser === 'blocked' ? (
+                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Run Confluence Scan</button>
+                  ) : (
+                    <Link href={`/tools/confluence-scanner?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
+                  )}
+                  {upeSignal?.eligibilityUser === 'blocked' ? (
+                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Open Journal Draft</button>
+                  ) : (
+                    <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${data.company.symbol} setup`)}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
+                  )}
+                </div>
+              </div>
 
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <div className="mb-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <h2 className="text-xs font-bold">Trend / RS / Volatility Context</h2>
+                </div>
+                <div className="grid gap-2">
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Structure Bias</p>
+                    <p className="text-xs text-slate-200">Weekly: <span className="font-semibold">{data.technicals.priceVs200MA >= 0 ? 'Bullish' : 'Bearish'}</span> • Daily: <span className="font-semibold">{data.technicals.priceVs50MA >= 0 ? 'Bullish' : 'Bearish'}</span></p>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Relative Strength</p>
+                    <p className="text-xs text-slate-200">vs SPY: <span className={`font-semibold ${data.quote.changePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{data.quote.changePercent >= 0 ? '+' : ''}{data.quote.changePercent.toFixed(2)}%</span> • vs Sector: <span className="font-semibold text-slate-300">proxy</span></p>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Volatility + Liquidity</p>
+                    <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{upeGlobal?.volatilityState || 'normal'}</span> • RVOL proxy: <span className="font-semibold">{(data.quote.volume / Math.max(1, data.valuation.marketCap / 1000)).toFixed(2)}x</span></p>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Event Risk</p>
+                    <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'Neutral'}</span></p>
+                  </div>
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-400">
+                    {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — deploy only on trend + volume confirmation.' : upeSignal?.eligibilityUser === 'blocked' ? 'Blocked — no execution until governance state clears.' : 'Eligible — execution workflow is permissioned.'}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+              <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
+                <span>Zone 3 • Informational (Collapsed by Default)</span>
+                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+              </summary>
+
+              <div className="mt-2 space-y-2">
             {/* Key Stats Grid */}
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
@@ -874,6 +1086,8 @@ export default function EquityExplorerPage() {
             <p className="mt-1 text-center text-[11px] text-slate-500">
               Data powered by Alpha Vantage • Updated every 5 minutes during market hours
             </p>
+              </div>
+            </details>
           </div>
         )}
 

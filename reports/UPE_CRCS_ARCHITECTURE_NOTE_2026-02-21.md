@@ -121,7 +121,12 @@ Tenant overlays cannot:
    - `upe-global-open` (weekday open snapshot)
    - `upe-global-close` (weekday close snapshot)
    - `upe-crcs-hourly` (hourly `:05` cadence)
-- ⏳ Pending: extend UPE consumption into explorer surfaces.
+- ✅ Equity Explorer decision-console pass (`app/tools/equity-explorer/page.tsx`):
+   - UPE symbol + global snapshot consumption integrated
+   - Added top deployment gate + environment breakdown
+   - Added action-row parity with blocked-action disabled behavior
+   - Moved research-heavy blocks into collapsed informational zone
+- ⏳ Pending: mirror same UPE decision-console consumption depth in Crypto Explorer and finalize shared component extraction.
 
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`
