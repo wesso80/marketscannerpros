@@ -1024,6 +1024,22 @@ export default function OptionsConfluenceScanner() {
     }
   };
 
+  useEffect(() => {
+    const normalized = symbol.trim().toUpperCase();
+    if (!normalized) {
+      setExpirations([]);
+      setSelectedExpiry('');
+      setLastSymbolFetched('');
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void fetchExpirations(normalized);
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [symbol]);
+
   const handleScan = async () => {
     if (!symbol.trim()) {
       setError("Please enter a symbol");
