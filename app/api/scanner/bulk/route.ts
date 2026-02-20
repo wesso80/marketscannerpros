@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { adx, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
@@ -47,7 +47,7 @@ const EQUITY_UNIVERSE = [
   "DIS", "PYPL", "ADBE", "NOW", "INTU"
 ];
 
-// Binance crypto symbols - Top 100 by market cap/volume (USDT pairs)
+// Crypto symbols - Top 100 by market cap/volume
 const CRYPTO_UNIVERSE = [
   // Top 20 by market cap
   "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "LINK", "DOT",
@@ -646,7 +646,7 @@ function analyzeAssetByTimeframe(
 }
 
 // =============================================================================
-// BINANCE DERIVATIVES DATA (OI, FUNDING, L/S RATIO)
+// CRYPTO DERIVATIVES DATA (COINGECKO AGGREGATE: OI, FUNDING, L/S PROXY)
 // =============================================================================
 
 interface DerivativesData {
@@ -1424,51 +1424,29 @@ function applyInstitutionalFilterToTopPicks(
 
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
-    // Convert BTC -> BTCUSDT for Binance
-    const binanceSymbol = `${symbol}USDT`;
-    
-    const [oiRes, fundingRes, lsRes] = await Promise.all([
-      // Open Interest
-      fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${binanceSymbol}`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      // Funding Rate
-      fetch(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${binanceSymbol}&limit=1`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null),
-      // Long/Short Ratio
-      fetch(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${binanceSymbol}&period=1h&limit=1`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null)
-    ]);
-    
-    let openInterestCoin = 0;
-    let fundingRate: number | undefined;
-    let longShortRatio: number | undefined;
-    
-    if (oiRes?.ok) {
-      const oi = await oiRes.json();
-      openInterestCoin = parseFloat(oi.openInterest || '0');
-    }
-    
-    if (fundingRes?.ok) {
-      const funding = await fundingRes.json();
-      if (funding?.[0]?.fundingRate) {
-        fundingRate = parseFloat(funding[0].fundingRate) * 100; // Convert to %
-      }
-    }
-    
-    if (lsRes?.ok) {
-      const ls = await lsRes.json();
-      if (ls?.[0]?.longShortRatio) {
-        longShortRatio = parseFloat(ls[0].longShortRatio);
-      }
-    }
-    
-    if (openInterestCoin === 0) return null;
-    
+    const tickers = await getDerivativesForSymbols([symbol]);
+    if (!tickers.length) return null;
+
+    const openInterestUsd = tickers.reduce((sum, t) => sum + (Number(t.open_interest) || 0), 0);
+    const avgIndex = tickers.length
+      ? tickers.reduce((sum, t) => sum + (Number(t.index) || 0), 0) / tickers.length
+      : 0;
+    const openInterestCoin = avgIndex > 0 ? openInterestUsd / avgIndex : 0;
+    if (!Number.isFinite(openInterestCoin) || openInterestCoin <= 0) return null;
+
+    const fundingRates = tickers
+      .map((t) => Number(t.funding_rate))
+      .filter((v) => Number.isFinite(v));
+    const fundingRate = fundingRates.length
+      ? (fundingRates.reduce((sum, v) => sum + v, 0) / fundingRates.length) * 100
+      : undefined;
+
+    const longShortRatio = typeof fundingRate === 'number'
+      ? Math.max(0.5, Math.min(1.5, 1 + fundingRate / 0.05))
+      : undefined;
+
     return {
-      openInterest: 0, // Will calculate with price
+      openInterest: openInterestUsd,
       openInterestCoin,
       fundingRate,
       longShortRatio

@@ -7,6 +7,7 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import TrendingCoinsWidget from '@/components/TrendingCoinsWidget';
 import TopMoversWidget from '@/components/TopMoversWidget';
 import CategoryHeatmapWidget from '@/components/CategoryHeatmapWidget';
+import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 
 interface FundingRate {
   symbol: string;
@@ -262,6 +263,10 @@ export default function CryptoDashboard() {
         {lastUpdate && (
           <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdate.toLocaleTimeString()}</p>
         )}
+      </div>
+
+      <div className="mb-8">
+        <CryptoMorningDecisionCard />
       </div>
 
       {/* Price Ticker */}

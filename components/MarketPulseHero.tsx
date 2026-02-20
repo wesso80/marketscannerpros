@@ -40,20 +40,20 @@ export default function MarketPulseHero() {
       try {
         // Fetch all data in parallel
         const [globalRes, fgRes, oiRes, derivRes] = await Promise.all([
-          fetch('https://api.coingecko.com/api/v3/global').then(r => r.json()).catch(() => null),
+          fetch('/api/crypto/market-overview', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
           fetch('/api/fear-greed-custom?market=crypto').then(r => r.json()).catch(() => null),
           fetch('/api/open-interest').then(r => r.json()).catch(() => null),
           fetch('/api/funding-rates').then(r => r.json()).catch(() => null),
         ]);
 
         if (globalRes?.data) {
-          const mcap = globalRes.data.market_cap_percentage || {};
+          const mcap = globalRes.data.dominanceMap || {};
           setDominance({
-            btc: mcap.btc || 0,
-            eth: mcap.eth || 0,
-            stablecoin: (mcap.usdt || 0) + (mcap.usdc || 0),
-            totalMarketCap: globalRes.data.total_market_cap?.usd || 0,
-            change24h: globalRes.data.market_cap_change_percentage_24h_usd || 0,
+            btc: globalRes.data.btcDominance ?? mcap.btc ?? 0,
+            eth: globalRes.data.ethDominance ?? mcap.eth ?? 0,
+            stablecoin: (globalRes.data.usdtDominance ?? mcap.usdt ?? 0) + (globalRes.data.usdcDominance ?? mcap.usdc ?? 0),
+            totalMarketCap: globalRes.data.totalMarketCap || 0,
+            change24h: globalRes.data.marketCapChange24h || 0,
           });
         }
 

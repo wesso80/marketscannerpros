@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDerivativesTickers, getMarketData } from '@/lib/coingecko';
+import { getDerivativesTickers, getGlobalData, getMarketData } from '@/lib/coingecko';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ let cache: { data: any; timestamp: number } | null = null;
 
 interface MarketData {
   // Crypto metrics
-  cryptoFG?: number;           // Alternative.me F&G
+  cryptoFG?: number;           // CoinGecko-derived sentiment index
   btcOI?: number;              // BTC OI
   btcOIChange?: number;        // 24h OI change %
   btcFundingRate?: number;     // Funding rate
@@ -26,33 +26,36 @@ interface MarketData {
   putCallRatio?: number;       // Put/Call ratio (if available)
 }
 
-// Fetch Alternative.me Crypto Fear & Greed
+// Fetch CoinGecko-derived crypto sentiment proxy (0-100)
 async function fetchCryptoFG(): Promise<number | null> {
   try {
-    const res = await fetch('https://api.alternative.me/fng/?limit=1', {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return parseInt(data?.data?.[0]?.value || '50');
+    const global = await getGlobalData();
+    if (!global) return null;
+
+    const mcapChange = Number(global.market_cap_change_percentage_24h_usd || 0);
+    const usdtDom = Number(global.market_cap_percentage?.usdt || 0);
+    const usdcDom = Number(global.market_cap_percentage?.usdc || 0);
+    const stableDom = usdtDom + usdcDom;
+
+    let score = 50;
+    score += mcapChange * 4;
+    score -= Math.max(0, stableDom - 7.5) * 6;
+
+    return Math.max(0, Math.min(100, Math.round(score)));
   } catch {
     return null;
   }
 }
 
-// Fetch BTC derivatives data from CoinGecko + Binance (L/S ratio only)
+// Fetch BTC derivatives data from CoinGecko
 async function fetchBTCDerivatives(): Promise<Partial<MarketData>> {
   const result: Partial<MarketData> = {};
   
   try {
-    // Fetch from CoinGecko (funding rate, OI) and Binance (L/S ratio, price change)
-    const [derivativesTickers, marketData, lsRes] = await Promise.all([
+    // Fetch from CoinGecko (funding rate, OI, price change)
+    const [derivativesTickers, marketData] = await Promise.all([
       getDerivativesTickers(),
       getMarketData({ ids: ['bitcoin'], per_page: 1 }),
-      // L/S ratio only available from Binance
-      fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1', {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      }).catch(() => null)
     ]);
     
     // Extract BTC data from CoinGecko derivatives
@@ -85,13 +88,6 @@ async function fetchBTCDerivatives(): Promise<Partial<MarketData>> {
       result.btcPriceChange24h = marketData[0].price_change_percentage_24h;
     }
     
-    // L/S ratio from Binance (CoinGecko doesn't have this)
-    if (lsRes?.ok) {
-      const ls = await lsRes.json();
-      if (ls?.[0]?.longShortRatio) {
-        result.btcLongShortRatio = parseFloat(ls[0].longShortRatio);
-      }
-    }
   } catch (e) {
     console.error('BTC derivatives fetch error:', e);
   }

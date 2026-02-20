@@ -150,7 +150,7 @@ interface PriceData {
   };
 }
 
-type PriceDataSource = 'alpha_vantage' | 'binance' | 'coingecko';
+type PriceDataSource = 'alpha_vantage' | 'coingecko';
 
 interface PriceFetchResult {
   priceData: PriceData;
@@ -209,108 +209,7 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
   return priceData;
 }
 
-// Fetch crypto price data from Binance (FREE, no API key, excellent historical data)
-async function fetchCryptoPriceDataBinance(symbol: string, timeframe: string = 'daily', startDate: string, endDate: string): Promise<PriceData> {
-  const cleanSymbol = normalizeSymbol(symbol);
-  const binanceSymbol = `${cleanSymbol}USDT`;
-
-  const parsedTimeframe = parseBacktestTimeframe(timeframe);
-  if (!parsedTimeframe) {
-    throw new Error(`Unsupported timeframe: ${timeframe}`);
-  }
-  
-  const interval = parsedTimeframe.binanceInterval;
-  
-  // Calculate timestamps
-  const startTime = new Date(startDate).getTime();
-  const endTime = new Date(endDate).getTime() + 86400000; // Add 1 day to include end date
-  
-  logger.info(`Fetching ${cleanSymbol} from Binance (${interval}) ${startDate} to ${endDate}`);
-  
-  // Binance returns max 1000 candles per request, so we may need multiple requests
-  const allCandles: any[] = [];
-  let currentStart = startTime;
-  const limit = 1000;
-  
-  while (currentStart < endTime) {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&startTime=${currentStart}&endTime=${endTime}&limit=${limit}`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      // Try with USD pair instead of USDT
-      const altUrl = `https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}USD&interval=${interval}&startTime=${currentStart}&endTime=${endTime}&limit=${limit}`;
-      const altResponse = await fetch(altUrl);
-      
-      if (!altResponse.ok) {
-        throw new Error(`Binance API error for ${cleanSymbol}: Symbol not found. Try major pairs like BTC, ETH, XRP, SOL.`);
-      }
-      
-      const altData = await altResponse.json();
-      allCandles.push(...altData);
-      break;
-    }
-    
-    const data = await response.json();
-    
-    if (data.code) {
-      throw new Error(`Binance API error: ${data.msg}`);
-    }
-    
-    if (!Array.isArray(data) || data.length === 0) {
-      break;
-    }
-    
-    allCandles.push(...data);
-    
-    // Move start time to after last candle
-    const lastCandle = data[data.length - 1];
-    currentStart = lastCandle[0] + 1;
-    
-    // If we got less than limit, we've reached the end
-    if (data.length < limit) {
-      break;
-    }
-  }
-  
-  if (allCandles.length === 0) {
-    throw new Error(`No data found for ${cleanSymbol} on Binance. Symbol may not be listed.`);
-  }
-  
-  // Convert Binance klines to our format
-  // Kline format: [openTime, open, high, low, close, volume, closeTime, ...]
-  const priceData: PriceData = {};
-  for (const candle of allCandles) {
-    const timestamp = candle[0];
-    const date = new Date(timestamp);
-    
-    // Format date based on timeframe
-    let dateKey: string;
-    if (parsedTimeframe.kind === 'daily') {
-      dateKey = date.toISOString().split('T')[0];
-    } else {
-      // For intraday, use full datetime
-      dateKey = date.toISOString().replace('T', ' ').slice(0, 19);
-    }
-    
-    priceData[dateKey] = {
-      open: parseFloat(candle[1]),
-      high: parseFloat(candle[2]),
-      low: parseFloat(candle[3]),
-      close: parseFloat(candle[4]),
-      volume: parseFloat(candle[5])
-    };
-  }
-  
-  const finalPriceData = parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
-    ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
-    : priceData;
-
-  logger.info(`Fetched ${Object.keys(finalPriceData).length} ${timeframe} bars from Binance for ${cleanSymbol}`);
-  return finalPriceData;
-}
-
-// Fetch crypto price data from CoinGecko - FALLBACK
+// Fetch crypto price data from CoinGecko
 async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
   const cleanSymbol = normalizeSymbol(symbol);
   logger.info(`Fetching crypto data for ${cleanSymbol} (${timeframe}) via CoinGecko`);
@@ -355,22 +254,12 @@ async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string =
   return finalPriceData;
 }
 
-// Smart crypto fetch - tries Binance first (better data), falls back to CoinGecko
-async function fetchCryptoPriceData(symbol: string, timeframe: string, startDate: string, endDate: string): Promise<PriceFetchResult> {
-  try {
-    // Try Binance first - better historical data for all timeframes
-    return {
-      priceData: await fetchCryptoPriceDataBinance(symbol, timeframe, startDate, endDate),
-      source: 'binance',
-    };
-  } catch (binanceError) {
-    logger.warn(`Binance failed for ${symbol}, trying CoinGecko: ${binanceError}`);
-    // Fallback to CoinGecko
-    return {
-      priceData: await fetchCryptoPriceDataCoinGecko(symbol, timeframe),
-      source: 'coingecko',
-    };
-  }
+// Crypto fetch (CoinGecko-only under commercial contract)
+async function fetchCryptoPriceData(symbol: string, timeframe: string, _startDate: string, _endDate: string): Promise<PriceFetchResult> {
+  return {
+    priceData: await fetchCryptoPriceDataCoinGecko(symbol, timeframe),
+    source: 'coingecko',
+  };
 }
 
 // Smart fetch - detects crypto vs stock and supports intraday for both
@@ -1668,7 +1557,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Fetch real historical price data
-    logger.debug(`Fetching ${isCrypto ? 'crypto (Binance)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${parsedTimeframe.normalized})...`);
+    logger.debug(`Fetching ${isCrypto ? 'crypto (CoinGecko)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${parsedTimeframe.normalized})...`);
     const { priceData, source: priceDataSource } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate);
     logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
 

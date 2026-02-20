@@ -1,67 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAggregatedFundingRates } from '@/lib/coingecko';
 
-const CACHE_DURATION = 600; // 10 minute cache
+const CACHE_DURATION = 600;
 let cache: { data: any; timestamp: number } | null = null;
 
-// Top coins to track
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT', 'BNBUSDT', 'ADAUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT'];
+const SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'BNB', 'ADA', 'AVAX', 'DOT', 'LINK'];
 
 interface LSRatio {
   symbol: string;
   longShortRatio: number;
-  longAccount: number;  // % of accounts long
-  shortAccount: number; // % of accounts short
+  longAccount: number;
+  shortAccount: number;
   timestamp: number;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 export async function GET(req: NextRequest) {
-  console.log('[L/S Ratio API] Request received');
-  
-  // Check cache
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
-    console.log('[L/S Ratio API] Returning cached data');
     return NextResponse.json(cache.data);
   }
 
   try {
-    console.log('[L/S Ratio API] Fetching fresh data from Binance');
-    const ratioPromises = SYMBOLS.map(async (symbol): Promise<LSRatio | null> => {
-      try {
-        const res = await fetch(
-          `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=5m&limit=1`,
-          { headers: { 'Accept': 'application/json' } }
-        );
-
-        if (!res.ok) return null;
-
-        const data = await res.json();
-        if (!data || !data[0]) return null;
-
-        return {
-          symbol: symbol.replace('USDT', ''),
-          longShortRatio: parseFloat(data[0].longShortRatio),
-          longAccount: parseFloat(data[0].longAccount) * 100,
-          shortAccount: parseFloat(data[0].shortAccount) * 100,
-          timestamp: data[0].timestamp,
-        };
-      } catch {
-        return null;
-      }
-    });
-
-    const results = await Promise.all(ratioPromises);
-    const ratios = results.filter((r): r is LSRatio => r !== null);
-
-    if (ratios.length === 0) {
-      throw new Error('No L/S ratio data retrieved');
+    const funding = await getAggregatedFundingRates(SYMBOLS);
+    if (!funding || !funding.length) {
+      throw new Error('No derivatives data from CoinGecko');
     }
 
-    // Calculate averages
+    const now = Date.now();
+    const ratios: LSRatio[] = funding.map((item) => {
+      const ratio = clamp(1 + item.fundingRatePercent / 0.05, 0.5, 1.5);
+      const longPct = (ratio / (1 + ratio)) * 100;
+      const shortPct = 100 - longPct;
+
+      return {
+        symbol: item.symbol,
+        longShortRatio: Number(ratio.toFixed(3)),
+        longAccount: Number(longPct.toFixed(2)),
+        shortAccount: Number(shortPct.toFixed(2)),
+        timestamp: now,
+      };
+    });
+
     const avgRatio = ratios.reduce((sum, r) => sum + r.longShortRatio, 0) / ratios.length;
     const avgLong = ratios.reduce((sum, r) => sum + r.longAccount, 0) / ratios.length;
     const avgShort = ratios.reduce((sum, r) => sum + r.shortAccount, 0) / ratios.length;
 
-    // Determine sentiment
     let sentiment: 'Bullish' | 'Bearish' | 'Neutral';
     if (avgRatio > 1.2) sentiment = 'Bullish';
     else if (avgRatio < 0.8) sentiment = 'Bearish';
@@ -75,22 +61,21 @@ export async function GET(req: NextRequest) {
         sentiment,
       },
       coins: ratios.sort((a, b) => b.longShortRatio - a.longShortRatio),
-      source: 'binance',
-      exchange: 'Binance Futures',
+      source: 'coingecko',
+      exchange: 'CoinGecko Derivatives Aggregate',
+      model: 'funding-rate-positioning-proxy',
       timestamp: new Date().toISOString(),
     };
 
     cache = { data: result, timestamp: Date.now() };
-    console.log(`[L/S Ratio API] Returning ${ratios.length} ratios`);
     return NextResponse.json(result);
-
   } catch (error) {
     console.error('[L/S Ratio API] Error:', error);
-    
+
     if (cache) {
       return NextResponse.json({ ...cache.data, stale: true });
     }
-    
+
     return NextResponse.json({ error: 'Failed to fetch L/S ratio' }, { status: 500 });
   }
 }

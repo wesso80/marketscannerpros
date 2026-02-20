@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 
 interface CoinData {
   coin: {
@@ -372,6 +373,8 @@ function CryptoDetailPageContent() {
           <h1 className="text-lg font-bold text-teal-300">🔍 Crypto Asset Explorer</h1>
           <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
         </header>
+
+        <CryptoMorningDecisionCard />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2" ref={searchRef}>
           <div className="relative">

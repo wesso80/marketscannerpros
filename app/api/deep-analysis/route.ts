@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from '@/lib/auth';
 import { estimateGreeks } from '@/lib/options-confluence-analyzer';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { getCoinDetail, getGlobalData, resolveSymbolToId } from '@/lib/coingecko';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -668,25 +669,21 @@ async function fetchCryptoNews(symbol: string) {
 // Fetch crypto-specific data
 async function fetchCryptoData(symbol: string) {
   try {
-    // Fear & Greed Index
-    const fgRes = await fetch('https://api.alternative.me/fng/?limit=1');
-    const fgData = await fgRes.json();
+    // CoinGecko-derived fear/greed proxy
+    const global = await getGlobalData();
+    const mcapChange = Number(global?.market_cap_change_percentage_24h_usd || 0);
+    const stableDom = Number(global?.market_cap_percentage?.usdt || 0) + Number(global?.market_cap_percentage?.usdc || 0);
+    const fgValue = Math.max(0, Math.min(100, Math.round(50 + mcapChange * 4 - Math.max(0, stableDom - 7.5) * 6)));
+    const fgClassification = fgValue < 20 ? 'Extreme Fear' : fgValue < 40 ? 'Fear' : fgValue < 60 ? 'Neutral' : fgValue < 80 ? 'Greed' : 'Extreme Greed';
     
-    // Try to get market data from CoinGecko
+    // Try to get market data from CoinGecko (commercial key via shared client)
     const cgSymbol = symbol.toLowerCase().replace('usdt', '').replace('usd', '');
-    const cgMapping: Record<string, string> = {
-      'btc': 'bitcoin', 'eth': 'ethereum', 'xrp': 'ripple', 'sol': 'solana',
-      'ada': 'cardano', 'doge': 'dogecoin', 'dot': 'polkadot', 'matic': 'polygon',
-      'link': 'chainlink', 'avax': 'avalanche-2', 'shib': 'shiba-inu', 'ltc': 'litecoin'
-    };
-    
     let marketData = null;
-    const cgId = cgMapping[cgSymbol];
+    const cgId = await resolveSymbolToId(cgSymbol);
     if (cgId) {
       try {
-        const cgRes = await fetch(`https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&community_data=false&developer_data=false`);
-        if (cgRes.ok) {
-          const cgData = await cgRes.json();
+        const cgData = await getCoinDetail(cgId);
+        if (cgData) {
           marketData = {
             marketCapRank: cgData.market_cap_rank,
             marketCap: cgData.market_data?.market_cap?.usd,
@@ -703,8 +700,8 @@ async function fetchCryptoData(symbol: string) {
     
     return {
       fearGreed: {
-        value: parseInt(fgData.data[0].value),
-        classification: fgData.data[0].value_classification
+        value: fgValue,
+        classification: fgClassification,
       },
       marketData
     };

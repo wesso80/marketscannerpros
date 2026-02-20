@@ -29,21 +29,20 @@ export default function DominanceWidget() {
   useEffect(() => {
     async function fetchDominance() {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/global');
+        const res = await fetch('/api/crypto/market-overview', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch');
-        
+
         const json = await res.json();
-        const marketCap = json.data?.market_cap_percentage || {};
-        const totalMcap = json.data?.total_market_cap?.usd || 0;
-        const mcapChange = json.data?.market_cap_change_percentage_24h_usd || 0;
-        
+        const payload = json?.data || {};
+        const marketCap = payload.dominanceMap || {};
+
         setData({
-          btc: marketCap.btc || 0,
-          eth: marketCap.eth || 0,
-          usdt: marketCap.usdt || 0,
-          usdc: marketCap.usdc || 0,
-          totalMarketCap: totalMcap,
-          totalMarketCapChange24h: mcapChange,
+          btc: payload.btcDominance ?? marketCap.btc ?? 0,
+          eth: payload.ethDominance ?? marketCap.eth ?? 0,
+          usdt: payload.usdtDominance ?? marketCap.usdt ?? 0,
+          usdc: payload.usdcDominance ?? marketCap.usdc ?? 0,
+          totalMarketCap: payload.totalMarketCap || 0,
+          totalMarketCapChange24h: payload.marketCapChange24h || 0,
           loading: false,
         });
       } catch (err: any) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
-import DataComingSoon from "@/components/DataComingSoon";
+import { useAIPageContext } from "@/lib/ai/pageContext";
 
 interface MarketMover {
   ticker: string;
@@ -14,113 +15,52 @@ interface MarketMover {
   volume: string;
 }
 
-interface ClassifiedMover extends MarketMover {
-  assetType: "Stock" | "ETF" | "Warrant" | "Unknown";
-  riskLevel: "Low" | "Medium" | "High" | "Extreme";
+type SetupMode = "breakout" | "reversal" | "momentum";
+type Cluster = "large_cap" | "mid_cap" | "small_cap" | "microcap" | "high_beta";
+type Deployment = "Eligible" | "Conditional" | "Blocked";
+
+type ClassifiedMover = MarketMover & {
+  relVolume: number;
+  structureBias: string;
+  confluenceScore: number;
+  liquidityScore: number;
+  deployment: Deployment;
+  blockReason?: string;
+  cluster: Cluster;
+  setupClass: "Breakout" | "Reversal" | "Early Momentum" | "Watch";
   tags: string[];
-}
+  thresholdsUsed: {
+    liquidityMin: number;
+    relVolMin: number;
+    confluenceMin: number;
+  };
+};
 
-// Helper: Classify asset type and risk
-function classifyTicker(ticker: string, price: number, changePercent: number, volume: number): {
-  assetType: "Stock" | "ETF" | "Warrant" | "Unknown";
-  riskLevel: "Low" | "Medium" | "High" | "Extreme";
-  tags: string[];
-} {
-  const tags: string[] = [];
-  
-  // Asset type detection (heuristics)
-  let assetType: "Stock" | "ETF" | "Warrant" | "Unknown" = "Stock";
-  if (ticker.endsWith("W") || ticker.includes("+")) {
-    assetType = "Warrant";
-    tags.push("Warrant");
-  } else if (ticker.length >= 4 && (ticker.endsWith("Q") || ticker.endsWith("X"))) {
-    assetType = "ETF";
-  } else if (["SPY", "QQQ", "IWM", "DIA", "VTI", "VOO", "SQQQ", "TQQQ", "SOXL", "SOXS", "UVXY", "SPXU", "SPXS", "LABU", "LABD", "FNGU", "FNGD", "ARKK", "XLF", "XLE", "XLK", "GLD", "SLV", "USO", "UNG"].includes(ticker)) {
-    assetType = "ETF";
-  }
-  
-  // Leveraged ETF detection
-  if (["SQQQ", "TQQQ", "SOXL", "SOXS", "UVXY", "SPXU", "SPXS", "LABU", "LABD", "FNGU", "FNGD", "UPRO", "TMF", "TNA", "TZA", "JNUG", "JDST", "NUGT", "DUST"].includes(ticker)) {
-    tags.push("Leveraged");
-  }
-  
-  // Risk level based on price, volatility, and volume
-  let riskLevel: "Low" | "Medium" | "High" | "Extreme" = "Medium";
-  
-  if (price < 1) {
-    riskLevel = "Extreme";
-    tags.push("Sub-$1");
-  } else if (price < 5) {
-    riskLevel = "High";
-    tags.push("Penny Stock");
-  } else if (price < 20) {
-    riskLevel = "Medium";
-  } else {
-    riskLevel = "Low";
-  }
-  
-  // Extreme moves are high risk regardless
-  if (Math.abs(changePercent) > 50) {
-    riskLevel = "Extreme";
-    tags.push("Extreme Move");
-  } else if (Math.abs(changePercent) > 25) {
-    if (riskLevel !== "Extreme") riskLevel = "High";
-    tags.push("Extended");
-  }
-  
-  // Low volume warning
-  if (volume < 100000) {
-    tags.push("Low Volume");
-    if (riskLevel === "Low") riskLevel = "Medium";
-    if (riskLevel === "Medium") riskLevel = "High";
-  }
-  
-  return { assetType, riskLevel, tags };
-}
-
-// Generate insight based on data
-function generateMoverInsight(data: MarketMover[], type: "gainers" | "losers" | "active"): string {
-  if (data.length === 0) return "";
-  
-  const avgChange = data.reduce((sum, d) => sum + Math.abs(parseFloat(d.change_percentage.replace("%", ""))), 0) / data.length;
-  const lowPriceCount = data.filter(d => parseFloat(d.price) < 5).length;
-  const extremeMoves = data.filter(d => Math.abs(parseFloat(d.change_percentage.replace("%", ""))) > 30).length;
-  
-  if (type === "gainers") {
-    if (lowPriceCount > data.length * 0.6) {
-      return "⚠️ Today's top gainers are dominated by low-price, speculative names — elevated risk of reversals.";
-    }
-    if (extremeMoves > 5) {
-      return "🔥 Multiple extreme moves today — momentum is strong but consider waiting for pullbacks.";
-    }
-    if (avgChange > 30) {
-      return "📈 High volatility session — large % moves may not sustain. Confirm volume and trend before entry.";
-    }
-    return "📊 Mixed session — scan for quality setups with volume confirmation.";
-  }
-  
-  if (type === "losers") {
-    if (lowPriceCount > data.length * 0.5) {
-      return "⚠️ Many losers are already low-priced — avoid catching falling knives without catalyst clarity.";
-    }
-    if (extremeMoves > 5) {
-      return "🔻 Sharp selloffs today — potential bounce plays but high risk. Wait for stabilization.";
-    }
-    return "📉 Selling pressure present — look for oversold bounces with volume confirmation.";
-  }
-  
-  if (type === "active") {
-    return "📊 Most Active includes ETFs and leveraged products. Filter to stocks for cleaner signals.";
-  }
-  
-  return "";
-}
-
-type SortField = "ticker" | "price" | "change" | "percent" | "volume";
+type SortField = "ticker" | "percent" | "volume";
 type SortDirection = "asc" | "desc";
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function percentile50(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function formatVol(v: number) {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return `${v}`;
+}
 
 export default function GainersLosersPage() {
   const { tier } = useUserTier();
+  const { setPageData } = useAIPageContext();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -129,36 +69,28 @@ export default function GainersLosersPage() {
   const [losers, setLosers] = useState<MarketMover[]>([]);
   const [active, setActive] = useState<MarketMover[]>([]);
   const [activeTab, setActiveTab] = useState<"gainers" | "losers" | "active">("gainers");
-  
-  // Filters
-  const [hideETFs, setHideETFs] = useState(false);
-  const [hideLeveraged, setHideLeveraged] = useState(false);
-  const [hideExtremeRisk, setHideExtremeRisk] = useState(false);
-  const [minPrice, setMinPrice] = useState<number>(0);
-  
-  // Sorting
+  const [setupMode, setSetupMode] = useState<SetupMode>("breakout");
+  const [hideBlocked, setHideBlocked] = useState(false);
+  const [minPrice, setMinPrice] = useState(0);
   const [sortField, setSortField] = useState<SortField>("percent");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
-    
+
     try {
       const response = await fetch(`/api/market-movers?_t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
       });
       const data = await response.json();
-      
       if (data.success) {
         setGainers(data.topGainers?.slice(0, 20) || []);
         setLosers(data.topLosers?.slice(0, 20) || []);
         setActive(data.mostActive?.slice(0, 20) || []);
         setLastUpdated(new Date());
-        if (data.lastUpdated) {
-          setMarketDate(data.lastUpdated);
-        }
+        setMarketDate(data.lastUpdated || null);
       }
     } catch (error) {
       console.error("Failed to fetch market movers:", error);
@@ -172,102 +104,250 @@ export default function GainersLosersPage() {
     if (canAccessPortfolioInsights(tier)) fetchData();
   }, [tier]);
 
-  // Compute rawData BEFORE any conditional returns
   const rawData = activeTab === "gainers" ? gainers : activeTab === "losers" ? losers : active;
-  
-  // Apply filters and sorting - MUST be before conditional returns
-  const currentData = useMemo(() => {
-    let filtered: ClassifiedMover[] = rawData.map(item => {
-      const price = parseFloat(item.price);
-      const changePercent = parseFloat(item.change_percentage.replace("%", ""));
-      const volume = parseInt(item.volume);
-      const classification = classifyTicker(item.ticker, price, changePercent, volume);
-      return { ...item, ...classification };
-    });
-    
-    // Apply filters
-    if (hideETFs) {
-      filtered = filtered.filter(d => d.assetType !== "ETF");
-    }
-    if (hideLeveraged) {
-      filtered = filtered.filter(d => !d.tags.includes("Leveraged"));
-    }
-    if (hideExtremeRisk) {
-      filtered = filtered.filter(d => d.riskLevel !== "Extreme");
-    }
-    if (minPrice > 0) {
-      filtered = filtered.filter(d => parseFloat(d.price) >= minPrice);
-    }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aVal: number, bVal: number;
-      switch (sortField) {
-        case "ticker":
-          return sortDirection === "asc" 
-            ? a.ticker.localeCompare(b.ticker) 
-            : b.ticker.localeCompare(a.ticker);
-        case "price":
-          aVal = parseFloat(a.price);
-          bVal = parseFloat(b.price);
-          break;
-        case "change":
-          aVal = parseFloat(a.change_amount);
-          bVal = parseFloat(b.change_amount);
-          break;
-        case "percent":
-          aVal = Math.abs(parseFloat(a.change_percentage.replace("%", "")));
-          bVal = Math.abs(parseFloat(b.change_percentage.replace("%", "")));
-          break;
-        case "volume":
-          aVal = parseInt(a.volume);
-          bVal = parseInt(b.volume);
-          break;
-        default:
-          return 0;
-      }
-      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-    });
-    
-    return filtered;
-  }, [rawData, hideETFs, hideLeveraged, hideExtremeRisk, minPrice, sortField, sortDirection]);
-  
-  const insight = generateMoverInsight(rawData, activeTab);
 
-  // Removed admin-only gate - now using Pro+ tier gate below
-  
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
-  
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span style={{ opacity: 0.3 }}>↕</span>;
-    return <span>{sortDirection === "asc" ? "↑" : "↓"}</span>;
-  };
-  
-  const getRiskBadgeStyle = (level: "Low" | "Medium" | "High" | "Extreme") => {
-    const styles: Record<string, React.CSSProperties> = {
-      Low: { background: "rgba(16, 185, 129, 0.15)", color: "#10B981", border: "1px solid rgba(16, 185, 129, 0.3)" },
-      Medium: { background: "rgba(251, 191, 36, 0.15)", color: "#FBBF24", border: "1px solid rgba(251, 191, 36, 0.3)" },
-      High: { background: "rgba(249, 115, 22, 0.15)", color: "#F97316", border: "1px solid rgba(249, 115, 22, 0.3)" },
-      Extreme: { background: "rgba(239, 68, 68, 0.15)", color: "#EF4444", border: "1px solid rgba(239, 68, 68, 0.3)" },
+  const environment = useMemo(() => {
+    const combined = [...gainers, ...losers, ...active];
+    const medianVol = percentile50(combined.map((i) => parseInt(i.volume || "0")));
+    const avgAbsMove = combined.length
+      ? combined.reduce((sum, item) => sum + Math.abs(parseFloat(item.change_percentage.replace("%", "") || "0")), 0) / combined.length
+      : 0;
+    const activeBreadthPct = active.length
+      ? (active.filter((item) => parseFloat(item.change_percentage.replace("%", "") || "0") > 0).length / active.length) * 100
+      : 50;
+
+    const marketMode = avgAbsMove >= 4.5 ? "Risk-On" : avgAbsMove <= 2 ? "Risk-Off" : "Neutral";
+    const breadth = activeBreadthPct >= 60 ? "Broad" : activeBreadthPct >= 45 ? "Mixed" : "Weak";
+    const liquidity = medianVol >= 25_000_000 ? "Expanding" : medianVol >= 8_000_000 ? "Stable" : "Thin";
+    const volatility = avgAbsMove >= 7 ? "Elevated" : avgAbsMove >= 3 ? "Normal" : "Compression";
+
+    const adaptiveConfidence = Math.round(
+      clamp(
+        (marketMode === "Risk-On" ? 78 : marketMode === "Neutral" ? 56 : 35) * 0.25 +
+          (breadth === "Broad" ? 80 : breadth === "Mixed" ? 58 : 35) * 0.2 +
+          (liquidity === "Expanding" ? 82 : liquidity === "Stable" ? 58 : 30) * 0.2 +
+          (volatility === "Normal" ? 72 : volatility === "Compression" ? 52 : 40) * 0.15 +
+          clamp(activeBreadthPct, 0, 100) * 0.2,
+        0,
+        100,
+      ),
+    );
+
+    let deploymentMode: "YES" | "CONDITIONAL" | "NO" = "CONDITIONAL";
+    if (marketMode === "Risk-Off" && liquidity === "Thin") deploymentMode = "NO";
+    else if (adaptiveConfidence >= 65 && marketMode !== "Risk-Off") deploymentMode = "YES";
+    else if (adaptiveConfidence < 40) deploymentMode = "NO";
+
+    return {
+      marketMode,
+      breadth,
+      liquidity,
+      volatility,
+      adaptiveConfidence,
+      deploymentMode,
+      medianVol,
+      highBetaPolicy: deploymentMode === "YES" && liquidity !== "Thin" && volatility !== "Elevated" ? "Conditional" : "Restricted",
+      breakoutPolicy: deploymentMode === "NO" ? "Restricted" : deploymentMode === "YES" ? "Allowed" : "Conditional",
+      meanReversionPolicy: deploymentMode === "NO" ? "Preferred" : volatility === "Elevated" ? "Preferred" : "Allowed",
     };
-    return { ...styles[level], padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "600" };
-  };
+  }, [gainers, losers, active]);
 
-  // Gate entire page for Pro+ users
+  const currentData = useMemo(() => {
+    let evaluated: ClassifiedMover[] = rawData.map((item) => {
+      const price = parseFloat(item.price || "0");
+      const volume = parseInt(item.volume || "0");
+      const changePct = parseFloat(item.change_percentage.replace("%", "") || "0");
+      const relVolume = environment.medianVol > 0 ? volume / environment.medianVol : 1;
+
+      const cluster: Cluster = Math.abs(changePct) >= 10
+        ? "high_beta"
+        : volume >= 50_000_000
+        ? "large_cap"
+        : volume >= 15_000_000
+        ? "mid_cap"
+        : volume >= 4_000_000
+        ? "small_cap"
+        : "microcap";
+
+      const thresholds: Record<Cluster, { liquidityMin: number; relVolMin: number; confluenceMin: number }> = {
+        large_cap: { liquidityMin: 10_000_000, relVolMin: 1.2, confluenceMin: 55 },
+        mid_cap: { liquidityMin: 5_000_000, relVolMin: 1.4, confluenceMin: 60 },
+        small_cap: { liquidityMin: 3_000_000, relVolMin: 1.7, confluenceMin: 65 },
+        microcap: { liquidityMin: 2_000_000, relVolMin: 2.0, confluenceMin: 74 },
+        high_beta: { liquidityMin: 8_000_000, relVolMin: 1.9, confluenceMin: 72 },
+      };
+
+      const t = { ...thresholds[cluster] };
+      if (environment.marketMode === "Risk-On") {
+        if (cluster === "large_cap" || cluster === "mid_cap") t.confluenceMin -= 4;
+        if (cluster === "small_cap") t.confluenceMin -= 2;
+      } else if (environment.marketMode === "Risk-Off") {
+        t.liquidityMin = Math.round(t.liquidityMin * 1.5);
+        t.confluenceMin += 10;
+        t.relVolMin += 0.3;
+      } else {
+        t.confluenceMin += 2;
+        t.relVolMin += 0.1;
+      }
+
+      let structureBias = "Mixed";
+      let setupClass: ClassifiedMover["setupClass"] = "Watch";
+      if (setupMode === "breakout") {
+        if (changePct >= 2 && relVolume >= 1.2) {
+          structureBias = "Trend Continuation";
+          setupClass = "Breakout";
+        } else if (changePct <= -2) {
+          structureBias = "Countertrend";
+        }
+      } else if (setupMode === "reversal") {
+        if (changePct <= -4 && relVolume >= 1.1) {
+          structureBias = "Oversold Reversal";
+          setupClass = "Reversal";
+        } else if (changePct >= 5) {
+          structureBias = "Extension Risk";
+        }
+      } else {
+        if (Math.abs(changePct) >= 3 && relVolume >= 1.35) {
+          structureBias = "Early Expansion";
+          setupClass = "Early Momentum";
+        } else {
+          structureBias = "Await Expansion";
+        }
+      }
+
+      const structurePoints =
+        structureBias === "Trend Continuation" || structureBias === "Oversold Reversal" || structureBias === "Early Expansion"
+          ? 85
+          : structureBias === "Mixed" || structureBias === "Await Expansion"
+          ? 58
+          : 35;
+      const relVolPoints = clamp((relVolume / Math.max(1, t.relVolMin * 1.4)) * 100, 0, 100);
+      const liquidityPoints = clamp((volume / Math.max(1, t.liquidityMin * 1.5)) * 100, 0, 100);
+      const moveQualityPoints = clamp(100 - Math.max(0, Math.abs(changePct) - 12) * 6, 25, 100);
+
+      const confluenceScore = Math.round(
+        structurePoints * 0.3 + relVolPoints * 0.25 + liquidityPoints * 0.25 + moveQualityPoints * 0.2,
+      );
+      const liquidityScore = Math.round(clamp((volume / Math.max(1, environment.medianVol * 1.6)) * 100, 0, 100));
+
+      const blockReasons: string[] = [];
+      if (volume < t.liquidityMin) blockReasons.push("Liquidity below adaptive threshold");
+      if (relVolume < t.relVolMin * 0.85) blockReasons.push("Relative volume below threshold");
+      if (confluenceScore < t.confluenceMin) blockReasons.push("Confluence below threshold");
+      if (environment.marketMode === "Risk-Off" && (cluster === "microcap" || cluster === "high_beta")) blockReasons.push("Cluster blocked in risk-off");
+      if (environment.deploymentMode === "NO" && setupMode === "breakout") blockReasons.push("Breakouts blocked by deployment gate");
+
+      let deployment: Deployment = "Conditional";
+      if (!blockReasons.length && confluenceScore >= t.confluenceMin && relVolume >= t.relVolMin && volume >= t.liquidityMin) deployment = "Eligible";
+      else if (blockReasons.length >= 2) deployment = "Blocked";
+      if (environment.deploymentMode === "NO" && deployment === "Eligible") deployment = "Conditional";
+
+      const tags = [] as string[];
+      if (cluster === "microcap") tags.push("Microcap");
+      if (cluster === "high_beta") tags.push("High Beta");
+      if (relVolume >= 2) tags.push("Volume Spike");
+      if (Math.abs(changePct) >= 15) tags.push("Extreme Move");
+
+      return {
+        ...item,
+        relVolume,
+        structureBias,
+        confluenceScore,
+        liquidityScore,
+        deployment,
+        blockReason: blockReasons[0],
+        cluster,
+        setupClass,
+        tags,
+        thresholdsUsed: t,
+      };
+    });
+
+    evaluated = evaluated.filter((item) => parseFloat(item.price || "0") >= minPrice);
+    if (hideBlocked) evaluated = evaluated.filter((item) => item.deployment !== "Blocked");
+
+    evaluated.sort((a, b) => {
+      const tierScore = (v: Deployment) => (v === "Eligible" ? 0 : v === "Conditional" ? 1 : 2);
+      const t = tierScore(a.deployment) - tierScore(b.deployment);
+      if (t !== 0) return t;
+      if (b.confluenceScore !== a.confluenceScore) return b.confluenceScore - a.confluenceScore;
+      if (b.relVolume !== a.relVolume) return b.relVolume - a.relVolume;
+
+      if (sortField === "ticker") return sortDirection === "asc" ? a.ticker.localeCompare(b.ticker) : b.ticker.localeCompare(a.ticker);
+      if (sortField === "volume") {
+        const av = parseInt(a.volume || "0");
+        const bv = parseInt(b.volume || "0");
+        return sortDirection === "asc" ? av - bv : bv - av;
+      }
+      const ap = Math.abs(parseFloat(a.change_percentage.replace("%", "") || "0"));
+      const bp = Math.abs(parseFloat(b.change_percentage.replace("%", "") || "0"));
+      return sortDirection === "asc" ? ap - bp : bp - ap;
+    });
+
+    return evaluated;
+  }, [rawData, environment, setupMode, minPrice, hideBlocked, sortField, sortDirection]);
+
+  const eligibleCount = useMemo(() => currentData.filter((item) => item.deployment === "Eligible").length, [currentData]);
+
+  useEffect(() => {
+    if (!currentData.length) return;
+
+    setPageData({
+      skill: "market_movers",
+      symbols: currentData.slice(0, 10).map((row) => row.ticker),
+      summary: `Movers gate ${environment.deploymentMode} (${environment.adaptiveConfidence}%). Eligible ${eligibleCount}/${currentData.length}.`,
+      data: {
+        regime: {
+          mode: environment.marketMode,
+          breadth: environment.breadth,
+          liquidity: environment.liquidity,
+          volatility: environment.volatility,
+          adaptiveConfidence: environment.adaptiveConfidence,
+          deploymentMode: environment.deploymentMode,
+          policies: {
+            highBeta: environment.highBetaPolicy,
+            breakout: environment.breakoutPolicy,
+            meanReversion: environment.meanReversionPolicy,
+          },
+        },
+        setupMode,
+        moversTelemetry: currentData.slice(0, 20).map((row) => ({
+          ticker: row.ticker,
+          cluster: row.cluster,
+          deployment: row.deployment,
+          relVolume: Number(row.relVolume.toFixed(2)),
+          confluenceScore: row.confluenceScore,
+          liquidityScore: row.liquidityScore,
+          structureBias: row.structureBias,
+          setupClass: row.setupClass,
+          blockReason: row.blockReason || null,
+          thresholdsUsed: row.thresholdsUsed,
+        })),
+      },
+    });
+  }, [
+    currentData,
+    eligibleCount,
+    environment.adaptiveConfidence,
+    environment.breadth,
+    environment.breakoutPolicy,
+    environment.deploymentMode,
+    environment.highBetaPolicy,
+    environment.liquidity,
+    environment.marketMode,
+    environment.meanReversionPolicy,
+    environment.volatility,
+    setPageData,
+    setupMode,
+  ]);
+
   if (!canAccessPortfolioInsights(tier)) {
     return (
       <div style={{ minHeight: "100vh", background: "#0f172a" }}>
         <ToolsPageHeader
           badge="MARKET MOVERS"
           title="Top Gainers & Losers"
-          subtitle="Find live gainers, losers, and most-active tickers with risk context."
+          subtitle="Institutional mover governance with deployment filtering."
           icon="📊"
           backHref="/dashboard"
         />
@@ -283,335 +363,187 @@ export default function GainersLosersPage() {
       <ToolsPageHeader
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"
-        subtitle="Find live gainers, losers, and most-active tickers with risk context."
+        subtitle="Institutional mover governance with deployment filtering."
         icon="📊"
         backHref="/dashboard"
       />
-      <main style={{ padding: "24px 16px", width: '100%' }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>
-
-        {/* Refresh bar */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '16px',
-          flexWrap: 'wrap',
-          gap: '12px'
-        }}>
-          <div style={{ color: '#64748b', fontSize: '13px' }}>
-            {marketDate && <div>📅 Market data: {marketDate}</div>}
-            {lastUpdated && <div style={{ marginTop: '2px' }}>🔄 Fetched: {lastUpdated.toLocaleTimeString()}</div>}
-            <div style={{ marginTop: '4px', fontSize: '11px', color: '#475569' }}>
-              Note: Alpha Vantage updates this data once daily after market close
+      <main style={{ padding: "24px 16px", width: "100%" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+            <div style={{ color: "#64748b", fontSize: 13 }}>
+              {marketDate && <div>📅 Market data: {marketDate}</div>}
+              {lastUpdated && <div style={{ marginTop: 2 }}>🔄 Fetched: {lastUpdated.toLocaleTimeString()}</div>}
             </div>
-          </div>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={refreshing}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              background: refreshing ? '#334155' : 'var(--msp-accent)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-              fontWeight: '600',
-              fontSize: '14px',
-              cursor: refreshing ? 'wait' : 'pointer',
-              opacity: refreshing ? 0.7 : 1,
-              transition: 'all 0.2s'
-            }}
-          >
-            <span style={{ 
-              display: 'inline-block',
-              animation: refreshing ? 'spin 1s linear infinite' : 'none'
-            }}>🔄</span>
-            {refreshing ? 'Refreshing...' : 'Refresh Data'}
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-          <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16, 185, 129, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
-            🚀 Top Gainers
-          </button>
-          <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
-            📉 Top Losers
-          </button>
-          <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: "12px", color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", fontSize: "14px" }}>
-            🔥 Most Active
-          </button>
-        </div>
-        
-        {/* Mover Insight - Pro feature */}
-        {insight && canAccessPortfolioInsights(tier) && (
-          <div style={{
-            padding: "12px 16px",
-            background: "var(--msp-panel)",
-            border: "1px solid var(--msp-border)",
-            borderRadius: "10px",
-            marginBottom: "16px",
-            color: "#E2E8F0",
-            fontSize: "14px",
-            lineHeight: "1.5"
-          }}>
-            {insight}
-          </div>
-        )}
-        
-        {/* Filters */}
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "12px",
-          alignItems: "center",
-          marginBottom: "16px",
-          padding: "12px 16px",
-          background: "rgba(30, 41, 59, 0.5)",
-          borderRadius: "10px",
-          border: "1px solid rgba(51,65,85,0.6)"
-        }}>
-          <span style={{ color: "#94A3B8", fontSize: "13px", fontWeight: "600" }}>Filters:</span>
-          
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", color: "#94A3B8", fontSize: "13px", cursor: "pointer" }}>
-            <input type="checkbox" checked={hideETFs} onChange={(e) => setHideETFs(e.target.checked)} style={{ accentColor: "#10B981" }} />
-            Hide ETFs
-          </label>
-          
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", color: "#94A3B8", fontSize: "13px", cursor: "pointer" }}>
-            <input type="checkbox" checked={hideLeveraged} onChange={(e) => setHideLeveraged(e.target.checked)} style={{ accentColor: "#10B981" }} />
-            Hide Leveraged
-          </label>
-          
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", color: "#94A3B8", fontSize: "13px", cursor: "pointer" }}>
-            <input type="checkbox" checked={hideExtremeRisk} onChange={(e) => setHideExtremeRisk(e.target.checked)} style={{ accentColor: "#10B981" }} />
-            Hide Extreme Risk
-          </label>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ color: "#94A3B8", fontSize: "13px" }}>Min Price:</span>
-            <select 
-              value={minPrice} 
-              onChange={(e) => setMinPrice(Number(e.target.value))}
-              style={{ 
-                padding: "4px 8px", 
-                background: "#1e293b", 
-                border: "1px solid rgba(51,65,85,0.8)", 
-                borderRadius: "6px", 
-                color: "#fff", 
-                fontSize: "13px" 
+            <button
+              onClick={() => fetchData(true)}
+              disabled={refreshing}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 20px",
+                background: refreshing ? "#334155" : "var(--msp-accent)",
+                border: "none",
+                borderRadius: 8,
+                color: "#fff",
+                fontWeight: 600,
+                cursor: refreshing ? "wait" : "pointer",
               }}
             >
-              <option value={0}>All</option>
-              <option value={1}>$1+</option>
-              <option value={5}>$5+</option>
-              <option value={10}>$10+</option>
-              <option value={20}>$20+</option>
-            </select>
+              🔄 {refreshing ? "Refreshing..." : "Refresh Data"}
+            </button>
           </div>
-        </div>
-        
-        {/* Educational Note */}
-        <div style={{
-          padding: "10px 14px",
-          background: "rgba(251, 191, 36, 0.08)",
-          border: "1px solid rgba(251, 191, 36, 0.2)",
-          borderRadius: "8px",
-          marginBottom: "16px",
-          color: "#FBBF24",
-          fontSize: "12px"
-        }}>
-          💡 <strong>Trading Tip:</strong> Large % moves often retrace. Confirm trend, volume, and liquidity before trading. Use the Scanner for deeper analysis.
-        </div>
 
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "3rem", color: "#94A3B8" }}>
-            Finding market movers...
-          </div>
-        ) : (
-          <>
-            {/* Mobile Cards */}
-            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {currentData.length === 0 ? (
-                <div style={{ padding: "2rem", textAlign: "center", color: "#64748B", background: "rgba(15,23,42,0.8)", borderRadius: "12px", border: "1px solid rgba(51,65,85,0.6)" }}>
-                  No movers match these filters yet. Adjust filters to broaden results.
-                </div>
-              ) : currentData.map((item, index) => (
-                <div key={index} style={{
-                  background: "var(--msp-card)",
-                  borderRadius: "12px",
-                  border: "1px solid rgba(51,65,85,0.8)",
-                  padding: "16px"
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#fff', fontWeight: '700', fontSize: '18px' }}>{item.ticker}</span>
-                      {item.assetType !== "Stock" && (
-                        <span style={{ padding: "2px 6px", background: "rgba(100, 116, 139, 0.2)", borderRadius: "4px", fontSize: "10px", color: "#94A3B8" }}>
-                          {item.assetType}
-                        </span>
-                      )}
-                    </div>
-                    <span style={getRiskBadgeStyle(item.riskLevel)}>{item.riskLevel}</span>
-                  </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Price</div>
-                      <div style={{ color: '#fff', fontWeight: '600' }}>${parseFloat(item.price).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Change</div>
-                      <div style={{ color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444", fontWeight: '600' }}>
-                        {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '2px' }}>Change %</div>
-                      <div style={{ color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: '700' }}>
-                        {item.change_percentage}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ color: '#94A3B8', fontSize: '12px' }}>
-                      Vol: {parseInt(item.volume).toLocaleString()}
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: 'flex-end' }}>
-                      {item.tags.slice(0, 2).map((tag, i) => (
-                        <span key={i} style={{ 
-                          padding: "2px 6px", 
-                          background: tag.includes("Extreme") || tag.includes("Sub-$1") 
-                            ? "rgba(239, 68, 68, 0.15)" 
-                            : tag.includes("Extended") 
-                              ? "rgba(249, 115, 22, 0.15)"
-                              : "rgba(100, 116, 139, 0.15)", 
-                          borderRadius: "4px", 
-                          fontSize: "10px", 
-                          color: tag.includes("Extreme") || tag.includes("Sub-$1")
-                            ? "#EF4444"
-                            : tag.includes("Extended")
-                              ? "#F97316"
-                              : "#94A3B8"
-                        }}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1.15fr 1fr", marginBottom: 16 }}>
+            <div style={{ padding: "12px 14px", background: "var(--msp-panel)", border: "1px solid var(--msp-border)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Market Deployment Status</div>
+              <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: environment.deploymentMode === "YES" ? "#10B981" : environment.deploymentMode === "CONDITIONAL" ? "#FBBF24" : "#EF4444" }}>
+                {environment.deploymentMode === "YES" ? "🟢 PERMISSIONED" : environment.deploymentMode === "CONDITIONAL" ? "🟡 CONDITIONAL" : "🔴 NO DEPLOYMENT"}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>Adaptive Confidence: {environment.adaptiveConfidence}%</span>
+                <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>High Beta: {environment.highBetaPolicy}</span>
+                <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>Breakouts: {environment.breakoutPolicy}</span>
+                <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>Mean Reversion: {environment.meanReversionPolicy}</span>
+              </div>
             </div>
 
-            {/* Desktop Table */}
-            <div className="hidden md:block" style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid rgba(51,65,85,0.8)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)", overflow: "auto", width: '100%' }}>
-              <div style={{ minWidth: 700, width: '100%' }}>
+            <div style={{ padding: "12px 14px", background: "var(--msp-panel)", border: "1px solid var(--msp-border)", borderRadius: 10 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Movers Context Card</div>
+              <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 8, fontSize: 12 }}>
+                <div><span style={{ color: "#64748B" }}>Mode</span><div style={{ color: "#E2E8F0", fontWeight: 700 }}>{environment.marketMode}</div></div>
+                <div><span style={{ color: "#64748B" }}>Breadth</span><div style={{ color: "#E2E8F0", fontWeight: 700 }}>{environment.breadth}</div></div>
+                <div><span style={{ color: "#64748B" }}>Liquidity</span><div style={{ color: "#E2E8F0", fontWeight: 700 }}>{environment.liquidity}</div></div>
+                <div><span style={{ color: "#64748B" }}>Volatility</span><div style={{ color: "#E2E8F0", fontWeight: 700 }}>{environment.volatility}</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
+            <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16,185,129,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🚀 Top Gainers</button>
+            <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>📉 Top Losers</button>
+            <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🔥 Most Active</button>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            {([
+              ["breakout", "Breakout Continuation Only"],
+              ["reversal", "Mean Reversion Candidates"],
+              ["momentum", "Early Momentum Expansion"],
+            ] as Array<[SetupMode, string]>).map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => setSetupMode(mode)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  border: setupMode === mode ? "1px solid rgba(16,185,129,0.5)" : "1px solid rgba(51,65,85,0.8)",
+                  background: setupMode === mode ? "rgba(16,185,129,0.12)" : "rgba(15,23,42,0.8)",
+                  color: setupMode === mode ? "#10B981" : "#94A3B8",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "rgba(30, 41, 59, 0.5)", borderRadius: 10, border: "1px solid rgba(51,65,85,0.6)" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#94A3B8", fontSize: 13, cursor: "pointer" }}>
+              <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} style={{ accentColor: "#10B981" }} />
+              Hide Blocked
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "#94A3B8", fontSize: 13 }}>Min Price:</span>
+              <select value={minPrice} onChange={(e) => setMinPrice(Number(e.target.value))} style={{ padding: "4px 8px", background: "#1e293b", border: "1px solid rgba(51,65,85,0.8)", borderRadius: 6, color: "#fff", fontSize: 13 }}>
+                <option value={0}>All</option>
+                <option value={1}>$1+</option>
+                <option value={5}>$5+</option>
+                <option value={10}>$10+</option>
+                <option value={20}>$20+</option>
+              </select>
+            </div>
+          </div>
+
+          {environment.deploymentMode === "NO" && (
+            <div style={{ padding: "10px 14px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 8, marginBottom: 16, color: "#FBBF24", fontSize: 12 }}>
+              ⚠ No Permissioned Movers — environment not suitable for momentum deployment.
+            </div>
+          )}
+
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "3rem", color: "#94A3B8" }}>Finding market movers...</div>
+          ) : (
+            <div style={{ background: "var(--msp-card)", borderRadius: 16, border: "1px solid rgba(51,65,85,0.8)", overflow: "auto", width: "100%" }}>
+              <div style={{ minWidth: 980, width: "100%" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                      <th onClick={() => handleSort("ticker")} style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                        Symbol <SortIcon field="ticker" />
-                      </th>
-                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: "600" }}>Risk</th>
-                      <th onClick={() => handleSort("price")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                        Price <SortIcon field="price" />
-                      </th>
-                      <th onClick={() => handleSort("change")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                        Change <SortIcon field="change" />
-                      </th>
-                      <th onClick={() => handleSort("percent")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                        Change % <SortIcon field="percent" />
-                      </th>
-                      <th onClick={() => handleSort("volume")} style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: "600", cursor: "pointer", userSelect: "none" }}>
-                        Volume <SortIcon field="volume" />
-                      </th>
-                      <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: "600" }}>Tags</th>
+                      <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: 600 }}>Symbol</th>
+                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: 600 }}>Deployment</th>
+                      <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>Change %</th>
+                      <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>RelVol</th>
+                      <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: 600 }}>Structure</th>
+                      <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>Confluence</th>
+                      <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>Liquidity</th>
+                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: 600 }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentData.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#64748B" }}>
-                          No movers match these filters yet. Adjust filters to broaden results.
-                        </td>
+                        <td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#64748B" }}>No movers match these filters yet.</td>
                       </tr>
-                    ) : currentData.map((item, index) => (
-                      <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
-                        <td style={{ padding: "1rem" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ color: "#fff", fontWeight: "600" }}>{item.ticker}</span>
-                            {item.assetType !== "Stock" && (
-                              <span style={{ 
-                                padding: "2px 6px", 
-                                background: "rgba(100, 116, 139, 0.2)", 
-                                borderRadius: "4px", 
-                                fontSize: "10px", 
-                                color: "#94A3B8" 
-                              }}>
-                                {item.assetType}
-                              </span>
+                    ) : (
+                      currentData.map((item, index) => (
+                        <tr key={index} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)", opacity: item.deployment === "Blocked" ? 0.55 : 1 }} title={item.blockReason || ""}>
+                          <td style={{ padding: "1rem", color: "#fff", fontWeight: 600 }}>{item.ticker}</td>
+                          <td style={{ padding: "1rem", textAlign: "center" }}>
+                            <span style={{
+                              padding: "2px 8px",
+                              borderRadius: 999,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              border: item.deployment === "Eligible" ? "1px solid rgba(16,185,129,0.45)" : item.deployment === "Conditional" ? "1px solid rgba(251,191,36,0.45)" : "1px solid rgba(100,116,139,0.5)",
+                              color: item.deployment === "Eligible" ? "#10B981" : item.deployment === "Conditional" ? "#FBBF24" : "#94A3B8",
+                              background: item.deployment === "Eligible" ? "rgba(16,185,129,0.1)" : item.deployment === "Conditional" ? "rgba(251,191,36,0.1)" : "rgba(51,65,85,0.35)",
+                            }}>{item.deployment}</span>
+                          </td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "") || "0") >= 0 ? "#10B981" : "#EF4444", fontWeight: 600 }}>{item.change_percentage}</td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#E2E8F0" }}>{item.relVolume.toFixed(2)}x</td>
+                          <td style={{ padding: "1rem", color: "#CBD5E1", fontSize: 12 }}>{item.structureBias}</td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#E2E8F0" }}>{item.confluenceScore}</td>
+                          <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>{item.liquidityScore}</td>
+                          <td style={{ padding: "1rem", textAlign: "center" }}>
+                            {item.deployment === "Blocked" ? (
+                              <span title={item.blockReason || "Blocked by governance"} style={{ fontSize: 11, color: "#64748B", border: "1px solid #334155", borderRadius: 999, padding: "3px 10px" }}>Blocked</span>
+                            ) : (
+                              <Link
+                                href={`/tools/options-confluence?symbol=${item.ticker}&setupClass=${encodeURIComponent(item.setupClass)}&eligibility=${item.deployment.toLowerCase()}&confluence=${item.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                style={{ fontSize: 11, color: "#10B981", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 999, padding: "3px 10px" }}
+                              >
+                                Open Confluence Panel
+                              </Link>
                             )}
-                          </div>
-                        </td>
-                        <td style={{ padding: "1rem", textAlign: "center" }}>
-                          <span style={getRiskBadgeStyle(item.riskLevel)}>{item.riskLevel}</span>
-                        </td>
-                        <td style={{ padding: "1rem", textAlign: "right", color: "#fff" }}>
-                          ${parseFloat(item.price).toFixed(2)}
-                        </td>
-                        <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_amount) >= 0 ? "#10B981" : "#EF4444" }}>
-                          {parseFloat(item.change_amount) >= 0 ? "+" : ""}{parseFloat(item.change_amount).toFixed(2)}
-                        </td>
-                        <td style={{ padding: "1rem", textAlign: "right", color: parseFloat(item.change_percentage.replace("%", "")) >= 0 ? "#10B981" : "#EF4444", fontWeight: "600" }}>
-                          {item.change_percentage}
-                        </td>
-                        <td style={{ padding: "1rem", textAlign: "right", color: "#94A3B8" }}>
-                          {parseInt(item.volume).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "0.75rem" }}>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                            {item.tags.slice(0, 3).map((tag, i) => (
-                              <span key={i} style={{ 
-                                padding: "2px 6px", 
-                                background: tag.includes("Extreme") || tag.includes("Sub-$1") 
-                                  ? "rgba(239, 68, 68, 0.15)" 
-                                  : tag.includes("Extended") 
-                                    ? "rgba(249, 115, 22, 0.15)"
-                                    : "rgba(100, 116, 139, 0.15)", 
-                                borderRadius: "4px", 
-                                fontSize: "10px", 
-                                color: tag.includes("Extreme") || tag.includes("Sub-$1")
-                                  ? "#EF4444"
-                                  : tag.includes("Extended")
-                                    ? "#F97316"
-                                    : "#94A3B8"
-                              }}>
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-          </>
-        )}
-        
-        {/* Results count */}
-        {!loading && (
-          <div style={{ marginTop: "12px", color: "#64748B", fontSize: "12px", textAlign: "right" }}>
-            Showing {currentData.length} of {rawData.length} results
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+
+          {!loading && (
+            <div style={{ marginTop: 12, color: "#64748B", fontSize: 12, textAlign: "right" }}>
+              Showing {currentData.length} of {rawData.length} results • Permissioned: {eligibleCount}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
