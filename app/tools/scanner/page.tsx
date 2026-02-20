@@ -1368,6 +1368,57 @@ function ScannerContent() {
     }, 0);
   };
 
+  const addScannerCandidateToWatchlist = async (pick: any) => {
+    try {
+      const watchlistsResponse = await fetch('/api/watchlists');
+      const watchlistsData = await watchlistsResponse.json();
+
+      if (!watchlistsResponse.ok) {
+        throw new Error(watchlistsData?.error || 'Failed to load watchlists');
+      }
+
+      let targetWatchlist = watchlistsData?.watchlists?.find((list: any) => list.is_default) || watchlistsData?.watchlists?.[0];
+
+      if (!targetWatchlist) {
+        const createResponse = await fetch('/api/watchlists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'My Watchlist',
+            description: 'Auto-created from scanner results',
+            color: 'emerald',
+            icon: 'star',
+          }),
+        });
+        const createData = await createResponse.json();
+        if (!createResponse.ok) {
+          throw new Error(createData?.error || 'Failed to create watchlist');
+        }
+        targetWatchlist = createData?.watchlist;
+      }
+
+      const addItemResponse = await fetch('/api/watchlists/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          watchlistId: targetWatchlist.id,
+          symbol: pick.symbol,
+          assetType: bulkScanResults?.type === 'crypto' ? 'crypto' : 'equity',
+          addedPrice: pick.indicators?.price,
+        }),
+      });
+      const addItemData = await addItemResponse.json();
+
+      if (!addItemResponse.ok) {
+        throw new Error(addItemData?.error || 'Failed to add symbol to watchlist');
+      }
+
+      alert(`✅ ${pick.symbol} added to ${targetWatchlist.name}`);
+    } catch (error: any) {
+      alert(error?.message || 'Failed to add to watchlist');
+    }
+  };
+
   const getFreshnessMeta = (timestamp?: string | null) => {
     if (!timestamp) {
       return { label: 'Unknown', status: 'neutral' as const };
@@ -1629,13 +1680,7 @@ function ScannerContent() {
                         <div className="mt-auto flex gap-2">
                           <button onClick={() => deployRankCandidate(pick)} className="h-8 flex-1 rounded-md border border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-accent)]">Deploy</button>
                           <button onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
-                          <button onClick={() => {
-                            fetch('/api/watchlist', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ symbol: pick.symbol, name: pick.name || pick.symbol, type: bulkScanResults.type === 'crypto' ? 'crypto' : 'stock', price: pick.indicators?.price }),
-                            }).catch(() => {});
-                          }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
+                          <button onClick={() => { void addScannerCandidateToWatchlist(pick); }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
                         </div>
                       </div>
                     );
@@ -2281,26 +2326,7 @@ function ScannerContent() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Add to default watchlist
-                          const price = pick.indicators?.price;
-                          fetch('/api/watchlist', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              symbol: pick.symbol,
-                              name: pick.name || pick.symbol,
-                              type: bulkScanResults.type === 'crypto' ? 'crypto' : 'stock',
-                              price: price
-                            })
-                          }).then(res => res.json()).then(data => {
-                            if (data.error) {
-                              alert(data.error);
-                            } else {
-                              alert(`✅ ${pick.symbol} added to watchlist!`);
-                            }
-                          }).catch(() => {
-                            alert('Failed to add to watchlist');
-                          });
+                          void addScannerCandidateToWatchlist(pick);
                         }}
                         style={{
                           flex: 1,

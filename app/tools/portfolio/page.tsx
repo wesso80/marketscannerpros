@@ -503,6 +503,24 @@ function PortfolioContent() {
     currentPrice: '',
     strategy: '' as Position['strategy'] | ''
   });
+  const [deployDraft, setDeployDraft] = useState({
+    symbol: '',
+    side: 'LONG' as 'LONG' | 'SHORT',
+    entry: '',
+    stop: '',
+    target: '',
+    strategyTag: '',
+  });
+  const [riskFramework, setRiskFramework] = useState<'fixed_fractional' | 'kelly' | 'volatility_adjusted'>('fixed_fractional');
+  const [riskSettings, setRiskSettings] = useState({
+    maxRiskPerTrade: 1,
+    maxCorrelatedExposure: 45,
+    maxSectorAllocation: 35,
+    maxDrawdownThreshold: 12,
+    maxPositionSize: 20,
+  });
+  const [positionStopMap, setPositionStopMap] = useState<Record<number, number>>({});
+  const [showDrawdownOverlay, setShowDrawdownOverlay] = useState(true);
 
   // AI Analysis state
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -974,6 +992,79 @@ function PortfolioContent() {
     setShowAddForm(false);
   };
 
+  const deployCapitalTrade = (quantity: number, entry: number) => {
+    if (!deployDraft.symbol || quantity <= 0 || entry <= 0) {
+      alert('Complete trade input to deploy capital.');
+      return;
+    }
+    if (positions.length >= portfolioLimit) {
+      alert(`Free tier is limited to ${portfolioLimit} positions. Upgrade to Pro for higher capacity.`);
+      return;
+    }
+
+    const position: Position = {
+      id: Date.now(),
+      symbol: deployDraft.symbol.toUpperCase(),
+      side: deployDraft.side,
+      quantity,
+      entryPrice: entry,
+      currentPrice: entry,
+      pl: 0,
+      plPercent: 0,
+      entryDate: new Date().toISOString(),
+      strategy: (deployDraft.strategyTag || undefined) as Position['strategy'] | undefined,
+    };
+
+    const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
+      eventType: 'trade.executed',
+      workflowId: buildPortfolioWorkflowId(position.symbol),
+      route: '/tools/portfolio',
+      module: 'portfolio',
+      entity: {
+        entity_type: 'trade',
+        entity_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+      },
+      payload: {
+        trade_id: `trade_${position.id}`,
+        symbol: position.symbol,
+        asset_class: 'mixed',
+        direction: position.side === 'LONG' ? 'long' : 'short',
+        status: 'open',
+        execution: {
+          side: position.side,
+          quantity: position.quantity,
+          entry_price: position.entryPrice,
+          entry_date: position.entryDate,
+        },
+        risk_runtime: {
+          current_price: position.currentPrice,
+          unrealized_pnl: position.pl,
+          unrealized_pnl_percent: position.plPercent,
+        },
+      },
+    });
+
+    tradeExecutionEventMapRef.current[position.id] = tradeExecutionEvent.event_id;
+    void emitWorkflowEvents([tradeExecutionEvent]);
+
+    setPositions((prev) => [...prev, position]);
+    const stopValue = parseFloat(deployDraft.stop || '0');
+    if (stopValue > 0) {
+      setPositionStopMap((prev) => ({ ...prev, [position.id]: stopValue }));
+    }
+    setDeployDraft({
+      symbol: '',
+      side: 'LONG',
+      entry: '',
+      stop: '',
+      target: '',
+      strategyTag: '',
+    });
+    setActiveTab('active-positions');
+  };
+
   const closePosition = (id: number) => {
     const position = positions.find(p => p.id === id);
     if (!position) return;
@@ -1046,6 +1137,34 @@ function PortfolioContent() {
         };
       }
       return p;
+    }));
+  };
+
+  const reducePositionHalf = (id: number) => {
+    setPositions((prev) => prev.map((position) => {
+      if (position.id !== id) return position;
+      const reducedQuantity = Math.max(0, position.quantity * 0.5);
+      const pl = position.side === 'LONG'
+        ? (position.currentPrice - position.entryPrice) * reducedQuantity
+        : (position.entryPrice - position.currentPrice) * reducedQuantity;
+      const plPercent = reducedQuantity > 0
+        ? ((pl / (position.entryPrice * reducedQuantity)) * 100)
+        : 0;
+      return {
+        ...position,
+        quantity: reducedQuantity,
+        pl,
+        plPercent,
+      };
+    }));
+  };
+
+  const moveStopToBreakeven = (id: number) => {
+    const position = positions.find((p) => p.id === id);
+    if (!position) return;
+    setPositionStopMap((prev) => ({
+      ...prev,
+      [id]: position.entryPrice,
     }));
   };
 
@@ -1240,6 +1359,187 @@ function PortfolioContent() {
   // Color palette for pie chart
   const colors = ['#10b981', '#f59e0b', '#ef4444', 'var(--msp-accent)', '#f97316', '#22c55e', '#eab308', '#84cc16', '#fb7185'];
 
+  const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+  const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
+  const grossExposureValue = longExposureValue + shortExposureValue;
+  const capitalBase = Math.max(totalCost, totalValue, 10000);
+  const deploymentPct = capitalBase > 0 ? (grossExposureValue / capitalBase) * 100 : 0;
+  const availableCash = Math.max(0, capitalBase - grossExposureValue);
+  const largestPositionPct = totalValue > 0
+    ? Math.max(...positions.map((p) => ((p.currentPrice * p.quantity) / totalValue) * 100), 0)
+    : 0;
+
+  const classifySector = (symbol: string) => {
+    const normalized = symbol.toUpperCase().replace('-USD', '');
+    if (['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LINK'].includes(normalized)) return 'Crypto Majors';
+    if (['AAPL', 'MSFT', 'NVDA', 'AMD', 'META', 'GOOGL', 'TSLA'].includes(normalized)) return 'Mega Cap Tech';
+    if (['XOM', 'CVX', 'COP', 'SLB'].includes(normalized)) return 'Energy';
+    if (['JPM', 'BAC', 'GS', 'MS', 'V'].includes(normalized)) return 'Financials';
+    return 'Other';
+  };
+
+  const sectorExposure = positions.reduce((acc, position) => {
+    const sector = classifySector(position.symbol);
+    const value = position.currentPrice * position.quantity;
+    acc[sector] = (acc[sector] || 0) + value;
+    return acc;
+  }, {} as Record<string, number>);
+  const sectorConcentrationPct = totalValue > 0
+    ? Math.max(...Object.values(sectorExposure).map((value) => (value / totalValue) * 100), 0)
+    : 0;
+
+  const correlationRiskPct = Math.max(
+    0,
+    Math.min(
+      100,
+      (largestPositionPct * 0.6) + (Math.max(0, sectorConcentrationPct - 20) * 0.8) + (Math.max(0, deploymentPct - 65) * 0.5),
+    ),
+  );
+
+  const currentDrawdownPct = Math.max(0, -totalReturn);
+  const isRiskEvent = currentDrawdownPct > riskSettings.maxDrawdownThreshold || correlationRiskPct > riskSettings.maxCorrelatedExposure || deploymentPct > 90;
+  const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
+  const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
+  const riskStateTone = isRiskEvent ? '#ef4444' : isRiskElevated ? '#f59e0b' : '#10b981';
+  const riskStateIcon = isRiskEvent ? '🔴' : isRiskElevated ? '🟡' : '🟢';
+  const portfolioRiskProfile = isRiskEvent ? 'Aggressive' : isRiskElevated ? 'Moderate' : 'Low';
+  const longExposurePct = capitalBase > 0 ? (longExposureValue / capitalBase) * 100 : 0;
+  const shortExposurePct = capitalBase > 0 ? (shortExposureValue / capitalBase) * 100 : 0;
+  const netExposurePct = capitalBase > 0 ? ((longExposureValue - shortExposureValue) / capitalBase) * 100 : 0;
+
+  const closedTradesCount = closedPositions.length;
+  const winningTrades = closedPositions.filter((trade) => trade.realizedPL > 0);
+  const losingTrades = closedPositions.filter((trade) => trade.realizedPL < 0);
+  const winRatePct = closedTradesCount > 0 ? (winningTrades.length / closedTradesCount) * 100 : 0;
+  const avgWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / winningTrades.length : 0;
+  const avgLossAbs = losingTrades.length > 0 ? Math.abs(losingTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / losingTrades.length) : 0;
+  const profitFactor = avgLossAbs > 0
+    ? Math.abs(winningTrades.reduce((sum, trade) => sum + trade.realizedPL, 0) / Math.min(-0.01, losingTrades.reduce((sum, trade) => sum + trade.realizedPL, 0)))
+    : winningTrades.length > 0
+    ? 9.99
+    : 0;
+  const expectancy = closedTradesCount > 0
+    ? ((winRatePct / 100) * avgWin) - ((1 - (winRatePct / 100)) * avgLossAbs)
+    : 0;
+
+  const cumulativeClosedEquity = closedPositions.reduce((acc, trade, index) => {
+    const prev = index === 0 ? 0 : acc[index - 1].equity;
+    acc.push({
+      timestamp: trade.closeDate,
+      equity: prev + trade.realizedPL,
+    });
+    return acc;
+  }, [] as Array<{ timestamp: string; equity: number }>);
+
+  const maxDrawdownFromSnapshots = (() => {
+    if (performanceHistory.length === 0) return currentDrawdownPct;
+    let peak = -Infinity;
+    let maxDrawdown = 0;
+    performanceHistory.forEach((point) => {
+      peak = Math.max(peak, point.totalValue);
+      if (peak > 0) {
+        const dd = ((peak - point.totalValue) / peak) * 100;
+        maxDrawdown = Math.max(maxDrawdown, dd);
+      }
+    });
+    return maxDrawdown;
+  })();
+
+  const cagrApprox = (() => {
+    if (performanceHistory.length < 2) return 0;
+    const first = performanceHistory[0];
+    const last = performanceHistory[performanceHistory.length - 1];
+    const days = Math.max(1, (new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 86_400_000);
+    const years = days / 365;
+    if (years <= 0 || first.totalValue <= 0 || last.totalValue <= 0) return 0;
+    return (Math.pow(last.totalValue / first.totalValue, 1 / years) - 1) * 100;
+  })();
+
+  const returnsSeries = performanceHistory
+    .slice(1)
+    .map((point, index) => {
+      const prev = performanceHistory[index];
+      if (!prev || prev.totalValue === 0) return 0;
+      return ((point.totalValue - prev.totalValue) / prev.totalValue) * 100;
+    });
+  const avgReturn = returnsSeries.length > 0 ? returnsSeries.reduce((sum, value) => sum + value, 0) / returnsSeries.length : 0;
+  const returnStd = returnsSeries.length > 1
+    ? Math.sqrt(returnsSeries.reduce((sum, value) => sum + Math.pow(value - avgReturn, 2), 0) / returnsSeries.length)
+    : 0;
+  const sharpeApprox = returnStd > 0 ? (avgReturn / returnStd) * Math.sqrt(252) : 0;
+
+  const riskContributors = [...positions]
+    .map((position) => {
+      const value = position.currentPrice * position.quantity;
+      const concentrationPct = totalValue > 0 ? (value / totalValue) * 100 : 0;
+      const stopPrice = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
+      const riskPerUnit = position.side === 'LONG'
+        ? Math.max(0, position.currentPrice - stopPrice)
+        : Math.max(0, stopPrice - position.currentPrice);
+      const dollarRisk = riskPerUnit * position.quantity;
+      return {
+        ...position,
+        concentrationPct,
+        dollarRisk,
+      };
+    })
+    .sort((a, b) => b.dollarRisk - a.dollarRisk)
+    .slice(0, 3);
+
+  const modeItems = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'deploy-capital', label: 'Deploy Capital' },
+    { key: 'risk-model', label: 'Risk Model' },
+    { key: 'active-positions', label: 'Active Positions' },
+    { key: 'trade-ledger', label: 'Trade Ledger' },
+  ] as const;
+
+  const formatMoney = (value: number) => `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+
+  const avgR = closedPositions.length > 0
+    ? closedPositions.reduce((sum, trade) => {
+        const notional = trade.entryPrice * trade.quantity;
+        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
+        return sum + (trade.realizedPL / Math.max(1, riskUnit));
+      }, 0) / closedPositions.length
+    : 0;
+  const bestR = closedPositions.length > 0
+    ? Math.max(...closedPositions.map((trade) => {
+        const notional = trade.entryPrice * trade.quantity;
+        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
+        return trade.realizedPL / Math.max(1, riskUnit);
+      }))
+    : 0;
+  const worstR = closedPositions.length > 0
+    ? Math.min(...closedPositions.map((trade) => {
+        const notional = trade.entryPrice * trade.quantity;
+        const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
+        return trade.realizedPL / Math.max(1, riskUnit);
+      }))
+    : 0;
+
+  const draftEntry = Number(deployDraft.entry || 0);
+  const draftStop = Number(deployDraft.stop || 0);
+  const draftTarget = Number(deployDraft.target || 0);
+  const draftRiskPerUnit = draftEntry > 0
+    ? Math.abs(draftEntry - draftStop)
+    : 0;
+  const draftRiskBudget = capitalBase * (riskSettings.maxRiskPerTrade / 100);
+  const suggestedQuantity = draftRiskPerUnit > 0 ? (draftRiskBudget / draftRiskPerUnit) : 0;
+  const draftPositionNotional = draftEntry * suggestedQuantity;
+  const draftRewardPerUnit = draftTarget > 0 ? Math.abs(draftTarget - draftEntry) : 0;
+  const draftRMultiple = draftRiskPerUnit > 0 && draftRewardPerUnit > 0 ? draftRewardPerUnit / draftRiskPerUnit : 0;
+  const projectedGrossExposure = grossExposureValue + Math.max(0, draftPositionNotional);
+  const projectedDeploymentPct = capitalBase > 0 ? (projectedGrossExposure / capitalBase) * 100 : 0;
+
+  const bestPerformer = positions.length > 0
+    ? [...positions].sort((a, b) => b.plPercent - a.plPercent)[0]
+    : null;
+  const worstPerformer = positions.length > 0
+    ? [...positions].sort((a, b) => a.plPercent - b.plPercent)[0]
+    : null;
+
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
@@ -1298,7 +1598,7 @@ function PortfolioContent() {
               onClick={() => {
                 // Soft friction: warn during drawdown
                 const inDrawdown = totalReturn < -20 && positions.length > 0;
-                if (inDrawdown && !showAddForm && !drawdownAcknowledged) {
+                if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
                   const proceed = confirm(
                     '⚠️ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
                     'Consider reviewing your risk exposure before adding new positions.\n\n' +
@@ -1307,11 +1607,11 @@ function PortfolioContent() {
                   if (!proceed) return;
                   setDrawdownAcknowledged(true);
                 }
-                setShowAddForm(!showAddForm);
+                setActiveTab('deploy-capital');
               }}
               className="rounded-[10px] bg-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[var(--msp-shadow)]"
             >
-              {showAddForm ? '✕ Cancel' : '+ Add Position'}
+              + Deploy Capital
             </button>
           </>
         }
@@ -1393,6 +1693,396 @@ function PortfolioContent() {
           </div>
         </div>
       )}
+
+      <div className="px-4 pb-6">
+        <div className="rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Value</div>
+              <div className="text-2xl font-black text-slate-100">{formatMoney(totalValue)}</div>
+              <div className={`text-sm font-semibold ${totalPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>Net P&L {totalPL >= 0 ? '+' : '-'}{formatMoney(totalPL)}</div>
+              <div className="text-xs text-slate-400">Drawdown {currentDrawdownPct.toFixed(2)}%</div>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Risk State</div>
+              <div className="mt-1 text-lg font-black" style={{ color: riskStateTone }}>{riskStateIcon} {riskStateLabel}</div>
+              <div className="text-xs text-slate-300">{portfolioRiskProfile}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Capital Deployment</div>
+              <div className="text-2xl font-black text-slate-100">{deploymentPct.toFixed(1)}%</div>
+              <div className="text-sm text-slate-300">Available Cash {formatMoney(availableCash)}</div>
+              <div className="text-xs text-slate-400">Exposure {netExposurePct.toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 md:grid-cols-6">
+          {[
+            { label: 'Total Long Exposure', value: `${longExposurePct.toFixed(1)}%` },
+            { label: 'Total Short Exposure', value: `${shortExposurePct.toFixed(1)}%` },
+            { label: 'Largest Position %', value: `${largestPositionPct.toFixed(1)}%` },
+            { label: 'Sector Concentration', value: `${sectorConcentrationPct.toFixed(1)}%` },
+            { label: 'Correlation Risk', value: `${correlationRiskPct.toFixed(1)}%` },
+            { label: 'Max Position Size %', value: `${riskSettings.maxPositionSize.toFixed(1)}%` },
+          ].map((item) => (
+            <div key={item.label} className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{item.label}</div>
+              <div className="text-sm font-bold text-slate-100">{item.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 grid gap-2 md:grid-cols-5">
+          {modeItems.map((item) => {
+            const isActive = activeTab === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                className={`rounded-lg border px-3 py-2 text-xs font-bold uppercase tracking-[0.06em] transition ${isActive ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] p-4">
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-5">
+                <div className="lg:col-span-3 rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Equity Curve</div>
+                    <button onClick={() => setShowDrawdownOverlay((prev) => !prev)} className="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase text-slate-300">
+                      {showDrawdownOverlay ? 'Hide Drawdown Overlay' : 'Show Drawdown Overlay'}
+                    </button>
+                  </div>
+                  <div className="grid h-44 grid-cols-12 items-end gap-1">
+                    {(performanceHistory.length ? performanceHistory.slice(-12) : [{ totalValue } as PerformanceSnapshot]).map((point, index, arr) => {
+                      const min = Math.min(...arr.map((p: any) => p.totalValue || totalValue));
+                      const max = Math.max(...arr.map((p: any) => p.totalValue || totalValue));
+                      const value = (point as any).totalValue || totalValue;
+                      const h = max === min ? 40 : Math.max(8, ((value - min) / (max - min)) * 100);
+                      return (
+                        <div key={`${(point as any).timestamp || index}`} className="relative rounded-t bg-emerald-500/60" style={{ height: `${h}%` }}>
+                          {showDrawdownOverlay && value < max && <span className="absolute inset-x-0 bottom-0 h-1 bg-red-500/60" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
+                </div>
+                <div className="lg:col-span-2 space-y-3">
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Allocation & Exposure</div>
+                    <div className="space-y-1.5 text-sm text-slate-300">
+                      {allocationData.slice(0, 4).map((item) => (
+                        <div key={item.symbol} className="flex items-center justify-between">
+                          <span>{item.symbol}</span>
+                          <span className="font-bold text-slate-100">{item.percentage.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                      {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
+                    </div>
+                    <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
+                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
+                    <div className="font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Contributors</div>
+                    <div className="mt-2 space-y-1 text-slate-300">
+                      {riskContributors.map((risk) => (
+                        <div key={risk.id} className="flex justify-between">
+                          <span>{risk.symbol}</span>
+                          <span className="font-bold text-red-300">{formatMoney(risk.dollarRisk)}</span>
+                        </div>
+                      ))}
+                      {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
+                    </div>
+                    <div className="mt-2 text-slate-400">Best: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'N/A'}</div>
+                    <div className="text-slate-400">Worst: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-5">
+                {[
+                  { label: 'CAGR', value: `${cagrApprox.toFixed(2)}%` },
+                  { label: 'Sharpe', value: `${sharpeApprox.toFixed(2)}` },
+                  { label: 'Profit Factor', value: `${profitFactor.toFixed(2)}` },
+                  { label: 'Max DD', value: `${maxDrawdownFromSnapshots.toFixed(2)}%` },
+                  { label: 'Win Rate', value: `${winRatePct.toFixed(1)}%` },
+                ].map((metric) => (
+                  <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>
+                    <div className="text-sm font-bold text-slate-100">{metric.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <details className="rounded-lg border border-slate-700 bg-slate-900/40 p-3" open={showAiAnalysis}>
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Review</summary>
+                <div className="mt-2 text-sm text-slate-300">
+                  {aiLoading ? 'Analyzing portfolio...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate AI review.'}
+                </div>
+              </details>
+            </div>
+          )}
+
+          {activeTab === 'deploy-capital' && (
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 space-y-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Trade Input Panel</div>
+                  <input value={deployDraft.symbol} onChange={(e) => setDeployDraft((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol" className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select>
+                    <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input type="number" value={deployDraft.entry} onChange={(e) => setDeployDraft((prev) => ({ ...prev, entry: e.target.value }))} placeholder="Entry" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input type="number" value={deployDraft.stop} onChange={(e) => setDeployDraft((prev) => ({ ...prev, stop: e.target.value }))} placeholder="Stop" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input type="number" value={deployDraft.target} onChange={(e) => setDeployDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="Target" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Preview Engine</div>
+                  <div className="mt-2 space-y-1.5 text-sm text-slate-300">
+                    <div className="flex justify-between"><span>Position Size</span><span className="font-bold text-slate-100">{suggestedQuantity.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span>Risk %</span><span className="font-bold text-slate-100">{riskSettings.maxRiskPerTrade.toFixed(2)}%</span></div>
+                    <div className="flex justify-between"><span>R Multiple</span><span className="font-bold text-slate-100">{draftRMultiple.toFixed(2)}R</span></div>
+                    <div className="flex justify-between"><span>Portfolio Impact</span><span className="font-bold text-slate-100">{((draftPositionNotional / Math.max(1, capitalBase)) * 100).toFixed(2)}%</span></div>
+                    <div className="flex justify-between"><span>New Exposure %</span><span className="font-bold text-slate-100">{projectedDeploymentPct.toFixed(2)}%</span></div>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-slate-200">
+                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-emerald-300">Simulate Portfolio After Entry</div>
+                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
+              </div>
+              <button
+                onClick={() => deployCapitalTrade(Math.max(0, suggestedQuantity), draftEntry)}
+                disabled={!deployDraft.symbol || draftEntry <= 0 || suggestedQuantity <= 0}
+                className="rounded-md border border-emerald-500/50 bg-emerald-500/15 px-4 py-2 text-sm font-bold uppercase tracking-[0.06em] text-emerald-300 disabled:opacity-40"
+              >
+                Deploy Capital
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'risk-model' && (
+            <div className="space-y-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Framework Selector</div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-3">
+                    {[
+                      { key: 'fixed_fractional', label: 'Fixed Fractional' },
+                      { key: 'kelly', label: 'Kelly' },
+                      { key: 'volatility_adjusted', label: 'Volatility Adjusted' },
+                    ].map((framework) => (
+                      <button
+                        key={framework.key}
+                        onClick={() => setRiskFramework(framework.key as 'fixed_fractional' | 'kelly' | 'volatility_adjusted')}
+                        className={`rounded border px-2 py-2 text-[11px] font-semibold uppercase ${riskFramework === framework.key ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900 text-slate-300'}`}
+                      >
+                        {framework.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Portfolio Risk Settings</div>
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    {[
+                      { key: 'maxRiskPerTrade', label: 'Max risk / trade' },
+                      { key: 'maxCorrelatedExposure', label: 'Max correlated exposure' },
+                      { key: 'maxSectorAllocation', label: 'Max sector allocation' },
+                      { key: 'maxDrawdownThreshold', label: 'Max drawdown threshold' },
+                    ].map((setting) => (
+                      <label key={setting.key} className="text-xs text-slate-400">
+                        {setting.label}
+                        <input
+                          type="number"
+                          value={riskSettings[setting.key as keyof typeof riskSettings]}
+                          onChange={(e) => setRiskSettings((prev) => ({ ...prev, [setting.key]: Number(e.target.value) || 0 }))}
+                          className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Live Risk Heatmap</div>
+                <div className="mt-2 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-700 text-slate-500">
+                        <th className="px-2 py-1 text-left">Symbol</th>
+                        <th className="px-2 py-1 text-right">Concentration</th>
+                        <th className="px-2 py-1 text-right">Dollar Risk</th>
+                        <th className="px-2 py-1 text-left">Warning</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {riskContributors.map((risk) => (
+                        <tr key={risk.id} className="border-b border-slate-800/60 text-slate-300">
+                          <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
+                          <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
+                          <td className="px-2 py-1.5 text-right">{formatMoney(risk.dollarRisk)}</td>
+                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? '⚠ Concentration warning' : 'Normal'}</td>
+                        </tr>
+                      ))}
+                      {riskContributors.length === 0 && (
+                        <tr><td colSpan={4} className="px-2 py-2 text-slate-500">No risk matrix data yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'active-positions' && (
+            <div className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Total Exposure</div><div className="text-sm font-bold text-slate-100">{deploymentPct.toFixed(1)}%</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Unrealized P&L</div><div className={`text-sm font-bold ${unrealizedPL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{unrealizedPL >= 0 ? '+' : '-'}{formatMoney(unrealizedPL)}</div></div>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-500">
+                      <th className="px-2 py-2 text-left">Symbol</th>
+                      <th className="px-2 py-2 text-left">Side</th>
+                      <th className="px-2 py-2 text-right">Size %</th>
+                      <th className="px-2 py-2 text-right">Entry</th>
+                      <th className="px-2 py-2 text-right">Current</th>
+                      <th className="px-2 py-2 text-right">R Multiple</th>
+                      <th className="px-2 py-2 text-right">P&L %</th>
+                      <th className="px-2 py-2 text-right">Risk Remaining</th>
+                      <th className="px-2 py-2 text-right">Stop Dist %</th>
+                      <th className="px-2 py-2 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {positions.map((position) => {
+                      const notional = position.currentPrice * position.quantity;
+                      const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
+                      const stop = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
+                      const initialRiskUnit = Math.abs(position.entryPrice - stop);
+                      const currentMove = Math.abs(position.currentPrice - position.entryPrice);
+                      const rMultipleOpen = initialRiskUnit > 0 ? currentMove / initialRiskUnit : 0;
+                      const stopDistancePct = position.currentPrice > 0 ? (Math.abs(position.currentPrice - stop) / position.currentPrice) * 100 : 0;
+                      const riskRemainingPct = Math.max(0, Math.min(100, stopDistancePct / Math.max(1, riskSettings.maxRiskPerTrade) * 100));
+
+                      return (
+                        <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
+                          <td className="px-2 py-2 font-semibold text-slate-100">{position.symbol}</td>
+                          <td className="px-2 py-2">{position.side}</td>
+                          <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
+                          <td className="px-2 py-2 text-right">{position.entryPrice.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right">{position.currentPrice.toFixed(2)}</td>
+                          <td className="px-2 py-2 text-right">{rMultipleOpen.toFixed(2)}R</td>
+                          <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
+                          <td className="px-2 py-2 text-right">{riskRemainingPct.toFixed(0)}%</td>
+                          <td className="px-2 py-2 text-right">{stopDistancePct.toFixed(2)}%</td>
+                          <td className="px-2 py-2">
+                            <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
+                              <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
+                            </div>
+                            <div className="flex gap-1">
+                              <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Close</button>
+                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Reduce 50%</button>
+                              <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Move Stop</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {positions.length === 0 && <tr><td colSpan={10} className="px-2 py-3 text-slate-500">No active positions.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'trade-ledger' && (
+            <div className="space-y-4">
+              <div className="grid gap-2 md:grid-cols-5">
+                {[
+                  { label: 'Win %', value: `${winRatePct.toFixed(1)}%` },
+                  { label: 'Avg R', value: `${avgR.toFixed(2)}R` },
+                  { label: 'Best R', value: `${bestR.toFixed(2)}R` },
+                  { label: 'Worst R', value: `${worstR.toFixed(2)}R` },
+                  { label: 'Expectancy', value: formatMoney(expectancy) },
+                ].map((metric) => (
+                  <div key={metric.label} className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">{metric.label}</div>
+                    <div className="text-sm font-bold text-slate-100">{metric.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>
+                <div className="grid h-24 grid-cols-12 items-end gap-1">
+                  {(cumulativeClosedEquity.length ? cumulativeClosedEquity.slice(-12) : [{ equity: 0, timestamp: 'now' }]).map((point, idx, arr) => {
+                    const min = Math.min(...arr.map((p) => p.equity));
+                    const max = Math.max(...arr.map((p) => p.equity));
+                    const h = max === min ? 40 : Math.max(8, ((point.equity - min) / (max - min)) * 100);
+                    return <div key={`${point.timestamp}-${idx}`} className="rounded-t bg-cyan-400/70" style={{ height: `${h}%` }} />;
+                  })}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-500">
+                      <th className="px-2 py-2 text-left">Entry</th>
+                      <th className="px-2 py-2 text-left">Exit</th>
+                      <th className="px-2 py-2 text-right">R Multiple</th>
+                      <th className="px-2 py-2 text-right">Holding Time</th>
+                      <th className="px-2 py-2 text-left">Setup Tag</th>
+                      <th className="px-2 py-2 text-left">Outcome</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closedPositions.map((trade) => {
+                      const notional = trade.entryPrice * trade.quantity;
+                      const riskUnit = notional > 0 ? notional * (riskSettings.maxRiskPerTrade / 100) : 1;
+                      const r = trade.realizedPL / Math.max(1, riskUnit);
+                      const holdDays = Math.max(0, Math.round((new Date(trade.closeDate).getTime() - new Date(trade.entryDate).getTime()) / 86_400_000));
+                      const outcomeType = trade.realizedPL > 0 ? 'Target' : trade.realizedPL < 0 ? 'Stop' : 'Manual';
+                      return (
+                        <tr key={trade.id} className="border-b border-slate-800/60 text-slate-300">
+                          <td className="px-2 py-2">{trade.symbol} @ {trade.entryPrice.toFixed(2)}</td>
+                          <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
+                          <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
+                          <td className="px-2 py-2 text-right">{holdDays}d</td>
+                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
+                          <td className="px-2 py-2">{outcomeType}</td>
+                        </tr>
+                      );
+                    })}
+                    {closedPositions.length === 0 && <tr><td colSpan={6} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {false && (
+        <>
 
       {/* Top Stats Bar */}
       <div className="border-b border-slate-700/60 bg-[var(--msp-bg)] px-4 py-6">
@@ -1998,7 +2688,7 @@ function PortfolioContent() {
                     lineHeight: '1.8',
                     whiteSpace: 'pre-wrap'
                   }}>
-                    {aiAnalysis.split('\n').map((line, i) => {
+                    {(aiAnalysis ?? '').split('\n').map((line, i) => {
                       // Style headers
                       if (line.startsWith('##') || line.startsWith('**') && line.endsWith('**')) {
                         return (
@@ -3076,6 +3766,8 @@ function PortfolioContent() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
