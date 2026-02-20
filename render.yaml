@@ -164,3 +164,43 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+
+  # ========================================================================
+  # UPE Scheduler Wiring (Phase D)
+  # US session aligned using UTC schedules (EST baseline; adjust seasonally)
+  # ========================================================================
+  - type: cron
+    name: upe-global-open
+    runtime: node
+    schedule: "35 14 * * 1-5"  # 09:35 ET (EST baseline)
+    buildCommand: npm install
+    startCommand: npm run worker:upe:global:open
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+
+  - type: cron
+    name: upe-global-close
+    runtime: node
+    schedule: "5 21 * * 1-5"  # 16:05 ET (EST baseline)
+    buildCommand: npm install
+    startCommand: npm run worker:upe:global:close
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+
+  - type: cron
+    name: upe-crcs-hourly
+    runtime: node
+    schedule: "5 * * * *"  # Hourly at :05
+    buildCommand: npm install
+    startCommand: npm run worker:upe:crcs:hourly
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

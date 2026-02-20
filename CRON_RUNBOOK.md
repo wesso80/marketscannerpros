@@ -21,6 +21,16 @@ This project uses **Render cron services only**.
 | learning-outcomes | `*/15 * * * *` | `POST /api/jobs/learning-outcomes` |
 | journal-auto-close | `*/5 * * * *` | `POST /api/jobs/journal-auto-close?limit=200` |
 | stale-auto-draft-cleanup | `15 0 * * *` | `npm run worker:cleanup:stale-auto-drafts` |
+| upe-global-open | `35 14 * * 1-5` | `npm run worker:upe:global:open` |
+| upe-global-close | `5 21 * * 1-5` | `npm run worker:upe:global:close` |
+| upe-crcs-hourly | `5 * * * *` | `npm run worker:upe:crcs:hourly` |
+
+## UPE cadence note
+
+- UPE schedules are configured in UTC with **EST baseline** session alignment.
+- If you want exact ET wall-clock behavior through DST transitions, shift:
+  - open job by 1 hour during DST windows
+  - close job by 1 hour during DST windows
 
 ## Render configuration checklist
 
