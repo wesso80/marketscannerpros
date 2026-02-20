@@ -300,16 +300,13 @@ function CryptoDetailPageContent() {
       setShowDropdown(true);
     } catch (err) {
       console.error('Search error:', err);
-                ['Liquidity', decision.liquidityState, 'Liq'],
+    } finally {
       setIsSearching(false);
     }
-                ['Permission', decision.tradePermission, 'Perm'],
-              ].map(([k, v, mobileK]) => (
+  }, []);
+
   useEffect(() => {
-                  <span className="font-semibold text-slate-100">
-                    <span className="md:hidden">{mobileK || k}</span>
-                    <span className="hidden md:inline">{k}</span>
-                  </span> · {v}
+    const timer = setTimeout(() => {
       if (searchQuery) searchCoins(searchQuery);
     }, 300);
     return () => clearTimeout(timer);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 
@@ -55,315 +55,91 @@ interface EquityData {
     quarterlyRevenueGrowth: number;
   };
   technicals: {
-            {/* Zone 1 — Deployment Anchor */}
-            {deployment && (
-              <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Zone 1 • Asset Identity</p>
-                  <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-3xl font-bold">{data.company.symbol}</h2>
-                        <span className="px-2 py-0.5 bg-slate-700 rounded text-sm text-gray-300">{data.company.exchange}</span>
-                      </div>
-                      <p className="text-xl text-gray-300">{data.company.name}</p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded border border-slate-600 bg-slate-900/70 px-2 py-0.5 text-slate-300">Cluster: {deployment.cluster}</span>
-                        <span className="rounded border border-slate-600 bg-slate-900/70 px-2 py-0.5 text-slate-300">Sector: {data.company.sector}</span>
-                        <span className="rounded border border-slate-600 bg-slate-900/70 px-2 py-0.5 text-slate-300">Exchange: {data.company.exchange}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-4xl font-bold">{formatPrice(data.quote.price)}</p>
-                      <div className="flex items-center justify-end gap-2 mt-1">
-                        <span className={data.quote.change >= 0 ? 'text-green-400' : 'text-red-400'}>
-                          {data.quote.change >= 0 ? '+' : ''}{data.quote.change.toFixed(2)}
-                        </span>
-                        <PercentBadge value={data.quote.changePercent} />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Last updated: {data.quote.latestTradingDay}</p>
-                    </div>
-                  </div>
-                  {data.chart.length > 0 && (
-                    <div className="mt-4 flex justify-center">
-                      <MiniChart data={data.chart} />
-                    </div>
-                  )}
-                </div>
+    beta: number;
+    week52High: number;
+    week52Low: number;
+    week52Position: number;
+    ma50: number;
+    ma200: number;
+    priceVs50MA: number;
+    priceVs200MA: number;
+  };
+  dividend: {
+    dividendPerShare: number;
+    dividendYield: number;
+    dividendDate: string;
+    exDividendDate: string;
+  };
+  shares: {
+    outstanding: number;
+  };
+  analysts: {
+    strongBuy: number;
+    buy: number;
+    hold: number;
+    sell: number;
+    strongSell: number;
+    targetPrice: number;
+    totalRatings: number;
+  };
+  financials: {
+    annual: Array<{
+      fiscalDate: string;
+      revenue: number;
+      grossProfit: number;
+      operatingIncome: number;
+      netIncome: number;
+    }>;
+    quarterly: Array<{
+      fiscalDate: string;
+      revenue: number;
+      grossProfit: number;
+      operatingIncome: number;
+      netIncome: number;
+    }>;
+  };
+  earnings: Array<{
+    fiscalDate: string;
+    reportedDate: string;
+    reportedEPS: number;
+    estimatedEPS: number;
+    surprise: number;
+    surprisePercent: number;
+  }>;
+  news: Array<{
+    title: string;
+    url: string;
+    publishedAt: string;
+    source: string;
+    sentiment: string;
+    sentimentScore: number;
+    summary?: string;
+  }>;
+  chart: Array<{
+    date: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
+  lastUpdated: string;
+}
 
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Zone 1 • Deployment Status</p>
-                  <h3 className={`mt-2 text-2xl font-extrabold ${
-                    deployment.verdict === 'Eligible'
-                      ? 'text-emerald-300'
-                      : deployment.verdict === 'Conditional'
-                      ? 'text-amber-300'
-                      : 'text-red-300'
-                  }`}>
-                    {data.company.symbol} Deployment: {deployment.verdict.toUpperCase()}
-                  </h3>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Adaptive Confidence: <span className="font-semibold text-slate-200">{deployment.adaptiveConfidence}%</span></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Confluence: <span className="font-semibold text-slate-200">{deployment.confluenceScore}/100</span></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Global Regime: <span className="font-semibold text-slate-200">{deployment.globalRegime}</span></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Equities Micro: <span className="font-semibold text-slate-200">{deployment.equitiesMicro}</span></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Capital Mode: <span className="font-semibold text-slate-200">{deployment.capitalMode}</span></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">Cluster: <span className="font-semibold text-slate-200">{deployment.cluster}</span></div>
-                  </div>
+// Popular stocks for quick selection
+const POPULAR_STOCKS = [
+  { symbol: 'AAPL', name: 'Apple' },
+  { symbol: 'MSFT', name: 'Microsoft' },
+  { symbol: 'GOOGL', name: 'Alphabet' },
+  { symbol: 'AMZN', name: 'Amazon' },
+  { symbol: 'NVDA', name: 'NVIDIA' },
+  { symbol: 'TSLA', name: 'Tesla' },
+  { symbol: 'META', name: 'Meta' },
+  { symbol: 'JPM', name: 'JPMorgan' },
+];
 
-                  <details className="mt-3 rounded border border-slate-700 bg-slate-900/40 p-2">
-                    <summary className="cursor-pointer text-xs font-semibold text-slate-300">Expanded Engine Inputs</summary>
-                    <div className="mt-2 grid gap-1 text-xs text-slate-300">
-                      <p>Liquidity Min Used: {formatVolume(deployment.thresholds.liquidityMin)}</p>
-                      <p>RelVol Min: {deployment.thresholds.relVolMin.toFixed(2)}x</p>
-                      <p>Confluence Min: {deployment.thresholds.confluenceMin}</p>
-                      <p>AI Adjustment Delta: {deployment.thresholds.aiAdjustmentDelta >= 0 ? '+' : ''}{deployment.thresholds.aiAdjustmentDelta}</p>
-                      <p>Hard Blocks: {deployment.hardBlocks.length ? deployment.hardBlocks.join(' • ') : 'None'}</p>
-                    </div>
-                  </details>
-                </div>
-              </section>
-            )}
-
-            {/* Zone 2 — Structured Confluence */}
-            {deployment && (
-              <section className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wide text-slate-500">Zone 2 • Structured Confluence</p>
-                    <h3 className="text-lg font-semibold">Unified Permission Engine Contract</h3>
-                  </div>
-                  <div className="rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">
-                    Confluence Score: {deployment.confluenceScore} / 100
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3 text-sm">
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Weekly Bias: <span className="font-semibold">{deployment.components.weeklyBias >= 0 ? '+' : ''}{deployment.components.weeklyBias}</span></div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Daily Structure: <span className="font-semibold">{deployment.components.dailyStructure >= 0 ? '+' : ''}{deployment.components.dailyStructure}</span></div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Momentum Phase: <span className="font-semibold">{deployment.components.momentumPhase >= 0 ? '+' : ''}{deployment.components.momentumPhase}</span></div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Liquidity Condition: <span className="font-semibold">{deployment.components.liquidityCondition >= 0 ? '+' : ''}{deployment.components.liquidityCondition}</span></div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Volatility Regime: <span className="font-semibold">{deployment.components.volatilityRegime >= 0 ? '+' : ''}{deployment.components.volatilityRegime}</span></div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">Breadth Context: <span className="font-semibold">{deployment.components.breadthContext >= 0 ? '+' : ''}{deployment.components.breadthContext}</span></div>
-                </div>
-              </section>
-            )}
-
-            {/* Zone 3 — Risk Model */}
-            {deployment && (
-              <section className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <p className="text-[11px] uppercase tracking-wide text-slate-500">Zone 3 • Risk Model</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm">
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">
-                    <p className="text-xs text-slate-400">ATR</p>
-                    <p className="font-semibold text-slate-100">{deployment.riskModel.atrPercent.toFixed(1)}%</p>
-                  </div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">
-                    <p className="text-xs text-slate-400">Volatility Class</p>
-                    <p className="font-semibold text-slate-100">{deployment.riskModel.volatilityClass}</p>
-                  </div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">
-                    <p className="text-xs text-slate-400">Suggested Size</p>
-                    <p className="font-semibold text-slate-100">{deployment.riskModel.suggestedSize}</p>
-                  </div>
-                  <div className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2">
-                    <p className="text-xs text-slate-400">Spread</p>
-                    <p className="font-semibold text-slate-100">{deployment.riskModel.spreadStatus}</p>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Zone 4 — Context Blocks */}
-            <section className="space-y-4">
-              <p className="text-[11px] uppercase tracking-wide text-slate-500">Zone 4 • Context (Informational)</p>
-
-              <div className="grid lg:grid-cols-2 gap-6">
-                {/* Valuation */}
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">💰 Valuation Metrics</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-sm text-gray-400">P/E (TTM)</p><p className="font-semibold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p></div>
-                    <div><p className="text-sm text-gray-400">Forward P/E</p><p className="font-semibold">{data.valuation.forwardPE > 0 ? data.valuation.forwardPE.toFixed(2) : 'N/A'}</p></div>
-                    <div><p className="text-sm text-gray-400">PEG Ratio</p><p className="font-semibold">{data.valuation.peg > 0 ? data.valuation.peg.toFixed(2) : 'N/A'}</p></div>
-                    <div><p className="text-sm text-gray-400">Price/Sales</p><p className="font-semibold">{data.valuation.priceToSales > 0 ? data.valuation.priceToSales.toFixed(2) : 'N/A'}</p></div>
-                    <div><p className="text-sm text-gray-400">Price/Book</p><p className="font-semibold">{data.valuation.priceToBook > 0 ? data.valuation.priceToBook.toFixed(2) : 'N/A'}</p></div>
-                    <div><p className="text-sm text-gray-400">EV/EBITDA</p><p className="font-semibold">{data.valuation.evToEBITDA > 0 ? data.valuation.evToEBITDA.toFixed(2) : 'N/A'}</p></div>
-                  </div>
-                </div>
-
-                {/* Fundamentals */}
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📊 Fundamentals</h3>
-                  {(data.fundamentals.quarterlyRevenueGrowth || data.fundamentals.quarterlyEarningsGrowth) && (
-                    <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/70">
-                      {data.fundamentals.quarterlyRevenueGrowth !== undefined && (
-                        <div className="text-center">
-                          <p className="text-xs text-teal-300 uppercase mb-1">Revenue YoY</p>
-                          <p className={`text-lg font-bold ${data.fundamentals.quarterlyRevenueGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {data.fundamentals.quarterlyRevenueGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyRevenueGrowth * 100).toFixed(1)}%
-                          </p>
-                        </div>
-                      )}
-                      {data.fundamentals.quarterlyEarningsGrowth !== undefined && (
-                        <div className="text-center">
-                          <p className="text-xs text-teal-300 uppercase mb-1">EPS YoY</p>
-                          <p className={`text-lg font-bold ${data.fundamentals.quarterlyEarningsGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {data.fundamentals.quarterlyEarningsGrowth >= 0 ? '▲' : '▼'} {Math.abs(data.fundamentals.quarterlyEarningsGrowth * 100).toFixed(1)}%
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><p className="text-sm text-gray-400">EPS (TTM)</p><p className="font-semibold">${data.fundamentals.eps.toFixed(2)}</p></div>
-                    <div><p className="text-sm text-gray-400">Revenue</p><p className="font-semibold">{formatNumber(data.fundamentals.revenue)}</p></div>
-                    <div><p className="text-sm text-gray-400">Profit Margin</p><p className="font-semibold">{formatPercent(data.fundamentals.profitMargin * 100)}</p></div>
-                    <div><p className="text-sm text-gray-400">Operating Margin</p><p className="font-semibold">{formatPercent(data.fundamentals.operatingMargin * 100)}</p></div>
-                    <div><p className="text-sm text-gray-400">ROE</p><p className="font-semibold">{formatPercent(data.fundamentals.returnOnEquity * 100)}</p></div>
-                    <div><p className="text-sm text-gray-400">ROA</p><p className="font-semibold">{formatPercent(data.fundamentals.returnOnAssets * 100)}</p></div>
-                  </div>
-                </div>
-
-                {/* Technicals */}
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📈 Technical Levels</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-400">52-Week Range</span>
-                        <span className="text-gray-300">{formatPrice(data.technicals.week52Low)} - {formatPrice(data.technicals.week52High)}</span>
-                      </div>
-                      <div className="relative h-2 bg-slate-700 rounded-full">
-                        <div className="absolute h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(Math.max(data.technicals.week52Position, 0), 100)}%` }} />
-                        <div className="absolute w-3 h-3 bg-white rounded-full -top-0.5 transform -translate-x-1/2" style={{ left: `${Math.min(Math.max(data.technicals.week52Position, 0), 100)}%` }} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><p className="text-sm text-gray-400">50-Day MA</p><p className="font-semibold">{formatPrice(data.technicals.ma50)}</p><PercentBadge value={data.technicals.priceVs50MA} /></div>
-                      <div><p className="text-sm text-gray-400">200-Day MA</p><p className="font-semibold">{formatPrice(data.technicals.ma200)}</p><PercentBadge value={data.technicals.priceVs200MA} /></div>
-                      <div><p className="text-sm text-gray-400">Beta</p><p className="font-semibold">{data.technicals.beta.toFixed(2)}</p></div>
-                      <div><p className="text-sm text-gray-400">Day Range</p><p className="font-semibold text-sm">{formatPrice(data.quote.low)} - {formatPrice(data.quote.high)}</p></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Analyst Ratings */}
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🎯 Analyst Ratings</h3>
-                  {data.analysts.totalRatings > 0 ? (
-                    <div className="space-y-4">
-                      <AnalystRatingsBar analysts={data.analysts} />
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-400">Target Price</span>
-                        <span className="text-xl font-bold text-emerald-400">{formatPrice(data.analysts.targetPrice)}</span>
-                      </div>
-                      {data.quote.price > 0 && data.analysts.targetPrice > 0 && (
-                        <p className="text-sm text-gray-400">
-                          {data.analysts.targetPrice > data.quote.price
-                            ? `+${((data.analysts.targetPrice - data.quote.price) / data.quote.price * 100).toFixed(1)}% upside`
-                            : `${((data.analysts.targetPrice - data.quote.price) / data.quote.price * 100).toFixed(1)}% downside`}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">No analyst ratings available</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Earnings */}
-              {data.earnings.length > 0 && (
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">💵 Recent Earnings</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-gray-400 border-b border-slate-700">
-                          <th className="text-left py-2">Quarter</th>
-                          <th className="text-right py-2">Reported</th>
-                          <th className="text-right py-2">Estimated</th>
-                          <th className="text-right py-2">Actual</th>
-                          <th className="text-right py-2">Surprise</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.earnings.slice(0, 4).map((e, i) => (
-                          <tr key={i} className="border-b border-slate-700/50">
-                            <td className="py-2">{e.fiscalDate}</td>
-                            <td className="text-right text-gray-400">{e.reportedDate}</td>
-                            <td className="text-right">${e.estimatedEPS.toFixed(2)}</td>
-                            <td className="text-right">${e.reportedEPS.toFixed(2)}</td>
-                            <td className="text-right">
-                              <span className={e.surprisePercent >= 0 ? 'text-green-400' : 'text-red-400'}>
-                                {e.surprisePercent >= 0 ? '+' : ''}{e.surprisePercent.toFixed(1)}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* News */}
-              {data.news.length > 0 && (
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <div className="flex items-center justify-between mb-4 gap-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">📰 Latest News</h3>
-                    {aggregateSentiment && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-lg border border-slate-600">
-                        <span className="text-xs text-gray-400">News Sentiment:</span>
-                        <span className={`font-bold ${aggregateSentiment.color}`}>{aggregateSentiment.score}% {aggregateSentiment.label}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-4">
-                    {data.news.slice(0, 5).map((article, i) => (
-                      <a
-                        key={i}
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block p-4 bg-slate-900/50 rounded-lg hover:bg-slate-900 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-gray-200 mb-1">{article.title}</p>
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              <span>{article.source}</span>
-                              <span>•</span>
-                              <span>{new Date(article.publishedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                          <SentimentBadge sentiment={article.sentiment} />
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Company Description */}
-              {data.company.description && (
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🏢 About {data.company.name}</h3>
-                  <p className="text-gray-300 leading-relaxed">{data.company.description}</p>
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div><p className="text-gray-500">Country</p><p className="text-gray-300">{data.company.country}</p></div>
-                    <div><p className="text-gray-500">Fiscal Year End</p><p className="text-gray-300">{data.company.fiscalYearEnd}</p></div>
-                    <div><p className="text-gray-500">Shares Outstanding</p><p className="text-gray-300">{formatNumber(data.shares.outstanding).replace('$', '')}</p></div>
-                    <div><p className="text-gray-500">Latest Quarter</p><p className="text-gray-300">{data.company.latestQuarter}</p></div>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            <p className="text-center text-xs text-gray-500 mt-8">
-              Data powered by Alpha Vantage • Updated every 5 minutes during market hours
-            </p>
-
+function formatNumber(num: number | undefined, decimals: number = 2): string {
+  if (num === undefined || num === null || isNaN(num)) return 'N/A';
   if (Math.abs(num) >= 1e12) return `$${(num / 1e12).toFixed(decimals)}T`;
   if (Math.abs(num) >= 1e9) return `$${(num / 1e9).toFixed(decimals)}B`;
   if (Math.abs(num) >= 1e6) return `$${(num / 1e6).toFixed(decimals)}M`;
@@ -548,214 +324,6 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   );
 }
 
-type DeploymentVerdict = 'Eligible' | 'Conditional' | 'Blocked';
-type RegimeState = 'Risk-On' | 'Neutral' | 'Risk-Off';
-type EquityCluster = 'Large Cap' | 'Mid Cap' | 'Small Cap' | 'Microcap' | 'High Beta';
-
-interface EquityDeploymentEngine {
-  cluster: EquityCluster;
-  verdict: DeploymentVerdict;
-  globalRegime: RegimeState;
-  equitiesMicro: RegimeState;
-  adaptiveConfidence: number;
-  confluenceScore: number;
-  capitalMode: 'Normal Size' | 'Reduced Size' | 'Capital Preservation';
-  components: {
-    weeklyBias: number;
-    dailyStructure: number;
-    momentumPhase: number;
-    liquidityCondition: number;
-    volatilityRegime: number;
-    breadthContext: number;
-  };
-  thresholds: {
-    liquidityMin: number;
-    relVolMin: number;
-    confluenceMin: number;
-    aiAdjustmentDelta: number;
-  };
-  hardBlocks: string[];
-  relVolume: number;
-  riskModel: {
-    atrPercent: number;
-    volatilityClass: 'Low' | 'Normal' | 'High';
-    suggestedSize: string;
-    spreadStatus: 'Acceptable' | 'Caution' | 'Wide';
-  };
-}
-
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function classifyCluster(marketCap: number, beta: number): EquityCluster {
-  if (beta >= 1.8 && marketCap < 100_000_000_000) return 'High Beta';
-  if (marketCap >= 200_000_000_000) return 'Large Cap';
-  if (marketCap >= 20_000_000_000) return 'Mid Cap';
-  if (marketCap >= 2_000_000_000) return 'Small Cap';
-  return 'Microcap';
-}
-
-function computeAtrPercent(chart: EquityData['chart'], fallbackPrice: number): number {
-  if (!Array.isArray(chart) || chart.length < 2 || fallbackPrice <= 0) return 0;
-  const lookback = Math.min(14, chart.length - 1);
-  const recent = chart.slice(chart.length - (lookback + 1));
-  const trueRanges: number[] = [];
-
-  for (let index = 1; index < recent.length; index++) {
-    const candle = recent[index];
-    const prev = recent[index - 1];
-    const highLow = candle.high - candle.low;
-    const highPrev = Math.abs(candle.high - prev.close);
-    const lowPrev = Math.abs(candle.low - prev.close);
-    trueRanges.push(Math.max(highLow, highPrev, lowPrev));
-  }
-
-  if (!trueRanges.length) return 0;
-  const atr = trueRanges.reduce((sum, value) => sum + value, 0) / trueRanges.length;
-  return (atr / fallbackPrice) * 100;
-}
-
-function buildEquityDeploymentEngine(
-  data: EquityData,
-  aggregateSentiment: { score: number; label: string; color: string } | null,
-): EquityDeploymentEngine {
-  const marketCap = Number(data.valuation.marketCap || 0);
-  const beta = Number(data.technicals.beta || 1);
-  const cluster = classifyCluster(marketCap, beta);
-
-  const avgVolume = data.chart.length
-    ? data.chart.slice(-20).reduce((sum, row) => sum + (Number(row.volume) || 0), 0) / Math.min(20, data.chart.length)
-    : Number(data.quote.volume || 0);
-  const relVolume = avgVolume > 0 ? Number(data.quote.volume || 0) / avgVolume : 1;
-
-  const sentimentTilt = aggregateSentiment ? ((aggregateSentiment.score - 50) / 50) * 5 : 0;
-  const globalRegimeScore =
-    (Number(data.technicals.priceVs200MA || 0) >= 0 ? 8 : -8) +
-    (Number(data.quote.changePercent || 0) >= 0 ? 4 : -4) +
-    (Number(data.technicals.week52Position || 50) - 50) * 0.12 +
-    sentimentTilt;
-
-  const microScore =
-    (Number(data.technicals.priceVs50MA || 0) >= 0 ? 6 : -6) +
-    clampNumber(Number(data.quote.changePercent || 0), -3, 3) * 2 +
-    (relVolume - 1) * 4;
-
-  const globalRegime: RegimeState = globalRegimeScore >= 6 ? 'Risk-On' : globalRegimeScore <= -6 ? 'Risk-Off' : 'Neutral';
-  const equitiesMicro: RegimeState = microScore >= 5 ? 'Risk-On' : microScore <= -5 ? 'Risk-Off' : 'Neutral';
-
-  const weeklyBias = clampNumber(
-    Math.round((Number(data.technicals.priceVs200MA || 0) * 1.2) + ((Number(data.technicals.week52Position || 50) - 50) * 0.22)),
-    -20,
-    20,
-  );
-  const dailyStructure = clampNumber(
-    Math.round((Number(data.technicals.priceVs50MA || 0) * 1.5) + (Number(data.quote.changePercent || 0) * 1.1)),
-    -15,
-    15,
-  );
-
-  const closeNow = Number(data.chart[data.chart.length - 1]?.close || data.quote.price || 0);
-  const closePast = Number(data.chart[Math.max(data.chart.length - 6, 0)]?.close || closeNow);
-  const swingPct = closePast > 0 ? ((closeNow - closePast) / closePast) * 100 : 0;
-  const momentumPhase = clampNumber(Math.round((Number(data.quote.changePercent || 0) * 1.6) + (swingPct * 1.1)), -15, 15);
-  const liquidityCondition = clampNumber(Math.round((relVolume - 1) * 12 + ((Number(data.quote.volume || 0) >= 20_000_000) ? 4 : 0)), -15, 15);
-
-  const atrPercent = computeAtrPercent(data.chart, Number(data.quote.price || 0));
-  const volatilityRegime = atrPercent > 5 ? -8 : atrPercent > 3 ? -2 : atrPercent >= 1 ? 4 : 0;
-  const breadthContext = globalRegime === 'Risk-On' ? 10 : globalRegime === 'Risk-Off' ? -10 : 0;
-  const aiAdjustmentDelta = aggregateSentiment ? Math.round(((aggregateSentiment.score - 50) / 50) * 6) : 0;
-
-  const baseThresholds: Record<EquityCluster, { liquidityMin: number; relVolMin: number; confluenceMin: number }> = {
-    'Large Cap': { liquidityMin: 8_000_000, relVolMin: 0.9, confluenceMin: 58 },
-    'Mid Cap': { liquidityMin: 4_000_000, relVolMin: 1.0, confluenceMin: 60 },
-    'Small Cap': { liquidityMin: 2_000_000, relVolMin: 1.2, confluenceMin: 64 },
-    Microcap: { liquidityMin: 1_000_000, relVolMin: 1.5, confluenceMin: 70 },
-    'High Beta': { liquidityMin: 6_000_000, relVolMin: 1.3, confluenceMin: 68 },
-  };
-
-  const thresholds = { ...baseThresholds[cluster] };
-  if (globalRegime === 'Risk-Off') {
-    thresholds.liquidityMin = Math.round(thresholds.liquidityMin * 1.3);
-    thresholds.relVolMin = Number((thresholds.relVolMin + 0.2).toFixed(2));
-    thresholds.confluenceMin += 8;
-  } else if (globalRegime === 'Risk-On') {
-    thresholds.confluenceMin -= 4;
-  }
-
-  const confluenceScore = clampNumber(
-    Math.round(50 + weeklyBias + dailyStructure + momentumPhase + liquidityCondition + volatilityRegime + breadthContext + aiAdjustmentDelta),
-    0,
-    100,
-  );
-
-  const hardBlocks: string[] = [];
-  if (Number(data.quote.volume || 0) < thresholds.liquidityMin) hardBlocks.push('Liquidity below adaptive minimum');
-  if (relVolume < thresholds.relVolMin * 0.85) hardBlocks.push('Relative volume below required floor');
-  if (atrPercent > 6) hardBlocks.push('Volatility regime too elevated for stable entries');
-  if (globalRegime === 'Risk-Off' && (cluster === 'High Beta' || cluster === 'Small Cap' || cluster === 'Microcap')) {
-    hardBlocks.push('Cluster restricted in Risk-Off global regime');
-  }
-
-  let verdict: DeploymentVerdict = 'Conditional';
-  if (hardBlocks.length >= 2 || confluenceScore < 40) verdict = 'Blocked';
-  else if (!hardBlocks.length && confluenceScore >= thresholds.confluenceMin) verdict = 'Eligible';
-
-  const adaptiveConfidence = clampNumber(
-    Math.round((confluenceScore * 0.75) + (verdict === 'Eligible' ? 15 : verdict === 'Conditional' ? 5 : -5)),
-    0,
-    100,
-  );
-
-  const capitalMode = verdict === 'Eligible' ? 'Normal Size' : verdict === 'Conditional' ? 'Reduced Size' : 'Capital Preservation';
-  const volatilityClass: 'Low' | 'Normal' | 'High' = atrPercent > 4 ? 'High' : atrPercent < 1 ? 'Low' : 'Normal';
-
-  let size = verdict === 'Eligible' ? 1 : verdict === 'Conditional' ? 0.7 : 0.3;
-  if (volatilityClass === 'High') size -= 0.2;
-  if (volatilityClass === 'Low') size += 0.1;
-  if (globalRegime === 'Risk-Off') size -= 0.1;
-  size = clampNumber(size, 0.2, 1.1);
-
-  const spreadStatus: 'Acceptable' | 'Caution' | 'Wide' =
-    Number(data.quote.volume || 0) >= thresholds.liquidityMin && atrPercent < 4
-      ? 'Acceptable'
-      : atrPercent > 6 || Number(data.quote.volume || 0) < thresholds.liquidityMin * 0.7
-      ? 'Wide'
-      : 'Caution';
-
-  return {
-    cluster,
-    verdict,
-    globalRegime,
-    equitiesMicro,
-    adaptiveConfidence,
-    confluenceScore,
-    capitalMode,
-    components: {
-      weeklyBias,
-      dailyStructure,
-      momentumPhase,
-      liquidityCondition,
-      volatilityRegime,
-      breadthContext,
-    },
-    thresholds: {
-      liquidityMin: thresholds.liquidityMin,
-      relVolMin: thresholds.relVolMin,
-      confluenceMin: thresholds.confluenceMin,
-      aiAdjustmentDelta,
-    },
-    hardBlocks,
-    relVolume,
-    riskModel: {
-      atrPercent,
-      volatilityClass,
-      suggestedSize: `${size.toFixed(1)}x${capitalMode === 'Reduced Size' ? ' (Reduced Mode)' : capitalMode === 'Capital Preservation' ? ' (Preservation)' : ''}`,
-      spreadStatus,
-    },
-  };
-}
-
 export default function EquityExplorerPage() {
   const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
@@ -818,12 +386,6 @@ export default function EquityExplorerPage() {
       fetchEquityData(symbol, true);
     }
   };
-
-  const aggregateSentiment = useMemo(() => (data ? getAggregateSentiment(data.news) : null), [data]);
-  const deployment = useMemo(
-    () => (data ? buildEquityDeploymentEngine(data, aggregateSentiment) : null),
-    [data, aggregateSentiment],
-  );
 
   // Gate Pro Trader features
   if (!tierLoading && tier !== 'pro_trader' && tier !== 'pro') {
