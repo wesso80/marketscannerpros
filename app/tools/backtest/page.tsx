@@ -1752,7 +1752,9 @@ function BacktestContent() {
 
             <button
               type="button"
-              onClick={scanBestUniversePair}
+              onClick={() => {
+                void scanBestUniversePair();
+              }}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse}
               style={{
                 flex: '1 1 220px',
