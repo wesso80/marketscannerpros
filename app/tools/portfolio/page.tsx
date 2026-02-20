@@ -39,6 +39,14 @@ interface PerformanceSnapshot {
   totalPL: number;
 }
 
+interface CashLedgerEntry {
+  id: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  timestamp: string;
+  note?: string;
+}
+
 // Position Sizing Calculator Component
 function PositionSizerCalculator() {
   const [accountSize, setAccountSize] = useState<string>('10000');
@@ -493,6 +501,13 @@ function PortfolioContent() {
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
+  const [startingCapitalInput, setStartingCapitalInput] = useState<string>('10000');
+  const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
+  const [cashFlowDraft, setCashFlowDraft] = useState({
+    type: 'deposit' as 'deposit' | 'withdrawal',
+    amount: '',
+    note: '',
+  });
   const [showAddForm, setShowAddForm] = useState(false);
   const [drawdownAcknowledged, setDrawdownAcknowledged] = useState(false);
   const [newPosition, setNewPosition] = useState({
@@ -807,11 +822,15 @@ function PortfolioContent() {
         const res = await fetch('/api/portfolio');
         if (res.ok) {
           const data = await res.json();
-          if (data.positions?.length > 0 || data.closedPositions?.length > 0 || data.performanceHistory?.length > 0) {
+          if (data.positions?.length > 0 || data.closedPositions?.length > 0 || data.performanceHistory?.length > 0 || data.cashState) {
             loadedPositions = data.positions || [];
             setPositions(loadedPositions);
             setClosedPositions(data.closedPositions || []);
             setPerformanceHistory(data.performanceHistory || []);
+            if (data.cashState) {
+              setStartingCapitalInput(String(Number(data.cashState.startingCapital || 10000)));
+              setCashLedger(Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : []);
+            }
             setDataLoaded(true);
             // Auto-refresh prices after loading
             if (loadedPositions.length > 0) {
@@ -828,6 +847,8 @@ function PortfolioContent() {
       const saved = localStorage.getItem('portfolio_positions');
       const savedClosed = localStorage.getItem('portfolio_closed');
       const savedPerformance = localStorage.getItem('portfolio_performance');
+      const savedStartingCapital = localStorage.getItem('portfolio_starting_capital');
+      const savedCashLedger = localStorage.getItem('portfolio_cash_ledger');
       if (saved) {
         try {
           loadedPositions = JSON.parse(saved);
@@ -850,6 +871,16 @@ function PortfolioContent() {
           console.error('Failed to load performance history');
         }
       }
+      if (savedStartingCapital) {
+        setStartingCapitalInput(savedStartingCapital);
+      }
+      if (savedCashLedger) {
+        try {
+          setCashLedger(JSON.parse(savedCashLedger));
+        } catch (e) {
+          console.error('Failed to load cash ledger');
+        }
+      }
       setDataLoaded(true);
       // Auto-refresh prices after loading from localStorage
       if (loadedPositions.length > 0) {
@@ -866,6 +897,10 @@ function PortfolioContent() {
     
     // Save to localStorage as backup
     localStorage.setItem('portfolio_positions', JSON.stringify(positions));
+    localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
+    localStorage.setItem('portfolio_performance', JSON.stringify(performanceHistory));
+    localStorage.setItem('portfolio_starting_capital', startingCapitalInput);
+    localStorage.setItem('portfolio_cash_ledger', JSON.stringify(cashLedger));
     
     // Sync to database
     const syncToServer = async () => {
@@ -873,7 +908,15 @@ function PortfolioContent() {
         await fetch('/api/portfolio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ positions, closedPositions, performanceHistory })
+          body: JSON.stringify({
+            positions,
+            closedPositions,
+            performanceHistory,
+            cashState: {
+              startingCapital: Number(startingCapitalInput || 0),
+              cashLedger,
+            },
+          })
         });
       } catch (e) {
         console.error('Failed to sync portfolio to server');
@@ -883,14 +926,7 @@ function PortfolioContent() {
     // Debounce the sync
     const timeoutId = setTimeout(syncToServer, 1000);
     return () => clearTimeout(timeoutId);
-  }, [positions, mounted, dataLoaded]);
-
-  useEffect(() => {
-    if (!dataLoaded) return;
-    if (closedPositions.length > 0) {
-      localStorage.setItem('portfolio_closed', JSON.stringify(closedPositions));
-    }
-  }, [closedPositions, dataLoaded]);
+  }, [positions, closedPositions, performanceHistory, startingCapitalInput, cashLedger, mounted, dataLoaded]);
 
   // Track performance snapshots when portfolio changes
   useEffect(() => {
@@ -1197,21 +1233,49 @@ function PortfolioContent() {
     closeManual();
   };
 
+  const applyCashFlow = () => {
+    const amount = Number(cashFlowDraft.amount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Enter a valid cash amount.');
+      return;
+    }
+    const entry: CashLedgerEntry = {
+      id: `${Date.now()}`,
+      type: cashFlowDraft.type,
+      amount,
+      timestamp: new Date().toISOString(),
+      note: cashFlowDraft.note.trim() || undefined,
+    };
+    setCashLedger((prev) => [...prev, entry]);
+    setCashFlowDraft({ type: cashFlowDraft.type, amount: '', note: '' });
+  };
+
   const clearAllData = async () => {
     if (confirm('Are you sure you want to clear all portfolio data? This cannot be undone.')) {
       setPositions([]);
       setClosedPositions([]);
       setPerformanceHistory([]);
+      setCashLedger([]);
       localStorage.removeItem('portfolio_positions');
       localStorage.removeItem('portfolio_closed');
       localStorage.removeItem('portfolio_performance');
+      localStorage.removeItem('portfolio_cash_ledger');
+      localStorage.removeItem('portfolio_starting_capital');
       
       // Also clear from server
       try {
         await fetch('/api/portfolio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ positions: [], closedPositions: [], performanceHistory: [] })
+          body: JSON.stringify({
+            positions: [],
+            closedPositions: [],
+            performanceHistory: [],
+            cashState: {
+              startingCapital: Number(startingCapitalInput || 0),
+              cashLedger: [],
+            },
+          })
         });
       } catch (e) {
         console.error('Failed to clear server data');
@@ -1285,6 +1349,11 @@ function PortfolioContent() {
   const unrealizedPL = positions.reduce((sum, p) => sum + p.pl, 0);
   const realizedPL = closedPositions.reduce((sum, p) => sum + p.realizedPL, 0);
   const totalPL = unrealizedPL + realizedPL;
+  const startingCapital = Number(startingCapitalInput || 0);
+  const netDeposits = cashLedger.reduce((sum, item) => sum + (item.type === 'deposit' ? item.amount : -item.amount), 0);
+  const investedNotional = positions.reduce((sum, p) => sum + (p.entryPrice * p.quantity), 0);
+  const accountCash = startingCapital + netDeposits + realizedPL - investedNotional;
+  const accountEquity = accountCash + totalValue;
   const totalReturn = totalCost > 0 ? ((unrealizedPL / totalCost) * 100) : 0;
   const numPositions = positions.length;
 
@@ -1362,9 +1431,9 @@ function PortfolioContent() {
   const longExposureValue = positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const shortExposureValue = positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0);
   const grossExposureValue = longExposureValue + shortExposureValue;
-  const capitalBase = Math.max(totalCost, totalValue, 10000);
+  const capitalBase = Math.max(accountEquity, totalCost, totalValue, 1000);
   const deploymentPct = capitalBase > 0 ? (grossExposureValue / capitalBase) * 100 : 0;
-  const availableCash = Math.max(0, capitalBase - grossExposureValue);
+  const availableCash = accountCash;
   const largestPositionPct = totalValue > 0
     ? Math.max(...positions.map((p) => ((p.currentPrice * p.quantity) / totalValue) * 100), 0)
     : 0;
@@ -1496,6 +1565,7 @@ function PortfolioContent() {
 
   const formatMoney = (value: number) => `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+  const formatSignedMoney = (value: number) => `${value >= 0 ? '+' : '-'}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
   const avgR = closedPositions.length > 0
     ? closedPositions.reduce((sum, trade) => {
@@ -1711,9 +1781,56 @@ function PortfolioContent() {
             <div className="text-right">
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Capital Deployment</div>
               <div className="text-2xl font-black text-slate-100">{deploymentPct.toFixed(1)}%</div>
-              <div className="text-sm text-slate-300">Available Cash {formatMoney(availableCash)}</div>
+              <div className={`text-sm ${availableCash >= 0 ? 'text-slate-300' : 'text-red-300'}`}>Available Cash {formatSignedMoney(availableCash)}</div>
+              <div className="text-xs text-slate-400">Account Equity {formatMoney(accountEquity)}</div>
               <div className="text-xs text-slate-400">Exposure {netExposurePct.toFixed(1)}%</div>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-4">
+          <label className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2 text-xs text-slate-400">
+            Starting Capital
+            <input
+              type="number"
+              min="0"
+              step="100"
+              value={startingCapitalInput}
+              onChange={(e) => setStartingCapitalInput(e.target.value)}
+              className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+            />
+          </label>
+          <label className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2 text-xs text-slate-400">
+            Cash Flow Type
+            <select
+              value={cashFlowDraft.type}
+              onChange={(e) => setCashFlowDraft((prev) => ({ ...prev, type: e.target.value as 'deposit' | 'withdrawal' }))}
+              className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+            >
+              <option value="deposit">Deposit</option>
+              <option value="withdrawal">Withdrawal</option>
+            </select>
+          </label>
+          <label className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2 text-xs text-slate-400">
+            Amount
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={cashFlowDraft.amount}
+              onChange={(e) => setCashFlowDraft((prev) => ({ ...prev, amount: e.target.value }))}
+              className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-100"
+            />
+          </label>
+          <div className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2">
+            <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Cash Controls</div>
+            <button
+              onClick={applyCashFlow}
+              className="mt-1.5 w-full rounded border border-emerald-500/50 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.06em] text-emerald-300"
+            >
+              Apply Cash Flow
+            </button>
+            <div className="mt-1 text-[11px] text-slate-400">Net Deposits {formatSignedMoney(netDeposits)}</div>
           </div>
         </div>
 
