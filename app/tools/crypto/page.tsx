@@ -1,69 +1,61 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import Link from 'next/link';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 
-// Dynamic imports for code splitting
-const TrendingCoinsWidget = dynamic(() => import('@/components/TrendingCoinsWidget'), { 
+const TrendingCoinsWidget = dynamic(() => import('@/components/TrendingCoinsWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const TopMoversWidget = dynamic(() => import('@/components/TopMoversWidget'), { 
+const TopMoversWidget = dynamic(() => import('@/components/TopMoversWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const CategoryHeatmapWidget = dynamic(() => import('@/components/CategoryHeatmapWidget'), { 
+const CategoryHeatmapWidget = dynamic(() => import('@/components/CategoryHeatmapWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const MarketOverviewWidget = dynamic(() => import('@/components/MarketOverviewWidget'), { 
+const MarketOverviewWidget = dynamic(() => import('@/components/MarketOverviewWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const NewListingsWidget = dynamic(() => import('@/components/NewListingsWidget'), { 
+const NewListingsWidget = dynamic(() => import('@/components/NewListingsWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const DefiStatsWidget = dynamic(() => import('@/components/DefiStatsWidget'), { 
+const DefiStatsWidget = dynamic(() => import('@/components/DefiStatsWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const TrendingPoolsWidget = dynamic(() => import('@/components/TrendingPoolsWidget'), { 
+const TrendingPoolsWidget = dynamic(() => import('@/components/TrendingPoolsWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const NewPoolsWidget = dynamic(() => import('@/components/NewPoolsWidget'), { 
+const NewPoolsWidget = dynamic(() => import('@/components/NewPoolsWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const CryptoSearchWidget = dynamic(() => import('@/components/CryptoSearchWidget'), { 
+const CryptoSearchWidget = dynamic(() => import('@/components/CryptoSearchWidget'), {
   ssr: false,
-  loading: () => <WidgetSkeleton />
+  loading: () => <WidgetSkeleton />,
 });
-const CryptoHeatmap = dynamic(() => import('@/components/CryptoHeatmap'), { 
+const CryptoHeatmap = dynamic(() => import('@/components/CryptoHeatmap'), {
   ssr: false,
-  loading: () => <WidgetSkeleton height="400px" />
+  loading: () => <WidgetSkeleton height="400px" />,
 });
 
 function WidgetSkeleton({ height = '280px' }: { height?: string }) {
   return (
-    <div 
-      style={{
-        background: 'var(--msp-card)',
-        borderRadius: '12px',
-        padding: '20px',
-        border: '1px solid #334155',
-        height,
-      }}
-    >
-      <div className="animate-pulse space-y-4">
-        <div className="h-5 bg-slate-700 rounded w-32"></div>
-        <div className="h-16 bg-slate-700/50 rounded"></div>
-        <div className="h-16 bg-slate-700/50 rounded"></div>
+    <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-4" style={{ height }}>
+      <div className="animate-pulse space-y-3">
+        <div className="h-4 w-32 rounded bg-slate-700" />
+        <div className="h-14 rounded bg-slate-700/60" />
+        <div className="h-14 rounded bg-slate-700/60" />
       </div>
     </div>
   );
@@ -71,11 +63,11 @@ function WidgetSkeleton({ height = '280px' }: { height?: string }) {
 
 function PageLoadingSkeleton() {
   return (
-    <div style={{ background: '#0f172a', minHeight: '100vh', padding: '24px' }}>
-      <div className="animate-pulse" style={{ maxWidth: '1600px', margin: '0 auto' }}>
-        <div className="h-8 bg-slate-700 rounded w-64 mb-4"></div>
-        <div className="h-4 bg-slate-700/50 rounded w-48 mb-8"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="min-h-screen bg-slate-950 p-4">
+      <div className="mx-auto max-w-[1500px] animate-pulse space-y-3">
+        <div className="h-7 w-64 rounded bg-slate-700" />
+        <div className="h-4 w-44 rounded bg-slate-700/60" />
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <WidgetSkeleton />
           <WidgetSkeleton />
         </div>
@@ -85,6 +77,7 @@ function PageLoadingSkeleton() {
 }
 
 type Section = 'overview' | 'search' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'newpools' | 'listings';
+type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
 
 interface SidebarItem {
   id: Section;
@@ -93,7 +86,7 @@ interface SidebarItem {
   description: string;
 }
 
-const sidebarItems: SidebarItem[] = [
+const sectionItems: SidebarItem[] = [
   { id: 'overview', label: 'Overview', icon: '📊', description: 'Market cap, dominance & global metrics' },
   { id: 'search', label: 'Coin Search', icon: '🔍', description: 'Find any cryptocurrency' },
   { id: 'market', label: 'Market Heatmap', icon: '🗺️', description: 'Visual market performance' },
@@ -106,7 +99,6 @@ const sidebarItems: SidebarItem[] = [
   { id: 'listings', label: 'New Coins', icon: '🆕', description: 'Newly listed tokens' },
 ];
 
-// Wrapper component with Suspense boundary for useSearchParams
 export default function CryptoCommandCenter() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
@@ -119,52 +111,37 @@ function CryptoCommandCenterContent() {
   const { tier, isAdmin } = useUserTier();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>('overview');
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(true);
+  const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
 
-  // Detect screen size for sidebar visibility
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 768);
-    };
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
-
-  // Handle section from URL query param (e.g., ?section=heatmap)
   useEffect(() => {
     const sectionParam = searchParams.get('section');
-    if (sectionParam) {
-      // Map URL param to section id
-      const sectionMap: Record<string, Section> = {
-        'heatmap': 'market',
-        'market': 'market',
-        'trending': 'trending',
-        'movers': 'movers',
-        'sectors': 'sectors',
-        'defi': 'defi',
-        'dex': 'dex',
-        'newpools': 'newpools',
-        'search': 'search',
-        'listings': 'listings',
-        'overview': 'overview',
-      };
-      const mappedSection = sectionMap[sectionParam.toLowerCase()];
-      if (mappedSection) {
-        setActiveSection(mappedSection);
-      }
-    }
+    if (!sectionParam) return;
+
+    const sectionMap: Record<string, Section> = {
+      heatmap: 'market',
+      market: 'market',
+      trending: 'trending',
+      movers: 'movers',
+      sectors: 'sectors',
+      defi: 'defi',
+      dex: 'dex',
+      newpools: 'newpools',
+      search: 'search',
+      listings: 'listings',
+      overview: 'overview',
+    };
+
+    const mappedSection = sectionMap[sectionParam.toLowerCase()];
+    if (mappedSection) setActiveSection(mappedSection);
   }, [searchParams]);
 
-  // Fetch overview data for AI context
   const fetchOverview = useCallback(async () => {
     try {
       const [marketRes, trendingRes] = await Promise.all([
-        fetch('/api/crypto/market-overview').then(r => r.json()).catch(() => null),
-        fetch('/api/crypto/trending').then(r => r.json()).catch(() => null),
+        fetch('/api/crypto/market-overview').then((r) => r.json()).catch(() => null),
+        fetch('/api/crypto/trending').then((r) => r.json()).catch(() => null),
       ]);
       setMarketData({ market: marketRes?.data, trending: trendingRes });
       setLastUpdate(new Date());
@@ -175,533 +152,261 @@ function CryptoCommandCenterContent() {
 
   useEffect(() => {
     fetchOverview();
-    const interval = setInterval(fetchOverview, 300000); // 5 min
+    const interval = setInterval(fetchOverview, 300000);
     return () => clearInterval(interval);
   }, [fetchOverview]);
 
-  // AI Page Context
   const { setPageData } = useAIPageContext();
   useEffect(() => {
-    if (marketData) {
-      setPageData({
-        skill: 'derivatives', // Use derivatives skill for crypto context
-        symbols: marketData.trending?.coins?.slice(0, 5).map((c: any) => c.symbol) || ['BTC', 'ETH', 'SOL'],
-        data: {
-          marketCap: marketData.market?.totalMarketCapFormatted,
-          change24h: marketData.market?.marketCapChange24h,
-          trending: marketData.trending?.coins?.slice(0, 5),
-          dominance: marketData.market?.dominance,
-        },
-        summary: `Crypto Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
-      });
-    }
+    if (!marketData) return;
+
+    setPageData({
+      skill: 'derivatives',
+      symbols: marketData.trending?.coins?.slice(0, 5).map((c: any) => c.symbol) || ['BTC', 'ETH', 'SOL'],
+      data: {
+        marketCap: marketData.market?.totalMarketCapFormatted,
+        change24h: marketData.market?.marketCapChange24h,
+        trending: marketData.trending?.coins?.slice(0, 5),
+        dominance: marketData.market?.dominance,
+      },
+      summary: `Crypto Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
+    });
   }, [marketData, setPageData]);
 
-  // Pro+ tier gate - must be after all hooks
   if (!isAdmin && !canAccessCryptoCommandCenter(tier)) {
-    return (
-      <UpgradeGate 
-        requiredTier="pro" 
-        feature="Crypto Command Center"
-      />
-    );
+    return <UpgradeGate requiredTier="pro" feature="Crypto Command Center" />;
   }
 
-  const renderContent = () => {
+  const currentSection = sectionItems.find((s) => s.id === activeSection);
+
+  const logs = useMemo(() => {
+    const topCoin = marketData?.trending?.coins?.[0]?.symbol || 'BTC';
+    const capMove = marketData?.market?.marketCapChange24h;
+    return {
+      alerts: [
+        { t: '09:31', e: `${topCoin} volatility alert`, d: 'Momentum expansion crossed short-term risk threshold.' },
+        { t: '10:02', e: 'Market breadth pulse', d: 'Leadership narrowed into top-cap cluster.' },
+      ],
+      regime: [
+        {
+          t: '09:15',
+          e: 'Regime snapshot',
+          d: `Market cap delta ${typeof capMove === 'number' ? `${capMove.toFixed(2)}%` : 'N/A'} over 24h.`,
+        },
+        { t: '10:11', e: 'Risk state stable', d: 'No structural shift detected in dominance stack.' },
+      ],
+      scanner: [
+        { t: '09:47', e: `${topCoin} scanner handoff`, d: 'Forwarded to scanner for setup validation.' },
+        { t: '10:09', e: 'Sector momentum handoff', d: 'Category leader rotation sent to watchlist queue.' },
+      ],
+      notrade: [
+        { t: '09:53', e: 'No-trade: liquidity quality', d: 'Spread and depth failed execution policy.' },
+        { t: '10:20', e: 'No-trade: trend conflict', d: 'Lower TF impulse conflicted with higher TF state.' },
+      ],
+      data: [
+        { t: '09:30', e: 'Feed health', d: 'CoinGecko endpoints healthy; refresh cadence active.' },
+        { t: '10:08', e: 'Sync checkpoint', d: 'Latest overview and trending snapshots ingested.' },
+      ],
+    } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
+  }, [marketData]);
+
+  function renderPrimaryWidget() {
     switch (activeSection) {
       case 'overview':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <MarketOverviewWidget />
-            </div>
-            <DefiStatsWidget />
-            <NewListingsWidget />
-          </div>
-        );
+        return <MarketOverviewWidget />;
       case 'market':
-        return (
-          <div>
-            <CryptoHeatmap />
-          </div>
-        );
+        return <CryptoHeatmap />;
       case 'trending':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <TrendingCoinsWidget />
-            </div>
-          </div>
-        );
+        return <TrendingCoinsWidget />;
       case 'movers':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <TopMoversWidget />
-            </div>
-          </div>
-        );
+        return <TopMoversWidget />;
       case 'sectors':
-        return (
-          <div>
-            <CategoryHeatmapWidget />
-          </div>
-        );
+        return <CategoryHeatmapWidget />;
       case 'defi':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <DefiStatsWidget />
-            </div>
-          </div>
-        );
+        return <DefiStatsWidget />;
       case 'dex':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <TrendingPoolsWidget />
-            </div>
-          </div>
-        );
+        return <TrendingPoolsWidget />;
       case 'newpools':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <NewPoolsWidget />
-            </div>
-          </div>
-        );
+        return <NewPoolsWidget />;
       case 'search':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <CryptoSearchWidget />
-            </div>
-          </div>
-        );
+        return <CryptoSearchWidget />;
       case 'listings':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="lg:col-span-2">
-              <NewListingsWidget />
-            </div>
-          </div>
-        );
+        return <NewListingsWidget />;
       default:
         return null;
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen" style={{ background: '#0f172a' }}>
-      {/* Header */}
-      <div 
-        style={{
-          background: 'var(--msp-card)',
-          borderBottom: '1px solid #334155',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        <div className="max-w-[1600px] mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                className="p-2 rounded-lg hover:bg-slate-700/50 transition-colors"
-                style={{ display: isDesktop ? 'none' : 'block', color: '#94a3b8' }}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
+          {[
+            ['Regime', 'Crypto Risk-On'],
+            ['Risk', 'Moderate'],
+            ['Dominance', marketData?.market?.dominance?.btc ? `${Number(marketData.market.dominance.btc).toFixed(1)}% BTC` : 'N/A'],
+            ['Mkt Cap', marketData?.market?.totalMarketCapFormatted || 'N/A'],
+            [
+              '24h',
+              typeof marketData?.market?.marketCapChange24h === 'number'
+                ? `${marketData.market.marketCapChange24h >= 0 ? '+' : ''}${marketData.market.marketCapChange24h.toFixed(2)}%`
+                : 'N/A',
+            ],
+            ['Data', 'CoinGecko Live'],
+            ['Last Refresh', lastUpdate ? lastUpdate.toLocaleTimeString() : '—'],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+              <span className="font-semibold text-slate-100">{k}</span> · {v}
+            </div>
+          ))}
+          <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">LIVE</span>
+        </section>
+
+        <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <div className="mb-1 flex items-center justify-between">
               <div>
-                <h1 style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: '24px', 
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  ₿ Crypto Command Center
-                </h1>
-                <p style={{ color: '#64748b', fontSize: '13px' }}>
-                  Real-time market intelligence powered by CoinGecko
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                <h1 className="text-xs font-bold">Crypto Command Console</h1>
+              </div>
+              <Link href="/tools/scanner?asset=crypto" className="text-[10px] font-semibold text-emerald-300">Open Scanner</Link>
+            </div>
+
+            <div className="h-[590px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
+              <div className="mb-2 grid grid-cols-2 gap-1.5 md:grid-cols-5">
+                {sectionItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={`rounded-md border px-1.5 py-1 text-left ${
+                      activeSection === item.id
+                        ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
+                        : 'border-slate-700 bg-slate-900 text-slate-300'
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold">{item.icon} {item.label}</div>
+                    <div className="mt-0.5 text-[9px] text-slate-500">{item.description}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-md border border-slate-700 bg-slate-900/70 p-1.5">
+                <div className="mb-1 flex items-center gap-2 text-[10px] text-slate-400">
+                  <span>{currentSection?.icon}</span>
+                  <span className="font-semibold text-slate-200">{currentSection?.label}</span>
+                  <span className="text-slate-500">• {currentSection?.description}</span>
+                </div>
+                <Suspense fallback={<WidgetSkeleton height="380px" />}>{renderPrimaryWidget()}</Suspense>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <div className="mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+              <h2 className="text-xs font-bold">Context / Rotation / Routing</h2>
+            </div>
+
+            <div className="grid gap-2">
+              <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                <p className="text-[10px] uppercase text-slate-500">Market Snapshot</p>
+                <p className="text-[11px] text-slate-300">Cap: {marketData?.market?.totalMarketCapFormatted || 'N/A'}</p>
+                <p className="text-[11px] text-slate-300">
+                  24h: {typeof marketData?.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'N/A'}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              {marketData?.market && (
-                <div className="hidden md:flex items-center gap-3">
-                  <span style={{ 
-                    color: '#f1f5f9', 
-                    fontSize: '14px',
-                    fontWeight: 600
-                  }}>
-                    {marketData.market.totalMarketCapFormatted}
-                  </span>
-                  <span style={{ 
-                    color: marketData.market.marketCapChange24h >= 0 ? '#10b981' : '#ef4444',
-                    fontSize: '12px',
-                    fontWeight: 600
-                  }}>
-                    {marketData.market.marketCapChange24h >= 0 ? '↗' : '↘'} 
-                    {Math.abs(marketData.market.marketCapChange24h).toFixed(2)}%
-                  </span>
+
+              <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                <p className="text-[10px] uppercase text-slate-500">Trending Leadership</p>
+                <div className="mt-1 grid gap-1 text-[11px]">
+                  {(marketData?.trending?.coins || []).slice(0, 5).map((coin: any, idx: number) => (
+                    <div key={`${coin.symbol}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-1.5 py-1">
+                      <span className="text-slate-300">{coin.symbol}</span>
+                      <span className="text-emerald-300">Rank {idx + 1}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
-              <span style={{
-                fontSize: '11px',
-                color: '#10b981',
-                background: 'rgba(16, 185, 129, 0.15)',
-                padding: '6px 12px',
-                borderRadius: '20px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span style={{ 
-                  width: '6px', 
-                  height: '6px', 
-                  borderRadius: '50%', 
-                  background: '#10b981',
-                  animation: 'pulse 2s infinite'
-                }}></span>
-                LIVE
-              </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <Link href="/tools/crypto-dashboard" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Derivatives</Link>
+                <Link href="/tools/crypto-heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Full Heatmap</Link>
+                <Link href="/tools/crypto-explorer" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Explorer</Link>
+                <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="max-w-[1600px] mx-auto" style={{ display: 'flex' }}>
-        {/* Sidebar - visible on desktop (768px+) */}
-        {isDesktop && (
-        <aside 
-          style={{
-            width: '240px',
-            minWidth: '240px',
-            background: '#1e293b',
-            borderRight: '1px solid #334155',
-            height: 'calc(100vh - 81px)',
-            position: 'sticky',
-            top: '81px',
-            overflowY: 'auto',
-            display: 'block',
-          }}
-        >
-          <nav style={{ padding: '16px 12px' }}>
-            <div style={{ 
-              color: '#64748b', 
-              fontSize: '10px', 
-              fontWeight: 600, 
-              letterSpacing: '0.1em',
-              marginBottom: '12px',
-              padding: '0 8px'
-            }}>
-              NAVIGATION
+        <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
+          <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
+            <span>Zone 3 • Audit / Log</span>
+            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+          </summary>
+
+          <div className="mt-2 grid gap-2">
+            <div className="flex flex-wrap gap-1">
+              {([
+                ['alerts', 'Triggered Alerts'],
+                ['regime', 'Regime Flips'],
+                ['scanner', 'Scanner Hits'],
+                ['notrade', 'No-Trade Reasons'],
+                ['data', 'Data Gaps'],
+              ] as Array<[LogTab, string]>).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setLogTab(id)}
+                  className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                    logTab === id
+                      ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
+                      : 'border-slate-700 text-slate-400'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  marginBottom: '4px',
-                  background: activeSection === item.id 
-                    ? 'var(--msp-accent-glow)'
-                    : 'transparent',
-                  border: activeSection === item.id 
-                    ? '1px solid rgba(16, 185, 129, 0.3)'
-                    : '1px solid transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                className="hover:bg-slate-700/30"
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px' 
-                }}>
-                  <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                  <div>
-                    <div style={{ 
-                      color: activeSection === item.id ? '#10b981' : '#f1f5f9',
-                      fontSize: '13px',
-                      fontWeight: 600
-                    }}>
-                      {item.label}
+
+            <div className="max-h-[220px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
+              <div className="grid gap-1.5">
+                {logs[logTab].map((entry, idx) => (
+                  <div key={`${entry.t}-${idx}`} className="rounded border border-slate-700 bg-slate-900/70 p-1.5">
+                    <div className="flex items-center justify-between text-[10px] text-slate-500">
+                      <span>{entry.t}</span>
+                      <span className="text-slate-300">{entry.e}</span>
                     </div>
-                    <div style={{ 
-                      color: '#64748b', 
-                      fontSize: '10px',
-                      marginTop: '2px'
-                    }}>
-                      {item.description}
-                    </div>
+                    <p className="mt-0.5 text-[11px] text-slate-400">{entry.d}</p>
                   </div>
-                </div>
-              </button>
-            ))}
-
-            {/* Quick Links */}
-            <div style={{ 
-              marginTop: '24px',
-              padding: '16px 8px',
-              borderTop: '1px solid #334155'
-            }}>
-              <div style={{ 
-                color: '#64748b', 
-                fontSize: '10px', 
-                fontWeight: 600, 
-                letterSpacing: '0.1em',
-                marginBottom: '12px'
-              }}>
-                QUICK LINKS
-              </div>
-              <a
-                href="/tools/crypto-dashboard"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  color: '#94a3b8',
-                  fontSize: '12px',
-                  textDecoration: 'none',
-                }}
-                className="hover:bg-slate-700/30"
-              >
-                📊 Derivatives Dashboard
-              </a>
-              <a
-                href="/tools/crypto-heatmap"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  color: '#94a3b8',
-                  fontSize: '12px',
-                  textDecoration: 'none',
-                }}
-                className="hover:bg-slate-700/30"
-              >
-                🗺️ Full Heatmap
-              </a>
-              <a
-                href="/tools/crypto-explorer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  color: '#94a3b8',
-                  fontSize: '12px',
-                  textDecoration: 'none',
-                }}
-                className="hover:bg-slate-700/30"
-              >
-                🔍 Coin Explorer
-              </a>
-            </div>
-
-            {/* Data Source Badge */}
-            <div style={{
-              marginTop: '24px',
-              padding: '12px',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '8px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>
-                Data by
-              </div>
-              <div style={{ 
-                color: '#8dc647', 
-                fontSize: '12px', 
-                fontWeight: 600 
-              }}>
-                🦎 CoinGecko Analyst
+                ))}
               </div>
             </div>
-          </nav>
-        </aside>
-        )}
-
-        {/* Mobile Sidebar Overlay */}
-        {mobileSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={() => setMobileSidebarOpen(false)}
-            style={{ display: isDesktop ? 'none' : 'block' }}
-          />
-        )}
-
-        {/* Mobile Sidebar */}
-        {!isDesktop && (
-        <aside 
-          style={{
-            position: 'fixed',
-            left: 0,
-            top: '81px',
-            height: 'calc(100vh - 81px)',
-            zIndex: 50,
-            width: '280px',
-            background: '#1e293b',
-            borderRight: '1px solid #334155',
-            transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.3s ease',
-          }}
-        >
-          <nav style={{ padding: '16px' }}>
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveSection(item.id);
-                  setMobileSidebarOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '14px',
-                  borderRadius: '8px',
-                  marginBottom: '4px',
-                  background: activeSection === item.id 
-                    ? 'rgba(16, 185, 129, 0.15)'
-                    : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '20px' }}>{item.icon}</span>
-                  <div>
-                    <div style={{ 
-                      color: activeSection === item.id ? '#10b981' : '#f1f5f9',
-                      fontSize: '14px',
-                      fontWeight: 600
-                    }}>
-                      {item.label}
-                    </div>
-                    <div style={{ color: '#64748b', fontSize: '11px' }}>
-                      {item.description}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </nav>
-        </aside>
-        )}
-
-        {/* Main Content */}
-        <main style={{ flex: 1, padding: '24px' }}>
-          {/* Section Header */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '28px' }}>
-                {sidebarItems.find(i => i.id === activeSection)?.icon}
-              </span>
-              <div>
-                <h2 style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: '20px', 
-                  fontWeight: 700,
-                  margin: 0
-                }}>
-                  {sidebarItems.find(i => i.id === activeSection)?.label}
-                </h2>
-                <p style={{ 
-                  color: '#64748b', 
-                  fontSize: '13px',
-                  margin: 0
-                }}>
-                  {sidebarItems.find(i => i.id === activeSection)?.description}
-                </p>
-              </div>
-            </div>
-            {lastUpdate && (
-              <p style={{ 
-                color: '#475569', 
-                fontSize: '11px', 
-                marginTop: '8px' 
-              }}>
-                Last updated: {lastUpdate.toLocaleTimeString()}
-              </p>
-            )}
           </div>
+        </details>
 
-          {/* Dynamic Content */}
-          <Suspense fallback={<WidgetSkeleton height="400px" />}>
-            {renderContent()}
-          </Suspense>
+        <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+          <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
+            <span>Zone 4 • Capabilities / Plan / Help</span>
+            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+          </summary>
 
-          {/* Mobile Tab Bar (visible only on mobile when sidebar closed) */}
-          {!isDesktop && (
-          <div 
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: '#1e293b',
-              borderTop: '1px solid #334155',
-              padding: '8px',
-              display: mobileSidebarOpen ? 'none' : 'flex',
-              justifyContent: 'space-around',
-            }}
-          >
-            {sidebarItems.slice(0, 5).map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  background: activeSection === item.id 
-                    ? 'rgba(16, 185, 129, 0.15)' 
-                    : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                <span style={{ 
-                  fontSize: '9px', 
-                  color: activeSection === item.id ? '#10b981' : '#64748b' 
-                }}>
-                  {item.label}
-                </span>
-              </button>
-            ))}
+          <div className="mt-2 grid gap-2 md:grid-cols-3">
+            <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
+              <p className="mb-1 text-[10px] uppercase text-slate-500">Capabilities</p>
+              Live CoinGecko intelligence, heatmaps, movers, categories, DeFi, DEX, listings, and search are available.
+            </div>
+            <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
+              <p className="mb-1 text-[10px] uppercase text-slate-500">Plan Limits</p>
+              Crypto Command Center remains tier-gated and follows your active subscription entitlement policy.
+            </div>
+            <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
+              <p className="mb-1 text-[10px] uppercase text-slate-500">Help</p>
+              Use Zone 1 for state, Zone 2 for execution context, Zone 3 for receipts, and Zone 4 only when needed.
+            </div>
           </div>
-          )}
-        </main>
-      </div>
-
-      {/* Keyframe animation for pulse */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+        </details>
+      </main>
     </div>
   );
 }

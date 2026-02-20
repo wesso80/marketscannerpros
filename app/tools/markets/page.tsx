@@ -8,6 +8,7 @@ import WatchlistWidget from '@/components/WatchlistWidget';
 import AlertsWidget from '@/components/AlertsWidget';
 
 type RegionTab = 'americas' | 'emea' | 'apac';
+type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
 
 const todayTiles = [
   { symbol: 'SPY', value: '+0.6%', spark: '▃▄▅▆▇', tone: 'bull' },
@@ -36,77 +37,52 @@ const globalRows: Record<RegionTab, Array<{ name: string; last: string; chg: str
   ],
 };
 
-const optionsPulse = [
-  {
-    title: 'Flow Concentration',
-    subtitle: 'Flow concentration and unusual contracts',
-    href: '/tools/options-confluence',
-  },
-  {
-    title: 'Premium State',
-    subtitle: 'Premium context and compression/expansion',
-    href: '/tools/options-confluence',
-  },
-  {
-    title: 'Put/Call Skew Bias',
-    subtitle: 'Sentiment imbalance and defensive demand',
-    href: '/tools/options-confluence',
-  },
-];
+const logs: Record<LogTab, Array<{ t: string; event: string; detail: string; tone?: 'bull' | 'bear' | 'warn' }>> = {
+  alerts: [
+    { t: '09:31', event: 'SPY volatility gate', detail: 'Alert fired on spread expansion near open.', tone: 'warn' },
+    { t: '10:12', event: 'QQQ continuation', detail: 'Momentum confirmation with improving breadth.', tone: 'bull' },
+  ],
+  regime: [
+    { t: '08:55', event: 'Regime unchanged', detail: 'Neutral trend with selective risk-on internals.' },
+    { t: '09:40', event: 'Risk pulse upgrade', detail: 'Breadth > 55/45 while VIX remained contained.', tone: 'bull' },
+  ],
+  scanner: [
+    { t: '09:47', event: 'Scanner hit: NVDA', detail: 'Trend continuation candidate, score 78.' },
+    { t: '10:03', event: 'Scanner hit: TSLA', detail: 'Rejected due to elevated event risk.', tone: 'warn' },
+  ],
+  notrade: [
+    { t: '10:05', event: 'No trade: IWM breakdown', detail: 'Failed confirmation stack, weak participation.', tone: 'bear' },
+    { t: '10:18', event: 'No trade: BTC impulse', detail: 'Spread + slippage exceeded plan threshold.', tone: 'warn' },
+  ],
+  data: [
+    { t: '09:29', event: 'Data health check', detail: 'All primary feeds green; backup feed synced.' },
+    { t: '10:08', event: 'Quote delay recovered', detail: 'Transient delay resolved in 12 seconds.', tone: 'warn' },
+  ],
+};
 
-function toneColor(tone: string) {
-  if (tone === 'bull') return 'var(--msp-bull)';
-  if (tone === 'bear') return 'var(--msp-bear)';
-  if (tone === 'warn') return 'var(--msp-warn)';
-  return 'var(--msp-neutral)';
+function toneClass(tone?: 'bull' | 'bear' | 'warn') {
+  if (tone === 'bull') return 'text-emerald-300';
+  if (tone === 'bear') return 'text-rose-300';
+  if (tone === 'warn') return 'text-amber-300';
+  return 'text-slate-300';
 }
 
-function Card({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section
-      style={{
-        background: 'var(--msp-card)',
-        border: '1px solid var(--msp-border)',
-        borderRadius: 14,
-        padding: '0.9rem',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem', gap: '0.75rem' }}>
-        <h2 style={{ margin: 0, fontSize: '0.86rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--msp-text-muted)', fontWeight: 800 }}>
-          {title}
-        </h2>
-        {right}
-      </div>
-      {children}
-    </section>
-  );
+function tileToneClass(tone: string) {
+  if (tone === 'bull') return 'text-emerald-300';
+  if (tone === 'bear') return 'text-rose-300';
+  if (tone === 'warn') return 'text-amber-300';
+  return 'text-cyan-300';
 }
 
 export default function MarketsPage() {
   const [regionTab, setRegionTab] = useState<RegionTab>('americas');
+  const [logTab, setLogTab] = useState<LogTab>('alerts');
   const rows = useMemo(() => globalRows[regionTab], [regionTab]);
-  const edgeState: 'BUILDING' | 'ACTIVE' | 'DEFENSIVE' = 'BUILDING';
-  const edgeStateColor = {
-    BUILDING: 'var(--msp-warn)',
-    ACTIVE: 'var(--msp-bull)',
-    DEFENSIVE: 'var(--msp-bear)',
-  }[edgeState];
 
   return (
-    <div style={{ background: 'var(--msp-bg)', minHeight: '100vh', padding: '1rem' }}>
-      <div style={{ maxWidth: 1320, margin: '0 auto', display: 'grid', gap: '0.7rem' }}>
-        <nav
-          style={{
-            background: 'var(--msp-card)',
-            border: '1px solid var(--msp-border)',
-            borderRadius: 12,
-            padding: '0.65rem 0.8rem',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.65rem 0.95rem',
-            alignItems: 'center',
-          }}
-        >
+    <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
+      <div className="mx-auto grid w-full max-w-[1500px] gap-2">
+        <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] px-3 py-2 text-[11px] font-semibold">
           {[
             ['Tools', '/tools'],
             ['Markets', '/tools/markets'],
@@ -115,244 +91,218 @@ export default function MarketsPage() {
             ['Watchlist', '/tools/watchlists'],
             ['Account', '/account'],
           ].map(([label, href]) => (
-            <Link key={label} href={href} style={{ color: label === 'Markets' ? 'var(--msp-accent)' : 'var(--msp-text-muted)', textDecoration: 'none', fontSize: '0.86rem', fontWeight: 700 }}>
+            <Link
+              key={label}
+              href={href}
+              className={label === 'Markets' ? 'text-[var(--msp-accent)]' : 'text-[var(--msp-text-muted)] hover:text-[var(--msp-text)]'}
+            >
               {label}
             </Link>
           ))}
         </nav>
 
-        <div
-          style={{
-            position: 'sticky',
-            top: 10,
-            zIndex: 20,
-            background: 'var(--msp-panel)',
-            border: '1px solid var(--msp-border-strong)',
-            borderRadius: 12,
-            padding: '0.42rem 0.62rem',
-            display: 'flex',
-            gap: '0.42rem',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-          }}
-        >
+        <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1.5">
           {[
-            ['Regime', 'Trend'],
+            ['Regime', 'Neutral Trend'],
             ['Risk', 'Moderate'],
             ['Breadth', '56/44'],
             ['VIX', '13.8'],
             ['10Y', '4.21'],
             ['DXY', '103.2'],
             ['Data', 'Live'],
+            ['Last Refresh', '09:42:11'],
           ].map(([k, v]) => (
-            <div key={k} style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.16rem 0.48rem', color: 'var(--msp-text-muted)', fontSize: '0.72rem' }}>
-              <strong style={{ color: 'var(--msp-text)' }}>{k}</strong> • {v}
+            <div key={k} className="rounded-full border border-[var(--msp-border)] px-2 py-0.5 text-[10px] text-[var(--msp-text-muted)]">
+              <span className="font-semibold text-[var(--msp-text)]">{k}</span> · {v}
             </div>
           ))}
-          <div style={{ marginLeft: 'auto' }}>
+          <div className="ml-auto">
             <MarketStatusBadge compact showGlobal />
-          </div>
-        </div>
-
-        <section
-          style={{
-            background: 'var(--msp-panel)',
-            border: '1px solid var(--msp-border-strong)',
-            borderRadius: 14,
-            padding: '0.72rem',
-            display: 'grid',
-            gap: '0.7rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'grid', gap: '0.06rem' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.09em', fontWeight: 800 }}>Decision Plane</div>
-              <div style={{ fontSize: '0.95rem', color: 'var(--msp-text)', fontWeight: 800 }}>Market Brain</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--msp-accent)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Current Regime: Neutral
-              </div>
-            </div>
-            <div style={{ border: '1px solid var(--msp-border)', borderRadius: 999, padding: '0.2rem 0.6rem', color: edgeStateColor, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Edge State: {edgeState}
-            </div>
-          </div>
-
-          <div className="grid xl:grid-cols-2 gap-3">
-            <Card title="Today In Markets">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {todayTiles.map((tile) => (
-                  <div key={tile.symbol} style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{tile.symbol}</div>
-                      <div style={{ color: toneColor(tile.tone), fontWeight: 800 }}>{tile.value}</div>
-                    </div>
-                    <div style={{ marginTop: '0.25rem', color: toneColor(tile.tone), letterSpacing: '0.08em' }}>{tile.spark}</div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card
-              title="Sector Heatmap"
-              right={<span style={{ fontSize: '0.7rem', color: 'var(--msp-accent)', fontWeight: 700 }}>Risk Regime • Balanced</span>}
-            >
-              <div style={{ minHeight: 336 }}>
-                <SectorHeatmap />
-              </div>
-            </Card>
-          </div>
-
-          <div className="grid xl:grid-cols-2 gap-3">
-            <Card title="Compare To Benchmarks" right={<Link href="/tools/market-movers" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Full</Link>}>
-              <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.65rem' }}>
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
-                  {[
-                    ['SPY', '▃▄▅▆▇', '+0.6%'],
-                    ['QQQ', '▃▄▆▇▇', '+0.8%'],
-                    ['IWM', '▅▄▃▂▁', '-0.2%'],
-                  ].map(([s, spark, chg]) => (
-                    <div key={s} style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', alignItems: 'center', gap: '0.45rem' }}>
-                      <span style={{ color: 'var(--msp-text)', fontWeight: 700 }}>{s}</span>
-                      <span style={{ color: 'var(--msp-accent)', letterSpacing: '0.08em' }}>{spark}</span>
-                      <span style={{ color: (chg as string).startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)', fontWeight: 700 }}>{chg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-
-            <Card title="Global Index Tables">
-              <div style={{ display: 'flex', gap: '0.3rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
-                {(['americas', 'emea', 'apac'] as RegionTab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setRegionTab(tab)}
-                    style={{
-                      borderRadius: 999,
-                      border: `1px solid ${regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
-                      background: regionTab === tab ? 'var(--msp-accent-glow)' : 'var(--msp-panel-2)',
-                      color: regionTab === tab ? 'var(--msp-accent)' : 'var(--msp-text-muted)',
-                      padding: '0.18rem 0.6rem',
-                      fontSize: '0.72rem',
-                      textTransform: 'uppercase',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
-                  <thead>
-                    <tr style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                      {['Name', 'Last', 'Chg', '1D', '1W', '1M', 'Spark'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', padding: '0.34rem 0.25rem', borderBottom: '1px solid var(--msp-border)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.name} style={{ borderBottom: '1px solid var(--msp-divider)' }}>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text)', fontWeight: 700 }}>{row.name}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.last}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: row.chg.startsWith('-') ? 'var(--msp-bear)' : 'var(--msp-bull)' }}>{row.chg}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.d1}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.w1}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-text-muted)' }}>{row.m1}</td>
-                        <td style={{ padding: '0.42rem 0.25rem', color: 'var(--msp-accent)' }}>{row.spark}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
           </div>
         </section>
 
-        <Card title="Flow Intelligence" right={<Link href="/tools/options-confluence" style={{ color: 'var(--msp-accent)', fontSize: '0.74rem', textDecoration: 'none' }}>Open Cockpit</Link>}>
-          <Link
-            href="/tools/options-confluence"
-            style={{
-              textDecoration: 'none',
-              display: 'grid',
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border-strong)',
-              borderRadius: 10,
-              overflow: 'hidden',
-            }}
-          >
-            <div className="grid md:grid-cols-3" style={{ borderBottom: '1px solid var(--msp-border)' }}>
-              {optionsPulse.map((item, index) => (
-                <div
-                  key={item.title}
-                  style={{
-                    padding: '0.7rem 0.75rem',
-                    borderRight: index < optionsPulse.length - 1 ? '1px solid var(--msp-divider)' : 'none',
-                    display: 'grid',
-                    gap: '0.18rem',
-                  }}
-                >
-                  <div style={{ color: 'var(--msp-text)', fontWeight: 800, fontSize: '0.82rem' }}>{item.title}</div>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>{item.subtitle}</div>
+        <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
+          <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Zone 2 • Action</p>
+                <h2 className="text-xs font-bold text-[var(--msp-text)]">Today&apos;s Plays / Watchlist / Scans</h2>
+              </div>
+              <Link href="/tools/scanner" className="text-[11px] font-semibold text-[var(--msp-accent)]">Open Scanner</Link>
+            </div>
+
+            <div className="h-[560px] overflow-y-auto rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+              <div className="grid gap-2">
+                <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2">
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--msp-text-muted)]">Today In Markets</h3>
+                    <span className="text-[10px] text-[var(--msp-text-faint)]">Priority queue</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+                    {todayTiles.map((tile) => (
+                      <div key={tile.symbol} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-[var(--msp-text)]">{tile.symbol}</span>
+                          <span className={`font-bold ${tileToneClass(tile.tone)}`}>{tile.value}</span>
+                        </div>
+                        <div className={`mt-0.5 text-[11px] tracking-[0.12em] ${tileToneClass(tile.tone)}`}>{tile.spark}</div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2">
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--msp-text-muted)]">Watchlist</h3>
+                    <Link href="/tools/watchlists" className="text-[10px] font-semibold text-[var(--msp-accent)]">Manage</Link>
+                  </div>
+                  <WatchlistWidget />
+                </section>
+
+                <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2">
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--msp-text-muted)]">Alerts & Permissions</h3>
+                    <Link href="/tools/alerts" className="text-[10px] font-semibold text-[var(--msp-accent)]">Console</Link>
+                  </div>
+                  <AlertsWidget compact />
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-2">
+            <div className="mb-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Zone 2 • Context</p>
+              <h2 className="text-xs font-bold text-[var(--msp-text)]">Rotation / Heatmap / Flow Snapshot</h2>
+            </div>
+
+            <div className="grid gap-2">
+              <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+                <div className="mb-1 flex items-center justify-between">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--msp-text-muted)]">Sector Rotation</h3>
+                  <span className="text-[10px] text-[var(--msp-accent)]">Balanced risk</span>
                 </div>
-              ))}
-            </div>
-            <div style={{ padding: '0.45rem 0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--msp-text-faint)', fontWeight: 700 }}>Mini Cockpit</span>
-              <span style={{ color: 'var(--msp-bull)', fontSize: '0.74rem', fontWeight: 700 }}>Edge Summary: Flow constructive</span>
-              <span style={{ color: 'var(--msp-warn)', fontSize: '0.74rem', fontWeight: 700 }}>Volatility: Elevated watch</span>
-              <span style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>Skew: Mild defensive put demand</span>
-            </div>
-          </Link>
-        </Card>
+                <div className="min-h-[285px]">
+                  <SectorHeatmap />
+                </div>
+              </section>
 
-        <div className="grid xl:grid-cols-2 gap-4">
-          <Card title="Watchlist" right={<Link href="/tools/watchlists" style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', textDecoration: 'none' }}>Manage</Link>}>
-            <WatchlistWidget />
-          </Card>
+              <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+                <div className="mb-1 flex items-center justify-between">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--msp-text-muted)]">Global Index Context</h3>
+                  <div className="flex gap-1">
+                    {(['americas', 'emea', 'apac'] as RegionTab[]).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setRegionTab(tab)}
+                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase ${
+                          regionTab === tab
+                            ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]'
+                            : 'border-[var(--msp-border)] text-[var(--msp-text-muted)]'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-[620px] w-full border-collapse text-[11px]">
+                    <thead>
+                      <tr className="text-left uppercase tracking-wide text-[10px] text-[var(--msp-text-faint)]">
+                        {['Name', 'Last', 'Chg', '1D', '1W', '1M', 'Spark'].map((h) => (
+                          <th key={h} className="border-b border-[var(--msp-border)] px-1 py-1">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.name} className="border-b border-[var(--msp-divider)]">
+                          <td className="px-1 py-1.5 font-semibold text-[var(--msp-text)]">{row.name}</td>
+                          <td className="px-1 py-1.5 text-[var(--msp-text-muted)]">{row.last}</td>
+                          <td className={`px-1 py-1.5 ${row.chg.startsWith('-') ? 'text-rose-300' : 'text-emerald-300'}`}>{row.chg}</td>
+                          <td className="px-1 py-1.5 text-[var(--msp-text-muted)]">{row.d1}</td>
+                          <td className="px-1 py-1.5 text-[var(--msp-text-muted)]">{row.w1}</td>
+                          <td className="px-1 py-1.5 text-[var(--msp-text-muted)]">{row.m1}</td>
+                          <td className="px-1 py-1.5 text-[var(--msp-accent)]">{row.spark}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
 
-          <Card title="News">
-            <div className="grid gap-2.5">
-              {[
-                ['Earnings', 'Earnings calendar and company-specific events', '/tools/earnings'],
-                ['Macro', 'Market-moving macro headlines and context', '/tools/macro'],
-                ['Sentiment', 'Headline and sentiment scanner', '/tools/news'],
-              ].map(([tag, desc, href]) => (
-                <Link
-                  key={tag}
-                  href={href}
-                  style={{
-                    textDecoration: 'none',
-                    background: 'var(--msp-panel)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: 10,
-                    padding: '0.7rem 0.75rem',
-                    display: 'grid',
-                    gap: '0.2rem',
-                  }}
+        <details className="group rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-2" open>
+          <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-[var(--msp-text)]">
+            <span>Zone 3 • Audit / Log</span>
+            <span className="text-[10px] text-[var(--msp-text-faint)] group-open:hidden">Expand</span>
+            <span className="hidden text-[10px] text-[var(--msp-text-faint)] group-open:inline">Collapse</span>
+          </summary>
+
+          <div className="mt-2 grid gap-2">
+            <div className="flex flex-wrap gap-1">
+              {([
+                ['alerts', 'Triggered Alerts'],
+                ['regime', 'Regime Flips'],
+                ['scanner', 'Scanner Hits'],
+                ['notrade', 'No-Trade Reasons'],
+                ['data', 'Data Gaps'],
+              ] as Array<[LogTab, string]>).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setLogTab(key)}
+                  className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                    logTab === key
+                      ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]'
+                      : 'border-[var(--msp-border)] text-[var(--msp-text-muted)]'
+                  }`}
                 >
-                  <div style={{ color: 'var(--msp-accent)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase' }}>{tag}</div>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.84rem' }}>{desc}</div>
-                </Link>
+                  {label}
+                </button>
               ))}
             </div>
-          </Card>
-        </div>
 
-        <div className="grid xl:grid-cols-2 gap-4">
-          <Card title="Calendar" right={<Link href="/tools/economic-calendar" style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', textDecoration: 'none' }}>Open</Link>}>
-            <div style={{ background: 'var(--msp-panel)', border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.75rem', color: 'var(--msp-text-muted)', fontSize: '0.86rem' }}>
-              <div style={{ marginBottom: '0.35rem' }}><strong style={{ color: 'var(--msp-text)' }}>Earnings + Macro</strong> unified timing view for execution windows.</div>
-              <div>Use calendar events to align scanner triggers and avoid low-quality entries around major releases.</div>
+            <div className="max-h-[220px] overflow-y-auto rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1.5">
+              <div className="grid gap-1.5">
+                {logs[logTab].map((log, idx) => (
+                  <div key={`${log.t}-${idx}`} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+                    <div className="flex items-center justify-between text-[10px] text-[var(--msp-text-faint)]">
+                      <span>{log.t}</span>
+                      <span className={toneClass(log.tone)}>{log.event}</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-[var(--msp-text-muted)]">{log.detail}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </Card>
+          </div>
+        </details>
 
-          <Card title="Alerts & Plays" right={<Link href="/tools/scanner" style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', textDecoration: 'none' }}>Scanner</Link>}>
-            <AlertsWidget compact />
-          </Card>
-        </div>
+        <details className="group rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-2">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-[var(--msp-text)]">
+            <span>Zone 4 • Capabilities / Plan / Help</span>
+            <span className="text-[10px] text-[var(--msp-text-faint)] group-open:hidden">Expand</span>
+            <span className="hidden text-[10px] text-[var(--msp-text-faint)] group-open:inline">Collapse</span>
+          </summary>
+
+          <div className="mt-2 grid gap-2 md:grid-cols-3">
+            <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2 text-[11px] text-[var(--msp-text-muted)]">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--msp-text-faint)]">Capabilities</p>
+              Regime map, breadth/risk strip, rotation context, watchlist sync, and alert routing are active.
+            </div>
+            <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2 text-[11px] text-[var(--msp-text-muted)]">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--msp-text-faint)]">Plan Limits</p>
+              Higher-frequency refresh and expanded market breadth sets are tier-gated by your active plan.
+            </div>
+            <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2 text-[11px] text-[var(--msp-text-muted)]">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--msp-text-faint)]">Help</p>
+              Breadth = advancing vs declining participation. VIX = implied volatility. DXY = USD strength backdrop.
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
