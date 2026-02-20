@@ -166,6 +166,20 @@ type AvailableDateRange = {
   endDate: string;
 };
 
+const TOP_MARKET_CAP_STOCKS_AND_CRYPTO = [
+  'AAPL',
+  'MSFT',
+  'NVDA',
+  'AMZN',
+  'GOOGL',
+  'META',
+  'TSLA',
+  'AVGO',
+  'LLY',
+  'JPM',
+  'BTCUSD',
+].join(', ');
+
 function BacktestContent() {
   const lastPlanEventKeyRef = useRef('');
   const previousEdgeGroupRef = useRef<EdgeGroupId | null>(null);
@@ -913,7 +927,7 @@ function BacktestContent() {
       'daily',
     ]));
 
-    const maxCombos = 60;
+    const maxCombos = Math.min(140, Math.max(60, symbols.length * candidateTimeframes.length));
     const concurrency = 6;
     const minimumTradesForLeaderboard = resolveMinimumScanTrades();
 
@@ -988,6 +1002,11 @@ function BacktestContent() {
     setSymbol(best.symbol);
     setTimeframe(best.timeframe);
     await runBacktest({ symbol: best.symbol, timeframe: best.timeframe });
+  };
+
+  const scanTopMarketCapUniverse = async () => {
+    setUniverseSymbolsInput(TOP_MARKET_CAP_STOCKS_AND_CRYPTO);
+    await scanBestUniversePair();
   };
 
   const runBacktest = async (overrides?: {
@@ -1743,6 +1762,26 @@ function BacktestContent() {
               }}
             >
               {isScanningUniverse ? 'Scanning universe…' : '🌐 Scan Universe'}
+            </button>
+
+            <button
+              type="button"
+              onClick={scanTopMarketCapUniverse}
+              disabled={isLoading || isScanningTimeframes || isScanningUniverse}
+              style={{
+                flex: '1 1 260px',
+                padding: '10px 12px',
+                background: 'rgba(234,179,8,0.15)',
+                border: '1px solid rgba(234,179,8,0.35)',
+                borderRadius: '8px',
+                color: '#fde68a',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: isLoading || isScanningTimeframes || isScanningUniverse ? 'not-allowed' : 'pointer',
+                opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
+              }}
+            >
+              🌍 Scan Top 10 Stocks + BTC
             </button>
 
             <button
