@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import Link from 'next/link';
+import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -32,8 +33,6 @@ interface CoinData {
   market: {
     rank?: number;
     price_usd?: number;
-    price_btc?: number;
-    price_eth?: number;
     market_cap?: number;
     fully_diluted_valuation?: number;
     total_volume_24h?: number;
@@ -57,14 +56,8 @@ interface CoinData {
   developer?: {
     github_stars?: number;
     github_forks?: number;
-    subscribers?: number;
-    total_issues?: number;
-    closed_issues?: number;
-    pull_requests_merged?: number;
     contributors?: number;
     commits_4_weeks?: number;
-    additions_4_weeks?: number;
-    deletions_4_weeks?: number;
   };
   tickers: Array<{
     exchange: string;
@@ -76,10 +69,6 @@ interface CoinData {
     is_stale: boolean;
   }>;
   ohlc: [number, number, number, number, number][];
-  chart?: {
-    prices: [number, number][];
-    volumes: [number, number][];
-  };
   sparkline?: number[];
   derivatives?: {
     funding_rate?: number;
@@ -97,7 +86,6 @@ interface SearchResult {
   thumb: string;
 }
 
-// Popular coins for quick selection
 const POPULAR_COINS = [
   { symbol: 'BTC', name: 'Bitcoin' },
   { symbol: 'ETH', name: 'Ethereum' },
@@ -109,7 +97,7 @@ const POPULAR_COINS = [
   { symbol: 'LINK', name: 'Chainlink' },
 ];
 
-function formatNumber(num: number | undefined, decimals: number = 2): string {
+function formatNumber(num: number | undefined, decimals = 2): string {
   if (num === undefined || num === null) return 'N/A';
   if (num >= 1e12) return `$${(num / 1e12).toFixed(decimals)}T`;
   if (num >= 1e9) return `$${(num / 1e9).toFixed(decimals)}B`;
@@ -127,126 +115,83 @@ function formatPrice(price: number | undefined): string {
   return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function formatPercent(pct: number | undefined): string {
-  if (pct === undefined || pct === null) return 'N/A';
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(2)}%`;
-}
-
 function PercentBadge({ value }: { value: number | undefined }) {
-  if (value === undefined || value === null) return <span className="text-gray-500">N/A</span>;
+  if (value === undefined || value === null) return <span className="text-slate-500">N/A</span>;
   const isPositive = value >= 0;
   return (
-    <span className={`px-2 py-0.5 rounded text-sm font-medium ${isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-      {isPositive ? '▲' : '▼'} {Math.abs(value).toFixed(2)}%
+    <span className={`rounded px-2 py-0.5 text-xs font-semibold ${isPositive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+      {isPositive ? '+' : ''}{value.toFixed(2)}%
     </span>
   );
 }
 
 function MiniSparkline({ data, color = '#10B981' }: { data: number[]; color?: string }) {
   if (!data || data.length < 2) return null;
-  
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  
-  const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * 100;
-    const y = 100 - ((val - min) / range) * 100;
-    return `${x},${y}`;
-  }).join(' ');
-  
+
+  const points = data
+    .map((val, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 100 - ((val - min) / range) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
   return (
-    <svg viewBox="0 0 100 100" className="w-full h-16" preserveAspectRatio="none">
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        points={points}
-      />
+    <svg viewBox="0 0 100 100" className="h-16 w-full" preserveAspectRatio="none">
+      <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
     </svg>
   );
 }
 
-// OHLC Candlestick Chart Component
-function OHLCChart({ data, height = 200 }: { data: [number, number, number, number, number][]; height?: number }) {
+function OHLCChart({ data, height = 220 }: { data: [number, number, number, number, number][]; height?: number }) {
   if (!data || data.length < 2) {
-    return (
-      <div className="flex items-center justify-center h-48 text-gray-500">
-        No OHLC data available
-      </div>
-    );
+    return <div className="flex h-48 items-center justify-center text-slate-500">No OHLC data available</div>;
   }
-  
-  // Data format: [timestamp, open, high, low, close]
-  const prices = data.map(d => [d[2], d[3]]).flat(); // All highs and lows
+
+  const prices = data.map((d) => [d[2], d[3]]).flat();
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = maxPrice - minPrice || 1;
-  
   const chartWidth = 800;
   const candleWidth = Math.max(2, Math.floor((chartWidth - 40) / data.length) - 2);
   const spacing = candleWidth + 2;
-  
-  const getY = (price: number) => {
-    return height - 20 - ((price - minPrice) / priceRange) * (height - 40);
-  };
-  
+
+  const getY = (price: number) => height - 20 - ((price - minPrice) / priceRange) * (height - 40);
+
   return (
-    <div className="relative overflow-x-auto">
-      <svg 
-        viewBox={`0 0 ${Math.max(chartWidth, data.length * spacing + 40)} ${height}`} 
-        className="w-full" 
-        style={{ minWidth: '400px', maxHeight: `${height}px` }}
-        preserveAspectRatio="xMidYMid meet"
+    <div className="overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${Math.max(chartWidth, data.length * spacing + 40)} ${height}`}
+        className="w-full"
+        style={{ minWidth: '420px', maxHeight: `${height}px` }}
       >
-        {/* Grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
           const y = 20 + pct * (height - 40);
           const price = maxPrice - pct * priceRange;
           return (
             <g key={i}>
               <line x1="40" y1={y} x2={data.length * spacing + 40} y2={y} stroke="#334155" strokeWidth="1" strokeDasharray="4,4" />
-              <text x="5" y={y + 4} fill="#64748b" fontSize="10">
-                ${price >= 1 ? price.toFixed(0) : price.toFixed(4)}
-              </text>
+              <text x="5" y={y + 4} fill="#64748b" fontSize="10">${price >= 1 ? price.toFixed(0) : price.toFixed(4)}</text>
             </g>
           );
         })}
-        
-        {/* Candles */}
+
         {data.map((candle, i) => {
           const [, open, high, low, close] = candle;
           const x = 45 + i * spacing;
           const isGreen = close >= open;
           const color = isGreen ? '#10B981' : '#EF4444';
-          
           const bodyTop = getY(Math.max(open, close));
           const bodyBottom = getY(Math.min(open, close));
           const bodyHeight = Math.max(1, bodyBottom - bodyTop);
-          
+
           return (
             <g key={i}>
-              {/* Wick */}
-              <line
-                x1={x + candleWidth / 2}
-                y1={getY(high)}
-                x2={x + candleWidth / 2}
-                y2={getY(low)}
-                stroke={color}
-                strokeWidth="1"
-              />
-              {/* Body */}
-              <rect
-                x={x}
-                y={bodyTop}
-                width={candleWidth}
-                height={bodyHeight}
-                fill={isGreen ? color : color}
-                stroke={color}
-                strokeWidth="1"
-                rx="1"
-              />
+              <line x1={x + candleWidth / 2} y1={getY(high)} x2={x + candleWidth / 2} y2={getY(low)} stroke={color} strokeWidth="1" />
+              <rect x={x} y={bodyTop} width={candleWidth} height={bodyHeight} fill={color} stroke={color} strokeWidth="1" rx="1" />
             </g>
           );
         })}
@@ -255,99 +200,68 @@ function OHLCChart({ data, height = 200 }: { data: [number, number, number, numb
   );
 }
 
-// Directional intelligence helpers
-function getFundingInsight(fundingRate: number | undefined): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
-  if (fundingRate === undefined) return null;
-  const rate = fundingRate * 100; // Convert to percentage
-  
-  if (rate > 0.1) return { text: 'Crowded longs — squeeze risk rising', type: 'warning' };
-  if (rate > 0.05) return { text: 'Longs paying premium — bullish bias', type: 'bullish' };
-  if (rate < -0.1) return { text: 'Crowded shorts — potential short squeeze', type: 'warning' };
-  if (rate < -0.05) return { text: 'Shorts paying premium — bearish bias', type: 'bearish' };
-  return { text: 'Neutral positioning', type: 'neutral' };
-}
-
-function getOIPriceInsight(
-  priceChange24h: number | undefined, 
-  priceChange7d: number | undefined
-): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
-  if (priceChange24h === undefined || priceChange7d === undefined) return null;
-  
-  // Bearish absorption: OI rising + price falling
-  if (priceChange24h < -2 && priceChange7d < 0) {
-    return { text: 'Price weakness — potential distribution', type: 'bearish' };
+function computeDecisionState(coinData: CoinData | null, btc7d: number | null) {
+  if (!coinData) {
+    return {
+      structureBias: 'Neutral',
+      alignmentScore: 50,
+      volatilityState: 'Unknown',
+      liquidityState: 'Unknown',
+      relativeStrengthVsBtc: null as number | null,
+      tradePermission: 'Conditional',
+      regimeTag: 'Observe',
+      riskTag: 'Moderate',
+    };
   }
-  // Bullish accumulation: OI rising + price rising  
-  if (priceChange24h > 2 && priceChange7d > 0) {
-    return { text: 'Price strength — potential accumulation', type: 'bullish' };
-  }
-  return null;
-}
 
-function getSentimentPriceInsight(
-  sentiment: string | undefined,
-  priceChange7d: number | undefined
-): { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } | null {
-  if (!sentiment || priceChange7d === undefined) return null;
-  
-  // Divergence warnings
-  if (sentiment === 'bullish' && priceChange7d < -5) {
-    return { text: 'Euphoria while price weak — distribution risk', type: 'warning' };
-  }
-  if (sentiment === 'bearish' && priceChange7d > 5) {
-    return { text: 'Fear while price strong — accumulation signal', type: 'bullish' };
-  }
-  return null;
-}
+  const p24 = coinData.price_changes['24h'] ?? 0;
+  const p7 = coinData.price_changes['7d'] ?? 0;
+  const p30 = coinData.price_changes['30d'] ?? 0;
+  const p200 = coinData.price_changes['200d'] ?? 0;
 
-// Trend context helpers
-function getTrendContext(priceChanges: CoinData['price_changes']): {
-  weeklyTrend: 'Bullish' | 'Bearish' | 'Neutral';
-  monthlyTrend: 'Bullish' | 'Bearish' | 'Neutral';
-  momentum: 'Rising' | 'Falling' | 'Flat';
-  above200d: boolean | null;
-} {
-  const p7d = priceChanges['7d'] ?? 0;
-  const p30d = priceChanges['30d'] ?? 0;
-  const p200d = priceChanges['200d'];
-  
-  // Weekly trend
-  const weeklyTrend = p7d > 3 ? 'Bullish' : p7d < -3 ? 'Bearish' : 'Neutral';
-  
-  // Monthly trend
-  const monthlyTrend = p30d > 10 ? 'Bullish' : p30d < -10 ? 'Bearish' : 'Neutral';
-  
-  // Momentum: Compare short-term to mid-term
-  const momentum = p7d > p30d / 4 + 2 ? 'Rising' : p7d < p30d / 4 - 2 ? 'Falling' : 'Flat';
-  
-  // Above 200d (if price is positive vs 200d ago, we're above the rough "200d MA" equivalent)
-  const above200d = p200d !== undefined ? p200d > 0 : null;
-  
-  return { weeklyTrend, monthlyTrend, momentum, above200d };
-}
+  const bullishVotes = [p24 > 0, p7 > 0, p30 > 0, p200 > 0].filter(Boolean).length;
+  const bearishVotes = [p24 < 0, p7 < 0, p30 < 0, p200 < 0].filter(Boolean).length;
 
-function InsightBadge({ insight }: { insight: { text: string; type: 'warning' | 'bullish' | 'bearish' | 'neutral' } }) {
-  const colors = {
-    warning: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-    bullish: 'bg-green-500/20 text-green-400 border-green-500/40',
-    bearish: 'bg-red-500/20 text-red-400 border-red-500/40',
-    neutral: 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+  const structureBias = bullishVotes >= 3 ? 'Bullish' : bearishVotes >= 3 ? 'Bearish' : 'Neutral';
+  const alignmentScore = Math.round((Math.max(bullishVotes, bearishVotes) / 4) * 100);
+
+  const high = coinData.market.high_24h;
+  const low = coinData.market.low_24h;
+  const price = coinData.market.price_usd;
+  const volRangePct = high && low && price ? ((high - low) / price) * 100 : null;
+  const volatilityState = volRangePct === null ? 'Unknown' : volRangePct > 8 ? 'Expansion' : volRangePct < 3 ? 'Compression' : 'Normal';
+
+  const marketCap = coinData.market.market_cap;
+  const vol24 = coinData.market.total_volume_24h;
+  const volRatio = marketCap && vol24 ? vol24 / marketCap : null;
+  const liquidityState = volRatio === null ? 'Unknown' : volRatio > 0.12 ? 'High' : volRatio < 0.03 ? 'Thin' : 'Moderate';
+
+  const relativeStrengthVsBtc = btc7d === null ? null : p7 - btc7d;
+
+  let tradePermission: 'Yes' | 'Conditional' | 'No' = 'Conditional';
+  if (alignmentScore >= 70 && liquidityState !== 'Thin' && volatilityState !== 'Expansion') tradePermission = 'Yes';
+  if (alignmentScore <= 35 || liquidityState === 'Thin') tradePermission = 'No';
+
+  const regimeTag = structureBias === 'Bullish' ? 'Risk-On' : structureBias === 'Bearish' ? 'Risk-Off' : 'Mixed';
+  const riskTag = volatilityState === 'Expansion' || liquidityState === 'Thin' ? 'Elevated' : 'Normal';
+
+  return {
+    structureBias,
+    alignmentScore,
+    volatilityState,
+    liquidityState,
+    relativeStrengthVsBtc,
+    tradePermission,
+    regimeTag,
+    riskTag,
   };
-  const icons = { warning: '⚠️', bullish: '📈', bearish: '📉', neutral: '➖' };
-  
-  return (
-    <div className={`text-xs px-3 py-1.5 rounded-lg border ${colors[insight.type]} flex items-center gap-1.5`}>
-      <span>{icons[insight.type]}</span>
-      <span>{insight.text}</span>
-    </div>
-  );
 }
 
 function CryptoDetailPageContent() {
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
   const initialCoinId = searchParams.get('coin');
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -357,10 +271,10 @@ function CryptoDetailPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [chartView, setChartView] = useState<'sparkline' | 'ohlc'>('ohlc');
+  const [btc7dChange, setBtc7dChange] = useState<number | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const hasLoadedInitial = useRef(false);
-  
-  // Close dropdown when clicking outside
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -370,14 +284,13 @@ function CryptoDetailPageContent() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
-  // Search for coins
+
   const searchCoins = useCallback(async (query: string) => {
     if (!query || query.length < 2) {
       setSearchResults([]);
       return;
     }
-    
+
     setIsSearching(true);
     try {
       const res = await fetch(`/api/crypto/detail?action=search&q=${encodeURIComponent(query)}`);
@@ -390,726 +303,381 @@ function CryptoDetailPageContent() {
       setIsSearching(false);
     }
   }, []);
-  
-  // Debounced search
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery) searchCoins(searchQuery);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, searchCoins]);
-  
-  // Load coin details by symbol (for quick buttons)
-  const loadCoinDetails = useCallback(async (symbol: string) => {
+
+  const loadCoinBySymbolOrId = useCallback(async (symbolOrId: string) => {
     setLoading(true);
     setError(null);
-    setSelectedCoin(symbol);
+    setSelectedCoin(symbolOrId);
     setShowDropdown(false);
     setSearchQuery('');
-    
+
     try {
-      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbol)}`, {
-        cache: 'no-store'
-      });
+      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(symbolOrId)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch coin data');
       const data = await res.json();
       setCoinData(data);
+
+      if (data?.coin?.symbol?.toUpperCase() === 'BTC') {
+        setBtc7dChange(data.price_changes?.['7d'] ?? null);
+      } else {
+        try {
+          const btcRes = await fetch('/api/crypto/detail?action=detail&symbol=BTC', { cache: 'no-store' });
+          if (btcRes.ok) {
+            const btcData = await btcRes.json();
+            setBtc7dChange(btcData?.price_changes?.['7d'] ?? null);
+          }
+        } catch {
+          setBtc7dChange(null);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setCoinData(null);
+      setBtc7dChange(null);
     } finally {
       setLoading(false);
     }
   }, []);
-  
-  // Load coin details by CoinGecko ID (for URL params and search results)
-  const loadCoinById = useCallback(async (coinId: string) => {
-    setLoading(true);
-    setError(null);
-    setSelectedCoin(coinId);
-    setShowDropdown(false);
-    setSearchQuery('');
-    
-    try {
-      // Use ID directly - the API will handle it
-      const res = await fetch(`/api/crypto/detail?action=detail&symbol=${encodeURIComponent(coinId)}`, {
-        cache: 'no-store'
-      });
-      if (!res.ok) throw new Error('Failed to fetch coin data');
-      const data = await res.json();
-      setCoinData(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setCoinData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Auto-load coin from URL parameter
+
   useEffect(() => {
     if (initialCoinId && !hasLoadedInitial.current && tier && tier !== 'free') {
       hasLoadedInitial.current = true;
-      loadCoinById(initialCoinId);
+      loadCoinBySymbolOrId(initialCoinId);
     }
-  }, [initialCoinId, loadCoinById, tier]);
-  
-  // Gate check
+  }, [initialCoinId, loadCoinBySymbolOrId, tier]);
+
   if (!tier || tier === 'free') {
     return (
       <div className="min-h-screen bg-[#0F172A]">
         <div className="container mx-auto px-4 py-16">
-          <UpgradeGate 
-            requiredTier="pro" 
-            feature="Crypto Asset Explorer" 
-          />
+          <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" />
         </div>
       </div>
     );
   }
-  
+
+  const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-teal-300">
-            🔍 Crypto Asset Explorer
-          </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Find complete crypto context fast with market data, on-chain metrics, exchange tickers, and derivatives signals.
-          </p>
-        </div>
-        
-        {/* Search Section */}
-        <div className="max-w-2xl mx-auto mb-8" ref={searchRef}>
+      <div className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+          <h1 className="text-lg font-bold text-teal-300">🔍 Crypto Asset Explorer</h1>
+          <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
+        </header>
+
+        <section className="rounded-lg border border-slate-700 bg-slate-900 p-2" ref={searchRef}>
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
-              placeholder="Search for any cryptocurrency (e.g., Bitcoin, ETH, Solana)..."
-              className="w-full px-6 py-4 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-lg"
+              placeholder="Search any coin (e.g., XRP, Bitcoin, SOL)..."
+              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none"
             />
             {isSearching && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
               </div>
             )}
-            
-            {/* Search Dropdown */}
+
             {showDropdown && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-md border border-slate-700 bg-slate-900">
                 {searchResults.map((coin) => (
                   <button
                     key={coin.id}
-                    onClick={() => loadCoinDetails(coin.id)}
-                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-700 transition-colors text-left"
+                    onClick={() => loadCoinBySymbolOrId(coin.id)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-800"
                   >
-                    <img src={coin.thumb} alt={coin.name} className="w-8 h-8 rounded-full" />
-                    <div>
-                      <span className="font-medium">{coin.name}</span>
-                      <span className="text-gray-400 ml-2 text-sm">{coin.symbol.toUpperCase()}</span>
-                    </div>
+                    <img src={coin.thumb} alt={coin.name} className="h-6 w-6 rounded-full" />
+                    <span className="text-sm font-medium text-white">{coin.name}</span>
+                    <span className="text-xs text-slate-400">{coin.symbol.toUpperCase()}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-        </div>
-        
-        {/* Quick Select Popular Coins */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {POPULAR_COINS.map((coin) => (
-            <button
-              key={coin.symbol}
-              onClick={() => loadCoinDetails(coin.symbol)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedCoin === coin.symbol 
-                  ? 'bg-emerald-500 text-white' 
-                  : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
-              }`}
-            >
-              {coin.symbol}
-            </button>
-          ))}
-        </div>
-        
-        {/* Loading State */}
+
+          <div className="mt-2 flex flex-wrap gap-1">
+            {POPULAR_COINS.map((coin) => (
+              <button
+                key={coin.symbol}
+                onClick={() => loadCoinBySymbolOrId(coin.symbol)}
+                className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                  selectedCoin === coin.symbol ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 text-slate-300'
+                }`}
+              >
+                {coin.symbol}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {loading && (
-          <div className="flex flex-col justify-center items-center py-20 gap-4">
-            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-400">Finding crypto setup data...</p>
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 py-16">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <p className="text-sm text-slate-400">Loading decision context...</p>
           </div>
         )}
-        
-        {/* Error State */}
+
         {error && (
-          <div className="text-center py-12">
-            <div className="text-red-400 text-lg">❌ {error}</div>
-            <button 
-              onClick={() => selectedCoin && loadCoinDetails(selectedCoin)}
-              className="mt-4 px-6 py-2 bg-emerald-500 rounded-lg hover:bg-emerald-600 transition-colors"
+          <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-4 text-center">
+            <p className="text-sm text-rose-300">❌ {error}</p>
+            <button
+              onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}
+              className="mt-2 rounded bg-emerald-500 px-3 py-1 text-xs font-semibold text-white"
             >
-              Try Again
+              Retry
             </button>
           </div>
         )}
-        
-        {/* Coin Data Display */}
+
         {coinData && !loading && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Header Card */}
-            <div className="bg-slate-800/50 border border-slate-600/50 rounded-2xl p-6">
-              <div className="flex flex-wrap items-start gap-6">
-                {/* Coin Image & Basic Info */}
-                <div className="flex items-center gap-4">
-                  {coinData.coin.image && (
-                    <img 
-                      src={coinData.coin.image} 
-                      alt={coinData.coin.name} 
-                      className="w-16 h-16 rounded-full"
-                    />
-                  )}
+          <>
+            <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
+              {[
+                ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
+                ['Price', formatPrice(coinData.market.price_usd)],
+                ['24h', `${coinData.price_changes['24h'] !== undefined ? `${coinData.price_changes['24h'] >= 0 ? '+' : ''}${coinData.price_changes['24h']?.toFixed(2)}%` : 'N/A'}`],
+                ['Bias', decision.structureBias],
+                ['Align', `${decision.alignmentScore}%`],
+                ['Vol', decision.volatilityState],
+                ['Liquidity', decision.liquidityState],
+                ['Regime', decision.regimeTag],
+                ['Risk', decision.riskTag],
+                ['Permission', decision.tradePermission],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+                  <span className="font-semibold text-slate-100">{k}</span> · {v}
+                </div>
+              ))}
+            </section>
+
+            <section className="grid gap-2 xl:grid-cols-[1.2fr_1fr]">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <div className="mb-1 flex items-center justify-between">
                   <div>
-                    <h2 className="text-3xl font-bold flex items-center gap-3">
-                      {coinData.coin.name}
-                      <span className="text-lg font-normal text-gray-400">{coinData.coin.symbol}</span>
-                      {coinData.market.rank && (
-                        <span className="text-sm bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded">
-                          Rank #{coinData.market.rank}
-                        </span>
-                      )}
-                    </h2>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {coinData.coin.categories.slice(0, 3).map((cat, i) => (
-                        <span key={i} className="text-xs bg-slate-700 text-gray-300 px-2 py-1 rounded">
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
-                </div>
-                
-                {/* Price Section */}
-                <div className="ml-auto text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <div className="text-4xl font-bold">{formatPrice(coinData.market.price_usd)}</div>
-                    <button
-                      onClick={() => selectedCoin && loadCoinDetails(selectedCoin)}
-                      disabled={loading}
-                      className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50"
-                      title="Refresh data"
-                    >
-                      <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-end gap-4 mt-2">
-                    <PercentBadge value={coinData.price_changes['24h']} />
-                    <span className="text-gray-400 text-sm">24h</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Price Chart with Toggle */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm text-gray-400">Price Chart</div>
-                  <div className="flex gap-1 bg-slate-700/50 rounded-lg p-1">
-                    <button
-                      onClick={() => setChartView('sparkline')}
-                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
-                        chartView === 'sparkline'
-                          ? 'bg-emerald-500 text-white'
-                          : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      📈 Line
-                    </button>
-                    <button
-                      onClick={() => setChartView('ohlc')}
-                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
-                        chartView === 'ohlc'
-                          ? 'bg-emerald-500 text-white'
-                          : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      🕯️ Candles
-                    </button>
-                  </div>
-                </div>
-                
-                {chartView === 'sparkline' && coinData.sparkline && coinData.sparkline.length > 0 && (
-                  <div className="bg-slate-900/50 rounded-lg p-4">
-                    <MiniSparkline 
-                      data={coinData.sparkline} 
-                      color={coinData.price_changes['7d'] && coinData.price_changes['7d'] >= 0 ? '#10B981' : '#EF4444'} 
-                    />
-                    <div className="text-center text-xs text-gray-500 mt-2">7-Day Price Movement</div>
-                  </div>
-                )}
-                
-                {chartView === 'ohlc' && coinData.ohlc && coinData.ohlc.length > 0 && (
-                  <div className="bg-slate-900/50 rounded-lg p-4">
-                    <OHLCChart data={coinData.ohlc} height={220} />
-                    <div className="text-center text-xs text-gray-500 mt-2">30-Day OHLC Candlestick Chart</div>
-                  </div>
-                )}
-                
-                {chartView === 'ohlc' && (!coinData.ohlc || coinData.ohlc.length === 0) && (
-                  <div className="bg-slate-900/50 rounded-lg p-8 text-center text-gray-500">
-                    No OHLC data available for this coin
-                  </div>
-                )}
-                
-                {chartView === 'sparkline' && (!coinData.sparkline || coinData.sparkline.length === 0) && (
-                  <div className="bg-slate-900/50 rounded-lg p-8 text-center text-gray-500">
-                    No price history data available
-                  </div>
-                )}
-              </div>
-              
-              {/* Links */}
-              <div className="flex flex-wrap gap-3 mt-6">
-                {coinData.coin.links.homepage && (
-                  <a href={coinData.coin.links.homepage} target="_blank" rel="noopener noreferrer" 
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-                    🌐 Website
-                  </a>
-                )}
-                {coinData.coin.links.whitepaper && (
-                  <a href={coinData.coin.links.whitepaper} target="_blank" rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-                    📄 Whitepaper
-                  </a>
-                )}
-                {coinData.coin.links.twitter && (
-                  <a href={coinData.coin.links.twitter} target="_blank" rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-                    🐦 Twitter
-                  </a>
-                )}
-                {coinData.coin.links.github && (
-                  <a href={coinData.coin.links.github} target="_blank" rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-                    💻 GitHub
-                  </a>
-                )}
-                {coinData.coin.links.blockchain && (
-                  <a href={coinData.coin.links.blockchain} target="_blank" rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-                    🔗 Explorer
-                  </a>
-                )}
-              </div>
-            </div>
-            
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Market Cap</div>
-                <div className="text-xl font-bold mt-1">{formatNumber(coinData.market.market_cap)}</div>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">24h Volume</div>
-                <div className="text-xl font-bold mt-1">{formatNumber(coinData.market.total_volume_24h)}</div>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">FDV</div>
-                <div className="text-xl font-bold mt-1">{formatNumber(coinData.market.fully_diluted_valuation)}</div>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4">
-                <div className="text-gray-400 text-sm">Circulating Supply</div>
-                <div className="text-xl font-bold mt-1">
-                  {coinData.market.circulating_supply 
-                    ? `${(coinData.market.circulating_supply / 1e6).toFixed(2)}M` 
-                    : 'N/A'}
-                </div>
-              </div>
-            </div>
-            
-            {/* Trend Context - Mini trend intelligence */}
-            {(() => {
-              const trend = getTrendContext(coinData.price_changes);
-              return (
-                <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold mb-4">🧭 Trend Context</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-gray-400 text-xs uppercase mb-1">Weekly Trend</div>
-                      <div className={`text-lg font-bold ${
-                        trend.weeklyTrend === 'Bullish' ? 'text-green-400' : 
-                        trend.weeklyTrend === 'Bearish' ? 'text-red-400' : 'text-yellow-400'
-                      }`}>
-                        {trend.weeklyTrend === 'Bullish' ? '📈' : trend.weeklyTrend === 'Bearish' ? '📉' : '➖'} {trend.weeklyTrend}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-gray-400 text-xs uppercase mb-1">Monthly Trend</div>
-                      <div className={`text-lg font-bold ${
-                        trend.monthlyTrend === 'Bullish' ? 'text-green-400' : 
-                        trend.monthlyTrend === 'Bearish' ? 'text-red-400' : 'text-yellow-400'
-                      }`}>
-                        {trend.monthlyTrend === 'Bullish' ? '📈' : trend.monthlyTrend === 'Bearish' ? '📉' : '➖'} {trend.monthlyTrend}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-gray-400 text-xs uppercase mb-1">Momentum</div>
-                      <div className={`text-lg font-bold ${
-                        trend.momentum === 'Rising' ? 'text-green-400' : 
-                        trend.momentum === 'Falling' ? 'text-red-400' : 'text-slate-400'
-                      }`}>
-                        {trend.momentum === 'Rising' ? '🔥' : trend.momentum === 'Falling' ? '❄️' : '⚖️'} {trend.momentum}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-gray-400 text-xs uppercase mb-1">vs 200-Day</div>
-                      <div className={`text-lg font-bold ${
-                        trend.above200d === true ? 'text-green-400' : 
-                        trend.above200d === false ? 'text-red-400' : 'text-slate-400'
-                      }`}>
-                        {trend.above200d === true ? '✅ Above' : trend.above200d === false ? '⚠️ Below' : '—'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Quick interpretation */}
-                  <div className="mt-4 pt-4 border-t border-slate-700/70">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-teal-300">💡</span>
-                      <span className="text-slate-300">
-                        {trend.weeklyTrend === 'Bullish' && trend.monthlyTrend === 'Bullish' && 'Strong uptrend — momentum aligned across timeframes'}
-                        {trend.weeklyTrend === 'Bearish' && trend.monthlyTrend === 'Bearish' && 'Strong downtrend — caution advised'}
-                        {trend.weeklyTrend === 'Bullish' && trend.monthlyTrend === 'Bearish' && 'Potential trend reversal — watch for confirmation'}
-                        {trend.weeklyTrend === 'Bearish' && trend.monthlyTrend === 'Bullish' && 'Short-term pullback in larger uptrend — possible dip buy'}
-                        {trend.weeklyTrend === 'Neutral' && 'Consolidation phase — waiting for breakout direction'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-            
-            {/* Price Changes & ATH/ATL */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Price Changes */}
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">📈 Price Performance</h3>
-                <div className="space-y-3">
-                  {[
-                    { label: '24 Hours', key: '24h' as const },
-                    { label: '7 Days', key: '7d' as const },
-                    { label: '14 Days', key: '14d' as const },
-                    { label: '30 Days', key: '30d' as const },
-                    { label: '60 Days', key: '60d' as const },
-                    { label: '1 Year', key: '1y' as const },
-                  ].map(({ label, key }) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <span className="text-gray-400">{label}</span>
-                      <PercentBadge value={coinData.price_changes[key]} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* ATH / ATL */}
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">🏆 All-Time High / Low</h3>
-                <div className="space-y-6">
-                  <div>
-                    <div className="text-emerald-400 font-medium mb-2">All-Time High</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{formatPrice(coinData.market.ath.usd)}</span>
-                      <PercentBadge value={coinData.market.ath.change_percentage} />
-                    </div>
-                    {coinData.market.ath.date && (
-                      <div className="text-gray-500 text-sm mt-1">
-                        {new Date(coinData.market.ath.date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-red-400 font-medium mb-2">All-Time Low</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">{formatPrice(coinData.market.atl.usd)}</span>
-                      <PercentBadge value={coinData.market.atl.change_percentage} />
-                    </div>
-                    {coinData.market.atl.date && (
-                      <div className="text-gray-500 text-sm mt-1">
-                        {new Date(coinData.market.atl.date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Derivatives Data (if available) */}
-            {coinData.derivatives && (
-              <div className="bg-slate-800/50 border border-slate-700/70 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">📊 Derivatives Data</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  {coinData.derivatives.funding_rate !== undefined && (
-                    <div>
-                      <div className="text-gray-400 text-sm">Funding Rate</div>
-                      <div className={`text-xl font-bold ${coinData.derivatives.funding_rate >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {(coinData.derivatives.funding_rate * 100).toFixed(4)}%
-                      </div>
-                    </div>
-                  )}
-                  {coinData.derivatives.funding_sentiment && (
-                    <div>
-                      <div className="text-gray-400 text-sm">Funding Sentiment</div>
-                      <div className={`text-xl font-bold ${coinData.derivatives.funding_sentiment === 'bullish' ? 'text-green-400' : 'text-red-400'}`}>
-                        {coinData.derivatives.funding_sentiment.toUpperCase()}
-                      </div>
-                    </div>
-                  )}
-                  {coinData.derivatives.open_interest && (
-                    <div>
-                      <div className="text-gray-400 text-sm">Open Interest</div>
-                      <div className="text-xl font-bold">{formatNumber(coinData.derivatives.open_interest)}</div>
-                    </div>
-                  )}
-                  {coinData.derivatives.volume_24h !== undefined && (
-                    <div>
-                      <div className="text-gray-400 text-sm">24h Volume</div>
-                      <div className="text-xl font-bold">{formatNumber(coinData.derivatives.volume_24h)}</div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Directional Intelligence Insights */}
-                {(() => {
-                  const fundingInsight = getFundingInsight(coinData.derivatives?.funding_rate);
-                  const oiInsight = getOIPriceInsight(coinData.price_changes['24h'], coinData.price_changes['7d']);
-                  const sentimentInsight = getSentimentPriceInsight(coinData.derivatives?.funding_sentiment, coinData.price_changes['7d']);
-                  const insights = [fundingInsight, oiInsight, sentimentInsight].filter(Boolean);
-                  
-                  if (insights.length === 0) return null;
-                  
-                  return (
-                    <div className="border-t border-slate-700/70 pt-4 mt-2">
-                      <div className="text-xs text-teal-300 uppercase font-semibold mb-2">🎯 Directional Intelligence</div>
-                      <div className="flex flex-wrap gap-2">
-                        {insights.map((insight, idx) => (
-                          <InsightBadge key={idx} insight={insight!} />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            
-            {/* Community Sentiment */}
-            {(coinData.sentiment.votes_up_percentage || coinData.sentiment.watchlist_users) && (
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">💬 Community Sentiment</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {coinData.sentiment.votes_up_percentage !== undefined && (
-                    <div>
-                      <div className="text-gray-400 text-sm">Bullish Votes</div>
-                      <div className="text-xl font-bold text-green-400">
-                        {coinData.sentiment.votes_up_percentage.toFixed(1)}%
-                      </div>
-                      <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-green-500 h-2 rounded-full" 
-                          style={{ width: `${coinData.sentiment.votes_up_percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {coinData.sentiment.watchlist_users && (
-                    <div>
-                      <div className="text-gray-400 text-sm">Watchlist Users</div>
-                      <div className="text-xl font-bold">
-                        {(coinData.sentiment.watchlist_users / 1000).toFixed(0)}K
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Developer Activity */}
-            {coinData.developer && coinData.developer.github_stars && (
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">👨‍💻 Developer Activity</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <div className="text-gray-400 text-sm">GitHub Stars</div>
-                    <div className="text-xl font-bold">{coinData.developer.github_stars?.toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Forks</div>
-                    <div className="text-xl font-bold">{coinData.developer.github_forks?.toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Contributors</div>
-                    <div className="text-xl font-bold">{coinData.developer.contributors?.toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Commits (4 weeks)</div>
-                    <div className="text-xl font-bold">{coinData.developer.commits_4_weeks?.toLocaleString()}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Exchange Tickers */}
-            {coinData.tickers && coinData.tickers.length > 0 && (
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">🏦 Exchange Tickers</h3>
-                
-                {/* Mobile Cards */}
-                <div className="md:hidden flex flex-col gap-3">
-                  {coinData.tickers.slice(0, 10).map((ticker, i) => (
-                    <div key={i} className="bg-slate-700/30 rounded-lg p-4 border border-slate-600/30">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="font-semibold text-white">{ticker.exchange}</div>
-                          <div className="text-sm text-gray-400">{ticker.pair}</div>
-                        </div>
-                        {ticker.trade_url && (
-                          <a 
-                            href={ticker.trade_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-emerald-400 hover:text-emerald-300 text-sm px-3 py-1 bg-emerald-500/10 rounded"
-                          >
-                            Trade →
-                          </a>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div>
-                          <div className="text-gray-500 text-xs">Price</div>
-                          <div className="text-white font-medium">{formatPrice(ticker.price)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs">Volume</div>
-                          <div className="text-gray-300">{formatNumber(ticker.volume_usd)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500 text-xs">Spread</div>
-                          <div className="text-gray-300">{ticker.spread ? `${ticker.spread.toFixed(3)}%` : '-'}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  <button
+                    onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}
+                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"
+                  >
+                    Refresh
+                  </button>
                 </div>
 
-                {/* Desktop Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-gray-400 text-sm border-b border-slate-600">
-                        <th className="pb-3 pr-4">Exchange</th>
-                        <th className="pb-3 pr-4">Pair</th>
-                        <th className="pb-3 pr-4 text-right">Price</th>
-                        <th className="pb-3 pr-4 text-right">24h Volume</th>
-                        <th className="pb-3 pr-4 text-right">Spread</th>
-                        <th className="pb-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {coinData.tickers.slice(0, 10).map((ticker, i) => (
-                        <tr key={i} className="border-b border-slate-700/50">
-                          <td className="py-3 pr-4 font-medium">{ticker.exchange}</td>
-                          <td className="py-3 pr-4 text-gray-300">{ticker.pair}</td>
-                          <td className="py-3 pr-4 text-right">{formatPrice(ticker.price)}</td>
-                          <td className="py-3 pr-4 text-right">{formatNumber(ticker.volume_usd)}</td>
-                          <td className="py-3 pr-4 text-right">
-                            {ticker.spread ? `${ticker.spread.toFixed(3)}%` : '-'}
-                          </td>
-                          <td className="py-3">
-                            {ticker.trade_url && (
-                              <a 
-                                href={ticker.trade_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-emerald-400 hover:text-emerald-300 text-sm"
-                              >
-                                Trade →
-                              </a>
-                            )}
-                          </td>
-                        </tr>
+                <div className="h-[540px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
+                  <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-200">{coinData.coin.name} ({coinData.coin.symbol.toUpperCase()})</span>
+                      <PercentBadge value={coinData.price_changes['24h']} />
+                    </div>
+
+                    <div className="mb-2 flex gap-1 rounded bg-slate-800/70 p-1">
+                      <button
+                        onClick={() => setChartView('ohlc')}
+                        className={`rounded px-2 py-1 text-[10px] ${chartView === 'ohlc' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
+                      >
+                        Candles
+                      </button>
+                      <button
+                        onClick={() => setChartView('sparkline')}
+                        className={`rounded px-2 py-1 text-[10px] ${chartView === 'sparkline' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
+                      >
+                        Sparkline
+                      </button>
+                    </div>
+
+                    {chartView === 'ohlc' ? (
+                      coinData.ohlc?.length ? (
+                        <OHLCChart data={coinData.ohlc} height={220} />
+                      ) : (
+                        <div className="rounded bg-slate-950 p-6 text-center text-xs text-slate-500">No OHLC data</div>
+                      )
+                    ) : coinData.sparkline?.length ? (
+                      <div className="rounded bg-slate-950 p-3">
+                        <MiniSparkline data={coinData.sparkline} color={(coinData.price_changes['7d'] ?? 0) >= 0 ? '#10B981' : '#EF4444'} />
+                      </div>
+                    ) : (
+                      <div className="rounded bg-slate-950 p-6 text-center text-xs text-slate-500">No sparkline data</div>
+                    )}
+                  </div>
+
+                  <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/70 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Trade Permission</p>
+                    <div className="mt-1 flex items-center justify-between">
+                      <p className="text-sm font-bold text-slate-100">{decision.tradePermission}</p>
+                      <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-300">
+                      {decision.tradePermission === 'Yes' && 'Structure and liquidity conditions support execution workflow.'}
+                      {decision.tradePermission === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack before entry.'}
+                      {decision.tradePermission === 'No' && 'Condition stack fails risk policy. Monitor, do not force setup.'}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <Link href={`/tools/watchlists?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
+                    <Link href={`/tools/alerts?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
+                    <Link href={`/tools/scanner?asset=crypto&symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
+                    <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${coinData.coin.symbol.toUpperCase()} setup`)}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <div className="mb-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <h2 className="text-xs font-bold">Trend / RS / Liquidity Context</h2>
+                </div>
+
+                <div className="grid gap-2">
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Structure Bias</p>
+                    <p className="text-sm font-bold text-slate-100">{decision.structureBias}</p>
+                    <p className="text-[11px] text-slate-400">Weekly {coinData.price_changes['7d']?.toFixed(2) ?? 'N/A'}% • Monthly {coinData.price_changes['30d']?.toFixed(2) ?? 'N/A'}%</p>
+                  </div>
+
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Relative Strength vs BTC (7D)</p>
+                    <p className={`text-sm font-bold ${decision.relativeStrengthVsBtc === null ? 'text-slate-400' : decision.relativeStrengthVsBtc >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                      {decision.relativeStrengthVsBtc === null ? 'N/A' : `${decision.relativeStrengthVsBtc >= 0 ? '+' : ''}${decision.relativeStrengthVsBtc.toFixed(2)}%`}
+                    </p>
+                  </div>
+
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="text-[10px] uppercase text-slate-500">Volatility + Liquidity</p>
+                    <p className="text-[11px] text-slate-300">Volatility: {decision.volatilityState}</p>
+                    <p className="text-[11px] text-slate-300">Liquidity: {decision.liquidityState}</p>
+                    <p className="text-[11px] text-slate-400">24h Vol {formatNumber(coinData.market.total_volume_24h)} • MCap {formatNumber(coinData.market.market_cap)}</p>
+                  </div>
+
+                  {coinData.derivatives && (
+                    <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                      <p className="text-[10px] uppercase text-slate-500">Derivatives Overlay</p>
+                      <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${(coinData.derivatives.funding_rate * 100).toFixed(4)}%` : 'N/A'}</p>
+                      <p className="text-[11px] text-slate-300">Sentiment: {coinData.derivatives.funding_sentiment?.toUpperCase() || 'N/A'}</p>
+                      <p className="text-[11px] text-slate-300">Open Interest: {formatNumber(coinData.derivatives.open_interest)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
+              <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
+                <span>Zone 3 • Informational (Collapsed by Default)</span>
+                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+              </summary>
+
+              <div className="mt-2 max-h-[420px] overflow-y-auto space-y-2 pr-1">
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">Performance</p>
+                    {([
+                      ['24h', coinData.price_changes['24h']],
+                      ['7d', coinData.price_changes['7d']],
+                      ['14d', coinData.price_changes['14d']],
+                      ['30d', coinData.price_changes['30d']],
+                      ['60d', coinData.price_changes['60d']],
+                      ['1y', coinData.price_changes['1y']],
+                    ] as Array<[string, number | undefined]>).map(([label, val]) => (
+                      <div key={label} className="flex items-center justify-between py-0.5">
+                        <span className="text-xs text-slate-400">{label}</span>
+                        <PercentBadge value={val} />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">ATH / ATL</p>
+                    <div className="text-xs text-slate-300">ATH: {formatPrice(coinData.market.ath.usd)} ({coinData.market.ath.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
+                    <div className="text-xs text-slate-300">ATL: {formatPrice(coinData.market.atl.usd)} ({coinData.market.atl.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
+                    <div className="mt-1 text-xs text-slate-400">FDV: {formatNumber(coinData.market.fully_diluted_valuation)}</div>
+                    <div className="text-xs text-slate-400">Circulating: {coinData.market.circulating_supply ? `${(coinData.market.circulating_supply / 1e6).toFixed(2)}M` : 'N/A'}</div>
+                  </div>
+                </div>
+
+                {(coinData.sentiment.votes_up_percentage !== undefined || coinData.sentiment.watchlist_users) && (
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">Sentiment</p>
+                    <p className="text-xs text-slate-300">Bullish votes: {coinData.sentiment.votes_up_percentage?.toFixed(1) ?? 'N/A'}%</p>
+                    <p className="text-xs text-slate-300">Watchlist users: {coinData.sentiment.watchlist_users?.toLocaleString() ?? 'N/A'}</p>
+                  </div>
+                )}
+
+                {coinData.developer && coinData.developer.github_stars && (
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">Developer Activity</p>
+                    <div className="grid grid-cols-2 gap-1 text-xs text-slate-300">
+                      <span>Stars: {coinData.developer.github_stars?.toLocaleString() || 'N/A'}</span>
+                      <span>Forks: {coinData.developer.github_forks?.toLocaleString() || 'N/A'}</span>
+                      <span>Contributors: {coinData.developer.contributors?.toLocaleString() || 'N/A'}</span>
+                      <span>Commits 4w: {coinData.developer.commits_4_weeks?.toLocaleString() || 'N/A'}</span>
+                    </div>
+                  </div>
+                )}
+
+                {coinData.tickers?.length > 0 && (
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">Exchange Tickers</p>
+                    <div className="space-y-1">
+                      {coinData.tickers.slice(0, 8).map((ticker, idx) => (
+                        <div key={`${ticker.exchange}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs">
+                          <span className="text-slate-200">{ticker.exchange} • {ticker.pair}</span>
+                          <span className="text-slate-400">{formatPrice(ticker.price)}</span>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                )}
+
+                {coinData.coin.description && (
+                  <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+                    <p className="mb-1 text-[10px] uppercase text-slate-500">About</p>
+                    <p className="text-xs leading-5 text-slate-300">{coinData.coin.description}</p>
+                  </div>
+                )}
               </div>
-            )}
-            
-            {/* Description */}
-            {coinData.coin.description && (
-              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold mb-4">📝 About {coinData.coin.name}</h3>
-                <p className="text-gray-300 leading-relaxed">{coinData.coin.description}</p>
-                <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-400">
-                  {coinData.coin.genesis_date && (
-                    <span>📅 Genesis: {new Date(coinData.coin.genesis_date).toLocaleDateString()}</span>
-                  )}
-                  {coinData.coin.hashing_algorithm && (
-                    <span>🔐 Algorithm: {coinData.coin.hashing_algorithm}</span>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Last Updated */}
-            {coinData.last_updated && (
-              <div className="text-center text-gray-500 text-sm">
-                Last updated: {new Date(coinData.last_updated).toLocaleString()}
-              </div>
-            )}
-          </div>
+            </details>
+
+            <div className="text-center text-[11px] text-slate-500">
+              Last updated: {coinData.last_updated ? new Date(coinData.last_updated).toLocaleString() : 'N/A'}
+            </div>
+          </>
         )}
-        
-        {/* Empty State */}
+
         {!selectedCoin && !loading && (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🔎</div>
-            <h3 className="text-xl font-semibold text-gray-300">Ready to find a crypto setup?</h3>
-            <p className="text-gray-500 mt-2">Search above or choose a popular coin to unlock full context</p>
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
+            <div className="mb-2 text-4xl">🔎</div>
+            <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate a crypto setup?</h3>
+            <p className="mt-1 text-sm text-slate-500">Search or choose a popular coin to generate decision context.</p>
           </div>
         )}
-        
-        {/* Footer Attribution */}
-        <div className="text-center text-gray-500 text-sm mt-12 pb-8">
-          📊 Data powered by <span className="text-emerald-400">CoinGecko</span>
-        </div>
       </div>
-      
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
 
-// Loading skeleton for Suspense
 function PageLoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex min-h-screen items-center justify-center bg-[#0F172A]">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
     </div>
   );
 }
 
-// Export with Suspense wrapper for useSearchParams
 export default function CryptoDetailPage() {
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
