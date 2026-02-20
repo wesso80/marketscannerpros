@@ -1377,6 +1377,14 @@ export default function OptionsConfluenceScanner() {
         ? 'MEDIUM'
         : 'LOW';
 
+  const decisionReasons = result
+    ? [
+        ...(result.tradeSnapshot?.why || []),
+        ...(result.compositeScore?.conflicts || []),
+        ...(result.qualityReasons || []),
+      ].filter(Boolean).slice(0, 3)
+    : [];
+
   const layerMetricVolFit = universalTopCandidate?.features?.context?.volFit;
   const layerMetricRegime = universalTopCandidate?.features?.context?.underlyingRegimeAlignment;
   const layerMetricLiquidity = universalTopCandidate?.features?.context?.liquidityHealth;
@@ -1463,14 +1471,6 @@ export default function OptionsConfluenceScanner() {
   const commandUpdatedAgo = lastUpdated
     ? Math.max(0, Math.round((Date.now() - lastUpdated.getTime()) / 1000))
     : null;
-
-  const decisionReasons = result
-    ? [
-        ...(result.tradeSnapshot?.why || []),
-        ...(result.compositeScore?.conflicts || []),
-        ...(result.qualityReasons || []),
-      ].filter(Boolean).slice(0, 3)
-    : [];
 
   const decisionTrigger = result
     ? (result.tradeSnapshot?.action?.entryTrigger

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PageShell from '@/components/msp/layout/PageShell';
 import OptionsHeaderBar from '@/components/msp/options/OptionsHeaderBar';
@@ -52,7 +52,7 @@ function normalizePayload(raw: any) {
   };
 }
 
-export default function OptionsPage() {
+function OptionsPageContent() {
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState('SPY');
   const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
@@ -132,7 +132,9 @@ export default function OptionsPage() {
           </select>
           <button
             type="button"
-            onClick={runScan}
+            onClick={() => {
+              void runScan();
+            }}
             disabled={loading}
             className="col-span-12 rounded-lg border border-[var(--msp-accent)] bg-[var(--msp-accent)]/15 px-4 py-2 text-sm font-semibold text-[var(--msp-accent)] disabled:opacity-50 md:col-span-4"
           >
@@ -148,5 +150,13 @@ export default function OptionsPage() {
       <DecisionBar payload={payload} />
       <EvidenceAccordion payload={payload} />
     </PageShell>
+  );
+}
+
+export default function OptionsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--msp-bg)]" />}>
+      <OptionsPageContent />
+    </Suspense>
   );
 }
