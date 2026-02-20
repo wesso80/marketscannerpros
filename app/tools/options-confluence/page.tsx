@@ -516,6 +516,7 @@ export default function OptionsConfluenceScanner() {
   const [expirations, setExpirations] = useState<ExpirationOption[]>([]);
   const [selectedExpiry, setSelectedExpiry] = useState<string>(''); // Empty = auto-select
   const [loadingExpirations, setLoadingExpirations] = useState(false);
+  const [expirationsError, setExpirationsError] = useState<string | null>(null);
   const [lastSymbolFetched, setLastSymbolFetched] = useState('');
   const [personalityEntries, setPersonalityEntries] = useState<PersonalityJournalEntry[]>([]);
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
@@ -1006,6 +1007,7 @@ export default function OptionsConfluenceScanner() {
     if (!sym.trim() || sym.trim() === lastSymbolFetched) return;
     
     setLoadingExpirations(true);
+    setExpirationsError(null);
     setExpirations([]);
     setSelectedExpiry(''); // Reset to auto-select
     
@@ -1016,9 +1018,12 @@ export default function OptionsConfluenceScanner() {
       if (data.success && data.expirations) {
         setExpirations(data.expirations);
         setLastSymbolFetched(sym.trim().toUpperCase());
+      } else {
+        setExpirationsError(data?.error || 'No expiration data available for this symbol');
       }
     } catch (err) {
       console.warn('Failed to fetch expirations:', err);
+      setExpirationsError('Failed to fetch expiration dates. Check API availability and try again.');
     } finally {
       setLoadingExpirations(false);
     }
@@ -1029,6 +1034,7 @@ export default function OptionsConfluenceScanner() {
     if (!normalized) {
       setExpirations([]);
       setSelectedExpiry('');
+      setExpirationsError(null);
       setLastSymbolFetched('');
       return;
     }
@@ -2292,6 +2298,7 @@ export default function OptionsConfluenceScanner() {
           >
             <option value="">
               {loadingExpirations ? '⏳ Loading...' : 
+               expirationsError ? '⚠ Expirations unavailable' :
                expirations.length === 0 ? '📅 Enter symbol first' : 
                '📅 Auto-select expiry'}
             </option>
@@ -2301,6 +2308,11 @@ export default function OptionsConfluenceScanner() {
               </option>
             ))}
           </select>
+          {expirationsError && (
+            <div className="w-full text-center text-[0.74rem] text-[var(--msp-warn)]">
+              {expirationsError}
+            </div>
+          )}
 
           <button
             onClick={() => handleScan()}
