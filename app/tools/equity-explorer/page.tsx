@@ -170,7 +170,7 @@ function PercentBadge({ value }: { value: number | undefined }) {
   if (value === undefined || value === null || isNaN(value)) return <span className="text-gray-500">N/A</span>;
   const isPositive = value >= 0;
   return (
-    <span className={`px-2 py-0.5 rounded text-sm font-medium ${isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+    <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${isPositive ? 'border-green-500/30 bg-green-500/20 text-green-300' : 'border-red-500/30 bg-red-500/20 text-red-300'}`}>
       {isPositive ? '▲' : '▼'} {Math.abs(value).toFixed(2)}%
     </span>
   );
@@ -216,7 +216,7 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
   };
   
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[sentiment] || colors['Neutral']}`}>
+    <span className={`rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold ${colors[sentiment] || colors['Neutral']}`}>
       {sentiment}
     </span>
   );
@@ -306,7 +306,7 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
   
   return (
     <div className="space-y-2">
-      <div className="flex h-4 rounded-full overflow-hidden bg-slate-700">
+      <div className="flex h-3 overflow-hidden rounded-full bg-slate-700">
         {segments.map((seg, i) => (
           <div
             key={i}
@@ -315,7 +315,7 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
           />
         ))}
       </div>
-      <div className="flex justify-between text-xs text-gray-400">
+      <div className="flex justify-between text-[10px] text-gray-400">
         <span>Strong Buy ({analysts.strongBuy})</span>
         <span>Hold ({analysts.hold})</span>
         <span>Strong Sell ({analysts.strongSell})</span>
@@ -400,30 +400,29 @@ export default function EquityExplorerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">📈 Equity Explorer</h1>
-          <p className="text-gray-400">Find complete stock context in seconds with live market data</p>
-        </div>
+    <div className="min-h-screen bg-[#0F172A] text-white">
+      <div className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+          <h1 className="text-lg font-bold text-teal-300">📈 Equity Explorer</h1>
+          <p className="text-xs text-slate-400">Decision-grade equity view: valuation, trend, risk, and catalyst context.</p>
+        </header>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
+        <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+          <form onSubmit={handleSearch}>
+            <div className="flex flex-col gap-2 md:flex-row">
+              <div className="relative flex-1">
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
                 placeholder="Enter stock symbol (e.g., AAPL, MSFT, GOOGL)"
-                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500"
               />
             </div>
             <button
               type="submit"
               disabled={loading || !searchInput.trim()}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-semibold rounded-lg transition-colors"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:bg-slate-700"
             >
               {loading ? 'Finding Stock Setup...' : 'Find Stock Setup'}
             </button>
@@ -432,19 +431,16 @@ export default function EquityExplorerPage() {
                 type="button"
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg transition-colors"
+                className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 disabled:bg-slate-800"
                 title="Refresh data"
               >
                 {refreshing ? '⏳' : '🔄'}
               </button>
             )}
-          </div>
-        </form>
+            </div>
+          </form>
 
-        {/* Quick Picks */}
-        <div className="mb-8">
-          <p className="text-sm text-gray-400 mb-2">Popular Stocks:</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-1">
             {POPULAR_STOCKS.map((stock) => (
               <button
                 key={stock.symbol}
@@ -452,59 +448,80 @@ export default function EquityExplorerPage() {
                   setSearchInput(stock.symbol);
                   fetchEquityData(stock.symbol);
                 }}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
                   symbol === stock.symbol
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-gray-300 hover:bg-slate-700'
+                    ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
+                    : 'border-slate-700 text-slate-300 hover:bg-slate-800'
                 }`}
               >
                 {stock.symbol}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-            <p className="text-red-400">❌ {error}</p>
+          <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-4">
+            <p className="text-sm text-rose-300">❌ {error}</p>
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
           </div>
         )}
 
         {/* Data Display */}
         {data && !loading && (
-          <div className="space-y-6">
+          <div className="space-y-2">
+            <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
+              {[
+                ['Asset', `${data.company.symbol} • ${data.company.exchange}`],
+                ['Price', formatPrice(data.quote.price)],
+                ['24h', `${data.quote.changePercent >= 0 ? '+' : ''}${data.quote.changePercent.toFixed(2)}%`],
+                ['Trend', getQuickSignals(data).trend.label],
+                ['Momentum', getQuickSignals(data).momentum.label],
+                ['Volatility', getQuickSignals(data).volatility.label],
+                ['Volume', formatVolume(data.quote.volume)],
+                ['P/E', data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
+                  <span className="font-semibold text-slate-100">{k}</span> · {v}
+                </div>
+              ))}
+            </section>
+
             {/* Company Header */}
-            <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+              <div className="mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Snapshot</p>
+                <h2 className="text-xs font-bold">Company + Price Console</h2>
+              </div>
+              <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-slate-700 bg-slate-950/60 p-2">
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold">{data.company.symbol}</h2>
-                    <span className="px-2 py-0.5 bg-slate-700 rounded text-sm text-gray-300">
+                  <div className="mb-1 flex items-center gap-2">
+                    <h2 className="text-lg font-bold">{data.company.symbol}</h2>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300">
                       {data.company.exchange}
                     </span>
                   </div>
-                  <p className="text-xl text-gray-300">{data.company.name}</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-slate-300">{data.company.name}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
                     {data.company.sector} • {data.company.industry}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-4xl font-bold">{formatPrice(data.quote.price)}</p>
-                  <div className="flex items-center justify-end gap-2 mt-1">
-                    <span className={data.quote.change >= 0 ? 'text-green-400' : 'text-red-400'}>
+                  <p className="text-2xl font-bold">{formatPrice(data.quote.price)}</p>
+                  <div className="mt-1 flex items-center justify-end gap-2">
+                    <span className={`text-xs ${data.quote.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {data.quote.change >= 0 ? '+' : ''}{data.quote.change.toFixed(2)}
                     </span>
                     <PercentBadge value={data.quote.changePercent} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="mt-1 text-[10px] text-slate-500">
                     Last updated: {data.quote.latestTradingDay}
                   </p>
                 </div>
@@ -512,7 +529,7 @@ export default function EquityExplorerPage() {
               
               {/* Mini Chart */}
               {data.chart.length > 0 && (
-                <div className="mt-4 flex justify-center">
+                <div className="mt-2 flex justify-center rounded-md border border-slate-700 bg-slate-950/60 py-1">
                   <MiniChart data={data.chart} />
                 </div>
               )}
@@ -521,22 +538,22 @@ export default function EquityExplorerPage() {
               {(() => {
                 const signals = getQuickSignals(data);
                 return (
-                  <div className="mt-4 flex flex-wrap justify-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
-                      <span className="text-xs text-gray-400 uppercase">Trend</span>
-                      <span className={`font-semibold ${signals.trend.color}`}>
+                  <div className="mt-2 flex flex-wrap justify-center gap-1">
+                    <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                      <span className="text-[10px] uppercase text-slate-500">Trend</span>
+                      <span className={`text-xs font-semibold ${signals.trend.color}`}>
                         {signals.trend.icon} {signals.trend.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
-                      <span className="text-xs text-gray-400 uppercase">Momentum</span>
-                      <span className={`font-semibold ${signals.momentum.color}`}>
+                    <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                      <span className="text-[10px] uppercase text-slate-500">Momentum</span>
+                      <span className={`text-xs font-semibold ${signals.momentum.color}`}>
                         {signals.momentum.icon} {signals.momentum.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600">
-                      <span className="text-xs text-gray-400 uppercase">Volatility</span>
-                      <span className={`font-semibold ${signals.volatility.color}`}>
+                    <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                      <span className="text-[10px] uppercase text-slate-500">Volatility</span>
+                      <span className={`text-xs font-semibold ${signals.volatility.color}`}>
                         {signals.volatility.icon} {signals.volatility.label}
                       </span>
                     </div>
@@ -546,31 +563,31 @@ export default function EquityExplorerPage() {
             </div>
 
             {/* Key Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <p className="text-sm text-gray-400">Market Cap</p>
-                <p className="text-xl font-bold">{formatNumber(data.valuation.marketCap)}</p>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                <p className="text-[10px] uppercase text-slate-500">Market Cap</p>
+                <p className="text-sm font-bold">{formatNumber(data.valuation.marketCap)}</p>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <p className="text-sm text-gray-400">P/E Ratio</p>
-                <p className="text-xl font-bold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p>
+              <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                <p className="text-[10px] uppercase text-slate-500">P/E Ratio</p>
+                <p className="text-sm font-bold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <p className="text-sm text-gray-400">Volume</p>
-                <p className="text-xl font-bold">{formatVolume(data.quote.volume)}</p>
+              <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                <p className="text-[10px] uppercase text-slate-500">Volume</p>
+                <p className="text-sm font-bold">{formatVolume(data.quote.volume)}</p>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                <p className="text-sm text-gray-400">Dividend Yield</p>
-                <p className="text-xl font-bold">{data.dividend.dividendYield > 0 ? `${(data.dividend.dividendYield * 100).toFixed(2)}%` : 'N/A'}</p>
+              <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
+                <p className="text-[10px] uppercase text-slate-500">Dividend Yield</p>
+                <p className="text-sm font-bold">{data.dividend.dividendYield > 0 ? `${(data.dividend.dividendYield * 100).toFixed(2)}%` : 'N/A'}</p>
               </div>
             </div>
 
             {/* Two Column Layout */}
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid gap-2 lg:grid-cols-2">
               {/* Valuation */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  💰 Valuation Metrics
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  Valuation Metrics
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -601,14 +618,14 @@ export default function EquityExplorerPage() {
               </div>
 
               {/* Fundamentals */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  📊 Fundamentals
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  Fundamentals
                 </h3>
                 
                 {/* Growth Metrics Highlight */}
                 {(data.fundamentals.quarterlyRevenueGrowth || data.fundamentals.quarterlyEarningsGrowth) && (
-                  <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/70">
+                  <div className="mb-3 grid grid-cols-2 gap-3 rounded-md border border-slate-700/70 bg-slate-950/60 p-2">
                     {data.fundamentals.quarterlyRevenueGrowth !== undefined && (
                       <div className="text-center">
                         <p className="text-xs text-teal-300 uppercase mb-1">Revenue YoY</p>
@@ -657,9 +674,9 @@ export default function EquityExplorerPage() {
               </div>
 
               {/* Technicals */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  📈 Technical Levels
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  Technical Levels
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -702,9 +719,9 @@ export default function EquityExplorerPage() {
               </div>
 
               {/* Analyst Ratings */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  🎯 Analyst Ratings
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  Analyst Ratings
                 </h3>
                 {data.analysts.totalRatings > 0 ? (
                   <div className="space-y-4">
@@ -732,9 +749,9 @@ export default function EquityExplorerPage() {
 
             {/* Earnings */}
             {data.earnings.length > 0 && (
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  💵 Recent Earnings
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  Recent Earnings
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -769,18 +786,18 @@ export default function EquityExplorerPage() {
 
             {/* News */}
             {data.news.length > 0 && (
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    📰 Latest News
+                  <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Latest News
                   </h3>
                   {/* Aggregate News Sentiment */}
                   {(() => {
                     const sentiment = getAggregateSentiment(data.news);
                     if (!sentiment) return null;
                     return (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 rounded-lg border border-slate-600">
-                        <span className="text-xs text-gray-400">News Sentiment:</span>
+                      <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
+                        <span className="text-[10px] text-slate-400">News Sentiment:</span>
                         <span className={`font-bold ${sentiment.color}`}>
                           {sentiment.score}% {sentiment.label}
                         </span>
@@ -804,7 +821,7 @@ export default function EquityExplorerPage() {
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block p-4 bg-slate-900/50 rounded-lg hover:bg-slate-900 transition-colors"
+                      className="block rounded-md border border-slate-700 bg-slate-950/60 p-3 transition-colors hover:bg-slate-900"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -825,14 +842,14 @@ export default function EquityExplorerPage() {
 
             {/* Company Description */}
             {data.company.description && (
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  🏢 About {data.company.name}
+              <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
+                  About {data.company.name}
                 </h3>
-                <p className="text-gray-300 leading-relaxed">
+                <p className="text-sm text-gray-300 leading-relaxed">
                   {data.company.description}
                 </p>
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="mt-3 grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
                   <div>
                     <p className="text-gray-500">Country</p>
                     <p className="text-gray-300">{data.company.country}</p>
@@ -854,7 +871,7 @@ export default function EquityExplorerPage() {
             )}
 
             {/* Footer Attribution */}
-            <p className="text-center text-xs text-gray-500 mt-8">
+            <p className="mt-1 text-center text-[11px] text-slate-500">
               Data powered by Alpha Vantage • Updated every 5 minutes during market hours
             </p>
           </div>
@@ -862,10 +879,10 @@ export default function EquityExplorerPage() {
 
         {/* Empty State */}
         {!data && !loading && !error && (
-          <div className="text-center py-20">
-            <p className="text-6xl mb-4">📊</p>
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">Ready to find a stock setup?</h3>
-            <p className="text-gray-500">Enter a ticker to unlock valuation, momentum, and risk context</p>
+          <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
+            <p className="mb-2 text-4xl">📊</p>
+            <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate an equity setup?</h3>
+            <p className="mt-1 text-sm text-slate-500">Search or choose a popular symbol to generate decision context.</p>
           </div>
         )}
       </div>
