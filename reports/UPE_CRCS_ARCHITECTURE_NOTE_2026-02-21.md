@@ -130,7 +130,10 @@ Tenant overlays cannot:
    - UPE symbol + global snapshot consumption integrated
    - Permission, CRCS, and micro-delta surfaced in state strip
    - Action-row controls now enforce blocked disabled state with tooltip reasons
-- ⏳ Pending: finalize shared explorer component extraction (gate/context/action blocks).
+- ✅ Shared action/governance extraction complete:
+   - `components/explorer/ExplorerActionGrid.tsx` now owns action-row link + blocked behavior
+   - Wired into both `app/tools/equity-explorer/page.tsx` and `app/tools/crypto-explorer/page.tsx`
+- ⏳ Pending: optional extraction of gate/context visual blocks into shared presentational components.
 
 ## Restore Plan
 - Restore tag: `restore/pre-upe-crcs-2026-02-21-58d07daa`

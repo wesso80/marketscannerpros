@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 
 interface EquityData {
   company: {
@@ -713,28 +714,12 @@ export default function EquityExplorerPage() {
                   </div>
                 );
               })()}
-                <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
-                  {upeSignal?.eligibilityUser === 'blocked' ? (
-                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Create Alert</button>
-                  ) : (
-                    <Link href={`/tools/alerts?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
-                  )}
-                  {upeSignal?.eligibilityUser === 'blocked' ? (
-                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Add to Watchlist</button>
-                  ) : (
-                    <Link href={`/tools/watchlists?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
-                  )}
-                  {upeSignal?.eligibilityUser === 'blocked' ? (
-                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Run Confluence Scan</button>
-                  ) : (
-                    <Link href={`/tools/confluence-scanner?symbol=${data.company.symbol}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
-                  )}
-                  {upeSignal?.eligibilityUser === 'blocked' ? (
-                    <button type="button" disabled className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-500" title={upeSignal.overlayReasons?.join(' • ') || 'Blocked by governance'}>Open Journal Draft</button>
-                  ) : (
-                    <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${data.company.symbol} setup`)}`} className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
-                  )}
-                </div>
+                <ExplorerActionGrid
+                  assetType="equity"
+                  symbol={data.company.symbol}
+                  blocked={upeSignal?.eligibilityUser === 'blocked'}
+                  blockReason={upeSignal?.overlayReasons?.join(' • ') || 'Blocked by governance'}
+                />
               </div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">

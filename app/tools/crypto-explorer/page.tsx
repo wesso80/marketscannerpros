@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
+import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 
 interface CoinData {
   coin: {
@@ -589,28 +590,12 @@ function CryptoDetailPageContent() {
                     </p>
                   </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    {isBlocked ? (
-                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Add to Watchlist</button>
-                    ) : (
-                      <Link href={`/tools/watchlists?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Add to Watchlist</Link>
-                    )}
-                    {isBlocked ? (
-                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Create Alert</button>
-                    ) : (
-                      <Link href={`/tools/alerts?symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
-                    )}
-                    {isBlocked ? (
-                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Run Confluence Scan</button>
-                    ) : (
-                      <Link href={`/tools/scanner?asset=crypto&symbol=${coinData.coin.symbol.toUpperCase()}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Run Confluence Scan</Link>
-                    )}
-                    {isBlocked ? (
-                      <button type="button" disabled title={blockReason} className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-1 text-center text-[10px] text-slate-500">Open Journal Draft</button>
-                    ) : (
-                      <Link href={`/tools/journal?note=${encodeURIComponent(`Review ${coinData.coin.symbol.toUpperCase()} setup`)}`} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-center text-[10px] text-slate-300">Open Journal Draft</Link>
-                    )}
-                  </div>
+                  <ExplorerActionGrid
+                    assetType="crypto"
+                    symbol={coinData.coin.symbol}
+                    blocked={isBlocked}
+                    blockReason={blockReason}
+                  />
                 </div>
               </div>
 
