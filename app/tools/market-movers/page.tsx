@@ -445,7 +445,7 @@ export default function MarketMoversPage() {
       />
 
       <main className="mx-auto w-full max-w-[1500px] space-y-2 px-3 pb-6 pt-3">
-        <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
+        <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur md:sticky md:top-2">
           {[
             ['Mode', environment.marketMode],
             ['Breadth', environment.breadthState],
@@ -565,7 +565,7 @@ export default function MarketMoversPage() {
                   </div>
                 )}
 
-                <div className="h-[520px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60">
+                <div className="h-auto overflow-visible rounded-md border border-slate-700 bg-slate-950/60 md:h-[520px] md:overflow-y-auto">
                   <table className="w-full text-[11px]">
                     <thead className="sticky top-0 bg-slate-900/95">
                       <tr className="text-[10px] uppercase text-slate-400">

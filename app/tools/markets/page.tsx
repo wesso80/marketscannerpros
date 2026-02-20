@@ -101,7 +101,7 @@ export default function MarketsPage() {
           ))}
         </nav>
 
-        <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1.5">
+        <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1.5 md:sticky md:top-2">
           {[
             ['Regime', 'Neutral Trend'],
             ['Risk', 'Moderate'],
@@ -131,7 +131,7 @@ export default function MarketsPage() {
               <Link href="/tools/scanner" className="text-[11px] font-semibold text-[var(--msp-accent)]">Open Scanner</Link>
             </div>
 
-            <div className="h-[560px] overflow-y-auto rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5">
+            <div className="h-auto overflow-visible rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1.5 md:h-[560px] md:overflow-y-auto">
               <div className="grid gap-2">
                 <section className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-2">
                   <div className="mb-1 flex items-center justify-between">

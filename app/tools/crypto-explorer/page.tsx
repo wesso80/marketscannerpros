@@ -445,7 +445,7 @@ function CryptoDetailPageContent() {
 
         {coinData && !loading && (
           <>
-            <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
+            <section className="z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur md:sticky md:top-2">
               {[
                 ['Asset', `${coinData.coin.symbol.toUpperCase()} • #${coinData.market.rank || 'N/A'}`],
                 ['Price', formatPrice(coinData.market.price_usd)],
@@ -479,7 +479,7 @@ function CryptoDetailPageContent() {
                   </button>
                 </div>
 
-                <div className="h-[540px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
+                <div className="h-auto overflow-visible rounded-md border border-slate-700 bg-slate-950/60 p-1.5 md:h-[540px] md:overflow-y-auto">
                   <div className="rounded-md border border-slate-700 bg-slate-900/70 p-2">
                     <div className="mb-1 flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-200">{coinData.coin.name} ({coinData.coin.symbol.toUpperCase()})</span>
