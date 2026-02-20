@@ -1,33 +1,223 @@
 'use client';
 
-import { useEffect, Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import AlertsWidget from "@/components/AlertsWidget";
-import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 
+type AlertItem = {
+  id: string;
+  symbol: string;
+  condition_type: string;
+  condition_value: number;
+  is_active: boolean;
+  trigger_count: number;
+  triggered_at?: string;
+  is_smart_alert?: boolean;
+  is_multi_condition?: boolean;
+  cooldown_minutes?: number | null;
+};
+
+type AlertHistoryItem = {
+  id: string;
+  symbol: string;
+  triggered_at: string;
+  condition_met: string;
+  condition_type?: string;
+  user_action?: string | null;
+  alert_name: string;
+};
+
+type NotificationPrefs = {
+  in_app_enabled: boolean;
+  email_enabled: boolean;
+  discord_enabled: boolean;
+  discord_webhook_url: string | null;
+};
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="w-[104px] rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="text-sm font-semibold text-slate-100">{value}</div>
+    </div>
+  );
+}
+
+function StatusBadge({ label, state }: { label: string; state: string }) {
+  const good = ['enabled', 'connected', 'active'].includes(state.toLowerCase());
+  return (
+    <div className={`rounded-xl border px-3 py-1.5 text-xs ${good ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-500/30 bg-amber-500/10 text-amber-200'}`}>
+      <span className="text-slate-300">{label}: </span>{state}
+    </div>
+  );
+}
+
+function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
+  if (alert.is_multi_condition) return 'Multi';
+  if (alert.is_smart_alert || alert.condition_type.startsWith('strategy_') || alert.condition_type.startsWith('scanner_')) {
+    return 'Strategy';
+  }
+  return 'Basic';
+}
+
+function deriveStatus(alert: AlertItem): 'Armed' | 'Cooldown' | 'Disabled' {
+  if (!alert.is_active) return 'Disabled';
+  if (!alert.triggered_at || !alert.cooldown_minutes) return 'Armed';
+  const ms = Date.now() - new Date(alert.triggered_at).getTime();
+  return ms < alert.cooldown_minutes * 60_000 ? 'Cooldown' : 'Armed';
+}
+
+function fmtDateTime(value?: string) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString();
+}
+
+function avgTriggerInterval(history: AlertHistoryItem[]) {
+  if (history.length < 2) return 'N/A';
+  const sorted = [...history]
+    .map((h) => new Date(h.triggered_at).getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => b - a);
+  if (sorted.length < 2) return 'N/A';
+  let total = 0;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    total += Math.abs(sorted[i] - sorted[i + 1]);
+  }
+  const avgMin = Math.round(total / (sorted.length - 1) / 60000);
+  if (avgMin < 60) return `${avgMin}m`;
+  const hours = (avgMin / 60).toFixed(1);
+  return `${hours}h`;
+}
+
 function AlertsContent() {
   const { tier, isLoading } = useUserTier();
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [history, setHistory] = useState<AlertHistoryItem[]>([]);
+  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [loadingData, setLoadingData] = useState(true);
+  const [consoleTab, setConsoleTab] = useState<'basic' | 'strategy' | 'smart' | 'triggered'>('basic');
+  const [zone3Open, setZone3Open] = useState(true);
+  const [zone4Open, setZone4Open] = useState(false);
+  const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy' | 'multi'>('basic');
 
   // AI Page Context - share alerts page state with copilot
   const { setPageData } = useAIPageContext();
 
+  const fetchAll = async () => {
+    setLoadingData(true);
+    try {
+      const [alertsRes, historyRes, prefsRes] = await Promise.all([
+        fetch('/api/alerts', { cache: 'no-store' }),
+        fetch('/api/alerts/history?limit=30', { cache: 'no-store' }),
+        fetch('/api/notifications/prefs', { cache: 'no-store' }),
+      ]);
+
+      const alertsJson = await alertsRes.json().catch(() => ({}));
+      const historyJson = await historyRes.json().catch(() => ({}));
+      const prefsJson = await prefsRes.json().catch(() => ({}));
+
+      setAlerts(Array.isArray(alertsJson?.alerts) ? alertsJson.alerts : []);
+      setHistory(Array.isArray(historyJson?.history) ? historyJson.history : []);
+      setPrefs(prefsJson?.prefs || null);
+    } catch {
+      setAlerts([]);
+      setHistory([]);
+      setPrefs(null);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   useEffect(() => {
-    // Set basic page context - alerts are managed by AlertsWidget
+    void fetchAll();
+  }, []);
+
+  const activeAlerts = useMemo(() => alerts.filter((a) => a.is_active), [alerts]);
+  const triggeredToday = useMemo(() => {
+    const today = new Date();
+    return history.filter((h) => {
+      const d = new Date(h.triggered_at);
+      return d.toDateString() === today.toDateString();
+    }).length;
+  }, [history]);
+
+  const smartPct = useMemo(() => {
+    if (activeAlerts.length === 0) return 0;
+    const smart = activeAlerts.filter((a) => a.is_smart_alert || a.condition_type.startsWith('strategy_') || a.condition_type.startsWith('scanner_')).length;
+    return Math.round((smart / activeAlerts.length) * 100);
+  }, [activeAlerts]);
+
+  const mostActiveSymbol = useMemo(() => {
+    if (history.length === 0) return 'N/A';
+    const counts = new Map<string, number>();
+    for (const row of history) {
+      counts.set(row.symbol, (counts.get(row.symbol) || 0) + 1);
+    }
+    let topSymbol = 'N/A';
+    let topCount = -1;
+    for (const [symbol, count] of counts.entries()) {
+      if (count > topCount) {
+        topSymbol = symbol;
+        topCount = count;
+      }
+    }
+    return topSymbol;
+  }, [history]);
+
+  const pendingCooldowns = useMemo(() => activeAlerts.filter((a) => deriveStatus(a) === 'Cooldown').length, [activeAlerts]);
+
+  const alertRows = useMemo(() => {
+    const filtered = activeAlerts.filter((alert) => {
+      const isSmart = Boolean(alert.is_smart_alert || alert.condition_type.startsWith('strategy_') || alert.condition_type.startsWith('scanner_'));
+      const isMulti = Boolean(alert.is_multi_condition);
+      if (consoleTab === 'basic') return !isSmart && !isMulti;
+      if (consoleTab === 'strategy') return isSmart && !isMulti;
+      if (consoleTab === 'smart') return isSmart;
+      return alert.trigger_count > 0;
+    });
+    return filtered.slice(0, 12);
+  }, [activeAlerts, consoleTab]);
+
+  const toggleAlert = async (alert: AlertItem) => {
+    await fetch('/api/alerts', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: alert.id, isActive: !alert.is_active }),
+    });
+    await fetchAll();
+  };
+
+  const deleteAlert = async (id: string) => {
+    await fetch(`/api/alerts?id=${id}`, { method: 'DELETE' });
+    await fetchAll();
+  };
+
+  const editAlert = (alert: AlertItem) => {
+    const type = classifyAlertType(alert);
+    setActiveZone4Tab(type === 'Multi' ? 'multi' : type === 'Strategy' ? 'strategy' : 'basic');
+    setZone4Open(true);
+  };
+
+  useEffect(() => {
     setPageData({
-      skill: 'watchlist', // alerts fall under watchlist skill
-      symbols: [],
+      skill: 'watchlist',
+      symbols: activeAlerts.map((a) => a.symbol),
       data: {
         pageType: 'alerts',
         tier,
+        activeAlerts: activeAlerts.length,
+        triggeredToday,
       },
-      summary: `Alert Intelligence page - detect, validate, execute, and log market events`,
+      summary: `Alert Radar Console: ${activeAlerts.length} active, ${triggeredToday} triggered today`,
     });
-  }, [tier, setPageData]);
+  }, [tier, setPageData, activeAlerts, triggeredToday]);
 
-  if (isLoading) {
+  if (isLoading || loadingData) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="animate-pulse">
@@ -39,157 +229,202 @@ function AlertsContent() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <AdaptivePersonalityCard
-        skill="alerts"
-        setupText="Alerts workflow with regime and momentum trigger monitoring"
-        baseScore={50}
-        compact
-      />
-
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-          🔔 Alert Intelligence
-        </h1>
-        <p className="text-slate-400">
-          Run your event pipeline from one place: detect setups, validate context, execute next actions, and log outcomes.
-        </p>
-      </div>
-
-      {/* Alerts Widget */}
-      <AlertsWidget />
-
-      {/* How It Works */}
-      <div className="mt-8 bg-gradient-to-r from-slate-800/50 to-slate-900/50 rounded-xl p-6 border border-slate-700">
-        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <span>📖</span> How Alerts Work
-        </h3>
-        <div className="space-y-4 text-sm text-slate-300">
-          <div className="flex gap-3">
-            <span className="text-emerald-400 font-bold">1.</span>
-            <p><strong>Detect</strong> — Create basic, strategy, or AI-smart conditions on symbols you monitor</p>
+    <div className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-6 lg:px-6">
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3 md:h-[88px] md:px-6">
+        <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
+          <div className="flex gap-2 lg:gap-3">
+            <MetricPill label="Active" value={`${activeAlerts.length}`} />
+            <MetricPill label="Triggered Today" value={`${triggeredToday}`} />
+            <MetricPill label="Smart %" value={`${smartPct}%`} />
           </div>
-          <div className="flex gap-3">
-            <span className="text-emerald-400 font-bold">2.</span>
-            <p><strong>Validate</strong> — Triggered events surface context so you can confirm signal quality quickly</p>
+
+          <div className="flex justify-start gap-2 lg:justify-center">
+            <StatusBadge label="Push" state={prefs?.in_app_enabled ? 'Enabled' : 'Disabled'} />
+            <StatusBadge label="Webhook" state={prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Connected' : 'Not Set'} />
           </div>
-          <div className="flex gap-3">
-            <span className="text-emerald-400 font-bold">3.</span>
-            <p><strong>Execute</strong> — Jump directly into Scanner, Backtest, or Journal from each triggered event</p>
-          </div>
-          <div className="flex gap-3">
-            <span className="text-emerald-400 font-bold">4.</span>
-            <p><strong>Learn</strong> — Track trigger history and actions to tighten future decision loops</p>
+
+          <div className="flex justify-start gap-2 lg:justify-end">
+            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950/30 p-1">
+              <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+                Basic
+              </button>
+              <button onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+                Strategy
+              </button>
+              <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'multi' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+                Multi
+              </button>
+            </div>
+            <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100">
+              Quick Alert
+            </button>
+            <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200">
+              + New Alert
+            </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Alert Types Explainer */}
-      <div className="mt-6 grid md:grid-cols-2 gap-4">
-        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <span>💰</span> Price Alerts
-            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">All Tiers</span>
-          </h4>
-          <ul className="space-y-2 text-sm text-slate-400">
-            <li><strong className="text-slate-300">Price Above:</strong> Triggers when price exceeds your target (breakout alerts)</li>
-            <li><strong className="text-slate-300">Price Below:</strong> Triggers when price drops below target (dip buying)</li>
-            <li><strong className="text-slate-300">% Change Up:</strong> Triggers on X% gain (momentum alerts)</li>
-            <li><strong className="text-slate-300">% Change Down:</strong> Triggers on X% drop (stop loss alerts)</li>
-            <li><strong className="text-slate-300">Volume Spike:</strong> Triggers on unusual volume (activity alerts)</li>
-          </ul>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-xl p-5 border border-purple-500/30">
-          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <span>🔗</span> Multi-Condition Alerts
-            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">Pro</span>
-          </h4>
-          <ul className="space-y-2 text-sm text-slate-400">
-            <li><strong className="text-purple-300">AND Logic:</strong> Trigger when ALL conditions are met (e.g., RSI &lt; 30 AND Price &lt; $45K)</li>
-            <li><strong className="text-purple-300">OR Logic:</strong> Trigger when ANY condition is met (e.g., Volume spike OR Price drop)</li>
-            <li><strong className="text-purple-300">Technical Indicators:</strong> RSI, MACD, SMA, EMA cross conditions</li>
-            <li><strong className="text-purple-300">Derivatives:</strong> Open Interest levels, funding rate thresholds</li>
-            <li><strong className="text-purple-300">Up to 5 conditions:</strong> Combine multiple signals for precision alerts</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="mt-4 grid md:grid-cols-1 gap-4">
-        <div className="bg-gradient-to-br from-indigo-500/10 to-blue-500/10 rounded-xl p-5 border border-indigo-500/30">
-          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <span>🧠</span> Smart Alerts
-            <span className="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded">Pro Trader</span>
-          </h4>
-          <ul className="space-y-2 text-sm text-slate-400">
-            <li><strong className="text-indigo-300">OI Surge/Drop:</strong> Open Interest spikes or crashes (liquidation events)</li>
-            <li><strong className="text-indigo-300">Funding Extremes:</strong> Overleveraged longs or shorts (squeeze setups)</li>
-            <li><strong className="text-indigo-300">L/S Ratio:</strong> Crowded trades warning (reversal signals)</li>
-            <li><strong className="text-indigo-300">Fear & Greed:</strong> Extreme sentiment (contrarian opportunities)</li>
-            <li><strong className="text-indigo-300">OI Divergence:</strong> Smart money accumulation/distribution</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Feature Cards */}
-      <div className="mt-6 grid md:grid-cols-3 gap-4">
-        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-          <div className="text-2xl mb-2">⚡</div>
-          <h3 className="font-semibold text-white mb-2">Instant Notifications</h3>
-          <p className="text-sm text-slate-400">
-            Get push notifications the moment your price target is hit.
-          </p>
-        </div>
-        
-        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-          <div className="text-2xl mb-2">🔄</div>
-          <h3 className="font-semibold text-white mb-2">Recurring Alerts</h3>
-          <p className="text-sm text-slate-400">
-            Set alerts to automatically re-arm after triggering for continuous monitoring.
-          </p>
-        </div>
-        
-        <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-          <div className="text-2xl mb-2">📊</div>
-          <h3 className="font-semibold text-white mb-2">Multi-Asset</h3>
-          <p className="text-sm text-slate-400">
-            Create alerts for crypto, stocks, forex, and commodities all in one place.
-          </p>
-        </div>
-      </div>
-
-      {/* Tier limits */}
-      <div className="mt-8 bg-slate-800/30 rounded-xl p-6 border border-slate-700">
-        <h3 className="font-semibold text-white mb-4">Alert Limits by Plan</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className={`p-4 rounded-lg ${tier === 'free' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/50'}`}>
-            <div className="text-sm text-slate-400 mb-1">Free</div>
-            <div className="text-2xl font-bold text-white">3</div>
-            <div className="text-xs text-slate-500">active alerts</div>
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
+        <div className="mb-3 flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex h-9 rounded-lg border border-slate-700 bg-slate-950/30 p-1">
+            <button onClick={() => setConsoleTab('basic')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Basic</button>
+            <button onClick={() => setConsoleTab('strategy')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Strategy</button>
+            <button onClick={() => setConsoleTab('smart')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'smart' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Smart</button>
+            <button onClick={() => setConsoleTab('triggered')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'triggered' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Triggered</button>
           </div>
-          <div className={`p-4 rounded-lg ${tier === 'pro' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/50'}`}>
-            <div className="text-sm text-slate-400 mb-1">Pro</div>
-            <div className="text-2xl font-bold text-white">25</div>
-            <div className="text-xs text-slate-500">active alerts</div>
+          <div className="text-xs text-slate-400">{alertRows.length} shown</div>
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/25">
+            <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-100">Active Alerts Console</div>
+            {alertRows.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-slate-400">No active alerts. Use Quick Alert or New Alert to arm your radar.</div>
+            ) : (
+              <div className="max-h-[520px] overflow-auto">
+                {alertRows.map((alert) => {
+                  const status = deriveStatus(alert);
+                  const type = classifyAlertType(alert);
+                  return (
+                    <div key={alert.id} className="h-[60px] border-b border-slate-800 px-4">
+                      <div className="flex h-full items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <span className="rounded-lg bg-white/10 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
+                          <span className="truncate text-sm text-slate-200">{alert.condition_type.replaceAll('_', ' ')} {alert.condition_value}</span>
+                          <span className="text-xs text-slate-400">{type}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400">Triggered {alert.trigger_count}x</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
+                            {status}
+                          </span>
+                          <button onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
+                          <button onClick={() => void toggleAlert(alert)} className="rounded bg-white/10 px-2 py-1 text-[11px] text-slate-100">{alert.is_active ? 'Pause' : 'Arm'}</button>
+                          <button onClick={() => void deleteAlert(alert.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] text-rose-200">Delete</button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className={`p-4 rounded-lg ${tier === 'pro_trader' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/50'}`}>
-            <div className="text-sm text-slate-400 mb-1">Pro Trader</div>
-            <div className="text-2xl font-bold text-white">∞</div>
-            <div className="text-xs text-slate-500">unlimited alerts</div>
+
+          <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-4">
+            <div className="text-sm font-semibold text-slate-100">Trigger Summary</div>
+            <div className="mt-3 space-y-2 text-sm text-slate-300">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Last Trigger: <span className="text-slate-100">{fmtDateTime(history[0]?.triggered_at)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Most Active Symbol: <span className="text-slate-100">{mostActiveSymbol}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Avg Trigger Interval: <span className="text-slate-100">{avgTriggerInterval(history)}</span></div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">Pending Cooldowns: <span className="text-slate-100">{pendingCooldowns}</span></div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <a href="/tools/scanner" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Scanner</a>
+              <a href="/tools/journal" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Journal</a>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Pro upsell */}
-      {tier === 'free' && (
-        <div className="mt-6">
-          <UpgradeGate 
-            requiredTier="pro" 
-            feature="more price alerts"
-          />
-        </div>
-      )}
+      <section className="space-y-3">
+        <details className="rounded-2xl border border-slate-800 bg-slate-900/25" open={zone3Open}>
+          <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-100">Trigger Log + Intelligence</div>
+              <div className="text-xs text-slate-400">Live execution outcomes and response behavior</div>
+            </div>
+            <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</button>
+          </summary>
+          <div className="border-t border-slate-800 px-4 py-3">
+            <div className="max-h-[420px] overflow-auto rounded-xl border border-slate-800">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-[#0b1220]/95 text-slate-300 backdrop-blur">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Time</th>
+                    <th className="px-3 py-2 text-left">Symbol</th>
+                    <th className="px-3 py-2 text-left">Condition</th>
+                    <th className="px-3 py-2 text-left">Action Taken</th>
+                    <th className="px-3 py-2 text-left">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.slice(0, 12).map((row) => (
+                    <tr key={row.id} className="border-t border-slate-800 text-slate-200">
+                      <td className="px-3 py-2 text-xs text-slate-300">{fmtDateTime(row.triggered_at)}</td>
+                      <td className="px-3 py-2 font-semibold">{row.symbol}</td>
+                      <td className="px-3 py-2">{row.condition_met || row.condition_type || row.alert_name}</td>
+                      <td className="px-3 py-2">{row.user_action || 'No action'}</td>
+                      <td className="px-3 py-2">{row.user_action === 'traded' ? 'Opened Trade' : row.user_action ? 'Handled' : 'Ignored'}</td>
+                    </tr>
+                  ))}
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-4 text-center text-slate-400">No triggers logged yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details className="rounded-2xl border border-slate-800 bg-slate-900/25" open={zone4Open}>
+          <summary onClick={(e) => { e.preventDefault(); setZone4Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-100">Alert Capabilities</div>
+              <div className="text-xs text-slate-400">Feature set and plan limits (collapsed by default)</div>
+            </div>
+            <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone4Open ? 'Collapse' : 'Expand'}</button>
+          </summary>
+          <div className="space-y-4 border-t border-slate-800 px-4 py-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Price Alerts</div>
+                <div className="text-sm text-slate-300">Threshold, percent move, and volume spike conditions.</div>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Multi-Condition</div>
+                <div className="text-sm text-slate-300">AND/OR condition chains with up to 5 combined rules.</div>
+              </div>
+              <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Smart Alerts</div>
+                <div className="text-sm text-slate-300">Strategy/scanner-linked triggers with cooldown intelligence.</div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Plan & Limits</div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className={`rounded-lg p-2 ${tier === 'free' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
+                  <div className="text-slate-400">Free</div>
+                  <div className="font-semibold text-slate-100">3</div>
+                </div>
+                <div className={`rounded-lg p-2 ${tier === 'pro' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
+                  <div className="text-slate-400">Pro</div>
+                  <div className="font-semibold text-slate-100">25</div>
+                </div>
+                <div className={`rounded-lg p-2 ${tier === 'pro_trader' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
+                  <div className="text-slate-400">Pro Trader</div>
+                  <div className="font-semibold text-slate-100">∞</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
+              <div className="mb-2 flex flex-wrap gap-2">
+                <button onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
+                <button onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
+                <button onClick={() => setActiveZone4Tab('multi')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'multi' ? 'bg-purple-500/15 text-purple-200' : 'bg-white/10 text-slate-200'}`}>Multi</button>
+              </div>
+              <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" />
+            </div>
+
+            {tier === 'free' && <UpgradeGate requiredTier="pro" feature="more price alerts" />}
+          </div>
+        </details>
+      </section>
+
     </div>
   );
 }
