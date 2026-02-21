@@ -8,6 +8,7 @@ import PermissionGate from "@/components/news-decision/PermissionGate";
 import NarrativeStack from "@/components/news-decision/NarrativeStack";
 import RotationBoard from "@/components/news-decision/RotationBoard";
 import NewsGroup from "@/components/news-decision/NewsGroup";
+import type { DecisionNewsItem, NarrativeGroup, NewsGateModel } from "@/components/news-decision/types";
 
 interface TickerSentiment {
   ticker: string;
@@ -200,6 +201,10 @@ function clamp(value: number, min = 0, max = 100): number {
 }
 
 type TabType = "news" | "earnings";
+type EnrichedNewsItem = DecisionNewsItem & {
+  volatilityKeywords: boolean;
+  macroMentions: boolean;
+};
 
 export default function NewsSentimentPage() {
   const { tier, isAdmin } = useUserTier();
@@ -575,7 +580,7 @@ export default function NewsSentimentPage() {
     loadNextMacroEvent();
   }, [activeTab]);
 
-  const enrichNews = useMemo(() => {
+  const enrichNews = useMemo<EnrichedNewsItem[]>(() => {
     return articles.map((article, idx) => {
       const sourceText = `${article.title} ${article.summary} ${(article.aiTags || []).join(' ')}`.toLowerCase();
       const mentions = article.tickerSentiments?.length || 0;
@@ -606,7 +611,7 @@ export default function NewsSentimentPage() {
         commoditiesMentions ? 'Commodity Shock' :
         'General Risk Tape';
 
-      const sentiment = article.sentiment.label.toLowerCase().includes('bull')
+      const sentiment: DecisionNewsItem['sentiment'] = article.sentiment.label.toLowerCase().includes('bull')
         ? 'BULLISH'
         : article.sentiment.label.toLowerCase().includes('bear')
           ? 'BEARISH'
@@ -623,7 +628,7 @@ export default function NewsSentimentPage() {
         )
       );
 
-      const impact = impactScore >= 72 ? 'HIGH' : impactScore >= 46 ? 'MEDIUM' : 'LOW';
+      const impact: DecisionNewsItem['impact'] = impactScore >= 72 ? 'HIGH' : impactScore >= 46 ? 'MEDIUM' : 'LOW';
       const quality = clamp(Math.round((article.summary?.length || 0) / 12 + (article.aiWhyMatters ? 20 : 0)));
 
       return {
@@ -642,7 +647,7 @@ export default function NewsSentimentPage() {
     });
   }, [articles]);
 
-  const filteredNews = useMemo(() => {
+  const filteredNews = useMemo<EnrichedNewsItem[]>(() => {
     const bySentiment = sentimentFilter === 'all'
       ? enrichNews
       : enrichNews.filter((item) => item.raw.sentiment.label.toLowerCase().includes(sentimentFilter));
@@ -669,7 +674,7 @@ export default function NewsSentimentPage() {
     return sorted.slice(0, 25);
   }, [enrichNews, sentimentFilter, newsQuery, newsBucket, hideLowQualityNews, newsSort]);
 
-  const groupedNarratives = useMemo(() => {
+  const groupedNarratives = useMemo<NarrativeGroup[]>(() => {
     const groups: Record<string, typeof filteredNews> = {};
     filteredNews.forEach((item) => {
       if (!groups[item.narrative]) groups[item.narrative] = [];
@@ -686,7 +691,7 @@ export default function NewsSentimentPage() {
       .sort((a, b) => b.avgImpact - a.avgImpact);
   }, [filteredNews]);
 
-  const newsGate = useMemo(() => {
+  const newsGate = useMemo<NewsGateModel>(() => {
     const highImpactCount24h = filteredNews.filter((item) => item.impact === 'HIGH').length;
     const macroMentionsCount = filteredNews.filter((item) => item.macroMentions).length;
     const volatilityKeywordsScore = filteredNews.filter((item) => item.volatilityKeywords).length;
