@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import SectorHeatmap from '@/components/SectorHeatmap';
 import WatchlistWidget from '@/components/WatchlistWidget';
@@ -10,55 +10,50 @@ import AlertsWidget from '@/components/AlertsWidget';
 type RegionTab = 'americas' | 'emea' | 'apac';
 type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
 
-const todayTiles = [
-  { symbol: 'SPY', value: '+0.6%', spark: '▃▄▅▆▇', tone: 'bull' },
-  { symbol: 'QQQ', value: '+0.8%', spark: '▃▄▆▇▇', tone: 'bull' },
-  { symbol: 'IWM', value: '-0.2%', spark: '▅▄▃▂▁', tone: 'bear' },
-  { symbol: 'VIX', value: '13.8', spark: '▃▂▃▂▁', tone: 'neutral' },
-  { symbol: '10Y', value: '4.21', spark: '▃▄▅▅▄', tone: 'warn' },
-  { symbol: 'DXY', value: '103.2', spark: '▅▄▃▂▁', tone: 'neutral' },
-];
+interface TodayTile {
+  symbol: string;
+  value: string;
+  spark: string;
+  tone: 'bull' | 'bear' | 'neutral' | 'warn';
+}
 
-const globalRows: Record<RegionTab, Array<{ name: string; last: string; chg: string; d1: string; w1: string; m1: string; spark: string }>> = {
-  americas: [
-    { name: 'SPX', last: '5,212', chg: '+0.42%', d1: '+0.42%', w1: '+1.24%', m1: '+2.98%', spark: '▃▄▅▆▇' },
-    { name: 'NDX', last: '18,011', chg: '+0.58%', d1: '+0.58%', w1: '+1.61%', m1: '+3.42%', spark: '▃▄▅▇▇' },
-    { name: 'RUT', last: '2,054', chg: '-0.12%', d1: '-0.12%', w1: '+0.24%', m1: '+1.04%', spark: '▅▄▃▃▂' },
-  ],
-  emea: [
-    { name: 'STOXX50', last: '4,821', chg: '+0.22%', d1: '+0.22%', w1: '+0.80%', m1: '+1.52%', spark: '▃▄▅▅▆' },
-    { name: 'DAX', last: '18,391', chg: '+0.34%', d1: '+0.34%', w1: '+1.10%', m1: '+2.20%', spark: '▃▄▅▆▆' },
-    { name: 'FTSE', last: '8,011', chg: '+0.06%', d1: '+0.06%', w1: '+0.14%', m1: '+0.63%', spark: '▃▃▄▄▅' },
-  ],
-  apac: [
-    { name: 'NIKKEI', last: '39,101', chg: '+0.49%', d1: '+0.49%', w1: '+1.02%', m1: '+2.41%', spark: '▃▄▅▆▆' },
-    { name: 'HSI', last: '17,032', chg: '-0.21%', d1: '-0.21%', w1: '+0.34%', m1: '+0.92%', spark: '▅▄▃▃▂' },
-    { name: 'ASX200', last: '7,842', chg: '+0.11%', d1: '+0.11%', w1: '+0.27%', m1: '+0.74%', spark: '▃▄▄▅▅' },
-  ],
-};
+interface GlobalRow {
+  name: string;
+  last: string;
+  chg: string;
+  d1: string;
+  w1: string;
+  m1: string;
+  spark: string;
+}
 
-const logs: Record<LogTab, Array<{ t: string; event: string; detail: string; tone?: 'bull' | 'bear' | 'warn' }>> = {
-  alerts: [
-    { t: '09:31', event: 'SPY volatility gate', detail: 'Alert fired on spread expansion near open.', tone: 'warn' },
-    { t: '10:12', event: 'QQQ continuation', detail: 'Momentum confirmation with improving breadth.', tone: 'bull' },
-  ],
-  regime: [
-    { t: '08:55', event: 'Regime unchanged', detail: 'Neutral trend with selective risk-on internals.' },
-    { t: '09:40', event: 'Risk pulse upgrade', detail: 'Breadth > 55/45 while VIX remained contained.', tone: 'bull' },
-  ],
-  scanner: [
-    { t: '09:47', event: 'Scanner hit: NVDA', detail: 'Trend continuation candidate, score 78.' },
-    { t: '10:03', event: 'Scanner hit: TSLA', detail: 'Rejected due to elevated event risk.', tone: 'warn' },
-  ],
-  notrade: [
-    { t: '10:05', event: 'No trade: IWM breakdown', detail: 'Failed confirmation stack, weak participation.', tone: 'bear' },
-    { t: '10:18', event: 'No trade: BTC impulse', detail: 'Spread + slippage exceeded plan threshold.', tone: 'warn' },
-  ],
-  data: [
-    { t: '09:29', event: 'Data health check', detail: 'All primary feeds green; backup feed synced.' },
-    { t: '10:08', event: 'Quote delay recovered', detail: 'Transient delay resolved in 12 seconds.', tone: 'warn' },
-  ],
-};
+interface LogEntry {
+  t: string;
+  event: string;
+  detail: string;
+  tone?: 'bull' | 'bear' | 'warn';
+}
+
+// Helper: derive tone from change
+function deriveTone(chg: number): 'bull' | 'bear' | 'neutral' {
+  if (chg > 0.1) return 'bull';
+  if (chg < -0.1) return 'bear';
+  return 'neutral';
+}
+
+// Helper: generate mini spark from change direction
+function deriveSpark(chg: number): string {
+  if (chg > 0.5) return '▃▄▅▆▇';
+  if (chg > 0) return '▃▄▅▅▆';
+  if (chg > -0.5) return '▅▄▃▃▂';
+  return '▅▄▃▂▁';
+}
+
+function formatPrice(n: number): string {
+  if (n >= 10000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  if (n >= 100) return n.toFixed(1);
+  return n.toFixed(2);
+}
 
 function toneClass(tone?: 'bull' | 'bear' | 'warn') {
   if (tone === 'bull') return 'text-emerald-300';
@@ -77,7 +72,111 @@ function tileToneClass(tone: string) {
 export default function MarketsPage() {
   const [regionTab, setRegionTab] = useState<RegionTab>('americas');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
-  const rows = useMemo(() => globalRows[regionTab], [regionTab]);
+  const [todayTiles, setTodayTiles] = useState<TodayTile[]>([]);
+  const [globalRows, setGlobalRows] = useState<Record<RegionTab, GlobalRow[]>>({ americas: [], emea: [], apac: [] });
+  const [statusBar, setStatusBar] = useState<Array<[string, string]>>([]);
+  const [logs, setLogs] = useState<Record<LogTab, LogEntry[]>>({
+    alerts: [], regime: [], scanner: [], notrade: [], data: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState('--:--:--');
+
+  const fetchMarketData = useCallback(async () => {
+    try {
+      // Fetch key market quotes in parallel
+      const symbols = [
+        { sym: 'SPY', type: 'stock' }, { sym: 'QQQ', type: 'stock' }, { sym: 'IWM', type: 'stock' },
+      ];
+      const quotePromises = symbols.map(({ sym, type }) =>
+        fetch(`/api/quote?symbol=${sym}&type=${type}`).then(r => r.json()).catch(() => null)
+      );
+      // Fetch sector heatmap for regime derivation
+      const sectorPromise = fetch('/api/sectors/heatmap').then(r => r.json()).catch(() => null);
+      // Fetch recent alerts
+      const alertsPromise = fetch('/api/alerts/history?limit=4').then(r => r.json()).catch(() => null);
+
+      const [spyQ, qqqQ, iwmQ, sectorData, alertsData] = await Promise.all([
+        ...quotePromises, sectorPromise, alertsPromise,
+      ]);
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+      setLastRefresh(timeStr);
+
+      // Build today tiles from real quotes
+      const tiles: TodayTile[] = [];
+      if (spyQ?.ok) {
+        const chg = ((spyQ.price - (spyQ.previousClose || spyQ.price)) / (spyQ.previousClose || spyQ.price)) * 100;
+        tiles.push({ symbol: 'SPY', value: spyQ.price ? `$${formatPrice(spyQ.price)}` : '--', spark: deriveSpark(chg), tone: deriveTone(chg) });
+      }
+      if (qqqQ?.ok) {
+        const chg = ((qqqQ.price - (qqqQ.previousClose || qqqQ.price)) / (qqqQ.previousClose || qqqQ.price)) * 100;
+        tiles.push({ symbol: 'QQQ', value: qqqQ.price ? `$${formatPrice(qqqQ.price)}` : '--', spark: deriveSpark(chg), tone: deriveTone(chg) });
+      }
+      if (iwmQ?.ok) {
+        const chg = ((iwmQ.price - (iwmQ.previousClose || iwmQ.price)) / (iwmQ.previousClose || iwmQ.price)) * 100;
+        tiles.push({ symbol: 'IWM', value: iwmQ.price ? `$${formatPrice(iwmQ.price)}` : '--', spark: deriveSpark(chg), tone: deriveTone(chg) });
+      }
+      if (tiles.length === 0) {
+        tiles.push({ symbol: 'SPY', value: '--', spark: '▃▃▃▃▃', tone: 'neutral' });
+      }
+      setTodayTiles(tiles);
+
+      // Derive regime from sector data
+      let regimeLabel = 'Loading...';
+      let riskLabel = 'Loading...';
+      if (sectorData?.sectors && Array.isArray(sectorData.sectors)) {
+        const defensive = sectorData.sectors.filter((s: any) => ['XLU', 'XLP', 'XLV', 'XLRE'].includes(s.symbol));
+        const offensive = sectorData.sectors.filter((s: any) => ['XLK', 'XLY', 'XLF', 'XLI', 'XLB'].includes(s.symbol));
+        const defAvg = defensive.reduce((a: number, s: any) => a + (s.changePercent || 0), 0) / (defensive.length || 1);
+        const offAvg = offensive.reduce((a: number, s: any) => a + (s.changePercent || 0), 0) / (offensive.length || 1);
+        regimeLabel = offAvg > defAvg + 0.3 ? 'Risk-On' : offAvg < defAvg - 0.3 ? 'Risk-Off' : 'Neutral';
+        riskLabel = Math.abs(offAvg - defAvg) > 1 ? 'Elevated' : 'Moderate';
+      }
+
+      setStatusBar([
+        ['Regime', regimeLabel],
+        ['Risk', riskLabel],
+        ['Data', 'Live'],
+        ['Refresh', timeStr],
+      ]);
+
+      // Build live logs from alert history
+      const logEntries: Record<LogTab, LogEntry[]> = {
+        alerts: [],
+        regime: [{ t: timeStr, event: `Regime: ${regimeLabel}`, detail: `Risk level: ${riskLabel}. Derived from sector rotation data.` }],
+        scanner: [],
+        notrade: [],
+        data: [{ t: timeStr, event: 'Data refresh', detail: 'Market quotes and sector data updated successfully.' }],
+      };
+
+      if (alertsData?.alerts && Array.isArray(alertsData.alerts)) {
+        logEntries.alerts = alertsData.alerts.slice(0, 4).map((a: any) => ({
+          t: new Date(a.triggered_at || a.created_at).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+          event: a.symbol ? `${a.symbol} alert` : 'Alert',
+          detail: a.name || a.condition || 'Triggered',
+          tone: 'warn' as const,
+        }));
+      }
+      if (logEntries.alerts.length === 0) {
+        logEntries.alerts.push({ t: timeStr, event: 'No recent alerts', detail: 'No alerts have triggered recently.' });
+      }
+      setLogs(logEntries);
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Markets data fetch error:', err);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 60_000); // Refresh every 60s
+    return () => clearInterval(interval);
+  }, [fetchMarketData]);
+
+  const rows = useMemo(() => globalRows[regionTab], [regionTab, globalRows]);
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
@@ -102,21 +201,9 @@ export default function MarketsPage() {
         </nav>
 
         <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-1 md:sticky md:top-2 md:gap-1.5 md:p-1.5">
-          {[
-            ['Regime', 'Neutral Trend'],
-            ['Risk', 'Moderate'],
-            ['Breadth', '56/44'],
-            ['VIX', '13.8'],
-            ['10Y', '4.21'],
-            ['DXY', '103.2'],
-            ['Data', 'Live'],
-            ['Last Refresh', '09:42:11', 'Refresh'],
-          ].map(([k, v, mobileK]) => (
+          {(statusBar.length > 0 ? statusBar : [['Regime', 'Loading...'], ['Risk', '--'], ['Data', '--'], ['Refresh', '--']]).map(([k, v]) => (
             <div key={k} className="rounded-full border border-[var(--msp-border)] px-1.5 py-0.5 text-[10px] leading-tight text-[var(--msp-text-muted)] md:px-2 md:text-[11px]">
-              <span className="font-semibold text-[var(--msp-text)]">
-                <span className="md:hidden">{mobileK || k}</span>
-                <span className="hidden md:inline">{k}</span>
-              </span> · {v}
+              <span className="font-semibold text-[var(--msp-text)]">{k}</span> · {v}
             </div>
           ))}
           <div className="ml-auto">
@@ -210,6 +297,7 @@ export default function MarketsPage() {
                   </div>
                 </div>
                 <div className="overflow-x-auto">
+                  {rows.length > 0 ? (
                   <table className="min-w-[620px] w-full border-collapse text-[11px]">
                     <thead>
                       <tr className="text-left uppercase tracking-wide text-[10px] text-[var(--msp-text-faint)]">
@@ -232,6 +320,11 @@ export default function MarketsPage() {
                       ))}
                     </tbody>
                   </table>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-[var(--msp-text-faint)]">
+                      Global index data requires Alpha Vantage premium. Showing sector rotation above as primary context.
+                    </div>
+                  )}
                 </div>
               </section>
             </div>

@@ -370,30 +370,28 @@ function CryptoCommandCenterContent() {
   const logs = useMemo(() => {
     const topCoin = marketData?.trending?.coins?.[0]?.symbol || 'BTC';
     const capMove = marketData?.market?.marketCapChange24h;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const dataTime = marketData ? timeStr : '--:--';
     return {
-      alerts: [
-        { t: '09:31', e: `${topCoin} volatility alert`, d: 'Momentum expansion crossed short-term risk threshold.' },
-        { t: '10:02', e: 'Market breadth pulse', d: 'Leadership narrowed into top-cap cluster.' },
+      alerts: marketData ? [
+        { t: dataTime, e: `${topCoin} market update`, d: `Top trending coin: ${topCoin}. Monitor for momentum shifts.` },
+      ] : [
+        { t: '--:--', e: 'Awaiting data', d: 'Market data loading...' },
       ],
       regime: [
         {
-          t: '09:15',
+          t: dataTime,
           e: 'Regime snapshot',
           d: `Market cap delta ${typeof capMove === 'number' ? `${capMove.toFixed(2)}%` : 'N/A'} over 24h.`,
         },
-        { t: '10:11', e: 'Risk state stable', d: 'No structural shift detected in dominance stack.' },
       ],
-      scanner: [
-        { t: '09:47', e: `${topCoin} scanner handoff`, d: 'Forwarded to scanner for setup validation.' },
-        { t: '10:09', e: 'Sector momentum handoff', d: 'Category leader rotation sent to watchlist queue.' },
-      ],
-      notrade: [
-        { t: '09:53', e: 'No-trade: liquidity quality', d: 'Spread and depth failed execution policy.' },
-        { t: '10:20', e: 'No-trade: trend conflict', d: 'Lower TF impulse conflicted with higher TF state.' },
-      ],
+      scanner: marketData ? [
+        { t: dataTime, e: `${topCoin} available`, d: 'Use scanner for setup validation on trending coins.' },
+      ] : [],
+      notrade: [],
       data: [
-        { t: '09:30', e: 'Feed health', d: 'CoinGecko endpoints healthy; refresh cadence active.' },
-        { t: '10:08', e: 'Sync checkpoint', d: 'Latest overview and trending snapshots ingested.' },
+        { t: dataTime, e: 'Feed status', d: marketData ? 'CoinGecko feed active. Data fresh.' : 'Waiting for CoinGecko response...' },
       ],
     } as Record<LogTab, Array<{ t: string; e: string; d: string }>>;
   }, [marketData]);

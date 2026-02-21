@@ -18,6 +18,21 @@ export default function GoldenEggPage() {
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <GEHeaderBar />
+      {/* DEMO DATA BANNER — all data on this page is illustrative only */}
+      <div className="mx-auto w-full max-w-[1280px] px-4 pt-2">
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <span className="text-sm font-bold uppercase tracking-wider text-amber-300">Demo / Illustrative Data Only</span>
+            <span className="text-lg">⚠️</span>
+          </div>
+          <p className="mt-1 text-xs text-amber-200/70">
+            This page displays sample data to demonstrate the Golden Egg decision framework. 
+            All prices, levels, and signals shown are static examples — not live market data. 
+            Do not use this information for trading decisions.
+          </p>
+        </div>
+      </div>
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-24">
         <GECommandStrip meta={payload.meta} layer1={payload.layer1} />
 

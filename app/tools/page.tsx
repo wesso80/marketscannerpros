@@ -195,14 +195,14 @@ export default function ToolsPage() {
     }
 
     return {
-      title: 'BTC • Time Confluence setup active',
+      title: 'No active signals — scan for opportunities',
       ctaLabel: 'Open Scanner',
-      ctaHref: '/tools/confluence-scanner',
+      ctaHref: '/tools/scanner',
       metrics: [
         { label: 'Direction', value: 'Neutral' },
         { label: 'Confidence', value: `${stats.aiConfidence}%` },
-        { label: 'Target', value: '$66,800' },
-        { label: 'Time Window', value: '1H close' },
+        { label: 'Target', value: 'Run scan' },
+        { label: 'Time Window', value: 'N/A' },
       ],
     };
   }, [stats]);
