@@ -695,7 +695,9 @@ async function fetchCryptoData(symbol: string) {
             atl: cgData.market_data?.atl?.usd,
           };
         }
-      } catch {}
+      } catch (cgErr) {
+        console.warn(`[deep-analysis] CoinGecko detail fetch failed for ${cgId}:`, cgErr instanceof Error ? cgErr.message : cgErr);
+      }
     }
     
     return {

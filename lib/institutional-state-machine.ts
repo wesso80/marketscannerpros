@@ -75,6 +75,8 @@ export interface InstitutionalStateMachineInput {
     riskBlockReasons: string[];
     edgeDecay?: boolean;
     decisionConfidence: number; // 0-1
+    /** Pre-trade checklist completed (required for ARMED → EXECUTE) */
+    checklistCompleted?: boolean;
   };
 }
 
@@ -94,6 +96,7 @@ export interface InstitutionalStateMachineOutput {
       setup_quality: { pass: boolean; missing: string[]; invalidate_level: number | null };
       trigger: { pass: boolean; definition: string; current: string; eta: string };
       risk_governor: { pass: boolean; permission: 'ALLOW' | 'ALLOW_SMALL' | 'BLOCK'; size_multiplier: number };
+      pre_trade_checklist?: { pass: boolean; reason: string | null };
     };
     next_best_action: {
       action: 'WAIT' | 'SET_ALERT' | 'PREP_ORDER' | 'EXECUTE' | 'MANAGE' | 'STANDBY' | 'REVIEW';
@@ -177,6 +180,7 @@ export function runInstitutionalTransitionEngine(input: InstitutionalStateMachin
   const gateSetup = input.context.setupQualityPass;
   const gateTrigger = input.trigger.pass;
   const gateRisk = input.context.riskGovernorPass && input.context.permission !== 'BLOCK';
+  const gateChecklist = input.context.checklistCompleted === true;
 
   const watchReady = gateData && gateRegime && gateFilter && input.context.brainScore >= 40;
   const stalkReady = watchReady && gateFlow && input.context.brainScore >= 55;
@@ -202,10 +206,13 @@ export function runInstitutionalTransitionEngine(input: InstitutionalStateMachin
     newState = 'MANAGE';
     reason = 'Position open; manage state enforced';
   }
-  // Priority 3: execution
-  else if (input.currentState === 'ARMED' && gateTrigger && gateRisk) {
+  // Priority 3: execution (checklist gate enforced)
+  else if (input.currentState === 'ARMED' && gateTrigger && gateRisk && gateChecklist) {
     newState = 'EXECUTE';
-    reason = 'Trigger fired with risk approval';
+    reason = 'Trigger fired with risk approval and checklist completed';
+  } else if (input.currentState === 'ARMED' && gateTrigger && gateRisk && !gateChecklist) {
+    newState = 'ARMED'; // Stay ARMED — checklist not yet completed
+    reason = 'Trigger fired but pre-trade checklist incomplete';
   } else if (input.event === 'entry_filled') {
     newState = 'MANAGE';
     reason = 'Entry confirmed';
@@ -309,6 +316,10 @@ export function runInstitutionalTransitionEngine(input: InstitutionalStateMachin
           pass: gateRisk,
           permission: input.context.permission,
           size_multiplier: Number(Math.max(0, Math.min(1.5, input.context.sizeMultiplier)).toFixed(2)),
+        },
+        pre_trade_checklist: {
+          pass: gateChecklist,
+          reason: gateChecklist ? null : 'Pre-trade checklist not completed',
         },
       },
       next_best_action: bestAction(newState, input.trigger.definition, input.context.permission),

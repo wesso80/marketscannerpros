@@ -13,7 +13,9 @@ function getPool(): Pool {
     
     global.__pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 5,
+      max: 15,
+      connectionTimeoutMillis: 5_000,   // 5s to acquire connection
+      idleTimeoutMillis: 10_000,        // release idle clients after 10s
       ssl: requiresSSL ? { rejectUnauthorized: false } : undefined,
     });
 
@@ -32,8 +34,14 @@ export const pool = {
 };
 
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  const res = await pool.query(text, params);
-  return res.rows as T[];
+  const client = await getPool().connect();
+  try {
+    await client.query('SET statement_timeout = 30000'); // 30s query timeout
+    const res = await client.query(text, params);
+    return res.rows as T[];
+  } finally {
+    client.release();
+  }
 }
 
 export async function tx<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

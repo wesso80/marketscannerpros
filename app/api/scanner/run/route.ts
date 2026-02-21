@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
+import { scannerLimiter, getClientIP } from "@/lib/rateLimit";
+import { avCircuit } from "@/lib/circuitBreaker";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
@@ -30,19 +32,37 @@ function isStablecoinSymbol(symbol: string): boolean {
 }
 
 // Friendly handler for Alpha Vantage throttling/premium notices
+// Wrapped in circuit breaker to prevent cascading failures
 async function fetchAlphaJson(url: string, tag: string) {
+  return avCircuit.call(async () => {
   // Add cache-busting timestamp
   const cacheBustUrl = url + (url.includes('?') ? '&' : '?') + `_nocache=${Date.now()}`;
   console.info(`[AV] Fetching ${tag}: ${url.substring(0, 100)}...`);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000); // 15s hard timeout
   
-  const res = await fetch(cacheBustUrl, { 
-    next: { revalidate: 0 }, 
-    cache: "no-store",
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
+  let res: Response;
+  try {
+    res = await fetch(cacheBustUrl, { 
+      next: { revalidate: 0 }, 
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      }
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.error(`[AV] Timeout after 15s for ${tag}`);
+      throw new Error(`Alpha Vantage timeout during ${tag}`);
     }
-  });
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
   
   if (!res.ok) {
     console.error(`[AV] HTTP ${res.status} for ${tag}`);
@@ -64,6 +84,7 @@ async function fetchAlphaJson(url: string, tag: string) {
   }
 
   return json;
+  }); // end avCircuit.call
 }
 
 interface ScanRequest {
@@ -242,6 +263,16 @@ function buildScannerLiquidityLevels(
 export async function POST(req: NextRequest) {
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
   try {
+    // Rate limit check
+    const ip = getClientIP(req);
+    const rl = scannerLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many scanner requests. Please wait before scanning again.', retryAfter: rl.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+      );
+    }
+
     // Auth check - require valid session to use scanner
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {

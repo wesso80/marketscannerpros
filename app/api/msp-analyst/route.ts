@@ -387,13 +387,32 @@ Instruction:
         const protocol = host.includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${host}`;
         
-        // Fetch all derivatives data in parallel
+        // Fetch all derivatives data in parallel (surface failures for data health)
+        const safeJsonFetch = async (url: string, label: string) => {
+          try {
+            const r = await fetch(url, { cache: 'no-store' });
+            if (!r.ok) { console.warn(`[msp-analyst] ${label} returned HTTP ${r.status}`); return null; }
+            return await r.json();
+          } catch (err) {
+            console.warn(`[msp-analyst] ${label} fetch failed:`, err instanceof Error ? err.message : err);
+            return null;
+          }
+        };
+
         const [oiRes, lsRes, fundingRes, fearGreedRes] = await Promise.all([
-          fetch(`${baseUrl}/api/open-interest`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-          fetch(`${baseUrl}/api/long-short-ratio`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-          fetch(`${baseUrl}/api/funding-rates`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-          fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+          safeJsonFetch(`${baseUrl}/api/open-interest`, 'open-interest'),
+          safeJsonFetch(`${baseUrl}/api/long-short-ratio`, 'long-short-ratio'),
+          safeJsonFetch(`${baseUrl}/api/funding-rates`, 'funding-rates'),
+          safeJsonFetch(`${baseUrl}/api/fear-greed`, 'fear-greed'),
         ]);
+
+        // Track data health for response metadata
+        const dataHealth = {
+          openInterest: oiRes !== null,
+          longShortRatio: lsRes !== null,
+          fundingRates: fundingRes !== null,
+          fearGreed: fearGreedRes !== null,
+        };
 
         let derivativesContext = '\n📊 DERIVATIVES & SENTIMENT DATA (Live from Binance Futures):\n';
         

@@ -6,7 +6,7 @@ import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
 
-const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
+const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 type PriceData = Record<string, {
   open: number;

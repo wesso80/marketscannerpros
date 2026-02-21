@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { backtestRequestSchema, type BacktestRequest } from '../../../lib/validation';
 import { getSessionFromCookie } from '@/lib/auth';
+import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildBacktestEngineResult, type BacktestTrade } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
 import { getBacktestStrategy } from '@/lib/strategies/registry';
@@ -44,7 +45,13 @@ import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
 
-const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'UI755FUUAM6FRRI9';
+const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+
+/** Backtest: 10 per minute per IP (heavy compute) */
+const backtestLimiter = createRateLimiter('backtest', {
+  windowMs: 60 * 1000,
+  max: 10,
+});
 
 // Known crypto symbols for detection
 const KNOWN_CRYPTO = [
@@ -1503,6 +1510,16 @@ function runStrategy(
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit check
+    const ip = getClientIP(req);
+    const rl = backtestLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many backtest requests. Please wait before running another.', retryAfter: rl.retryAfter },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+      );
+    }
+
     // Pro Trader tier required
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {

@@ -61,6 +61,12 @@ export type CandidateIntent = {
   stop_price: number;
   atr: number;
   event_severity?: 'none' | 'medium' | 'high';
+  /** Current open positions for correlation enforcement */
+  open_positions?: Array<{
+    symbol: string;
+    direction: Direction;
+    asset_class?: 'equities' | 'crypto';
+  }>;
 };
 
 export type EvaluateResult = {
@@ -86,12 +92,34 @@ const MAX_DAILY_R = 2;
 const MAX_OPEN_R = 3;
 const LOSS_STREAK_THROTTLE = 3;
 const LOSS_STREAK_LOCK = 4;
+const MAX_CORRELATED_SAME_CLUSTER = 2;
 
 const CONFIDENCE_THRESHOLD = {
   ALLOW: 70,
   ALLOW_REDUCED: 62,
   ALLOW_TIGHTENED: 65,
 };
+
+/**
+ * Infer correlation cluster from symbol.
+ * Symbols in the same cluster + direction should be limited.
+ */
+function inferCluster(assetClass: 'equities' | 'crypto', symbol: string): string {
+  const s = symbol.toUpperCase();
+
+  if (assetClass === 'crypto') {
+    if (/^(BTC|ETH|SOL|AVAX|RNDR|FET|TAO|NEAR|APT|ARB|OP|SUI)$/.test(s)) return 'CRYPTO_BETA';
+    if (/^(FET|RNDR|TAO|AGIX|OCEAN|GRT)$/.test(s)) return 'CRYPTO_AI';
+    if (/^(ADA|DOT|ATOM|AVAX|SOL|NEAR)$/.test(s)) return 'CRYPTO_L1';
+    return 'CRYPTO_OTHER';
+  }
+
+  if (/^(NVDA|AAPL|AMD|MSFT|META|GOOGL|QQQ|SOXL|TSLA)$/.test(s)) return 'AI_TECH';
+  if (/^(IWM|ARKK|SHOP|SNOW|NET|PLTR)$/.test(s)) return 'GROWTH';
+  if (/^(XOM|CVX|COP|XLE)$/.test(s)) return 'ENERGY';
+  if (/^(JPM|BAC|GS|MS|XLF)$/.test(s)) return 'FINANCIALS';
+  return 'GENERAL';
+}
 
 function buildMatrix(regime: Regime): Record<StrategyTag, Record<Direction, Permission>> {
   const block = { LONG: 'BLOCK' as Permission, SHORT: 'BLOCK' as Permission };
@@ -349,6 +377,30 @@ export function evaluateCandidate(snapshot: PermissionMatrixSnapshot, candidate:
     permission = 'BLOCK';
     reasonCodes.push('CONFIDENCE_BELOW_THRESHOLD');
     requiredActions.push(`Raise setup quality to >= ${confidenceFloor}% confidence.`);
+  }
+
+  // ─── Position correlation enforcement ───
+  if (candidate.open_positions && candidate.open_positions.length > 0) {
+    const myCluster = inferCluster(candidate.asset_class, candidate.symbol);
+    const sameClusterSameDirection = candidate.open_positions.filter(p => {
+      const pCluster = inferCluster(p.asset_class ?? candidate.asset_class, p.symbol);
+      return pCluster === myCluster && p.direction === candidate.direction;
+    }).length;
+
+    if (sameClusterSameDirection >= MAX_CORRELATED_SAME_CLUSTER) {
+      permission = 'BLOCK';
+      reasonCodes.push('CORRELATED_CLUSTER_FULL');
+      requiredActions.push(
+        `Max ${MAX_CORRELATED_SAME_CLUSTER} ${candidate.direction} positions in cluster ${myCluster}. Close an existing position first.`
+      );
+    } else if (sameClusterSameDirection === MAX_CORRELATED_SAME_CLUSTER - 1) {
+      // Approaching limit — warn and reduce size
+      if (permission === 'ALLOW') {
+        permission = 'ALLOW_REDUCED';
+        reasonCodes.push('CORRELATED_CLUSTER_WARNING');
+        requiredActions.push(`Approaching cluster limit for ${myCluster}. Size reduced.`);
+      }
+    }
   }
 
   const stopDistance = Math.abs(candidate.entry_price - candidate.stop_price);

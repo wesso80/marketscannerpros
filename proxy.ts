@@ -48,7 +48,52 @@ async function verify(token: string) {
   return payload;
 }
 
+// ─── Global API rate limiter (Edge-compatible, in-memory) ───
+const GLOBAL_API_WINDOW_MS = 60_000;
+const GLOBAL_API_MAX = 120;
+
+const apiHits = new Map<string, { count: number; windowStart: number }>();
+
+function getClientIP(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    '0.0.0.0'
+  );
+}
+
+function isApiRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = apiHits.get(ip);
+  if (!entry || now - entry.windowStart > GLOBAL_API_WINDOW_MS) {
+    apiHits.set(ip, { count: 1, windowStart: now });
+    return false;
+  }
+  entry.count++;
+  return entry.count > GLOBAL_API_MAX;
+}
+
+// Prune stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of apiHits) {
+    if (now - entry.windowStart > GLOBAL_API_WINDOW_MS * 5) apiHits.delete(ip);
+  }
+}, 300_000);
+
 export async function proxy(req: NextRequest) {
+  // ── Global rate limit on API routes ──
+  const { pathname } = req.nextUrl;
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks')) {
+    const ip = getClientIP(req);
+    if (isApiRateLimited(ip)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded — try again shortly' },
+        { status: 429, headers: { 'Retry-After': '60' } },
+      );
+    }
+  }
+
   const cookie = req.cookies.get('ms_auth')?.value;
   if (cookie) {
     const session = await verify(cookie);
