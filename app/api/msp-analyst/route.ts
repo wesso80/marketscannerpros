@@ -105,12 +105,13 @@ export async function POST(req: NextRequest) {
     if (!process.env.OPENAI_API_KEY) {
       return new Response(
         JSON.stringify({ 
-          error: "OPENAI_API_KEY not set on server",
-          debug: {
-            hasKey: !!process.env.OPENAI_API_KEY,
-            envKeys: Object.keys(process.env).filter(k => k.includes('OPENAI')),
-            nodeEnv: process.env.NODE_ENV
-          }
+          error: "AI service unavailable",
+          ...(process.env.NODE_ENV === 'development' ? {
+            debug: {
+              hasKey: !!process.env.OPENAI_API_KEY,
+              nodeEnv: process.env.NODE_ENV
+            }
+          } : {})
         }),
         { status: 500 }
       );

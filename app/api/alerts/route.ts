@@ -78,12 +78,12 @@ const SMART_ALERT_TYPES = [
 
 // GET - List all alerts
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const url = new URL(req.url);
     const activeOnly = url.searchParams.get('active') === 'true';
     const symbol = url.searchParams.get('symbol');
@@ -179,12 +179,12 @@ export async function GET(req: NextRequest) {
 
 // POST - Create new alert
 export async function POST(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body: AlertPayload = await req.json();
 
     // Check if this is a multi-condition alert
@@ -370,12 +370,12 @@ export async function POST(req: NextRequest) {
 
 // PUT - Update alert
 export async function PUT(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id, ...updates } = body;
 
@@ -439,12 +439,12 @@ export async function PUT(req: NextRequest) {
 
 // DELETE - Delete alert
 export async function DELETE(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
 

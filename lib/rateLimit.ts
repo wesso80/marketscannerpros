@@ -146,6 +146,12 @@ export const aiLimiter = createRateLimiter("ai", {
   max: 10,              // 10 requests per minute max (even for pro_trader)
 });
 
+/** Deep analysis: 5 per minute per IP (expensive - multiple AV calls) */
+export const deepAnalysisLimiter = createRateLimiter("deep-analysis", {
+  windowMs: 60 * 1000,  // 1 minute
+  max: 5,
+});
+
 // ============= Helper =============
 
 /**

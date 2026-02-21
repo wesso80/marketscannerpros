@@ -142,8 +142,8 @@ export async function POST(req: NextRequest) {
       await q(`delete from daily_market_focus_items where focus_id = $1`, [focusId]);
     }
 
-    // Fetch candidates - always use production URL to avoid deployment URL issues
-    const baseUrl = "https://www.marketscannerpros.app";
+    // Fetch candidates - use configured URL, fallback to production
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.marketscannerpros.app";
 
     console.log("[generate] Fetching candidates from:", baseUrl);
     

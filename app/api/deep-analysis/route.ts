@@ -3,6 +3,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { estimateGreeks } from '@/lib/options-confluence-analyzer';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { getCoinDetail, getGlobalData, resolveSymbolToId } from '@/lib/coingecko';
+import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -1148,6 +1149,16 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
   try {
+    // Rate limit: 5 per minute per IP (expensive route - multiple AV calls)
+    const ip = getClientIP(request);
+    const rl = deepAnalysisLimiter.check(ip);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { success: false, error: `Rate limit exceeded. Try again in ${rl.retryAfter}s` },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+      );
+    }
+
     // Pro Trader tier required
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {

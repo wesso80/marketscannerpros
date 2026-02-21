@@ -4,8 +4,8 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { isFreeForAllMode } from "@/lib/entitlements";
 
-// Admin emails that can access all features for testing
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "bradleywessling@yahoo.com.au,arcabulls@gmail.com").split(",").map(e => e.trim().toLowerCase());
+// Admin emails that can access all features for testing — MUST be set via ADMIN_EMAILS env var
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
 async function getEmailFromWorkspace(workspaceId: string): Promise<string | null> {
   try {
