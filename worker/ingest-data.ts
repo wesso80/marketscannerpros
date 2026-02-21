@@ -248,40 +248,96 @@ function getRateLimiter(): TokenBucket {
 let pool: Pool | null = null;
 let redis: Redis | null = null;
 
-function hashWorkerLaneToKey(lane: string): number {
-  let hash = 0;
-  const input = `msp-ingest-lane-${lane}`;
-  for (let index = 0; index < input.length; index++) {
-    hash = ((hash << 5) - hash + input.charCodeAt(index)) | 0;
-  }
-  return Math.abs(hash) || 1;
+const WORKER_INSTANCE_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const HEARTBEAT_STALE_MS = 120_000; // 2 minutes — lock is considered stale after this
+const HEARTBEAT_INTERVAL_MS = 30_000; // Update heartbeat every 30 seconds
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+async function ensureWorkerLocksTable(): Promise<void> {
+  const db = getPool();
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS worker_locks (
+      lane TEXT PRIMARY KEY,
+      instance_id TEXT NOT NULL,
+      heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      started_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 async function acquireWorkerLaneLock(lane: string): Promise<(() => Promise<void>) | null> {
   const db = getPool();
-  const client = await db.connect();
-  const lockKey = hashWorkerLaneToKey(lane);
 
+  await ensureWorkerLocksTable();
+
+  // Try to insert a fresh lock row (no existing lock)
   try {
-    const result = await client.query<{ locked: boolean }>('SELECT pg_try_advisory_lock($1) AS locked', [lockKey]);
-    const locked = result.rows[0]?.locked === true;
+    await db.query(
+      `INSERT INTO worker_locks (lane, instance_id, heartbeat_at, started_at)
+       VALUES ($1, $2, NOW(), NOW())`,
+      [lane, WORKER_INSTANCE_ID]
+    );
+    console.log(`[worker] Lock acquired (new) for lane '${lane}', instance=${WORKER_INSTANCE_ID}`);
+  } catch (err: any) {
+    // Unique violation means row already exists — check if stale
+    if (err.code !== '23505') throw err;
 
-    if (!locked) {
-      client.release();
-      return null;
-    }
+    const existing = await db.query<{ instance_id: string; heartbeat_at: Date }>(
+      `SELECT instance_id, heartbeat_at FROM worker_locks WHERE lane = $1`,
+      [lane]
+    );
 
-    return async () => {
-      try {
-        await client.query('SELECT pg_advisory_unlock($1)', [lockKey]);
-      } finally {
-        client.release();
+    if (existing.rows.length > 0) {
+      const row = existing.rows[0];
+      const ageMs = Date.now() - new Date(row.heartbeat_at).getTime();
+
+      if (ageMs < HEARTBEAT_STALE_MS) {
+        console.log(`[worker] Lock held by instance=${row.instance_id}, heartbeat ${Math.round(ageMs / 1000)}s ago (fresh) — cannot acquire`);
+        return null;
       }
-    };
-  } catch (error) {
-    client.release();
-    throw error;
+
+      // Stale lock — steal it with atomic CAS to prevent races
+      const stolen = await db.query(
+        `UPDATE worker_locks
+         SET instance_id = $1, heartbeat_at = NOW(), started_at = NOW()
+         WHERE lane = $2 AND instance_id = $3
+         RETURNING lane`,
+        [WORKER_INSTANCE_ID, lane, row.instance_id]
+      );
+
+      if (stolen.rowCount === 0) {
+        console.log(`[worker] Stale lock detected but another instance stole it first — cannot acquire`);
+        return null;
+      }
+      console.log(`[worker] Stale lock stolen from instance=${row.instance_id} (${Math.round(ageMs / 1000)}s stale), now owned by ${WORKER_INSTANCE_ID}`);
+    }
   }
+
+  // Start heartbeat interval
+  heartbeatTimer = setInterval(async () => {
+    try {
+      await db.query(
+        `UPDATE worker_locks SET heartbeat_at = NOW() WHERE lane = $1 AND instance_id = $2`,
+        [lane, WORKER_INSTANCE_ID]
+      );
+    } catch (err: any) {
+      console.error(`[worker] Heartbeat update failed:`, err?.message || err);
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+
+  // Return release function
+  return async () => {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+    try {
+      await db.query(`DELETE FROM worker_locks WHERE lane = $1 AND instance_id = $2`, [lane, WORKER_INSTANCE_ID]);
+      console.log(`[worker] Lock released for lane '${lane}'`);
+    } catch (err: any) {
+      console.error(`[worker] Lock release failed:`, err?.message || err);
+    }
+  };
 }
 
 function getPool(): Pool {
@@ -1440,12 +1496,16 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  process.on('SIGINT', () => {
-    void releaseLaneLock();
+  process.on('SIGINT', async () => {
+    console.log('[worker] SIGINT received, releasing lock...');
+    await releaseLaneLock();
+    process.exit(0);
   });
 
-  process.on('SIGTERM', () => {
-    void releaseLaneLock();
+  process.on('SIGTERM', async () => {
+    console.log('[worker] SIGTERM received, releasing lock...');
+    await releaseLaneLock();
+    process.exit(0);
   });
 
   let cycleCount = 0;
