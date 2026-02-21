@@ -28,7 +28,8 @@
 
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
-import { MSP_ANALYST_V11_PROMPT } from "@/lib/prompts/mspAnalystV11";
+import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from "@/lib/prompts/mspAnalystV2";
+import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from "@/lib/prompts/pineScriptEngineerV2";
 import { SCANNER_EXPLAINER_RULES, getScannerExplainerContext } from "@/lib/prompts/scannerExplainerRules";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
@@ -40,6 +41,9 @@ import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from "@/lib/ai/regimeScoring";
+import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
+import type { PromptMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
 
@@ -235,10 +239,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ===== V2 DUAL-MODE PROMPT ROUTING =====
+    const promptMode: PromptMode = isPineScriptRequest(query) ? 'pine_script' : 'analyst';
+    const basePrompt = promptMode === 'pine_script' ? PINE_SCRIPT_V2_PROMPT : MSP_ANALYST_V2_PROMPT;
+
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
-        content: MSP_ANALYST_V11_PROMPT,
+        content: basePrompt,
       },
     ];
 
@@ -247,6 +255,60 @@ export async function POST(req: NextRequest) {
         role: "system",
         content: `Mode: ${mode}. Follow this mode when answering.`,
       });
+    }
+
+    // ===== V2 REGIME-CALIBRATED SCORING + ACL =====
+    const regimeLabel = institutionalFilter.filters.find(f => f.key === 'regime')?.reason || 'unknown';
+    const regimeRaw = /range|chop/.test(query.toLowerCase()) ? 'RANGE_NEUTRAL' : 
+                      /trend/.test(query.toLowerCase()) ? 'TREND_UP' : 'RANGE_NEUTRAL';
+    const scoringRegime = mapToScoringRegime(regimeRaw);
+    
+    // Estimate confluence components from available data
+    const components = estimateComponentsFromContext({
+      scannerScore: Number(scanner?.score ?? 50),
+      regime: regimeRaw,
+      rsi: scanner?.scanData?.rsi,
+      cci: scanner?.scanData?.cci,
+      adx: scanner?.scanData?.adx,
+      aroonUp: scanner?.scanData?.aroon_up,
+      aroonDown: scanner?.scanData?.aroon_down,
+      obv: scanner?.scanData?.obv,
+      session: 'regular',
+      derivativesAvailable: false, // Will be set to true if crypto data fetched
+    });
+    
+    const regimeScoring = computeRegimeScore(components, scoringRegime);
+    
+    // Determine event risk from query keywords
+    const eventRiskLevel = /fomc|cpi|nfp|earnings|news/.test(query.toLowerCase()) ? 'high' as const : 'none' as const;
+    
+    const aclResult = computeACLFromScoring(regimeScoring, {
+      regimeConfidence: institutionalFilter.finalScore,
+      setupType: inferStrategyFromText(query) === 'breakout' ? 'breakout' :
+                 inferStrategyFromText(query) === 'mean_reversion' ? 'mean_reversion' :
+                 inferStrategyFromText(query) === 'momentum' ? 'momentum' :
+                 inferStrategyFromText(query) === 'macro_swing' ? 'swing' : undefined,
+      eventRisk: eventRiskLevel,
+      riskGovernorPermission: institutionalFilter.noTrade ? 'BLOCK' : 'ALLOW',
+    });
+    
+    // Inject V2 platform state (regime weights + ACL)
+    const v2StateInjection = buildAnalystV2SystemMessages({
+      regimeLabel: scoringRegime,
+      riskLevel: institutionalFilter.finalGrade,
+      permission: institutionalFilter.noTrade ? 'BLOCK' : 'ALLOW',
+      regimeWeights: regimeScoring.weights,
+      aclResult: {
+        confidence: aclResult.confidence,
+        authorization: aclResult.authorization,
+        throttle: aclResult.throttle,
+        reasonCodes: aclResult.reasonCodes,
+      },
+      volatilityState: institutionalFilter.filters.find(f => f.key === 'volatility')?.reason,
+    });
+    
+    if (v2StateInjection) {
+      messages.push({ role: "system", content: v2StateInjection });
     }
 
     // NEW: inject strict scanner explainer rules if this came from scanner
@@ -560,6 +622,35 @@ Always mention which derivatives signals support or contradict your analysis.
       JSON.stringify({
         ok: true,
         text,
+        // V2 structured metadata
+        promptMode,
+        decision: {
+          regime: scoringRegime,
+          riskEnvironment: institutionalFilter.finalGrade,
+          volatilityState: institutionalFilter.filters.find(f => f.key === 'volatility')?.status || 'unknown',
+          confluenceScore: regimeScoring.weightedScore,
+          authorization: aclResult.authorization,
+          throttle: aclResult.throttle,
+          tradeBias: regimeScoring.tradeBias,
+          verdict: aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
+                   aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
+                   regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH',
+          reasonCodes: aclResult.reasonCodes,
+        },
+        confidence: {
+          value: aclResult.confidence,
+          type: 'composite',
+          horizon: 'next_session',
+          components: [
+            { name: 'SQ', weight: regimeScoring.weights.SQ, value: regimeScoring.rawComponents.SQ },
+            { name: 'TA', weight: regimeScoring.weights.TA, value: regimeScoring.rawComponents.TA },
+            { name: 'VA', weight: regimeScoring.weights.VA, value: regimeScoring.rawComponents.VA },
+            { name: 'LL', weight: regimeScoring.weights.LL, value: regimeScoring.rawComponents.LL },
+            { name: 'MTF', weight: regimeScoring.weights.MTF, value: regimeScoring.rawComponents.MTF },
+            { name: 'FD', weight: regimeScoring.weights.FD, value: regimeScoring.rawComponents.FD },
+          ],
+          calibrationNote: `Regime: ${scoringRegime} | ACL Pipeline: Base=${aclResult.pipeline.step1_base}→Final=${aclResult.pipeline.step5_final}`,
+        },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

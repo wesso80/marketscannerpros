@@ -11,7 +11,11 @@ import OpenAI from 'openai';
 import { buildUnifiedContext, serializeContextForPrompt } from '@/lib/ai/context';
 import { getOpenAITools, toolRequiresConfirmation, AI_TOOLS, generateIdempotencyKey } from '@/lib/ai/tools';
 import { SKILL_CONFIGS, CONTEXT_VERSION, SKILL_VERSION_PREFIX } from '@/lib/ai/types';
-import type { PageContext, PageSkill, AIToolCall, CopilotMessage, SuggestedAction } from '@/lib/ai/types';
+import type { PageContext, PageSkill, AIToolCall, CopilotMessage, SuggestedAction, PromptMode } from '@/lib/ai/types';
+import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from '@/lib/prompts/mspAnalystV2';
+import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineScriptEngineerV2';
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from '@/lib/ai/regimeScoring';
+import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -141,8 +145,11 @@ export async function POST(req: NextRequest) {
       pageData || {}
     );
 
-    // Build system prompt
-    const systemPrompt = buildSystemPrompt(skill, skillConfig, context);
+    // V2 Dual-mode routing: detect Pine Script requests
+    const promptMode: PromptMode = isPineScriptRequest(message) ? 'pine_script' : 'analyst';
+
+    // Build system prompt with V2 institutional intelligence
+    const systemPrompt = buildSystemPromptV2(skill, skillConfig, context, promptMode);
 
     // Build messages array
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -157,10 +164,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Add context summary
+    // Add context summary with V2 regime scoring + ACL
+    const scoringRegime = mapToScoringRegime(
+      context.marketState?.regime === 'risk-off' ? 'RISK_OFF_STRESS' :
+      context.marketState?.regime === 'risk-on' ? 'TREND_UP' :
+      context.marketState?.regime === 'transitioning' ? 'TRANSITION' : 'RANGE_NEUTRAL'
+    );
+    const components = estimateComponentsFromContext({
+      scannerScore: typeof pageData?.score === 'number' ? pageData.score : 50,
+      regime: scoringRegime,
+      session: 'regular',
+    });
+    const regimeScoring = computeRegimeScore(components, scoringRegime);
+    const aclResult = computeACLFromScoring(regimeScoring, {
+      regimeConfidence: 60,
+    });
+
+    const v2State = buildAnalystV2SystemMessages({
+      regimeLabel: scoringRegime,
+      regimeWeights: regimeScoring.weights,
+      aclResult: {
+        confidence: aclResult.confidence,
+        authorization: aclResult.authorization,
+        throttle: aclResult.throttle,
+        reasonCodes: aclResult.reasonCodes,
+      },
+    });
+
     messages.push({
       role: 'system',
-      content: `Current context:\n${serializeContextForPrompt(context)}`,
+      content: `Current context:\n${serializeContextForPrompt(context)}${v2State ? '\n' + v2State : ''}`,
     });
 
     // Add user message
@@ -294,6 +327,29 @@ export async function POST(req: NextRequest) {
       latencyMs: latency,
       contextVersion: CONTEXT_VERSION,
       skillVersion,
+      // V2 structured decision metadata
+      promptMode,
+      decision: {
+        regime: scoringRegime,
+        confluenceScore: regimeScoring.weightedScore,
+        authorization: aclResult.authorization,
+        throttle: aclResult.throttle,
+        tradeBias: regimeScoring.tradeBias,
+        reasonCodes: aclResult.reasonCodes,
+      },
+      confidence: {
+        value: aclResult.confidence,
+        type: 'composite',
+        horizon: 'next_session',
+        components: [
+          { name: 'SQ', weight: regimeScoring.weights.SQ, value: regimeScoring.rawComponents.SQ },
+          { name: 'TA', weight: regimeScoring.weights.TA, value: regimeScoring.rawComponents.TA },
+          { name: 'VA', weight: regimeScoring.weights.VA, value: regimeScoring.rawComponents.VA },
+          { name: 'LL', weight: regimeScoring.weights.LL, value: regimeScoring.rawComponents.LL },
+          { name: 'MTF', weight: regimeScoring.weights.MTF, value: regimeScoring.rawComponents.MTF },
+          { name: 'FD', weight: regimeScoring.weights.FD, value: regimeScoring.rawComponents.FD },
+        ],
+      },
       // Include quota info in response
       quota: {
         used: quota.usageCount + 1,
@@ -321,30 +377,30 @@ async function generateInputHash(message: string, context: string): Promise<stri
   return Math.abs(hash).toString(16).padStart(16, '0');
 }
 
-// Build the system prompt based on skill and context
-function buildSystemPrompt(
+// Build the system prompt based on skill and context — V2 Institutional Intelligence
+function buildSystemPromptV2(
   skill: PageSkill, 
   skillConfig: typeof SKILL_CONFIGS[PageSkill],
-  context: Awaited<ReturnType<typeof buildUnifiedContext>>
+  context: Awaited<ReturnType<typeof buildUnifiedContext>>,
+  promptMode: PromptMode
 ): string {
+  // For Pine Script requests, use the Pine Script Engineer V2 prompt
+  if (promptMode === 'pine_script') {
+    return `${PINE_SCRIPT_V2_PROMPT}\n\nCONTEXT: User is on the ${skillConfig.displayName} page. Subscription: ${context.user.tier}. Trading Style: ${context.user.tradingStyle}.`;
+  }
+
   // Check if we have page data
   const hasPageData = context.pageData && Object.keys(context.pageData).length > 0;
   const pageDataNote = hasPageData 
     ? `\n\nIMPORTANT: You have access to the current scan/page results in the "PAGE DATA" section below. USE THIS DATA to answer user questions about the current scan. Reference specific values like symbol, price, direction, signals, etc.`
     : '';
 
-  const basePrompt = `You are MSP Analyst, the AI assistant for MarketScanner Pros - a professional trading analysis platform.
+  // V2: Base prompt is the institutional system prompt + skill-specific additions
+  const basePrompt = `${MSP_ANALYST_V2_PROMPT}
 
-CORE PRINCIPLES:
-1. Be concise and actionable. Traders value their time.
-2. Always show your sources: "Based on: [specific data points]"
-3. Never invent numbers. If data is missing, say "data unavailable".
-4. Include educational context for complex topics.
-5. Every response should end with "Educational purposes only - not financial advice."
-${pageDataNote}
-
-YOUR CAPABILITIES ON THIS PAGE (${skillConfig.displayName}):
+SKILL CONTEXT: ${skillConfig.displayName}
 ${skillConfig.systemPromptAddition}
+${pageDataNote}
 
 USER PROFILE:
 - Subscription: ${context.user.tier}
@@ -354,21 +410,18 @@ USER PROFILE:
 
 TOOLS AVAILABLE:
 You can call tools to take actions. Only suggest actions that make sense for the current context.
-Tools that require confirmation will be shown to the user before executing.
-
-RESPONSE FORMAT:
-- Start with the direct answer or insight
-- Include 1-2 supporting data points from the PAGE DATA when available
-- If action is warranted, suggest it using available tools
-- End with the educational disclaimer
-
-FORBIDDEN:
-- Never guarantee returns or profits
-- Never tell users exactly what to buy/sell
-- Never share specific price targets as recommendations
-- Never dismiss risk or downplay potential losses`;
+Tools that require confirmation will be shown to the user before executing.`;
 
   return basePrompt;
+}
+
+// Legacy buildSystemPrompt kept for reference — now superseded by buildSystemPromptV2
+function buildSystemPrompt(
+  skill: PageSkill, 
+  skillConfig: typeof SKILL_CONFIGS[PageSkill],
+  context: Awaited<ReturnType<typeof buildUnifiedContext>>
+): string {
+  return buildSystemPromptV2(skill, skillConfig, context, 'analyst');
 }
 
 // Format tool call into user-friendly label

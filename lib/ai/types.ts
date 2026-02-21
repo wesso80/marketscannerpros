@@ -459,3 +459,29 @@ export const SKILL_CONFIGS: Record<PageSkill, SkillConfig> = {
     maxTokens: 600,
   },
 };
+
+// ===== V2 INSTITUTIONAL DECISION TYPES =====
+
+/** Structured decision object included in V2 AI responses */
+export interface DecisionObject {
+  regime: string;
+  riskEnvironment: string;
+  volatilityState: string;
+  confluenceScore: number;
+  authorization: 'AUTHORIZED' | 'CONDITIONAL' | 'BLOCKED';
+  throttle: number;
+  tradeBias: 'NEUTRAL' | 'CONDITIONAL' | 'VALID' | 'HIGH_CONFLUENCE';
+  verdict: 'TRADE_READY' | 'CONDITIONAL' | 'WATCH' | 'NO_TRADE';
+  reasonCodes: string[];
+}
+
+/** V2 AI response with structured decision metadata */
+export interface V2AIResponse {
+  content: string;
+  decision?: DecisionObject;
+  confidence?: ConfidenceMetadata;
+  promptMode: 'analyst' | 'pine_script';
+}
+
+/** Route mode for dual-mode prompt routing */
+export type PromptMode = 'analyst' | 'pine_script';
