@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { isFreeForAllMode } from "@/lib/entitlements";
 
 // Admin emails that can access all features for testing
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "bradleywessling@yahoo.com.au,arcabulls@gmail.com").split(",").map(e => e.trim().toLowerCase());
@@ -54,8 +55,19 @@ export async function GET() {
   // Check if user is admin
   const isAdmin = email ? ADMIN_EMAILS.includes(email.toLowerCase()) : false;
 
+  // Determine effective tier:
+  // 1) FREE_FOR_ALL_MODE → everyone gets pro_trader
+  // 2) Admin users always get pro_trader
+  // 3) Otherwise use session tier from cookie
+  let effectiveTier = session.tier;
+  if (isFreeForAllMode()) {
+    effectiveTier = "pro_trader";
+  } else if (isAdmin) {
+    effectiveTier = "pro_trader";
+  }
+
   return NextResponse.json({ 
-    tier: session.tier, 
+    tier: effectiveTier, 
     workspaceId: session.workspaceId,
     authenticated: true,
     isAdmin,

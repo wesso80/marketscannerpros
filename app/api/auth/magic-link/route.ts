@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signToken } from "@/lib/auth";
 import { sendAlertEmail } from "@/lib/email";
 import { createRateLimiter, getClientIP } from "@/lib/rateLimit";
+import { APP_URL } from "@/lib/appUrl";
 
 const magicLinkLimiter = createRateLimiter("magic-link", {
   windowMs: 60 * 1000,
@@ -34,7 +35,9 @@ export async function POST(req: NextRequest) {
       exp,
     });
 
-    const verifyUrl = `${req.nextUrl.origin}/auth/verify?token=${encodeURIComponent(token)}`;
+    // Use APP_URL constant – req.nextUrl.origin resolves to 0.0.0.0:10000 on Render
+    const origin = APP_URL || req.nextUrl.origin;
+    const verifyUrl = `${origin}/auth/verify?token=${encodeURIComponent(token)}`;
 
     const subject = "Your secure MarketScannerPros sign-in link";
     const html = `
