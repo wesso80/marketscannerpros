@@ -29,7 +29,7 @@ export default function ToolsNavBar() {
           href={href}
           className={`whitespace-nowrap rounded-full border px-2.5 py-1 transition-colors ${
             isActive(href)
-              ? "border-[var(--msp-accent)]/40 bg-[var(--msp-accent)]/10 text-[var(--msp-accent)]"
+              ? "border-[rgba(16,185,129,0.4)] bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)]"
               : "border-transparent text-[var(--msp-text-muted)] hover:text-[var(--msp-text)]"
           }`}
         >

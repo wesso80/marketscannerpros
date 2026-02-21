@@ -112,7 +112,7 @@ export default function MarketsPage() {
             ['Data', 'Live'],
             ['Last Refresh', '09:42:11', 'Refresh'],
           ].map(([k, v, mobileK]) => (
-            <div key={k} className="rounded-full border border-[var(--msp-border)] px-1.5 py-0.5 text-[9px] leading-tight text-[var(--msp-text-muted)] md:px-2 md:text-[10px]">
+            <div key={k} className="rounded-full border border-[var(--msp-border)] px-1.5 py-0.5 text-[10px] leading-tight text-[var(--msp-text-muted)] md:px-2 md:text-[11px]">
               <span className="font-semibold text-[var(--msp-text)]">
                 <span className="md:hidden">{mobileK || k}</span>
                 <span className="hidden md:inline">{k}</span>

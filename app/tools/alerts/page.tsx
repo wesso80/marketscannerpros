@@ -40,7 +40,7 @@ type NotificationPrefs = {
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="w-[104px] rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
+    <div className="min-w-[80px] flex-1 rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
       <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
       <div className="text-sm font-semibold text-slate-100">{value}</div>
     </div>

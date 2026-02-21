@@ -252,7 +252,7 @@ function AiAnalystContent() {
         title="MSP AI Analyst"
         subtitle="State → Context → Query → Output → Action"
         icon="🧠"
-        backHref="/dashboard"
+        backHref="/tools/markets"
       />
 
       <main className="mx-auto w-full max-w-[1700px] space-y-2 px-2 pb-6 pt-3 md:px-3">

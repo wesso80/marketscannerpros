@@ -19,9 +19,9 @@
   --msp-muted: var(--msp-text-muted);
   --msp-faint: var(--msp-text-faint);
 
-  --msp-accent: #19B7A0;
-  --msp-accent-hover: #16A38F;
-  --msp-accent-glow: rgba(25, 183, 160, 0.18);
+  --msp-accent: #10B981;
+  --msp-accent-hover: #059669;
+  --msp-accent-glow: rgba(16, 185, 129, 0.18);
 
   --msp-bull: #2FB36E;
   --msp-bear: #E46767;

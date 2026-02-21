@@ -363,7 +363,7 @@ function PlanCard({
             "w-full rounded-2xl px-4 py-3 text-sm font-semibold transition",
             plan.highlight
               ? "border border-white/15 bg-white/15 hover:bg-white/20"
-              : "border border-white/10 bg-white/8 hover:bg-white/12",
+              : "border border-white/10 bg-white/10 hover:bg-white/20",
             loading ? "opacity-60 cursor-not-allowed" : "",
           ].join(" ")}
         >

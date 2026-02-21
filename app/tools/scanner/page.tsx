@@ -5307,7 +5307,7 @@ function ScannerContent() {
 
 export default function ScannerPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0F172A" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--msp-bg, #0A101C)" }} />}>
       <ScannerContent />
     </Suspense>
   );

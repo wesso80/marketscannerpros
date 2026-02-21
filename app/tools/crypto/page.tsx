@@ -524,7 +524,7 @@ function CryptoCommandCenterContent() {
               <Link href="/tools/scanner?asset=crypto" className="text-[10px] font-semibold text-emerald-300">Open Scanner</Link>
             </div>
 
-            <div className="h-[590px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
+            <div className="max-h-[590px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
               <div className="mb-2 grid grid-cols-2 gap-1.5 md:grid-cols-5">
                 {sectionItems.map((item) => (
                   <button
