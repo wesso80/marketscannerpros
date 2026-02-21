@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -650,7 +651,7 @@ export default function NewsSentimentPage() {
   const filteredNews = useMemo<EnrichedNewsItem[]>(() => {
     const bySentiment = sentimentFilter === 'all'
       ? enrichNews
-      : enrichNews.filter((item) => item.raw.sentiment.label.toLowerCase().includes(sentimentFilter));
+      : enrichNews.filter((item) => item.sentiment.toLowerCase().includes(sentimentFilter));
 
     const byQuery = !newsQuery.trim()
       ? bySentiment

@@ -23,6 +23,7 @@ export interface DecisionNewsItem {
   raw: {
     title: string;
     summary: string;
+    timePublished: string;
     url: string;
     source: string;
     tickerSentiments?: Array<{ ticker: string }>;
