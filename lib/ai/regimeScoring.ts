@@ -57,33 +57,33 @@ export interface RegimeScoringResult {
 const REGIME_MATRICES: Record<ScoringRegime, RegimeWeightMatrix> = {
   TREND_EXPANSION: {
     regime: 'TREND_EXPANSION',
-    weights: { SQ: 0.20, TA: 0.25, VA: 0.15, LL: 0.10, MTF: 0.20, FD: 0.10 },
+    weights: { SQ: 0.10, TA: 0.35, VA: 0.10, LL: 0.05, MTF: 0.30, FD: 0.10 },
     gates: { TA: 50, MTF: 40 },
-    description: 'Strong trend — Technical Alignment and Multi-Timeframe drive conviction. Gate: TA≥50, MTF≥40.',
+    description: 'Strong trend — Technical Alignment (0.35) and Multi-Timeframe (0.30) drive conviction. Gate: TA≥50, MTF≥40.',
   },
   TREND_MATURE: {
     regime: 'TREND_MATURE',
-    weights: { SQ: 0.15, TA: 0.20, VA: 0.20, LL: 0.10, MTF: 0.15, FD: 0.20 },
+    weights: { SQ: 0.10, TA: 0.10, VA: 0.30, LL: 0.10, MTF: 0.10, FD: 0.30 },
     gates: { VA: 40, FD: 35 },
-    description: 'Aging trend — Volume confirmation and Derivatives divergence become critical. Gate: VA≥40, FD≥35.',
+    description: 'Aging trend — Volume (0.30) and Derivatives (0.30) divergence critical. Gate: VA≥40, FD≥35.',
   },
   RANGE_COMPRESSION: {
     regime: 'RANGE_COMPRESSION',
-    weights: { SQ: 0.25, TA: 0.15, VA: 0.20, LL: 0.15, MTF: 0.10, FD: 0.15 },
+    weights: { SQ: 0.35, TA: 0.10, VA: 0.15, LL: 0.20, MTF: 0.05, FD: 0.15 },
     gates: { SQ: 55, LL: 40 },
-    description: 'Range/chop — Signal Quality must be exceptional. Liquidity matters for clean fills. Gate: SQ≥55, LL≥40.',
+    description: 'Range/chop — Signal Quality (0.35) must be exceptional. Liquidity (0.20) for clean fills. Gate: SQ≥55, LL≥40.',
   },
   VOL_EXPANSION: {
     regime: 'VOL_EXPANSION',
-    weights: { SQ: 0.15, TA: 0.15, VA: 0.10, LL: 0.25, MTF: 0.10, FD: 0.25 },
+    weights: { SQ: 0.05, TA: 0.10, VA: 0.10, LL: 0.35, MTF: 0.05, FD: 0.35 },
     gates: { LL: 50, FD: 40 },
-    description: 'Volatility spiking — Liquidity and Fundamental context dominate. Gate: LL≥50, FD≥40.',
+    description: 'Volatility spiking — Liquidity (0.35) and Fundamentals (0.35) dominate. Gate: LL≥50, FD≥40.',
   },
   TRANSITION: {
     regime: 'TRANSITION',
-    weights: { SQ: 0.20, TA: 0.15, VA: 0.15, LL: 0.15, MTF: 0.20, FD: 0.15 },
+    weights: { SQ: 0.25, TA: 0.10, VA: 0.10, LL: 0.10, MTF: 0.35, FD: 0.10 },
     gates: { MTF: 50, SQ: 50 },
-    description: 'Regime uncertain — Multi-Timeframe confirmation and Signal Quality required. Gate: MTF≥50, SQ≥50.',
+    description: 'Regime uncertain — MTF confirmation (0.35) and Signal Quality (0.25) required. Gate: MTF≥50, SQ≥50.',
   },
 };
 

@@ -56,6 +56,71 @@ function getOpenAIClient() {
   });
 }
 
+/**
+ * Infer market regime from indicator data with query-text fallback.
+ * Replaces naive regex detection with actual technical analysis.
+ */
+function inferRegimeFromData(scanData: any, query: string): string {
+  // Priority 1: Use actual technical indicators
+  if (scanData) {
+    const adx = scanData.adx !== undefined ? Number(scanData.adx) : NaN;
+    const rsi = scanData.rsi !== undefined ? Number(scanData.rsi) : NaN;
+    const aroonUp = scanData.aroon_up !== undefined ? Number(scanData.aroon_up) : NaN;
+    const aroonDown = scanData.aroon_down !== undefined ? Number(scanData.aroon_down) : NaN;
+
+    // Extreme RSI → vol expansion
+    if (!isNaN(rsi) && (rsi > 80 || rsi < 20)) return 'VOL_EXPANSION';
+
+    // Strong directional trend: ADX > 25
+    if (!isNaN(adx) && adx > 25) {
+      if (!isNaN(aroonUp) && !isNaN(aroonDown)) {
+        if (aroonUp > 70 && aroonDown < 30) return 'TREND_UP';
+        if (aroonDown > 70 && aroonUp < 30) return 'TREND_DOWN';
+      }
+      if (!isNaN(rsi)) {
+        if (rsi >= 55) return 'TREND_UP';
+        if (rsi <= 45) return 'TREND_DOWN';
+      }
+      return 'TREND_UP'; // Strong ADX defaults bullish
+    }
+
+    // Weak ADX → range bound
+    if (!isNaN(adx) && adx < 20) return 'RANGE_NEUTRAL';
+
+    // ADX 20-25 → borderline, conservative
+    if (!isNaN(adx)) return 'RANGE_NEUTRAL';
+  }
+
+  // Priority 2: Query text heuristics (fallback when no indicator data)
+  const q = query.toLowerCase();
+  if (/risk.?off|stress|crash|sell.?off|panic|capitulat/.test(q)) return 'RISK_OFF_STRESS';
+  if (/vol(?:atile|atility)?.*(?:spike|expan|high|extreme)|vix.*(?:spike|high)/.test(q)) return 'VOL_EXPANSION';
+  if (/bear(?:ish)?|down.?trend|sell(?:ing)?.*pressure/.test(q)) return 'TREND_DOWN';
+  if (/bull(?:ish)?|up.?trend|break.?out|momentum|rally/.test(q)) return 'TREND_UP';
+  if (/range|chop|sideways|flat|consolidat/.test(q)) return 'RANGE_NEUTRAL';
+  if (/contract|compress|squeeze|tight|low.?vol/.test(q)) return 'VOL_CONTRACTION';
+
+  return 'RANGE_NEUTRAL';
+}
+
+/** Count real indicator data points available from scanner */
+function countDataComponents(scanner: any): number {
+  if (!scanner?.scanData) return 0;
+  const d = scanner.scanData;
+  let count = 0;
+  if (d.rsi !== undefined && d.rsi !== null) count++;
+  if (d.adx !== undefined && d.adx !== null) count++;
+  if (d.cci !== undefined && d.cci !== null) count++;
+  if (d.macd_hist !== undefined && d.macd_hist !== null) count++;
+  if (d.obv !== undefined && d.obv !== null) count++;
+  if (d.stoch_k !== undefined && d.stoch_k !== null) count++;
+  if (d.aroon_up !== undefined && d.aroon_up !== null) count++;
+  if (d.aroon_down !== undefined && d.aroon_down !== null) count++;
+  if (d.atr !== undefined && d.atr !== null) count++;
+  if (d.ema200 !== undefined && d.ema200 !== null) count++;
+  return count;
+}
+
 export async function POST(req: NextRequest) {
   // Rate limit: 10 requests per minute per IP (prevents spam, separate from daily DB limits)
   const ip = getClientIP(req);
@@ -163,15 +228,23 @@ export async function POST(req: NextRequest) {
       Number(scanner?.score ?? 50)
     );
 
+    // ===== INDICATOR-BASED REGIME INFERENCE (replaces naive regex) =====
+    const regimeInferred = inferRegimeFromData(scanner?.scanData, query);
+    const dataComponentCount = countDataComponents(scanner);
+
     const institutionalFilter = computeInstitutionalFilter({
       baseScore: Number(scanner?.score ?? 50),
       strategy: inferStrategyFromText(`${query} ${mode || ''}`),
-      regime: /range|chop/.test(query.toLowerCase()) ? 'ranging' : 'unknown',
+      regime: regimeInferred === 'RANGE_NEUTRAL' || regimeInferred === 'VOL_CONTRACTION' ? 'ranging'
+            : regimeInferred.startsWith('TREND') ? 'trending'
+            : regimeInferred === 'VOL_EXPANSION' || regimeInferred === 'RISK_OFF_STRESS' ? 'high_volatility_chaos'
+            : 'unknown',
       liquidity: {
         session: 'regular',
       },
       volatility: {
-        state: /extreme|chaos|shock/.test(query.toLowerCase()) ? 'extreme' : 'normal',
+        state: regimeInferred === 'VOL_EXPANSION' || regimeInferred === 'RISK_OFF_STRESS' ? 'extreme'
+              : /extreme|chaos|shock/.test(query.toLowerCase()) ? 'extreme' : 'normal',
       },
       dataHealth: {
         freshness: scanner?.source === 'msp-web-scanner' ? 'LIVE' : 'DELAYED',
@@ -259,14 +332,12 @@ export async function POST(req: NextRequest) {
 
     // ===== V2 REGIME-CALIBRATED SCORING + ACL =====
     const regimeLabel = institutionalFilter.filters.find(f => f.key === 'regime')?.reason || 'unknown';
-    const regimeRaw = /range|chop/.test(query.toLowerCase()) ? 'RANGE_NEUTRAL' : 
-                      /trend/.test(query.toLowerCase()) ? 'TREND_UP' : 'RANGE_NEUTRAL';
-    const scoringRegime = mapToScoringRegime(regimeRaw);
+    const scoringRegime = mapToScoringRegime(regimeInferred);
     
     // Estimate confluence components from available data
     const components = estimateComponentsFromContext({
       scannerScore: Number(scanner?.score ?? 50),
-      regime: regimeRaw,
+      regime: regimeInferred,
       rsi: scanner?.scanData?.rsi,
       cci: scanner?.scanData?.cci,
       adx: scanner?.scanData?.adx,
@@ -290,6 +361,7 @@ export async function POST(req: NextRequest) {
                  inferStrategyFromText(query) === 'macro_swing' ? 'swing' : undefined,
       eventRisk: eventRiskLevel,
       riskGovernorPermission: institutionalFilter.noTrade ? 'BLOCK' : 'ALLOW',
+      dataComponentsProvided: dataComponentCount,
     });
     
     // Inject V2 platform state (regime weights + ACL)

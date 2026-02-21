@@ -69,6 +69,7 @@ export interface ACLInput {
   lateEntry?: boolean; // Is this entry after >60% of the move?
   consecutiveLosses?: number; // Loss streak count
   riskGovernorPermission?: 'ALLOW' | 'ALLOW_REDUCED' | 'ALLOW_TIGHTENED' | 'BLOCK';
+  dataComponentsProvided?: number; // Number of real (non-estimated) data points 0-10
 }
 
 // =====================================================
@@ -110,13 +111,13 @@ const REGIME_SETUP_MULTIPLIERS: Record<string, number> = {
   'VOL_EXPANSION:swing': 0.70,
   'VOL_EXPANSION:trend_follow': 0.75,
 
-  // Transition — everything gets penalized, conservative only
-  'TRANSITION:mean_reversion': 0.90,
-  'TRANSITION:scalp': 0.85,
-  'TRANSITION:swing': 0.80,
-  'TRANSITION:trend_follow': 0.75,
-  'TRANSITION:momentum': 0.75,
-  'TRANSITION:breakout': 0.70,
+  // Transition — heavily penalized, only defensive setups survive
+  'TRANSITION:mean_reversion': 0.85,
+  'TRANSITION:scalp': 0.80,
+  'TRANSITION:swing': 0.70,
+  'TRANSITION:trend_follow': 0.65,
+  'TRANSITION:momentum': 0.60,
+  'TRANSITION:breakout': 0.60,
 };
 
 function getCompatibilityMultiplier(regime: ScoringRegime, setupType?: string): number {
@@ -151,8 +152,13 @@ function evaluatePenalties(input: ACLInput): ACLPenalty[] {
     active: liqPenalty < 0,
   });
 
-  // MTF Disagreement Penalty
-  const mtfPenalty = input.mtfScore !== undefined && input.mtfScore < 40 ? -10 : 0;
+  // MTF Disagreement Penalty (graduated: 3-tier)
+  let mtfPenalty = 0;
+  if (input.mtfScore !== undefined) {
+    if (input.mtfScore < 30) mtfPenalty = -15;
+    else if (input.mtfScore < 40) mtfPenalty = -10;
+    else if (input.mtfScore < 50) mtfPenalty = -5;
+  }
   penalties.push({
     code: 'MTF_DISAGREE',
     label: 'Multi-timeframe disagreement',
@@ -206,6 +212,17 @@ function evaluatePenalties(input: ACLInput): ACLPenalty[] {
     label: 'Consecutive loss streak active',
     amount: Math.max(streakPenalty, -15), // Cap at -15
     active: streakPenalty < 0,
+  });
+
+  // Sparse Data Penalty
+  const sparsePenalty = input.dataComponentsProvided !== undefined && input.dataComponentsProvided < 3
+    ? -12 : input.dataComponentsProvided !== undefined && input.dataComponentsProvided < 5
+    ? -5 : 0;
+  penalties.push({
+    code: 'SPARSE_DATA',
+    label: 'Insufficient data points for high-conviction assessment',
+    amount: sparsePenalty,
+    active: sparsePenalty < 0,
   });
 
   return penalties;
@@ -360,6 +377,19 @@ export function computeACL(input: ACLInput): ACLResult {
     reasonCodes.push(`REGIME_ALIGNED: ${input.setupType} in ${input.regime} (×${multiplier.toFixed(2)})`);
   }
 
+  // Regime identification
+  reasonCodes.push(`REGIME: ${input.regime}`);
+
+  // Setup type identification
+  if (!input.setupType) {
+    reasonCodes.push('NO_SETUP_TYPE: Conservative ×0.90 applied');
+  }
+
+  // Data quality signal
+  if (input.dataComponentsProvided !== undefined) {
+    reasonCodes.push(`DATA_QUALITY: ${input.dataComponentsProvided}/10 indicators`);
+  }
+
   // Active penalty reasons
   for (const p of penalties.filter(p => p.active)) {
     reasonCodes.push(`PENALTY_${p.code}: ${p.amount}`);
@@ -400,6 +430,7 @@ export function computeACLFromScoring(
     lateEntry?: boolean;
     consecutiveLosses?: number;
     riskGovernorPermission?: ACLInput['riskGovernorPermission'];
+    dataComponentsProvided?: number;
   } = {}
 ): ACLResult {
   return computeACL({
@@ -417,5 +448,6 @@ export function computeACLFromScoring(
     lateEntry: opts.lateEntry,
     consecutiveLosses: opts.consecutiveLosses,
     riskGovernorPermission: opts.riskGovernorPermission,
+    dataComponentsProvided: opts.dataComponentsProvided,
   });
 }

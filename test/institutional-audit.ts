@@ -676,6 +676,165 @@ console.log(`    ✓  LL penalty applied exactly once — no triple-punishment o
 
 
 // =====================================================
+// PHASE 24 HARDENING VALIDATION — Push All Scores to 10
+// =====================================================
+section('PHASE 24 HARDENING — NEW VALIDATIONS');
+
+// H1: Regime Score Spread with Skewed Inputs
+subsection('Regime Spread — Skewed TA/MTF Input');
+const skewedTAMTF: ConfluenceComponents = { SQ: 50, TA: 95, VA: 50, LL: 50, MTF: 90, FD: 50 };
+const skewedTrend = computeRegimeScore(skewedTAMTF, 'TREND_EXPANSION');
+const skewedRange = computeRegimeScore(skewedTAMTF, 'RANGE_COMPRESSION');
+const skewedVol = computeRegimeScore(skewedTAMTF, 'VOL_EXPANSION');
+console.log(`    TREND=${skewedTrend.weightedScore}, RANGE=${skewedRange.weightedScore}, VOL=${skewedVol.weightedScore}`);
+assert(skewedTrend.weightedScore - skewedRange.weightedScore > 10,
+  'TA/MTF-skewed input: TREND scores 10+ pts higher than RANGE',
+  `delta=${(skewedTrend.weightedScore - skewedRange.weightedScore).toFixed(1)}`);
+assert(skewedTrend.weightedScore - skewedVol.weightedScore > 10,
+  'TA/MTF-skewed input: TREND scores 10+ pts higher than VOL',
+  `delta=${(skewedTrend.weightedScore - skewedVol.weightedScore).toFixed(1)}`);
+
+// H2: Regime Spread with LL/FD Skewed Inputs
+subsection('Regime Spread — Skewed LL/FD Input');
+const skewedLLFD: ConfluenceComponents = { SQ: 50, TA: 50, VA: 50, LL: 95, MTF: 50, FD: 95 };
+const llfdVol = computeRegimeScore(skewedLLFD, 'VOL_EXPANSION');
+const llfdTrend = computeRegimeScore(skewedLLFD, 'TREND_EXPANSION');
+console.log(`    VOL=${llfdVol.weightedScore}, TREND=${llfdTrend.weightedScore}`);
+assert(llfdVol.weightedScore - llfdTrend.weightedScore > 10,
+  'LL/FD-skewed input: VOL scores 10+ pts higher than TREND',
+  `delta=${(llfdVol.weightedScore - llfdTrend.weightedScore).toFixed(1)}`);
+
+// H3: TRANSITION Multiplier Strictness — only MR and scalp survive
+subsection('TRANSITION Multiplier Strictness');
+const transBase = { weightedScore: 70, regimeConfidence: 70, regime: 'TRANSITION' as const };
+const transMR = computeACL({ ...transBase, setupType: 'mean_reversion' });
+const transScalp = computeACL({ ...transBase, setupType: 'scalp' });
+const transMomentum = computeACL({ ...transBase, setupType: 'momentum' });
+const transBreakout = computeACL({ ...transBase, setupType: 'breakout' });
+const transTF = computeACL({ ...transBase, setupType: 'trend_follow' });
+console.log(`    MR=${transMR.confidence}, Scalp=${transScalp.confidence}, Mom=${transMomentum.confidence}, BO=${transBreakout.confidence}, TF=${transTF.confidence}`);
+assert(transMomentum.authorization === 'BLOCKED' || transMomentum.confidence < 50,
+  'TRANSITION blocks momentum (conf < 50)',
+  `conf=${transMomentum.confidence}`);
+assert(transBreakout.authorization === 'BLOCKED' || transBreakout.confidence < 50,
+  'TRANSITION blocks breakout (conf < 50)',
+  `conf=${transBreakout.confidence}`);
+assert(transTF.authorization === 'BLOCKED' || transTF.confidence < 50,
+  'TRANSITION blocks trend_follow (conf < 50)',
+  `conf=${transTF.confidence}`);
+assert(transMR.confidence > transMomentum.confidence,
+  'MR survives better than momentum in TRANSITION',
+  `MR=${transMR.confidence} vs Mom=${transMomentum.confidence}`);
+
+// H4: Sparse Data Penalty
+subsection('Sparse Data Penalty');
+const sparseACL = computeACL({
+  weightedScore: 72,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  setupType: 'trend_follow',
+  dataComponentsProvided: 2,
+});
+const fullDataACL = computeACL({
+  weightedScore: 72,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  setupType: 'trend_follow',
+  dataComponentsProvided: 8,
+});
+console.log(`    Sparse(2 indicators)=${sparseACL.confidence}, Full(8 indicators)=${fullDataACL.confidence}`);
+assert(sparseACL.confidence < fullDataACL.confidence, 'Sparse data reduces confidence',
+  `sparse=${sparseACL.confidence} vs full=${fullDataACL.confidence}`);
+const sparsePen = sparseACL.penalties.find(p => p.code === 'SPARSE_DATA');
+assert(sparsePen?.active === true, 'SPARSE_DATA penalty fires with 2/10 indicators');
+assert(sparsePen!.amount <= -10, 'Sparse data penalty at least -10',
+  `amount=${sparsePen?.amount}`);
+const fullPen = fullDataACL.penalties.find(p => p.code === 'SPARSE_DATA');
+assert(fullPen?.active === false, 'SPARSE_DATA penalty does NOT fire with 8/10 indicators');
+
+// H5: Graduated MTF Penalty — 3-tier
+subsection('Graduated MTF Penalty');
+const mtf25 = computeACL({ weightedScore: 75, regimeConfidence: 75, regime: 'TREND_EXPANSION', mtfScore: 25 });
+const mtf35 = computeACL({ weightedScore: 75, regimeConfidence: 75, regime: 'TREND_EXPANSION', mtfScore: 35 });
+const mtf45 = computeACL({ weightedScore: 75, regimeConfidence: 75, regime: 'TREND_EXPANSION', mtfScore: 45 });
+const mtf55 = computeACL({ weightedScore: 75, regimeConfidence: 75, regime: 'TREND_EXPANSION', mtfScore: 55 });
+const pen25 = mtf25.penalties.find(p => p.code === 'MTF_DISAGREE')!;
+const pen35 = mtf35.penalties.find(p => p.code === 'MTF_DISAGREE')!;
+const pen45 = mtf45.penalties.find(p => p.code === 'MTF_DISAGREE')!;
+const pen55 = mtf55.penalties.find(p => p.code === 'MTF_DISAGREE')!;
+console.log(`    MTF=25: ${pen25.amount}, MTF=35: ${pen35.amount}, MTF=45: ${pen45.amount}, MTF=55: ${pen55.amount}`);
+assert(pen25.amount === -15, 'MTF < 30 → penalty -15', `got ${pen25.amount}`);
+assert(pen35.amount === -10, 'MTF 30-39 → penalty -10', `got ${pen35.amount}`);
+assert(pen45.amount === -5, 'MTF 40-49 → penalty -5', `got ${pen45.amount}`);
+assert(pen55.amount === 0, 'MTF ≥ 50 → no penalty', `got ${pen55.amount}`);
+
+// H6: RANGE_NEUTRAL Tightened Permissions
+subsection('RANGE_NEUTRAL Tightened Permissions');
+{
+  const snap = buildPermissionSnapshot({ regime: 'RANGE_NEUTRAL', enabled: true });
+  assert(snap.matrix.TREND_PULLBACK.LONG === 'ALLOW_TIGHTENED',
+    'RANGE_NEUTRAL TREND_PULLBACK LONG = ALLOW_TIGHTENED',
+    `got ${snap.matrix.TREND_PULLBACK.LONG}`);
+  assert(snap.matrix.MOMENTUM_REVERSAL.LONG === 'ALLOW_TIGHTENED',
+    'RANGE_NEUTRAL MOMENTUM_REVERSAL LONG = ALLOW_TIGHTENED',
+    `got ${snap.matrix.MOMENTUM_REVERSAL.LONG}`);
+  assert(snap.matrix.MOMENTUM_REVERSAL.SHORT === 'ALLOW_TIGHTENED',
+    'RANGE_NEUTRAL MOMENTUM_REVERSAL SHORT = ALLOW_TIGHTENED',
+    `got ${snap.matrix.MOMENTUM_REVERSAL.SHORT}`);
+  assert(snap.matrix.RANGE_FADE.LONG === 'ALLOW',
+    'RANGE_NEUTRAL RANGE_FADE still ALLOW (untouched)',
+    `got ${snap.matrix.RANGE_FADE.LONG}`);
+}
+
+// H7: VOL_CONTRACTION Tightened Permissions
+subsection('VOL_CONTRACTION Tightened Permissions');
+{
+  const snap = buildPermissionSnapshot({ regime: 'VOL_CONTRACTION', enabled: true });
+  assert(snap.matrix.TREND_PULLBACK.LONG === 'ALLOW_TIGHTENED',
+    'VOL_CONTRACTION TREND_PULLBACK LONG = ALLOW_TIGHTENED',
+    `got ${snap.matrix.TREND_PULLBACK.LONG}`);
+  assert(snap.matrix.MEAN_REVERSION.LONG === 'ALLOW',
+    'VOL_CONTRACTION MEAN_REVERSION still ALLOW',
+    `got ${snap.matrix.MEAN_REVERSION.LONG}`);
+}
+
+// H8: Enhanced Reason Codes — Regime + Setup identification
+subsection('Enhanced Reason Codes');
+const reasonACL = computeACL({
+  weightedScore: 70,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  dataComponentsProvided: 8,
+});
+const hasRegimeCode = reasonACL.reasonCodes.some(r => r.startsWith('REGIME:'));
+const hasNoSetupCode = reasonACL.reasonCodes.some(r => r.startsWith('NO_SETUP_TYPE'));
+const hasDataQuality = reasonACL.reasonCodes.some(r => r.startsWith('DATA_QUALITY'));
+assert(hasRegimeCode, 'Reason codes include REGIME identification');
+assert(hasNoSetupCode, 'Reason codes include NO_SETUP_TYPE when absent');
+assert(hasDataQuality, 'Reason codes include DATA_QUALITY when provided');
+
+// H9: Setup-type reason code for identified setups
+const setupReasonACL = computeACL({
+  weightedScore: 70,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  setupType: 'trend_follow',
+});
+const hasAlignedCode = setupReasonACL.reasonCodes.some(r => r.startsWith('REGIME_ALIGNED'));
+assert(hasAlignedCode, 'REGIME_ALIGNED reason code for trend_follow in TREND_EXPANSION');
+
+// H10: SQ-skewed input greatest in RANGE
+subsection('SQ-Skewed Greatest in RANGE');
+const sqSkew: ConfluenceComponents = { SQ: 100, TA: 50, VA: 50, LL: 50, MTF: 50, FD: 50 };
+const sqRange = computeRegimeScore(sqSkew, 'RANGE_COMPRESSION');
+const sqVol = computeRegimeScore(sqSkew, 'VOL_EXPANSION');
+console.log(`    SQ-heavy: RANGE=${sqRange.weightedScore}, VOL=${sqVol.weightedScore}`);
+assert(sqRange.weightedScore - sqVol.weightedScore > 10,
+  'SQ-skewed: RANGE scores 10+ pts higher than VOL',
+  `delta=${(sqRange.weightedScore - sqVol.weightedScore).toFixed(1)}`);
+
+
+// =====================================================
 // FINAL SUMMARY
 // =====================================================
 section('AUDIT SUMMARY');
