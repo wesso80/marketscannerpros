@@ -6,4 +6,3 @@ export default function Page() {
   // Legacy launch route — redirect to tools dashboard
   redirect("/tools");
 }
-}
