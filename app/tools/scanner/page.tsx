@@ -786,10 +786,11 @@ function ScannerContent() {
     return [];
   };
 
-  const runScan = async () => {
+  const runScan = async (symbolOverride?: string) => {
+    const effectiveTicker = symbolOverride?.trim() || ticker.trim();
     if (loading) return;
 
-    if (!ticker.trim()) {
+    if (!effectiveTicker) {
       setError("Please enter or select a ticker");
       return;
     }
@@ -823,7 +824,7 @@ function ScannerContent() {
           type: requestedAssetType === "forex" ? "forex" : requestedAssetType,
           timeframe: requestedTimeframe,
           minScore: 0,
-          symbols: [ticker.trim().toUpperCase()],
+          symbols: [effectiveTicker.toUpperCase()],
         }),
       });
 
@@ -1101,9 +1102,8 @@ function ScannerContent() {
       nextTrigger,
       risk,
     });
-    setTimeout(() => {
-      void runScan();
-    }, 0);
+    // Pass symbol directly to avoid stale React state (setTicker is async)
+    void runScan(String(pick.symbol || '').trim());
   };
 
   const deployRankCandidate = (pick: any) => {
@@ -2461,7 +2461,7 @@ function ScannerContent() {
             </div>
 
             <button
-              onClick={runScan}
+              onClick={() => { void runScan(); }}
               disabled={loading}
               style={{
                 padding: "0.75rem 2rem",
@@ -2677,7 +2677,7 @@ function ScannerContent() {
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
                   <button
-                    onClick={runScan}
+                    onClick={() => { void runScan(); }}
                     style={{
                       padding: "0.4rem 0.7rem",
                       borderRadius: "999px",
@@ -2752,7 +2752,7 @@ function ScannerContent() {
             </div>
             <div className="flex items-center justify-center gap-2">
               <button
-                onClick={runScan}
+                onClick={() => { void runScan(); }}
                 disabled={loading}
                 className="rounded-md border border-[var(--msp-border-strong)] bg-[var(--msp-bull)] px-4 py-2 text-[0.76rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bg)] disabled:opacity-60"
               >
@@ -2807,15 +2807,17 @@ function ScannerContent() {
                 : null;
 
               const recommendation = result.institutionalFilter?.recommendation;
-              const executionAllowed = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
-              const tactical = !executionAllowed && quality === 'MEDIUM' && direction !== 'neutral';
-              const executionStatus = executionAllowed ? 'TRADE PERMITTED' : 'NO TRADE';
-              const statusColor = executionAllowed ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-bear)';
-              const statusBorder = executionAllowed ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-bear)';
+              // Educational mode: show status as advisory only, not blocking
+              const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
+              const executionAllowed = true; // Educational platform — never block
+              const tactical = !tradeReady && quality === 'MEDIUM' && direction !== 'neutral';
+              const executionStatus = tradeReady ? 'HIGH CONVICTION' : tactical ? 'MODERATE SETUP' : 'LOW SETUP — REVIEW';
+              const statusColor = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-bear)';
+              const statusBorder = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-border-strong)';
               const confidenceBarColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)';
 
-              const blockReasons = executionAllowed
-                ? ['Sizing: Reduced', direction === 'bullish' ? 'Shorts: Disabled' : 'Longs: Disabled']
+              const blockReasons = tradeReady
+                ? ['Structure aligned', direction === 'bullish' ? 'Bias: Long' : direction === 'bearish' ? 'Bias: Short' : 'Bias: Neutral']
                 : [
                     quality === 'LOW' ? 'Quality below threshold' : null,
                     !trendAligned ? 'Structure incomplete' : null,
@@ -2875,9 +2877,9 @@ function ScannerContent() {
                             <div key={reason}>• {reason}</div>
                           ))}
                         </div>
-                        {!executionAllowed && (
+                        {!tradeReady && (
                           <div className="mt-2 text-[0.72rem] font-extrabold uppercase" style={{ color: statusColor }}>
-                            NO TRADE — QUALITY {quality} — WAIT FOR STRUCTURE
+                            ADVISORY: QUALITY {quality} — REVIEW STRUCTURE
                           </div>
                         )}
                       </div>
@@ -2946,8 +2948,8 @@ function ScannerContent() {
 
                         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-[var(--msp-text-muted)]">
                           <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Risk Governor</div>
-                          <div>Capital Allocation: <span className={`font-bold ${executionAllowed ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-bear)]'}`}>{executionAllowed ? '0.5% risk' : '0% (Blocked)'}</span></div>
-                          <div>Active Constraint: <span className="font-bold text-[var(--msp-text)]">{executionAllowed ? 'Tactical sizing' : 'Risk control mode'}</span></div>
+                          <div>Capital Allocation: <span className={`font-bold ${tradeReady ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{tradeReady ? '0.5% risk' : 'Review sizing'}</span></div>
+                          <div>Active Constraint: <span className="font-bold text-[var(--msp-text)]">{tradeReady ? 'Tactical sizing' : 'Educational mode'}</span></div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
