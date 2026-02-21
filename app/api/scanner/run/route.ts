@@ -903,11 +903,11 @@ export async function POST(req: NextRequest) {
       // Calculate total signals
       const totalSignals = bullishSignals + bearishSignals + neutralSignals;
       
-      // Determine direction based on signal counts
+      // Determine direction based on signal counts (1.15x threshold for sensitive detection)
       let direction: 'bullish' | 'bearish' | 'neutral';
-      if (bullishSignals > bearishSignals * 1.3) {
+      if (bullishSignals > bearishSignals * 1.15) {
         direction = 'bullish';
-      } else if (bearishSignals > bullishSignals * 1.3) {
+      } else if (bearishSignals > bullishSignals * 1.15) {
         direction = 'bearish';
       } else {
         direction = 'neutral';

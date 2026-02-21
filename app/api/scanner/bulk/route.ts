@@ -430,8 +430,8 @@ function computeScore(indicators: Indicators): {
 
   // Direction
   let direction: 'bullish' | 'bearish' | 'neutral';
-  if (bullish > bearish * 1.3) direction = 'bullish';
-  else if (bearish > bullish * 1.3) direction = 'bearish';
+  if (bullish > bearish * 1.15) direction = 'bullish';
+  else if (bearish > bullish * 1.15) direction = 'bearish';
   else direction = 'neutral';
 
   // Score 0-100 (max possible signals depends on ADX multiplier)
@@ -1086,7 +1086,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
   const ranked = Array.from(dedupedBySymbol.values())
     .map((coin) => scoreLightCryptoCandidate(coin, timeframe))
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
 
   return {
     scanned: ranked.length,
@@ -1333,7 +1333,7 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
   const ranked = candidates
     .map((symbol) => scoreLightEquityCandidate(symbol, quoteResult.priceMap.get(symbol), timeframe, moverBiasMap.get(symbol) ?? 0))
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightEquityCandidate>> => item !== null)
-    .sort((left, right) => right.score - left.score);
+    .sort((left, right) => Math.abs(right.score - 50) - Math.abs(left.score - 50));
 
   return {
     scanned: ranked.length,
@@ -1617,9 +1617,9 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Sort by score and get top 10
+    // Sort by conviction strength — distance from 50 — so both bullish AND bearish setups rank high
     const topPicks = results
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50))
       .slice(0, 10);
     const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
       type,

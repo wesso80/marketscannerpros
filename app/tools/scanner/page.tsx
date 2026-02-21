@@ -954,8 +954,12 @@ function ScannerContent() {
     const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 60) : rankMinConfidence;
 
     const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
-      const confidence = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
+      const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
       const direction = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'all';
+      // For bearish picks, confidence is inverted: score 25 → 75% confident bearish
+      const confidence = direction === 'short'
+        ? Math.max(1, Math.min(99, Math.round(100 - rawScore)))
+        : Math.max(1, Math.min(99, Math.round(rawScore)));
       const quality = (pick?.scoreV2?.final?.qualityTier as 'high' | 'medium' | 'low' | undefined) ?? (confidence >= 70 ? 'high' : confidence >= 55 ? 'medium' : 'low');
       const atrPercent = Number(pick.indicators?.atr_percent ?? 0);
       const volatility = atrPercent >= 3 ? 'high' : atrPercent >= 1.5 ? 'moderate' : 'low';
@@ -1544,7 +1548,12 @@ function ScannerContent() {
                     return (
                       <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)]" style={{ borderColor }}>
                         <div className="mb-2 flex items-center justify-between gap-2">
-                          <div className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</span>
+                            <span className={`rounded px-1.5 py-0.5 text-[0.58rem] font-extrabold uppercase tracking-[0.08em] ${pick._direction === 'long' ? 'bg-emerald-500/15 text-emerald-400' : pick._direction === 'short' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                              {pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'NEUTRAL'}
+                            </span>
+                          </div>
                           <PermissionChip state={permission} />
                         </div>
                         <div className="mb-2 flex items-center justify-between gap-2 text-[0.68rem] uppercase tracking-[0.05em] text-[var(--msp-text-muted)]">
