@@ -120,7 +120,7 @@ const REGIME_SETUP_MULTIPLIERS: Record<string, number> = {
 };
 
 function getCompatibilityMultiplier(regime: ScoringRegime, setupType?: string): number {
-  if (!setupType) return 1.0; // No setup type = no adjustment
+  if (!setupType) return 0.90; // No setup type = conservative default (prevents inflation bypass)
   const key = `${regime}:${setupType}`;
   return REGIME_SETUP_MULTIPLIERS[key] ?? 0.90; // Default conservative
 }
@@ -404,11 +404,12 @@ export function computeACLFromScoring(
 ): ACLResult {
   return computeACL({
     weightedScore: scoring.weightedScore,
-    regimeConfidence: opts.regimeConfidence ?? 60, // Default moderate confidence if not provided
+    regimeConfidence: opts.regimeConfidence ?? 55, // Default conservative — at REGIME_LOW threshold
     regime: scoring.regime,
     setupType: opts.setupType,
     eventRisk: opts.eventRisk,
-    liquidityQuality: scoring.rawComponents.LL,
+    // NOTE: liquidityQuality intentionally omitted to avoid triple-penalty with llScore + LIQUIDITY_POOR cap
+    // The LL component penalty (llScore) + hard cap already enforce liquidity risk
     mtfScore: scoring.rawComponents.MTF,
     llScore: scoring.rawComponents.LL,
     vaScore: scoring.rawComponents.VA,

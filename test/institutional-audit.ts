@@ -1,0 +1,689 @@
+// test/institutional-audit.ts
+// Post-Upgrade Institutional Audit — Functional Validation + Stress Testing
+// Run: npx tsx test/institutional-audit.ts
+
+import { computeRegimeScore, estimateComponentsFromContext, mapToScoringRegime } from '../lib/ai/regimeScoring';
+import type { ConfluenceComponents, ScoringRegime } from '../lib/ai/regimeScoring';
+import { computeACL, computeACLFromScoring } from '../lib/ai/adaptiveConfidenceLens';
+import type { ACLInput } from '../lib/ai/adaptiveConfidenceLens';
+import { buildPermissionSnapshot, evaluateCandidate } from '../lib/risk-governor-hard';
+import type { CandidateIntent, Regime } from '../lib/risk-governor-hard';
+
+// =====================================================
+// TEST INFRASTRUCTURE
+// =====================================================
+let passCount = 0;
+let failCount = 0;
+const failures: string[] = [];
+
+function assert(condition: boolean, label: string, detail?: string) {
+  if (condition) {
+    passCount++;
+    console.log(`  ✅ ${label}`);
+  } else {
+    failCount++;
+    const msg = detail ? `${label} — ${detail}` : label;
+    failures.push(msg);
+    console.log(`  ❌ ${label}${detail ? ` → ${detail}` : ''}`);
+  }
+}
+
+function section(name: string) {
+  console.log(`\n${'═'.repeat(70)}\n${name}\n${'═'.repeat(70)}`);
+}
+
+function subsection(name: string) {
+  console.log(`\n  ── ${name} ──`);
+}
+
+// =====================================================
+// PHASE 1.1: REGIME FILTERING VALIDATION
+// =====================================================
+section('PHASE 1.1 — REGIME FILTERING');
+
+// Test 1: Same components, different regimes → scores MUST change
+subsection('Cross-Regime Score Differentiation');
+const baseComponents: ConfluenceComponents = { SQ: 65, TA: 60, VA: 55, LL: 60, MTF: 50, FD: 50 };
+const regimes: ScoringRegime[] = ['TREND_EXPANSION', 'TREND_MATURE', 'RANGE_COMPRESSION', 'VOL_EXPANSION', 'TRANSITION'];
+const regimeScores: Record<string, number> = {};
+for (const regime of regimes) {
+  const result = computeRegimeScore(baseComponents, regime);
+  regimeScores[regime] = result.weightedScore;
+  console.log(`    ${regime}: score=${result.weightedScore}, bias=${result.tradeBias}, gated=${result.gated}`);
+}
+
+// Check that scores actually differ across regimes
+const uniqueScores = new Set(Object.values(regimeScores));
+assert(uniqueScores.size >= 3, 'At least 3 unique scores across 5 regimes',
+  `Got ${uniqueScores.size} unique: ${JSON.stringify(regimeScores)}`);
+
+// Test 2: Breakouts in RANGE_COMPRESSION should be penalized (gates)
+subsection('Breakout in Range Compression — Gate Enforcement');
+const rangeBreakout: ConfluenceComponents = { SQ: 45, TA: 55, VA: 60, LL: 35, MTF: 60, FD: 55 }; // SQ=45 < gate 55, LL=35 < gate 40
+const rangeResult = computeRegimeScore(rangeBreakout, 'RANGE_COMPRESSION');
+assert(rangeResult.gated === true, 'Breakout with weak SQ is gated in range compression',
+  `gated=${rangeResult.gated}, violations=${rangeResult.gateViolations.join(',')}`);
+assert(rangeResult.weightedScore <= 55, 'Gated score capped at ≤55',
+  `score=${rangeResult.weightedScore}`);
+assert(rangeResult.tradeBias === 'NEUTRAL' || rangeResult.tradeBias === 'CONDITIONAL',
+  'Trade bias is NEUTRAL or CONDITIONAL when gated',
+  `bias=${rangeResult.tradeBias}`);
+
+// Test 3: Excellent SQ in range compression passes gate
+subsection('High SQ Breakout in Range — Gate Pass');
+const rangeGoodSQ: ConfluenceComponents = { SQ: 80, TA: 55, VA: 60, LL: 65, MTF: 60, FD: 55 };
+const rangeGoodResult = computeRegimeScore(rangeGoodSQ, 'RANGE_COMPRESSION');
+assert(rangeGoodResult.gated === false, 'High SQ passes range compression gate',
+  `gated=${rangeGoodResult.gated}`);
+
+// Test 4: Late trend entries in TREND_MATURE should be reduced
+subsection('Late Entry in Mature Trend');
+const matureComponents: ConfluenceComponents = { SQ: 65, TA: 60, VA: 30, LL: 60, MTF: 50, FD: 30 }; // VA=30 < gate 40, FD=30 < gate 35
+const matureResult = computeRegimeScore(matureComponents, 'TREND_MATURE');
+assert(matureResult.gated === true, 'Weak VA/FD gates mature trend setup',
+  `gated=${matureResult.gated}, violations=${matureResult.gateViolations.join(',')}`);
+
+// Test 5: TRANSITION regime enforces both MTF and SQ gates
+subsection('Transition Regime Double Gate');
+const transitionWeak: ConfluenceComponents = { SQ: 40, TA: 70, VA: 70, LL: 70, MTF: 40, FD: 70 }; // SQ=40 < 50, MTF=40 < 50
+const transitionResult = computeRegimeScore(transitionWeak, 'TRANSITION');
+assert(transitionResult.gated === true, 'Transition blocks when SQ and MTF below gates',
+  `violations=${transitionResult.gateViolations.join(' | ')}`);
+
+// Test 6: VOL_EXPANSION requires LL≥50 and FD≥40
+subsection('Vol Expansion Gate — Liquidity + Derivatives');
+const volNoLiquidity: ConfluenceComponents = { SQ: 80, TA: 80, VA: 80, LL: 40, MTF: 80, FD: 80 }; // LL=40 < 50
+const volResult = computeRegimeScore(volNoLiquidity, 'VOL_EXPANSION');
+assert(volResult.gated === true, 'Vol expansion gates when LL < 50',
+  `gated=${volResult.gated}`);
+
+// Test 7: Check weight asymmetry — TREND_EXPANSION heavily weights TA
+subsection('Weight Asymmetry Validation');
+const TAheavy: ConfluenceComponents = { SQ: 50, TA: 100, VA: 50, LL: 50, MTF: 50, FD: 50 };
+const TAheavyTrend = computeRegimeScore(TAheavy, 'TREND_EXPANSION');
+const TAheavyRange = computeRegimeScore(TAheavy, 'RANGE_COMPRESSION');
+assert(TAheavyTrend.weightedScore > TAheavyRange.weightedScore,
+  'TA-heavy setup scores higher in TREND than RANGE',
+  `trend=${TAheavyTrend.weightedScore} vs range=${TAheavyRange.weightedScore}`);
+
+
+// =====================================================
+// PHASE 1.2: ADAPTIVE CONFIDENCE LENS VALIDATION
+// =====================================================
+section('PHASE 1.2 — ADAPTIVE CONFIDENCE LENS');
+
+// Test 8: Basic ACL pipeline — clean setup
+subsection('Clean Setup — Full Pipeline');
+const cleanScoring = computeRegimeScore(
+  { SQ: 80, TA: 75, VA: 70, LL: 70, MTF: 65, FD: 60 },
+  'TREND_EXPANSION'
+);
+const cleanACL = computeACLFromScoring(cleanScoring, {
+  regimeConfidence: 80,
+  setupType: 'trend_follow',
+  riskGovernorPermission: 'ALLOW',
+});
+console.log(`    Pipeline: Base=${cleanACL.pipeline.step1_base} → Regime=${cleanACL.pipeline.step2_regimeMultiplied} → Pen=${cleanACL.pipeline.step3_penalized} → Cap=${cleanACL.pipeline.step4_capped} → Final=${cleanACL.pipeline.step5_final}`);
+assert(cleanACL.authorization === 'AUTHORIZED', 'Clean trend setup is AUTHORIZED',
+  `auth=${cleanACL.authorization}, conf=${cleanACL.confidence}`);
+assert(cleanACL.throttle > 0.6, 'Throttle above 0.6 for clean setup',
+  `throttle=${cleanACL.throttle}`);
+
+// Test 9: Breakout in range compression → should be heavily penalized
+subsection('Breakout in Range Compression — ACL Penalty');
+const rangeBreakoutScoring = computeRegimeScore(
+  { SQ: 60, TA: 55, VA: 50, LL: 45, MTF: 40, FD: 45 },
+  'RANGE_COMPRESSION'
+);
+const rangeBreakoutACL = computeACLFromScoring(rangeBreakoutScoring, {
+  regimeConfidence: 55,
+  setupType: 'breakout',
+});
+console.log(`    Breakout in range: conf=${rangeBreakoutACL.confidence}, auth=${rangeBreakoutACL.authorization}, reasons=${rangeBreakoutACL.reasonCodes.join(' | ')}`);
+assert(rangeBreakoutACL.confidence < 50, 'Breakout in range confidence below 50',
+  `conf=${rangeBreakoutACL.confidence}`);
+assert(rangeBreakoutACL.authorization === 'BLOCKED', 'Breakout in range is BLOCKED',
+  `auth=${rangeBreakoutACL.authorization}`);
+const hasMismatch = rangeBreakoutACL.reasonCodes.some(r => r.includes('REGIME_MISMATCH'));
+assert(hasMismatch, 'Reason codes include REGIME_MISMATCH');
+
+// Test 10: Mean reversion in range compression → should be boosted
+subsection('Mean Reversion in Range — Regime Aligned');
+const rangeMRScoring = computeRegimeScore(
+  { SQ: 75, TA: 65, VA: 55, LL: 60, MTF: 50, FD: 55 },
+  'RANGE_COMPRESSION'
+);
+const rangeMRACL = computeACLFromScoring(rangeMRScoring, {
+  regimeConfidence: 70,
+  setupType: 'mean_reversion',
+});
+console.log(`    MR in range: conf=${rangeMRACL.confidence}, auth=${rangeMRACL.authorization}`);
+assert(rangeMRACL.confidence > rangeBreakoutACL.confidence, 'MR scores higher than breakout in range',
+  `MR=${rangeMRACL.confidence} vs BO=${rangeBreakoutACL.confidence}`);
+
+// Test 11: Event risk cap
+subsection('High Event Risk Cap');
+const eventACL = computeACL({
+  weightedScore: 85,
+  regimeConfidence: 80,
+  regime: 'TREND_EXPANSION',
+  setupType: 'momentum',
+  eventRisk: 'high',
+  riskGovernorPermission: 'ALLOW',
+});
+assert(eventACL.confidence <= 50, 'High event risk caps confidence at 50',
+  `conf=${eventACL.confidence}`);
+assert(eventACL.authorization !== 'AUTHORIZED', 'High event risk prevents AUTHORIZED',
+  `auth=${eventACL.authorization}`);
+
+// Test 12: Risk Governor BLOCK overrides everything
+subsection('Risk Governor BLOCK Override');
+const governorBlockACL = computeACL({
+  weightedScore: 95,
+  regimeConfidence: 95,
+  regime: 'TREND_EXPANSION',
+  setupType: 'trend_follow',
+  riskGovernorPermission: 'BLOCK',
+});
+assert(governorBlockACL.authorization === 'BLOCKED', 'Governor BLOCK always means BLOCKED',
+  `auth=${governorBlockACL.authorization}`);
+assert(governorBlockACL.throttle === 0, 'Governor BLOCK throttle is 0',
+  `throttle=${governorBlockACL.throttle}`);
+
+// Test 13: RU throttle scales with Risk Governor modes
+subsection('Throttle Scaling Across Governor Modes');
+const baseInput: ACLInput = {
+  weightedScore: 78,
+  regimeConfidence: 75,
+  regime: 'TREND_EXPANSION',
+};
+const allowACL = computeACL({ ...baseInput, riskGovernorPermission: 'ALLOW' });
+const reducedACL = computeACL({ ...baseInput, riskGovernorPermission: 'ALLOW_REDUCED' });
+const tightenedACL = computeACL({ ...baseInput, riskGovernorPermission: 'ALLOW_TIGHTENED' });
+console.log(`    ALLOW=${allowACL.throttle}, REDUCED=${reducedACL.throttle}, TIGHTENED=${tightenedACL.throttle}`);
+assert(allowACL.throttle > reducedACL.throttle, 'ALLOW throttle > REDUCED',
+  `${allowACL.throttle} vs ${reducedACL.throttle}`);
+assert(reducedACL.throttle > tightenedACL.throttle, 'REDUCED throttle > TIGHTENED',
+  `${reducedACL.throttle} vs ${tightenedACL.throttle}`);
+
+// Test 14: Penalty stacking
+subsection('Penalty Stacking — Multiple Risk Factors');
+const stackedACL = computeACL({
+  weightedScore: 75,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  setupType: 'momentum',
+  eventRisk: 'medium',  // -8
+  mtfScore: 30,          // -10
+  vaScore: 25,           // -5
+  lateEntry: true,       // -10
+  consecutiveLosses: 4,  // -12
+});
+const totalPenalties = stackedACL.penalties.filter(p => p.active).reduce((s, p) => s + p.amount, 0);
+console.log(`    Total penalties: ${totalPenalties}, final conf: ${stackedACL.confidence}`);
+assert(totalPenalties <= -30, 'Stacked penalties sum to at least -30',
+  `total=${totalPenalties}`);
+assert(stackedACL.confidence < 50, 'Stacked penalties push below BLOCKED threshold',
+  `conf=${stackedACL.confidence}`);
+
+// Test 15: Correlation penalty
+subsection('Correlation Penalty');
+const corrACL = computeACL({
+  weightedScore: 75,
+  regimeConfidence: 70,
+  regime: 'TREND_EXPANSION',
+  correlatedPositions: 3,
+});
+const corrPen = corrACL.penalties.find(p => p.code === 'CORRELATION');
+assert(corrPen?.active === true, 'Correlation penalty active with 3 positions',
+  `active=${corrPen?.active}, amount=${corrPen?.amount}`);
+assert((corrPen?.amount ?? 0) <= -10, 'Correlation penalty at least -10',
+  `amount=${corrPen?.amount}`);
+
+
+// =====================================================
+// PHASE 1.3: RISK GOVERNOR ENFORCEMENT
+// =====================================================
+section('PHASE 1.3 — RISK GOVERNOR ENFORCEMENT');
+
+// Test 16: Stop on wrong side
+subsection('Stop Wrong Side — LONG');
+const snapshot = buildPermissionSnapshot({ regime: 'TREND_UP', enabled: true });
+const wrongStop: CandidateIntent = {
+  symbol: 'AAPL',
+  asset_class: 'equities',
+  strategy_tag: 'BREAKOUT_CONTINUATION',
+  direction: 'LONG',
+  confidence: 80,
+  entry_price: 150,
+  stop_price: 155, // WRONG: stop above entry for long
+  atr: 2.5,
+};
+const wrongStopResult = evaluateCandidate(snapshot, wrongStop);
+assert(wrongStopResult.permission === 'BLOCK', 'Wrong-side stop BLOCKS trade',
+  `permission=${wrongStopResult.permission}`);
+assert(wrongStopResult.reason_codes.includes('STOP_WRONG_SIDE'), 'Reason code: STOP_WRONG_SIDE');
+
+// Test 17: Stop equals entry
+subsection('Stop Equals Entry');
+const equalStop: CandidateIntent = {
+  symbol: 'AAPL',
+  asset_class: 'equities',
+  strategy_tag: 'BREAKOUT_CONTINUATION',
+  direction: 'LONG',
+  confidence: 80,
+  entry_price: 150,
+  stop_price: 150, // WRONG: equals entry
+  atr: 2.5,
+};
+const equalStopResult = evaluateCandidate(snapshot, equalStop);
+assert(equalStopResult.permission === 'BLOCK', 'Stop=Entry BLOCKS trade',
+  `permission=${equalStopResult.permission}`);
+
+// Test 18: Low confidence below threshold
+subsection('Low Confidence Below ALLOW Threshold');
+const lowConfCandidate: CandidateIntent = {
+  symbol: 'BTC',
+  asset_class: 'crypto',
+  strategy_tag: 'BREAKOUT_CONTINUATION',
+  direction: 'LONG',
+  confidence: 55, // Below ALLOW threshold of 70
+  entry_price: 50000,
+  stop_price: 48000,
+  atr: 1500,
+};
+const lowConfResult = evaluateCandidate(snapshot, lowConfCandidate);
+assert(lowConfResult.permission === 'BLOCK', 'Low confidence BLOCKs trade',
+  `permission=${lowConfResult.permission}`);
+assert(lowConfResult.reason_codes.includes('CONFIDENCE_BELOW_THRESHOLD'), 'Has CONFIDENCE_BELOW_THRESHOLD reason');
+
+// Test 19: Risk mode LOCKED blocks everything
+subsection('Risk Mode LOCKED');
+const lockedSnapshot = buildPermissionSnapshot({
+  regime: 'TREND_UP',
+  enabled: true,
+  consecutiveLosses: 5, // Triggers LOCKED
+});
+assert(lockedSnapshot.risk_mode === 'LOCKED', 'Snapshot risk mode is LOCKED',
+  `mode=${lockedSnapshot.risk_mode}`);
+const lockedResult = evaluateCandidate(lockedSnapshot, {
+  symbol: 'AAPL',
+  asset_class: 'equities',
+  strategy_tag: 'BREAKOUT_CONTINUATION',
+  direction: 'LONG',
+  confidence: 95,
+  entry_price: 150,
+  stop_price: 147,
+  atr: 2.5,
+});
+assert(lockedResult.permission === 'BLOCK', 'LOCKED mode blocks all trades',
+  `permission=${lockedResult.permission}`);
+
+// Test 20: High event severity blocks non-event strategies
+subsection('High Event Severity Block');
+const eventSnap = buildPermissionSnapshot({
+  regime: 'TREND_UP',
+  enabled: true,
+  eventSeverity: 'high',
+});
+const eventCandidate: CandidateIntent = {
+  symbol: 'AAPL',
+  asset_class: 'equities',
+  strategy_tag: 'BREAKOUT_CONTINUATION', // NOT event strategy
+  direction: 'LONG',
+  confidence: 80,
+  entry_price: 150,
+  stop_price: 147,
+  atr: 2.5,
+  event_severity: 'high',
+};
+const eventResult = evaluateCandidate(eventSnap, eventCandidate);
+assert(eventResult.permission === 'BLOCK', 'High event blocks non-event strategies',
+  `permission=${eventResult.permission}`);
+assert(eventResult.reason_codes.includes('EVENT_BLOCK'), 'Has EVENT_BLOCK reason');
+
+// Test 21: Data DOWN blocks everything
+subsection('Data Feed DOWN');
+const dataDownSnap = buildPermissionSnapshot({
+  regime: 'TREND_UP',
+  enabled: true,
+  dataStatus: 'DOWN',
+});
+assert(dataDownSnap.risk_mode === 'LOCKED', 'Data DOWN → LOCKED mode',
+  `mode=${dataDownSnap.risk_mode}`);
+
+// Test 22: Correlated cluster enforcement
+subsection('Correlated Cluster Enforcement');
+const corrCandidate: CandidateIntent = {
+  symbol: 'AMD',
+  asset_class: 'equities',
+  strategy_tag: 'BREAKOUT_CONTINUATION',
+  direction: 'LONG',
+  confidence: 80,
+  entry_price: 120,
+  stop_price: 116,
+  atr: 3.0,
+  open_positions: [
+    { symbol: 'NVDA', direction: 'LONG' },
+    { symbol: 'MSFT', direction: 'LONG' },
+  ],
+};
+const corrResult = evaluateCandidate(snapshot, corrCandidate);
+assert(corrResult.permission === 'BLOCK', 'Correlated cluster full → BLOCK',
+  `permission=${corrResult.permission}, reasons=${corrResult.reason_codes.join(',')}`);
+
+
+// =====================================================
+// PHASE 1.4: TRADE PERMISSION MATRIX INTEGRITY
+// =====================================================
+section('PHASE 1.4 — TRADE PERMISSION MATRIX');
+
+// Test 23: Trend UP blocks short breakouts
+subsection('Trend UP Blocks Short Breakouts');
+{
+  const snap = buildPermissionSnapshot({ regime: 'TREND_UP', enabled: true });
+  const perm = snap.matrix.BREAKOUT_CONTINUATION.SHORT;
+  assert(perm === 'BLOCK', 'TREND_UP blocks SHORT breakout continuation',
+    `permission=${perm}`);
+}
+
+// Test 24: Range neutral allows RANGE_FADE both directions
+subsection('Range Neutral Allows Range Fade');
+{
+  const snap = buildPermissionSnapshot({ regime: 'RANGE_NEUTRAL', enabled: true });
+  assert(snap.matrix.RANGE_FADE.LONG === 'ALLOW', 'Range allows LONG fade');
+  assert(snap.matrix.RANGE_FADE.SHORT === 'ALLOW', 'Range allows SHORT fade');
+}
+
+// Test 25: RISK_OFF_STRESS blocks long breakouts
+subsection('Risk-Off Stress Blocks Long Breakouts');
+{
+  const snap = buildPermissionSnapshot({ regime: 'RISK_OFF_STRESS', enabled: true });
+  assert(snap.matrix.BREAKOUT_CONTINUATION.LONG === 'BLOCK', 'Stress blocks LONG breakout');
+  assert(snap.matrix.BREAKOUT_CONTINUATION.SHORT === 'BLOCK', 'Stress blocks SHORT breakout');
+}
+
+// Test 26: VOL_EXPANSION blocks momentum reversal
+subsection('Vol Expansion Blocks Momentum Reversal');
+{
+  const snap = buildPermissionSnapshot({ regime: 'VOL_EXPANSION', enabled: true });
+  assert(snap.matrix.MOMENTUM_REVERSAL.LONG === 'BLOCK', 'Vol expansion blocks LONG momentum reversal');
+  assert(snap.matrix.MOMENTUM_REVERSAL.SHORT === 'BLOCK', 'Vol expansion blocks SHORT momentum reversal');
+}
+
+
+// =====================================================
+// PHASE 3: STRESS TESTS
+// =====================================================
+section('PHASE 3 — STRESS TESTS');
+
+// Stress 1: Low Volatility Chop
+subsection('STRESS: Low Volatility Chop');
+const chopComponents = estimateComponentsFromContext({
+  scannerScore: 40,
+  adx: 12,
+  rsi: 48,
+  cci: -20,
+  session: 'regular',
+  mtfAlignment: 1,
+  derivativesAvailable: false,
+});
+const chopScoring = computeRegimeScore(chopComponents, 'RANGE_COMPRESSION');
+const chopACL = computeACLFromScoring(chopScoring, {
+  regimeConfidence: 50,
+  setupType: 'momentum',
+});
+console.log(`    Chop: SQ=${chopComponents.SQ} TA=${chopComponents.TA} VA=${chopComponents.VA} LL=${chopComponents.LL} MTF=${chopComponents.MTF} FD=${chopComponents.FD}`);
+console.log(`    Score=${chopScoring.weightedScore}, gated=${chopScoring.gated}, conf=${chopACL.confidence}, auth=${chopACL.authorization}`);
+assert(chopACL.authorization === 'BLOCKED', 'Chop regime blocks momentum trades',
+  `auth=${chopACL.authorization}`);
+assert(chopACL.confidence < 50, 'Chop confidence below 50',
+  `conf=${chopACL.confidence}`);
+
+// Stress 2: Strong Breakout Trend
+subsection('STRESS: Strong Breakout Trend');
+const breakoutComponents = estimateComponentsFromContext({
+  scannerScore: 88,
+  adx: 35,
+  rsi: 62,
+  cci: 120,
+  session: 'regular',
+  mtfAlignment: 4,
+  volumeRatio: 1.8,
+  derivativesAvailable: true,
+  oiChange24h: 8,
+  fundingRate: 0.02,
+  fearGreed: 65,
+});
+const breakoutScoring = computeRegimeScore(breakoutComponents, 'TREND_EXPANSION');
+const breakoutACL = computeACLFromScoring(breakoutScoring, {
+  regimeConfidence: 85,
+  setupType: 'trend_follow',
+});
+console.log(`    Breakout: SQ=${breakoutComponents.SQ} TA=${breakoutComponents.TA} VA=${breakoutComponents.VA} LL=${breakoutComponents.LL} MTF=${breakoutComponents.MTF} FD=${breakoutComponents.FD}`);
+console.log(`    Score=${breakoutScoring.weightedScore}, conf=${breakoutACL.confidence}, auth=${breakoutACL.authorization}, RU=${breakoutACL.throttle}`);
+assert(breakoutACL.authorization === 'AUTHORIZED', 'Strong trend is AUTHORIZED',
+  `auth=${breakoutACL.authorization}`);
+assert(breakoutACL.confidence > 70, 'Strong trend confidence above 70',
+  `conf=${breakoutACL.confidence}`);
+assert(breakoutACL.throttle > 0.7, 'Strong trend throttle above 0.7',
+  `throttle=${breakoutACL.throttle}`);
+
+// Stress 3: News-Driven Volatility Expansion
+subsection('STRESS: News-Driven Vol Expansion');
+const newsComponents = estimateComponentsFromContext({
+  scannerScore: 70,
+  adx: 30,
+  rsi: 55,
+  cci: 50,
+  session: 'regular',
+  mtfAlignment: 2,
+  derivativesAvailable: true,
+  oiChange24h: 12,
+  fundingRate: 0.08,
+  fearGreed: 20,
+});
+const newsScoring = computeRegimeScore(newsComponents, 'VOL_EXPANSION');
+const newsACL = computeACLFromScoring(newsScoring, {
+  regimeConfidence: 75,
+  setupType: 'momentum',
+  eventRisk: 'high',
+});
+console.log(`    News vol: SQ=${newsComponents.SQ} TA=${newsComponents.TA} VA=${newsComponents.VA} LL=${newsComponents.LL} MTF=${newsComponents.MTF} FD=${newsComponents.FD}`);
+console.log(`    Score=${newsScoring.weightedScore}, conf=${newsACL.confidence}, auth=${newsACL.authorization}`);
+assert(newsACL.confidence <= 50, 'News vol caps confidence via event risk',
+  `conf=${newsACL.confidence}`);
+assert(newsACL.authorization !== 'AUTHORIZED', 'News vol prevents full authorization',
+  `auth=${newsACL.authorization}`);
+
+// Stress 4: Transition Regime (Conflicting signals)
+subsection('STRESS: Transition Regime');
+const transComponents = estimateComponentsFromContext({
+  scannerScore: 55,
+  adx: 18,
+  rsi: 52,
+  cci: -30,
+  session: 'regular',
+  mtfAlignment: 2,
+  derivativesAvailable: false,
+});
+const transScoring = computeRegimeScore(transComponents, 'TRANSITION');
+const transACL = computeACLFromScoring(transScoring, {
+  regimeConfidence: 45,
+  setupType: 'swing',
+});
+console.log(`    Transition: SQ=${transComponents.SQ} TA=${transComponents.TA} VA=${transComponents.VA} LL=${transComponents.LL} MTF=${transComponents.MTF} FD=${transComponents.FD}`);
+console.log(`    Score=${transScoring.weightedScore}, gated=${transScoring.gated}, conf=${transACL.confidence}, auth=${transACL.authorization}`);
+assert(transACL.confidence < 60, 'Transition regime confidence below 60',
+  `conf=${transACL.confidence}`);
+
+// Stress 5: Compare strong trend vs chop — material behavioral difference
+subsection('BEHAVIORAL DIFFERENTIATION: Trend vs Chop');
+const diff = breakoutACL.confidence - chopACL.confidence;
+console.log(`    Trend conf=${breakoutACL.confidence}, Chop conf=${chopACL.confidence}, DELTA=${diff.toFixed(1)}`);
+assert(diff > 30, 'At least 30pt confidence difference between trend and chop',
+  `delta=${diff.toFixed(1)}`);
+
+// Stress 6: Compare news vol vs clean trend — material difference
+const diff2 = breakoutACL.confidence - newsACL.confidence;
+console.log(`    Clean trend conf=${breakoutACL.confidence}, News vol conf=${newsACL.confidence}, DELTA=${diff2.toFixed(1)}`);
+assert(diff2 > 25, 'At least 25pt difference between clean trend and news vol',
+  `delta=${diff2.toFixed(1)}`);
+
+
+// =====================================================
+// EDGE CASE TESTS
+// =====================================================
+section('EDGE CASES');
+
+// Edge 1: All components at 50 (uniform mediocrity)
+subsection('Uniform Mediocrity — All Components 50');
+const medComponents: ConfluenceComponents = { SQ: 50, TA: 50, VA: 50, LL: 50, MTF: 50, FD: 50 };
+for (const regime of regimes) {
+  const result = computeRegimeScore(medComponents, regime);
+  console.log(`    ${regime}: score=${result.weightedScore}, gated=${result.gated}`);
+}
+// All SHOULD sum to ~50 since weights sum to ~1.0 and all inputs are 50
+const medResult = computeRegimeScore(medComponents, 'TREND_EXPANSION');
+assert(Math.abs(medResult.weightedScore - 50) < 5, 'Uniform 50 produces score near 50',
+  `score=${medResult.weightedScore}`);
+
+// Edge 2: No setup type provided — conservative 0.90 multiplier applied
+subsection('No Setup Type — Conservative Default Multiplier');
+const noSetupACL = computeACL({
+  weightedScore: 70,
+  regimeConfidence: 70,
+  regime: 'RANGE_COMPRESSION',
+});
+const withSetupACL = computeACL({
+  weightedScore: 70,
+  regimeConfidence: 70,
+  regime: 'RANGE_COMPRESSION',
+  setupType: 'breakout',
+});
+assert(noSetupACL.confidence > withSetupACL.confidence, 'No setup type still scores higher than breakout in range (0.90 > 0.65)',
+  `noSetup=${noSetupACL.confidence} vs breakout=${withSetupACL.confidence}`);
+
+// Edge 3: mapToScoringRegime coverage
+subsection('Regime Mapping Coverage');
+assert(mapToScoringRegime('TREND_UP') === 'TREND_EXPANSION', 'TREND_UP maps to TREND_EXPANSION');
+assert(mapToScoringRegime('TREND_DOWN') === 'TREND_MATURE', 'TREND_DOWN maps to TREND_MATURE (directional asymmetry)');
+assert(mapToScoringRegime('RANGE_NEUTRAL') === 'RANGE_COMPRESSION', 'RANGE_NEUTRAL maps to RANGE_COMPRESSION');
+assert(mapToScoringRegime('VOL_EXPANSION') === 'VOL_EXPANSION', 'VOL_EXPANSION maps correctly');
+assert(mapToScoringRegime('VOL_CONTRACTION') === 'RANGE_COMPRESSION', 'VOL_CONTRACTION maps to RANGE_COMPRESSION');
+assert(mapToScoringRegime('RISK_OFF_STRESS') === 'VOL_EXPANSION', 'RISK_OFF_STRESS maps to VOL_EXPANSION');
+assert(mapToScoringRegime('unknown_garbage') === 'TRANSITION', 'Unknown input defaults to TRANSITION');
+
+// Edge 4: estimateComponentsFromContext — closed market session
+subsection('Closed Market Session Liquidity');
+const closedComponents = estimateComponentsFromContext({
+  scannerScore: 90,
+  session: 'closed',
+  mtfAlignment: 5,
+});
+assert(closedComponents.LL === 20, 'Closed market LL = 20',
+  `LL=${closedComponents.LL}`);
+
+// Edge 5: Perfect components in every regime
+subsection('Perfect Setup Across All Regimes');
+const perfectComponents: ConfluenceComponents = { SQ: 100, TA: 100, VA: 100, LL: 100, MTF: 100, FD: 100 };
+for (const regime of regimes) {
+  const result = computeRegimeScore(perfectComponents, regime);
+  assert(result.weightedScore >= 95, `Perfect setup in ${regime} scores ≥95`,
+    `score=${result.weightedScore}`);
+  assert(result.gated === false, `Perfect setup not gated in ${regime}`);
+}
+
+
+// =====================================================
+// DEFECT HUNTING — STRUCTURAL WEAKNESS PROBING
+// =====================================================
+section('DEFECT HUNTING — STRUCTURAL WEAKNESS PROBES');
+
+// Defect 1 [FIXED]: No setup type now uses 0.90 conservative multiplier (was 1.0)
+subsection('No-Setup-Type Conservative Default');
+const noTypeACL = computeACL({
+  weightedScore: 72,
+  regimeConfidence: 70,
+  regime: 'RANGE_COMPRESSION',
+  // No setupType → 0.90 conservative multiplier
+});
+console.log(`    No-setup-type in RANGE: conf=${noTypeACL.confidence}, auth=${noTypeACL.authorization}`);
+const defBreakoutACL = computeACL({
+  weightedScore: 72,
+  regimeConfidence: 70,
+  regime: 'RANGE_COMPRESSION',
+  setupType: 'breakout', // 0.65 multiplier
+});
+console.log(`    Breakout in RANGE: conf=${defBreakoutACL.confidence}, auth=${defBreakoutACL.authorization}`);
+const mrACL = computeACL({
+  weightedScore: 72,
+  regimeConfidence: 70,
+  regime: 'RANGE_COMPRESSION',
+  setupType: 'mean_reversion', // 1.15 multiplier
+});
+console.log(`    MR in RANGE: conf=${mrACL.confidence}, auth=${mrACL.authorization}`);
+const inflationGap = noTypeACL.confidence - defBreakoutACL.confidence;
+console.log(`    Gap no-type vs breakout: ${inflationGap.toFixed(1)} pts`);
+assert(noTypeACL.confidence < mrACL.confidence, 'No-type scores lower than aligned setup (MR in range)',
+  `noType=${noTypeACL.confidence} vs MR=${mrACL.confidence}`);
+assert(noTypeACL.confidence > defBreakoutACL.confidence, 'No-type still scores higher than misaligned (breakout in range)',
+  `noType=${noTypeACL.confidence} vs breakout=${defBreakoutACL.confidence}`);
+
+// Defect 2 [FIXED]: TREND_UP and TREND_DOWN now map differently
+subsection('Directional Asymmetry: UP vs DOWN');
+console.log(`    TREND_UP → ${mapToScoringRegime('TREND_UP')}`);
+console.log(`    TREND_DOWN → ${mapToScoringRegime('TREND_DOWN')}`);
+assert(mapToScoringRegime('TREND_UP') !== mapToScoringRegime('TREND_DOWN'),
+  'TREND_UP and TREND_DOWN map to different regimes',
+  `UP=${mapToScoringRegime('TREND_UP')}, DOWN=${mapToScoringRegime('TREND_DOWN')}`);
+assert(mapToScoringRegime('TREND_DOWN') === 'TREND_MATURE',
+  'TREND_DOWN maps to TREND_MATURE (VA/FD emphasis for bearish conditions)');
+
+// Defect 3 [FIXED]: Default regimeConfidence lowered to 55 (conservative)
+subsection('Default Regime Confidence = 55 (Conservative)');
+const defaultConfACL = computeACLFromScoring(
+  computeRegimeScore({ SQ: 80, TA: 80, VA: 70, LL: 70, MTF: 70, FD: 65 }, 'TREND_EXPANSION'),
+  // regimeConfidence not provided → defaults to 55
+);
+const hasCap = defaultConfACL.hardCaps.find(c => c.code === 'REGIME_LOW');
+console.log(`    Default regime conf: REGIME_LOW cap active=${hasCap?.active}, max=${hasCap?.maxConfidence}`);
+assert(hasCap?.active === false, 'Default 55 does NOT trigger REGIME_LOW cap (requires <55)');
+console.log(`    ✓  Default 55 sits exactly at threshold — conservative but not over-punishing`);
+
+// Defect 4 [FIXED]: MTF default raised to 3 → 60 (passes TRANSITION gate)
+subsection('MTF Default Passes TRANSITION Gate');
+const defaultMTF = estimateComponentsFromContext({ scannerScore: 65 });
+console.log(`    Default MTF=${defaultMTF.MTF} (from mtfAlignment default=3 → 3*20=60)`);
+assert(defaultMTF.MTF >= 50, 'Default MTF passes TRANSITION gate (≥50)',
+  `MTF=${defaultMTF.MTF}`);
+console.log(`    TRANSITION gate: MTF≥50 → DEFAULT NOW PASSES`);
+
+// Defect 5 [FIXED]: Triple LL penalty eliminated — computeACLFromScoring no longer maps LL to both fields
+subsection('LL Penalty Deduplication');
+const fixedLLACL = computeACLFromScoring(
+  computeRegimeScore({ SQ: 80, TA: 75, VA: 60, LL: 35, MTF: 70, FD: 60 }, 'TREND_EXPANSION'),
+  { regimeConfidence: 75 }
+);
+const llPenalties = fixedLLACL.penalties.filter(p => p.active && (p.code === 'LOW_LIQUIDITY' || p.code === 'LL_WEAK'));
+console.log(`    Active LL penalties: ${llPenalties.map(p => `${p.code}=${p.amount}`).join(', ')}`);
+const lowLiqActive = fixedLLACL.penalties.find(p => p.code === 'LOW_LIQUIDITY')?.active ?? false;
+assert(!lowLiqActive, 'LOW_LIQUIDITY penalty no longer fires from convenience wrapper',
+  `Previously: liquidityQuality was mapped to LL, causing double penalty`);
+assert(llPenalties.length <= 1, 'Only LL_WEAK penalty active (not both)',
+  `Active LL-related penalties: ${llPenalties.length}`);
+console.log(`    ✓  LL penalty applied exactly once — no triple-punishment on same data source`);
+
+
+// =====================================================
+// FINAL SUMMARY
+// =====================================================
+section('AUDIT SUMMARY');
+console.log(`\n  Total Tests: ${passCount + failCount}`);
+console.log(`  ✅ Passed: ${passCount}`);
+console.log(`  ❌ Failed: ${failCount}`);
+if (failures.length > 0) {
+  console.log(`\n  FAILURES:`);
+  failures.forEach(f => console.log(`    • ${f}`));
+}
+console.log('');

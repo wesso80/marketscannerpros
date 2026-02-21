@@ -92,7 +92,8 @@ const REGIME_MATRICES: Record<ScoringRegime, RegimeWeightMatrix> = {
  */
 export function mapToScoringRegime(regime: string): ScoringRegime {
   const r = regime.toUpperCase();
-  if (r === 'TREND_UP' || r === 'TREND_DOWN') return 'TREND_EXPANSION';
+  if (r === 'TREND_UP') return 'TREND_EXPANSION';
+  if (r === 'TREND_DOWN') return 'TREND_MATURE'; // Downtrends = mature treatment (VA/FD emphasis, conservative)
   if (r === 'RANGE_NEUTRAL') return 'RANGE_COMPRESSION';
   if (r === 'VOL_EXPANSION') return 'VOL_EXPANSION';
   if (r === 'VOL_CONTRACTION') return 'RANGE_COMPRESSION';
@@ -271,7 +272,7 @@ export function estimateComponentsFromContext(opts: {
   LL = clamp(LL);
 
   // MTF: Multi-Timeframe
-  const mtfCount = opts.mtfAlignment ?? 2; // Default conservative
+  const mtfCount = opts.mtfAlignment ?? 3; // Default moderate (was 2, which auto-failed TRANSITION gate)
   const MTF = clamp(mtfCount * 20); // 0TF=0, 1TF=20, 2TF=40, 3TF=60, 4TF=80, 5TF=100
 
   // FD: Fundamental/Derivatives
