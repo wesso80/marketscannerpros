@@ -1,4 +1,5 @@
 import { JournalHeaderActions, JournalHeaderModel } from '@/types/journal';
+import TerminalPageHeader from '@/components/terminal/TerminalPageHeader';
 
 type JournalCommandBarProps = {
   header?: JournalHeaderModel;
@@ -14,26 +15,32 @@ function healthTone(health?: JournalHeaderModel['health']) {
 }
 
 export default function JournalCommandBar({ header, actions, viewMode, onToggleViewMode }: JournalCommandBarProps) {
-  return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-slate-100">Trade Journal</h1>
-            <span className={`rounded-full px-2 py-0.5 text-xs ${healthTone(header?.health)}`}>{header?.health || 'ok'}</span>
-          </div>
-          <p className="text-sm text-slate-300">{header?.subtitle || 'Learning loop + truth source for scanner, options, and time.'}</p>
-        </div>
+  const headerActions = (
+    <>
+      <button onClick={actions.onNewTrade} className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200">+ New Trade</button>
+      <button onClick={actions.onExport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Export CSV</button>
+      {actions.onImport && (
+        <button onClick={actions.onImport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Import</button>
+      )}
+      <button onClick={onToggleViewMode} className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
+    </>
+  );
 
-        <div className="flex flex-wrap gap-2">
-          <button onClick={actions.onNewTrade} className="rounded-lg bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200">+ New Trade</button>
-          <button onClick={actions.onExport} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-slate-100">Export CSV</button>
-          {actions.onImport && (
-            <button onClick={actions.onImport} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-slate-100">Import</button>
-          )}
-          <button onClick={onToggleViewMode} className="rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
-        </div>
-      </div>
-    </div>
+  const headerMeta = (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${healthTone(header?.health)}`}>
+      Data Health: {header?.health || 'ok'}
+    </span>
+  );
+
+  return (
+    <TerminalPageHeader
+      badge="TRADE JOURNAL"
+      title={header?.title || 'Trade Journal'}
+      subtitle={header?.subtitle || 'Learning loop + truth source for scanner, options, and time.'}
+      icon="🧾"
+      actions={headerActions}
+      meta={headerMeta}
+      className="bg-slate-900/40"
+    />
   );
 }
