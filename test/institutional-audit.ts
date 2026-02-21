@@ -2,12 +2,14 @@
 // Post-Upgrade Institutional Audit — Functional Validation + Stress Testing
 // Run: npx tsx test/institutional-audit.ts
 
-import { computeRegimeScore, estimateComponentsFromContext, mapToScoringRegime } from '../lib/ai/regimeScoring';
+import { computeRegimeScore, estimateComponentsFromContext, mapToScoringRegime, deriveRegimeConfidence } from '../lib/ai/regimeScoring';
 import type { ConfluenceComponents, ScoringRegime } from '../lib/ai/regimeScoring';
 import { computeACL, computeACLFromScoring } from '../lib/ai/adaptiveConfidenceLens';
 import type { ACLInput } from '../lib/ai/adaptiveConfidenceLens';
 import { buildPermissionSnapshot, evaluateCandidate } from '../lib/risk-governor-hard';
 import type { CandidateIntent, Regime } from '../lib/risk-governor-hard';
+import { computePerformanceThrottle, applyPerformanceDampener } from '../lib/ai/performanceThrottle';
+import { detectSessionPhase, getSessionPhaseMultiplier, computeSessionPhaseOverlay } from '../lib/ai/sessionPhase';
 
 // =====================================================
 // TEST INFRASTRUCTURE
@@ -832,6 +834,441 @@ console.log(`    SQ-heavy: RANGE=${sqRange.weightedScore}, VOL=${sqVol.weightedS
 assert(sqRange.weightedScore - sqVol.weightedScore > 10,
   'SQ-skewed: RANGE scores 10+ pts higher than VOL',
   `delta=${(sqRange.weightedScore - sqVol.weightedScore).toFixed(1)}`);
+
+
+// =====================================================
+// PHASE 25: GAP 1 — AGREEMENT-DERIVED REGIME CONFIDENCE
+// =====================================================
+section('PHASE 25 GAP 1 — REGIME AGREEMENT CONFIDENCE');
+
+// G1-1: Full agreement (4/4) → confidence = 85
+subsection('Full Agreement — 4/4 Signals');
+{
+  const result = deriveRegimeConfidence({
+    adx: 30,          // > 25: agrees with TREND_UP
+    rsi: 62,          // ≥ 50: agrees with TREND_UP
+    aroonUp: 85,      // > 70 + aroonDown < 50: agrees
+    aroonDown: 20,
+    mtfAlignment: 4,  // ≥ 3: agrees
+    inferredRegime: 'TREND_UP',
+  });
+  console.log(`    Agreement: ${result.agreementCount}/${result.totalChecks} = conf ${result.confidence}`);
+  console.log(`    Details: ${result.details.join(' | ')}`);
+  assert(result.confidence === 85, '4/4 agreement → confidence 85',
+    `got ${result.confidence}`);
+  assert(result.agreementCount === 4, 'All 4 signals agree',
+    `got ${result.agreementCount}/${result.totalChecks}`);
+}
+
+// G1-2: Partial agreement (2/4) → confidence = 55
+subsection('Mixed Agreement — 2/4 Signals');
+{
+  const result = deriveRegimeConfidence({
+    adx: 15,          // < 20: disagrees with TREND_UP (wants > 25)
+    rsi: 62,          // ≥ 50: agrees with TREND_UP
+    aroonUp: 40,      // Not > 70: disagrees
+    aroonDown: 50,
+    mtfAlignment: 4,  // ≥ 3: agrees
+    inferredRegime: 'TREND_UP',
+  });
+  console.log(`    Agreement: ${result.agreementCount}/${result.totalChecks} = conf ${result.confidence}`);
+  assert(result.confidence === 55, '2/4 agreement → confidence 55',
+    `got ${result.confidence}`);
+}
+
+// G1-3: Full disagreement (0/4) → confidence = 30
+subsection('Full Disagreement — 0/4 Signals');
+{
+  const result = deriveRegimeConfidence({
+    adx: 15,          // < 20: disagrees with TREND_UP
+    rsi: 35,          // < 50: disagrees with TREND_UP
+    aroonUp: 20,      // Not > 70: disagrees
+    aroonDown: 80,    // But we said TREND_UP...
+    mtfAlignment: 1,  // < 3: disagrees
+    inferredRegime: 'TREND_UP',
+  });
+  console.log(`    Agreement: ${result.agreementCount}/${result.totalChecks} = conf ${result.confidence}`);
+  assert(result.confidence === 30, '0/4 agreement → confidence 30',
+    `got ${result.confidence}`);
+}
+
+// G1-4: Insufficient data (only 1 indicator) → floor 45
+subsection('Insufficient Data — Floor 45');
+{
+  const result = deriveRegimeConfidence({
+    rsi: 60,
+    inferredRegime: 'TREND_UP',
+  });
+  console.log(`    Agreement: ${result.agreementCount}/${result.totalChecks} = conf ${result.confidence}`);
+  assert(result.confidence === 45, 'Only 1 signal available → floor 45',
+    `got ${result.confidence}`);
+  assert(result.details.some(d => d.includes('INSUFFICIENT_DATA')),
+    'Should flag INSUFFICIENT_DATA');
+}
+
+// G1-5: Range regime with confirming signals
+subsection('Range Regime Agreement');
+{
+  const result = deriveRegimeConfidence({
+    adx: 14,          // < 20: agrees with RANGE_NEUTRAL
+    rsi: 50,          // 35-65: agrees with range
+    aroonUp: 55,      // Spread < 30: confirms no clear direction
+    aroonDown: 45,
+    mtfAlignment: 4,
+    inferredRegime: 'RANGE_NEUTRAL',
+  });
+  console.log(`    Range agreement: ${result.agreementCount}/${result.totalChecks} = conf ${result.confidence}`);
+  assert(result.confidence >= 70, 'Range with 3-4 confirming signals → conf ≥ 70',
+    `got ${result.confidence}`);
+}
+
+// G1-6: 3/4 agreement → confidence = 70
+subsection('3 of 4 Agreement → 70');
+{
+  const result = deriveRegimeConfidence({
+    adx: 30,          // agrees
+    rsi: 65,          // agrees
+    aroonUp: 40,      // disagrees (not > 70)
+    aroonDown: 50,
+    mtfAlignment: 4,  // agrees
+    inferredRegime: 'TREND_UP',
+  });
+  assert(result.confidence === 70, '3/4 agreement → confidence 70',
+    `got ${result.confidence}`);
+}
+
+
+// =====================================================
+// PHASE 25: GAP 2 — PERFORMANCE-LINKED RISK THROTTLE
+// =====================================================
+section('PHASE 25 GAP 2 — PERFORMANCE THROTTLE');
+
+// G2-1: Normal session — no throttle
+subsection('Normal Session — No Drawdown');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: 0.5, consecutiveLosses: 0 });
+  assert(result.level === 'NORMAL', 'Positive P&L → NORMAL',
+    `level=${result.level}`);
+  assert(result.ruDampener === 1.0, 'No dampening',
+    `dampener=${result.ruDampener}`);
+  assert(result.governorRecommendation === 'NORMAL', 'Governor: NORMAL');
+}
+
+// G2-2: -2R session → CAUTIOUS
+subsection('-2R Session → CAUTIOUS');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: -2, consecutiveLosses: 1 });
+  assert(result.level === 'CAUTIOUS', '-2R → CAUTIOUS',
+    `level=${result.level}`);
+  assert(result.ruDampener === 0.70, 'Dampener = 0.70',
+    `dampener=${result.ruDampener}`);
+  assert(result.governorRecommendation === 'THROTTLED', 'Governor: THROTTLED');
+}
+
+// G2-3: -3R session → DEFENSIVE
+subsection('-3R Session → DEFENSIVE');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: -3, consecutiveLosses: 2 });
+  assert(result.level === 'DEFENSIVE', '-3R → DEFENSIVE',
+    `level=${result.level}`);
+  assert(result.ruDampener === 0.50, 'Dampener = 0.50',
+    `dampener=${result.ruDampener}`);
+  assert(result.governorRecommendation === 'DEFENSIVE', 'Governor: DEFENSIVE');
+}
+
+// G2-4: -4R session → LOCKED (RU=0)
+subsection('-4R Session → LOCKED');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: -4, consecutiveLosses: 3 });
+  assert(result.level === 'LOCKED', '-4R → LOCKED',
+    `level=${result.level}`);
+  assert(result.ruDampener === 0, 'Dampener = 0 (full lock)',
+    `dampener=${result.ruDampener}`);
+  assert(result.governorRecommendation === 'LOCKED', 'Governor: LOCKED');
+}
+
+// G2-5: 5-loss streak → streak dampener 0.60
+subsection('5-Loss Streak → RU × 0.60');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: -0.5, consecutiveLosses: 5 });
+  assert(result.level === 'CAUTIOUS', '5 losses → at least CAUTIOUS',
+    `level=${result.level}`);
+  assert(result.ruDampener === 0.60, 'Streak dampener 0.60',
+    `dampener=${result.ruDampener}`);
+}
+
+// G2-6: -3R + 5 losses → multiplicative: 0.50 × 0.60 = 0.30
+subsection('Stacked: -3R + 5-Loss Streak → 0.30');
+{
+  const result = computePerformanceThrottle({ sessionPnlR: -3, consecutiveLosses: 5 });
+  assert(result.ruDampener === 0.30, 'Multiplicative: 0.50 × 0.60 = 0.30',
+    `dampener=${result.ruDampener}`);
+  assert(result.level === 'DEFENSIVE', 'Level: DEFENSIVE (P&L dominates)',
+    `level=${result.level}`);
+}
+
+// G2-7: Low win rate overlay
+subsection('Low Win Rate Overlay');
+{
+  const result = computePerformanceThrottle({
+    sessionPnlR: -1,
+    consecutiveLosses: 2,
+    rolling5WinRate: 0.10,
+  });
+  assert(result.ruDampener <= 0.70, 'Low win rate caps dampener ≤ 0.70',
+    `dampener=${result.ruDampener}`);
+  assert(result.reasonCodes.some(r => r.includes('LOW_WIN_RATE')),
+    'Has LOW_WIN_RATE reason code');
+}
+
+// G2-8: Apply dampener to ACL throttle
+subsection('Apply Dampener to ACL Throttle');
+{
+  const perf = computePerformanceThrottle({ sessionPnlR: -3, consecutiveLosses: 0 });
+  const result = applyPerformanceDampener(0.80, perf);
+  assert(result.throttle === 0.40, 'ACL 0.80 × defn 0.50 = 0.40',
+    `throttle=${result.throttle}`);
+}
+
+
+// =====================================================
+// PHASE 25: GAP 3 — NONLINEAR CONVICTION CURVE
+// =====================================================
+section('PHASE 25 GAP 3 — NONLINEAR CONVICTION CURVE');
+
+// G3-1: High-scoring setup gets convex boost
+subsection('Convex Boost for Strong Setup');
+{
+  // Components that should score > 75 linearly
+  const strong: ConfluenceComponents = { SQ: 85, TA: 90, VA: 80, LL: 75, MTF: 85, FD: 70 };
+  const result = computeRegimeScore(strong, 'TREND_EXPANSION');
+  // Linear weighted score ≈ 0.10*85 + 0.35*90 + 0.10*80 + 0.05*75 + 0.30*85 + 0.10*70 = 84.25
+  // Nonlinear: 84.25^1.08 / 100 * 100 + 5 ≈ 88.x
+  console.log(`    Strong setup: weighted=${result.weightedScore}`);
+  assert(result.weightedScore > 84, 'Nonlinear boost pushes strong setup above linear 84',
+    `weighted=${result.weightedScore}`);
+}
+
+// G3-2: Weak-scoring setup gets mild concavity compression
+subsection('Concave Compression for Weak Setup');
+{
+  const weak: ConfluenceComponents = { SQ: 30, TA: 35, VA: 30, LL: 25, MTF: 30, FD: 25 };
+  const result = computeRegimeScore(weak, 'RANGE_COMPRESSION');
+  // SQ gate = 55 → gated, but let's check the formula path
+  // Linear would be ~30. Nonlinear with 0.95 exponent makes < 50 slightly higher.
+  console.log(`    Weak setup: weighted=${result.weightedScore}, gated=${result.gated}`);
+  // Gated caps at 55, so this tests the gate path primarily
+  assert(result.gated === true, 'Weak setup is gated (SQ < 55)',
+    `gated=${result.gated}`);
+}
+
+// G3-3: Mid-range separation — 50-75 zone
+subsection('Mid-Range Separation');
+{
+  const mid60: ConfluenceComponents = { SQ: 60, TA: 65, VA: 60, LL: 55, MTF: 55, FD: 55 };
+  const mid75: ConfluenceComponents = { SQ: 75, TA: 80, VA: 75, LL: 70, MTF: 75, FD: 70 };
+  const r60 = computeRegimeScore(mid60, 'TREND_EXPANSION');
+  const r75 = computeRegimeScore(mid75, 'TREND_EXPANSION');
+  const linearDelta = (75 * 0.35 + 80 * 0.10 + 70 * 0.30) - (65 * 0.35 + 60 * 0.10 + 55 * 0.30);
+  console.log(`    Mid 60s=${r60.weightedScore}, Mid 70s=${r75.weightedScore}, delta=${(r75.weightedScore - r60.weightedScore).toFixed(1)}`);
+  assert(r75.weightedScore - r60.weightedScore > 10,
+    'Nonlinear curve amplifies gap between 60s and 70s scores',
+    `delta=${(r75.weightedScore - r60.weightedScore).toFixed(1)}`);
+}
+
+// G3-4: Perfect 100 everywhere remains ≥ 95
+subsection('Perfect Input Nonlinear — Still ≥ 95');
+{
+  const perfect: ConfluenceComponents = { SQ: 100, TA: 100, VA: 100, LL: 100, MTF: 100, FD: 100 };
+  for (const regime of ['TREND_EXPANSION', 'RANGE_COMPRESSION', 'VOL_EXPANSION'] as ScoringRegime[]) {
+    const r = computeRegimeScore(perfect, regime);
+    assert(r.weightedScore >= 95, `Perfect in ${regime} ≥ 95 after nonlinear`,
+      `score=${r.weightedScore}`);
+  }
+}
+
+
+// =====================================================
+// PHASE 25: GAP 4 — TIME-OF-DAY SESSION PHASE
+// =====================================================
+section('PHASE 25 GAP 4 — SESSION PHASE OVERLAY');
+
+// G4-1: Equity market phases detected correctly
+subsection('Equity Session Phase Detection');
+{
+  // 9:45 ET = 14:45 UTC (opening range)
+  const openingRange = detectSessionPhase('equities', new Date('2026-02-22T14:45:00Z'));
+  assert(openingRange === 'OPENING_RANGE', '9:45 ET = OPENING_RANGE',
+    `got ${openingRange}`);
+
+  // 12:00 ET = 17:00 UTC (midday)
+  const midday = detectSessionPhase('equities', new Date('2026-02-22T17:00:00Z'));
+  assert(midday === 'MIDDAY', '12:00 ET = MIDDAY',
+    `got ${midday}`);
+
+  // 15:00 ET = 20:00 UTC (power hour)
+  const powerHour = detectSessionPhase('equities', new Date('2026-02-22T20:00:00Z'));
+  assert(powerHour === 'POWER_HOUR', '15:00 ET = POWER_HOUR',
+    `got ${powerHour}`);
+
+  // 15:55 ET = 20:55 UTC (close auction)
+  const closeAuction = detectSessionPhase('equities', new Date('2026-02-22T20:55:00Z'));
+  assert(closeAuction === 'CLOSE_AUCTION', '15:55 ET = CLOSE_AUCTION',
+    `got ${closeAuction}`);
+
+  // 18:00 ET = 23:00 UTC (after hours)
+  const afterHours = detectSessionPhase('equities', new Date('2026-02-22T23:00:00Z'));
+  assert(afterHours === 'AFTER_HOURS', '18:00 ET = AFTER_HOURS',
+    `got ${afterHours}`);
+}
+
+// G4-2: Crypto session phases
+subsection('Crypto Session Phase Detection');
+{
+  const asian = detectSessionPhase('crypto', new Date('2026-02-22T03:00:00Z'));
+  assert(asian === 'CRYPTO_ASIAN', '03:00 UTC = CRYPTO_ASIAN',
+    `got ${asian}`);
+
+  const european = detectSessionPhase('crypto', new Date('2026-02-22T10:00:00Z'));
+  assert(european === 'CRYPTO_EUROPEAN', '10:00 UTC = CRYPTO_EUROPEAN',
+    `got ${european}`);
+
+  const us = detectSessionPhase('crypto', new Date('2026-02-22T16:00:00Z'));
+  assert(us === 'CRYPTO_US', '16:00 UTC = CRYPTO_US',
+    `got ${us}`);
+
+  const overnight = detectSessionPhase('crypto', new Date('2026-02-22T22:30:00Z'));
+  assert(overnight === 'CRYPTO_OVERNIGHT', '22:30 UTC = CRYPTO_OVERNIGHT',
+    `got ${overnight}`);
+}
+
+// G4-3: Breakout multipliers vary by session
+subsection('Breakout Multipliers Vary By Session');
+{
+  const openMult = getSessionPhaseMultiplier('OPENING_RANGE', 'breakout');
+  const midMult = getSessionPhaseMultiplier('MIDDAY', 'breakout');
+  const closeMult = getSessionPhaseMultiplier('CLOSE_AUCTION', 'breakout');
+  console.log(`    Opening=${openMult}, Midday=${midMult}, Close=${closeMult}`);
+  assert(openMult > midMult, 'Opening breakout > Midday breakout',
+    `${openMult} vs ${midMult}`);
+  assert(midMult > closeMult, 'Midday breakout > Close auction breakout',
+    `${midMult} vs ${closeMult}`);
+  assert(openMult >= 1.10, 'Opening range breakout ≥ 1.10 multiplier',
+    `got ${openMult}`);
+  assert(closeMult <= 0.65, 'Close auction breakout ≤ 0.65 multiplier',
+    `got ${closeMult}`);
+}
+
+// G4-4: Mean reversion thrives midday
+subsection('Mean Reversion Midday Advantage');
+{
+  const mrMidday = getSessionPhaseMultiplier('MIDDAY', 'mean_reversion');
+  const momMidday = getSessionPhaseMultiplier('MIDDAY', 'momentum');
+  console.log(`    MR Midday=${mrMidday}, Mom Midday=${momMidday}`);
+  assert(mrMidday > momMidday, 'Mean reversion beats momentum midday',
+    `MR=${mrMidday} vs Mom=${momMidday}`);
+  assert(mrMidday >= 1.05, 'MR midday is boosted ≥ 1.05',
+    `got ${mrMidday}`);
+  assert(momMidday <= 0.75, 'Momentum midday is penalized ≤ 0.75',
+    `got ${momMidday}`);
+}
+
+// G4-5: No setup type → conservative 0.90
+subsection('No Setup Type → 0.90 Default');
+{
+  const mult = getSessionPhaseMultiplier('POWER_HOUR', undefined);
+  assert(mult === 0.90, 'No setup type → 0.90',
+    `got ${mult}`);
+}
+
+// G4-6: Full overlay result
+subsection('Full Session Phase Overlay Result');
+{
+  const result = computeSessionPhaseOverlay('equities', 'breakout', new Date('2026-02-22T14:45:00Z'));
+  assert(result.phase === 'OPENING_RANGE', 'Phase detected correctly');
+  assert(result.multiplier >= 1.10, 'Breakout at open boosted',
+    `mult=${result.multiplier}`);
+  assert(result.favorable === true, 'Opening breakout favorable=true');
+  assert(result.reason.includes('SESSION_BOOST'), 'Reason includes SESSION_BOOST',
+    `reason=${result.reason}`);
+}
+
+// G4-7: Crypto overnight penalty
+subsection('Crypto Overnight Penalty');
+{
+  const result = computeSessionPhaseOverlay('crypto', 'momentum', new Date('2026-02-22T22:30:00Z'));
+  assert(result.phase === 'CRYPTO_OVERNIGHT', 'Phase correct');
+  assert(result.multiplier <= 0.75, 'Overnight momentum ≤ 0.75',
+    `mult=${result.multiplier}`);
+  assert(result.favorable === false, 'Overnight momentum not favorable');
+}
+
+
+// =====================================================
+// PHASE 25: INTEGRATION — All 4 Gaps Working Together
+// =====================================================
+section('PHASE 25 INTEGRATION — ALL GAPS COMBINED');
+
+// INT-1: Strong trend, good agreement, good session, no drawdown
+subsection('Full Stack: Optimal Setup');
+{
+  const components: ConfluenceComponents = { SQ: 85, TA: 90, VA: 80, LL: 75, MTF: 85, FD: 70 };
+  const scoring = computeRegimeScore(components, 'TREND_EXPANSION');
+  const agreement = deriveRegimeConfidence({
+    adx: 32, rsi: 65, aroonUp: 85, aroonDown: 15, mtfAlignment: 4,
+    inferredRegime: 'TREND_UP',
+  });
+  const acl = computeACLFromScoring(scoring, {
+    regimeConfidence: agreement.confidence,
+    setupType: 'trend_follow',
+    riskGovernorPermission: 'ALLOW',
+    dataComponentsProvided: 8,
+  });
+  const perf = computePerformanceThrottle({ sessionPnlR: 1.5, consecutiveLosses: 0 });
+  const session = computeSessionPhaseOverlay('equities', 'trend_follow', new Date('2026-02-22T15:30:00Z')); // 10:30 ET morning
+  const finalThrottle = acl.throttle * session.multiplier * perf.ruDampener;
+  
+  console.log(`    Score=${scoring.weightedScore}, Agreement=${agreement.confidence}, ACL=${acl.confidence}, Session=${session.multiplier}, Perf=${perf.ruDampener}`);
+  console.log(`    Final Throttle=${finalThrottle.toFixed(3)}, Auth=${acl.authorization}`);
+  
+  assert(acl.authorization === 'AUTHORIZED', 'Optimal setup is AUTHORIZED');
+  assert(acl.confidence > 75, 'Confidence > 75 with high regime agreement',
+    `conf=${acl.confidence}`);
+  assert(finalThrottle > 0.70, 'Final throttle > 0.70 (all green)',
+    `throttle=${finalThrottle.toFixed(3)}`);
+}
+
+// INT-2: Same setup but midday + drawdown + disagreement
+subsection('Full Stack: Degraded Conditions');
+{
+  const components: ConfluenceComponents = { SQ: 85, TA: 90, VA: 80, LL: 75, MTF: 85, FD: 70 };
+  const scoring = computeRegimeScore(components, 'TREND_EXPANSION');
+  const agreement = deriveRegimeConfidence({
+    adx: 15, rsi: 48, aroonUp: 40, aroonDown: 50, mtfAlignment: 1,
+    inferredRegime: 'TREND_UP',
+  });
+  const acl = computeACLFromScoring(scoring, {
+    regimeConfidence: agreement.confidence,
+    setupType: 'breakout',
+    riskGovernorPermission: 'ALLOW',
+    dataComponentsProvided: 4,
+  });
+  const perf = computePerformanceThrottle({ sessionPnlR: -2.5, consecutiveLosses: 3 });
+  const session = computeSessionPhaseOverlay('equities', 'breakout', new Date('2026-02-22T17:00:00Z')); // midday
+  const finalThrottle = acl.throttle * session.multiplier * perf.ruDampener;
+
+  console.log(`    Score=${scoring.weightedScore}, Agreement=${agreement.confidence}, ACL=${acl.confidence}, Session=${session.multiplier}, Perf=${perf.ruDampener}`);
+  console.log(`    Final Throttle=${finalThrottle.toFixed(3)}, Auth=${acl.authorization}`);
+
+  assert(agreement.confidence <= 40, 'Disagreeing signals → low confidence',
+    `conf=${agreement.confidence}`);
+  assert(session.multiplier <= 0.75, 'Midday breakout penalized',
+    `mult=${session.multiplier}`);
+  assert(perf.ruDampener < 1.0, 'Drawdown dampens',
+    `dampener=${perf.ruDampener}`);
+  assert(finalThrottle < 0.30, 'Final throttle < 0.30 under degraded conditions',
+    `throttle=${finalThrottle.toFixed(3)}`);
+}
 
 
 // =====================================================

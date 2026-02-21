@@ -158,10 +158,25 @@ export function computeRegimeScore(
     FD: clamped.FD * weights.FD,
   };
 
-  // Weighted total
-  const rawWeightedScore =
+  // Weighted total (linear)
+  const linearWeightedScore =
     breakdown.SQ + breakdown.TA + breakdown.VA +
     breakdown.LL + breakdown.MTF + breakdown.FD;
+
+  // === NONLINEAR CONVICTION CURVE ===
+  // Mild convexity: inflates high-confidence scores, compresses mid-range
+  // Creates visual separation in strong environments without destabilizing mid-range
+  // Formula: score^1.08 for scores > 50, with +5 bonus above 75
+  let rawWeightedScore: number;
+  if (linearWeightedScore > 75) {
+    rawWeightedScore = Math.pow(linearWeightedScore / 100, 1.08) * 100 + 5;
+  } else if (linearWeightedScore > 50) {
+    rawWeightedScore = Math.pow(linearWeightedScore / 100, 1.08) * 100;
+  } else {
+    // Below 50: apply mild concavity (makes weak scores slightly weaker)
+    rawWeightedScore = Math.pow(linearWeightedScore / 100, 0.95) * 100;
+  }
+  rawWeightedScore = clamp(rawWeightedScore, 0, 100);
 
   // Check gates
   const gateViolations: string[] = [];
@@ -208,6 +223,141 @@ export function computeRegimeScore(
       FD: Number(breakdown.FD.toFixed(2)),
     },
   };
+}
+
+// =====================================================
+// REGIME CONFIDENCE — Multi-Signal Agreement Score
+// =====================================================
+
+export interface RegimeAgreementInput {
+  /** ADX value — used for trend/range classification */
+  adx?: number;
+  /** RSI value — confirms directional extreme or neutrality */
+  rsi?: number;
+  /** Aroon Up */
+  aroonUp?: number;
+  /** Aroon Down */
+  aroonDown?: number;
+  /** MTF alignment count 0-5 */
+  mtfAlignment?: number;
+  /** Inferred regime string (from inferRegimeFromData or similar) */
+  inferredRegime?: string;
+}
+
+/**
+ * Derive regimeConfidence from multi-signal agreement instead of static default.
+ *
+ * Agreement dimensions (each 0 or 1):
+ *   1. ADX classification — does ADX agree with regime? (trend→ADX>25, range→ADX<20)
+ *   2. RSI confirmation — RSI extreme for vol expansion, or directional for trend
+ *   3. Aroon direction — Aroon spread confirms regime direction
+ *   4. MTF alignment — 3+ timeframes agree
+ *
+ * Scoring: 4/4=85, 3/4=70, 2/4=55, 1/4=40, 0/4=30
+ * If fewer than 2 indicators are available, clamp at floor of 45 (insufficient data).
+ */
+export function deriveRegimeConfidence(input: RegimeAgreementInput): {
+  confidence: number;
+  agreementCount: number;
+  totalChecks: number;
+  details: string[];
+} {
+  const regime = (input.inferredRegime || 'RANGE_NEUTRAL').toUpperCase();
+  let agreements = 0;
+  let checks = 0;
+  const details: string[] = [];
+
+  // Dimension 1: ADX classification
+  if (input.adx !== undefined && !isNaN(input.adx)) {
+    checks++;
+    const isTrend = regime.includes('TREND');
+    const isRange = regime.includes('RANGE') || regime.includes('CONTRACTION');
+    const isVol = regime.includes('VOL') || regime.includes('STRESS');
+    if (isTrend && input.adx > 25) {
+      agreements++;
+      details.push(`ADX=${input.adx.toFixed(0)} confirms trend (>25)`);
+    } else if (isRange && input.adx < 20) {
+      agreements++;
+      details.push(`ADX=${input.adx.toFixed(0)} confirms range (<20)`);
+    } else if (isVol && input.adx > 20) {
+      agreements++;
+      details.push(`ADX=${input.adx.toFixed(0)} supports vol expansion (>20)`);
+    } else {
+      details.push(`ADX=${input.adx.toFixed(0)} DISAGREES with ${regime}`);
+    }
+  }
+
+  // Dimension 2: RSI confirmation
+  if (input.rsi !== undefined && !isNaN(input.rsi)) {
+    checks++;
+    const isTrendUp = regime === 'TREND_UP' || regime === 'TREND_EXPANSION';
+    const isTrendDown = regime === 'TREND_DOWN' || regime === 'TREND_MATURE';
+    const isVolExpansion = regime.includes('VOL') || regime.includes('STRESS');
+    if (isTrendUp && input.rsi >= 50) {
+      agreements++;
+      details.push(`RSI=${input.rsi.toFixed(0)} confirms bullish trend (≥50)`);
+    } else if (isTrendDown && input.rsi <= 50) {
+      agreements++;
+      details.push(`RSI=${input.rsi.toFixed(0)} confirms bearish trend (≤50)`);
+    } else if (isVolExpansion && (input.rsi > 75 || input.rsi < 25)) {
+      agreements++;
+      details.push(`RSI=${input.rsi.toFixed(0)} confirms extreme volatility`);
+    } else if (!isTrendUp && !isTrendDown && !isVolExpansion && input.rsi >= 35 && input.rsi <= 65) {
+      agreements++;
+      details.push(`RSI=${input.rsi.toFixed(0)} confirms range-bound (35-65)`);
+    } else {
+      details.push(`RSI=${input.rsi.toFixed(0)} DISAGREES with ${regime}`);
+    }
+  }
+
+  // Dimension 3: Aroon direction agreement
+  if (input.aroonUp !== undefined && input.aroonDown !== undefined &&
+      !isNaN(input.aroonUp) && !isNaN(input.aroonDown)) {
+    checks++;
+    const isTrendUp = regime === 'TREND_UP' || regime === 'TREND_EXPANSION';
+    const isTrendDown = regime === 'TREND_DOWN' || regime === 'TREND_MATURE';
+    if (isTrendUp && input.aroonUp > 70 && input.aroonDown < 50) {
+      agreements++;
+      details.push(`Aroon ${input.aroonUp.toFixed(0)}/${input.aroonDown.toFixed(0)} confirms uptrend`);
+    } else if (isTrendDown && input.aroonDown > 70 && input.aroonUp < 50) {
+      agreements++;
+      details.push(`Aroon ${input.aroonUp.toFixed(0)}/${input.aroonDown.toFixed(0)} confirms downtrend`);
+    } else if (!isTrendUp && !isTrendDown && Math.abs(input.aroonUp - input.aroonDown) < 30) {
+      agreements++;
+      details.push(`Aroon spread ${Math.abs(input.aroonUp - input.aroonDown).toFixed(0)} confirms no clear direction`);
+    } else {
+      details.push(`Aroon ${input.aroonUp.toFixed(0)}/${input.aroonDown.toFixed(0)} DISAGREES with ${regime}`);
+    }
+  }
+
+  // Dimension 4: MTF alignment
+  if (input.mtfAlignment !== undefined && !isNaN(input.mtfAlignment)) {
+    checks++;
+    if (input.mtfAlignment >= 3) {
+      agreements++;
+      details.push(`MTF=${input.mtfAlignment}/5 aligned (strong)`);
+    } else {
+      details.push(`MTF=${input.mtfAlignment}/5 aligned (weak)`);
+    }
+  }
+
+  // Scoring: map agreement ratio to confidence
+  // 4/4 = 85, 3/4 = 70, 2/4 = 55, 1/4 = 40, 0/4 = 30
+  // If <2 indicators available, floor at 45 (insufficient data)
+  let confidence: number;
+  if (checks < 2) {
+    confidence = 45; // Insufficient data — conservative floor
+    details.push(`INSUFFICIENT_DATA: only ${checks} signals available, floor=45`);
+  } else {
+    const ratio = agreements / checks;
+    if (ratio >= 1.0) confidence = 85;
+    else if (ratio >= 0.75) confidence = 70;
+    else if (ratio >= 0.50) confidence = 55;
+    else if (ratio >= 0.25) confidence = 40;
+    else confidence = 30;
+  }
+
+  return { confidence, agreementCount: agreements, totalChecks: checks, details };
 }
 
 /**

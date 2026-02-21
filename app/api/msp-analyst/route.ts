@@ -41,8 +41,10 @@ import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
-import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from "@/lib/ai/regimeScoring";
-import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
+import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
+import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
+import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import type { PromptMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -350,19 +352,88 @@ export async function POST(req: NextRequest) {
     
     const regimeScoring = computeRegimeScore(components, scoringRegime);
     
+    // ===== GAP 1: AGREEMENT-DERIVED REGIME CONFIDENCE =====
+    const regimeAgreement = deriveRegimeConfidence({
+      adx: scanner?.scanData?.adx !== undefined ? Number(scanner.scanData.adx) : undefined,
+      rsi: scanner?.scanData?.rsi !== undefined ? Number(scanner.scanData.rsi) : undefined,
+      aroonUp: scanner?.scanData?.aroon_up !== undefined ? Number(scanner.scanData.aroon_up) : undefined,
+      aroonDown: scanner?.scanData?.aroon_down !== undefined ? Number(scanner.scanData.aroon_down) : undefined,
+      mtfAlignment: undefined, // Will be derived from MTF component if available
+      inferredRegime: regimeInferred,
+    });
+    
     // Determine event risk from query keywords
     const eventRiskLevel = /fomc|cpi|nfp|earnings|news/.test(query.toLowerCase()) ? 'high' as const : 'none' as const;
     
+    // Infer setup type for ACL
+    const inferredStrategy = inferStrategyFromText(query);
+    const aclSetupType: 'breakout' | 'mean_reversion' | 'momentum' | 'swing' | undefined =
+      inferredStrategy === 'breakout' ? 'breakout' :
+      inferredStrategy === 'mean_reversion' ? 'mean_reversion' :
+      inferredStrategy === 'momentum' ? 'momentum' :
+      inferredStrategy === 'macro_swing' ? 'swing' : undefined;
+
+    // ===== GAP 4: TIME-OF-DAY SESSION PHASE =====
+    const cryptoKeywordsCheck = ['btc', 'eth', 'bitcoin', 'ethereum', 'crypto', 'sol', 'xrp', 'doge'];
+    const qLower = query.toLowerCase();
+    const symLower = (context?.symbol || '').toLowerCase();
+    const isCryptoForPhase = cryptoKeywordsCheck.some(kw => qLower.includes(kw) || symLower.includes(kw)) ||
+                              context?.symbol?.includes('USDT') ||
+                              context?.symbol?.includes('-USD');
+    const sessionPhase = computeSessionPhaseOverlay(
+      isCryptoForPhase ? 'crypto' : 'equities',
+      aclSetupType as any,
+    );
+
     const aclResult = computeACLFromScoring(regimeScoring, {
-      regimeConfidence: institutionalFilter.finalScore,
-      setupType: inferStrategyFromText(query) === 'breakout' ? 'breakout' :
-                 inferStrategyFromText(query) === 'mean_reversion' ? 'mean_reversion' :
-                 inferStrategyFromText(query) === 'momentum' ? 'momentum' :
-                 inferStrategyFromText(query) === 'macro_swing' ? 'swing' : undefined,
+      regimeConfidence: regimeAgreement.confidence,
+      setupType: aclSetupType,
       eventRisk: eventRiskLevel,
       riskGovernorPermission: institutionalFilter.noTrade ? 'BLOCK' : 'ALLOW',
       dataComponentsProvided: dataComponentCount,
     });
+
+    // ===== GAP 2: PERFORMANCE-LINKED THROTTLE =====
+    // Fetch session P&L from recent trades (last 24h) for this workspace
+    let perfThrottle = computePerformanceThrottle({ sessionPnlR: 0, consecutiveLosses: 0 });
+    try {
+      const recentTrades = await q(
+        `SELECT pnl_r, created_at FROM portfolio_closed 
+         WHERE workspace_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+         ORDER BY created_at DESC LIMIT 20`,
+        [workspaceId]
+      );
+      if (recentTrades && recentTrades.length > 0) {
+        let sessionPnlR = 0;
+        let consecutiveLosses = 0;
+        let wins = 0;
+        const last5 = recentTrades.slice(0, 5);
+        for (const trade of recentTrades) {
+          const pnl = Number(trade.pnl_r || 0);
+          sessionPnlR += pnl;
+        }
+        // Count consecutive losses from most recent
+        for (const trade of recentTrades) {
+          if (Number(trade.pnl_r || 0) < 0) consecutiveLosses++;
+          else break;
+        }
+        // Rolling 5-trade win rate
+        for (const trade of last5) {
+          if (Number(trade.pnl_r || 0) > 0) wins++;
+        }
+        const rolling5WinRate = last5.length > 0 ? wins / last5.length : undefined;
+        perfThrottle = computePerformanceThrottle({ sessionPnlR, consecutiveLosses, rolling5WinRate });
+      }
+    } catch (dbErr) {
+      // Non-critical: if portfolio_closed table doesn't exist or query fails, use default
+      logger.debug('Performance throttle DB query skipped', { error: (dbErr as any)?.message });
+    }
+
+    // Apply session phase multiplier to throttle
+    const phaseAdjustedThrottle = aclResult.throttle * sessionPhase.multiplier;
+    // Apply performance dampener
+    const perfAdjusted = applyPerformanceDampener(phaseAdjustedThrottle, perfThrottle);
+    const finalThrottle = perfAdjusted.throttle;
     
     // Inject V2 platform state (regime weights + ACL)
     const v2StateInjection = buildAnalystV2SystemMessages({
@@ -373,8 +444,12 @@ export async function POST(req: NextRequest) {
       aclResult: {
         confidence: aclResult.confidence,
         authorization: aclResult.authorization,
-        throttle: aclResult.throttle,
-        reasonCodes: aclResult.reasonCodes,
+        throttle: finalThrottle,
+        reasonCodes: [
+          ...aclResult.reasonCodes,
+          sessionPhase.reason,
+          ...perfAdjusted.reasonCodes,
+        ],
       },
       volatilityState: institutionalFilter.filters.find(f => f.key === 'volatility')?.reason,
     });
@@ -382,6 +457,35 @@ export async function POST(req: NextRequest) {
     if (v2StateInjection) {
       messages.push({ role: "system", content: v2StateInjection });
     }
+
+    // ===== V3 INSTITUTIONAL OVERLAYS: Session Phase + Performance Throttle =====
+    messages.push({
+      role: "system",
+      content: `
+Session Phase Overlay:
+- Phase: ${sessionPhase.phase}
+- Setup Multiplier: ×${sessionPhase.multiplier.toFixed(2)}
+- Favorable: ${sessionPhase.favorable ? 'YES' : 'NO'}
+- Detail: ${sessionPhase.reason}
+
+Regime Agreement Score:
+- Confidence: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} signals agree)
+- Details: ${regimeAgreement.details.join(' | ')}
+
+Performance Throttle:
+- Level: ${perfThrottle.level}
+- RU Dampener: ×${perfThrottle.ruDampener.toFixed(2)}
+- Governor Recommendation: ${perfThrottle.governorRecommendation}
+- Final Effective Throttle: ${finalThrottle.toFixed(3)}
+- Reasons: ${perfThrottle.reasonCodes.join(' | ')}
+
+Instruction:
+- If session phase is unfavorable, mention it explicitly and recommend waiting for a better window.
+- If performance throttle is not NORMAL, advise reduced position sizing or waiting.
+- If regime agreement is below 55%, flag regime uncertainty in your analysis.
+- Factor session timing into breakout vs mean reversion recommendations.
+      `.trim(),
+    });
 
     // NEW: inject strict scanner explainer rules if this came from scanner
     if (scanner && scanner.source === "msp-web-scanner") {
@@ -702,12 +806,16 @@ Always mention which derivatives signals support or contradict your analysis.
           volatilityState: institutionalFilter.filters.find(f => f.key === 'volatility')?.status || 'unknown',
           confluenceScore: regimeScoring.weightedScore,
           authorization: aclResult.authorization,
-          throttle: aclResult.throttle,
+          throttle: finalThrottle,
           tradeBias: regimeScoring.tradeBias,
           verdict: aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
                    aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
                    regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH',
-          reasonCodes: aclResult.reasonCodes,
+          reasonCodes: [
+            ...aclResult.reasonCodes,
+            sessionPhase.reason,
+            ...perfAdjusted.reasonCodes,
+          ],
         },
         confidence: {
           value: aclResult.confidence,
@@ -722,6 +830,24 @@ Always mention which derivatives signals support or contradict your analysis.
             { name: 'FD', weight: regimeScoring.weights.FD, value: regimeScoring.rawComponents.FD },
           ],
           calibrationNote: `Regime: ${scoringRegime} | ACL Pipeline: Base=${aclResult.pipeline.step1_base}→Final=${aclResult.pipeline.step5_final}`,
+        },
+        // V3 institutional overlays
+        regimeAgreement: {
+          confidence: regimeAgreement.confidence,
+          agreement: `${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks}`,
+          details: regimeAgreement.details,
+        },
+        sessionPhase: {
+          phase: sessionPhase.phase,
+          multiplier: sessionPhase.multiplier,
+          favorable: sessionPhase.favorable,
+          reason: sessionPhase.reason,
+        },
+        performanceThrottle: {
+          level: perfThrottle.level,
+          dampener: perfThrottle.ruDampener,
+          governorRecommendation: perfThrottle.governorRecommendation,
+          reasons: perfThrottle.reasonCodes,
         },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
