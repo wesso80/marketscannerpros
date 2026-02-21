@@ -31,6 +31,8 @@ services:
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
+      - key: COINGECKO_API_KEY
+        sync: false
 
   # Cron Jobs for Alerts
   - type: cron

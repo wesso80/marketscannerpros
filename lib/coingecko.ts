@@ -11,20 +11,22 @@
  * - Historical data (10 years on Analyst plan)
  */
 
-const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
+// Read API key lazily so dotenv/Render env vars are available at call time
+const getApiKey = () => process.env.COINGECKO_API_KEY || '';
 const BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const FREE_URL = 'https://api.coingecko.com/api/v3';
 
 // Use Pro API if key is available, otherwise fall back to free tier
-const getBaseUrl = () => COINGECKO_API_KEY ? BASE_URL : FREE_URL;
+const getBaseUrl = () => getApiKey() ? BASE_URL : FREE_URL;
 
 // Request headers with API key
 const getHeaders = (): HeadersInit => {
   const headers: HeadersInit = {
     'Accept': 'application/json',
   };
-  if (COINGECKO_API_KEY) {
-    headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
+  const key = getApiKey();
+  if (key) {
+    headers['x-cg-pro-api-key'] = key;
   }
   return headers;
 };
@@ -50,8 +52,9 @@ function buildCoinGeckoUrl(path: string, params?: URLSearchParams): string {
     url.search = params.toString();
   }
 
-  if (COINGECKO_API_KEY && !url.searchParams.has('x_cg_pro_api_key')) {
-    url.searchParams.set('x_cg_pro_api_key', COINGECKO_API_KEY);
+  const key = getApiKey();
+  if (key && !url.searchParams.has('x_cg_pro_api_key')) {
+    url.searchParams.set('x_cg_pro_api_key', key);
   }
 
   return url.toString();
