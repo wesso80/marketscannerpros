@@ -11,6 +11,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import type { PageSkill } from '@/lib/ai/types';
 import { CommandLayout, TerminalLayout, getToolsLayoutMode, getToolsContainerVariant } from './LayoutContracts';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 
 function getSkillFromPath(pathname: string): PageSkill {
@@ -58,6 +59,7 @@ export default function ToolsLayoutClient({
     : <CommandLayout>{children}</CommandLayout>;
 
   return (
+    <RegimeProvider>
     <RiskPermissionProvider>
       <AIPageProvider>
         <ErrorBoundary fallback={null}>
@@ -84,5 +86,6 @@ export default function ToolsLayoutClient({
         </ErrorBoundary>
       </AIPageProvider>
     </RiskPermissionProvider>
+    </RegimeProvider>
   );
 }

@@ -15,6 +15,7 @@ import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+import { RegimeProvider } from '@/lib/useRegime';
 import PermissionChip from '@/components/risk/PermissionChip';
 import RiskApplicationOverlay from '@/components/risk/RiskApplicationOverlay';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
@@ -1775,6 +1776,7 @@ export default function OperatorDashboardPage() {
   });
 
   return (
+    <RegimeProvider>
     <RiskPermissionProvider>
     <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
       <ToolsNavBar />
@@ -1979,5 +1981,6 @@ export default function OperatorDashboardPage() {
       />
     </div>
     </RiskPermissionProvider>
+    </RegimeProvider>
   );
 }
