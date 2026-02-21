@@ -86,7 +86,7 @@ export default function JournalPage() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
-      <main className="mx-auto w-full max-w-[1280px] space-y-4 px-4 py-4 md:px-6">
+      <main className="mx-auto w-full max-w-none space-y-4 px-4 py-4 md:px-6">
         <JournalLayout
           header={payload?.header}
           kpis={payload?.kpis}

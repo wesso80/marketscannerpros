@@ -66,7 +66,7 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
       />
 
       {pageGuide && helpOpen ? (
-        <div className="mx-auto mt-4 max-w-[1600px] rounded-panel border border-msp-borderStrong bg-msp-panel p-4">
+        <div className="mx-auto mt-4 max-w-none rounded-panel border border-msp-borderStrong bg-msp-panel p-4">
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full border border-msp-borderStrong bg-msp-card px-2 py-0.5 text-[10px] uppercase tracking-[0.04em] text-msp-accent">
               {pageGuide.badge}

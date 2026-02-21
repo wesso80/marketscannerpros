@@ -16,7 +16,7 @@ function Pill({ label, value }: { label: string; value: string }) {
 export default function DeskHeaderSticky({ header }: DeskHeaderStickyProps) {
   return (
     <div className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/60 backdrop-blur">
-      <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-2 px-4 py-2 md:grid-cols-12">
+      <div className="mx-auto grid w-full max-w-none grid-cols-1 gap-2 px-4 py-2 md:grid-cols-12">
         <div className="md:col-span-4 flex items-center gap-2">
           <Pill label="Symbol" value={header.symbol} />
           <Pill label="Price" value={header.underlyingPrice.toFixed(2)} />

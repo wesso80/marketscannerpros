@@ -16,7 +16,7 @@ export default function ToolsSettingsPage() {
         backHref="/tools"
       />
 
-      <main className="mx-auto w-full max-w-[980px] px-4 py-6 md:px-6">
+      <main className="mx-auto w-full max-w-none px-4 py-6 md:px-6">
         <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 md:p-5">
           <div className="mb-4">
             <h2 className="text-base font-bold text-slate-100">Education Risk Guard</h2>

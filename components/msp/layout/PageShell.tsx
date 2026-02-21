@@ -5,5 +5,5 @@ type PageShellProps = {
 };
 
 export default function PageShell({ children }: PageShellProps) {
-  return <div className="mx-auto w-full max-w-[1248px] space-y-8 px-4 py-6 lg:px-6">{children}</div>;
+  return <div className="mx-auto w-full max-w-none space-y-8 px-4 py-6 lg:px-6">{children}</div>;
 }

@@ -510,7 +510,7 @@ export default function MarketMoversPage() {
         icon="📈"
       />
 
-      <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+      <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
           {[
             ['Mode', environment.marketMode],

@@ -56,11 +56,7 @@ export function TerminalLayout({
   children: ReactNode;
   containerVariant?: ToolsContainerVariant;
 }) {
-  const containerClass = containerVariant === 'full'
-    ? 'max-w-none'
-    : containerVariant === 'wide'
-      ? 'mx-auto max-w-[1360px]'
-      : 'mx-auto max-w-[1120px]';
+  const containerClass = 'max-w-none';
 
   return (
     <div className={`msp-layout-terminal w-full px-3 md:px-4 ${containerClass}`}>

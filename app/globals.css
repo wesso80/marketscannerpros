@@ -234,7 +234,7 @@ a:hover {
 
 .msp-container {
   width: 100%;
-  max-width: var(--msp-content-max);
+  max-width: none;
   margin: 0 auto;
   padding-left: 16px;
   padding-right: 16px;

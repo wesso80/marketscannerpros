@@ -344,7 +344,7 @@ function CompanyOverviewContent() {
         backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0 }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0 }}>
 
         {/* Search Bar */}
         <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>

@@ -21,7 +21,7 @@ function WatchlistsContent() {
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
       <main className="pt-6 pb-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-none px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-white">Institutional Watchlist Engine</h1>
             <p className="text-slate-400">Monitor and organize symbols for tactical scanning with live market data (educational mode)</p>

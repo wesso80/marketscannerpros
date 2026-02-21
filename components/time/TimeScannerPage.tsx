@@ -320,7 +320,7 @@ export default function TimeScannerPage() {
 
   return (
     <TimeScannerShell>
-      <main className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-4 lg:px-6 lg:py-6">
+      <main className="mx-auto w-full max-w-none space-y-5 px-4 py-4 lg:px-6 lg:py-6">
 
         {error && (
           <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">

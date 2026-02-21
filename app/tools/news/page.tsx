@@ -782,7 +782,7 @@ export default function NewsSentimentPage() {
         backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: 0, width: '100%' }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
 
         {/* Tabs */}
         <div

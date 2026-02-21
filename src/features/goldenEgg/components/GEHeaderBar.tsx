@@ -3,7 +3,7 @@ import GETag from '@/src/features/goldenEgg/components/shared/GETag';
 export default function GEHeaderBar() {
   return (
     <div className="border-b border-white/5 bg-slate-950/80">
-      <div className="mx-auto w-full max-w-[1280px] px-4 py-4">
+      <div className="mx-auto w-full max-w-none px-4 py-4">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold text-slate-100">Market Edge Analyzer</h1>
           <GETag tone="amber" text="Powered by Golden Egg™" />

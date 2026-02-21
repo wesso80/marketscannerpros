@@ -270,7 +270,7 @@ export default function MacroDashboardPage() {
         icon="🏛️"
       />
 
-      <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 pb-24 pt-6 md:px-6">
+      <div className="mx-auto w-full max-w-none space-y-4 px-4 pb-24 pt-6 md:px-6">
         <div className="sticky top-2 z-20 rounded-xl border border-white/10 bg-slate-950/95 p-3 backdrop-blur">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">

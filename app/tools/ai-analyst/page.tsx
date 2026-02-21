@@ -255,7 +255,7 @@ function AiAnalystContent() {
         backHref="/tools/markets"
       />
 
-      <main className="mx-auto w-full max-w-[1700px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+      <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="sticky top-0 z-20 grid grid-cols-1 gap-1.5 rounded-lg border border-slate-800 bg-slate-900/95 p-1.5 backdrop-blur md:grid-cols-[2fr_1fr]">
           <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
             <div className="rounded-md border border-slate-700 bg-slate-900 p-1.5">

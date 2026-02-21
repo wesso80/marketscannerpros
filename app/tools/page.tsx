@@ -210,7 +210,7 @@ export default function ToolsPage() {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-none items-center justify-between px-4 py-3 md:px-6">
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill label="Regime" value={regime} />
             <StatusPill label="Risk" value={risk} />
@@ -233,7 +233,7 @@ export default function ToolsPage() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 pb-16 pt-6 md:px-6">
+      <div className="mx-auto w-full max-w-none space-y-4 px-4 pb-16 pt-6 md:px-6">
         <section>
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
             <div>

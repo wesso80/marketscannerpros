@@ -221,7 +221,7 @@ function AlertsContent() {
 
   if (isLoading || loadingData) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-none mx-auto px-4 py-8">
         <div className="animate-pulse">
           <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
           <div className="h-64 bg-slate-800 rounded"></div>
@@ -231,7 +231,7 @@ function AlertsContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] space-y-4 px-4 py-6 md:px-6">
+    <div className="mx-auto w-full max-w-none space-y-4 px-4 py-6 md:px-6">
       <section className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 md:h-[88px] md:px-6">
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <div className="flex gap-2 lg:gap-3">
@@ -446,7 +446,7 @@ export default function AlertsPage() {
         icon="🔔"
       />
       <Suspense fallback={
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-none mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
             <div className="h-64 bg-slate-800 rounded"></div>

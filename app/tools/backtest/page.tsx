@@ -1211,7 +1211,7 @@ function BacktestContent() {
         icon="🧪"
         backHref="/dashboard"
       />
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ maxWidth: 'none', margin: '0 auto', padding: '20px' }}>
         <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>

@@ -527,7 +527,7 @@ export default function CommoditiesPage() {
           </div>
         }
       />
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8">
         {derivedState && (
           <>
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">

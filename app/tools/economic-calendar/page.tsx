@@ -272,7 +272,7 @@ export default function EconomicCalendarPage() {
         }
       />
 
-      <main className="mx-auto max-w-6xl px-4 pb-16">
+      <main className="mx-auto max-w-none px-4 pb-16">
         {loading && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">Loading macro catalyst map...</div>}
         {error && <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>}
 
