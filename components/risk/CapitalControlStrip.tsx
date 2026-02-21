@@ -14,6 +14,8 @@ export default function CapitalControlStrip() {
   const { snapshot, loading, isLocked, guardEnabled, setGuardEnabled } = useRiskPermission();
   const [accountSize, setAccountSize] = useState(100000);
 
+  const oneRiskFraction = useMemo(() => Math.max(0.001, snapshot?.caps?.risk_per_trade ?? 0.005), [snapshot?.caps?.risk_per_trade]);
+
   useEffect(() => {
     let mounted = true;
     const loadAccount = async () => {
@@ -41,7 +43,6 @@ export default function CapitalControlStrip() {
 
   const dataTone = snapshot.data_health.status === 'OK' ? 'ok' : snapshot.data_health.status === 'DEGRADED' ? 'warn' : 'block';
   const modeTone = snapshot.risk_mode === 'LOCKED' ? 'block' : snapshot.risk_mode === 'THROTTLED' || snapshot.risk_mode === 'DEFENSIVE' ? 'warn' : 'ok';
-  const oneRiskFraction = useMemo(() => Math.max(0.001, snapshot.caps.risk_per_trade), [snapshot.caps.risk_per_trade]);
   const remainingDollar = rToDollar(snapshot.session.remaining_daily_R, accountSize, oneRiskFraction);
   const openRiskDollar = rToDollar(snapshot.session.open_risk_R, accountSize, oneRiskFraction);
 
