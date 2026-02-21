@@ -151,8 +151,9 @@ export default function Header() {
   ];
 
   const resourceItems: DropdownItem[] = [
-    { href: '/guide', label: 'Trading Guides', icon: '📚' },
-    { href: '/blog', label: 'Blog', icon: '✍️' },
+    { href: '/resources', label: 'Resources Hub', icon: '🧭' },
+    { href: '/resources/platform-guide', label: 'Platform Guide', icon: '📚' },
+    { href: '/resources/trading-guides', label: 'Trading Guides', icon: '🧠' },
     { href: '/partners', label: 'Partners', icon: '🤝' },
   ];
 
