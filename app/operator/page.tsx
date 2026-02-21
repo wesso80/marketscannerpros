@@ -13,6 +13,7 @@ import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
+import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 import PermissionChip from '@/components/risk/PermissionChip';
 import RiskApplicationOverlay from '@/components/risk/RiskApplicationOverlay';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
@@ -39,6 +40,7 @@ interface Position {
   symbol: string;
   side: 'LONG' | 'SHORT';
   quantity: number;
+  entryPrice?: number;
   currentPrice: number;
 }
 
@@ -1736,7 +1738,7 @@ export default function OperatorDashboardPage() {
           Number.isFinite(entryRiskPerTrade) && entryRiskPerTrade > 0 ? entryRiskPerTrade : riskPerTradeFraction
         );
     const multiplier = normalizedR !== 0 ? dynamicR / normalizedR : 1;
-    const throttleReason = multiplier < 0.95
+    const throttleReason: 'regime' | 'vol' | 'event' | 'none' = multiplier < 0.95
       ? volatilityLabel === 'HIGH'
         ? 'vol'
         : (riskGovernorDebug?.snapshot.riskEnvironment || '').toLowerCase().includes('event')
@@ -1759,7 +1761,8 @@ export default function OperatorDashboardPage() {
   const overlayOpenTrades = positions.slice(0, 10).map((position, index) => {
     const stop = position.side === 'LONG' ? position.currentPrice * 0.98 : position.currentPrice * 1.02;
     const riskPerUnit = Math.max(0.01, Math.abs(position.currentPrice - stop));
-    const unrealizedPerUnit = position.side === 'LONG' ? (position.currentPrice - position.entryPrice) : (position.entryPrice - position.currentPrice);
+    const entryPrice = Number.isFinite(Number(position.entryPrice)) ? Number(position.entryPrice) : position.currentPrice;
+    const unrealizedPerUnit = position.side === 'LONG' ? (position.currentPrice - entryPrice) : (entryPrice - position.currentPrice);
     const currentR = unrealizedPerUnit / riskPerUnit;
 
     return {
@@ -1771,6 +1774,7 @@ export default function OperatorDashboardPage() {
   });
 
   return (
+    <RiskPermissionProvider>
     <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
       <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2">
         <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>
@@ -1832,7 +1836,7 @@ export default function OperatorDashboardPage() {
                 </div>
                 <div className="mt-3 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                   <div>Loss Streak: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.session.consecutive_losses ?? 0}</span></div>
-                  <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.vol_multiplier ?? 1)}</span></div>
+                  <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)}</span></div>
                   <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.risk_per_trade ?? 0)}%</span></div>
                 </div>
               </div>
@@ -1855,7 +1859,7 @@ export default function OperatorDashboardPage() {
                   <div className="msp-elite-row flex justify-between"><span>Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.remaining_daily_R ?? 0)}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Max Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.max_open_risk_R ?? 5)}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Current Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.open_risk_R ?? 0)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.vol_multiplier ?? 1)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Event Restrictions</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'ACTIVE' : 'NORMAL'}</span></div>
                 </div>
               </div>
@@ -1972,5 +1976,6 @@ export default function OperatorDashboardPage() {
         }
       />
     </div>
+    </RiskPermissionProvider>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function VerifyMagicLinkPage() {
+function VerifyMagicLinkContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
@@ -95,5 +95,19 @@ export default function VerifyMagicLinkPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function VerifyMagicLinkPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#070B14] text-white">
+          <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 text-white/60">Verifying...</div>
+        </main>
+      }
+    >
+      <VerifyMagicLinkContent />
+    </Suspense>
   );
 }

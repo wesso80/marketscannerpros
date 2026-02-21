@@ -460,7 +460,7 @@ export async function POST(req: NextRequest) {
         stop_price: stopLoss,
         atr: Number(entry?.atr ?? defaultAtrFromEntry(entryPrice)),
         event_severity: ['none', 'medium', 'high'].includes(String(entry?.eventSeverity || '').toLowerCase())
-          ? String(entry?.eventSeverity || '').toLowerCase()
+          ? String(entry?.eventSeverity || '').toLowerCase() as 'none' | 'medium' | 'high'
           : 'none',
       } as const;
 

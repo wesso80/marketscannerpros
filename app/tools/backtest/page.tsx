@@ -1216,7 +1216,7 @@ function BacktestContent() {
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>
         <CommandCenterStateBar
-          mode="PREP"
+          mode="EVALUATE"
           actionableNow={results
             ? `Top setup: ${symbol} • ${strategy} • ${results.winRate.toFixed(1)}% win rate`
             : `No validated setup yet for ${symbol}. Run backtest to qualify execution.`}
