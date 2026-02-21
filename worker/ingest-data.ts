@@ -1490,10 +1490,27 @@ async function main(): Promise<void> {
   await ensureIngestionSchema();
   console.log('[worker] Schema compatibility checks complete');
 
-  const releaseLaneLock = await acquireWorkerLaneLock(workerLane);
-  if (!releaseLaneLock) {
-    console.log(`[worker] Another ${workerLane} ingest worker is already running; exiting`);
-    process.exit(0);
+  // Retry lock acquisition with backoff so Render doesn't spawn a restart loop.
+  // During deploys the old instance releases the lock via SIGTERM handler;
+  // after a crash the heartbeat goes stale after HEARTBEAT_STALE_MS (2 min).
+  const LOCK_RETRY_INTERVAL_MS = 15_000; // poll every 15 s
+  const LOCK_MAX_WAIT_MS = 180_000;      // give up after 3 min
+  let releaseLaneLock: (() => Promise<void>) | null = null;
+  const lockStartTime = Date.now();
+
+  while (!releaseLaneLock) {
+    releaseLaneLock = await acquireWorkerLaneLock(workerLane);
+    if (releaseLaneLock) break;
+
+    const elapsed = Date.now() - lockStartTime;
+    if (elapsed >= LOCK_MAX_WAIT_MS) {
+      console.log(`[worker] Could not acquire ${workerLane} lock after ${Math.round(elapsed / 1000)}s — another worker is healthy; exiting`);
+      process.exit(0);
+    }
+
+    const remaining = Math.round((LOCK_MAX_WAIT_MS - elapsed) / 1000);
+    console.log(`[worker] Lock busy, retrying in ${LOCK_RETRY_INTERVAL_MS / 1000}s (${remaining}s remaining before giving up)...`);
+    await new Promise((r) => setTimeout(r, LOCK_RETRY_INTERVAL_MS));
   }
 
   process.on('SIGINT', async () => {
