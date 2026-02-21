@@ -4018,26 +4018,35 @@ function ScannerContent() {
                                   </div>
 
                                   <div style={{ color: executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)', fontSize: '0.73rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
-                                    {executionEnabled ? 'Execution Enabled' : 'Wait For Confirmation'}
+                                    {executionEnabled ? 'Execution Enabled' : 'Review Before Entry'}
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
                                     <button
-                                      disabled={!executionEnabled}
+                                      onClick={() => {
+                                        if (result) {
+                                          deployRankCandidate({
+                                            symbol: result.symbol,
+                                            indicators: { price: result.price, atr: result.atr },
+                                            direction: result.direction || direction,
+                                            score: result.score,
+                                          });
+                                        }
+                                      }}
                                       style={{
                                         padding: '0.4rem 0.72rem',
                                         borderRadius: '8px',
-                                        border: `1px solid ${executionEnabled ? 'var(--msp-bull)' : 'var(--msp-border)'}`,
-                                        background: executionEnabled ? 'var(--msp-bull-tint)' : 'var(--msp-panel-2)',
-                                        color: executionEnabled ? 'var(--msp-bull)' : 'var(--msp-neutral)',
+                                        border: `1px solid ${executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)'}`,
+                                        background: executionEnabled ? 'var(--msp-bull-tint)' : 'var(--msp-warn-tint, rgba(234,179,8,0.08))',
+                                        color: executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)',
                                         fontSize: '0.72rem',
                                         fontWeight: 900,
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
-                                        cursor: executionEnabled ? 'pointer' : 'not-allowed',
+                                        cursor: 'pointer',
                                       }}
                                     >
-                                      Enter Trade
+                                      {executionEnabled ? 'Enter Trade' : 'Enter Trade (Review)'}
                                     </button>
                                     <button
                                       style={{

@@ -50,7 +50,7 @@ async function verify(token: string) {
 
 // ─── Global API rate limiter (Edge-compatible, in-memory) ───
 const GLOBAL_API_WINDOW_MS = 60_000;
-const GLOBAL_API_MAX = 120;
+const GLOBAL_API_MAX = 300;
 
 const apiHits = new Map<string, { count: number; windowStart: number }>();
 
