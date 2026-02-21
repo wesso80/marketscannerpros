@@ -159,7 +159,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur overflow-visible">
-      <div className={`mx-auto flex max-w-6xl items-center justify-between ${isTerminalMode ? 'h-12 px-3' : 'h-14 px-4'}`}>
+        <div className={`mx-auto flex max-w-none items-center justify-between ${isTerminalMode ? 'h-12 px-3' : 'h-14 px-4'}`}>
         <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-6">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
           <span>MarketScannerPros</span>
