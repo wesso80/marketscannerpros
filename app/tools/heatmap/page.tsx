@@ -2,6 +2,7 @@
 
 import SectorHeatmap from '@/components/SectorHeatmap';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
+import RegimeBanner from '@/components/RegimeBanner';
 
 export default function HeatmapPage() {
   return (
@@ -13,6 +14,11 @@ export default function HeatmapPage() {
         icon="📊"
       />
       <div className="max-w-none mx-auto px-4 py-8">
+
+        {/* Regime Context */}
+        <div className="mb-4">
+          <RegimeBanner />
+        </div>
 
         {/* Main Heatmap */}
         <SectorHeatmap />

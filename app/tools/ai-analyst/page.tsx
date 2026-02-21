@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
+import { useRegime, regimeLabel } from "@/lib/useRegime";
 
 type AssetType = "crypto" | "stock" | "fx";
 type OutputView = "thesis" | "risk" | "checklist" | "execution";
@@ -54,6 +55,7 @@ function normalizeDirection(direction?: string) {
 
 function AiAnalystContent() {
   const searchParams = useSearchParams();
+  const { data: regimeData } = useRegime();
 
   const [query, setQuery] = useState(
     "Give me a macro outlook for this ticker with bullish and bearish scenarios."
@@ -219,6 +221,12 @@ function AiAnalystContent() {
           mode,
           context,
           scanner: scannerPayload,
+          regime: regimeData ? {
+            regime: regimeData.regime,
+            riskLevel: regimeData.riskLevel,
+            permission: regimeData.permission,
+            sizing: regimeData.sizing,
+          } : undefined,
         }),
       });
 
@@ -364,7 +372,12 @@ function AiAnalystContent() {
 
               <div className="rounded-md border border-slate-800 bg-slate-950 p-1.5">
                 <p className="text-[10px] uppercase tracking-wide text-slate-400">Regime Summary</p>
-                <p className="mt-0.5 text-[11px] text-slate-300">Bias {scannerMeta.direction?.toUpperCase() || "N/A"} · Strength {scannerMeta.score || "—"}</p>
+                <p className="mt-0.5 text-[11px] text-slate-300">
+                  {regimeData ? `${regimeLabel(regimeData.regime)} · ${regimeData.riskLevel.toUpperCase()} · ${regimeData.permission}` : 'Loading...'}
+                </p>
+                {scannerMeta.direction && (
+                  <p className="mt-0.5 text-[10px] text-slate-500">Scanner: {scannerMeta.direction?.toUpperCase()} · Strength {scannerMeta.score || "—"}</p>
+                )}
               </div>
             </div>
           </div>

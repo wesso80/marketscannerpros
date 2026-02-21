@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import RegimeBanner from '@/components/RegimeBanner';
+import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 
 interface CompanyData {
   symbol: string;
@@ -345,6 +347,22 @@ function CompanyOverviewContent() {
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0 }}>
+
+        {/* Regime & Personality Context */}
+        <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <RegimeBanner />
+          {data && (
+            <div style={{ borderRadius: '8px', border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(15,23,42,0.5)', padding: '8px' }}>
+              <AdaptivePersonalityCard
+                skill="company_overview"
+                setupText={`${data.symbol} ${data.sector} fundamental analysis`}
+                direction={undefined}
+                timeframe="D"
+                baseScore={50}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Search Bar */}
         <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>

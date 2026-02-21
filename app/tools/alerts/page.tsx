@@ -7,6 +7,7 @@ import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
+import RegimeBanner from '@/components/RegimeBanner';
 
 type AlertItem = {
   id: string;
@@ -445,6 +446,9 @@ export default function AlertsPage() {
         subtitle="Detect, validate, execute, and learn from triggered market events"
         icon="🔔"
       />
+      <div className="max-w-none mx-auto px-4 pt-4">
+        <RegimeBanner />
+      </div>
       <Suspense fallback={
         <div className="max-w-none mx-auto px-4 py-8">
           <div className="animate-pulse">

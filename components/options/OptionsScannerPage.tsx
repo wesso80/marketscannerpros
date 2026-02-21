@@ -105,12 +105,51 @@ function OptionsScannerPageContent() {
       alertEnabled: true,
       watchlistEnabled: true,
       journalEnabled: payload?.decision.permission === 'GO',
-      onDeploy: () => {},
-      onAlert: () => {},
-      onWatchlist: () => {},
-      onJournal: () => {},
+      onDeploy: () => {
+        if (!payload) return;
+        alert(`⚠️ Educational Mode\n\nDeploy signal for ${symbol}:\nDirection: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}%\n\nThis is a simulated workflow — no broker execution.`);
+      },
+      onAlert: async () => {
+        try {
+          const res = await fetch('/api/alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              symbol: symbol.toUpperCase(),
+              condition_type: 'price_above',
+              condition_value: payload?.header?.underlyingPrice || 0,
+              alert_name: `Options: ${symbol} ${payload?.decision?.direction || 'NEUTRAL'} signal`,
+            }),
+          });
+          if (res.ok) alert(`✅ Alert created for ${symbol}`);
+          else alert('Failed to create alert');
+        } catch { alert('Failed to create alert — network error'); }
+      },
+      onWatchlist: async () => {
+        try {
+          const res = await fetch('/api/watchlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              symbol: symbol.toUpperCase(),
+              note: `Options scan: ${payload?.decision?.direction || 'N/A'} @ confidence ${payload?.decision?.confidence || 0}%`,
+            }),
+          });
+          if (res.ok) alert(`✅ ${symbol} added to watchlist`);
+          else alert('Failed to add to watchlist');
+        } catch { alert('Failed to add to watchlist — network error'); }
+      },
+      onJournal: () => {
+        const params = new URLSearchParams({
+          symbol: symbol.toUpperCase(),
+          direction: payload?.decision?.direction === 'BULLISH' ? 'LONG' : payload?.decision?.direction === 'BEARISH' ? 'SHORT' : 'LONG',
+          source: 'options-scanner',
+          confidence: String(payload?.decision?.confidence || 50),
+        });
+        window.location.href = `/tools/journal?${params.toString()}`;
+      },
     }),
-    [payload?.decision.permission],
+    [payload, symbol],
   );
 
   const fallbackHeader: DeskHeaderModel = {

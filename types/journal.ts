@@ -20,6 +20,12 @@ export type JournalKpisModel = {
   winRate30d: number;
   profitFactor30d: number;
   maxDrawdown90d: number;
+  /** Average Maximum Favorable Excursion (closed trades, 30d) */
+  avgMfe30d?: number;
+  /** Average Maximum Adverse Excursion (closed trades, 30d) */
+  avgMae30d?: number;
+  /** Average R-multiple (closed trades, 30d) */
+  avgR30d?: number;
 };
 
 export type FiltersMetaModel = {
@@ -51,6 +57,12 @@ export type TradeRowModel = {
   notesPreview?: string[];
   lastAiNoteTs?: string;
   snapshots?: TradeSnapshotMini;
+  /** Maximum Favorable Excursion — peak unrealized profit during trade */
+  mfe?: number;
+  /** Maximum Adverse Excursion — worst unrealized drawdown during trade */
+  mae?: number;
+  /** Market regime at time of entry */
+  regime?: string;
 };
 
 export type EquityCurvePoint = {
@@ -115,6 +127,7 @@ export type JournalFilters = {
   strategyTag?: string;
   side?: TradeSide;
   assetClass?: TradeAssetClass;
+  regime?: string;
   from?: string;
   to?: string;
   q?: string;

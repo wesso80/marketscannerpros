@@ -38,13 +38,22 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
     };
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-9">
       <KpiCard label="Equity / Balance" value={`$${data.equity.toFixed(2)}`} />
       <KpiCard label="Realized P&L (30d)" value={`$${data.realizedPnl30d.toFixed(2)}`} delta={data.realizedPnl30d} />
       <KpiCard label="Unrealized P&L (Open)" value={`$${data.unrealizedPnlOpen.toFixed(2)}`} delta={data.unrealizedPnlOpen} />
       <KpiCard label="Win Rate (30d)" value={(data.winRate30d * 100).toFixed(1)} suffix="%" />
       <KpiCard label="Profit Factor (30d)" value={data.profitFactor30d.toFixed(2)} />
       <KpiCard label="Max Drawdown (90d)" value={(data.maxDrawdown90d * 100).toFixed(1)} suffix="%" delta={data.maxDrawdown90d * 100} />
+      {typeof data.avgMfe30d === 'number' && (
+        <KpiCard label="Avg MFE (30d)" value={`$${data.avgMfe30d.toFixed(2)}`} delta={data.avgMfe30d} />
+      )}
+      {typeof data.avgMae30d === 'number' && (
+        <KpiCard label="Avg MAE (30d)" value={`$${data.avgMae30d.toFixed(2)}`} delta={-Math.abs(data.avgMae30d)} />
+      )}
+      {typeof data.avgR30d === 'number' && (
+        <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" delta={data.avgR30d} />
+      )}
     </div>
   );
 }

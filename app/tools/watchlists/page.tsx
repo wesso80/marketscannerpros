@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from 'react';
 import WatchlistWidget from '@/components/WatchlistWidget';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import RegimeBanner from '@/components/RegimeBanner';
 
 function WatchlistsContent() {
   const { setPageData } = useAIPageContext();
@@ -25,6 +26,10 @@ function WatchlistsContent() {
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-white">Institutional Watchlist Engine</h1>
             <p className="text-slate-400">Monitor and organize symbols for tactical scanning with live market data (educational mode)</p>
+          </div>
+
+          <div className="mb-4">
+            <RegimeBanner />
           </div>
 
           <WatchlistWidget />

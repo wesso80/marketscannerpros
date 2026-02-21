@@ -5,6 +5,7 @@ import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
+import RegimeBanner from '@/components/RegimeBanner';
 
 // Hierarchical Scan Result type
 interface HierarchicalResult {
@@ -403,6 +404,9 @@ export default function AIConfluenceScanner() {
           <p style={{ color: '#94A3B8' }}>
             Select your trading timeframe • Get probability direction based on all decompressing candles
           </p>
+          <div style={{ marginTop: '1rem' }}>
+            <RegimeBanner />
+          </div>
         </div>
 
         <div style={{
