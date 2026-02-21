@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { getRiskGovernorThresholdsFromEnv } from '@/lib/operator/riskGovernor';
-import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
+import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
+import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
 
 type CanonicalActionType =
   | 'alert.create'
@@ -141,6 +142,16 @@ function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
   return 'equity';
 }
 
+function mapPayloadStrategyTag(value: unknown): StrategyTag {
+  const text = String(value || '').toLowerCase();
+  if (text.includes('breakout')) return 'BREAKOUT_CONTINUATION';
+  if (text.includes('pullback') || text.includes('trend')) return 'TREND_PULLBACK';
+  if (text.includes('range') || text.includes('fade')) return 'RANGE_FADE';
+  if (text.includes('mean') || text.includes('reversion') || text.includes('reclaim')) return 'MEAN_REVERSION';
+  if (text.includes('event') || text.includes('earnings') || text.includes('cpi') || text.includes('fomc')) return 'EVENT_STRATEGY';
+  return 'MOMENTUM_REVERSAL';
+}
+
 function createIdempotencyFallback(workspaceId: string, actionType: string, payload: Record<string, any>) {
   return createHash('sha256')
     .update(JSON.stringify({ workspaceId, actionType, payload }))
@@ -250,7 +261,7 @@ async function createAlertDraft(workspaceId: string, payload: Record<string, any
   };
 }
 
-async function createJournalOpen(workspaceId: string, payload: Record<string, any>) {
+async function createJournalOpen(workspaceId: string, payload: Record<string, any>, guardEnabled: boolean) {
   const symbol = asUpper(payload.symbol || payload.ticker, 20);
   if (!symbol) throw new Error('journal.open requires symbol');
 
@@ -259,6 +270,7 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
   const tradeDate = String(payload.tradeDate || new Date().toISOString().slice(0, 10));
   const side = asUpper(payload.side || payload.direction || 'LONG', 8) || 'LONG';
   const entryPrice = Math.max(0, asNumber(payload.entryPrice ?? payload.triggerPrice ?? payload.price ?? 0, 0));
+  const stopPrice = Math.max(0, asNumber(payload.stop ?? payload.stopLoss ?? payload.invalidation ?? 0, 0));
 
   const assetClass = normalizeJournalAssetClass(payload.assetClass || payload.asset_class || payload.market || inferAssetClassFromSymbol(symbol));
 
@@ -269,7 +281,46 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
     `asset_class_${assetClass}`,
   ];
 
-  const snapshot = buildPermissionSnapshot({ enabled: true });
+  const runtimeInput = await getRuntimeRiskSnapshotInput(workspaceId).catch(() => null);
+  const snapshot = buildPermissionSnapshot({
+    enabled: guardEnabled,
+    regime: runtimeInput?.regime,
+    dataStatus: runtimeInput?.dataStatus,
+    dataAgeSeconds: runtimeInput?.dataAgeSeconds,
+    eventSeverity: runtimeInput?.eventSeverity,
+    realizedDailyR: runtimeInput?.realizedDailyR,
+    openRiskR: runtimeInput?.openRiskR,
+    consecutiveLosses: runtimeInput?.consecutiveLosses,
+  });
+
+  if (guardEnabled) {
+    if (entryPrice <= 0) {
+      throw new Error('Risk governor blocked journal.open: invalid entry price');
+    }
+    if (stopPrice <= 0) {
+      throw new Error('Risk governor blocked journal.open: missing stop/invalidation');
+    }
+
+    const direction = side === 'SHORT' || side === 'SELL' || side === 'BEARISH' ? 'SHORT' : 'LONG';
+    const atr = Math.max(0.01, asNumber(payload.atr, 0) || (entryPrice * 0.02));
+    const evaluation = evaluateCandidate(snapshot, {
+      symbol,
+      asset_class: assetClass === 'crypto' ? 'crypto' : 'equities',
+      strategy_tag: mapPayloadStrategyTag(payload.strategy || payload.setup),
+      direction,
+      confidence: Math.max(1, Math.min(99, Math.round(asNumber(payload.confidence, 70)))),
+      entry_price: entryPrice,
+      stop_price: stopPrice,
+      atr,
+      event_severity: runtimeInput?.eventSeverity || 'none',
+    });
+
+    if (evaluation.permission === 'BLOCK') {
+      const reason = evaluation.reason_codes?.[0] || 'POLICY_BLOCK';
+      throw new Error(`Risk governor blocked journal.open: ${reason}`);
+    }
+  }
+
   const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
   const entryRisk = computeEntryRiskMetrics({
     dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
@@ -676,10 +727,16 @@ function exportOrderDraft(payload: Record<string, any>) {
   };
 }
 
-async function performAction(workspaceId: string, actionType: CanonicalActionType, payload: Record<string, any>, effectiveMode: ExecuteMode) {
+async function performAction(
+  workspaceId: string,
+  actionType: CanonicalActionType,
+  payload: Record<string, any>,
+  effectiveMode: ExecuteMode,
+  options: { guardEnabled: boolean }
+) {
   if (actionType === 'alert.create') return createAlertDraft(workspaceId, payload);
   if (actionType === 'plan.create') return createPlanDraft(workspaceId, payload);
-  if (actionType === 'journal.open') return createJournalOpen(workspaceId, payload);
+  if (actionType === 'journal.open') return createJournalOpen(workspaceId, payload, options.guardEnabled);
   if (actionType === 'trade.close') return closeTrade(workspaceId, payload);
   if (actionType === 'focus.pin') return pinFocus(workspaceId, payload);
   if (actionType === 'focus.snooze') return snoozeFocus(workspaceId, payload);
@@ -781,6 +838,7 @@ export async function POST(req: NextRequest) {
     const assistGate = await evaluateAssistGate(session.workspaceId, parsedActionType);
     const effectiveMode: ExecuteMode = requestedMode === 'assist' && assistGate.allowed ? 'assist' : 'draft';
     const downgradeReason = requestedMode === 'assist' && !assistGate.allowed ? assistGate.reason : null;
+    const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
 
     const result = await performAction(
       session.workspaceId,
@@ -790,7 +848,8 @@ export async function POST(req: NextRequest) {
         source: body.source || 'operator_actions_execute',
         packetId: body.decisionPacketId || payload.packetId || null,
       },
-      effectiveMode
+      effectiveMode,
+      { guardEnabled }
     );
 
     await q(
@@ -870,6 +929,8 @@ export async function POST(req: NextRequest) {
     }
 
     console.error('[actions/execute] POST error:', error);
-    return NextResponse.json({ error: String(error?.message || 'Failed to execute action') }, { status: 500 });
+    const message = String(error?.message || 'Failed to execute action');
+    const status = message.startsWith('Risk governor blocked') ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

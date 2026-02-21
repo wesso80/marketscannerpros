@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 import { buildPermissionSnapshot, type Regime } from '@/lib/risk-governor-hard';
+import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
 
 function toNumber(value: string | null, fallback: number): number {
   if (!value) return fallback;
@@ -40,16 +42,21 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
+    const session = await getSessionFromCookie();
+
+    const runtimeInput = session?.workspaceId
+      ? await getRuntimeRiskSnapshotInput(session.workspaceId).catch(() => null)
+      : null;
 
     const snapshot = buildPermissionSnapshot({
       enabled: guardEnabled,
-      regime: toRegime(url.searchParams.get('regime')),
-      dataStatus: toDataStatus(url.searchParams.get('dataStatus')),
-      dataAgeSeconds: toNumber(url.searchParams.get('dataAgeSeconds'), 3),
-      eventSeverity: toEventSeverity(url.searchParams.get('eventSeverity')),
-      realizedDailyR: toNumber(url.searchParams.get('realizedDailyR'), -1.2),
-      openRiskR: toNumber(url.searchParams.get('openRiskR'), 2.2),
-      consecutiveLosses: toNumber(url.searchParams.get('consecutiveLosses'), 1),
+      regime: runtimeInput?.regime ?? toRegime(url.searchParams.get('regime')),
+      dataStatus: runtimeInput?.dataStatus ?? toDataStatus(url.searchParams.get('dataStatus')),
+      dataAgeSeconds: runtimeInput?.dataAgeSeconds ?? toNumber(url.searchParams.get('dataAgeSeconds'), 3),
+      eventSeverity: runtimeInput?.eventSeverity ?? toEventSeverity(url.searchParams.get('eventSeverity')),
+      realizedDailyR: runtimeInput?.realizedDailyR ?? toNumber(url.searchParams.get('realizedDailyR'), -1.2),
+      openRiskR: runtimeInput?.openRiskR ?? toNumber(url.searchParams.get('openRiskR'), 2.2),
+      consecutiveLosses: runtimeInput?.consecutiveLosses ?? toNumber(url.searchParams.get('consecutiveLosses'), 1),
     });
 
     return NextResponse.json(snapshot);

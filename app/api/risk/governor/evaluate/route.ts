@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 import {
   buildPermissionSnapshot,
   evaluateCandidate,
@@ -6,6 +7,7 @@ import {
   type Direction,
   type StrategyTag,
 } from '@/lib/risk-governor-hard';
+import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
 
 function isDirection(value: string): value is Direction {
   return value === 'LONG' || value === 'SHORT';
@@ -26,6 +28,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
+    const session = await getSessionFromCookie();
+    const runtimeInput = session?.workspaceId
+      ? await getRuntimeRiskSnapshotInput(session.workspaceId).catch(() => null)
+      : null;
     const input = body?.trade_intent || body;
 
     const strategy = String(input?.strategy_tag || '').toUpperCase();
@@ -53,15 +59,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid numeric trade intent fields' }, { status: 400 });
     }
 
+    const fallbackSnapshotInput = body?.snapshot_input || {};
     const snapshot = buildPermissionSnapshot({
       enabled: guardEnabled,
-      regime: body?.snapshot_input?.regime,
-      dataStatus: body?.snapshot_input?.dataStatus,
-      dataAgeSeconds: Number(body?.snapshot_input?.dataAgeSeconds ?? 3),
-      eventSeverity: body?.snapshot_input?.eventSeverity,
-      realizedDailyR: Number(body?.snapshot_input?.realizedDailyR ?? -1.2),
-      openRiskR: Number(body?.snapshot_input?.openRiskR ?? 2.2),
-      consecutiveLosses: Number(body?.snapshot_input?.consecutiveLosses ?? 1),
+      regime: runtimeInput?.regime ?? fallbackSnapshotInput?.regime,
+      dataStatus: runtimeInput?.dataStatus ?? fallbackSnapshotInput?.dataStatus,
+      dataAgeSeconds: runtimeInput?.dataAgeSeconds ?? Number(fallbackSnapshotInput?.dataAgeSeconds ?? 3),
+      eventSeverity: runtimeInput?.eventSeverity ?? fallbackSnapshotInput?.eventSeverity,
+      realizedDailyR: runtimeInput?.realizedDailyR ?? Number(fallbackSnapshotInput?.realizedDailyR ?? -1.2),
+      openRiskR: runtimeInput?.openRiskR ?? Number(fallbackSnapshotInput?.openRiskR ?? 2.2),
+      consecutiveLosses: runtimeInput?.consecutiveLosses ?? Number(fallbackSnapshotInput?.consecutiveLosses ?? 1),
     });
 
     const evaluation = evaluateCandidate(snapshot, candidate);

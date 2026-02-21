@@ -602,6 +602,13 @@ function ScannerContent() {
   const [journalMonitorAutoScanSeconds, setJournalMonitorAutoScanSeconds] = useState<number>(180);
   const [journalMonitorStatus, setJournalMonitorStatus] = useState<string | null>(null);
   const [journalMonitorError, setJournalMonitorError] = useState<string | null>(null);
+  const [showPreTradeChecklist, setShowPreTradeChecklist] = useState(false);
+  const [pendingDeployPick, setPendingDeployPick] = useState<any | null>(null);
+  const [preTradeChecklist, setPreTradeChecklist] = useState({
+    thesis: false,
+    risk: false,
+    eventWindow: false,
+  });
   const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
   const [sectorFilter, setSectorFilter] = useState<'all' | 'tech' | 'finance' | 'energy'>('all');
   const [scanIntentMode, setScanIntentMode] = useState<'observe' | 'decide'>('observe');
@@ -1357,7 +1364,7 @@ function ScannerContent() {
     return 'NOT COMPLIANT';
   };
 
-  const deployRankCandidate = async (pick: any) => {
+  const executeRankCandidateDeploy = async (pick: any) => {
     if (riskLocked) {
       alert('Rule Guard active: tracking locked. New simulated entries are disabled.');
       return;
@@ -1430,6 +1437,26 @@ function ScannerContent() {
     setTimeout(() => {
       void runScan();
     }, 0);
+  };
+
+  const deployRankCandidate = (pick: any) => {
+    setPendingDeployPick(pick);
+    setPreTradeChecklist({ thesis: false, risk: false, eventWindow: false });
+    setShowPreTradeChecklist(true);
+  };
+
+  const confirmDeployRankCandidate = async () => {
+    if (!pendingDeployPick) return;
+    const allChecked = preTradeChecklist.thesis && preTradeChecklist.risk && preTradeChecklist.eventWindow;
+    if (!allChecked) {
+      alert('Complete all pre-trade checklist items before proceeding.');
+      return;
+    }
+
+    setShowPreTradeChecklist(false);
+    const targetPick = pendingDeployPick;
+    setPendingDeployPick(null);
+    await executeRankCandidateDeploy(targetPick);
   };
 
   const addScannerCandidateToWatchlist = async (pick: any) => {
@@ -1596,8 +1623,8 @@ function ScannerContent() {
   ];
 
   const riskPerTradePct = ((riskSnapshot?.caps.risk_per_trade ?? 0) * 100).toFixed(2);
-  const throttleMultiplier = Math.max(0.4, Math.min(1, (riskSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)).toFixed(2);
-  const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.75' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.60' : '1.00';
+  const throttleMultiplier = Math.max(0.35, Math.min(1, (riskSnapshot?.caps.risk_per_trade ?? 0.0075) / 0.0075)).toFixed(2);
+  const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.50' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.35' : '1.00';
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
@@ -5516,6 +5543,63 @@ function ScannerContent() {
             <p style={{ fontSize: "0.875rem" }}>
               Pick an asset, choose a symbol, then click "Find Best Setup"
             </p>
+          </div>
+        )}
+
+        {showPreTradeChecklist && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 px-4">
+            <div className="w-full max-w-md rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-4">
+              <div className="mb-2 text-[0.84rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Pre-Trade Checklist</div>
+              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
+                Confirm discipline checks before creating a plan{pendingDeployPick?.symbol ? ` for ${String(pendingDeployPick.symbol).toUpperCase()}` : ''}.
+              </div>
+              <div className="grid gap-2 text-[0.78rem] text-[var(--msp-text)]">
+                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <input
+                    type="checkbox"
+                    checked={preTradeChecklist.thesis}
+                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, thesis: e.target.checked }))}
+                    className="mt-0.5"
+                  />
+                  <span>Thesis is clear and setup aligns with current regime.</span>
+                </label>
+                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <input
+                    type="checkbox"
+                    checked={preTradeChecklist.risk}
+                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, risk: e.target.checked }))}
+                    className="mt-0.5"
+                  />
+                  <span>Stop/invalidation and risk budget are defined before entry.</span>
+                </label>
+                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
+                  <input
+                    type="checkbox"
+                    checked={preTradeChecklist.eventWindow}
+                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, eventWindow: e.target.checked }))}
+                    className="mt-0.5"
+                  />
+                  <span>High-impact event window reviewed and throttle accepted.</span>
+                </label>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowPreTradeChecklist(false);
+                    setPendingDeployPick(null);
+                  }}
+                  className="h-9 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-muted)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { void confirmDeployRankCandidate(); }}
+                  className="msp-btn-elite-primary h-9 flex-1 px-3 text-[0.7rem] font-extrabold uppercase"
+                >
+                  Confirm & Create Plan
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

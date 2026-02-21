@@ -5,6 +5,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { emitTradeLifecycleEvent, hashDedupeKey } from "@/lib/notifications/tradeEvents";
 import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from "@/lib/risk-governor-hard";
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from "@/lib/journal/riskAtEntry";
+import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 
 interface JournalEntry {
   id: number;
@@ -417,16 +418,17 @@ export async function POST(req: NextRequest) {
     const incomingEntries = Array.isArray(entries) ? entries : [];
 
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
-    const snapshotInput = body?.riskSnapshotInput || body?.snapshot_input || {};
+    const runtimeSnapshotInput = await getRuntimeRiskSnapshotInput(workspaceId).catch(() => null);
+    const snapshotInput = runtimeSnapshotInput ?? body?.riskSnapshotInput ?? body?.snapshot_input ?? {};
     const gateSnapshot = buildPermissionSnapshot({
       enabled: guardEnabled,
       regime: snapshotInput?.regime,
       dataStatus: snapshotInput?.dataStatus,
       dataAgeSeconds: Number(snapshotInput?.dataAgeSeconds ?? 3),
       eventSeverity: snapshotInput?.eventSeverity,
-      realizedDailyR: Number(snapshotInput?.realizedDailyR ?? -1.2),
-      openRiskR: Number(snapshotInput?.openRiskR ?? 2.2),
-      consecutiveLosses: Number(snapshotInput?.consecutiveLosses ?? 1),
+      realizedDailyR: Number(snapshotInput?.realizedDailyR ?? 0),
+      openRiskR: Number(snapshotInput?.openRiskR ?? 0),
+      consecutiveLosses: Number(snapshotInput?.consecutiveLosses ?? 0),
     });
 
     const blockedOpenEntry = guardEnabled ? incomingEntries.find((entry: any) => {

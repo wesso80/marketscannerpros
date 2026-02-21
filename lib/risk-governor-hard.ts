@@ -81,10 +81,11 @@ export type EvaluateResult = {
   ts: string;
 };
 
-const BASE_RISK = 0.005;
-const MAX_DAILY_R = 5;
-const MAX_OPEN_R = 5;
+const BASE_RISK = 0.0075;
+const MAX_DAILY_R = 2;
+const MAX_OPEN_R = 3;
 const LOSS_STREAK_THROTTLE = 3;
+const LOSS_STREAK_LOCK = 4;
 
 const CONFIDENCE_THRESHOLD = {
   ALLOW: 70,
@@ -175,6 +176,7 @@ function inferRiskMode(args: {
   if (args.dataStatus === 'DOWN') return 'LOCKED';
   if (args.remainingDailyR <= 0) return 'LOCKED';
   if (args.openRiskR >= MAX_OPEN_R) return 'LOCKED';
+  if (args.consecutiveLosses >= LOSS_STREAK_LOCK) return 'LOCKED';
   if (args.eventSeverity === 'high') return 'THROTTLED';
   if (args.consecutiveLosses >= LOSS_STREAK_THROTTLE) return 'THROTTLED';
   if (args.dataStatus === 'DEGRADED') return 'DEFENSIVE';
@@ -209,7 +211,7 @@ export function buildPermissionSnapshot(input?: {
     consecutiveLosses,
   });
 
-  const riskMult = riskMode === 'LOCKED' ? 0 : riskMode === 'THROTTLED' ? 0.6 : riskMode === 'DEFENSIVE' ? 0.75 : 1;
+  const riskMult = riskMode === 'LOCKED' ? 0 : riskMode === 'THROTTLED' ? 0.5 : riskMode === 'DEFENSIVE' ? 0.35 : 1;
 
   const matrix = enabled ? buildMatrix(regime) : buildAllowAllMatrix();
   const globalBlocks: PermissionMatrixSnapshot['global_blocks'] = [];
