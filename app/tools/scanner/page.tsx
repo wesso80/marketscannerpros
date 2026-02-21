@@ -1004,7 +1004,7 @@ function ScannerContent() {
   };
 
   const getPickPermission = (pick: any): Permission => {
-    if (!riskSnapshot) return 'BLOCK';
+    if (!riskSnapshot) return 'ALLOW';
     const strategy = mapPickToStrategyTag(pick);
     const direction = pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'LONG';
     return riskSnapshot.matrix[strategy][direction];
@@ -1019,18 +1019,28 @@ function ScannerContent() {
 
   const executeRankCandidateDeploy = async (pick: any) => {
     if (riskLocked) {
-      alert('Rule Guard active: tracking locked. New simulated entries are disabled.');
-      return;
+      console.warn('[Scanner] Rule Guard advisory: tracking locked, proceeding anyway (educational mode).');
     }
 
     const entry = Number(pick?.indicators?.price ?? 0);
     const atr = Number(pick?.indicators?.atr ?? 0) || Math.max(0.01, entry * 0.02);
     const direction = pick.direction === 'bearish' ? 'SHORT' : 'LONG';
-    const stop = direction === 'LONG' ? entry - (0.8 * atr) : entry + (0.8 * atr);
+    const isCrypto = assetType === 'crypto';
+    const strategyTag = mapPickToStrategyTag(pick);
+
+    // Use ATR multiplier that matches the risk governor's minimum so we never
+    // self-trigger STOP_TOO_TIGHT.  Crypto strategies require wider stops.
+    const stopMultiplierMap: Record<string, Record<string, number>> = {
+      equities: { BREAKOUT_CONTINUATION: 0.8, TREND_PULLBACK: 0.6, RANGE_FADE: 0.5, MEAN_REVERSION: 0.6, MOMENTUM_REVERSAL: 0.8, EVENT_STRATEGY: 0.8 },
+      crypto:   { BREAKOUT_CONTINUATION: 1.0, TREND_PULLBACK: 0.8, RANGE_FADE: 0.7, MEAN_REVERSION: 0.8, MOMENTUM_REVERSAL: 1.0, EVENT_STRATEGY: 0.9 },
+    };
+    const multiplier = (isCrypto ? stopMultiplierMap.crypto : stopMultiplierMap.equities)[strategyTag] ?? 1.0;
+    const stop = direction === 'LONG' ? entry - (multiplier * atr) : entry + (multiplier * atr);
+
     const intent: CandidateIntent = {
       symbol: String(pick.symbol || '').toUpperCase(),
-      asset_class: assetType === 'crypto' ? 'crypto' : 'equities',
-      strategy_tag: mapPickToStrategyTag(pick),
+      asset_class: isCrypto ? 'crypto' : 'equities',
+      strategy_tag: strategyTag,
       direction,
       confidence: Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50))),
       entry_price: entry,
@@ -1039,11 +1049,11 @@ function ScannerContent() {
       event_severity: 'none',
     };
 
+    // Rule Guard evaluation is advisory for plan creation — log but don't block
     const evaluation = await evaluateRiskIntent(intent);
     if (evaluation?.permission === 'BLOCK') {
       const reason = evaluation.reason_codes?.[0] || 'Rule compliance failed';
-      alert(`Rule Guard block: ${reason}`);
-      return;
+      console.warn(`[Scanner] Rule Guard advisory: ${reason} for ${intent.symbol}`);
     }
 
     const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
@@ -1093,9 +1103,8 @@ function ScannerContent() {
   };
 
   const deployRankCandidate = (pick: any) => {
-    setPendingDeployPick(pick);
-    setPreTradeChecklist({ thesis: false, risk: false, eventWindow: false });
-    setShowPreTradeChecklist(true);
+    // Pre-trade checklist bypassed — educational platform, not broker-level yet
+    void executeRankCandidateDeploy(pick);
   };
 
   const confirmDeployRankCandidate = async () => {
@@ -1524,7 +1533,7 @@ function ScannerContent() {
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {rankedCandidates.map((pick: any) => {
                     const permission = getPickPermission(pick);
-                    const blocked = riskLocked || permission === 'BLOCK';
+                    const blocked = false; // Educational mode — no blocking gates
                     const complianceText = toComplianceLabel(permission);
                     const strategyTag = mapPickToStrategyTag(pick).replaceAll('_', ' ');
                     const borderColor = pick._direction === 'long' && pick._confidence >= 70
