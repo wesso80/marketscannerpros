@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import MSPCopilot from '@/components/MSPCopilot';
 import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
 import OperatorCommandStrip from '@/components/OperatorCommandStrip';
+import ToolsNavBar from '@/components/ToolsNavBar';
 import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -59,6 +60,9 @@ export default function ToolsLayoutClient({
   return (
     <RiskPermissionProvider>
       <AIPageProvider>
+        <ErrorBoundary fallback={null}>
+          <ToolsNavBar />
+        </ErrorBoundary>
         <ErrorBoundary fallback={null}>
           <AdaptiveTraderPersonalityBar skill={skill} />
         </ErrorBoundary>

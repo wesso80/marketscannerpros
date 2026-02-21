@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
+import ToolsNavBar from '@/components/ToolsNavBar';
 import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
@@ -1776,6 +1777,7 @@ export default function OperatorDashboardPage() {
   return (
     <RiskPermissionProvider>
     <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
+      <ToolsNavBar />
       <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2">
         <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>
           <CapitalControlStrip />
