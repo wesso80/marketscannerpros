@@ -6,8 +6,10 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import ToolsPageHeader from "@/components/ToolsPageHeader";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
+import ToolPageLayout from "@/components/tools/ToolPageLayout";
+import ToolIdentityHeader from "@/components/tools/ToolIdentityHeader";
+import CommandContextPanel from "@/components/tools/CommandContextPanel";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
@@ -16,10 +18,13 @@ import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
+import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
+import PermissionChip from "@/components/risk/PermissionChip";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence } from "@/lib/workflow/scoring";
 import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
+import type { CandidateIntent, Permission, StrategyTag } from "@/lib/risk-governor-hard";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -535,6 +540,7 @@ function TradingViewChart({
 function ScannerContent() {
   const searchParams = useSearchParams();
   const { isAdmin } = useUserTier();
+  const { snapshot: riskSnapshot, isLocked: riskLocked, evaluate: evaluateRiskIntent } = useRiskPermission();
   const [assetType, setAssetType] = useState<AssetType>("crypto");
   const [ticker, setTicker] = useState<string>("BTC");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
@@ -597,6 +603,8 @@ function ScannerContent() {
   const [journalMonitorStatus, setJournalMonitorStatus] = useState<string | null>(null);
   const [journalMonitorError, setJournalMonitorError] = useState<string | null>(null);
   const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
+  const [sectorFilter, setSectorFilter] = useState<'all' | 'tech' | 'finance' | 'energy'>('all');
+  const [scanIntentMode, setScanIntentMode] = useState<'observe' | 'decide'>('observe');
   const [rankMinConfidence, setRankMinConfidence] = useState<50 | 60 | 70 | 80>(70);
   const [rankQuality, setRankQuality] = useState<'all' | 'high' | 'medium'>('all');
   const [rankTfAlignment, setRankTfAlignment] = useState<2 | 3>(2);
@@ -1326,7 +1334,58 @@ function ScannerContent() {
     return filtered.slice(0, 9);
   }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort]);
 
-  const deployRankCandidate = (pick: any) => {
+  const mapPickToStrategyTag = (pick: any): StrategyTag => {
+    const setup = String(pick?.setup || pick?.setupClass || pick?.pattern || '').toLowerCase();
+    if (setup.includes('breakout')) return 'BREAKOUT_CONTINUATION';
+    if (setup.includes('pullback') || setup.includes('trend')) return 'TREND_PULLBACK';
+    if (setup.includes('range') || setup.includes('fade')) return 'RANGE_FADE';
+    if (setup.includes('mean') || setup.includes('reversion') || setup.includes('reclaim')) return 'MEAN_REVERSION';
+    return 'MOMENTUM_REVERSAL';
+  };
+
+  const getPickPermission = (pick: any): Permission => {
+    if (!riskSnapshot) return 'BLOCK';
+    const strategy = mapPickToStrategyTag(pick);
+    const direction = pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'LONG';
+    return riskSnapshot.matrix[strategy][direction];
+  };
+
+  const toComplianceLabel = (permission: Permission) => {
+    if (permission === 'ALLOW') return 'COMPLIANT';
+    if (permission === 'ALLOW_REDUCED') return 'REDUCED';
+    if (permission === 'ALLOW_TIGHTENED') return 'TIGHT';
+    return 'NOT COMPLIANT';
+  };
+
+  const deployRankCandidate = async (pick: any) => {
+    if (riskLocked) {
+      alert('Rule Guard active: tracking locked. New simulated entries are disabled.');
+      return;
+    }
+
+    const entry = Number(pick?.indicators?.price ?? 0);
+    const atr = Number(pick?.indicators?.atr ?? 0) || Math.max(0.01, entry * 0.02);
+    const direction = pick.direction === 'bearish' ? 'SHORT' : 'LONG';
+    const stop = direction === 'LONG' ? entry - (0.8 * atr) : entry + (0.8 * atr);
+    const intent: CandidateIntent = {
+      symbol: String(pick.symbol || '').toUpperCase(),
+      asset_class: assetType === 'crypto' ? 'crypto' : 'equities',
+      strategy_tag: mapPickToStrategyTag(pick),
+      direction,
+      confidence: Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50))),
+      entry_price: entry,
+      stop_price: stop,
+      atr,
+      event_severity: 'none',
+    };
+
+    const evaluation = await evaluateRiskIntent(intent);
+    if (evaluation?.permission === 'BLOCK') {
+      const reason = evaluation.reason_codes?.[0] || 'Rule compliance failed';
+      alert(`Rule Guard block: ${reason}`);
+      return;
+    }
+
     const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
     const bias: 'bullish' | 'bearish' | 'neutral' = pick.direction === 'bullish'
       ? 'bullish'
@@ -1497,32 +1556,73 @@ function ScannerContent() {
     }
   };
 
+  const contextChips = [
+    { label: 'Regime', value: presenceMode.replace(' MODE', '') },
+    { label: 'Bias', value: (result?.direction || 'neutral').toUpperCase() },
+    {
+      label: 'Volatility',
+      value: result?.atr && result?.price && result.atr / result.price >= 0.03 ? 'HIGH' : 'CONTROLLED',
+    },
+    { label: 'Breadth', value: `${(result?.signals?.bullish ?? 0) + (result?.signals?.bearish ?? 0)}` },
+    { label: 'Liquidity', value: result?.volume ? 'ACTIVE' : 'NORMAL' },
+    { label: 'Gamma', value: result?.capitalFlow?.gamma_state ?? 'UNKNOWN' },
+    {
+      label: 'Risk Env',
+      value: riskLocked ? 'RESTRICTED' : (riskSnapshot?.risk_mode ?? 'NORMAL'),
+    },
+  ];
+
+  const complianceMatrix: Array<{ strategy: string; long: Permission; short: Permission }> = [
+    {
+      strategy: 'Breakout',
+      long: riskSnapshot?.matrix.BREAKOUT_CONTINUATION.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix.BREAKOUT_CONTINUATION.SHORT ?? 'BLOCK',
+    },
+    {
+      strategy: 'Pullback',
+      long: riskSnapshot?.matrix.TREND_PULLBACK.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix.TREND_PULLBACK.SHORT ?? 'BLOCK',
+    },
+    {
+      strategy: 'Mean Rev',
+      long: riskSnapshot?.matrix.MEAN_REVERSION.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix.MEAN_REVERSION.SHORT ?? 'BLOCK',
+    },
+    {
+      strategy: 'Range Fade',
+      long: riskSnapshot?.matrix.RANGE_FADE.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix.RANGE_FADE.SHORT ?? 'BLOCK',
+    },
+  ];
+
+  const riskPerTradePct = ((riskSnapshot?.caps.risk_per_trade ?? 0) * 100).toFixed(2);
+  const throttleMultiplier = Math.max(0.4, Math.min(1, (riskSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)).toFixed(2);
+  const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.75' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.60' : '1.00';
+
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
-      <ToolsPageHeader
-        badge="MARKET SCANNER"
-        title="Market Scanner Pro"
-        subtitle="Find high-probability setups in seconds with multi-factor confluence."
-        icon="🧭"
-        backHref="/tools"
-      />
-      <main className="px-4 py-6">
-        <div className="w-full max-w-none">
+      <ToolPageLayout
+        identity={
+          <ToolIdentityHeader
+            toolName="Market Scanner"
+            description="Multi-factor opportunity discovery engine"
+            modeLabel={presenceMode}
+            confidenceLabel={result ? `${Math.round(result.score)}%` : 'N/A'}
+            lastUpdatedLabel={lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Not scanned'}
+          />
+        }
+        context={
+          <CommandContextPanel
+            chips={contextChips}
+            strategyModeLabel={useScannerFlowV2 ? 'Breakout / Trend Pullback' : 'Classic Scanner'}
+          />
+        }
+        primary={<div className="w-full max-w-none">
         {useScannerFlowV2 && (
           <>
             <div className="sticky top-[68px] z-30 mb-3 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-4 py-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="flex flex-wrap items-center gap-2 text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5">Regime: {presenceMode.replace(' MODE', '')}</span>
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5">Risk: {presenceState === 'READY' ? 'LOW' : presenceState === 'PREPARING' ? 'MODERATE' : 'HIGH'}</span>
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5">Vol: {result?.atr && result?.price && result.atr / result.price >= 0.03 ? 'HIGH' : 'CONTROLLED'}</span>
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5">Breadth: {(result?.signals?.bullish ?? 0) + (result?.signals?.bearish ?? 0)}</span>
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5">Liquidity: {result?.volume ? 'ACTIVE' : 'NORMAL'}</span>
-                </div>
-                <div className="flex items-center justify-start gap-2 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] md:justify-end">
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5 text-[var(--msp-accent)]">Adaptive Confidence: {result ? `${Math.round(result.score)}%` : 'N/A'}</span>
-                  <span className="rounded-full border border-[var(--msp-border)] px-2 py-0.5 text-[var(--msp-text-muted)]">Operator Mode: {presenceMode}</span>
-                </div>
+              <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
+                Primary Action Zone • Discover → Rank → Decide
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {[
@@ -1534,7 +1634,7 @@ function ScannerContent() {
                     key={item.step}
                     className={`rounded-lg border px-3 py-2 text-center text-[0.72rem] font-extrabold uppercase tracking-[0.08em] transition-all duration-300 ${
                       scannerStep === item.step
-                        ? 'scale-[1.01] border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]'
+                        ? 'scale-[1.01] border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'
                         : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-faint)]'
                     }`}
                   >
@@ -1545,145 +1645,239 @@ function ScannerContent() {
             </div>
 
             <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-95'}`}>
-              <div className="msp-card mb-3 px-4 py-4">
-                <div className="grid gap-3 md:grid-cols-12">
-                  <div className="md:col-span-3">
-                    <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Asset Class</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(['crypto', 'equity', 'forex'] as AssetType[]).map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => {
-                            setAssetType(type);
-                            setTicker(QUICK_PICKS[type][0]);
-                          }}
-                          className={`rounded-md border px-2.5 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] ${assetType === type ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                        >
-                          {type}
-                        </button>
-                      ))}
+              <div className="grid gap-3 lg:grid-cols-12">
+                <div className="lg:col-span-8">
+                  <div className="msp-elite-panel mb-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="msp-elite-row">
+                        <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Universe</div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div>
+                            <div className="mb-1 text-[0.64rem] uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Asset Class</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(['crypto', 'equity', 'forex'] as AssetType[]).map((type) => (
+                                <button
+                                  key={type}
+                                  onClick={() => {
+                                    setAssetType(type);
+                                    setTicker(QUICK_PICKS[type][0]);
+                                  }}
+                                  className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${assetType === type ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+                                >
+                                  {type}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>Universe</span>
+                            <select
+                              value={bulkCryptoUniverseSize}
+                              onChange={(e) => setBulkCryptoUniverseSize(Math.max(100, Math.min(15000, Number(e.target.value || 500))))}
+                              className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]"
+                            >
+                              {[250, 500, 1000, 2500, 5000].map((size) => (
+                                <option key={size} value={size}>{size}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)] sm:col-span-2">
+                            <span>Sector Filter</span>
+                            <select
+                              value={sectorFilter}
+                              onChange={(e) => setSectorFilter(e.target.value as 'all' | 'tech' | 'finance' | 'energy')}
+                              className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]"
+                            >
+                              <option value="all">All</option>
+                              <option value="tech">Technology</option>
+                              <option value="finance">Financials</option>
+                              <option value="energy">Energy</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="msp-elite-row">
+                        <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Structure</div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>Timeframe</span>
+                            <select value={bulkScanTimeframe} onChange={(e) => setBulkScanTimeframe(e.target.value as '15m' | '30m' | '1h' | '1d')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
+                              <option value="15m">15m</option>
+                              <option value="30m">30m</option>
+                              <option value="1h">1h</option>
+                              <option value="1d">1d</option>
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>MTF Alignment</span>
+                            <select value={rankTfAlignment} onChange={(e) => setRankTfAlignment(Number(e.target.value) as 2 | 3)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
+                              <option value={2}>2/4+</option>
+                              <option value={3}>3/4+</option>
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>Min Confidence</span>
+                            <select value={rankMinConfidence} onChange={(e) => setRankMinConfidence(Number(e.target.value) as 50 | 60 | 70 | 80)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
+                              <option value={50}>50</option>
+                              <option value={60}>60</option>
+                              <option value={70}>70</option>
+                              <option value={80}>80</option>
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>Vol State</span>
+                            <select value={rankVolatility} onChange={(e) => setRankVolatility(e.target.value as 'all' | 'low' | 'moderate' | 'high')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
+                              <option value="all">All</option>
+                              <option value="low">Low</option>
+                              <option value="moderate">Moderate</option>
+                              <option value="high">High</option>
+                            </select>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 msp-elite-row">
+                      <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Mode</div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex gap-1.5">
+                          {(['light', 'deep'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => setBulkCryptoScanMode(mode)}
+                              className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${bulkCryptoScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+                            >
+                              {mode === 'light' ? 'Fast' : 'Deep'}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-1.5">
+                          {(['observe', 'decide'] as const).map((mode) => (
+                            <button
+                              key={mode}
+                              onClick={() => setScanIntentMode(mode)}
+                              className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${scanIntentMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="md:col-span-3">
-                    <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Timeframe</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(['15m', '1h', '4h', '1d'] as const).map((tf) => (
-                        <button
-                          key={tf}
-                          onClick={() => setBulkScanTimeframe(tf === '4h' ? '1h' : tf)}
-                          className={`rounded-md border px-2.5 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] ${bulkScanTimeframe === (tf === '4h' ? '1h' : tf) ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                        >
-                          {tf === '1d' ? 'Daily' : tf}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-3">
-                    <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Scan Depth</div>
-                    <div className="flex gap-1.5">
-                      {(['light', 'deep'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setBulkCryptoScanMode(mode)}
-                          className={`rounded-md border px-2.5 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] ${bulkCryptoScanMode === mode ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                        >
-                          {mode === 'light' ? 'Fast' : 'Deep'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-3">
-                    <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Universe Size</div>
-                    <select
-                      value={bulkCryptoUniverseSize}
-                      onChange={(e) => setBulkCryptoUniverseSize(Math.max(100, Math.min(15000, Number(e.target.value || 500))))}
-                      className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-1.5 text-[0.75rem] font-bold text-[var(--msp-text)]"
+                  <div className="mb-3 flex justify-end">
+                    <button
+                      onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : 'equity')}
+                      disabled={bulkScanLoading}
+                      className="msp-btn-elite-primary w-[220px] px-6 py-3 text-[0.78rem] font-semibold uppercase tracking-[0.08em]"
                     >
-                      {[250, 500, 1000, 2500, 5000].map((size) => (
-                        <option key={size} value={size}>{size}</option>
-                      ))}
-                    </select>
+                      {bulkScanLoading ? 'Scanning...' : 'Scan For Setups'}
+                    </button>
+                  </div>
+
+                  <div className="msp-card px-4 py-3">
+                    <button onClick={() => setAdvancedDiscoverOpen((prev) => !prev)} className="flex w-full items-center justify-between">
+                      <span className="text-[0.74rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Advanced Settings</span>
+                      <span className="text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-faint)]">{advancedDiscoverOpen ? 'Collapse' : 'Expand'}</span>
+                    </button>
+                    {advancedDiscoverOpen && (
+                      <div className="mt-3 grid gap-3 md:grid-cols-3">
+                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
+                          <span>Journal Monitor</span>
+                          <input type="checkbox" checked={journalMonitorEnabled} onChange={(e) => setJournalMonitorEnabled(e.target.checked)} />
+                        </label>
+                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
+                          <span>Cooldown (minutes)</span>
+                          <input type="number" min={5} max={1440} value={journalMonitorCooldownMinutes} onChange={(e) => setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number(e.target.value || 120))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
+                        </label>
+                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
+                          <span>Auto-rescan (sec)</span>
+                          <input type="number" min={30} max={3600} value={journalMonitorAutoScanSeconds} onChange={(e) => setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number(e.target.value || 180))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-
-              <div className="mb-3 text-center">
-                <button
-                  onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : 'equity')}
-                  disabled={bulkScanLoading}
-                  className="rounded-xl border border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] px-8 py-4 text-[0.9rem] font-black uppercase tracking-[0.08em] text-[var(--msp-accent)] disabled:opacity-60"
-                >
-                  {bulkScanLoading ? 'Scanning...' : 'Find Top Setups'}
-                </button>
-                <div className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Multi-factor confluence ranking</div>
-              </div>
-
-              <div className="msp-card px-4 py-3">
-                <button onClick={() => setAdvancedDiscoverOpen((prev) => !prev)} className="flex w-full items-center justify-between">
-                  <span className="text-[0.74rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Advanced Settings</span>
-                  <span className="text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-faint)]">{advancedDiscoverOpen ? 'Collapse' : 'Expand'}</span>
-                </button>
-                {advancedDiscoverOpen && (
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                      <span>Journal Monitor</span>
-                      <input type="checkbox" checked={journalMonitorEnabled} onChange={(e) => setJournalMonitorEnabled(e.target.checked)} />
-                    </label>
-                    <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                      <span>Cooldown (minutes)</span>
-                      <input type="number" min={5} max={1440} value={journalMonitorCooldownMinutes} onChange={(e) => setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number(e.target.value || 120))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
-                    </label>
-                    <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                      <span>Auto-rescan (sec)</span>
-                      <input type="number" min={30} max={3600} value={journalMonitorAutoScanSeconds} onChange={(e) => setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number(e.target.value || 180))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
-                    </label>
+                <div className="msp-elite-panel h-fit lg:col-span-4">
+                  <div className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Rule Compliance</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[0.7rem]">
+                      <thead className="text-[var(--msp-text-faint)]">
+                        <tr>
+                          <th className="px-1.5 py-1">Strategy</th>
+                          <th className="px-1.5 py-1">Long</th>
+                          <th className="px-1.5 py-1">Short</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {complianceMatrix.map((row) => (
+                          <tr key={row.strategy} className="border-t border-[var(--msp-divider)]">
+                            <td className="px-1.5 py-1.5 text-[var(--msp-text-muted)]">{row.strategy}</td>
+                            <td className="px-1.5 py-1.5"><PermissionChip state={row.long} /></td>
+                            <td className="px-1.5 py-1.5"><PermissionChip state={row.short} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )}
+                  <div className="mt-3 grid gap-1 text-[0.7rem] text-[var(--msp-text-muted)]">
+                    <div className="msp-elite-row flex justify-between"><span>Effective Risk/Trade</span><span className="font-semibold text-[var(--msp-text)]">{riskPerTradePct}%</span></div>
+                    <div className="msp-elite-row flex justify-between"><span>Throttle Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{throttleMultiplier}x</span></div>
+                    <div className="msp-elite-row flex justify-between"><span>Event Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{eventMultiplier}x</span></div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {bulkScanResults && (
               <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 2 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
                 <div className="msp-card mb-3 px-4 py-3">
-                  <div className="grid gap-2 md:grid-cols-6">
+                  <div className="grid gap-2 md:grid-cols-3">
                     <select value={rankDirection} onChange={(e) => setRankDirection(e.target.value as 'all' | 'long' | 'short')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
-                    <select value={rankMinConfidence} onChange={(e) => setRankMinConfidence(Number(e.target.value) as 50 | 60 | 70 | 80)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value={50}>Min Conf: 50</option><option value={60}>Min Conf: 60</option><option value={70}>Min Conf: 70</option><option value={80}>Min Conf: 80</option></select>
                     <select value={rankQuality} onChange={(e) => setRankQuality(e.target.value as 'all' | 'high' | 'medium')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
-                    <select value={rankTfAlignment} onChange={(e) => setRankTfAlignment(Number(e.target.value) as 2 | 3)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value={2}>TF Align: 2/4+</option><option value={3}>TF Align: 3/4+</option></select>
-                    <select value={rankVolatility} onChange={(e) => setRankVolatility(e.target.value as 'all' | 'low' | 'moderate' | 'high')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Volatility: All</option><option value="low">Volatility: Low</option><option value="moderate">Volatility: Moderate</option><option value="high">Volatility: High</option></select>
                     <select value={rankSort} onChange={(e) => setRankSort(e.target.value as 'rank' | 'confidence' | 'volatility' | 'trend')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="rank">Sort: Rank</option><option value="confidence">Sort: Confidence</option><option value="volatility">Sort: Volatility</option><option value="trend">Sort: Trend Quality</option></select>
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {rankedCandidates.map((pick: any) => {
+                    const permission = getPickPermission(pick);
+                    const blocked = riskLocked || permission === 'BLOCK';
+                    const complianceText = toComplianceLabel(permission);
+                    const strategyTag = mapPickToStrategyTag(pick).replaceAll('_', ' ');
                     const borderColor = pick._direction === 'long' && pick._confidence >= 70
                       ? 'var(--msp-bull)'
                       : pick._direction === 'short' && pick._confidence >= 70
                       ? 'var(--msp-bear)'
                       : 'var(--msp-warn)';
                     return (
-                      <div key={pick.symbol} className="flex h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--msp-border-strong)]" style={{ borderColor }}>
-                        <div className="mb-2.5 flex items-start justify-between">
-                          <div>
-                            <div className="text-[0.95rem] font-black text-[var(--msp-text)]">{pick.symbol}</div>
-                            <div className={`text-[0.7rem] font-extrabold uppercase ${pick._direction === 'long' ? 'text-[var(--msp-bull)]' : pick._direction === 'short' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-warn)]'}`}>{pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'TACTICAL'}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-[1.05rem] font-black text-[var(--msp-text)]">{pick._confidence}%</div>
-                            <div className="text-[0.66rem] font-bold uppercase text-[var(--msp-text-faint)]">#{pick._rank}</div>
-                          </div>
+                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)]" style={{ borderColor }}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</div>
+                          <PermissionChip state={permission} />
                         </div>
+                        <div className="mb-2 flex items-center justify-between gap-2 text-[0.68rem] uppercase tracking-[0.05em] text-[var(--msp-text-muted)]">
+                          <span>{strategyTag}</span>
+                          <span className="font-semibold text-[var(--msp-text)]">{pick._confidence}%</span>
+                        </div>
+                        <div className="mb-2 border-t border-[var(--msp-divider)]" />
                         <div className="mb-2.5 grid flex-1 gap-1.5 text-[0.72rem] text-[var(--msp-text-muted)]">
                           <div>Structure: <span className="font-bold text-[var(--msp-text)]">{pick._quality.toUpperCase()}</span></div>
                           <div>TF Alignment: <span className="font-bold text-[var(--msp-text)]">{pick._tfAlignment}/4</span></div>
                           <div>Volatility: <span className="font-bold text-[var(--msp-text)]">{pick._volatility.toUpperCase()}</span></div>
+                          <div>Liquidity: <span className="font-bold text-[var(--msp-text)]">{pick.indicators?.volume ? 'ACTIVE' : 'NORMAL'}</span></div>
                         </div>
+                        <div className="mb-2 border-t border-[var(--msp-divider)]" />
                         <div className="mt-auto flex gap-2">
-                          <button onClick={() => deployRankCandidate(pick)} className="h-8 flex-1 rounded-md border border-[var(--msp-accent)] bg-[var(--msp-accent-glow)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-accent)]">Deploy</button>
+                          <button
+                            onClick={() => { void deployRankCandidate(pick); }}
+                            disabled={blocked}
+                            className="msp-btn-elite-primary h-8 flex-1 px-2 py-1 text-[0.68rem] font-extrabold uppercase"
+                          >
+                            {permission === 'ALLOW' ? 'Create Plan' : permission === 'ALLOW_REDUCED' ? 'Create Plan (Reduced)' : permission === 'ALLOW_TIGHTENED' ? 'Trigger Only' : 'View Analysis'}
+                          </button>
                           <button onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
                           <button onClick={() => { void addScannerCandidateToWatchlist(pick); }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
                         </div>
@@ -5339,8 +5533,8 @@ function ScannerContent() {
             Past performance does not guarantee future results. Always do your own research and consult a licensed financial advisor.
           </p>
         </div>
-      </div>
-    </main>
+      </div>}
+      />
     </div>
   );
 }

@@ -14,7 +14,7 @@ function WatchlistsContent() {
       data: {
         pageType: 'watchlists',
       },
-      summary: 'Institutional watchlist staging and deployment workspace',
+      summary: 'Institutional watchlist staging and educational tracking workspace',
     });
   }, [setPageData]);
 
@@ -24,7 +24,7 @@ function WatchlistsContent() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-white">Institutional Watchlist Engine</h1>
-            <p className="text-slate-400">Monitor and organize symbols for tactical scanning with live market data</p>
+            <p className="text-slate-400">Monitor and organize symbols for tactical scanning with live market data (educational mode)</p>
           </div>
 
           <WatchlistWidget />

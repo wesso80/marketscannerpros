@@ -9,6 +9,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import type { AIToolName, ActionStatus, AIActionResult, PageSkill } from '@/lib/ai/types';
 import { AI_TOOLS, assertToolAllowedForSkill, generateIdempotencyKey, getToolPolicy, isToolCacheable, getToolCacheTTL } from '@/lib/ai/tools';
+import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
+import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 
 interface ActionRequest {
   tool: AIToolName;
@@ -21,6 +23,13 @@ interface ActionRequest {
   confirm?: boolean;
   dryRun?: boolean;
   initiatedBy?: 'user' | 'ai';
+}
+
+async function ensureJournalRiskColumns() {
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS normalized_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 }
 
 async function resolveActionSkill(
@@ -661,6 +670,8 @@ async function executeJournalTrade(
   params: Record<string, unknown>
 ): Promise<{ success: boolean; data?: unknown; error?: string }> {
   try {
+    await ensureJournalRiskColumns();
+
     const { 
       symbol, 
       direction, 
@@ -676,10 +687,17 @@ async function executeJournalTrade(
       return { success: false, error: 'Symbol and direction required' };
     }
 
+    const snapshot = buildPermissionSnapshot({ enabled: true });
+    const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
+    const entryRisk = computeEntryRiskMetrics({
+      dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+      equityAtEntry,
+    });
+
     const result = await q(
       `INSERT INTO journal_entries 
-       (workspace_id, symbol, side, entry_price, exit_price, setup_type, notes, mistakes, lessons, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+       (workspace_id, symbol, side, entry_price, exit_price, setup_type, notes, mistakes, lessons, normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
        RETURNING id`,
       [
         workspaceId,
@@ -691,6 +709,10 @@ async function executeJournalTrade(
         notes || null,
         mistakes ? JSON.stringify(mistakes) : null,
         lessons || null,
+        entryRisk.normalizedR,
+        entryRisk.dynamicR,
+        entryRisk.riskPerTradeAtEntry,
+        entryRisk.equityAtEntry,
       ]
     );
 

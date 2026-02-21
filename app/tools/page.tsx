@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 
 const proTraderTools = [
   {
@@ -88,12 +89,12 @@ function PrimaryToolCard({ href, icon, title, description, badge }: { href: stri
   );
 }
 
-function ToolCard({ href, icon, title, description }: { href: string; icon: string; title: string; description: string }) {
+function ToolCard({ href, icon, title, description, locked }: { href: string; icon: string; title: string; description: string; locked?: boolean }) {
   return (
     <Link href={href} className="h-[110px] rounded-lg border border-slate-700 bg-slate-900/50 p-3 transition hover:bg-slate-900/80">
       <div className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/40 text-base">{icon}</div>
-        <div className="text-sm font-semibold text-slate-100">{title}</div>
+        <div className="text-sm font-semibold text-slate-100">{locked ? '🔒 ' : ''}{title}</div>
       </div>
       <div className="mt-2 line-clamp-2 text-xs text-slate-400">{description}</div>
     </Link>
@@ -101,6 +102,16 @@ function ToolCard({ href, icon, title, description }: { href: string; icon: stri
 }
 
 export default function ToolsPage() {
+  const { isLocked: riskLocked } = useRiskPermission();
+  const lockSensitiveTools = new Set([
+    '/operator',
+    '/tools/scanner',
+    '/tools/watchlists',
+    '/tools/portfolio',
+    '/tools/backtest',
+    '/tools/journal',
+    '/tools/alerts',
+  ]);
   const [stats, setStats] = useState<HubStats>({
     activeAlerts: 0,
     triggeredToday: 0,
@@ -228,7 +239,7 @@ export default function ToolsPage() {
             <div>
               <div className="text-xs uppercase tracking-wide text-slate-400">Tools</div>
               <h1 className="mt-1 text-2xl font-semibold">MSP Tooling Command Hub</h1>
-              <p className="mt-1 text-sm text-slate-400">Institutional workflow surfaces for observe → decide → execute.</p>
+              <p className="mt-1 text-sm text-slate-400">Institutional workflow surfaces for observe → decide → validate.</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -285,14 +296,14 @@ export default function ToolsPage() {
           <div className="mb-2 text-sm font-semibold text-slate-100">Platform Tools</div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {platformTools.map((tool) => (
-              <ToolCard key={tool.href} {...tool} />
+              <ToolCard key={tool.href} {...tool} locked={riskLocked && lockSensitiveTools.has(tool.href)} />
             ))}
           </div>
         </section>
 
         <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4">
           <div className="text-sm font-semibold text-slate-100">Workflow Tip</div>
-          <p className="mt-1 text-sm text-slate-400">Start with global state, confirm primary focus, clear active tasks, then scan.</p>
+          <p className="mt-1 text-sm text-slate-400">Start with global state, confirm primary focus, clear active tasks, then scan. Educational use only.</p>
         </section>
       </div>
     </main>

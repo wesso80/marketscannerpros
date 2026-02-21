@@ -53,6 +53,10 @@ async function ensureCloseSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_reason VARCHAR(20)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS followed_plan BOOLEAN`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_intent_id VARCHAR(120)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS normalized_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 
   await q(`
     CREATE TABLE IF NOT EXISTS journal_exit_intents (
@@ -223,6 +227,16 @@ export async function POST(req: NextRequest) {
                 pl = $5,
                 pl_percent = $6,
                 r_multiple = $7,
+                normalized_r = CASE
+                  WHEN COALESCE(equity_at_entry, 0) > 0
+                    THEN $5 / (equity_at_entry * 0.01)
+                  ELSE normalized_r
+                END,
+                dynamic_r = CASE
+                  WHEN COALESCE(equity_at_entry, 0) > 0 AND COALESCE(risk_per_trade_at_entry, 0) > 0
+                    THEN $5 / (equity_at_entry * risk_per_trade_at_entry)
+                  ELSE dynamic_r
+                END,
                 outcome = $8,
                 is_open = false,
                 status = 'CLOSED',

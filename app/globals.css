@@ -26,6 +26,7 @@
   --msp-bull: #2FB36E;
   --msp-bear: #E46767;
   --msp-warn: #D8A243;
+  --msp-tight: #C9833E;
   --msp-neutral: #94A3B8;
 
   --msp-bull-tint: rgba(47, 179, 110, 0.09);
@@ -34,6 +35,11 @@
 
   --msp-shadow: 0 10px 30px rgba(0,0,0,0.35);
   --msp-borderStrong: var(--msp-border-strong);
+
+  --msp-section-gap: 24px;
+  --msp-panel-padding: 16px;
+  --msp-grid-gap: 16px;
+  --msp-content-max: 1440px;
 }
 
 *, *::before, *::after {
@@ -209,6 +215,113 @@ a:hover {
 .btn-outline:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--msp-accent-glow);
+}
+
+.msp-elite-panel {
+  border: 1px solid var(--msp-border);
+  background: var(--msp-panel);
+  border-radius: 12px;
+  padding: var(--msp-panel-padding);
+  box-shadow: none;
+}
+
+.msp-elite-row {
+  border: 1px solid var(--msp-border);
+  background: var(--msp-panel-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.msp-container {
+  width: 100%;
+  max-width: var(--msp-content-max);
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 1280px) {
+  .msp-container {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+.msp-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--msp-grid-gap);
+  row-gap: var(--msp-section-gap);
+}
+
+.msp-state-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 9999px;
+  border: 1px solid var(--msp-border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--msp-panel-2);
+  color: var(--msp-text-muted);
+}
+
+.msp-state-chip--compliant {
+  border-color: color-mix(in oklab, var(--msp-bull) 40%, transparent);
+  color: var(--msp-bull);
+}
+
+.msp-state-chip--reduced {
+  border-color: color-mix(in oklab, var(--msp-warn) 40%, transparent);
+  color: var(--msp-warn);
+}
+
+.msp-state-chip--tight {
+  border-color: color-mix(in oklab, var(--msp-tight) 40%, transparent);
+  color: var(--msp-tight);
+}
+
+.msp-state-chip--blocked {
+  border-color: color-mix(in oklab, var(--msp-bear) 40%, transparent);
+  color: var(--msp-bear);
+}
+
+.msp-state-chip--observe {
+  border-color: var(--msp-border-strong);
+  color: var(--msp-text-faint);
+}
+
+.metric-r {
+  font-weight: 600;
+  color: var(--msp-text);
+}
+
+.metric-dollar {
+  font-weight: 400;
+  font-size: 0.86em;
+  opacity: 0.68;
+  margin-left: 6px;
+}
+
+.msp-btn-elite-primary {
+  border: 1px solid var(--msp-border-strong);
+  background: var(--msp-panel-2);
+  color: var(--msp-text);
+  border-radius: 10px;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.msp-btn-elite-primary:hover {
+  border-color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.04);
+}
+
+.msp-btn-elite-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Cookie banner */

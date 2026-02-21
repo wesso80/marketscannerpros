@@ -14,6 +14,8 @@ import {
   getRiskGovernorThresholdsFromEnv,
   type RiskGovernorThresholds,
 } from '@/lib/operator/riskGovernor';
+import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
+import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 
 const ALLOWED_EVENT_TYPES = new Set<WorkflowEventType>([
   'operator.session.started',
@@ -695,6 +697,10 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS r_multiple DECIMAL(10,4)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS planned_rr DECIMAL(10,4)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS normalized_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 }
 
 async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEvent) {
@@ -808,13 +814,22 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     tags.push(`dp_${decisionPacketId}`);
   }
 
+  const snapshot = buildPermissionSnapshot({ enabled: true });
+  const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
+  const entryRisk = computeEntryRiskMetrics({
+    equityAtEntry,
+    dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+  });
+
   await q(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class
+      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14, $15
+      $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, $17, $18, $19
     )`,
     [
       workspaceId,
@@ -832,6 +847,10 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
       tags,
       true,
       assetClass,
+      entryRisk.normalizedR,
+      entryRisk.dynamicR,
+      entryRisk.riskPerTradeAtEntry,
+      entryRisk.equityAtEntry,
     ]
   );
 

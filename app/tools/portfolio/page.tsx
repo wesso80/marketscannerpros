@@ -13,6 +13,8 @@ import CommandCenterStateBar from '@/components/CommandCenterStateBar';
 import CommandStrip, { type TerminalDensity } from '@/components/terminal/CommandStrip';
 import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
+import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
+import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
 
 interface Position {
   id: number;
@@ -491,6 +493,7 @@ function PositionSizerCalculator() {
 }
 
 function PortfolioContent() {
+  const { isLocked: riskLocked } = useRiskPermission();
   const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
 
   const { tier } = useUserTier();
@@ -1557,7 +1560,7 @@ function PortfolioContent() {
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
-    { key: 'deploy-capital', label: 'Deploy Capital' },
+    { key: 'deploy-capital', label: 'Model Allocation' },
     { key: 'risk-model', label: 'Risk Model' },
     { key: 'active-positions', label: 'Active Positions' },
     { key: 'trade-ledger', label: 'Trade Ledger' },
@@ -1566,6 +1569,12 @@ function PortfolioContent() {
   const formatMoney = (value: number) => `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const formatPct = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
   const formatSignedMoney = (value: number) => `${value >= 0 ? '+' : '-'}$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const riskPerTradeFractionForDisplay = Math.max(0.001, riskSettings.maxRiskPerTrade / 100);
+  const formatRiskPairText = (amount: number) => {
+    const rValue = amountToR(amount, capitalBase, riskPerTradeFractionForDisplay);
+    const sign = amount >= 0 ? '+' : '-';
+    return `${formatR(rValue)} (${sign}${formatDollar(amount)})`;
+  };
 
   const avgR = closedPositions.length > 0
     ? closedPositions.reduce((sum, trade) => {
@@ -1623,7 +1632,7 @@ function PortfolioContent() {
       <ToolsPageHeader
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
-        subtitle="Track live prices, allocation, and performance in real-time."
+        subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
         icon="📊"
         backHref="/dashboard"
         actions={
@@ -1679,9 +1688,10 @@ function PortfolioContent() {
                 }
                 setActiveTab('deploy-capital');
               }}
+              disabled={riskLocked}
               className="rounded-[10px] bg-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[var(--msp-shadow)]"
             >
-              + Deploy Capital
+              + Model Allocation
             </button>
           </>
         }
@@ -1711,8 +1721,8 @@ function PortfolioContent() {
         />
 
         <DecisionCockpit
-          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: ${totalValue.toFixed(2)}</div><div className="msp-muted">Cost Basis: ${totalCost.toFixed(2)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
-          center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {totalPL >= 0 ? '+' : '-'}${Math.abs(totalPL).toFixed(2)}</div><div className="msp-muted">Unrealized: {unrealizedPL >= 0 ? '+' : '-'}${Math.abs(unrealizedPL).toFixed(2)}</div><div className="msp-muted">Realized: {realizedPL >= 0 ? '+' : '-'}${Math.abs(realizedPL).toFixed(2)}</div></div>}
+          left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">Total Value: {formatRiskPairText(totalValue)}</div><div className="msp-muted">Cost Basis: {formatRiskPairText(totalCost)}</div><div className="msp-muted">Positions: {positions.length}</div></div>}
+          center={<div className="grid gap-1 text-sm"><div className={`font-extrabold ${totalPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Total P&L: {formatRiskPairText(totalPL)}</div><div className="msp-muted">Unrealized: {formatRiskPairText(unrealizedPL)}</div><div className="msp-muted">Realized: {formatRiskPairText(realizedPL)}</div></div>}
           right={<div className="grid gap-1 text-sm"><div className={`font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Return: {totalReturn.toFixed(2)}%</div><div className="msp-muted">Tier: {tier.toUpperCase()}</div><div className="msp-muted">CSV: {canExportCSV(tier) ? 'Enabled' : 'Locked'}</div></div>}
         />
 
@@ -1720,8 +1730,8 @@ function PortfolioContent() {
           items={[
             { label: 'Open', value: `${positions.length}`, tone: 'neutral' },
             { label: 'Closed', value: `${closedPositions.length}`, tone: 'neutral' },
-            { label: 'Unrealized', value: `${unrealizedPL >= 0 ? '+' : '-'}$${Math.abs(unrealizedPL).toFixed(0)}`, tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
-            { label: 'Realized', value: `${realizedPL >= 0 ? '+' : '-'}$${Math.abs(realizedPL).toFixed(0)}`, tone: realizedPL >= 0 ? 'bull' : 'bear' },
+            { label: 'Unrealized', value: formatRiskPairText(unrealizedPL), tone: unrealizedPL >= 0 ? 'bull' : 'bear' },
+            { label: 'Realized', value: formatRiskPairText(realizedPL), tone: realizedPL >= 0 ? 'bull' : 'bear' },
             { label: 'Drawdown', value: `${Math.max(0, -totalReturn).toFixed(1)}%`, tone: totalReturn < -20 ? 'bear' : 'warn' },
             { label: 'Limit', value: `${positions.length}/${getPortfolioLimit(tier)}`, tone: positions.length >= getPortfolioLimit(tier) ? 'warn' : 'neutral' },
           ]}
@@ -1981,11 +1991,14 @@ function PortfolioContent() {
               </div>
               <button
                 onClick={() => deployCapitalTrade(Math.max(0, suggestedQuantity), draftEntry)}
-                disabled={!deployDraft.symbol || draftEntry <= 0 || suggestedQuantity <= 0}
+                disabled={riskLocked || !deployDraft.symbol || draftEntry <= 0 || suggestedQuantity <= 0}
                 className="rounded-md border border-emerald-500/50 bg-emerald-500/15 px-4 py-2 text-sm font-bold uppercase tracking-[0.06em] text-emerald-300 disabled:opacity-40"
               >
-                Deploy Capital
+                Model Allocation
               </button>
+              {riskLocked && (
+                <div className="text-xs text-rose-300">Tracking lock active: modeled allocations are disabled until rule guard unlocks.</div>
+              )}
             </div>
           )}
 

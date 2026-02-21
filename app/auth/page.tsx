@@ -1,25 +1,66 @@
 "use client";
-import { useState, Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import PageHowItWorks from '@/components/PageHowItWorks';
+
+type StatusState = { tone: "idle" | "loading" | "success" | "error"; text: string };
 
 function AuthContent() {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [activationLoading, setActivationLoading] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
+  const [status, setStatus] = useState<StatusState>({ tone: "idle", text: "" });
   const [success, setSuccess] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const plan = searchParams.get('plan');
+  const plan = searchParams.get("plan");
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  const clearStatus = () => setStatus({ tone: "idle", text: "" });
+
+  const handleSendMagicLink = async () => {
+    if (!email || !email.includes("@")) {
+      setStatus({ tone: "error", text: "Enter a valid email address." });
+      return;
+    }
+
+    setMagicLoading(true);
+    setStatus({ tone: "loading", text: "Sending secure sign-in link..." });
 
     try {
-      // Always use relative URL - the API is on the same domain
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setStatus({ tone: "error", text: data?.error || "Could not send sign-in link." });
+        return;
+      }
+
+      setStatus({
+        tone: "success",
+        text: data?.message || "Check your inbox for your secure sign-in link.",
+      });
+    } catch {
+      setStatus({ tone: "error", text: "Network error while sending sign-in link." });
+    } finally {
+      setMagicLoading(false);
+    }
+  };
+
+  const handleActivateSubscription = async () => {
+    if (!email || !email.includes("@")) {
+      setStatus({ tone: "error", text: "Enter a valid email address." });
+      return;
+    }
+
+    setActivationLoading(true);
+    setStatus({ tone: "loading", text: "Verifying your subscription..." });
+
+    try {
       const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,203 +72,148 @@ function AuthContent() {
 
       if (res.ok) {
         setSuccess(true);
-        // Cookie is set, redirect to markets command center
+        setStatus({ tone: "success", text: "Subscription activated. Redirecting..." });
         setTimeout(() => {
           router.push("/tools/markets");
         }, 1500);
       } else if (res.status === 404 && plan) {
-        // No subscription found, but they came from pricing - redirect to checkout
-        const checkoutRes = await fetch('/api/payments/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const checkoutRes = await fetch("/api/payments/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ 
-            plan: plan === 'pro_trader' ? 'pro_trader' : 'pro',
-            billing: 'monthly',
-            email 
+            plan: plan === "pro_trader" ? "pro_trader" : "pro",
+            billing: "monthly",
+            email,
           }),
         });
         const checkoutData = await checkoutRes.json();
         if (checkoutData.url) {
           window.location.href = checkoutData.url;
         } else {
-          setError("Failed to start checkout. Please try again.");
+          setStatus({ tone: "error", text: "Failed to start checkout. Please try again." });
         }
       } else {
-        setError(data.error || "Authentication failed");
+        setStatus({ tone: "error", text: data.error || "Authentication failed." });
       }
-    } catch (err) {
-      setError("Network error. Please try again.");
+    } catch {
+      setStatus({ tone: "error", text: "Network error. Please try again." });
     } finally {
-      setLoading(false);
+      setActivationLoading(false);
     }
   };
 
+  const statusClassName =
+    status.tone === "error"
+      ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+      : status.tone === "success"
+        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+        : "border-white/10 bg-white/5 text-white/70";
+
   return (
-    <main style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--msp-bg)',
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '420px',
-        width: '100%',
-        background: 'var(--msp-card)',
-        border: '1px solid rgba(51,65,85,0.8)',
-        borderRadius: '20px',
-        padding: '40px',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
-      }}>
-        <PageHowItWorks route="/auth" />
+    <main className="min-h-screen bg-[#070B14] text-white">
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute left-1/2 top-24 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute left-1/2 top-48 h-[760px] w-[760px] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />
+      </div>
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            fontSize: '48px',
-            marginBottom: '16px'
-          }}>🔐</div>
-          <h1 style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            color: '#f1f5f9',
-            marginBottom: '8px'
-          }}>
-            {plan ? 'Activate Your Plan' : 'Sign In'}
-          </h1>
-          <p style={{
-            color: '#94a3b8',
-            fontSize: '15px',
-            lineHeight: '1.5'
-          }}>
-            {plan 
-              ? `Enter your email to activate ${plan === 'pro_trader' ? 'Pro Trader' : 'Pro'}`
-              : 'Enter the email you used at checkout'
-            }
-          </p>
-        </div>
+      <div className="relative mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-14">
+        <div className="w-full max-w-md">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+            <div className="flex items-start justify-between">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+                How it works
+              </span>
+              <span className="text-[11px] text-white/40">No password required</span>
+            </div>
 
-        {success ? (
-          <div style={{
-            background: 'rgba(16,185,129,0.15)',
-            border: '1px solid rgba(16,185,129,0.4)',
-            borderRadius: '12px',
-            padding: '20px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
-            <div style={{ color: '#10b981', fontWeight: '600', fontSize: '16px' }}>
-              Subscription activated!
+            <div className="mt-5 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+                <span className="text-xl">🔐</span>
+              </div>
+
+              <h1 className="mt-4 text-xl font-semibold tracking-tight">Sign In to MarketScannerPros</h1>
+
+              <p className="mt-2 text-sm text-white/60">Enter your email and we’ll send a secure sign-in link.</p>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: '14px', marginTop: '8px' }}>
-              Redirecting to dashboard...
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleAuth}>
-            <div style={{ marginBottom: '20px' }}>
-              <label 
-                htmlFor="email" 
-                style={{
-                  display: 'block',
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
+
+            {status.tone !== "idle" ? (
+              <div className={`mt-5 rounded-2xl border p-3 text-xs ${statusClassName}`}>
+                {status.text}
+              </div>
+            ) : null}
+
+            {!success ? (
+              <form
+                className="mt-6 space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleSendMagicLink();
                 }}
               >
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: '#1e293b',
-                  border: '1px solid #334155',
-                  borderRadius: '10px',
-                  color: '#f1f5f9',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'border-color 0.2s'
-                }}
-                placeholder="you@example.com"
-              />
-            </div>
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-white/70">Email address</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (status.tone !== "idle") clearStatus();
+                    }}
+                    className="w-full rounded-2xl border border-white/10 bg-[#0B1222] px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+                  />
+                  <p className="mt-2 text-[11px] text-white/40">Use the email tied to your subscription if you already upgraded.</p>
+                </div>
 
-            {error && (
-              <div style={{
-                marginBottom: '20px',
-                padding: '14px',
-                background: 'rgba(239,68,68,0.15)',
-                border: '1px solid rgba(239,68,68,0.4)',
-                borderRadius: '10px',
-                color: '#fca5a5',
-                fontSize: '14px'
-              }}>
-                {error}
+                <button
+                  type="submit"
+                  disabled={magicLoading || activationLoading}
+                  className="w-full rounded-2xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-3 text-sm font-semibold transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {magicLoading ? "⏳ Sending..." : "✉️ Send Sign-In Link"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleActivateSubscription()}
+                  disabled={activationLoading || magicLoading}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {activationLoading ? "⏳ Verifying..." : "🚀 Activate Subscription"}
+                </button>
+
+                <div className="pt-1 text-center text-xs text-white/50">
+                  Don’t have a subscription?{" "}
+                  <Link href="/pricing" className="text-emerald-300 underline underline-offset-4 hover:text-emerald-200">
+                    View pricing plans
+                  </Link>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-white/60">Not receiving the email?</p>
+                  <ul className="mt-2 space-y-1 text-[11px] text-white/45">
+                    <li>• Check spam/promotions folders</li>
+                    <li>• Wait 30–60 seconds and try again</li>
+                    <li>
+                      • Contact{" "}
+                      <Link href="/contact" className="text-emerald-300 underline underline-offset-4 hover:text-emerald-200">
+                        support
+                      </Link>{" "}
+                      if it still doesn’t show
+                    </li>
+                  </ul>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-center text-sm text-emerald-200">
+                Access granted. Redirecting to your command center...
               </div>
             )}
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: loading 
-                  ? '#374151' 
-                  : 'var(--msp-accent)',
-                border: 'none',
-                borderRadius: '10px',
-                color: '#fff',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                transition: 'all 0.2s'
-              }}
-            >
-              {loading ? '⏳ Verifying...' : '🚀 Activate Subscription'}
-            </button>
-          </form>
-        )}
-
-        <div style={{
-          marginTop: '24px',
-          paddingTop: '24px',
-          borderTop: '1px solid #334155',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '12px' }}>
-            Don't have a subscription yet?
-          </p>
-          <Link 
-            href="/pricing"
-            style={{
-              color: '#10b981',
-              fontSize: '14px',
-              fontWeight: '500',
-              textDecoration: 'none'
-            }}
-          >
-            View pricing plans →
-          </Link>
+          <div className="mt-6 text-center text-[11px] text-white/35">Educational tool only · Not financial advice</div>
         </div>
-
-        <p style={{
-          marginTop: '20px',
-          color: '#475569',
-          fontSize: '12px',
-          textAlign: 'center'
-        }}>
-          Your subscription will be linked to this device
-        </p>
       </div>
     </main>
   );
@@ -235,17 +221,13 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={
-      <main style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--msp-bg)'
-      }}>
-        <div style={{ color: '#94a3b8' }}>Loading...</div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#070B14] text-white">
+          <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 text-white/60">Loading...</div>
+        </main>
+      }
+    >
       <AuthContent />
     </Suspense>
   );

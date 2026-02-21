@@ -12,6 +12,12 @@ import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
+import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
+import PermissionChip from '@/components/risk/PermissionChip';
+import RiskApplicationOverlay from '@/components/risk/RiskApplicationOverlay';
+import ToolPageLayout from '@/components/tools/ToolPageLayout';
+import type { Permission, PermissionMatrixSnapshot } from '@/lib/risk-governor-hard';
+import { amountToR, formatDollar, formatR, rToDollar } from '@/lib/riskDisplay';
 
 type Tone = 'aligned' | 'building' | 'conflict';
 type PipelineStage = 'Detected' | 'Qualified' | 'Validated' | 'Ready' | 'Active' | 'Closed';
@@ -42,6 +48,10 @@ interface PerformanceSnapshot {
 
 interface JournalEntry {
   pl?: number;
+  normalizedR?: number;
+  dynamicR?: number;
+  riskPerTradeAtEntry?: number;
+  equityAtEntry?: number;
   outcome?: 'win' | 'loss' | 'breakeven' | 'open';
   isOpen?: boolean;
 }
@@ -521,6 +531,7 @@ export default function OperatorDashboardPage() {
   const [decisionPacketTrace, setDecisionPacketTrace] = useState<DecisionPacketTraceResponse | null>(null);
   const [decisionPacketTraceLoading, setDecisionPacketTraceLoading] = useState(false);
   const [riskGovernorDebug, setRiskGovernorDebug] = useState<RiskGovernorDebugResponse | null>(null);
+  const [permissionSnapshot, setPermissionSnapshot] = useState<PermissionMatrixSnapshot | null>(null);
   const [riskGovernorRefreshing, setRiskGovernorRefreshing] = useState(false);
   const [heartbeatLastBeatAt, setHeartbeatLastBeatAt] = useState<string | null>(null);
   const [heartbeatMonologue, setHeartbeatMonologue] = useState('Scanning…');
@@ -537,7 +548,7 @@ export default function OperatorDashboardPage() {
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes, riskGovernorRes] = await Promise.all([
+        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes, riskGovernorRes, permissionSnapshotRes] = await Promise.all([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
@@ -547,6 +558,7 @@ export default function OperatorDashboardPage() {
           fetch('/api/workflow/tasks?status=pending&limit=5', { cache: 'no-store' }),
           fetch('/api/operator/presence', { cache: 'no-store' }),
           fetch('/api/operator/risk-governor', { cache: 'no-store' }),
+          fetch('/api/risk/governor/permission-snapshot', { cache: 'no-store' }),
         ]);
 
         const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
@@ -558,6 +570,7 @@ export default function OperatorDashboardPage() {
         const workflowTasksData = workflowTasksRes.ok ? await workflowTasksRes.json() : null;
         const presenceData = presenceRes.ok ? await presenceRes.json() : null;
         const riskGovernorData = riskGovernorRes.ok ? await riskGovernorRes.json() : null;
+        const permissionSnapshotData = permissionSnapshotRes.ok ? await permissionSnapshotRes.json() : null;
 
         if (!mounted) return;
 
@@ -578,6 +591,7 @@ export default function OperatorDashboardPage() {
         setPresence(getPresenceFromApiResponse(presenceData));
         setCoachTasksQueue(workflowTasksData?.tasks || []);
         setRiskGovernorDebug((riskGovernorData || null) as RiskGovernorDebugResponse | null);
+        setPermissionSnapshot((permissionSnapshotData || null) as PermissionMatrixSnapshot | null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -613,6 +627,12 @@ export default function OperatorDashboardPage() {
       if (!res.ok) return;
       const data = (await res.json()) as RiskGovernorDebugResponse;
       setRiskGovernorDebug(data);
+
+      const permissionRes = await fetch('/api/risk/governor/permission-snapshot', { cache: 'no-store' });
+      if (permissionRes.ok) {
+        const permissionData = (await permissionRes.json()) as PermissionMatrixSnapshot;
+        setPermissionSnapshot(permissionData);
+      }
     } finally {
       setRiskGovernorRefreshing(false);
     }
@@ -1626,236 +1646,331 @@ export default function OperatorDashboardPage() {
   const deploymentBlocked = riskGovernorDebug?.decisions.systemExecution.allowed === false;
   const deploymentBlockReason = riskGovernorDebug?.decisions.systemExecution.reason || riskGovernorDebug?.decisions.autoAlert.reason || 'Risk governor blocked deployment.';
 
+  const longExposureValue = useMemo(
+    () => positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + Math.abs(p.quantity * p.currentPrice), 0),
+    [positions]
+  );
+  const shortExposureValue = useMemo(
+    () => positions.filter((p) => p.side === 'SHORT').reduce((sum, p) => sum + Math.abs(p.quantity * p.currentPrice), 0),
+    [positions]
+  );
+  const netExposurePct = portfolioValue > 0 ? ((longExposureValue - shortExposureValue) / portfolioValue) * 100 : 0;
+  const clusterExposurePct = concentrationPct;
+  const largestPosition = useMemo(() => {
+    if (!positions.length) return null;
+    return positions
+      .map((p) => ({ symbol: p.symbol, notional: Math.abs(p.quantity * p.currentPrice) }))
+      .sort((a, b) => b.notional - a.notional)[0];
+  }, [positions]);
+
+  const breadthLabel = useMemo(() => {
+    const bullishCount = opportunities.filter((p) => p.direction === 'bullish').length;
+    const bearishCount = opportunities.filter((p) => p.direction === 'bearish').length;
+    if (bullishCount > bearishCount) return 'SUPPORTIVE';
+    if (bearishCount > bullishCount) return 'DEFENSIVE';
+    return 'BALANCED';
+  }, [opportunities]);
+
+  const volatilityLabel = atrRatio >= 4 ? 'HIGH' : atrRatio >= 2.6 ? 'ELEVATED' : 'CONTROLLED';
+  const strategyModeLabel = regimeADX >= 25 ? 'BREAKOUT / TREND_PULLBACK' : 'RANGE / MEAN_REVERSION';
+
+  const toPermissionLabel = (permission: Permission): string => {
+    if (permission === 'ALLOW') return 'COMPLIANT';
+    if (permission === 'ALLOW_REDUCED') return 'REDUCED';
+    if (permission === 'ALLOW_TIGHTENED') return 'TIGHT';
+    return 'BLOCKED';
+  };
+
+  const permissionTone = (permission: Permission) => {
+    if (permission === 'ALLOW') return 'text-[var(--msp-bull)]';
+    if (permission === 'ALLOW_REDUCED') return 'text-[var(--msp-warn)]';
+    if (permission === 'ALLOW_TIGHTENED') return 'text-[var(--msp-tight)]';
+    return 'text-[var(--msp-bear)]';
+  };
+
+  const complianceRows = permissionSnapshot
+    ? [
+        { strategy: 'Breakout', long: permissionSnapshot.matrix.BREAKOUT_CONTINUATION.LONG, short: permissionSnapshot.matrix.BREAKOUT_CONTINUATION.SHORT },
+        { strategy: 'Pullback', long: permissionSnapshot.matrix.TREND_PULLBACK.LONG, short: permissionSnapshot.matrix.TREND_PULLBACK.SHORT },
+        { strategy: 'Mean Rev', long: permissionSnapshot.matrix.MEAN_REVERSION.LONG, short: permissionSnapshot.matrix.MEAN_REVERSION.SHORT },
+        { strategy: 'Range Fade', long: permissionSnapshot.matrix.RANGE_FADE.LONG, short: permissionSnapshot.matrix.RANGE_FADE.SHORT },
+      ]
+    : [];
+
+  const riskEvents = [
+    presence?.lastPresenceTs ? `${new Date(presence.lastPresenceTs).toLocaleTimeString()} — Presence heartbeat updated` : null,
+    riskGovernorDebug?.decisions.autoAlert.reason ? `${new Date().toLocaleTimeString()} — ${riskGovernorDebug.decisions.autoAlert.reason}` : null,
+    riskGovernorDebug?.snapshot.riskEnvironment ? `${new Date().toLocaleTimeString()} — Risk environment ${riskGovernorDebug.snapshot.riskEnvironment}` : null,
+    ...(presence?.systemHealth?.reasons?.map((reason) => `${new Date().toLocaleTimeString()} — ${reason}`) || []),
+  ].filter(Boolean) as string[];
+
+  const riskPerTradeFraction = permissionSnapshot?.caps.risk_per_trade ?? 0.005;
+  const normalizedRiskFraction = 0.01;
+  const formatRiskPairFromR = (valueR: number) => (
+    <>
+      <span className="metric-r">{formatR(valueR)}</span>
+      <span className="metric-dollar">({formatDollar(rToDollar(valueR, portfolioValue || 100000, riskPerTradeFraction))})</span>
+    </>
+  );
+  const formatRiskPairFromAmount = (amount: number) => (
+    <>
+      <span className="metric-r">{formatR(amountToR(amount, portfolioValue || 100000, riskPerTradeFraction))}</span>
+      <span className="metric-dollar">({amount >= 0 ? '+' : '-'}{formatDollar(amount)})</span>
+    </>
+  );
+
+  const overlayTrades = closedTrades.map((entry, index) => {
+    const amount = Number(entry.pl || 0);
+    const persistedNormalized = Number(entry.normalizedR);
+    const persistedDynamic = Number(entry.dynamicR);
+    const entryEquity = Number(entry.equityAtEntry);
+    const entryRiskPerTrade = Number(entry.riskPerTradeAtEntry);
+    const normalizedR = Number.isFinite(persistedNormalized)
+      ? persistedNormalized
+      : amountToR(amount, Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 100000), normalizedRiskFraction);
+    const dynamicR = Number.isFinite(persistedDynamic)
+      ? persistedDynamic
+      : amountToR(
+          amount,
+          Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 100000),
+          Number.isFinite(entryRiskPerTrade) && entryRiskPerTrade > 0 ? entryRiskPerTrade : riskPerTradeFraction
+        );
+    const multiplier = normalizedR !== 0 ? dynamicR / normalizedR : 1;
+    const throttleReason = multiplier < 0.95
+      ? volatilityLabel === 'HIGH'
+        ? 'vol'
+        : (riskGovernorDebug?.snapshot.riskEnvironment || '').toLowerCase().includes('event')
+        ? 'event'
+        : 'regime'
+      : 'none';
+
+    return {
+      id: `closed_${index}`,
+      date: new Date().toISOString(),
+      strategy: 'operator_flow',
+      regime: regimeADX >= 25 ? 'TREND' : 'RANGE',
+      normalizedR,
+      dynamicR,
+      multiplier,
+      throttleReason,
+    };
+  });
+
+  const overlayOpenTrades = positions.slice(0, 10).map((position, index) => {
+    const stop = position.side === 'LONG' ? position.currentPrice * 0.98 : position.currentPrice * 1.02;
+    const riskPerUnit = Math.max(0.01, Math.abs(position.currentPrice - stop));
+    const unrealizedPerUnit = position.side === 'LONG' ? (position.currentPrice - position.entryPrice) : (position.entryPrice - position.currentPrice);
+    const currentR = unrealizedPerUnit / riskPerUnit;
+
+    return {
+      id: `open_${position.symbol}_${index}`,
+      currentR,
+      stopR: -1,
+      targetR: 2,
+    };
+  });
+
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white">
-      <ToolsPageHeader
-        badge="OPERATOR"
-        title="Operator Dashboard"
-        subtitle="Governance-first execution supervision"
-        icon="🧭"
-      />
-
-      <div className="mx-auto max-w-[1440px] px-4 py-6">
-        <CommandCenterStateBar
-          mode={mappedCommandMode}
-          actionableNow={modeActionable.actionableNow}
-          nextStep={modeActionable.nextStep}
-          heartbeat={{
-            modeKey: presence?.experienceMode?.key || null,
-            brainState: canUseBrain ? (presence?.adaptiveInputs?.operatorBrain?.state || null) : null,
-            monologue: heartbeatMonologue,
-            drift: heartbeatDrift,
-            lastBeatAt: heartbeatLastBeatAt,
-          }}
-        />
-
-        <section className={`mb-4 rounded-xl p-4 ${presence?.systemHealth?.status === 'DEGRADED' || presence?.systemHealth?.status === 'STALE' ? 'border border-red-500/50 bg-red-500/10' : 'border border-slate-700 bg-slate-800/40'}`}>
-          <div className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-8">
-              <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">Operator State Banner</div>
-              <div className="mt-2 text-2xl font-black tracking-wide">
-                MODE: {operatorMode}
-              </div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-                  RISK CONTROL: {(experienceMode?.key === 'risk_control' ? 'ACTIVE' : 'MONITORED')}
-                </div>
-                <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2">
-                  BIAS: {bias.toUpperCase()}
-                </div>
-                <div className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2">
-                  REGIME: {regimeADX >= 25 ? 'TREND' : 'TRANSITIONAL'}
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                <span className={`rounded px-2 py-1 font-semibold ${riskGovernorDebug?.decisions.systemExecution.allowed ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-red-500/15 text-red-200 border border-red-500/30'}`}>
-                  CAPITAL DEPLOYMENT: {riskGovernorDebug?.decisions.systemExecution.allowed ? 'ALLOWED' : 'RESTRICTED'}
-                </span>
-                <span className={`rounded px-2 py-1 font-semibold ${showAggressiveActions ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-200 border border-amber-500/30'}`}>
-                  SIZE: {showAggressiveActions ? 'FULL' : 'REDUCED'}
-                </span>
-                <span className={`rounded px-2 py-1 font-semibold ${bias === 'bearish' ? 'bg-red-500/15 text-red-200 border border-red-500/30' : 'bg-slate-700/50 text-slate-200 border border-slate-600'}`}>
-                  SHORTS: {bias === 'bearish' ? 'TACTICAL' : 'DISABLED'}
-                </span>
-              </div>
-            </div>
-
-            <div className="lg:col-span-4 rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-xs">
-              <div className="font-bold uppercase tracking-wide text-slate-300">System Health</div>
-              <div className={`mt-2 text-sm font-bold ${presence?.systemHealth?.status === 'OK' ? 'text-emerald-300' : presence?.systemHealth?.status === 'DEGRADED' ? 'text-amber-300' : 'text-red-300'}`}>
-                {presence?.systemHealth?.status || 'OK'}
-              </div>
-              <div className="mt-2 text-slate-300">Last Market Event: {presence?.lastPresenceTs ? new Date(presence.lastPresenceTs).toLocaleTimeString() : '—'}</div>
-              <div className="mt-1 text-slate-300">Signal Freshness: {presence?.dataFreshness?.eventsWriteAgeSec ?? '—'}s</div>
-              <div className="mt-1 text-slate-300">Brain Load: {formatNumber(presence?.adaptiveInputs?.cognitiveLoad?.value ?? 0)}%</div>
-              {presence?.systemHealth?.reasons?.length ? (
-                <div className="mt-2 text-slate-400">{presence.systemHealth.reasons.join(' · ')}</div>
-              ) : null}
-            </div>
-          </div>
-        </section>
-
-        {deploymentBlocked ? (
-          <section className="mb-4 rounded-xl border border-red-500/60 bg-red-600/15 p-4">
-            <div className="text-sm font-black uppercase tracking-[0.08em] text-red-200">Execution Locked · Risk Governor Active</div>
-            <div className="mt-1 text-xs text-red-100/90">{deploymentBlockReason}</div>
-          </section>
-        ) : null}
-
-        <div className={deploymentBlocked ? 'relative' : ''}>
-          {deploymentBlocked ? (
-            <div className="pointer-events-none absolute inset-0 z-10 rounded-xl border border-red-500/35 bg-red-500/5" />
-          ) : null}
-
-        <section className="mb-4 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Capital Permission</h2>
-            <div className="grid gap-2 text-xs">
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Risk Environment: {presence?.riskLoad?.environment || 'moderate'}</div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Volatility Conflict: {volatilityLayer.tone === 'conflict' ? 'YES' : 'NO'}</div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Liquidity Condition: {liquidityLayer.label}</div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Exposure Threshold: {riskGovernorDebug?.thresholds.maxPlanRiskScoreForAutoAlert ?? 60}%</div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Current Exposure: {formatNumber(exposurePct)}%</div>
-            </div>
-            <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-              Constraint Reason: {riskGovernorDebug?.decisions.autoAlert.reason || 'Risk control mode active due to volatility mismatch and reduced signal clarity.'}
-            </div>
-            {!riskGovernorDebug?.decisions.systemExecution.allowed ? (
-              <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs font-semibold text-red-200">
-                Execution Disabled — Risk Governor Active
-              </div>
-            ) : null}
-          </div>
-
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Risk Command</h2>
-            <div className="grid gap-2 text-xs">
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Total Exposure: <span className="font-bold text-emerald-300">{formatNumber(exposurePct)}%</span></div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Sector Concentration: <span className={`font-bold ${concentrationLabel === 'HIGH' ? 'text-red-300' : concentrationLabel === 'MEDIUM' ? 'text-amber-300' : 'text-emerald-300'}`}>{concentrationLabel}</span></div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Max Drawdown State: <span className={`font-bold ${drawdownState === 'Stressed' ? 'text-red-300' : drawdownState === 'Warming' ? 'text-amber-300' : 'text-emerald-300'}`}>{drawdownState}</span></div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Gamma Risk: {presence?.marketState?.volatilityState || 'Neutral'}</div>
-              <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2">Macro Conflict: {regimeLayer.tone === 'conflict' ? 'Present' : 'None'}</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Signal Pipeline</div>
-            <div className="mt-1 text-lg font-bold text-emerald-300">{opportunities.length}</div>
-            <div className="text-xs text-slate-300">Active: {alertsView.length}</div>
-            <div className="text-xs text-slate-500">Qualified: {workflowToday?.candidates ?? 0}</div>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Bias & Regime</div>
-            <div className="mt-1 text-lg font-bold text-cyan-200">{bias.toUpperCase()}</div>
-            <div className="text-xs text-slate-300">Market: {regimeLayer.label}</div>
-            <div className="text-xs text-slate-500">Conflict: {regimeLayer.tone === 'conflict' ? 'Yes' : 'None'}</div>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Decision Status</div>
-            <div className="mt-1 text-lg font-bold text-violet-200">{currentStage}</div>
-            <div className="text-xs text-slate-300">Entry Zone: {formatNumber(entryLow)}-{formatNumber(entryHigh)}</div>
-            <div className="text-xs text-slate-500">Target: {formatNumber(targetOne)}</div>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Risk & Trigger</div>
-            <div className="mt-1 text-lg font-bold text-amber-200">{formatNumber(edgeScore)}%</div>
-            <div className="text-xs text-slate-300">R Multiple: 1.2</div>
-            <div className="text-xs text-slate-500">Invalidation: {drawdownState}</div>
-          </div>
-        </section>
-
-        <section className="mb-4 grid gap-4 lg:grid-cols-12">
-          <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 lg:col-span-7">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Active Constraints</h2>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {[
-                { label: 'Volatility Conflict', active: volatilityLayer.tone === 'conflict', reason: volatilityLayer.label },
-                { label: 'Timing Conflict', active: timingLayer.tone === 'conflict', reason: timingLayer.label },
-                { label: 'Momentum Divergence', active: momentumLayer.tone === 'conflict', reason: momentumLayer.label },
-                { label: 'Risk Control Mode', active: experienceMode?.key === 'risk_control', reason: experienceMode?.label || 'Focus Mode' },
-              ].map((constraint) => (
-                <div key={constraint.label} className={`rounded-md border px-3 py-2 text-xs ${constraint.active ? 'border-amber-500/40 bg-amber-500/10 text-amber-100' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'}`}>
-                  <div className="font-semibold">{constraint.label}</div>
-                  <div className="mt-1 opacity-90">{constraint.reason}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 lg:col-span-5">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-blue-100">AI Operator Coach</h2>
-            <div className="rounded-md border border-blue-500/30 bg-slate-900/50 px-3 py-3 text-sm text-blue-50">
-              {coachSuggestion}
-            </div>
-            <div className="mt-3 grid gap-2 text-xs">
-              <div className="rounded-md border border-blue-500/20 bg-slate-900/40 px-3 py-2">Adaptive Confidence: <span className="font-bold text-blue-100">{adaptiveScore}%</span></div>
-              <div className="rounded-md border border-blue-500/20 bg-slate-900/40 px-3 py-2">Behavioral Flag: {presence?.behavior ? 'No Overtrading Detected' : 'Insufficient behavior sample'}</div>
-              <div className="rounded-md border border-blue-500/20 bg-slate-900/40 px-3 py-2">Personality Match: {formatNumber(personalityMatch)} / 10</div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-4 rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-300">Action Terminal</h2>
-          <div className="flex flex-wrap gap-2 text-xs font-semibold">
-            {deploymentBlocked ? (
-              <span className="rounded-md border border-emerald-500/20 bg-slate-900/40 px-3 py-2 text-slate-500">Create Alert</span>
-            ) : (
-              <Link href={connectedRoutes.alerts} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-emerald-200 hover:bg-emerald-500/20">Create Alert</Link>
-            )}
-            {deploymentBlocked ? (
-              <span className="rounded-md border border-blue-500/20 bg-slate-900/40 px-3 py-2 text-slate-500">Draft Plan</span>
-            ) : (
-              <Link href={connectedRoutes.journalDraft} className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-blue-200 hover:bg-blue-500/20">Draft Plan</Link>
-            )}
-            <button type="button" disabled={deploymentBlocked} onClick={() => { void handleFocusAction('snooze'); }} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40">Snooze</button>
-            <button type="button" disabled={deploymentBlocked} onClick={() => { void handleFocusAction('pin'); }} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-cyan-200 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40">Pin Focus</button>
-            <button type="button" disabled={deploymentBlocked} className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-rose-200 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40">Override</button>
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
-          <details>
-            <summary className="cursor-pointer text-sm font-bold uppercase tracking-wide text-slate-300">Advanced System Diagnostics</summary>
-            <div className="mt-4 grid gap-4">
-              <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Consciousness Loop</div>
-                {canUseBrain && presence?.consciousnessLoop ? (
-                  <div className="space-y-1 text-xs text-slate-300">
-                    <div>Interpret: {presence.consciousnessLoop.interpret.decisionContext}</div>
-                    <div>Decide: {presence.consciousnessLoop.decide.decisionPacket.symbol} · {presence.consciousnessLoop.decide.decisionPacket.status}</div>
-                    <div>Learn: {presence.consciousnessLoop.learn.feedbackTag.replaceAll('_', ' ')}</div>
-                    <div>Adapt: {presence.consciousnessLoop.adapt.adjustments.slice(0, 3).join(' · ') || 'No adaptive updates yet.'}</div>
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-500">Consciousness loop data unavailable.</div>
-                )}
-              </div>
-
-              {workflowTodaySection}
-              {learningLoopSection}
-
-              <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-xs text-slate-300">
-                <div className="mb-2 font-bold uppercase tracking-wide text-slate-400">Operator Proposals</div>
-                <OperatorProposalRail
-                  source="operator_dashboard"
-                  symbolFallback={presence?.neuralAttention?.focus?.primary || focusSignal?.symbol || null}
-                  workflowPrefix="wf_operator"
-                  limit={8}
-                  maxVisible={4}
-                  sticky={false}
-                />
-                {!presence?.suggestedActions?.length ? (
-                  <div className="mt-2 text-slate-500">No active proposals — system in observation mode.</div>
-                ) : null}
-              </div>
-            </div>
-          </details>
-        </section>
+    <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
+      <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2">
+        <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>
+          <CapitalControlStrip />
         </div>
       </div>
+
+      <ToolPageLayout
+        identity={
+          <div className="msp-elite-panel">
+            <div className="grid gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-6">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Command State</div>
+                <div className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</div>
+                <div className="mt-3 grid gap-2 text-[0.76rem]">
+                  <div className="msp-elite-row flex justify-between"><span>MARKET REGIME</span><span className="font-semibold">{regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>EXECUTION BIAS</span><span className="font-semibold">{bias.toUpperCase()} CONTINUATION</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>STRATEGY MODE</span><span className="font-semibold">{strategyModeLabel}</span></div>
+                </div>
+              </div>
+              <div className="lg:col-span-6">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Environment Diagnostics</div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-[0.74rem]">
+                  <div className="msp-elite-row flex justify-between"><span>Volatility</span><span className="font-semibold">{volatilityLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Breadth</span><span className="font-semibold">{breadthLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Liquidity</span><span className="font-semibold">{liquidityLayer.label.toUpperCase()}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Gamma</span><span className="font-semibold">{presence?.marketState?.volatilityState || 'NEUTRAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Risk Environment</span><span className="font-semibold">{riskGovernorDebug?.snapshot.riskEnvironment || presence?.riskLoad?.environment || 'MODERATE'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Confidence</span><span className="font-semibold">{operatorScore}%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+        primary={
+          <div className="space-y-6">
+            <section className="grid gap-4 lg:grid-cols-3">
+              <div className="msp-elite-panel">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Rule Compliance</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[0.72rem]">
+                    <thead className="text-[var(--msp-text-faint)]">
+                      <tr>
+                        <th className="px-2 py-1 font-semibold">Strategy</th>
+                        <th className="px-2 py-1 font-semibold">Long</th>
+                        <th className="px-2 py-1 font-semibold">Short</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {complianceRows.map((row) => (
+                        <tr key={row.strategy} className="border-t border-[var(--msp-divider)]">
+                          <td className="px-2 py-1.5 text-[var(--msp-text)]">{row.strategy}</td>
+                          <td className="px-2 py-1.5"><PermissionChip state={row.long} /></td>
+                          <td className="px-2 py-1.5"><PermissionChip state={row.short} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
+                  <div>Loss Streak: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.session.consecutive_losses ?? 0}</span></div>
+                  <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.vol_multiplier ?? 1)}</span></div>
+                  <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.risk_per_trade ?? 0)}%</span></div>
+                </div>
+              </div>
+
+              <div className="msp-elite-panel">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Exposure Profile</div>
+                <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
+                  <div className="msp-elite-row flex justify-between"><span>Total Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(exposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Net Long</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(netExposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Cluster Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(clusterExposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Largest Position</span><span className="font-semibold text-[var(--msp-text)]">{largestPosition ? `${largestPosition.symbol} ${formatNumber((largestPosition.notional / Math.max(portfolioValue, 1)) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Long / Short Split</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber((longExposureValue / Math.max(totalExposure, 1)) * 100)} / {formatNumber((shortExposureValue / Math.max(totalExposure, 1)) * 100)}</span></div>
+                </div>
+              </div>
+
+              <div className={`msp-elite-panel ${deploymentBlocked ? 'border-l-2 border-l-[var(--msp-bear)]' : ''}`}>
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Active Constraints</div>
+                <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
+                  <div className="msp-elite-row flex justify-between"><span>Max Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.max_daily_R ?? 5)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.remaining_daily_R ?? 0)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Max Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.max_open_risk_R ?? 5)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Current Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.open_risk_R ?? 0)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.vol_multiplier ?? 1)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Event Restrictions</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'ACTIVE' : 'NORMAL'}</span></div>
+                </div>
+              </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-12">
+              <div className="msp-elite-panel lg:col-span-8">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Active Tracked Positions</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[0.72rem]">
+                    <thead className="text-[var(--msp-text-faint)]">
+                      <tr>
+                        <th className="px-2 py-1">Symbol</th>
+                        <th className="px-2 py-1">Dir</th>
+                        <th className="px-2 py-1">Ref Px</th>
+                        <th className="px-2 py-1">Stop Px</th>
+                        <th className="px-2 py-1">Open R</th>
+                        <th className="px-2 py-1">Exposure</th>
+                        <th className="px-2 py-1">Compliance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {positions.slice(0, 8).map((position) => {
+                        const estimatedStop = position.side === 'LONG' ? position.currentPrice * 0.98 : position.currentPrice * 1.02;
+                        const positionExposurePct = portfolioValue > 0 ? (Math.abs(position.quantity * position.currentPrice) / portfolioValue) * 100 : 0;
+                        const openRiskAmount = Math.abs(position.currentPrice - estimatedStop) * Math.abs(position.quantity);
+                        return (
+                          <tr key={`${position.symbol}_${position.side}`} className="border-t border-[var(--msp-divider)]">
+                            <td className="px-2 py-1.5 font-semibold text-[var(--msp-text)]">{position.symbol}</td>
+                            <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{position.side}</td>
+                            <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{formatNumber(position.currentPrice)}</td>
+                            <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{formatNumber(estimatedStop)}</td>
+                            <td className="px-2 py-1.5 font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(openRiskAmount)}</td>
+                            <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{formatNumber(positionExposurePct)}%</td>
+                            <td className={`px-2 py-1.5 font-semibold ${deploymentBlocked ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-bull)]'}`}>{deploymentBlocked ? 'RESTRICTED' : 'COMPLIANT'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="msp-elite-panel lg:col-span-4">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Risk Events</div>
+                <div className="space-y-2 text-[0.73rem] text-[var(--msp-text-muted)]">
+                  {riskEvents.slice(0, 8).map((event, idx) => (
+                    <div key={`${event}_${idx}`} className="msp-elite-row">{event}</div>
+                  ))}
+                  {!riskEvents.length ? <div className="msp-elite-row">No active risk events.</div> : null}
+                </div>
+              </div>
+            </section>
+          </div>
+        }
+        secondary={
+          <div className="space-y-4">
+            <section className="grid gap-4 lg:grid-cols-3">
+              <div className="msp-elite-panel">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Trade Journal Snapshot</div>
+                <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
+                  <div className="msp-elite-row flex justify-between"><span>Win Rate</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length ? formatNumber((wins / closedTrades.length) * 100) : '0'}%</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Avg Win</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(avgWin)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Avg Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(-avgLoss)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Expectancy</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(avgWin - avgLoss)}</span></div>
+                </div>
+              </div>
+              <div className="msp-elite-panel">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[0.72rem]">
+                    <thead className="text-[var(--msp-text-faint)]">
+                      <tr>
+                        <th className="px-2 py-1">Strategy</th>
+                        <th className="px-2 py-1">Trend</th>
+                        <th className="px-2 py-1">Range</th>
+                        <th className="px-2 py-1">Risk-Off</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['Breakout', 'Strong', 'Weak', 'Blocked'],
+                        ['Pullback', 'Good', 'Neutral', 'Reduced'],
+                        ['Mean Rev', 'Tight', 'Strong', 'Reduced'],
+                      ].map((row) => (
+                        <tr key={row[0]} className="border-t border-[var(--msp-divider)]">
+                          <td className="px-2 py-1.5 text-[var(--msp-text)]">{row[0]}</td>
+                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[1]}</td>
+                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[2]}</td>
+                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[3]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="msp-elite-panel">
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">System Diagnostics</div>
+                <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
+                  <div className="msp-elite-row flex justify-between"><span>Data Freshness</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.data_health.age_s ?? presence?.dataFreshness?.marketDataAgeSec ?? '—'}s</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>API Status</span><span className="font-semibold text-[var(--msp-text)]">{presence?.systemHealth?.status || 'OK'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>IRG Status</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'LOCKED' : 'ACTIVE'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Snapshot Source</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.data_health.source || 'operator_presence'}</span></div>
+                </div>
+              </div>
+            </section>
+
+            <RiskApplicationOverlay trades={overlayTrades} openTrades={overlayOpenTrades} />
+          </div>
+        }
+        footer={
+          <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-[0.68rem] text-[var(--msp-text-muted)]">
+            Educational command bridge only. No broker execution or investment advice.
+          </div>
+        }
+      />
     </div>
   );
 }

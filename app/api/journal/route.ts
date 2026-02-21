@@ -3,6 +3,8 @@ import { q } from "@/lib/db";
 import { tx } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth";
 import { emitTradeLifecycleEvent, hashDedupeKey } from "@/lib/notifications/tradeEvents";
+import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from "@/lib/risk-governor-hard";
+import { computeEntryRiskMetrics, getLatestPortfolioEquity } from "@/lib/journal/riskAtEntry";
 
 interface JournalEntry {
   id: number;
@@ -22,6 +24,10 @@ interface JournalEntry {
   riskAmount?: number;
   rMultiple?: number;
   plannedRR?: number;
+  normalizedR?: number;
+  dynamicR?: number;
+  riskPerTradeAtEntry?: number;
+  equityAtEntry?: number;
   pl: number;
   plPercent: number;
   strategy: string;
@@ -131,6 +137,20 @@ function normalizePacketMarketToAssetClass(value: unknown): 'crypto' | 'equity' 
   return null;
 }
 
+function mapJournalStrategyTag(value: unknown): StrategyTag {
+  const text = String(value || '').toLowerCase();
+  if (text.includes('breakout')) return 'BREAKOUT_CONTINUATION';
+  if (text.includes('pullback') || text.includes('trend')) return 'TREND_PULLBACK';
+  if (text.includes('range') || text.includes('fade')) return 'RANGE_FADE';
+  if (text.includes('mean') || text.includes('reversion') || text.includes('reclaim')) return 'MEAN_REVERSION';
+  if (text.includes('event') || text.includes('earnings') || text.includes('cpi') || text.includes('fomc')) return 'EVENT_STRATEGY';
+  return 'MOMENTUM_REVERSAL';
+}
+
+function defaultAtrFromEntry(entryPrice: number): number {
+  return Math.max(0.01, entryPrice * 0.02);
+}
+
 function resolveAssetClassWithUniverse(args: {
   symbol: string;
   fallback: 'crypto' | 'equity' | 'forex' | 'commodity';
@@ -192,6 +212,10 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS followed_plan BOOLEAN`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS exit_intent_id VARCHAR(120)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS asset_class VARCHAR(20)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS normalized_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 
   await q(`
     UPDATE journal_entries
@@ -347,6 +371,10 @@ export async function GET(req: NextRequest) {
       riskAmount: e.risk_amount ? parseFloat(e.risk_amount) : undefined,
       rMultiple: e.r_multiple ? parseFloat(e.r_multiple) : undefined,
       plannedRR: e.planned_rr ? parseFloat(e.planned_rr) : undefined,
+      normalizedR: e.normalized_r != null ? parseFloat(e.normalized_r) : undefined,
+      dynamicR: e.dynamic_r != null ? parseFloat(e.dynamic_r) : undefined,
+      riskPerTradeAtEntry: e.risk_per_trade_at_entry != null ? parseFloat(e.risk_per_trade_at_entry) : undefined,
+      equityAtEntry: e.equity_at_entry != null ? parseFloat(e.equity_at_entry) : undefined,
       pl: e.pl ? parseFloat(e.pl) : 0,
       plPercent: e.pl_percent ? parseFloat(e.pl_percent) : 0,
       strategy: e.strategy || '',
@@ -387,6 +415,118 @@ export async function POST(req: NextRequest) {
     await ensureJournalSchema();
 
     const incomingEntries = Array.isArray(entries) ? entries : [];
+
+    const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
+    const snapshotInput = body?.riskSnapshotInput || body?.snapshot_input || {};
+    const gateSnapshot = buildPermissionSnapshot({
+      enabled: guardEnabled,
+      regime: snapshotInput?.regime,
+      dataStatus: snapshotInput?.dataStatus,
+      dataAgeSeconds: Number(snapshotInput?.dataAgeSeconds ?? 3),
+      eventSeverity: snapshotInput?.eventSeverity,
+      realizedDailyR: Number(snapshotInput?.realizedDailyR ?? -1.2),
+      openRiskR: Number(snapshotInput?.openRiskR ?? 2.2),
+      consecutiveLosses: Number(snapshotInput?.consecutiveLosses ?? 1),
+    });
+
+    const blockedOpenEntry = guardEnabled ? incomingEntries.find((entry: any) => {
+      if (entry?.isOpen === false) return false;
+
+      const symbol = String(entry?.symbol || '').toUpperCase().trim();
+      const side = String(entry?.side || 'LONG').toUpperCase();
+      const entryPrice = Number(entry?.entryPrice);
+      const stopLoss = Number(entry?.stopLoss);
+
+      if (!symbol || !Number.isFinite(entryPrice) || entryPrice <= 0) {
+        return true;
+      }
+
+      if (!Number.isFinite(stopLoss) || stopLoss <= 0) {
+        return true;
+      }
+
+      const strategyTag = mapJournalStrategyTag(entry?.strategy || entry?.setup);
+      const assetClassRaw = String(entry?.assetClass || '').toLowerCase();
+      const assetClass = assetClassRaw === 'crypto' ? 'crypto' : 'equities';
+      const direction = side === 'SHORT' ? 'SHORT' : 'LONG';
+
+      const candidate = {
+        symbol,
+        asset_class: assetClass,
+        strategy_tag: strategyTag,
+        direction,
+        confidence: Number(entry?.confidence ?? 70),
+        entry_price: entryPrice,
+        stop_price: stopLoss,
+        atr: Number(entry?.atr ?? defaultAtrFromEntry(entryPrice)),
+        event_severity: ['none', 'medium', 'high'].includes(String(entry?.eventSeverity || '').toLowerCase())
+          ? String(entry?.eventSeverity || '').toLowerCase()
+          : 'none',
+      } as const;
+
+      const evaluation = evaluateCandidate(gateSnapshot, candidate);
+      return evaluation.permission === 'BLOCK';
+    }) : undefined;
+
+    if (blockedOpenEntry) {
+      const symbol = String(blockedOpenEntry?.symbol || '').toUpperCase().trim() || 'UNKNOWN';
+      const side = String(blockedOpenEntry?.side || 'LONG').toUpperCase();
+      const entryPrice = Number(blockedOpenEntry?.entryPrice);
+      const stopLoss = Number(blockedOpenEntry?.stopLoss);
+
+      if (!symbol || !Number.isFinite(entryPrice) || entryPrice <= 0) {
+        return NextResponse.json(
+          {
+            error: 'Journal open trade blocked by risk governor (invalid entry definition).',
+            reasonCodes: ['MISSING_ENTRY_PRICE_OR_SYMBOL'],
+            requiredActions: ['Provide symbol and valid entry price before submitting open trade.'],
+          },
+          { status: 403 }
+        );
+      }
+
+      if (!Number.isFinite(stopLoss) || stopLoss <= 0) {
+        return NextResponse.json(
+          {
+            error: 'Journal open trade blocked by risk governor (missing stop).',
+            reasonCodes: ['MISSING_STOP'],
+            requiredActions: ['Define stop/invalidation before creating an open trade.'],
+          },
+          { status: 403 }
+        );
+      }
+
+      const strategyTag = mapJournalStrategyTag(blockedOpenEntry?.strategy || blockedOpenEntry?.setup);
+      const assetClassRaw = String(blockedOpenEntry?.assetClass || '').toLowerCase();
+      const assetClass = assetClassRaw === 'crypto' ? 'crypto' : 'equities';
+      const direction = side === 'SHORT' ? 'SHORT' : 'LONG';
+
+      const evaluation = evaluateCandidate(gateSnapshot, {
+        symbol,
+        asset_class: assetClass,
+        strategy_tag: strategyTag,
+        direction,
+        confidence: Number(blockedOpenEntry?.confidence ?? 70),
+        entry_price: entryPrice,
+        stop_price: stopLoss,
+        atr: Number(blockedOpenEntry?.atr ?? defaultAtrFromEntry(entryPrice)),
+        event_severity: ['none', 'medium', 'high'].includes(String(blockedOpenEntry?.eventSeverity || '').toLowerCase())
+          ? String(blockedOpenEntry?.eventSeverity || '').toLowerCase() as 'none' | 'medium' | 'high'
+          : 'none',
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Journal open trade blocked by risk governor.',
+          symbol,
+          permission: evaluation.permission,
+          reasonCodes: evaluation.reason_codes,
+          requiredActions: evaluation.required_actions,
+          constraints: evaluation.constraints,
+        },
+        { status: 403 }
+      );
+    }
 
     const existingCountRows = await q<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM journal_entries WHERE workspace_id = $1`,
@@ -446,6 +586,8 @@ export async function POST(req: NextRequest) {
       strategy: string | null;
       setup: string | null;
     }> = [];
+    const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
+    const dynamicRiskPerTrade = gateSnapshot.caps.risk_per_trade;
 
     // Clear and re-insert atomically to avoid transient not-found windows during close requests.
     await tx(async (client) => {
@@ -494,6 +636,7 @@ export async function POST(req: NextRequest) {
           'expiration_date', 'quantity', 'entry_price', 'exit_price', 'exit_date', 'pl', 'pl_percent',
           'strategy', 'setup', 'notes', 'emotions', 'outcome', 'tags', 'is_open',
           'stop_loss', 'target', 'risk_amount', 'r_multiple', 'planned_rr',
+          'normalized_r', 'dynamic_r', 'risk_per_trade_at_entry', 'equity_at_entry',
           'status', 'close_source', 'exit_reason', 'followed_plan', 'exit_intent_id', 'asset_class'
         ];
 
@@ -509,6 +652,14 @@ export async function POST(req: NextRequest) {
               ),
               universeTypes: symbolUniverseBySymbol.get(String(e?.symbol || '').toUpperCase()),
             });
+
+        const entryRisk = computeEntryRiskMetrics({
+          pl: e?.pl,
+          normalizedR: e?.normalizedR ?? e?.normalized_r,
+          dynamicR: e?.dynamicR ?? e?.dynamic_r,
+          dynamicRiskPerTrade: e?.riskPerTradeAtEntry ?? e?.risk_per_trade_at_entry ?? dynamicRiskPerTrade,
+          equityAtEntry: e?.equityAtEntry ?? e?.equity_at_entry ?? equityAtEntry,
+        });
 
         const values: any[] = [
           workspaceId,
@@ -537,6 +688,10 @@ export async function POST(req: NextRequest) {
           e.riskAmount || null,
           e.rMultiple || null,
           e.plannedRR || null,
+          entryRisk.normalizedR,
+          entryRisk.dynamicR,
+          entryRisk.riskPerTradeAtEntry,
+          entryRisk.equityAtEntry,
           e.status || (e.isOpen !== false ? 'OPEN' : 'CLOSED'),
           e.closeSource || null,
           e.exitReason || null,

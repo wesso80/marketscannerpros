@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 
 interface Watchlist {
   id: string;
@@ -53,6 +54,7 @@ const ICONS: Record<string, string> = {
 
 export default function WatchlistWidget() {
   const { tier } = useUserTier();
+  const { isLocked: riskLocked } = useRiskPermission();
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null);
   const [items, setItems] = useState<WatchlistItem[]>([]);
@@ -368,7 +370,7 @@ export default function WatchlistWidget() {
     });
   }, [items, quotes]);
 
-  const readyToDeploy = ideaRows.filter((row) => row.stage === 'Execution Ready').length;
+  const readyToTrack = ideaRows.filter((row) => row.stage === 'Execution Ready').length;
   const structureBuilding = ideaRows.filter((row) => row.stage === 'Structure Building').length;
   const triggerWatch = ideaRows.filter((row) => row.stage === 'Trigger Watch').length;
   const conflictCount = ideaRows.filter((row) => row.stage === 'Conflict').length;
@@ -386,7 +388,7 @@ export default function WatchlistWidget() {
   const avgAlignment = ideaRows.length > 0
     ? (ideaRows.reduce((sum, row) => sum + row.alignmentScore, 0) / ideaRows.length).toFixed(1)
     : '0.0';
-  const deploymentReadinessPct = activeSymbols > 0 ? Math.round((readyToDeploy / activeSymbols) * 100) : 0;
+  const trackingReadinessPct = activeSymbols > 0 ? Math.round((readyToTrack / activeSymbols) * 100) : 0;
 
   const filteredIdeas = useMemo(() => {
     const rows = ideaRows.filter((row) => {
@@ -527,9 +529,9 @@ export default function WatchlistWidget() {
             <div className={`rounded-xl border px-4 py-4 ${
               invalidatedCount > 0
                 ? 'border-red-500/40 bg-red-500/10'
-                : conflictCount > readyToDeploy
+                : conflictCount > readyToTrack
                 ? 'border-amber-500/40 bg-amber-500/10'
-                : readyToDeploy > 0
+                : readyToTrack > 0
                 ? 'border-emerald-500/40 bg-emerald-500/10'
                 : 'border-slate-700 bg-slate-900/40'
             }`}>
@@ -548,8 +550,8 @@ export default function WatchlistWidget() {
                     <div className="font-bold text-amber-300">{hotSignals}</div>
                   </div>
                   <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
-                    <div className="uppercase tracking-wide text-slate-500">Ready to Deploy</div>
-                    <div className="font-bold text-emerald-400">{readyToDeploy}</div>
+                    <div className="uppercase tracking-wide text-slate-500">Ready to Track</div>
+                    <div className="font-bold text-emerald-400">{readyToTrack}</div>
                   </div>
                   <div className="rounded-lg border border-slate-700/80 bg-slate-800/60 px-2 py-1.5">
                     <div className="uppercase tracking-wide text-slate-500">Avg Confidence</div>
@@ -561,7 +563,10 @@ export default function WatchlistWidget() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 md:items-end">
-                  <div className="text-xs text-slate-400">{activeSymbols} symbols • readiness {deploymentReadinessPct}%</div>
+                  <div className="text-xs text-slate-400">{activeSymbols} symbols • readiness {trackingReadinessPct}%</div>
+                  {riskLocked && (
+                    <div className="text-[11px] font-semibold text-rose-300">Rule Guard active: marked setups remain staged; new tracking actions are locked.</div>
+                  )}
                   <div className="flex w-full flex-wrap gap-2 md:justify-end">
                     <button
                       onClick={() => setShowAddSymbol(true)}
@@ -584,7 +589,7 @@ export default function WatchlistWidget() {
 
             <div className="grid gap-2 md:grid-cols-5">
               {[
-                { label: 'Ready to Deploy', value: readyToDeploy, pct: activeSymbols ? Math.round((readyToDeploy / activeSymbols) * 100) : 0, tone: 'text-emerald-400' },
+                { label: 'Ready to Track', value: readyToTrack, pct: activeSymbols ? Math.round((readyToTrack / activeSymbols) * 100) : 0, tone: 'text-emerald-400' },
                 { label: 'Structure Building', value: structureBuilding, pct: activeSymbols ? Math.round((structureBuilding / activeSymbols) * 100) : 0, tone: 'text-cyan-300' },
                 { label: 'Trigger Watch', value: triggerWatch, pct: activeSymbols ? Math.round((triggerWatch / activeSymbols) * 100) : 0, tone: 'text-amber-300' },
                 { label: 'Conflict', value: conflictCount, pct: activeSymbols ? Math.round((conflictCount / activeSymbols) * 100) : 0, tone: 'text-orange-300' },
@@ -740,8 +745,9 @@ export default function WatchlistWidget() {
                 <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Run Confluence Check</button>
                 <button onClick={() => setReadyOnly(true)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Filter Ready Only</button>
                 <button onClick={exportWatchlist} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300">Export Watchlist</button>
-                <button onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
+                <button onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
               </div>
+              {riskLocked && <div className="mt-2 text-[11px] text-rose-300">Send Alerts for Ready is disabled while Tracking Lock is active.</div>}
             </div>
           </div>
         ) : null}

@@ -9,6 +9,8 @@ import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { PageSkill } from '@/lib/ai/types';
 import { CommandLayout, TerminalLayout, getToolsLayoutMode } from './LayoutContracts';
+import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -54,21 +56,28 @@ export default function ToolsLayoutClient({
     : <CommandLayout>{children}</CommandLayout>;
 
   return (
-    <AIPageProvider>
-      <ErrorBoundary fallback={null}>
-        <AdaptiveTraderPersonalityBar skill={skill} />
-      </ErrorBoundary>
-      <ErrorBoundary fallback={null}>
-        <div className="mx-auto w-full max-w-none px-3 md:px-4">
-          <Suspense fallback={null}>
-            <OperatorCommandStrip />
-          </Suspense>
-        </div>
-      </ErrorBoundary>
-      <ErrorBoundary>{wrappedChildren}</ErrorBoundary>
-      <ErrorBoundary fallback={null}>
-        <CopilotWithContext fallbackSkill={skill} />
-      </ErrorBoundary>
-    </AIPageProvider>
+    <RiskPermissionProvider>
+      <AIPageProvider>
+        <ErrorBoundary fallback={null}>
+          <AdaptiveTraderPersonalityBar skill={skill} />
+        </ErrorBoundary>
+        <ErrorBoundary fallback={null}>
+          <div className="mx-auto w-full max-w-none px-3 md:px-4">
+            <Suspense fallback={null}>
+              <OperatorCommandStrip />
+            </Suspense>
+          </div>
+        </ErrorBoundary>
+        <ErrorBoundary fallback={null}>
+          <div className="sticky top-[64px] z-30 mx-auto w-full max-w-none px-3 pb-2 md:px-4">
+            <CapitalControlStrip />
+          </div>
+        </ErrorBoundary>
+        <ErrorBoundary>{wrappedChildren}</ErrorBoundary>
+        <ErrorBoundary fallback={null}>
+          <CopilotWithContext fallbackSkill={skill} />
+        </ErrorBoundary>
+      </AIPageProvider>
+    </RiskPermissionProvider>
   );
 }

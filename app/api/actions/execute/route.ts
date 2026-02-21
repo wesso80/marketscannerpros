@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { getRiskGovernorThresholdsFromEnv } from '@/lib/operator/riskGovernor';
+import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
+import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 
 type CanonicalActionType =
   | 'alert.create'
@@ -103,6 +105,13 @@ async function ensureActionTable() {
     CREATE INDEX IF NOT EXISTS idx_operator_action_executions_workspace_created
     ON operator_action_executions (workspace_id, created_at DESC)
   `);
+}
+
+async function ensureJournalRiskColumns() {
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS normalized_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
+  await q(`ALTER TABLE IF EXISTS journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 }
 
 function asUpper(value: unknown, maxLen = 24): string {
@@ -245,6 +254,8 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
   const symbol = asUpper(payload.symbol || payload.ticker, 20);
   if (!symbol) throw new Error('journal.open requires symbol');
 
+  await ensureJournalRiskColumns();
+
   const tradeDate = String(payload.tradeDate || new Date().toISOString().slice(0, 10));
   const side = asUpper(payload.side || payload.direction || 'LONG', 8) || 'LONG';
   const entryPrice = Math.max(0, asNumber(payload.entryPrice ?? payload.triggerPrice ?? payload.price ?? 0, 0));
@@ -258,13 +269,22 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
     `asset_class_${assetClass}`,
   ];
 
+  const snapshot = buildPermissionSnapshot({ enabled: true });
+  const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
+  const entryRisk = computeEntryRiskMetrics({
+    dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+    equityAtEntry,
+  });
+
   const inserted = await q<{ id: number }>(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class
+      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14, $15
+      $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, $17, $18, $19
     )
     RETURNING id`,
     [
@@ -283,6 +303,10 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
       tags,
       true,
       assetClass,
+      entryRisk.normalizedR,
+      entryRisk.dynamicR,
+      entryRisk.riskPerTradeAtEntry,
+      entryRisk.equityAtEntry,
     ]
   );
 

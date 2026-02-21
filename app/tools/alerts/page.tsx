@@ -6,6 +6,7 @@ import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 
 type AlertItem = {
   id: string;
@@ -96,6 +97,7 @@ function avgTriggerInterval(history: AlertHistoryItem[]) {
 
 function AlertsContent() {
   const { tier, isLoading } = useUserTier();
+  const { isLocked: riskLocked } = useRiskPermission();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [history, setHistory] = useState<AlertHistoryItem[]>([]);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -255,14 +257,19 @@ function AlertsContent() {
                 Multi
               </button>
             </div>
-            <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100">
+            <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
               Quick Alert
             </button>
-            <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200">
+            <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
               + New Alert
             </button>
           </div>
         </div>
+        {riskLocked && (
+          <div className="mt-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            Tracking Lock active: alert automation remains notification-only until rule guard unlocks.
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 md:p-4">
@@ -332,7 +339,7 @@ function AlertsContent() {
           <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
             <div>
               <div className="text-sm font-semibold text-slate-100">Trigger Log + Intelligence</div>
-              <div className="text-xs text-slate-400">Live execution outcomes and response behavior</div>
+              <div className="text-xs text-slate-400">Live educational tracking outcomes and response behavior</div>
             </div>
             <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</button>
           </summary>

@@ -1207,13 +1207,16 @@ function BacktestContent() {
       <ToolsPageHeader
         badge="ELITE STRATEGY LAB"
         title="Strategy Backtester"
-        subtitle="Validate strategy edge before risking capital with real historical market data."
+        subtitle="Validate strategy edge in simulation before live decision-making (educational mode)."
         icon="🧪"
         backHref="/dashboard"
       />
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
+        <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
+          Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
+        </div>
         <CommandCenterStateBar
-          mode="EXECUTE"
+          mode="PREP"
           actionableNow={results
             ? `Top setup: ${symbol} • ${strategy} • ${results.winRate.toFixed(1)}% win rate`
             : `No validated setup yet for ${symbol}. Run backtest to qualify execution.`}

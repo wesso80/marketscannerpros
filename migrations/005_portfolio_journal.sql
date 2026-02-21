@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     notes TEXT,
     emotions TEXT,
     outcome VARCHAR(20) CHECK (outcome IN ('win', 'loss', 'breakeven', 'open')),
+    normalized_r DECIMAL(12, 6),
+    dynamic_r DECIMAL(12, 6),
+    risk_per_trade_at_entry DECIMAL(10, 6),
+    equity_at_entry DECIMAL(20, 8),
     tags TEXT[], -- Array of tags
     is_open BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW(),
